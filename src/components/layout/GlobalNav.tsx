@@ -56,7 +56,6 @@ const navContexts: NavContext[] = [
       { label: "Prospecting", href: "/crm/prospecting" },
       { label: "Listings", href: "/properties" },
       { label: "Comps", href: "/research/comps" },
-      { label: "Property timeline", href: "#" },
     ],
   },
   {
@@ -64,12 +63,12 @@ const navContexts: NavContext[] = [
     icon: faUsers,
     allowedRoles: ALL_ROLES,
     items: [
+      { label: "Leads", href: "/leads" },
       { label: "People", href: "/backoffice/contacts" },
       { label: "Companies", href: "#" },
       { label: "Lists", href: "#" },
       { label: "Sequences", href: "#" },
       { label: "Campaigns", href: "/email/messages" },
-      { label: "Leads", href: "/leads" },
     ],
   },
   {
@@ -77,7 +76,6 @@ const navContexts: NavContext[] = [
     icon: faHandshake,
     allowedRoles: ["principal", "broker"],
     items: [
-      { label: "Pipeline", href: "/deals/pipeline" },
       { label: "Transactions", href: "/deals/transactions" },
       { label: "Tasks", href: "/deals/planner" },
       { label: "Commissions", href: "/backoffice/broker_earnings" },
