@@ -3,11 +3,13 @@ import { useState } from "react";
 import { Card, CardBody } from "@buildoutinc/blueprint-react/ui/Card";
 import { PipelineStepper } from "#/components/pipeline/PipelineStepper";
 import { SubStagePanel } from "#/components/pipeline/SubStagePanel";
+import { NeedsAttentionSection } from "#/components/pipeline/NeedsAttentionSection";
 import {
   PIPELINE_STAGES,
   MOCK_DEALS,
   formatValue,
 } from "#/components/pipeline/pipelineData";
+import { ACTION_ITEMS } from "#/components/pipeline/actionItemsData";
 
 export const Route = createFileRoute("/suite/")({
   component: SuiteDashboard,
@@ -114,37 +116,41 @@ function SuiteDashboard() {
 
       {/* Main scrollable area */}
       <div className="flex-grow-1 overflow-auto p-5">
-        <Card className="shadow-sm">
-          <CardBody className="p-5 pb-4">
-            <div className="mb-2">
-              <span
-                className="fw-semibold fs-xs text-uppercase text-muted"
-                style={{ letterSpacing: "0.06em" }}
-              >
-                Pipeline
-              </span>
-            </div>
+
+        {/* Pipeline stepper — full width */}
+        <Card className="shadow-sm mb-4">
+          <CardBody>
             <PipelineStepper
               stages={PIPELINE_STAGES}
               selectedStageId={selectedStageId}
               onStageSelect={handleStageSelect}
             />
           </CardBody>
-
-          {/* One SubStagePanel per visible stage */}
-          {stagesToShow.map((stage) => (
-            <SubStagePanel
-              key={stage.id}
-              stage={stage}
-              deals={dealsForStage(stage.id)}
-              selectedSubStageId={subStageSelections[stage.id]}
-              onSubStageSelect={(id) => handleSubStageSelect(stage.id, id)}
-              onStageClick={
-                selectedStageId ? undefined : () => handleStageSelect(stage.id)
-              }
-            />
-          ))}
         </Card>
+
+        {/* Two-column layout: pipeline detail (left) + needs attention (right) */}
+        <div className="row g-4 align-items-start">
+          <div className="col-8">
+            <Card className="shadow-sm">
+              {stagesToShow.map((stage) => (
+                <SubStagePanel
+                  key={stage.id}
+                  stage={stage}
+                  deals={dealsForStage(stage.id)}
+                  selectedSubStageId={subStageSelections[stage.id]}
+                  onSubStageSelect={(id) => handleSubStageSelect(stage.id, id)}
+                  onStageClick={
+                    selectedStageId ? undefined : () => handleStageSelect(stage.id)
+                  }
+                />
+              ))}
+            </Card>
+          </div>
+          <div className="col-4">
+            <NeedsAttentionSection items={ACTION_ITEMS} />
+          </div>
+        </div>
+
       </div>
     </div>
   );
