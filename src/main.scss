@@ -1,0 +1,35 @@
+@import "@buildoutinc/blueprint-theme/scss/theme";
+
+// Pipeline stage cards
+.pipeline-stage-card {
+  transition: box-shadow 150ms ease, background-color 150ms ease;
+  cursor: pointer;
+
+  &:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  &:focus-visible {
+    outline: 3px solid currentColor;
+    outline-offset: 2px;
+  }
+}
+
+.pipeline-overview__stage-btn,
+.pipeline-stage-header {
+  transition: background-color 120ms ease;
+
+  &:hover {
+    background-color: #f1f5f9 !important;
+  }
+}
+
+
+.global-nav-role-select {
+  opacity: 0.5;
+  font-size: 0.75rem;
+
+  &:hover {
+    opacity: 0.75;
+  }
+}
