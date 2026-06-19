@@ -41,6 +41,20 @@ function Home() {
             </Card>
           </Link>
         </div>
+
+        <div className="col-md-4">
+          <Link to="/properties" className="text-decoration-none">
+            <Card className="shadow-sm h-100">
+              <CardHeader>
+                <CardTitle>Property Listings</CardTitle>
+              </CardHeader>
+              <CardBody>
+                Browse properties in a grid or interactive map view, with
+                search and filters by type, city, and status.
+              </CardBody>
+            </Card>
+          </Link>
+        </div>
       </div>
     </div>
   );

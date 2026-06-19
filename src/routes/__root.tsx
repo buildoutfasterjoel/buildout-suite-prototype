@@ -11,6 +11,7 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 
 import mainCSS from "../main.scss?url";
 import { getAuthSession } from "#/lib/auth";
@@ -69,7 +70,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {children}
+        <Tooltip.Provider>{children}</Tooltip.Provider>
         <TanStackDevtools
           config={{
             position: "bottom-right",

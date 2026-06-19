@@ -10,15 +10,22 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SuiteRouteImport } from './routes/suite'
+import { Route as PropertiesRouteImport } from './routes/properties'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SuiteIndexRouteImport } from './routes/suite/index'
+import { Route as PropertiesIndexRouteImport } from './routes/properties/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 
 const SuiteRoute = SuiteRouteImport.update({
   id: '/suite',
   path: '/suite',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PropertiesRoute = PropertiesRouteImport.update({
+  id: '/properties',
+  path: '/properties',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -41,6 +48,11 @@ const SuiteIndexRoute = SuiteIndexRouteImport.update({
   path: '/',
   getParentRoute: () => SuiteRoute,
 } as any)
+const PropertiesIndexRoute = PropertiesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PropertiesRoute,
+} as any)
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -51,14 +63,17 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/properties': typeof PropertiesRouteWithChildren
   '/suite': typeof SuiteRouteWithChildren
   '/app/': typeof AppIndexRoute
+  '/properties/': typeof PropertiesIndexRoute
   '/suite/': typeof SuiteIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/app': typeof AppIndexRoute
+  '/properties': typeof PropertiesIndexRoute
   '/suite': typeof SuiteIndexRoute
 }
 export interface FileRoutesById {
@@ -66,22 +81,42 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/properties': typeof PropertiesRouteWithChildren
   '/suite': typeof SuiteRouteWithChildren
   '/app/': typeof AppIndexRoute
+  '/properties/': typeof PropertiesIndexRoute
   '/suite/': typeof SuiteIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/app' | '/login' | '/suite' | '/app/' | '/suite/'
+  fullPaths:
+    | '/'
+    | '/app'
+    | '/login'
+    | '/properties'
+    | '/suite'
+    | '/app/'
+    | '/properties/'
+    | '/suite/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/app' | '/suite'
-  id: '__root__' | '/' | '/app' | '/login' | '/suite' | '/app/' | '/suite/'
+  to: '/' | '/login' | '/app' | '/properties' | '/suite'
+  id:
+    | '__root__'
+    | '/'
+    | '/app'
+    | '/login'
+    | '/properties'
+    | '/suite'
+    | '/app/'
+    | '/properties/'
+    | '/suite/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
+  PropertiesRoute: typeof PropertiesRouteWithChildren
   SuiteRoute: typeof SuiteRouteWithChildren
 }
 
@@ -92,6 +127,13 @@ declare module '@tanstack/react-router' {
       path: '/suite'
       fullPath: '/suite'
       preLoaderRoute: typeof SuiteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/properties': {
+      id: '/properties'
+      path: '/properties'
+      fullPath: '/properties'
+      preLoaderRoute: typeof PropertiesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -122,6 +164,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuiteIndexRouteImport
       parentRoute: typeof SuiteRoute
     }
+    '/properties/': {
+      id: '/properties/'
+      path: '/'
+      fullPath: '/properties/'
+      preLoaderRoute: typeof PropertiesIndexRouteImport
+      parentRoute: typeof PropertiesRoute
+    }
     '/app/': {
       id: '/app/'
       path: '/'
@@ -142,6 +191,18 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
+interface PropertiesRouteChildren {
+  PropertiesIndexRoute: typeof PropertiesIndexRoute
+}
+
+const PropertiesRouteChildren: PropertiesRouteChildren = {
+  PropertiesIndexRoute: PropertiesIndexRoute,
+}
+
+const PropertiesRouteWithChildren = PropertiesRoute._addFileChildren(
+  PropertiesRouteChildren,
+)
+
 interface SuiteRouteChildren {
   SuiteIndexRoute: typeof SuiteIndexRoute
 }
@@ -156,6 +217,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
+  PropertiesRoute: PropertiesRouteWithChildren,
   SuiteRoute: SuiteRouteWithChildren,
 }
 export const routeTree = rootRouteImport
