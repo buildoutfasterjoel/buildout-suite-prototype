@@ -12,14 +12,17 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SuiteRouteImport } from './routes/suite'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ListingsRouteImport } from './routes/listings'
+import { Route as EditorRouteImport } from './routes/editor'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SuiteIndexRouteImport } from './routes/suite/index'
 import { Route as ListingsIndexRouteImport } from './routes/listings/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as ListingsListingIdRouteImport } from './routes/listings/$listingId'
+import { Route as EditorListingIdRouteImport } from './routes/editor/$listingId'
 import { Route as ListingsListingIdIndexRouteImport } from './routes/listings/$listingId/index'
 import { Route as ListingsListingIdLeadsRouteImport } from './routes/listings/$listingId/leads'
+import { Route as ListingsListingIdDocumentsRouteImport } from './routes/listings/$listingId/documents'
 
 const SuiteRoute = SuiteRouteImport.update({
   id: '/suite',
@@ -34,6 +37,11 @@ const LoginRoute = LoginRouteImport.update({
 const ListingsRoute = ListingsRouteImport.update({
   id: '/listings',
   path: '/listings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EditorRoute = EditorRouteImport.update({
+  id: '/editor',
+  path: '/editor',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -66,6 +74,11 @@ const ListingsListingIdRoute = ListingsListingIdRouteImport.update({
   path: '/$listingId',
   getParentRoute: () => ListingsRoute,
 } as any)
+const EditorListingIdRoute = EditorListingIdRouteImport.update({
+  id: '/$listingId',
+  path: '/$listingId',
+  getParentRoute: () => EditorRoute,
+} as any)
 const ListingsListingIdIndexRoute = ListingsListingIdIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -76,26 +89,38 @@ const ListingsListingIdLeadsRoute = ListingsListingIdLeadsRouteImport.update({
   path: '/leads',
   getParentRoute: () => ListingsListingIdRoute,
 } as any)
+const ListingsListingIdDocumentsRoute =
+  ListingsListingIdDocumentsRouteImport.update({
+    id: '/documents',
+    path: '/documents',
+    getParentRoute: () => ListingsListingIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
+  '/editor': typeof EditorRouteWithChildren
   '/listings': typeof ListingsRouteWithChildren
   '/login': typeof LoginRoute
   '/suite': typeof SuiteRouteWithChildren
+  '/editor/$listingId': typeof EditorListingIdRoute
   '/listings/$listingId': typeof ListingsListingIdRouteWithChildren
   '/app/': typeof AppIndexRoute
   '/listings/': typeof ListingsIndexRoute
   '/suite/': typeof SuiteIndexRoute
+  '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
   '/listings/$listingId/leads': typeof ListingsListingIdLeadsRoute
   '/listings/$listingId/': typeof ListingsListingIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/editor': typeof EditorRouteWithChildren
   '/login': typeof LoginRoute
+  '/editor/$listingId': typeof EditorListingIdRoute
   '/app': typeof AppIndexRoute
   '/listings': typeof ListingsIndexRoute
   '/suite': typeof SuiteIndexRoute
+  '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
   '/listings/$listingId/leads': typeof ListingsListingIdLeadsRoute
   '/listings/$listingId': typeof ListingsListingIdIndexRoute
 }
@@ -103,13 +128,16 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
+  '/editor': typeof EditorRouteWithChildren
   '/listings': typeof ListingsRouteWithChildren
   '/login': typeof LoginRoute
   '/suite': typeof SuiteRouteWithChildren
+  '/editor/$listingId': typeof EditorListingIdRoute
   '/listings/$listingId': typeof ListingsListingIdRouteWithChildren
   '/app/': typeof AppIndexRoute
   '/listings/': typeof ListingsIndexRoute
   '/suite/': typeof SuiteIndexRoute
+  '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
   '/listings/$listingId/leads': typeof ListingsListingIdLeadsRoute
   '/listings/$listingId/': typeof ListingsListingIdIndexRoute
 }
@@ -118,35 +146,44 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/app'
+    | '/editor'
     | '/listings'
     | '/login'
     | '/suite'
+    | '/editor/$listingId'
     | '/listings/$listingId'
     | '/app/'
     | '/listings/'
     | '/suite/'
+    | '/listings/$listingId/documents'
     | '/listings/$listingId/leads'
     | '/listings/$listingId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/editor'
     | '/login'
+    | '/editor/$listingId'
     | '/app'
     | '/listings'
     | '/suite'
+    | '/listings/$listingId/documents'
     | '/listings/$listingId/leads'
     | '/listings/$listingId'
   id:
     | '__root__'
     | '/'
     | '/app'
+    | '/editor'
     | '/listings'
     | '/login'
     | '/suite'
+    | '/editor/$listingId'
     | '/listings/$listingId'
     | '/app/'
     | '/listings/'
     | '/suite/'
+    | '/listings/$listingId/documents'
     | '/listings/$listingId/leads'
     | '/listings/$listingId/'
   fileRoutesById: FileRoutesById
@@ -154,6 +191,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  EditorRoute: typeof EditorRouteWithChildren
   ListingsRoute: typeof ListingsRouteWithChildren
   LoginRoute: typeof LoginRoute
   SuiteRoute: typeof SuiteRouteWithChildren
@@ -180,6 +218,13 @@ declare module '@tanstack/react-router' {
       path: '/listings'
       fullPath: '/listings'
       preLoaderRoute: typeof ListingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/editor': {
+      id: '/editor'
+      path: '/editor'
+      fullPath: '/editor'
+      preLoaderRoute: typeof EditorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app': {
@@ -224,6 +269,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ListingsListingIdRouteImport
       parentRoute: typeof ListingsRoute
     }
+    '/editor/$listingId': {
+      id: '/editor/$listingId'
+      path: '/$listingId'
+      fullPath: '/editor/$listingId'
+      preLoaderRoute: typeof EditorListingIdRouteImport
+      parentRoute: typeof EditorRoute
+    }
     '/listings/$listingId/': {
       id: '/listings/$listingId/'
       path: '/'
@@ -236,6 +288,13 @@ declare module '@tanstack/react-router' {
       path: '/leads'
       fullPath: '/listings/$listingId/leads'
       preLoaderRoute: typeof ListingsListingIdLeadsRouteImport
+      parentRoute: typeof ListingsListingIdRoute
+    }
+    '/listings/$listingId/documents': {
+      id: '/listings/$listingId/documents'
+      path: '/documents'
+      fullPath: '/listings/$listingId/documents'
+      preLoaderRoute: typeof ListingsListingIdDocumentsRouteImport
       parentRoute: typeof ListingsListingIdRoute
     }
   }
@@ -251,12 +310,25 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
+interface EditorRouteChildren {
+  EditorListingIdRoute: typeof EditorListingIdRoute
+}
+
+const EditorRouteChildren: EditorRouteChildren = {
+  EditorListingIdRoute: EditorListingIdRoute,
+}
+
+const EditorRouteWithChildren =
+  EditorRoute._addFileChildren(EditorRouteChildren)
+
 interface ListingsListingIdRouteChildren {
+  ListingsListingIdDocumentsRoute: typeof ListingsListingIdDocumentsRoute
   ListingsListingIdLeadsRoute: typeof ListingsListingIdLeadsRoute
   ListingsListingIdIndexRoute: typeof ListingsListingIdIndexRoute
 }
 
 const ListingsListingIdRouteChildren: ListingsListingIdRouteChildren = {
+  ListingsListingIdDocumentsRoute: ListingsListingIdDocumentsRoute,
   ListingsListingIdLeadsRoute: ListingsListingIdLeadsRoute,
   ListingsListingIdIndexRoute: ListingsListingIdIndexRoute,
 }
@@ -291,6 +363,7 @@ const SuiteRouteWithChildren = SuiteRoute._addFileChildren(SuiteRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  EditorRoute: EditorRouteWithChildren,
   ListingsRoute: ListingsRouteWithChildren,
   LoginRoute: LoginRoute,
   SuiteRoute: SuiteRouteWithChildren,

@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Card, CardBody, CardHeader, CardTitle } from "@buildoutinc/blueprint-react/ui/Card";
+import { getStore } from "#/data/store";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -13,6 +14,9 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
+  // A stable sample listing for the document-editor prototype.
+  const sampleListingId = getStore().properties.keys().next().value ?? "";
+
   return (
     <div className="p-8 container">
       <Card className="shadow">
@@ -51,6 +55,25 @@ function Home() {
               <CardBody>
                 Browse properties in a grid or interactive map view, with
                 search and filters by type, city, and status.
+              </CardBody>
+            </Card>
+          </Link>
+        </div>
+
+        <div className="col-md-4">
+          <Link
+            to="/editor/$listingId"
+            params={{ listingId: sampleListingId }}
+            className="text-decoration-none"
+          >
+            <Card className="shadow-sm h-100">
+              <CardHeader>
+                <CardTitle>Document Editor</CardTitle>
+              </CardHeader>
+              <CardBody>
+                Canva-style editor for building listing PDFs — pages, blocks, a
+                contextual style panel, and dynamic data pulled live from a
+                listing.
               </CardBody>
             </Card>
           </Link>
