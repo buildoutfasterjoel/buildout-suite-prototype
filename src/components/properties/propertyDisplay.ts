@@ -79,3 +79,20 @@ export function formatSqFt(value: number): string {
 export function formatPct(value: number): string {
   return `${value.toFixed(1)}%`;
 }
+
+/** Stable hash so derived display values don't change between renders. */
+export function hash(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+/** Deterministic 5-digit reference id shown on cards and the detail header. */
+export function getRefId(id: string): number {
+  return 10000 + (hash(id) % 90000);
+}
+
+/** Deterministic placeholder photo for a property. */
+export function getPhotoUrl(id: string, w = 480, h = 280): string {
+  return `https://picsum.photos/seed/${id}/${w}/${h}`;
+}

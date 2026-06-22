@@ -69,8 +69,6 @@ export function PropertyMap({ properties }: { properties: Property[] }) {
       style={{
         height: "100%",
         width: "100%",
-        // borderRadius: 6,
-        // border: "1px solid var(--bp-border-color)",
       }}
     >
       <TileLayer

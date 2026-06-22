@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import {
   Empty,
   EmptyTitle,
@@ -26,7 +27,13 @@ export function PropertyGrid({ properties }: { properties: Property[] }) {
       <div className="row g-3">
         {properties.map((property) => (
           <div key={property.id} className="col-md-6 col-lg-4 col-xl-3">
-            <PropertyCard property={property} />
+            <Link
+              to="/properties/$propertyId"
+              params={{ propertyId: property.id }}
+              className="text-decoration-none text-reset d-block h-100"
+            >
+              <PropertyCard property={property} />
+            </Link>
           </div>
         ))}
       </div>
