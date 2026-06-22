@@ -10,28 +10,30 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SuiteRouteImport } from './routes/suite'
-import { Route as PropertiesRouteImport } from './routes/properties'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ListingsRouteImport } from './routes/listings'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SuiteIndexRouteImport } from './routes/suite/index'
-import { Route as PropertiesIndexRouteImport } from './routes/properties/index'
+import { Route as ListingsIndexRouteImport } from './routes/listings/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
-import { Route as PropertiesPropertyIdRouteImport } from './routes/properties/$propertyId'
+import { Route as ListingsListingIdRouteImport } from './routes/listings/$listingId'
+import { Route as ListingsListingIdIndexRouteImport } from './routes/listings/$listingId/index'
+import { Route as ListingsListingIdLeadsRouteImport } from './routes/listings/$listingId/leads'
 
 const SuiteRoute = SuiteRouteImport.update({
   id: '/suite',
   path: '/suite',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PropertiesRoute = PropertiesRouteImport.update({
-  id: '/properties',
-  path: '/properties',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ListingsRoute = ListingsRouteImport.update({
+  id: '/listings',
+  path: '/listings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -49,91 +51,111 @@ const SuiteIndexRoute = SuiteIndexRouteImport.update({
   path: '/',
   getParentRoute: () => SuiteRoute,
 } as any)
-const PropertiesIndexRoute = PropertiesIndexRouteImport.update({
+const ListingsIndexRoute = ListingsIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => PropertiesRoute,
+  getParentRoute: () => ListingsRoute,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
-const PropertiesPropertyIdRoute = PropertiesPropertyIdRouteImport.update({
-  id: '/$propertyId',
-  path: '/$propertyId',
-  getParentRoute: () => PropertiesRoute,
+const ListingsListingIdRoute = ListingsListingIdRouteImport.update({
+  id: '/$listingId',
+  path: '/$listingId',
+  getParentRoute: () => ListingsRoute,
+} as any)
+const ListingsListingIdIndexRoute = ListingsListingIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ListingsListingIdRoute,
+} as any)
+const ListingsListingIdLeadsRoute = ListingsListingIdLeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
+  getParentRoute: () => ListingsListingIdRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
+  '/listings': typeof ListingsRouteWithChildren
   '/login': typeof LoginRoute
-  '/properties': typeof PropertiesRouteWithChildren
   '/suite': typeof SuiteRouteWithChildren
-  '/properties/$propertyId': typeof PropertiesPropertyIdRoute
+  '/listings/$listingId': typeof ListingsListingIdRouteWithChildren
   '/app/': typeof AppIndexRoute
-  '/properties/': typeof PropertiesIndexRoute
+  '/listings/': typeof ListingsIndexRoute
   '/suite/': typeof SuiteIndexRoute
+  '/listings/$listingId/leads': typeof ListingsListingIdLeadsRoute
+  '/listings/$listingId/': typeof ListingsListingIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/properties/$propertyId': typeof PropertiesPropertyIdRoute
   '/app': typeof AppIndexRoute
-  '/properties': typeof PropertiesIndexRoute
+  '/listings': typeof ListingsIndexRoute
   '/suite': typeof SuiteIndexRoute
+  '/listings/$listingId/leads': typeof ListingsListingIdLeadsRoute
+  '/listings/$listingId': typeof ListingsListingIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
+  '/listings': typeof ListingsRouteWithChildren
   '/login': typeof LoginRoute
-  '/properties': typeof PropertiesRouteWithChildren
   '/suite': typeof SuiteRouteWithChildren
-  '/properties/$propertyId': typeof PropertiesPropertyIdRoute
+  '/listings/$listingId': typeof ListingsListingIdRouteWithChildren
   '/app/': typeof AppIndexRoute
-  '/properties/': typeof PropertiesIndexRoute
+  '/listings/': typeof ListingsIndexRoute
   '/suite/': typeof SuiteIndexRoute
+  '/listings/$listingId/leads': typeof ListingsListingIdLeadsRoute
+  '/listings/$listingId/': typeof ListingsListingIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/app'
+    | '/listings'
     | '/login'
-    | '/properties'
     | '/suite'
-    | '/properties/$propertyId'
+    | '/listings/$listingId'
     | '/app/'
-    | '/properties/'
+    | '/listings/'
     | '/suite/'
+    | '/listings/$listingId/leads'
+    | '/listings/$listingId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
-    | '/properties/$propertyId'
     | '/app'
-    | '/properties'
+    | '/listings'
     | '/suite'
+    | '/listings/$listingId/leads'
+    | '/listings/$listingId'
   id:
     | '__root__'
     | '/'
     | '/app'
+    | '/listings'
     | '/login'
-    | '/properties'
     | '/suite'
-    | '/properties/$propertyId'
+    | '/listings/$listingId'
     | '/app/'
-    | '/properties/'
+    | '/listings/'
     | '/suite/'
+    | '/listings/$listingId/leads'
+    | '/listings/$listingId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  ListingsRoute: typeof ListingsRouteWithChildren
   LoginRoute: typeof LoginRoute
-  PropertiesRoute: typeof PropertiesRouteWithChildren
   SuiteRoute: typeof SuiteRouteWithChildren
 }
 
@@ -146,18 +168,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuiteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/properties': {
-      id: '/properties'
-      path: '/properties'
-      fullPath: '/properties'
-      preLoaderRoute: typeof PropertiesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/listings': {
+      id: '/listings'
+      path: '/listings'
+      fullPath: '/listings'
+      preLoaderRoute: typeof ListingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app': {
@@ -181,12 +203,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuiteIndexRouteImport
       parentRoute: typeof SuiteRoute
     }
-    '/properties/': {
-      id: '/properties/'
+    '/listings/': {
+      id: '/listings/'
       path: '/'
-      fullPath: '/properties/'
-      preLoaderRoute: typeof PropertiesIndexRouteImport
-      parentRoute: typeof PropertiesRoute
+      fullPath: '/listings/'
+      preLoaderRoute: typeof ListingsIndexRouteImport
+      parentRoute: typeof ListingsRoute
     }
     '/app/': {
       id: '/app/'
@@ -195,12 +217,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
-    '/properties/$propertyId': {
-      id: '/properties/$propertyId'
-      path: '/$propertyId'
-      fullPath: '/properties/$propertyId'
-      preLoaderRoute: typeof PropertiesPropertyIdRouteImport
-      parentRoute: typeof PropertiesRoute
+    '/listings/$listingId': {
+      id: '/listings/$listingId'
+      path: '/$listingId'
+      fullPath: '/listings/$listingId'
+      preLoaderRoute: typeof ListingsListingIdRouteImport
+      parentRoute: typeof ListingsRoute
+    }
+    '/listings/$listingId/': {
+      id: '/listings/$listingId/'
+      path: '/'
+      fullPath: '/listings/$listingId/'
+      preLoaderRoute: typeof ListingsListingIdIndexRouteImport
+      parentRoute: typeof ListingsListingIdRoute
+    }
+    '/listings/$listingId/leads': {
+      id: '/listings/$listingId/leads'
+      path: '/leads'
+      fullPath: '/listings/$listingId/leads'
+      preLoaderRoute: typeof ListingsListingIdLeadsRouteImport
+      parentRoute: typeof ListingsListingIdRoute
     }
   }
 }
@@ -215,18 +251,31 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
-interface PropertiesRouteChildren {
-  PropertiesPropertyIdRoute: typeof PropertiesPropertyIdRoute
-  PropertiesIndexRoute: typeof PropertiesIndexRoute
+interface ListingsListingIdRouteChildren {
+  ListingsListingIdLeadsRoute: typeof ListingsListingIdLeadsRoute
+  ListingsListingIdIndexRoute: typeof ListingsListingIdIndexRoute
 }
 
-const PropertiesRouteChildren: PropertiesRouteChildren = {
-  PropertiesPropertyIdRoute: PropertiesPropertyIdRoute,
-  PropertiesIndexRoute: PropertiesIndexRoute,
+const ListingsListingIdRouteChildren: ListingsListingIdRouteChildren = {
+  ListingsListingIdLeadsRoute: ListingsListingIdLeadsRoute,
+  ListingsListingIdIndexRoute: ListingsListingIdIndexRoute,
 }
 
-const PropertiesRouteWithChildren = PropertiesRoute._addFileChildren(
-  PropertiesRouteChildren,
+const ListingsListingIdRouteWithChildren =
+  ListingsListingIdRoute._addFileChildren(ListingsListingIdRouteChildren)
+
+interface ListingsRouteChildren {
+  ListingsListingIdRoute: typeof ListingsListingIdRouteWithChildren
+  ListingsIndexRoute: typeof ListingsIndexRoute
+}
+
+const ListingsRouteChildren: ListingsRouteChildren = {
+  ListingsListingIdRoute: ListingsListingIdRouteWithChildren,
+  ListingsIndexRoute: ListingsIndexRoute,
+}
+
+const ListingsRouteWithChildren = ListingsRoute._addFileChildren(
+  ListingsRouteChildren,
 )
 
 interface SuiteRouteChildren {
@@ -242,8 +291,8 @@ const SuiteRouteWithChildren = SuiteRoute._addFileChildren(SuiteRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  ListingsRoute: ListingsRouteWithChildren,
   LoginRoute: LoginRoute,
-  PropertiesRoute: PropertiesRouteWithChildren,
   SuiteRoute: SuiteRouteWithChildren,
 }
 export const routeTree = rootRouteImport

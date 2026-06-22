@@ -36,7 +36,7 @@ import {
 } from "#/components/properties/propertyFacets";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 
-export const Route = createFileRoute("/properties/")({
+export const Route = createFileRoute("/listings/")({
   component: PropertyListings,
   head: () => ({
     meta: [{ title: "Listings | Buildout Suite" }],

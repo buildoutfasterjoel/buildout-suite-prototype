@@ -28,8 +28,8 @@ export function PropertyGrid({ properties }: { properties: Property[] }) {
         {properties.map((property) => (
           <div key={property.id} className="col-md-6 col-lg-4 col-xl-3">
             <Link
-              to="/properties/$propertyId"
-              params={{ propertyId: property.id }}
+              to="/listings/$listingId"
+              params={{ listingId: property.id }}
               className="text-decoration-none text-reset d-block h-100"
             >
               <PropertyCard property={property} />

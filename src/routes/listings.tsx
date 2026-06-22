@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "#/components/layout/AppShell";
 
-export const Route = createFileRoute("/properties")({
+export const Route = createFileRoute("/listings")({
   component: AppShell,
 });

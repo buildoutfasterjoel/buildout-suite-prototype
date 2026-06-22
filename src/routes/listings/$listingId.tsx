@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
@@ -7,12 +7,11 @@ import { faBuildingCircleExclamation } from "@fortawesome/pro-regular-svg-icons"
 import { getStore } from "#/data/store";
 import { PropertyDetailHeader } from "#/components/properties/PropertyDetailHeader";
 import { PropertyDetailSidebar } from "#/components/properties/PropertyDetailSidebar";
-import { PropertyDetailDashboard } from "#/components/properties/PropertyDetailDashboard";
 
-export const Route = createFileRoute("/properties/$propertyId")({
+export const Route = createFileRoute("/listings/$listingId")({
   component: PropertyDetail,
   head: ({ params }) => {
-    const property = getStore().properties.get(params.propertyId);
+    const property = getStore().properties.get(params.listingId);
     return {
       meta: [
         { title: `${property?.name ?? "Property"} | Buildout Suite` },
@@ -37,7 +36,7 @@ function PropertyNotFound() {
           been removed or the link is incorrect.
         </Empty.Content>
         <Empty.Actions>
-          <Button variant="primary" render={<Link to="/properties" />}>
+          <Button variant="primary" render={<Link to="/listings" />}>
             Back to Listings
           </Button>
         </Empty.Actions>
@@ -47,22 +46,32 @@ function PropertyNotFound() {
 }
 
 function PropertyDetail() {
-  const { propertyId } = Route.useParams();
-  const property = getStore().properties.get(propertyId);
+  const { listingId } = Route.useParams();
+  const property = getStore().properties.get(listingId);
 
   if (!property) return <PropertyNotFound />;
 
   return (
-    <div className="d-flex flex-column h-100">
+    <div className="d-flex flex-column h-100 overflow-hidden">
       <PropertyDetailHeader property={property} />
 
-      <div className="container py-4 flex-grow-1 overflow-auto">
-        <Card className="overflow-hidden">
-          <div className="d-flex align-items-stretch">
+      <div className="p-6 flex-grow-1 overflow-hidden d-flex flex-column">
+        <div className="container flex-grow-1 d-flex overflow-hidden gap-6">
+          {/* Section nav — its own card */}
+          <Card
+            className="overflow-auto shadow flex-shrink-0"
+            style={{ width: 248 }}
+          >
             <PropertyDetailSidebar />
-            <PropertyDetailDashboard property={property} />
-          </div>
-        </Card>
+          </Card>
+
+          {/* Detail content — its own card */}
+          <Card className="flex-grow-1 overflow-hidden d-flex flex-column">
+            <div className="flex-grow-1 overflow-y-auto overflow-x-hidden">
+              <Outlet />
+            </div>
+          </Card>
+        </div>
       </div>
     </div>
   );

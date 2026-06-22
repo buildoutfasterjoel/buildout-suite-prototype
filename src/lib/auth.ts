@@ -25,7 +25,7 @@ export const getAuthSession = createServerFn({ method: 'GET' }).handler(async ()
 })
 
 export const loginFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { password: string }) => data)
+  .validator((data: { password: string }) => data)
   .handler(async ({ data }) => {
     const pw = process.env.PROTOTYPE_PASSWORD
     if (!pw || data.password !== pw) throw new Error('Invalid password')

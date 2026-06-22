@@ -1,14 +1,10 @@
+import { useLocation, useParams, useNavigate } from "@tanstack/react-router";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
-  faObjectsColumn,
-  faCubes,
-  faSquareCheck,
-  faBolt,
   faAddressBook,
   faChartBar,
-  faPaperclip,
   faFileLines,
   faGaugeHigh,
   faGlobe,
@@ -18,72 +14,61 @@ import {
   faCardsBlank,
   faImage,
   faBullseye,
-  faSquarePollVertical,
-  faSignsPost,
   faFileInvoiceDollar,
-  faMoneyBill,
-  faBuilding,
 } from "@fortawesome/pro-regular-svg-icons";
 
-type NavItem = { label: string; icon: IconDefinition };
+type NavItem = { label: string; href: string; icon: IconDefinition };
 type NavGroup = { label?: string; items: NavItem[] };
 
 const NAV_GROUPS: NavGroup[] = [
-  { items: [{ label: "Dashboard", icon: faObjectsColumn }] },
   {
     label: "Project",
     items: [
-      { label: "Overview", icon: faCubes },
-      { label: "Tasks", icon: faSquareCheck },
-      { label: "Activities", icon: faBolt },
-      { label: "Leads", icon: faAddressBook },
-      { label: "Client Report", icon: faChartBar },
-      { label: "Attachments", icon: faPaperclip },
+      { label: "Leads", href: "leads", icon: faAddressBook },
+      { label: "Client Report", href: "client-report", icon: faChartBar },
     ],
   },
   {
     label: "Listing",
     items: [
-      { label: "Documents", icon: faFileLines },
-      { label: "Web Activity", icon: faGaugeHigh },
-      { label: "Website", icon: faGlobe },
-      { label: "Email", icon: faEnvelope },
-      { label: "Syndication", icon: faSatelliteDish },
-      { label: "Grids", icon: faGrid },
-      { label: "Plans", icon: faCardsBlank },
-      { label: "Media", icon: faImage },
-      { label: "Demographics", icon: faBullseye },
-      { label: "Area Analytics", icon: faSquarePollVertical },
-      { label: "Signs", icon: faSignsPost },
+      { label: "Documents", href: "documents", icon: faFileLines },
+      { label: "Web Activity", href: "web-activity", icon: faGaugeHigh },
+      { label: "Website", href: "website", icon: faGlobe },
+      { label: "Email", href: "email", icon: faEnvelope },
+      { label: "Syndication", href: "syndication", icon: faSatelliteDish },
+      { label: "Grids", href: "grids", icon: faGrid },
+      { label: "Plans", href: "plans", icon: faCardsBlank },
+      { label: "Media", href: "media", icon: faImage },
+      { label: "Demographics", href: "demographics", icon: faBullseye },
     ],
   },
   {
-    label: "Deals",
-    items: [
-      { label: "Deals", icon: faFileInvoiceDollar },
-      { label: "Royalties", icon: faMoneyBill },
-    ],
-  },
-  {
-    label: "Data",
-    items: [{ label: "Property", icon: faBuilding }],
+    label: "Deal",
+    items: [{ label: "Deals", href: "deals", icon: faFileInvoiceDollar }],
   },
 ];
 
-/**
- * Grouped pill navigation for the property detail page. A single vertical Tabs
- * context drives the active state (defaults to "Dashboard"); each Figma group is
- * its own pills track with a section label above it. Visual prototype only.
- */
 export function PropertyDetailSidebar() {
+  const { pathname } = useLocation();
+  const { listingId } = useParams({ from: "/listings/$listingId" });
+  const navigate = useNavigate();
+
+  function handleTabChange(value: string) {
+    const item = NAV_GROUPS.flatMap((g) => g.items).find(
+      (i) => i.label === value,
+    );
+    if (!item) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    void navigate({ to: `/listings/${listingId}/${item.href}` } as any);
+  }
+
   return (
-    <nav
-      className="flex-shrink-0 border-end p-3 overflow-auto"
-      style={{ width: 220 }}
-      aria-label="Property sections"
-    >
-      <Tabs defaultValue="Dashboard" orientation="vertical">
-        {NAV_GROUPS.map((group, i) => (
+    <nav className="p-3" aria-label="Property sections">
+      {NAV_GROUPS.map((group, i) => {
+        const activeInGroup =
+          group.items.find((item) => pathname.endsWith(`/${item.href}`))
+            ?.label ?? "";
+        return (
           <div
             key={group.label ?? `group-${i}`}
             className="d-flex flex-column gap-1 mb-2"
@@ -91,20 +76,26 @@ export function PropertyDetailSidebar() {
             {group.label && (
               <div className="fw-semibold mt-1">{group.label}</div>
             )}
-            <Tabs.List variant="pills" orientation="vertical">
-              {group.items.map((item) => (
-                <Tabs.Tab
-                  key={item.label}
-                  value={item.label}
-                  icon={<FontAwesomeIcon icon={item.icon} fixedWidth />}
-                >
-                  {item.label}
-                </Tabs.Tab>
-              ))}
-            </Tabs.List>
+            <Tabs
+              value={activeInGroup}
+              onValueChange={handleTabChange}
+              orientation="vertical"
+            >
+              <Tabs.List variant="pills" orientation="vertical">
+                {group.items.map((item) => (
+                  <Tabs.Tab
+                    key={item.label}
+                    value={item.label}
+                    icon={<FontAwesomeIcon icon={item.icon} />}
+                  >
+                    {item.label}
+                  </Tabs.Tab>
+                ))}
+              </Tabs.List>
+            </Tabs>
           </div>
-        ))}
-      </Tabs>
+        );
+      })}
     </nav>
   );
 }

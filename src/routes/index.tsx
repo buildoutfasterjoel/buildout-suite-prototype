@@ -43,7 +43,7 @@ function Home() {
         </div>
 
         <div className="col-md-4">
-          <Link to="/properties" className="text-decoration-none">
+          <Link to="/listings" className="text-decoration-none">
             <Card className="shadow-sm h-100">
               <CardHeader>
                 <CardTitle>Property Listings</CardTitle>
