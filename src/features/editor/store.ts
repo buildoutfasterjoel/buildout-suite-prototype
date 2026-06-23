@@ -9,13 +9,14 @@ import type {
   Selection,
 } from "./types";
 import { buildSampleDocument } from "./sampleDocument";
-import { createBlock, type BlockVariant } from "./blocks/blockFactory";
+import { createBlock, createCell, type BlockVariant } from "./blocks/blockFactory";
 import {
   findBlock,
   findLocation,
   insertAt,
   isContainer,
   removeBlock as removeBlockFromDoc,
+  updateTableRows,
 } from "./tree";
 
 interface EditorState {
@@ -39,6 +40,12 @@ interface EditorState {
   addBlock: (target: DropTarget, type: Block["type"], variant?: BlockVariant) => void;
   moveBlock: (blockId: string, target: DropTarget) => void;
   removeBlock: (blockId: string) => void;
+
+  // Phase 3 actions (table row/column editing).
+  addColumn: (blockId: string, index: number) => void;
+  removeColumn: (blockId: string, index: number) => void;
+  addRow: (blockId: string, index: number) => void;
+  removeRow: (blockId: string, index: number) => void;
 }
 
 /** Resolve the page a drop target belongs to (for post-add selection). */
@@ -121,7 +128,64 @@ export const useEditorStore = create<EditorState>((set) => ({
       const clears = s.selection?.blockId === blockId;
       return { document: doc, selection: clears ? null : s.selection };
     }),
+
+  addColumn: (blockId, index) =>
+    set((s) => ({
+      document: updateTableRows(s.document, blockId, (rows) =>
+        rows.map((row) => {
+          const next = [...row];
+          // New column-0 cells inherit the existing header column's role.
+          const header = index === 0 && row[0]?.header === true;
+          next.splice(clampIndex(index, row.length), 0, createCell({ header }));
+          return next;
+        }),
+      ),
+    })),
+
+  removeColumn: (blockId, index) =>
+    set((s) => ({
+      document: updateTableRows(s.document, blockId, (rows) => {
+        if ((rows[0]?.length ?? 0) <= 1) return rows; // keep at least one column
+        return rows.map((row) => row.filter((_, ci) => ci !== index));
+      }),
+      selection: clearTableCell(s.selection, blockId),
+    })),
+
+  addRow: (blockId, index) =>
+    set((s) => ({
+      document: updateTableRows(s.document, blockId, (rows) => {
+        const cols = rows[0]?.length ?? 1;
+        // Inherit each column's header flag from the current first row.
+        const newRow = Array.from({ length: cols }, (_, ci) =>
+          createCell({ header: rows[0]?.[ci]?.header === true }),
+        );
+        const next = [...rows];
+        next.splice(clampIndex(index, rows.length), 0, newRow);
+        return next;
+      }),
+    })),
+
+  removeRow: (blockId, index) =>
+    set((s) => ({
+      document: updateTableRows(s.document, blockId, (rows) =>
+        rows.length <= 1 ? rows : rows.filter((_, ri) => ri !== index),
+      ),
+      selection: clearTableCell(s.selection, blockId),
+    })),
 }));
+
+/** Clamp an insertion index into the inclusive range [0, length]. */
+function clampIndex(index: number, length: number): number {
+  return Math.max(0, Math.min(index, length));
+}
+
+/** Drop the cell part of a selection when it points at the given table. */
+function clearTableCell(selection: Selection | null, blockId: string): Selection | null {
+  if (selection?.blockId === blockId && selection.cellId) {
+    return { pageId: selection.pageId, blockId };
+  }
+  return selection;
+}
 
 /** Resolve the current selection to its concrete page/block/cell objects. */
 export function useSelectedEntities() {

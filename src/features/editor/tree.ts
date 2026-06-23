@@ -1,5 +1,6 @@
 import type {
   Block,
+  Cell,
   ContentBlock,
   DropTarget,
   EditorDocument,
@@ -117,6 +118,27 @@ function spliceInto<T>(list: T[], index: number, item: T): T[] {
   const i = Math.max(0, Math.min(index, next.length));
   next.splice(i, 0, item);
   return next;
+}
+
+/**
+ * Rewrite the rows of a table block found anywhere in the document (top level
+ * or one level deep), returning a new document. Non-table or unmatched ids are
+ * left untouched.
+ */
+export function updateTableRows(
+  doc: EditorDocument,
+  blockId: string,
+  fn: (rows: Cell[][]) => Cell[][],
+): EditorDocument {
+  const update = (block: Block): Block =>
+    block.id === blockId && block.type === "table"
+      ? { ...block, rows: fn(block.rows) }
+      : block;
+
+  const pages = doc.pages.map((page) =>
+    mapPageBlockLists(page, (list) => list.map(update)),
+  );
+  return { ...doc, pages };
 }
 
 /** Insert a block at the given drop target, returning a new document. */

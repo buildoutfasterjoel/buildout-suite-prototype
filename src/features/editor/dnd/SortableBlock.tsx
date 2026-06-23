@@ -4,7 +4,9 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGripDotsVertical, faTrashCan } from "@fortawesome/pro-regular-svg-icons";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { useEditorStore } from "../store";
+import type { Block } from "../types";
 import { listDroppableId, type DragOverData, type ListLocation } from "./dndTypes";
 
 /**
@@ -15,6 +17,7 @@ import { listDroppableId, type DragOverData, type ListLocation } from "./dndType
 export function SortableBlock({
   blockId,
   label,
+  blockType,
   list,
   index,
   selected,
@@ -22,6 +25,7 @@ export function SortableBlock({
 }: {
   blockId: string;
   label: string;
+  blockType: Block["type"];
   list: ListLocation;
   index: number;
   selected: boolean;
@@ -71,17 +75,24 @@ export function SortableBlock({
       </button>
 
       {selected && (
-        <button
-          type="button"
-          className="bo-editor-block-delete"
-          aria-label="Delete block"
-          onClick={(e) => {
-            e.stopPropagation();
-            removeBlock(blockId);
-          }}
-        >
-          <FontAwesomeIcon icon={faTrashCan} />
-        </button>
+        <Tooltip>
+          <Tooltip.Trigger
+            render={
+              <button
+                type="button"
+                className="bo-editor-block-delete"
+                aria-label={`Delete ${blockType}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeBlock(blockId);
+                }}
+              >
+                <FontAwesomeIcon icon={faTrashCan} />
+              </button>
+            }
+          />
+          <Tooltip.Content>Delete {blockType}</Tooltip.Content>
+        </Tooltip>
       )}
 
       {children}

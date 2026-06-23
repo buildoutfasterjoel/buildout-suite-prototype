@@ -46,6 +46,18 @@ function cell(value: string, header: boolean): Cell {
   };
 }
 
+/** A fresh, empty table cell — used when inserting new rows/columns. */
+export function createCell(opts?: { header?: boolean }): Cell {
+  const header = opts?.header ?? false;
+  return {
+    id: uid("cell"),
+    value: "",
+    header,
+    align: header ? "left" : "right",
+    style: { ...DEFAULT_CELL_STYLE },
+  };
+}
+
 /** A palette variant — currently only used to pick a Columns count. */
 export interface BlockVariant {
   columnCount?: 2 | 3;
