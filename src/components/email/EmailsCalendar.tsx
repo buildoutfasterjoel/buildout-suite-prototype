@@ -120,6 +120,7 @@ export function EmailsCalendar({ emails, month }: Props) {
   const year = month.getFullYear();
   const mon = month.getMonth();
 
+  const today = isoDate(new Date());
   const allDays = weeks.flat();
 
   return (
@@ -137,6 +138,7 @@ export function EmailsCalendar({ emails, month }: Props) {
         {
           const isCurrentMonth = day.getMonth() === mon;
           const iso = isoDate(day);
+          const isToday = iso === today;
           const dayEmails = emailsByDate.get(iso) ?? [];
           const visible = dayEmails.slice(0, 2);
           const overflow = dayEmails.length - visible.length;
@@ -145,7 +147,7 @@ export function EmailsCalendar({ emails, month }: Props) {
           return (
             <div
               key={idx}
-              className="border rounded overflow-hidden d-flex flex-column"
+              className={`border rounded overflow-hidden d-flex flex-column${isToday ? " bg-accent bg-opacity-10" : ""}`}
               style={{ height: 110 }}
             >
               {/* Day header */}
