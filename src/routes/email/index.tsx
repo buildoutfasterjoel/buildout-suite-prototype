@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { ButtonGroup } from "@buildoutinc/blueprint-react/ui/ButtonGroup";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { Popover } from "@buildoutinc/blueprint-react/ui/Popover";
 import { Progress } from "@buildoutinc/blueprint-react/ui/Progress";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
@@ -19,6 +21,10 @@ import {
   faCaretDown,
   faCircleInfo,
   faMagnifyingGlass,
+  faTableList,
+  faCalendar,
+  faChevronLeft,
+  faChevronRight,
 } from "@fortawesome/pro-regular-svg-icons";
 import {
   getEmails,
@@ -31,6 +37,7 @@ import {
 } from "#/data/emails";
 import { EmailPerformanceStats } from "#/components/email/EmailPerformanceStats";
 import { EmailsTable } from "#/components/email/EmailsTable";
+import { EmailsCalendar } from "#/components/email/EmailsCalendar";
 
 export const Route = createFileRoute("/email/")({
   component: EmailsPage,
@@ -41,6 +48,18 @@ export const Route = createFileRoute("/email/")({
 
 const ALL = "all";
 const PAGE_SIZE = 10;
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function prevMonth(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth() - 1, 1);
+}
+function nextMonth(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth() + 1, 1);
+}
 
 /** Value→label maps so each Select trigger shows the label, not the raw value. */
 const STATUS_FILTER_LABELS: Record<string, string> = {
@@ -101,6 +120,8 @@ function EmailsPage() {
   const [broker, setBroker] = useState(ALL);
   const [list, setList] = useState(ALL);
   const [page, setPage] = useState(1);
+  const [viewMode, setViewMode] = useState<"table" | "calendar">("table");
+  const [calMonth, setCalMonth] = useState(() => new Date(2026, 5, 1));
 
   const filtersActive =
     search.trim() !== "" ||
@@ -329,53 +350,119 @@ function EmailsPage() {
                     ))}
                   </Select.Content>
                 </Select>
+
+                {/* Month picker + view toggle (right-aligned) */}
+                <div className="d-flex align-items-center gap-2 ms-auto">
+                  {viewMode === "calendar" && (
+                    <div className="d-flex align-items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Previous month"
+                        onClick={() => setCalMonth(prevMonth(calMonth))}
+                      >
+                        <FontAwesomeIcon icon={faChevronLeft} />
+                      </Button>
+                      <span className="fw-semibold px-1" style={{ minWidth: 110, textAlign: "center" }}>
+                        {MONTH_NAMES[calMonth.getMonth()]} {calMonth.getFullYear()}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Next month"
+                        onClick={() => setCalMonth(nextMonth(calMonth))}
+                      >
+                        <FontAwesomeIcon icon={faChevronRight} />
+                      </Button>
+                    </div>
+                  )}
+                  <ButtonGroup aria-label="View switcher">
+                    <Tooltip>
+                      <Tooltip.Trigger
+                        render={
+                          <Button
+                            variant={viewMode === "table" ? "primary" : "outline"}
+                            size="icon"
+                            onClick={() => setViewMode("table")}
+                            aria-pressed={viewMode === "table"}
+                            aria-label="Table view"
+                          >
+                            <FontAwesomeIcon icon={faTableList} />
+                          </Button>
+                        }
+                      />
+                      <Tooltip.Content>Table</Tooltip.Content>
+                    </Tooltip>
+                    <Tooltip>
+                      <Tooltip.Trigger
+                        render={
+                          <Button
+                            variant={viewMode === "calendar" ? "primary" : "outline"}
+                            size="icon"
+                            onClick={() => setViewMode("calendar")}
+                            aria-pressed={viewMode === "calendar"}
+                            aria-label="Calendar view"
+                          >
+                            <FontAwesomeIcon icon={faCalendar} />
+                          </Button>
+                        }
+                      />
+                      <Tooltip.Content>Calendar</Tooltip.Content>
+                    </Tooltip>
+                  </ButtonGroup>
+                </div>
               </div>
 
-              {/* Table */}
-              <EmailsTable emails={paged} filtersActive={filtersActive} />
+              {/* Table or Calendar */}
+              {viewMode === "table" ? (
+                <>
+                  <EmailsTable emails={paged} filtersActive={filtersActive} />
 
-              {/* Pagination */}
-              {filtered.length > 0 && (
-                <Pagination className="d-flex justify-content-center">
-                  <Pagination.Content>
-                    <Pagination.Item>
-                      <Pagination.Previous
-                        href="#"
-                        aria-disabled={current === 1}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setPage((p) => Math.max(1, p - 1));
-                        }}
-                      />
-                    </Pagination.Item>
-                    {Array.from({ length: pageCount }, (_, i) => i + 1).map(
-                      (n) => (
-                        <Pagination.Item key={n}>
-                          <Pagination.Link
+                  {filtered.length > 0 && (
+                    <Pagination className="d-flex justify-content-center">
+                      <Pagination.Content>
+                        <Pagination.Item>
+                          <Pagination.Previous
                             href="#"
-                            isActive={n === current}
+                            aria-disabled={current === 1}
                             onClick={(e) => {
                               e.preventDefault();
-                              setPage(n);
+                              setPage((p) => Math.max(1, p - 1));
                             }}
-                          >
-                            {n}
-                          </Pagination.Link>
+                          />
                         </Pagination.Item>
-                      ),
-                    )}
-                    <Pagination.Item>
-                      <Pagination.Next
-                        href="#"
-                        aria-disabled={current === pageCount}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setPage((p) => Math.min(pageCount, p + 1));
-                        }}
-                      />
-                    </Pagination.Item>
-                  </Pagination.Content>
-                </Pagination>
+                        {Array.from({ length: pageCount }, (_, i) => i + 1).map(
+                          (n) => (
+                            <Pagination.Item key={n}>
+                              <Pagination.Link
+                                href="#"
+                                isActive={n === current}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setPage(n);
+                                }}
+                              >
+                                {n}
+                              </Pagination.Link>
+                            </Pagination.Item>
+                          ),
+                        )}
+                        <Pagination.Item>
+                          <Pagination.Next
+                            href="#"
+                            aria-disabled={current === pageCount}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setPage((p) => Math.min(pageCount, p + 1));
+                            }}
+                          />
+                        </Pagination.Item>
+                      </Pagination.Content>
+                    </Pagination>
+                  )}
+                </>
+              ) : (
+                <EmailsCalendar emails={filtered} month={calMonth} />
               )}
             </div>
           </Card.Body>

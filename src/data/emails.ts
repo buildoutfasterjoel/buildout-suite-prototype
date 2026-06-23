@@ -29,6 +29,8 @@ export interface Email {
   lastEditedAt: string;
   lastEditedBy: string;
   archived: boolean;
+  /** ISO YYYY-MM-DD — when this email lives on the calendar (sent date, scheduled send date, or created date). */
+  calendarDate: string;
 }
 
 const STATUSES: EmailStatus[] = ["draft", "sent", "scheduled"];
@@ -103,6 +105,12 @@ function fmtDate(d: Date): string {
   return `${d.getMonth() + 1}/${d.getDate()}/${yy}`;
 }
 
+function isoDate(d: Date): string {
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
 /** One day's worth of engagement counts for the performance chart. */
 export interface EmailDayMetric {
   date: string; // "MM-DD-YYYY"
@@ -137,6 +145,9 @@ export function getEmails(): Email[] {
 
   const base = new Date(2026, 2, 22, 9, 15); // 3/22/26 9:15am
 
+  // Calendar anchor: June 23, 2026 (today in the prototype)
+  const calAnchor = new Date(2026, 5, 23);
+
   _emails = Array.from({ length: EMAIL_COUNT }, (_, i) => {
     const id = `email-${i + 1}`;
     const h = hash(id);
@@ -148,9 +159,21 @@ export function getEmails(): Email[] {
     const edited = new Date(created);
     edited.setDate(edited.getDate() + ((h >>> 2) % 5));
 
+    const status = STATUSES[h % STATUSES.length];
+
+    // calendarDate: scheduled → future ±30 days; sent → past 60 days; draft → past 90 days
+    const calDate = new Date(calAnchor);
+    if (status === "scheduled") {
+      calDate.setDate(calDate.getDate() + 1 + (h % 30));
+    } else if (status === "sent") {
+      calDate.setDate(calDate.getDate() - (h % 60));
+    } else {
+      calDate.setDate(calDate.getDate() - (h % 90));
+    }
+
     return {
       id,
-      status: STATUSES[h % STATUSES.length],
+      status,
       campaign: `${10000 + (h % 90000)} ${CAMPAIGN_WORDS[(h >>> 1) % CAMPAIGN_WORDS.length]}`,
       subject: SUBJECTS[(h >>> 2) % SUBJECTS.length],
       type: PROPERTY_TYPES[(h >>> 3) % PROPERTY_TYPES.length],
@@ -160,6 +183,7 @@ export function getEmails(): Email[] {
       lastEditedAt: fmtDate(edited),
       lastEditedBy: EDITORS[(h >>> 5) % EDITORS.length],
       archived: h % 4 === 0,
+      calendarDate: isoDate(calDate),
     };
   });
 
