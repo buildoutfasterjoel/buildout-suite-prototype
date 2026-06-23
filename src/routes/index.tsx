@@ -61,6 +61,21 @@ function Home() {
         </div>
 
         <div className="col-md-4">
+          <Link to="/email" className="text-decoration-none">
+            <Card className="shadow-sm h-100">
+              <CardHeader>
+                <CardTitle>Email Campaigns</CardTitle>
+              </CardHeader>
+              <CardBody>
+                Email campaign landing page with performance stats, Active /
+                Archived tabs, searchable and filterable message list, and
+                pagination.
+              </CardBody>
+            </Card>
+          </Link>
+        </div>
+
+        <div className="col-md-4">
           <Link
             to="/editor/$listingId"
             params={{ listingId: sampleListingId }}

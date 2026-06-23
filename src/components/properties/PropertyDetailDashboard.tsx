@@ -77,7 +77,7 @@ export function PropertyDetailDashboard({ property }: { property: Property }) {
       <div className="d-flex align-items-center gap-3">
         <h2 className="fs-4 mb-0 flex-grow-1">Dashboard</h2>
         <Button variant="outline">
-          <FontAwesomeIcon icon={faDownload} className="me-2" />
+          <FontAwesomeIcon icon={faDownload} />
           Download PDF
         </Button>
       </div>

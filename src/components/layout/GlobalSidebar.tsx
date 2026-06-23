@@ -9,7 +9,6 @@ import {
   faUsers,
   faHandshake,
   faSignal,
-  faMagnifyingGlass,
   faBell,
   faUserGear,
   faCirclePlus,
@@ -66,7 +65,7 @@ const navContexts: NavContext[] = [
       { label: "Companies", href: "#" },
       { label: "Lists", href: "#" },
       { label: "Sequences", href: "#" },
-      { label: "Campaigns", href: "/email/messages" },
+      { label: "Campaigns", href: "/email" },
     ],
   },
   {

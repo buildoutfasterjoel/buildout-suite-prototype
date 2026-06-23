@@ -50,7 +50,7 @@ export function PropertyDetailHeader({ property }: { property: Property }) {
             <div className="text-muted text-truncate">{address}</div>
             <div className="d-flex align-items-center gap-2 mt-2">
               <Badge variant="secondary" appearance="muted">
-                <FontAwesomeIcon icon={faSignHanging} className="me-1" />
+                <FontAwesomeIcon icon={faSignHanging} />
                 {STATUS_LABELS[property.status]}
               </Badge>
               <Badge variant="secondary" appearance="muted">
@@ -66,7 +66,7 @@ export function PropertyDetailHeader({ property }: { property: Property }) {
               <FontAwesomeIcon icon={faUserGear} />
             </Button>
             <Button variant="primary">
-              <FontAwesomeIcon icon={faPencil} className="me-2" />
+              <FontAwesomeIcon icon={faPencil} />
               Edit Listing
             </Button>
             <Button variant="ghost" size="icon" aria-label="More options">

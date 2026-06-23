@@ -40,6 +40,12 @@
   position: relative;
 }
 
+// Email campaign tabs: keep badge inline with the label text
+.email-campaign-tabs .nav-link-text {
+  flex-direction: row;
+  align-items: center;
+}
+
 @media (min-width: 992px) {
   .app-shell > .sidebar {
     position: absolute;

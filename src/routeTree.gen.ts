@@ -12,13 +12,16 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SuiteRouteImport } from './routes/suite'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ListingsRouteImport } from './routes/listings'
+import { Route as EmailRouteImport } from './routes/email'
 import { Route as EditorRouteImport } from './routes/editor'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SuiteIndexRouteImport } from './routes/suite/index'
 import { Route as ListingsIndexRouteImport } from './routes/listings/index'
+import { Route as EmailIndexRouteImport } from './routes/email/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as ListingsListingIdRouteImport } from './routes/listings/$listingId'
+import { Route as EmailEmailIdRouteImport } from './routes/email/$emailId'
 import { Route as EditorListingIdRouteImport } from './routes/editor/$listingId'
 import { Route as ListingsListingIdIndexRouteImport } from './routes/listings/$listingId/index'
 import { Route as ListingsListingIdLeadsRouteImport } from './routes/listings/$listingId/leads'
@@ -37,6 +40,11 @@ const LoginRoute = LoginRouteImport.update({
 const ListingsRoute = ListingsRouteImport.update({
   id: '/listings',
   path: '/listings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmailRoute = EmailRouteImport.update({
+  id: '/email',
+  path: '/email',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EditorRoute = EditorRouteImport.update({
@@ -64,6 +72,11 @@ const ListingsIndexRoute = ListingsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ListingsRoute,
 } as any)
+const EmailIndexRoute = EmailIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => EmailRoute,
+} as any)
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -73,6 +86,11 @@ const ListingsListingIdRoute = ListingsListingIdRouteImport.update({
   id: '/$listingId',
   path: '/$listingId',
   getParentRoute: () => ListingsRoute,
+} as any)
+const EmailEmailIdRoute = EmailEmailIdRouteImport.update({
+  id: '/$emailId',
+  path: '/$emailId',
+  getParentRoute: () => EmailRoute,
 } as any)
 const EditorListingIdRoute = EditorListingIdRouteImport.update({
   id: '/$listingId',
@@ -100,12 +118,15 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/editor': typeof EditorRouteWithChildren
+  '/email': typeof EmailRouteWithChildren
   '/listings': typeof ListingsRouteWithChildren
   '/login': typeof LoginRoute
   '/suite': typeof SuiteRouteWithChildren
   '/editor/$listingId': typeof EditorListingIdRoute
+  '/email/$emailId': typeof EmailEmailIdRoute
   '/listings/$listingId': typeof ListingsListingIdRouteWithChildren
   '/app/': typeof AppIndexRoute
+  '/email/': typeof EmailIndexRoute
   '/listings/': typeof ListingsIndexRoute
   '/suite/': typeof SuiteIndexRoute
   '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
@@ -117,7 +138,9 @@ export interface FileRoutesByTo {
   '/editor': typeof EditorRouteWithChildren
   '/login': typeof LoginRoute
   '/editor/$listingId': typeof EditorListingIdRoute
+  '/email/$emailId': typeof EmailEmailIdRoute
   '/app': typeof AppIndexRoute
+  '/email': typeof EmailIndexRoute
   '/listings': typeof ListingsIndexRoute
   '/suite': typeof SuiteIndexRoute
   '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
@@ -129,12 +152,15 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/editor': typeof EditorRouteWithChildren
+  '/email': typeof EmailRouteWithChildren
   '/listings': typeof ListingsRouteWithChildren
   '/login': typeof LoginRoute
   '/suite': typeof SuiteRouteWithChildren
   '/editor/$listingId': typeof EditorListingIdRoute
+  '/email/$emailId': typeof EmailEmailIdRoute
   '/listings/$listingId': typeof ListingsListingIdRouteWithChildren
   '/app/': typeof AppIndexRoute
+  '/email/': typeof EmailIndexRoute
   '/listings/': typeof ListingsIndexRoute
   '/suite/': typeof SuiteIndexRoute
   '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
@@ -147,12 +173,15 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/editor'
+    | '/email'
     | '/listings'
     | '/login'
     | '/suite'
     | '/editor/$listingId'
+    | '/email/$emailId'
     | '/listings/$listingId'
     | '/app/'
+    | '/email/'
     | '/listings/'
     | '/suite/'
     | '/listings/$listingId/documents'
@@ -164,7 +193,9 @@ export interface FileRouteTypes {
     | '/editor'
     | '/login'
     | '/editor/$listingId'
+    | '/email/$emailId'
     | '/app'
+    | '/email'
     | '/listings'
     | '/suite'
     | '/listings/$listingId/documents'
@@ -175,12 +206,15 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/editor'
+    | '/email'
     | '/listings'
     | '/login'
     | '/suite'
     | '/editor/$listingId'
+    | '/email/$emailId'
     | '/listings/$listingId'
     | '/app/'
+    | '/email/'
     | '/listings/'
     | '/suite/'
     | '/listings/$listingId/documents'
@@ -192,6 +226,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   EditorRoute: typeof EditorRouteWithChildren
+  EmailRoute: typeof EmailRouteWithChildren
   ListingsRoute: typeof ListingsRouteWithChildren
   LoginRoute: typeof LoginRoute
   SuiteRoute: typeof SuiteRouteWithChildren
@@ -218,6 +253,13 @@ declare module '@tanstack/react-router' {
       path: '/listings'
       fullPath: '/listings'
       preLoaderRoute: typeof ListingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/email': {
+      id: '/email'
+      path: '/email'
+      fullPath: '/email'
+      preLoaderRoute: typeof EmailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/editor': {
@@ -255,6 +297,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ListingsIndexRouteImport
       parentRoute: typeof ListingsRoute
     }
+    '/email/': {
+      id: '/email/'
+      path: '/'
+      fullPath: '/email/'
+      preLoaderRoute: typeof EmailIndexRouteImport
+      parentRoute: typeof EmailRoute
+    }
     '/app/': {
       id: '/app/'
       path: '/'
@@ -268,6 +317,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/listings/$listingId'
       preLoaderRoute: typeof ListingsListingIdRouteImport
       parentRoute: typeof ListingsRoute
+    }
+    '/email/$emailId': {
+      id: '/email/$emailId'
+      path: '/$emailId'
+      fullPath: '/email/$emailId'
+      preLoaderRoute: typeof EmailEmailIdRouteImport
+      parentRoute: typeof EmailRoute
     }
     '/editor/$listingId': {
       id: '/editor/$listingId'
@@ -321,6 +377,18 @@ const EditorRouteChildren: EditorRouteChildren = {
 const EditorRouteWithChildren =
   EditorRoute._addFileChildren(EditorRouteChildren)
 
+interface EmailRouteChildren {
+  EmailEmailIdRoute: typeof EmailEmailIdRoute
+  EmailIndexRoute: typeof EmailIndexRoute
+}
+
+const EmailRouteChildren: EmailRouteChildren = {
+  EmailEmailIdRoute: EmailEmailIdRoute,
+  EmailIndexRoute: EmailIndexRoute,
+}
+
+const EmailRouteWithChildren = EmailRoute._addFileChildren(EmailRouteChildren)
+
 interface ListingsListingIdRouteChildren {
   ListingsListingIdDocumentsRoute: typeof ListingsListingIdDocumentsRoute
   ListingsListingIdLeadsRoute: typeof ListingsListingIdLeadsRoute
@@ -364,6 +432,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   EditorRoute: EditorRouteWithChildren,
+  EmailRoute: EmailRouteWithChildren,
   ListingsRoute: ListingsRouteWithChildren,
   LoginRoute: LoginRoute,
   SuiteRoute: SuiteRouteWithChildren,

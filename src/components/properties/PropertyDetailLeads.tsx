@@ -176,7 +176,7 @@ export function PropertyDetailLeads({ property }: { property: Property }) {
           </DropdownMenu.Content>
         </DropdownMenu>
         <Button variant="primary">
-          <FontAwesomeIcon icon={faPlus} className="me-2" />
+          <FontAwesomeIcon icon={faPlus} />
           Add Lead
         </Button>
       </div>
@@ -211,7 +211,7 @@ export function PropertyDetailLeads({ property }: { property: Property }) {
           </Select>
         ))}
         <Button variant="outline">
-          <FontAwesomeIcon icon={faSliders} className="me-2" />
+          <FontAwesomeIcon icon={faSliders} />
           All Filters
         </Button>
       </div>
@@ -322,7 +322,7 @@ export function PropertyDetailLeads({ property }: { property: Property }) {
                     </Badge>
                   ) : (
                     <Badge variant="secondary" appearance="muted">
-                      <FontAwesomeIcon icon={faCircleXmark} className="me-1" />
+                      <FontAwesomeIcon icon={faCircleXmark} />
                       Not Verified
                     </Badge>
                   )}
