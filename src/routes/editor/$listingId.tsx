@@ -9,18 +9,20 @@ import { EditorRoot } from "#/features/editor/EditorRoot";
 export const Route = createFileRoute("/editor/$listingId")({
   component: DocumentEditor,
   head: ({ params }) => {
-    const property = getStore().properties.get(params.listingId);
+    const listing = getStore().listings.get(params.listingId);
     return {
-      meta: [{ title: `Editing — ${property?.name ?? "Document"} | Buildout` }],
+      meta: [{ title: `Editing — ${listing?.name ?? "Document"} | Buildout` }],
     };
   },
 });
 
 function DocumentEditor() {
   const { listingId } = Route.useParams();
-  const listing = getStore().properties.get(listingId);
+  const store = getStore();
+  const listing = store.listings.get(listingId);
+  const property = listing && store.properties.get(listing.propertyId);
 
-  if (!listing) {
+  if (!listing || !property) {
     return (
       <div className="container py-8 d-flex justify-content-center">
         <Empty>
@@ -32,7 +34,7 @@ function DocumentEditor() {
             We couldn&apos;t find a listing to build a document for.
           </Empty.Content>
           <Empty.Actions>
-            <Button variant="primary" render={<Link to="/listings" />}>
+            <Button variant="primary" nativeButton={false} render={<Link to="/listings" />}>
               Back to Listings
             </Button>
           </Empty.Actions>
@@ -41,5 +43,5 @@ function DocumentEditor() {
     );
   }
 
-  return <EditorRoot listing={listing} listingId={listingId} />;
+  return <EditorRoot listing={property} listingId={listingId} />;
 }

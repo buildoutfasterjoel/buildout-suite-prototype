@@ -8,9 +8,9 @@ export const Route = createFileRoute("/listings/$listingId/documents")({
 
 function DocumentsRoute() {
   const { listingId } = Route.useParams();
-  const property = getStore().properties.get(listingId);
+  const listing = getStore().listings.get(listingId);
 
-  if (!property) return null;
+  if (!listing) return null;
 
-  return <PropertyDetailDocuments property={property} />;
+  return <PropertyDetailDocuments listingId={listingId} />;
 }

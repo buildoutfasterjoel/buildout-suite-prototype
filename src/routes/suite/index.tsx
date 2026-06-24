@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardBody } from "@buildoutinc/blueprint-react/ui/Card";
 import { PipelineStepper } from "#/components/pipeline/PipelineStepper";
 import { SubStagePanel } from "#/components/pipeline/SubStagePanel";
@@ -10,6 +10,7 @@ import {
   formatValue,
 } from "#/components/pipeline/pipelineData";
 import { ACTION_ITEMS } from "#/components/pipeline/actionItemsData";
+import { getStore } from "#/data/store";
 
 export const Route = createFileRoute("/suite/")({
   component: SuiteDashboard,
@@ -46,6 +47,16 @@ function StatCard({
 function SuiteDashboard() {
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
 
+  // Each pipeline card opens a real seeded listing (which is its deal, 1:1) so the
+  // pipeline and the listing workspace share one place. Pipeline stages are untouched.
+  const dealsWithLinks = useMemo(() => {
+    const listingIds = [...getStore().listings.keys()];
+    return MOCK_DEALS.map((d, i) => ({
+      ...d,
+      listingId: listingIds.length ? listingIds[i % listingIds.length] : undefined,
+    }));
+  }, []);
+
   // Track the active sub-stage per stage independently
   const [subStageSelections, setSubStageSelections] = useState<
     Record<string, string>
@@ -56,7 +67,8 @@ function SuiteDashboard() {
   const totalDeals = PIPELINE_STAGES.reduce((sum, s) => sum + s.dealCount, 0);
   const totalValue = PIPELINE_STAGES.reduce((sum, s) => sum + s.totalValue, 0);
   const avgDays = Math.round(
-    MOCK_DEALS.reduce((sum, d) => sum + d.daysInStage, 0) / MOCK_DEALS.length,
+    dealsWithLinks.reduce((sum, d) => sum + d.daysInStage, 0) /
+      dealsWithLinks.length,
   );
   const activeListings =
     PIPELINE_STAGES.find((s) => s.id === "listing-mktg")?.dealCount ?? 0;
@@ -72,7 +84,7 @@ function SuiteDashboard() {
   }
 
   function dealsForStage(stageId: string) {
-    return MOCK_DEALS.filter((d) => d.stageId === stageId);
+    return dealsWithLinks.filter((d) => d.stageId === stageId);
   }
 
   const stagesToShow = selectedStageId

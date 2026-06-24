@@ -4,15 +4,15 @@ import {
   EmptyTitle,
   EmptyContent,
 } from "@buildoutinc/blueprint-react/ui/Empty";
-import type { Property } from "#/data/types";
+import type { Listing } from "#/data/types";
 import { PropertyCard } from "./PropertyCard";
 
-export function PropertyGrid({ properties }: { properties: Property[] }) {
-  if (properties.length === 0) {
+export function PropertyGrid({ listings }: { listings: Listing[] }) {
+  if (listings.length === 0) {
     return (
       <div className="d-flex align-items-center justify-content-center h-100 p-8">
         <Empty>
-          <EmptyTitle>No properties match your filters</EmptyTitle>
+          <EmptyTitle>No listings match your filters</EmptyTitle>
           <EmptyContent>
             Try clearing the search or adjusting the type, city, or status
             filters.
@@ -25,14 +25,14 @@ export function PropertyGrid({ properties }: { properties: Property[] }) {
   return (
     <div>
       <div className="row g-3">
-        {properties.map((property) => (
-          <div key={property.id} className="col-md-6 col-lg-4 col-xl-3">
+        {listings.map((listing) => (
+          <div key={listing.id} className="col-md-6 col-lg-4 col-xl-3">
             <Link
               to="/listings/$listingId"
-              params={{ listingId: property.id }}
+              params={{ listingId: listing.id }}
               className="text-decoration-none text-reset d-block h-100"
             >
-              <PropertyCard property={property} />
+              <PropertyCard listing={listing} />
             </Link>
           </div>
         ))}

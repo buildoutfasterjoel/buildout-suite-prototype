@@ -29,6 +29,12 @@ export interface MockDeal {
   daysInStage: number
   subStageId: string
   stageId: string
+  /**
+   * Id of a real seeded Listing this pipeline card opens. Assigned at render time so
+   * clicking a pipeline deal lands on the unified listing workspace (a listing is its
+   * deal, 1:1). The pipeline's own stage placement is independent and untouched.
+   */
+  listingId?: string
 }
 
 export const PIPELINE_STAGES: PipelineStage[] = [

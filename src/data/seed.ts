@@ -1,6 +1,12 @@
 import { faker } from '@faker-js/faker'
 import type {
   Property,
+  Listing,
+  ListingStage,
+  DealBroker,
+  DealHistoryEntry,
+  DealTask,
+  DealType,
   Comp,
   Contact,
   PropertyType,
@@ -14,6 +20,37 @@ import type {
 const SEED = 20240101
 const PROPERTY_COUNT = 50
 const CONTACT_COUNT = 80
+
+/** Human label per property type — kept local so the seed stays display-layer free. */
+const TYPE_LABEL: Record<PropertyType, string> = {
+  office: 'Office',
+  retail: 'Retail',
+  industrial: 'Industrial',
+  multifamily: 'Multifamily',
+  'mixed-use': 'Mixed-Use',
+  land: 'Land',
+  hospitality: 'Hospitality',
+  'special-purpose': 'Special Purpose',
+}
+
+// Unified listing + deal lifecycle. Weighted toward the active middle.
+const STAGE_WEIGHTS = [
+  { weight: 12, value: 'proposal' as const },
+  { weight: 40, value: 'active' as const },
+  { weight: 22, value: 'under-contract' as const },
+  { weight: 16, value: 'closed' as const },
+  { weight: 10, value: 'inactive' as const },
+]
+
+const SPACE_LABELS = [
+  'Suite 100',
+  'Suite 200',
+  'Suite 300',
+  'Ground Floor Retail',
+  'Pad A',
+  'Pad B',
+  'Mezzanine',
+]
 
 // ── Market lookup tables ──────────────────────────────────────────────────────
 
@@ -388,13 +425,7 @@ function generateProperty(): Property {
     id,
     name: baseName,
     slug,
-    status: faker.helpers.weightedArrayElement([
-      { weight: 60, value: 'active' as const },
-      { weight: 15, value: 'under-contract' as const },
-      { weight: 10, value: 'sold' as const },
-      { weight: 10, value: 'off-market' as const },
-      { weight: 5, value: 'coming-soon' as const },
-    ]),
+    status: faker.helpers.weightedArrayElement(STAGE_WEIGHTS),
 
     propertyType,
     propertySubtype: faker.helpers.arrayElement(config.subtypes),
@@ -555,6 +586,213 @@ function generateContact(allPropertyIds: string[]): Contact {
   }
 }
 
+// ── Listing (+ its 1:1 deal) generator ────────────────────────────────────────
+
+function pickDealType(): DealType {
+  return faker.helpers.weightedArrayElement([
+    { weight: 55, value: 'Sale' as const },
+    { weight: 30, value: 'Lease' as const },
+    { weight: 15, value: 'Sale / Lease' as const },
+  ])
+}
+
+const STAGE_CLOSE_PROBABILITY: Record<ListingStage, [number, number]> = {
+  proposal: [5, 20],
+  active: [25, 55],
+  'under-contract': [65, 90],
+  closed: [100, 100],
+  inactive: [0, 15],
+}
+
+function generateBroker(side: 'internal' | 'outside', commissionAmount: number): DealBroker {
+  const splitPct = side === 'internal' ? 100 : faker.helpers.arrayElement([40, 50, 60])
+  return {
+    id: faker.string.uuid(),
+    name: `${faker.person.firstName()} ${faker.person.lastName()}`,
+    role: side === 'internal' ? 'Primary Broker - Sell Side' : 'Outside Broker',
+    email: faker.internet.email().toLowerCase(),
+    side,
+    commissionSplitPct: splitPct,
+    grossCommission: Math.round(commissionAmount * (splitPct / 100)),
+  }
+}
+
+function generateTasks(stage: ListingStage): DealTask[] {
+  const initials = ['OW', 'MT', 'KN', 'SP', 'JR']
+  const base: DealTask[] = [
+    {
+      id: faker.string.uuid(),
+      label: 'Create Proposal',
+      date: faker.date.past({ years: 1 }).toISOString().slice(0, 10),
+      relativeDue: null,
+      assigneeInitials: faker.helpers.arrayElement(initials),
+      status: stage === 'proposal' ? 'overdue' : 'complete',
+      hasAttachment: faker.datatype.boolean({ probability: 0.3 }),
+    },
+    {
+      id: faker.string.uuid(),
+      label: 'Upload Listing Agreement',
+      date: null,
+      relativeDue: '5 days after Listing Executed',
+      assigneeInitials: faker.helpers.arrayElement(initials),
+      status: 'open',
+      hasAttachment: false,
+    },
+  ]
+  if (faker.datatype.boolean({ probability: 0.5 })) {
+    base.push({
+      id: faker.string.uuid(),
+      label: faker.helpers.arrayElement(['Schedule property tour', 'Send marketing package', 'Review LOI', 'Confirm due diligence dates']),
+      date: faker.date.soon({ days: 30 }).toISOString().slice(0, 10),
+      relativeDue: null,
+      assigneeInitials: faker.helpers.arrayElement(initials),
+      status: 'open',
+      hasAttachment: false,
+    })
+  }
+  return base
+}
+
+/**
+ * A property contains 1–3 listings (spaces). Each listing IS its deal (1:1), so it
+ * carries the deal's transaction, brokers, contacts, planner, history, and voucher.
+ */
+function generateListings(
+  property: Property,
+  contacts: Contact[],
+  dealIdRef: { n: number },
+): Listing[] {
+  const count = faker.helpers.weightedArrayElement([
+    { weight: 60, value: 1 },
+    { weight: 28, value: 2 },
+    { weight: 12, value: 3 },
+  ])
+  const spaceLabels = faker.helpers.arrayElements(SPACE_LABELS, count)
+  const basePricePerSqFt = property.buildingSqFt > 0 ? property.askingPrice / property.buildingSqFt : 0
+
+  return Array.from({ length: count }, (_, i): Listing => {
+    const id = faker.string.uuid()
+    const dealId = String(dealIdRef.n++)
+    const availableSqFt = count === 1
+      ? property.buildingSqFt
+      : Math.max(500, Math.round((property.buildingSqFt / count) * faker.number.float({ min: 0.7, max: 1.2, fractionDigits: 2 })))
+    const dealType = pickDealType()
+    const name = count === 1 ? property.name : `${property.name} — ${spaceLabels[i]}`
+    const status: ListingStage = i === 0
+      ? property.status
+      : faker.helpers.weightedArrayElement(STAGE_WEIGHTS)
+
+    // Transaction
+    const salePrice = round(availableSqFt * basePricePerSqFt)
+    const pricePerSqFt = availableSqFt > 0 ? Math.round((salePrice / availableSqFt) * 100) / 100 : 0
+    const commissionPct = faker.number.float({ min: 2, max: 4, fractionDigits: 1 })
+    const commissionAmount = Math.round(salePrice * (commissionPct / 100))
+    const [pMin, pMax] = STAGE_CLOSE_PROBABILITY[status]
+
+    const internalBrokers = [generateBroker('internal', commissionAmount)]
+    const outsideBrokers = faker.datatype.boolean({ probability: 0.4 })
+      ? [generateBroker('outside', commissionAmount)]
+      : []
+
+    const sellerContacts = faker.helpers.arrayElements(contacts, faker.number.int({ min: 1, max: 2 }))
+    const buyerContacts = status === 'proposal' ? [] : faker.helpers.arrayElements(contacts, 1)
+    const sellerName = `${sellerContacts[0].firstName} ${sellerContacts[0].lastName}`
+
+    const tasks = generateTasks(status)
+    const nextTask = tasks.find((t) => t.status !== 'complete' && t.date)
+    const messages = Array.from(
+      { length: faker.number.int({ min: 0, max: 2 }) },
+      () => ({
+        id: faker.string.uuid(),
+        author: `${faker.person.firstName()} ${faker.person.lastName()}`,
+        text: faker.lorem.sentence(),
+        timestamp: faker.date.recent({ days: 30 }).toISOString(),
+      }),
+    )
+
+    const createdAt = property.createdAt
+    const history: DealHistoryEntry[] = [
+      {
+        id: faker.string.uuid(),
+        label: 'Created under',
+        fromStage: null,
+        toStage: 'proposal',
+        timestamp: createdAt,
+      },
+    ]
+    if (status !== 'proposal') {
+      history.push({
+        id: faker.string.uuid(),
+        label: 'Stage updated from',
+        fromStage: 'proposal',
+        toStage: status,
+        timestamp: faker.date.recent({ days: 120 }).toISOString(),
+      })
+    }
+
+    const voucherStatus = status === 'closed'
+      ? ('Approved' as const)
+      : faker.helpers.weightedArrayElement([
+          { weight: 40, value: 'Approved' as const },
+          { weight: 40, value: 'Pending' as const },
+          { weight: 20, value: 'Draft' as const },
+        ])
+
+    return {
+      id,
+      propertyId: property.id,
+      name,
+      slug: `${property.slug}-${i + 1}`,
+      status,
+      dealType,
+      availableSqFt,
+      askingPrice: salePrice,
+      leaseRate: dealType === 'Sale' ? null : faker.number.float({ min: 8, max: 55, fractionDigits: 2 }),
+      capRate: Math.max(0, property.capRate + faker.number.float({ min: -0.005, max: 0.005, fractionDigits: 4 })),
+      propertyType: property.propertyType,
+      propertySubtype: property.propertySubtype,
+      street: property.street,
+      city: property.city,
+      state: property.state,
+      zip: property.zip,
+      lat: property.lat,
+      lng: property.lng,
+
+      // Deal (1:1)
+      dealId,
+      location: `${property.city}, ${property.state}`,
+      propertyTypeLabel: TYPE_LABEL[property.propertyType],
+      salePrice,
+      pricePerSqFt,
+      commissionPct,
+      commissionAmount,
+      closeProbability: faker.number.int({ min: pMin, max: pMax }),
+      internalBrokers,
+      outsideBrokers,
+      sellerContactIds: sellerContacts.map((c) => c.id),
+      buyerContactIds: buyerContacts.map((c) => c.id),
+      otherContactIds: [],
+      tasks,
+      messages,
+      activities: [],
+      history,
+      voucher: {
+        name,
+        identifier: dealId,
+        status: voucherStatus,
+        closeDate: status === 'closed' ? faker.date.recent({ days: 90 }).toISOString().slice(0, 10) : null,
+        transactionValue: salePrice,
+        grossCommission: commissionAmount,
+        relatedContactsLabel: `${sellerName}${sellerContacts.length + buyerContacts.length > 1 ? ` & ${sellerContacts.length + buyerContacts.length - 1} more` : ''}`,
+      },
+      nextCriticalDate: nextTask?.date ?? null,
+
+      createdAt,
+      updatedAt: faker.date.recent({ days: 60 }).toISOString(),
+    }
+  })
+}
+
 // ── Top-level export ──────────────────────────────────────────────────────────
 
 export function generateDataset() {
@@ -564,12 +802,15 @@ export function generateDataset() {
 
   const allPropertyIds = properties.map((p) => p.id)
 
+  const contacts = Array.from({ length: CONTACT_COUNT }, () => generateContact(allPropertyIds))
+
+  const dealIdRef = { n: 100 }
+  const listings = properties.flatMap((p) => generateListings(p, contacts, dealIdRef))
+
   const comps = properties.flatMap((p) => {
     const count = faker.number.int({ min: 1, max: 5 })
     return Array.from({ length: count }, () => generateComp(p.id, p.buildingSqFt, p.propertyType))
   })
 
-  const contacts = Array.from({ length: CONTACT_COUNT }, () => generateContact(allPropertyIds))
-
-  return { properties, comps, contacts }
+  return { properties, listings, comps, contacts }
 }

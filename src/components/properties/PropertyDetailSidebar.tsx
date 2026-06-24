@@ -3,18 +3,18 @@ import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
-  faAddressBook,
-  faChartBar,
-  faFileLines,
   faGaugeHigh,
+  faAddressBook,
+  faListCheck,
+  faUsers,
+  faBolt,
+  faClockRotateLeft,
+  faHandshake,
+  faFileInvoiceDollar,
+  faFileLines,
   faGlobe,
   faEnvelope,
-  faSatelliteDish,
-  faGrid,
-  faCardsBlank,
   faImage,
-  faBullseye,
-  faFileInvoiceDollar,
 } from "@fortawesome/pro-regular-svg-icons";
 
 type NavItem = { label: string; href: string; icon: IconDefinition };
@@ -24,27 +24,29 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Project",
     items: [
+      { label: "Overview", href: "overview", icon: faGaugeHigh },
       { label: "Leads", href: "leads", icon: faAddressBook },
-      { label: "Client Report", href: "client-report", icon: faChartBar },
+      { label: "Planner", href: "planner", icon: faListCheck },
+      { label: "Contacts", href: "contacts", icon: faUsers },
+      { label: "Activities", href: "activities", icon: faBolt },
+      { label: "History", href: "history", icon: faClockRotateLeft },
+    ],
+  },
+  {
+    label: "Deal",
+    items: [
+      { label: "Transaction", href: "transaction", icon: faHandshake },
+      { label: "Voucher", href: "voucher", icon: faFileInvoiceDollar },
     ],
   },
   {
     label: "Listing",
     items: [
       { label: "Documents", href: "documents", icon: faFileLines },
-      { label: "Web Activity", href: "web-activity", icon: faGaugeHigh },
       { label: "Website", href: "website", icon: faGlobe },
       { label: "Email", href: "email", icon: faEnvelope },
-      { label: "Syndication", href: "syndication", icon: faSatelliteDish },
-      { label: "Grids", href: "grids", icon: faGrid },
-      { label: "Plans", href: "plans", icon: faCardsBlank },
       { label: "Media", href: "media", icon: faImage },
-      { label: "Demographics", href: "demographics", icon: faBullseye },
     ],
-  },
-  {
-    label: "Deal",
-    items: [{ label: "Deals", href: "deals", icon: faFileInvoiceDollar }],
   },
 ];
 

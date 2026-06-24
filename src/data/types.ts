@@ -1,4 +1,16 @@
-export type PropertyStatus = 'active' | 'under-contract' | 'sold' | 'off-market' | 'coming-soon'
+/**
+ * Unified listing + deal lifecycle. Since a listing IS its deal (1:1), one stage
+ * drives both the listing status and the deal stage.
+ */
+export type PropertyStatus =
+  | 'proposal'
+  | 'active'
+  | 'under-contract'
+  | 'closed'
+  | 'inactive'
+
+/** Alias for readers that think in deal terms — same unified lifecycle. */
+export type ListingStage = PropertyStatus
 
 export type PropertyType =
   | 'office'
@@ -43,6 +55,9 @@ export type CompType = 'sale' | 'lease'
 export type LeaseType = 'NNN' | 'Gross' | 'MG'
 export type CompSource = 'CoStar' | 'LoopNet' | 'Public Records' | 'MLS' | 'Internal'
 export type ContactRole = 'owner' | 'broker' | 'buyer' | 'tenant' | 'lender'
+
+/** A marketed offering — sale, lease, or both. */
+export type DealType = 'Sale' | 'Lease' | 'Sale / Lease'
 
 export interface Property {
   id: string
@@ -122,6 +137,124 @@ export interface Property {
   updatedAt: string
 }
 
+/**
+ * A Listing is a marketable space/offering that belongs to a Property (a building
+ * can have several — e.g. retail pads or office suites). It IS its deal (1:1), so it
+ * also carries the deal's transaction, brokers, contacts, planner, and back-office
+ * data. Display fields (location, type) are denormalized from the parent Property so
+ * listing views render without a join; building/tax/physical facts live on `Property`.
+ */
+export interface Listing {
+  id: string
+  propertyId: string
+  name: string
+  slug: string
+  status: PropertyStatus // unified listing + deal stage
+  dealType: DealType
+
+  // Offering-specific
+  availableSqFt: number
+  askingPrice: number
+  leaseRate: number | null
+  capRate: number
+
+  // Denormalized from parent Property for display
+  propertyType: PropertyType
+  propertySubtype: PropertySubtype
+  street: string
+  city: string
+  state: string
+  zip: string
+  lat: number
+  lng: number
+
+  // ── Deal data (1:1) ──────────────────────────────────────────────
+  dealId: string
+  location: string
+  propertyTypeLabel: string
+
+  // Transaction
+  salePrice: number
+  pricePerSqFt: number
+  commissionPct: number
+  commissionAmount: number
+  closeProbability: number
+
+  internalBrokers: DealBroker[]
+  outsideBrokers: DealBroker[]
+
+  sellerContactIds: string[]
+  buyerContactIds: string[]
+  otherContactIds: string[]
+
+  tasks: DealTask[]
+  messages: DealMessage[]
+  activities: DealActivity[]
+  history: DealHistoryEntry[]
+  voucher: DealVoucher
+
+  nextCriticalDate: string | null
+
+  createdAt: string
+  updatedAt: string
+}
+
+/** A broker on a deal, internal (own brokerage) or an outside co-broker. */
+export interface DealBroker {
+  id: string
+  name: string
+  role: string
+  email: string
+  side: 'internal' | 'outside'
+  commissionSplitPct: number
+  grossCommission: number
+}
+
+export type DealTaskStatus = 'open' | 'complete' | 'overdue'
+
+/** A planner task — either a fixed date or a relative due ("5 days after Listing Executed"). */
+export interface DealTask {
+  id: string
+  label: string
+  date: string | null
+  relativeDue: string | null
+  assigneeInitials: string
+  status: DealTaskStatus
+  hasAttachment: boolean
+}
+
+export interface DealMessage {
+  id: string
+  author: string
+  text: string
+  timestamp: string
+}
+
+export interface DealActivity {
+  id: string
+  type: string
+  note: string
+  timestamp: string
+}
+
+export interface DealHistoryEntry {
+  id: string
+  label: string
+  fromStage: ListingStage | null
+  toStage: ListingStage | null
+  timestamp: string
+}
+
+export interface DealVoucher {
+  name: string
+  identifier: string
+  status: 'Approved' | 'Pending' | 'Draft'
+  closeDate: string | null
+  transactionValue: number
+  grossCommission: number
+  relatedContactsLabel: string
+}
+
 export interface Comp {
   id: string
   propertyId: string
@@ -155,6 +288,7 @@ export interface Contact {
 
 export interface DataStore {
   properties: Map<string, Property>
+  listings: Map<string, Listing>
   comps: Map<string, Comp>
   contacts: Map<string, Contact>
 }

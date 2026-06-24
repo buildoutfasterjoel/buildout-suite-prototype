@@ -44,7 +44,7 @@ function CampaignNotFound() {
           been sent yet, or the link is incorrect.
         </Empty.Content>
         <Empty.Actions>
-          <Button variant="primary" render={<Link to="/email" />}>
+          <Button variant="primary" nativeButton={false} render={<Link to="/email" />}>
             Back to Emails
           </Button>
         </Empty.Actions>

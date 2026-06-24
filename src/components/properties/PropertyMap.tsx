@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import type { Property } from "#/data/types";
+import type { Listing } from "#/data/types";
 import {
   TYPE_COLORS,
   TYPE_LABELS,
@@ -41,14 +41,14 @@ function FitBounds({ points }: { points: [number, number][] }) {
   return null;
 }
 
-export function PropertyMap({ properties }: { properties: Property[] }) {
+export function PropertyMap({ listings }: { listings: Listing[] }) {
   // Leaflet touches the DOM/window — render only on the client after mount.
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
   const points = useMemo<[number, number][]>(
-    () => properties.map((p) => [p.lat, p.lng]),
-    [properties],
+    () => listings.map((l) => [l.lat, l.lng]),
+    [listings],
   );
 
   if (!mounted) {
@@ -76,7 +76,7 @@ export function PropertyMap({ properties }: { properties: Property[] }) {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <FitBounds points={points} />
-      {properties.map((p) => (
+      {listings.map((p) => (
         <Marker
           key={p.id}
           position={[p.lat, p.lng]}

@@ -22,7 +22,6 @@ import {
   faTrashCan,
   faCircleInfo,
 } from "@fortawesome/pro-regular-svg-icons";
-import type { Property } from "#/data/types";
 
 type Document = {
   id: string;
@@ -66,7 +65,7 @@ const DOCUMENTS: Document[] = [
 
 const CHECKBOX_COL_W = 44;
 
-export function PropertyDetailDocuments({ property }: { property: Property }) {
+export function PropertyDetailDocuments({ listingId }: { listingId: string }) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -254,8 +253,9 @@ export function PropertyDetailDocuments({ property }: { property: Property }) {
                   <Button
                     variant="outline"
                     size="sm"
+                    nativeButton={false}
                     render={
-                      <Link to="/editor/$listingId" params={{ listingId: property.id }} />
+                      <Link to="/editor/$listingId" params={{ listingId }} />
                     }
                   >
                     <FontAwesomeIcon icon={faPenToSquare} />

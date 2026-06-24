@@ -8,7 +8,9 @@ export const Route = createFileRoute("/listings/$listingId/leads")({
 
 function LeadsRoute() {
   const { listingId } = Route.useParams();
-  const property = getStore().properties.get(listingId);
+  const store = getStore();
+  const listing = store.listings.get(listingId);
+  const property = listing && store.properties.get(listing.propertyId);
 
   if (!property) return null;
 

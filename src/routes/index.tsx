@@ -15,7 +15,7 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   // A stable sample listing for the document-editor prototype.
-  const sampleListingId = getStore().properties.keys().next().value ?? "";
+  const sampleListingId = getStore().listings.keys().next().value ?? "";
 
   return (
     <div className="p-8 container">
@@ -53,8 +53,9 @@ function Home() {
                 <CardTitle>Property Listings</CardTitle>
               </CardHeader>
               <CardBody>
-                Browse properties in a grid or interactive map view, with
-                search and filters by type, city, and status.
+                Browse listings in a grid or map, then open one unified workspace
+                where the listing and its deal live together — overview,
+                transaction, planner, contacts, activities, and back-office voucher.
               </CardBody>
             </Card>
           </Link>

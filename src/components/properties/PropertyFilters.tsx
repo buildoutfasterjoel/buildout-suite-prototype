@@ -1,16 +1,16 @@
 import { useMemo } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/pro-regular-svg-icons";
-import type { Property } from "#/data/types";
+import type { Listing } from "#/data/types";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 
-/** A filterable facet: its options, how to read a property's value, and its selection state. */
+/** A filterable facet: its options, how to read a listing's value, and its selection state. */
 export interface Facet {
   id: string;
   title: string;
   options: readonly { value: string; label: string }[];
-  getValue: (p: Property) => string;
+  getValue: (l: Listing) => string;
   selected: Set<string>;
   toggle: (value: string) => void;
 }
@@ -67,11 +67,11 @@ function FacetSection({
 }
 
 export function PropertyFilters({
-  properties,
+  listings,
   facets,
   onClearAll,
 }: {
-  properties: Property[];
+  listings: Listing[];
   facets: Facet[];
   onClearAll: () => void;
 }) {
@@ -80,14 +80,14 @@ export function PropertyFilters({
     const result: Record<string, Record<string, number>> = {};
     for (const facet of facets) {
       const counts: Record<string, number> = {};
-      for (const p of properties) {
-        const v = facet.getValue(p);
+      for (const l of listings) {
+        const v = facet.getValue(l);
         counts[v] = (counts[v] ?? 0) + 1;
       }
       result[facet.id] = counts;
     }
     return result;
-  }, [properties, facets]);
+  }, [listings, facets]);
 
   const chips: ActiveChip[] = facets.flatMap((facet) =>
     [...facet.selected].map((value) => ({

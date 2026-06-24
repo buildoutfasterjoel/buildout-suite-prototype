@@ -5,7 +5,7 @@ import {
   faSignHanging,
   faCalendarCircleExclamation,
 } from "@fortawesome/pro-regular-svg-icons";
-import type { Property } from "#/data/types";
+import type { Listing } from "#/data/types";
 import {
   TYPE_ICONS,
   TYPE_LABELS,
@@ -18,9 +18,9 @@ import {
 } from "./propertyDisplay";
 import { AvatarGroup } from "./AvatarGroup";
 
-export function PropertyCard({ property }: { property: Property }) {
-  const seed = hash(property.id);
-  const refId = getRefId(property.id);
+export function PropertyCard({ listing }: { listing: Listing }) {
+  const seed = hash(listing.id);
+  const refId = getRefId(listing.id);
 
   return (
     <div
@@ -34,8 +34,8 @@ export function PropertyCard({ property }: { property: Property }) {
           style={{ height: 166, borderRadius: 4 }}
         >
           <img
-            src={getPhotoUrl(property.id)}
-            alt={property.name}
+            src={getPhotoUrl(listing.id)}
+            alt={listing.name}
             className="w-100 h-100"
             style={{ objectFit: "cover", display: "block" }}
           />
@@ -63,14 +63,14 @@ export function PropertyCard({ property }: { property: Property }) {
             <span
               className="d-inline-flex align-items-center gap-1 fw-semibold text-white"
               style={{
-                backgroundColor: STATUS_COLORS[property.status],
+                backgroundColor: STATUS_COLORS[listing.status],
                 borderRadius: 6,
                 padding: "3px 6px",
                 fontSize: 10,
               }}
             >
               <FontAwesomeIcon icon={faSignHanging} style={{ fontSize: 9 }} />
-              {STATUS_LABELS[property.status]}
+              {STATUS_LABELS[listing.status]}
             </span>
             <span
               className="fw-semibold text-white"
@@ -93,20 +93,20 @@ export function PropertyCard({ property }: { property: Property }) {
             style={{ fontSize: 10 }}
           >
             <FontAwesomeIcon
-              icon={TYPE_ICONS[property.propertyType]}
+              icon={TYPE_ICONS[listing.propertyType]}
               style={{ fontSize: 10 }}
             />
-            <span>{TYPE_LABELS[property.propertyType]}</span>
+            <span>{TYPE_LABELS[listing.propertyType]}</span>
           </div>
           <div
             className="fw-bold text-truncate"
             style={{ fontSize: 14, lineHeight: "19px", color: "#22262f" }}
-            title={property.name}
+            title={listing.name}
           >
-            {property.name}
+            {listing.name}
           </div>
           <div className="text-muted text-truncate" style={{ fontSize: 12 }}>
-            {property.city}, {property.state}
+            {listing.city}, {listing.state}
           </div>
         </div>
       </div>
@@ -117,7 +117,7 @@ export function PropertyCard({ property }: { property: Property }) {
         style={{ gap: 10, padding: 8 }}
       >
         <span className="text-muted flex-grow-1" style={{ fontSize: 10 }}>
-          {formatPrice(property.askingPrice)}
+          {formatPrice(listing.askingPrice)}
         </span>
         <FontAwesomeIcon
           icon={faCalendarCircleExclamation}

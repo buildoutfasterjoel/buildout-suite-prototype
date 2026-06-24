@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import { Badge } from '@buildoutinc/blueprint-react/ui/Badge'
 import { Tabs } from '@buildoutinc/blueprint-react/ui/Tabs'
 import { List } from '@buildoutinc/blueprint-react/ui/List'
@@ -38,7 +39,15 @@ function DealList({ deals }: { deals: MockDeal[] }) {
   return (
     <List flush>
       {deals.map((deal) => (
-        <List.Item key={deal.id} asAction>
+        <List.Item
+          key={deal.id}
+          asAction
+          render={
+            deal.listingId ? (
+              <Link to="/listings/$listingId" params={{ listingId: deal.listingId }} />
+            ) : undefined
+          }
+        >
           <List.ItemContent>
             <List.ItemTitle>{deal.propertyName}</List.ItemTitle>
             <List.ItemDescription>

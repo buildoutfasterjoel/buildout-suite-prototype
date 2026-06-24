@@ -47,20 +47,20 @@ export const TYPE_LABELS: Record<PropertyType, string> = {
 };
 
 export const STATUS_LABELS: Record<PropertyStatus, string> = {
+  proposal: "Proposal",
   active: "Active",
   "under-contract": "Under Contract",
-  sold: "Sold",
-  "off-market": "Off Market",
-  "coming-soon": "Coming Soon",
+  closed: "Closed",
+  inactive: "Inactive",
 };
 
-/** Status indicator dot color (Badge only supports primary/secondary/outline). */
+/** Stage indicator dot color (Badge only supports primary/secondary/outline). */
 export const STATUS_COLORS: Record<PropertyStatus, string> = {
+  proposal: "#6366f1",
   active: "#16a34a",
   "under-contract": "#d97706",
-  sold: "#64748b",
-  "off-market": "#94a3b8",
-  "coming-soon": "#2563eb",
+  closed: "#2563eb",
+  inactive: "#64748b",
 };
 
 export const PROPERTY_TYPES = Object.keys(TYPE_LABELS) as PropertyType[];

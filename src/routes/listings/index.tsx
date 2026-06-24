@@ -15,7 +15,7 @@ import {
   faArrowDownWideShort,
 } from "@fortawesome/pro-regular-svg-icons";
 import { getStore } from "#/data/store";
-import type { Property } from "#/data/types";
+import type { Listing } from "#/data/types";
 import { PropertyGrid } from "#/components/properties/PropertyGrid";
 import { PropertyMap } from "#/components/properties/PropertyMap";
 import {
@@ -80,8 +80,8 @@ function useToggleSet<T extends string>() {
 }
 
 function PropertyListings() {
-  const properties = useMemo(
-    () => Array.from(getStore().properties.values()),
+  const listings = useMemo(
+    () => Array.from(getStore().listings.values()),
     [],
   );
 
@@ -103,7 +103,7 @@ function PropertyListings() {
           value: s,
           label: STATUS_LABELS[s],
         })),
-        getValue: (p: Property) => p.status,
+        getValue: (l: Listing) => l.status,
         selected: status.set,
         toggle: status.toggle,
       },
@@ -130,7 +130,7 @@ function PropertyListings() {
           value: t,
           label: TYPE_LABELS[t],
         })),
-        getValue: (p: Property) => p.propertyType,
+        getValue: (l: Listing) => l.propertyType,
         selected: type.set,
         toggle: type.toggle,
       },
@@ -147,19 +147,19 @@ function PropertyListings() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return properties.filter((p) => {
+    return listings.filter((l) => {
       for (const facet of facets) {
-        if (facet.selected.size && !facet.selected.has(facet.getValue(p)))
+        if (facet.selected.size && !facet.selected.has(facet.getValue(l)))
           return false;
       }
       if (q) {
         const haystack =
-          `${p.name} ${p.street} ${p.city} ${p.state}`.toLowerCase();
+          `${l.name} ${l.street} ${l.city} ${l.state}`.toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       return true;
     });
-  }, [properties, facets, search]);
+  }, [listings, facets, search]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -179,6 +179,8 @@ function PropertyListings() {
     }
   }, [filtered, sortBy]);
 
+  const total = listings.length;
+
   return (
     <div className="d-flex flex-column h-100 overflow-hidden">
       {/* Page header — matches Pipeline */}
@@ -187,9 +189,8 @@ function PropertyListings() {
           <h1 className="fs-4 fw-semibold mb-0">Listings</h1>
           <span className="text-muted">
             {filtered.length}{" "}
-            {filtered.length === 1 ? "property" : "properties"}
-            {filtered.length !== properties.length &&
-              ` of ${properties.length}`}
+            {filtered.length === 1 ? "listing" : "listings"}
+            {filtered.length !== total && ` of ${total}`}
           </span>
         </div>
       </div>
@@ -252,7 +253,7 @@ function PropertyListings() {
               {/* Right: view toggle + count */}
               <div className="d-flex align-items-center gap-3 ms-auto">
                 <span className="text-muted text-nowrap">
-                  Displaying {filtered.length} of {properties.length} Properties
+                  Displaying {filtered.length} of {total} Listings
                 </span>
                 <ButtonGroup aria-label="View switcher">
                   <Tooltip>
@@ -298,7 +299,7 @@ function PropertyListings() {
       <div className="p-6 flex-grow-1 overflow-hidden d-flex flex-column">
         <div className="container flex-grow-1 d-flex overflow-hidden gap-6">
           <PropertyFilters
-            properties={properties}
+            listings={listings}
             facets={facets}
             onClearAll={clearAll}
           />
@@ -306,12 +307,12 @@ function PropertyListings() {
             {view === "grid" ? (
               <div className="flex-grow-1 overflow-y-auto overflow-x-hidden">
                 <Card.Body>
-                  <PropertyGrid properties={sorted} />
+                  <PropertyGrid listings={sorted} />
                 </Card.Body>
               </div>
             ) : (
               <Card.Body>
-                <PropertyMap properties={sorted} />
+                <PropertyMap listings={sorted} />
               </Card.Body>
             )}
           </Card>
