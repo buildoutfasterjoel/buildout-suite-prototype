@@ -30,8 +30,8 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
   const [stage, setStage] = useState<ListingStage>(listing.status);
 
   return (
-    <div className="bg-white border-bottom">
-      <div className="container py-3">
+    <div className="bg-card border-bottom">
+      <div className="container-fluid py-3">
         <div className="d-flex align-items-center gap-3">
           {/* Thumbnail */}
           <img
@@ -48,7 +48,10 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
 
           {/* Identity */}
           <div className="flex-grow-1" style={{ minWidth: 0 }}>
-            <h1 className="fs-4 fw-semibold mb-0 text-truncate" title={listing.name}>
+            <h1
+              className="fs-4 fw-semibold mb-0 text-truncate"
+              title={listing.name}
+            >
               {listing.name}
             </h1>
             <div className="text-muted text-truncate">{address}</div>
@@ -64,14 +67,23 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
 
           {/* Actions + stage */}
           <div className="d-flex align-items-center gap-2 flex-shrink-0">
-            <Select value={stage} onValueChange={(v) => v && setStage(v as ListingStage)}>
+            <Select
+              value={stage}
+              onValueChange={(v) => v && setStage(v as ListingStage)}
+            >
               <Select.Trigger style={{ minWidth: 168 }}>
                 <span className="d-inline-flex align-items-center gap-2">
                   <span
                     className="rounded-circle"
-                    style={{ width: 8, height: 8, backgroundColor: STATUS_COLORS[stage] }}
+                    style={{
+                      width: 8,
+                      height: 8,
+                      backgroundColor: STATUS_COLORS[stage],
+                    }}
                   />
-                  <Select.Value>{(v) => STATUS_LABELS[v as ListingStage]}</Select.Value>
+                  <Select.Value>
+                    {(v) => STATUS_LABELS[v as ListingStage]}
+                  </Select.Value>
                 </span>
               </Select.Trigger>
               <Select.Content>
@@ -80,7 +92,11 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
                     <span className="d-inline-flex align-items-center gap-2">
                       <span
                         className="rounded-circle"
-                        style={{ width: 8, height: 8, backgroundColor: STATUS_COLORS[s] }}
+                        style={{
+                          width: 8,
+                          height: 8,
+                          backgroundColor: STATUS_COLORS[s],
+                        }}
                       />
                       {STATUS_LABELS[s]}
                     </span>
@@ -92,7 +108,7 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
             <Button variant="ghost" size="icon" aria-label="Manage access">
               <FontAwesomeIcon icon={faUserGear} />
             </Button>
-            <Button variant="primary">
+            <Button variant="primary" className="flex-shrink-0">
               <FontAwesomeIcon icon={faPencil} />
               Edit Listing
             </Button>

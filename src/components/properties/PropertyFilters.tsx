@@ -98,7 +98,7 @@ export function PropertyFilters({
   );
 
   return (
-    <Card className="overflow-auto shadow flex-shrink-0" style={{ width: 248 }}>
+    <Card className="overflow-auto shadow flex-shrink-0">
       {/* Active Filters */}
       <Card.Body className="mb-4">
         <div className="d-flex align-items-baseline justify-content-between mb-2">

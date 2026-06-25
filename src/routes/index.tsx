@@ -18,7 +18,7 @@ function Home() {
   const sampleListingId = getStore().listings.keys().next().value ?? "";
 
   return (
-    <div className="p-8 container">
+    <div className="p-8 container-fluid">
       <Card className="shadow">
         <CardBody className="p-6">
           <h1 className="fs-display2 lh-display2 fw-bold">

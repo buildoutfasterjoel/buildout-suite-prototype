@@ -80,10 +80,7 @@ function useToggleSet<T extends string>() {
 }
 
 function PropertyListings() {
-  const listings = useMemo(
-    () => Array.from(getStore().listings.values()),
-    [],
-  );
+  const listings = useMemo(() => Array.from(getStore().listings.values()), []);
 
   const [view, setView] = useState<ViewMode>("grid");
   const [search, setSearch] = useState("");
@@ -184,138 +181,147 @@ function PropertyListings() {
   return (
     <div className="d-flex flex-column h-100 overflow-hidden">
       {/* Page header — matches Pipeline */}
-      <div className="border-bottom bg-white">
-        <div className="container py-4 flex-column">
+      <div className="border-bottom bg-card">
+        <div className="container-fluid py-4 flex-column">
           <h1 className="fs-4 fw-semibold mb-0">Listings</h1>
           <span className="text-muted">
-            {filtered.length}{" "}
-            {filtered.length === 1 ? "listing" : "listings"}
+            {filtered.length} {filtered.length === 1 ? "listing" : "listings"}
             {filtered.length !== total && ` of ${total}`}
           </span>
         </div>
       </div>
 
       {/* Toolbar card */}
-      <div>
-        <div className="container pt-6">
-          <Card className="shadow">
-            <Card.Body className="d-flex align-items-center gap-2 p-3">
-              {/* Left: search + members + sort */}
-              <div className="d-flex align-items-center gap-2 flex-grow-1">
-                <div className="flex-grow-1" style={{ maxWidth: 320 }}>
-                  <InputGroup>
-                    <InputGroup.Addon>
-                      <FontAwesomeIcon icon={faMagnifyingGlass} />
-                    </InputGroup.Addon>
-                    <Input
-                      type="search"
-                      placeholder="Search by Address…"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                    />
-                  </InputGroup>
-                </div>
-                <div>
-                  <InputGroup>
-                    <InputGroup.Addon>
-                      <FontAwesomeIcon icon={faUserGroupSimple} />
-                    </InputGroup.Addon>
-                    <Input placeholder="All Members" readOnly />
-                  </InputGroup>
-                </div>
-                <div>
-                  <Select
-                    value={sortBy}
-                    onValueChange={(v) => setSortBy(v as SortBy)}
-                  >
-                    <Select.Trigger>
-                      <FontAwesomeIcon
-                        icon={faArrowDownWideShort}
-                        className="me-2"
-                      />
-                      <Select.Value>
-                        {(v) =>
-                          v === "default" ? "Sort By" : SORT_LABELS[v as SortBy]
-                        }
-                      </Select.Value>
-                    </Select.Trigger>
-                    <Select.Content>
-                      {SORT_OPTIONS.map((opt) => (
-                        <Select.Item key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </Select.Item>
-                      ))}
-                    </Select.Content>
-                  </Select>
-                </div>
-              </div>
+      <div className="py-3 d-flex flex-column gap-3">
+        <div className="container-fluid">
+          <div className="row">
+            <div className="col">
+              <Card className="shadow">
+                <Card.Body className="d-flex align-items-center gap-2 p-3">
+                  {/* Left: search + members + sort */}
+                  <div className="d-flex align-items-center gap-2 flex-grow-1">
+                    <div className="flex-grow-1" style={{ maxWidth: 320 }}>
+                      <InputGroup>
+                        <InputGroup.Addon>
+                          <FontAwesomeIcon icon={faMagnifyingGlass} />
+                        </InputGroup.Addon>
+                        <Input
+                          type="search"
+                          placeholder="Search by Address…"
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                        />
+                      </InputGroup>
+                    </div>
+                    <div>
+                      <InputGroup>
+                        <InputGroup.Addon>
+                          <FontAwesomeIcon icon={faUserGroupSimple} />
+                        </InputGroup.Addon>
+                        <Input placeholder="All Members" readOnly />
+                      </InputGroup>
+                    </div>
+                    <div>
+                      <Select
+                        value={sortBy}
+                        onValueChange={(v) => setSortBy(v as SortBy)}
+                      >
+                        <Select.Trigger>
+                          <FontAwesomeIcon
+                            icon={faArrowDownWideShort}
+                            className="me-2"
+                          />
+                          <Select.Value>
+                            {(v) =>
+                              v === "default"
+                                ? "Sort By"
+                                : SORT_LABELS[v as SortBy]
+                            }
+                          </Select.Value>
+                        </Select.Trigger>
+                        <Select.Content>
+                          {SORT_OPTIONS.map((opt) => (
+                            <Select.Item key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </Select.Item>
+                          ))}
+                        </Select.Content>
+                      </Select>
+                    </div>
+                  </div>
 
-              {/* Right: view toggle + count */}
-              <div className="d-flex align-items-center gap-3 ms-auto">
-                <span className="text-muted text-nowrap">
-                  Displaying {filtered.length} of {total} Listings
-                </span>
-                <ButtonGroup aria-label="View switcher">
-                  <Tooltip>
-                    <Tooltip.Trigger
-                      render={
-                        <Button
-                          variant={view === "grid" ? "primary" : "outline"}
-                          size="icon"
-                          onClick={() => setView("grid")}
-                          aria-pressed={view === "grid"}
-                          aria-label="Grid view"
-                        >
-                          <FontAwesomeIcon icon={faTableCellsLarge} />
-                        </Button>
-                      }
-                    />
-                    <Tooltip.Content>Grid</Tooltip.Content>
-                  </Tooltip>
-                  <Tooltip>
-                    <Tooltip.Trigger
-                      render={
-                        <Button
-                          variant={view === "map" ? "primary" : "outline"}
-                          size="icon"
-                          onClick={() => setView("map")}
-                          aria-pressed={view === "map"}
-                          aria-label="Map view"
-                        >
-                          <FontAwesomeIcon icon={faLocationDot} />
-                        </Button>
-                      }
-                    />
-                    <Tooltip.Content>Map</Tooltip.Content>
-                  </Tooltip>
-                </ButtonGroup>
-              </div>
-            </Card.Body>
-          </Card>
+                  {/* Right: view toggle + count */}
+                  <div className="d-flex align-items-center gap-3 ms-auto">
+                    <span className="text-muted text-nowrap">
+                      Displaying {filtered.length} of {total} Listings
+                    </span>
+                    <ButtonGroup aria-label="View switcher">
+                      <Tooltip>
+                        <Tooltip.Trigger
+                          render={
+                            <Button
+                              variant={view === "grid" ? "primary" : "outline"}
+                              size="icon"
+                              onClick={() => setView("grid")}
+                              aria-pressed={view === "grid"}
+                              aria-label="Grid view"
+                            >
+                              <FontAwesomeIcon icon={faTableCellsLarge} />
+                            </Button>
+                          }
+                        />
+                        <Tooltip.Content>Grid</Tooltip.Content>
+                      </Tooltip>
+                      <Tooltip>
+                        <Tooltip.Trigger
+                          render={
+                            <Button
+                              variant={view === "map" ? "primary" : "outline"}
+                              size="icon"
+                              onClick={() => setView("map")}
+                              aria-pressed={view === "map"}
+                              aria-label="Map view"
+                            >
+                              <FontAwesomeIcon icon={faLocationDot} />
+                            </Button>
+                          }
+                        />
+                        <Tooltip.Content>Map</Tooltip.Content>
+                      </Tooltip>
+                    </ButtonGroup>
+                  </div>
+                </Card.Body>
+              </Card>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Sidebar + content */}
-      <div className="p-6 flex-grow-1 overflow-hidden d-flex flex-column">
-        <div className="container flex-grow-1 d-flex overflow-hidden gap-6">
-          <PropertyFilters
-            listings={listings}
-            facets={facets}
-            onClearAll={clearAll}
-          />
-          <Card className="flex-grow-1 overflow-hidden d-flex flex-column">
-            {view === "grid" ? (
-              <div className="flex-grow-1 overflow-y-auto overflow-x-hidden">
+      <div className="container-fluid flex-grow-1 overflow-hidden d-flex flex-column pb-3">
+        <div className="row gx-3 flex-grow-1 overflow-hidden">
+          <div className="col-2 overflow-auto h-100">
+            <PropertyFilters
+              listings={listings}
+              facets={facets}
+              onClearAll={clearAll}
+            />
+          </div>
+          <div className="col-10 d-flex flex-column overflow-hidden h-100">
+            <Card className="flex-grow-1 overflow-hidden d-flex flex-column">
+              {view === "grid" ? (
+                <div className="flex-grow-1 overflow-y-auto overflow-x-hidden">
+                  <Card.Body>
+                    <PropertyGrid listings={sorted} />
+                  </Card.Body>
+                </div>
+              ) : (
                 <Card.Body>
-                  <PropertyGrid listings={sorted} />
+                  <PropertyMap listings={sorted} />
                 </Card.Body>
-              </div>
-            ) : (
-              <Card.Body>
-                <PropertyMap listings={sorted} />
-              </Card.Body>
-            )}
-          </Card>
+              )}
+            </Card>
+          </div>
         </div>
       </div>
     </div>

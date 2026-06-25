@@ -30,7 +30,7 @@ export const Route = createFileRoute("/email/$emailId")({
 
 function CampaignNotFound() {
   return (
-    <div className="container py-8 d-flex justify-content-center">
+    <div className="container-fluid py-8 d-flex justify-content-center">
       <Empty>
         <Empty.Media>
           <FontAwesomeIcon
@@ -82,7 +82,7 @@ function EmailCampaignDetail() {
     <div className="d-flex flex-column h-100 overflow-auto">
       <EmailCampaignHeader email={email} />
 
-      <div className="container py-4 d-flex flex-column gap-4">
+      <div className="container-fluid py-4 d-flex flex-column gap-4">
         <EmailMetaCard email={email} performance={performance} />
 
         <Card>

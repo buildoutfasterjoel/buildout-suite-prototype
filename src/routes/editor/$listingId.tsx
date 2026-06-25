@@ -24,7 +24,7 @@ function DocumentEditor() {
 
   if (!listing || !property) {
     return (
-      <div className="container py-8 d-flex justify-content-center">
+      <div className="container-fluid py-8 d-flex justify-content-center">
         <Empty>
           <Empty.Media>
             <FontAwesomeIcon icon={faBuildingCircleExclamation} aria-label="Property not found" />
