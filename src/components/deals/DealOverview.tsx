@@ -3,6 +3,7 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faPencil } from "@fortawesome/pro-regular-svg-icons";
 import type { DealBroker, Listing, Property } from "#/data/types";
+import { ListingPageHeader } from "../listings/ListingPageHeader";
 import { formatCurrency, initials } from "./dealDisplay";
 
 function SectionCard({
@@ -141,6 +142,7 @@ export function ListingOverview({
 export function DealTransaction({ listing }: { listing: Listing }) {
   return (
     <div className="d-flex flex-column gap-4 p-4">
+      <ListingPageHeader title="Transaction" />
       <div className="row g-4">
         <div className="col-lg-6">
           <SectionCard

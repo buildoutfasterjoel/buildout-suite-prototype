@@ -26,10 +26,11 @@ import { Route as EditorListingIdRouteImport } from './routes/editor/$listingId'
 import { Route as ListingsListingIdIndexRouteImport } from './routes/listings/$listingId/index'
 import { Route as ListingsListingIdVoucherRouteImport } from './routes/listings/$listingId/voucher'
 import { Route as ListingsListingIdTransactionRouteImport } from './routes/listings/$listingId/transaction'
-import { Route as ListingsListingIdPlannerRouteImport } from './routes/listings/$listingId/planner'
+import { Route as ListingsListingIdTasksRouteImport } from './routes/listings/$listingId/tasks'
 import { Route as ListingsListingIdOverviewRouteImport } from './routes/listings/$listingId/overview'
 import { Route as ListingsListingIdLeadsRouteImport } from './routes/listings/$listingId/leads'
 import { Route as ListingsListingIdHistoryRouteImport } from './routes/listings/$listingId/history'
+import { Route as ListingsListingIdEmailRouteImport } from './routes/listings/$listingId/email'
 import { Route as ListingsListingIdDocumentsRouteImport } from './routes/listings/$listingId/documents'
 import { Route as ListingsListingIdContactsRouteImport } from './routes/listings/$listingId/contacts'
 import { Route as ListingsListingIdActivitiesRouteImport } from './routes/listings/$listingId/activities'
@@ -121,12 +122,11 @@ const ListingsListingIdTransactionRoute =
     path: '/transaction',
     getParentRoute: () => ListingsListingIdRoute,
   } as any)
-const ListingsListingIdPlannerRoute =
-  ListingsListingIdPlannerRouteImport.update({
-    id: '/planner',
-    path: '/planner',
-    getParentRoute: () => ListingsListingIdRoute,
-  } as any)
+const ListingsListingIdTasksRoute = ListingsListingIdTasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
+  getParentRoute: () => ListingsListingIdRoute,
+} as any)
 const ListingsListingIdOverviewRoute =
   ListingsListingIdOverviewRouteImport.update({
     id: '/overview',
@@ -144,6 +144,11 @@ const ListingsListingIdHistoryRoute =
     path: '/history',
     getParentRoute: () => ListingsListingIdRoute,
   } as any)
+const ListingsListingIdEmailRoute = ListingsListingIdEmailRouteImport.update({
+  id: '/email',
+  path: '/email',
+  getParentRoute: () => ListingsListingIdRoute,
+} as any)
 const ListingsListingIdDocumentsRoute =
   ListingsListingIdDocumentsRouteImport.update({
     id: '/documents',
@@ -181,10 +186,11 @@ export interface FileRoutesByFullPath {
   '/listings/$listingId/activities': typeof ListingsListingIdActivitiesRoute
   '/listings/$listingId/contacts': typeof ListingsListingIdContactsRoute
   '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
+  '/listings/$listingId/email': typeof ListingsListingIdEmailRoute
   '/listings/$listingId/history': typeof ListingsListingIdHistoryRoute
   '/listings/$listingId/leads': typeof ListingsListingIdLeadsRoute
   '/listings/$listingId/overview': typeof ListingsListingIdOverviewRoute
-  '/listings/$listingId/planner': typeof ListingsListingIdPlannerRoute
+  '/listings/$listingId/tasks': typeof ListingsListingIdTasksRoute
   '/listings/$listingId/transaction': typeof ListingsListingIdTransactionRoute
   '/listings/$listingId/voucher': typeof ListingsListingIdVoucherRoute
   '/listings/$listingId/': typeof ListingsListingIdIndexRoute
@@ -202,10 +208,11 @@ export interface FileRoutesByTo {
   '/listings/$listingId/activities': typeof ListingsListingIdActivitiesRoute
   '/listings/$listingId/contacts': typeof ListingsListingIdContactsRoute
   '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
+  '/listings/$listingId/email': typeof ListingsListingIdEmailRoute
   '/listings/$listingId/history': typeof ListingsListingIdHistoryRoute
   '/listings/$listingId/leads': typeof ListingsListingIdLeadsRoute
   '/listings/$listingId/overview': typeof ListingsListingIdOverviewRoute
-  '/listings/$listingId/planner': typeof ListingsListingIdPlannerRoute
+  '/listings/$listingId/tasks': typeof ListingsListingIdTasksRoute
   '/listings/$listingId/transaction': typeof ListingsListingIdTransactionRoute
   '/listings/$listingId/voucher': typeof ListingsListingIdVoucherRoute
   '/listings/$listingId': typeof ListingsListingIdIndexRoute
@@ -229,10 +236,11 @@ export interface FileRoutesById {
   '/listings/$listingId/activities': typeof ListingsListingIdActivitiesRoute
   '/listings/$listingId/contacts': typeof ListingsListingIdContactsRoute
   '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
+  '/listings/$listingId/email': typeof ListingsListingIdEmailRoute
   '/listings/$listingId/history': typeof ListingsListingIdHistoryRoute
   '/listings/$listingId/leads': typeof ListingsListingIdLeadsRoute
   '/listings/$listingId/overview': typeof ListingsListingIdOverviewRoute
-  '/listings/$listingId/planner': typeof ListingsListingIdPlannerRoute
+  '/listings/$listingId/tasks': typeof ListingsListingIdTasksRoute
   '/listings/$listingId/transaction': typeof ListingsListingIdTransactionRoute
   '/listings/$listingId/voucher': typeof ListingsListingIdVoucherRoute
   '/listings/$listingId/': typeof ListingsListingIdIndexRoute
@@ -257,10 +265,11 @@ export interface FileRouteTypes {
     | '/listings/$listingId/activities'
     | '/listings/$listingId/contacts'
     | '/listings/$listingId/documents'
+    | '/listings/$listingId/email'
     | '/listings/$listingId/history'
     | '/listings/$listingId/leads'
     | '/listings/$listingId/overview'
-    | '/listings/$listingId/planner'
+    | '/listings/$listingId/tasks'
     | '/listings/$listingId/transaction'
     | '/listings/$listingId/voucher'
     | '/listings/$listingId/'
@@ -278,10 +287,11 @@ export interface FileRouteTypes {
     | '/listings/$listingId/activities'
     | '/listings/$listingId/contacts'
     | '/listings/$listingId/documents'
+    | '/listings/$listingId/email'
     | '/listings/$listingId/history'
     | '/listings/$listingId/leads'
     | '/listings/$listingId/overview'
-    | '/listings/$listingId/planner'
+    | '/listings/$listingId/tasks'
     | '/listings/$listingId/transaction'
     | '/listings/$listingId/voucher'
     | '/listings/$listingId'
@@ -304,10 +314,11 @@ export interface FileRouteTypes {
     | '/listings/$listingId/activities'
     | '/listings/$listingId/contacts'
     | '/listings/$listingId/documents'
+    | '/listings/$listingId/email'
     | '/listings/$listingId/history'
     | '/listings/$listingId/leads'
     | '/listings/$listingId/overview'
-    | '/listings/$listingId/planner'
+    | '/listings/$listingId/tasks'
     | '/listings/$listingId/transaction'
     | '/listings/$listingId/voucher'
     | '/listings/$listingId/'
@@ -444,11 +455,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ListingsListingIdTransactionRouteImport
       parentRoute: typeof ListingsListingIdRoute
     }
-    '/listings/$listingId/planner': {
-      id: '/listings/$listingId/planner'
-      path: '/planner'
-      fullPath: '/listings/$listingId/planner'
-      preLoaderRoute: typeof ListingsListingIdPlannerRouteImport
+    '/listings/$listingId/tasks': {
+      id: '/listings/$listingId/tasks'
+      path: '/tasks'
+      fullPath: '/listings/$listingId/tasks'
+      preLoaderRoute: typeof ListingsListingIdTasksRouteImport
       parentRoute: typeof ListingsListingIdRoute
     }
     '/listings/$listingId/overview': {
@@ -470,6 +481,13 @@ declare module '@tanstack/react-router' {
       path: '/history'
       fullPath: '/listings/$listingId/history'
       preLoaderRoute: typeof ListingsListingIdHistoryRouteImport
+      parentRoute: typeof ListingsListingIdRoute
+    }
+    '/listings/$listingId/email': {
+      id: '/listings/$listingId/email'
+      path: '/email'
+      fullPath: '/listings/$listingId/email'
+      preLoaderRoute: typeof ListingsListingIdEmailRouteImport
       parentRoute: typeof ListingsListingIdRoute
     }
     '/listings/$listingId/documents': {
@@ -533,10 +551,11 @@ interface ListingsListingIdRouteChildren {
   ListingsListingIdActivitiesRoute: typeof ListingsListingIdActivitiesRoute
   ListingsListingIdContactsRoute: typeof ListingsListingIdContactsRoute
   ListingsListingIdDocumentsRoute: typeof ListingsListingIdDocumentsRoute
+  ListingsListingIdEmailRoute: typeof ListingsListingIdEmailRoute
   ListingsListingIdHistoryRoute: typeof ListingsListingIdHistoryRoute
   ListingsListingIdLeadsRoute: typeof ListingsListingIdLeadsRoute
   ListingsListingIdOverviewRoute: typeof ListingsListingIdOverviewRoute
-  ListingsListingIdPlannerRoute: typeof ListingsListingIdPlannerRoute
+  ListingsListingIdTasksRoute: typeof ListingsListingIdTasksRoute
   ListingsListingIdTransactionRoute: typeof ListingsListingIdTransactionRoute
   ListingsListingIdVoucherRoute: typeof ListingsListingIdVoucherRoute
   ListingsListingIdIndexRoute: typeof ListingsListingIdIndexRoute
@@ -546,10 +565,11 @@ const ListingsListingIdRouteChildren: ListingsListingIdRouteChildren = {
   ListingsListingIdActivitiesRoute: ListingsListingIdActivitiesRoute,
   ListingsListingIdContactsRoute: ListingsListingIdContactsRoute,
   ListingsListingIdDocumentsRoute: ListingsListingIdDocumentsRoute,
+  ListingsListingIdEmailRoute: ListingsListingIdEmailRoute,
   ListingsListingIdHistoryRoute: ListingsListingIdHistoryRoute,
   ListingsListingIdLeadsRoute: ListingsListingIdLeadsRoute,
   ListingsListingIdOverviewRoute: ListingsListingIdOverviewRoute,
-  ListingsListingIdPlannerRoute: ListingsListingIdPlannerRoute,
+  ListingsListingIdTasksRoute: ListingsListingIdTasksRoute,
   ListingsListingIdTransactionRoute: ListingsListingIdTransactionRoute,
   ListingsListingIdVoucherRoute: ListingsListingIdVoucherRoute,
   ListingsListingIdIndexRoute: ListingsListingIdIndexRoute,

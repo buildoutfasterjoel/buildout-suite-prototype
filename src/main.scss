@@ -1,8 +1,11 @@
+@import "@fortawesome/fontawesome-svg-core/styles.css" layer(components);
 @import "@buildoutinc/blueprint-theme/scss/theme";
 
 // Pipeline stage cards
 .pipeline-stage-card {
-  transition: box-shadow 150ms ease, background-color 150ms ease;
+  transition:
+    box-shadow 150ms ease,
+    background-color 150ms ease;
   cursor: pointer;
 
   &:hover {
@@ -23,7 +26,6 @@
     background-color: #f1f5f9 !important;
   }
 }
-
 
 .global-nav-role-select {
   opacity: 0.5;

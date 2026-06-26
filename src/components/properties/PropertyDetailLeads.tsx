@@ -22,6 +22,7 @@ import {
 import type { Contact, Property } from "#/data/types";
 import { getStore } from "#/data/store";
 import { hash } from "./propertyDisplay";
+import { ListingPageHeader } from "../listings/ListingPageHeader";
 
 const ACCESS_LEVELS = ["Low", "Medium", "High"] as const;
 const REFERRAL_SOURCES = [
@@ -156,30 +157,34 @@ export function PropertyDetailLeads({ property }: { property: Property }) {
   return (
     <div className="d-flex flex-column gap-3 p-4" style={{ minWidth: 0 }}>
       {/* Title row */}
-      <div className="d-flex align-items-center gap-3">
-        <h2 className="fs-4 mb-0 flex-grow-1">Leads</h2>
-        <DropdownMenu>
-          <DropdownMenu.Trigger
-            render={
-              <Button variant="outline">
-                Actions
-                <FontAwesomeIcon icon={faCaretDown} />
-              </Button>
-            }
-          />
-          <DropdownMenu.Content align="end">
-            <DropdownMenu.Item>Export</DropdownMenu.Item>
-            <DropdownMenu.Item>Send Email</DropdownMenu.Item>
-            <DropdownMenu.Item>Add to List</DropdownMenu.Item>
-            <DropdownMenu.Separator />
-            <DropdownMenu.Item>Remove Selected</DropdownMenu.Item>
-          </DropdownMenu.Content>
-        </DropdownMenu>
-        <Button variant="primary">
-          <FontAwesomeIcon icon={faPlus} />
-          Add Lead
-        </Button>
-      </div>
+      <ListingPageHeader
+        title="Leads"
+        actions={
+          <>
+            <DropdownMenu>
+              <DropdownMenu.Trigger
+                render={
+                  <Button variant="outline">
+                    Actions
+                    <FontAwesomeIcon icon={faCaretDown} />
+                  </Button>
+                }
+              />
+              <DropdownMenu.Content align="end">
+                <DropdownMenu.Item>Export</DropdownMenu.Item>
+                <DropdownMenu.Item>Send Email</DropdownMenu.Item>
+                <DropdownMenu.Item>Add to List</DropdownMenu.Item>
+                <DropdownMenu.Separator />
+                <DropdownMenu.Item>Remove Selected</DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu>
+            <Button variant="primary">
+              <FontAwesomeIcon icon={faPlus} />
+              Add Lead
+            </Button>
+          </>
+        }
+      />
 
       {/* Filter row */}
       <div className="d-flex align-items-center gap-2 flex-wrap">

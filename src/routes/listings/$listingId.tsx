@@ -13,9 +13,7 @@ export const Route = createFileRoute("/listings/$listingId")({
   head: ({ params }) => {
     const listing = getStore().listings.get(params.listingId);
     return {
-      meta: [
-        { title: `${listing?.name ?? "Listing"} | Buildout Suite` },
-      ],
+      meta: [{ title: `${listing?.name ?? "Listing"} | Buildout Suite` }],
     };
   },
 });
@@ -36,7 +34,11 @@ function ListingNotFound() {
           been removed or the link is incorrect.
         </Empty.Content>
         <Empty.Actions>
-          <Button variant="primary" nativeButton={false} render={<Link to="/listings" />}>
+          <Button
+            variant="primary"
+            nativeButton={false}
+            render={<Link to="/listings" />}
+          >
             Back to Listings
           </Button>
         </Empty.Actions>
@@ -55,8 +57,8 @@ function PropertyDetail() {
     <div className="d-flex flex-column h-100 overflow-hidden">
       <PropertyDetailHeader listing={listing} />
 
-      <div className="p-6 flex-grow-1 overflow-hidden d-flex flex-column">
-        <div className="container-fluid flex-grow-1 d-flex overflow-hidden gap-6">
+      <div className="flex-grow-1 overflow-hidden d-flex flex-column py-4">
+        <div className="container-fluid flex-grow-1 d-flex overflow-hidden gap-4">
           {/* Section nav — its own card */}
           <Card
             className="overflow-auto shadow flex-shrink-0"

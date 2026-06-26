@@ -22,6 +22,7 @@ import {
   faTrashCan,
   faCircleInfo,
 } from "@fortawesome/pro-regular-svg-icons";
+import { ListingPageHeader } from "../listings/ListingPageHeader";
 
 type Document = {
   id: string;
@@ -98,40 +99,44 @@ export function PropertyDetailDocuments({ listingId }: { listingId: string }) {
   return (
     <div className="d-flex flex-column gap-3 p-4" style={{ minWidth: 0 }}>
       {/* Title row */}
-      <div className="d-flex align-items-center gap-3">
-        <h2 className="fs-4 mb-0 flex-grow-1">Documents</h2>
-        <DropdownMenu>
-          <DropdownMenu.Trigger
-            render={
-              <Button variant="outline">
-                <FontAwesomeIcon icon={faShareNodes} />
-                Share
-                <FontAwesomeIcon icon={faCaretDown} />
-              </Button>
-            }
-          />
-          <DropdownMenu.Content align="end">
-            <DropdownMenu.Item>Copy Link</DropdownMenu.Item>
-            <DropdownMenu.Item>Download All</DropdownMenu.Item>
-            <DropdownMenu.Item>Embed</DropdownMenu.Item>
-          </DropdownMenu.Content>
-        </DropdownMenu>
-        <DropdownMenu>
-          <DropdownMenu.Trigger
-            render={
-              <Button variant="primary">
-                New
-                <FontAwesomeIcon icon={faCaretDown} />
-              </Button>
-            }
-          />
-          <DropdownMenu.Content align="end">
-            <DropdownMenu.Item>Upload File</DropdownMenu.Item>
-            <DropdownMenu.Item>Create Folder</DropdownMenu.Item>
-            <DropdownMenu.Item>Request Document</DropdownMenu.Item>
-          </DropdownMenu.Content>
-        </DropdownMenu>
-      </div>
+      <ListingPageHeader
+        title="Documents"
+        actions={
+          <>
+            <DropdownMenu>
+              <DropdownMenu.Trigger
+                render={
+                  <Button variant="outline">
+                    <FontAwesomeIcon icon={faShareNodes} />
+                    Share
+                    <FontAwesomeIcon icon={faCaretDown} />
+                  </Button>
+                }
+              />
+              <DropdownMenu.Content align="end">
+                <DropdownMenu.Item>Copy Link</DropdownMenu.Item>
+                <DropdownMenu.Item>Download All</DropdownMenu.Item>
+                <DropdownMenu.Item>Embed</DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenu.Trigger
+                render={
+                  <Button variant="primary">
+                    New
+                    <FontAwesomeIcon icon={faCaretDown} />
+                  </Button>
+                }
+              />
+              <DropdownMenu.Content align="end">
+                <DropdownMenu.Item>Upload File</DropdownMenu.Item>
+                <DropdownMenu.Item>Create Folder</DropdownMenu.Item>
+                <DropdownMenu.Item>Request Document</DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu>
+          </>
+        }
+      />
 
       {/* Filter + search row */}
       <div className="d-flex align-items-center justify-content-between gap-3 flex-wrap">

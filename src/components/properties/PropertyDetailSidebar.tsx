@@ -26,7 +26,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Overview", href: "overview", icon: faGaugeHigh },
       { label: "Leads", href: "leads", icon: faAddressBook },
-      { label: "Planner", href: "planner", icon: faListCheck },
+      { label: "Tasks", href: "tasks", icon: faListCheck },
       { label: "Contacts", href: "contacts", icon: faUsers },
       { label: "Activities", href: "activities", icon: faBolt },
       { label: "History", href: "history", icon: faClockRotateLeft },

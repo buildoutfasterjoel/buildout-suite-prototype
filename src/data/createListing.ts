@@ -1,0 +1,262 @@
+import type {
+  Listing,
+  Property,
+  PropertyType,
+  PropertySubtype,
+  DealType,
+  DealBroker,
+} from './types'
+import { addListing, addProperty, getProperty } from './store'
+import { TYPE_LABELS } from '#/components/properties/propertyDisplay'
+
+/**
+ * The editable subset of a listing the New Listing modal collects — just the
+ * listing-level essentials. Property/building facts come from the linked CRM
+ * property, not this flow; everything else on a proposal is defaulted/blank.
+ */
+export interface NewListingDraft {
+  /** Defaults to the address when left blank. */
+  name: string
+  address: string
+  /** Links to an existing CRM property when one is chosen/matched. */
+  propertyId: string
+  propertyType: PropertyType
+  dealType: DealType
+  listingPrice: number
+  commissionPct: number
+  availableSqFt: number
+  description: string
+  locationDescription: string
+}
+
+/** A sensible blank draft to seed the manual-entry form. */
+export function emptyDraft(): NewListingDraft {
+  return {
+    name: '',
+    address: '',
+    propertyId: '',
+    propertyType: 'office',
+    dealType: 'Sale',
+    listingPrice: 0,
+    commissionPct: 0,
+    availableSqFt: 0,
+    description: '',
+    locationDescription: '',
+  }
+}
+
+/** Default subtype per property type for a stub property. */
+const DEFAULT_SUBTYPE: Record<PropertyType, PropertySubtype> = {
+  office: 'Multi-Tenant',
+  retail: 'Storefront',
+  industrial: 'Warehouse',
+  multifamily: 'Mid-Rise',
+  'mixed-use': 'Mixed-Use',
+  land: 'Vacant Land',
+  hospitality: 'Hotel',
+  'special-purpose': 'Self-Storage',
+}
+
+/** The signed-in broker — a proposal is created under whoever starts it. */
+function currentUserBroker(commissionAmount: number): DealBroker {
+  return {
+    id: crypto.randomUUID(),
+    name: 'You (Listing Broker)',
+    role: 'Primary Broker - Sell Side',
+    email: 'me@buildout.com',
+    side: 'internal',
+    commissionSplitPct: 100,
+    grossCommission: commissionAmount,
+  }
+}
+
+/**
+ * Build a stub Property from the draft. A listing denormalizes its location/type
+ * for display, but deal sub-tabs (Transaction/Overview) read the parent Property
+ * for building facts — so a new listing needs a matching property to point at.
+ * In production this property would already exist in the broker's CRM.
+ */
+function buildStubProperty(draft: NewListingDraft, now: string): Property {
+  const id = crypto.randomUUID()
+  const slug = `${slugify(draft.name || draft.address || 'new-listing')}-${id.slice(0, 6)}`
+  return {
+    id,
+    name: draft.name || draft.address,
+    slug,
+    status: 'proposal',
+
+    propertyType: draft.propertyType,
+    propertySubtype: DEFAULT_SUBTYPE[draft.propertyType],
+    yearBuilt: 0,
+    yearRenovated: null,
+    residentialUnits: null,
+    fullBathrooms: null,
+    partialBathrooms: null,
+    totalBathrooms: null,
+    buildingSqFt: draft.availableSqFt,
+    lotSqFt: 0,
+    numberOfBuildings: 1,
+    stories: 0,
+    basementSqFt: null,
+
+    askingPrice: draft.listingPrice,
+    lastPurchasePrice: 0,
+    lastPurchaseDate: '',
+    assessedMarketValue: 0,
+    numberOfOpenLiens: 0,
+    amountOfOpenLiens: 0,
+
+    buildingClass: 'B',
+    basementType: null,
+    exteriorWallType: 'N/A',
+    heatingType: 'N/A',
+    airConditioning: 'None',
+    buildingStyle: 'N/A',
+
+    apn: '',
+    lat: 0,
+    lng: 0,
+    street: draft.address,
+    city: '',
+    state: '',
+    zip: '',
+    county: '',
+    submarket: '',
+    zoning: '',
+    censusTract: '',
+    schoolDistrict: null,
+    legalDescription: '',
+    district: '',
+    useCode: '',
+    municipality: '',
+
+    assessedTaxValue: 0,
+    landAssessedValue: 0,
+    improvementAssessedValue: 0,
+    assessedYear: 0,
+    taxAmount: 0,
+    taxYear: 0,
+
+    potentialGrossIncome: 0,
+    vacancyRate: 0,
+    effectiveGrossIncome: 0,
+    operatingExpenses: 0,
+    noi: 0,
+    capRate: 0,
+    cashOnCashReturn: 0,
+    grossRentMultiplier: 0,
+    parkingSpaces: 0,
+
+    createdAt: now,
+    updatedAt: now,
+  }
+}
+
+function slugify(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'listing'
+}
+
+/** Short, human-ish deal id for a new proposal. */
+function generateDealId(): string {
+  return `D-${String(Math.floor(Date.now() % 100000)).padStart(5, '0')}`
+}
+
+/**
+ * Create a new listing in proposal mode (plus its stub property) and insert both
+ * into the in-memory store. Returns the created listing so callers can navigate
+ * to it. Transaction/contact/task data starts empty — this is a fresh proposal.
+ */
+export function createProposalListing(draft: NewListingDraft): Listing {
+  const now = new Date().toISOString()
+
+  // Link to the chosen CRM property; only fabricate a stub if none was picked.
+  const linked = draft.propertyId ? getProperty(draft.propertyId) : undefined
+  const property = linked ?? buildStubProperty(draft, now)
+  if (!linked) addProperty(property)
+
+  const addressLabel = linked
+    ? [property.street, property.city, property.state].filter(Boolean).join(', ')
+    : draft.address
+
+  const id = crypto.randomUUID()
+  const dealId = generateDealId()
+  const name = draft.name || addressLabel || property.name || 'Untitled Listing'
+
+  const commissionAmount =
+    draft.listingPrice > 0
+      ? Math.round(draft.listingPrice * (draft.commissionPct / 100))
+      : 0
+
+  const listing: Listing = {
+    id,
+    propertyId: property.id,
+    name,
+    slug: `${property.slug}-1`,
+    status: 'proposal',
+    dealType: draft.dealType,
+
+    availableSqFt: draft.availableSqFt,
+    askingPrice: draft.listingPrice,
+    leaseRate: null,
+    capRate: 0,
+    description: draft.description,
+    locationDescription: draft.locationDescription,
+
+    propertyType: property.propertyType,
+    propertySubtype: property.propertySubtype,
+    street: property.street,
+    city: property.city,
+    state: property.state,
+    zip: property.zip,
+    lat: property.lat,
+    lng: property.lng,
+
+    // Deal (1:1) — empty/zeroed for a brand-new proposal
+    dealId,
+    location: linked
+      ? [property.city, property.state].filter(Boolean).join(', ')
+      : addressLabel,
+    propertyTypeLabel: TYPE_LABELS[property.propertyType],
+    salePrice: draft.listingPrice,
+    pricePerSqFt:
+      draft.availableSqFt > 0
+        ? Math.round((draft.listingPrice / draft.availableSqFt) * 100) / 100
+        : 0,
+    commissionPct: draft.commissionPct,
+    commissionAmount,
+    closeProbability: 0,
+    internalBrokers: [currentUserBroker(commissionAmount)],
+    outsideBrokers: [],
+    sellerContactIds: [],
+    buyerContactIds: [],
+    otherContactIds: [],
+    tasks: [],
+    messages: [],
+    activities: [],
+    history: [
+      {
+        id: crypto.randomUUID(),
+        label: 'Created under',
+        fromStage: null,
+        toStage: 'proposal',
+        timestamp: now,
+      },
+    ],
+    voucher: {
+      name,
+      identifier: dealId,
+      status: 'Draft',
+      closeDate: null,
+      transactionValue: draft.listingPrice,
+      grossCommission: commissionAmount,
+      relatedContactsLabel: '—',
+    },
+    nextCriticalDate: null,
+
+    createdAt: now,
+    updatedAt: now,
+  }
+
+  addListing(listing)
+  return listing
+}

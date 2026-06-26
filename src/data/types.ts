@@ -158,6 +158,10 @@ export interface Listing {
   leaseRate: number | null
   capRate: number
 
+  // Listing marketing copy (optional — surfaced in the New Listing flow)
+  description?: string
+  locationDescription?: string
+
   // Denormalized from parent Property for display
   propertyType: PropertyType
   propertySubtype: PropertySubtype

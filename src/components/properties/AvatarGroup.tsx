@@ -18,20 +18,15 @@ export function AvatarGroup({
   const more = 2 + (seed % 7);
 
   return (
-    <div
-      className="d-inline-flex align-items-center bg-white rounded-pill shadow-sm"
-      style={{ padding: "2px 8px 2px 2px", gap: 4 }}
-    >
-      <Avatar.Group size={size === "sm" ? "sm" : undefined}>
-        {Array.from({ length: shown }, (_, i) => (
-          <Avatar key={i}>
-            <Avatar.Fallback>
-              {AVATAR_INITIALS[(seed + i) % AVATAR_INITIALS.length]}
-            </Avatar.Fallback>
-          </Avatar>
-        ))}
-        <Avatar.More count={more - shown} />
-      </Avatar.Group>
-    </div>
+    <Avatar.Group size={size === "sm" ? "sm" : undefined}>
+      {Array.from({ length: shown }, (_, i) => (
+        <Avatar key={i}>
+          <Avatar.Fallback>
+            {AVATAR_INITIALS[(seed + i) % AVATAR_INITIALS.length]}
+          </Avatar.Fallback>
+        </Avatar>
+      ))}
+      <Avatar.More count={more - shown} />
+    </Avatar.Group>
   );
 }

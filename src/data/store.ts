@@ -34,3 +34,23 @@ export function getListing(listingId: string): Listing | undefined {
 export function getListingsForProperty(propertyId: string): Listing[] {
   return [...getStore().listings.values()].filter((l) => l.propertyId === propertyId)
 }
+
+/** Insert a property into the in-memory store. */
+export function addProperty(property: Property): void {
+  getStore().properties.set(property.id, property)
+}
+
+/** { value: propertyId, label: address } options for a property picker. */
+export function getPropertyOptions(): { value: string; label: string }[] {
+  return [...getStore().properties.values()]
+    .map((p) => ({
+      value: p.id,
+      label: [p.street, p.city, p.state].filter(Boolean).join(', '),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+}
+
+/** Insert a listing into the in-memory store. */
+export function addListing(listing: Listing): void {
+  getStore().listings.set(listing.id, listing)
+}

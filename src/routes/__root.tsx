@@ -16,6 +16,10 @@ import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import mainCSS from "../main.scss?url";
 import { getAuthSession } from "#/lib/auth";
 
+import { config } from "@fortawesome/fontawesome-svg-core";
+
+config.autoAddCss = false;
+
 export const Route = createRootRoute({
   beforeLoad: async ({ location }) => {
     if (location.pathname === "/login") return;

@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faUser } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact, Listing } from "#/data/types";
 import { getStore } from "#/data/store";
+import { ListingPageHeader } from "../listings/ListingPageHeader";
 import { initials } from "./dealDisplay";
 
 function ContactRow({ contact, role }: { contact: Contact; role: string }) {
@@ -105,6 +106,7 @@ export function DealContacts({ listing }: { listing: Listing }) {
 
   return (
     <div className="d-flex flex-column gap-4 p-4">
+      <ListingPageHeader title="Contacts" />
       <div className="row g-4">
         <div className="col-lg-6">
           <ContactCard title="Seller" required addLabel="Add seller">

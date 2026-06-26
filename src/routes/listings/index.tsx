@@ -13,6 +13,7 @@ import {
   faMagnifyingGlass,
   faUserGroupSimple,
   faArrowDownWideShort,
+  faCirclePlus,
 } from "@fortawesome/pro-regular-svg-icons";
 import { getStore } from "#/data/store";
 import type { Listing } from "#/data/types";
@@ -35,6 +36,7 @@ import {
   getExpiration,
 } from "#/components/properties/propertyFacets";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
+import { NewListingModal } from "#/components/listings/NewListingModal";
 
 export const Route = createFileRoute("/listings/")({
   component: PropertyListings,
@@ -85,6 +87,7 @@ function PropertyListings() {
   const [view, setView] = useState<ViewMode>("grid");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortBy>("default");
+  const [newOpen, setNewOpen] = useState(false);
 
   const status = useToggleSet<string>();
   const type = useToggleSet<string>();
@@ -182,14 +185,22 @@ function PropertyListings() {
     <div className="d-flex flex-column h-100 overflow-hidden">
       {/* Page header — matches Pipeline */}
       <div className="border-bottom bg-card">
-        <div className="container-fluid py-4 flex-column">
-          <h1 className="fs-4 fw-semibold mb-0">Listings</h1>
-          <span className="text-muted">
-            {filtered.length} {filtered.length === 1 ? "listing" : "listings"}
-            {filtered.length !== total && ` of ${total}`}
-          </span>
+        <div className="container-fluid py-4 d-flex align-items-center justify-content-between">
+          <div className="d-flex flex-column">
+            <h1 className="fs-4 fw-semibold mb-0">Listings</h1>
+            <span className="text-muted">
+              {filtered.length} {filtered.length === 1 ? "listing" : "listings"}
+              {filtered.length !== total && ` of ${total}`}
+            </span>
+          </div>
+          <Button variant="primary" onClick={() => setNewOpen(true)}>
+            <FontAwesomeIcon icon={faCirclePlus} />
+            New Listing
+          </Button>
         </div>
       </div>
+
+      <NewListingModal open={newOpen} onOpenChange={setNewOpen} />
 
       {/* Toolbar card */}
       <div className="py-3 d-flex flex-column gap-3">

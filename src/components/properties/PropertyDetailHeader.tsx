@@ -31,7 +31,7 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
 
   return (
     <div className="bg-card border-bottom">
-      <div className="container-fluid py-3">
+      <div className="container-fluid p-4">
         <div className="d-flex align-items-center gap-3">
           {/* Thumbnail */}
           <img

@@ -11,27 +11,13 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing } from "#/data/types";
 import { STATUS_LABELS } from "../properties/propertyDisplay";
+import { ListingPageHeader } from "../listings/ListingPageHeader";
 import { formatCurrency, formatDate } from "./dealDisplay";
-
-function SectionHeader({
-  title,
-  action,
-}: {
-  title: string;
-  action?: React.ReactNode;
-}) {
-  return (
-    <div className="d-flex align-items-center justify-content-between mb-3">
-      <h2 className="fs-4 mb-0">{title}</h2>
-      {action}
-    </div>
-  );
-}
 
 export function DealAttachments() {
   return (
     <div className="d-flex flex-column gap-3 p-4">
-      <SectionHeader title="Attachments" />
+      <ListingPageHeader title="Attachments" />
       <div className="bg-card border rounded" style={{ borderRadius: 6 }}>
         <Empty className="py-6">
           <Empty.Media>
@@ -58,9 +44,9 @@ export function DealAttachments() {
 export function DealActivities() {
   return (
     <div className="d-flex flex-column gap-3 p-4">
-      <SectionHeader
+      <ListingPageHeader
         title="Activities"
-        action={
+        actions={
           <Button variant="primary">
             <FontAwesomeIcon icon={faPlus} />
             Add activity
@@ -85,7 +71,7 @@ export function DealActivities() {
 export function DealHistory({ listing }: { listing: Listing }) {
   return (
     <div className="d-flex flex-column gap-3 p-4">
-      <SectionHeader title="History" />
+      <ListingPageHeader title="History" />
       <div className="bg-card border rounded" style={{ borderRadius: 6 }}>
         {listing.history.map((h) => (
           <div
@@ -120,7 +106,7 @@ export function DealVoucher({ listing }: { listing: Listing }) {
   const v = listing.voucher;
   return (
     <div className="d-flex flex-column gap-3 p-4">
-      <SectionHeader title="Voucher" />
+      <ListingPageHeader title="Voucher" />
       <Table>
         <Table.Header>
           <Table.Row>
