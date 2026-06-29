@@ -36,28 +36,8 @@
   }
 }
 
-// App shell: pin the sidebar so its hover-expand overlays the content
-// instead of reflowing it. Content reserves only the collapsed rail width.
-.app-shell {
-  position: relative;
-}
-
 // Email campaign tabs: keep badge inline with the label text
 .email-campaign-tabs .nav-link-text {
   flex-direction: row;
   align-items: center;
-}
-
-@media (min-width: 992px) {
-  .app-shell > .sidebar {
-    position: absolute;
-    inset-block: 0;
-    inset-inline-start: 0;
-    height: 100%;
-    z-index: 900; // above page content, below the dropdown/popover layer (1000+)
-  }
-
-  .app-shell__main {
-    margin-inline-start: 3rem; // collapsed rail width ($spacing-12)
-  }
 }

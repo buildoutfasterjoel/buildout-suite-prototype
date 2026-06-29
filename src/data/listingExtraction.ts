@@ -1,6 +1,6 @@
 import type { PropertyType, DealType, Property } from './types'
 import type { NewListingDraft } from './createListing'
-import { getStore } from './store'
+import { getStore, getListingsForProperty } from './store'
 
 /**
  * Simulated AI ingestion. This is a prototype — there is no real document parsing
@@ -70,6 +70,25 @@ function parseCommissionPct(text: string): number | null {
   if (!m) return null
   const n = parseFloat(m[1])
   return Number.isNaN(n) ? null : n
+}
+
+/** Words that suggest the broker is describing a space within a building, not the whole thing. */
+const SPACE_KEYWORDS = ['suite', 'ste', 'unit', 'sublease', 'floor', 'condo', 'space', 'pad']
+
+/** Normalize a captured space label into a tidy "Suite 300" / "Floor 3" form. */
+function parseSpaceLabel(text: string): string | null {
+  const m = text.match(/\b(suite|ste|unit|pad|floor|fl)\.?\s*#?\s*([a-z0-9-]+)\b/i)
+  if (!m) return null
+  const word = m[1].toLowerCase()
+  const label =
+    word === 'ste' ? 'Suite' : word === 'fl' ? 'Floor' : word[0].toUpperCase() + word.slice(1)
+  return `${label} ${m[2].toUpperCase()}`
+}
+
+/** Does the free text describe a space within a building (vs. the whole property)? */
+function detectsSpace(text: string): boolean {
+  const lower = text.toLowerCase()
+  return SPACE_KEYWORDS.some((w) => new RegExp(`\\b${w}\\b`, 'i').test(lower))
 }
 
 function detectType(text: string): PropertyType | null {
@@ -166,5 +185,42 @@ export async function extractListingDraft(input: {
   const property = pickProperty(preferredType)
   const base = property ? draftFromProperty(property) : {}
   const overrides = text ? parsePromptOverrides(text) : {}
-  return { ...base, ...overrides }
+
+  // If the broker describes a space (suite/unit/sublease…) and the matched property
+  // already has listings, suggest adding it as a new space rather than a whole building.
+  const space: Partial<NewListingDraft> = {}
+  if (property && detectsSpace(text) && getListingsForProperty(property.id).length > 0) {
+    space.attachAs = 'space'
+    space.spaceLabel = parseSpaceLabel(text) ?? ''
+  }
+
+  return { ...base, ...overrides, ...space }
+}
+
+/**
+ * Refine an in-progress draft from a follow-up message (e.g. "make it a lease at
+ * $30/SF"). Unlike {@link extractListingDraft} this never re-matches the property —
+ * it only layers structured details sniffed from the text, so the conversation can
+ * iterate without clobbering the already-connected property. Returns only the fields
+ * it actually found.
+ */
+export async function refineListingDraft(text: string): Promise<Partial<NewListingDraft>> {
+  await delay(700)
+
+  const draft: Partial<NewListingDraft> = {}
+  const price = parsePrice(text)
+  const sqft = parseSqFt(text)
+  const dealType = detectDealType(text)
+  const commission = parseCommissionPct(text)
+  const spaceLabel = parseSpaceLabel(text)
+
+  if (price != null) draft.listingPrice = price
+  if (sqft != null) draft.availableSqFt = sqft
+  if (dealType) draft.dealType = dealType
+  if (commission != null) draft.commissionPct = commission
+  if (spaceLabel) {
+    draft.attachAs = 'space'
+    draft.spaceLabel = spaceLabel
+  }
+  return draft
 }

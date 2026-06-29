@@ -41,7 +41,7 @@ import { NewListingModal } from "#/components/listings/NewListingModal";
 export const Route = createFileRoute("/listings/")({
   component: PropertyListings,
   head: () => ({
-    meta: [{ title: "Listings | Buildout Suite" }],
+    meta: [{ title: "Deals | Buildout Suite" }],
   }),
 });
 
@@ -187,15 +187,15 @@ function PropertyListings() {
       <div className="border-bottom bg-card">
         <div className="container-fluid py-4 d-flex align-items-center justify-content-between">
           <div className="d-flex flex-column">
-            <h1 className="fs-4 fw-semibold mb-0">Listings</h1>
+            <h1 className="fs-4 fw-semibold mb-0">Deals</h1>
             <span className="text-muted">
-              {filtered.length} {filtered.length === 1 ? "listing" : "listings"}
+              {filtered.length} {filtered.length === 1 ? "deal" : "deals"}
               {filtered.length !== total && ` of ${total}`}
             </span>
           </div>
           <Button variant="primary" onClick={() => setNewOpen(true)}>
             <FontAwesomeIcon icon={faCirclePlus} />
-            New Listing
+            New Deal
           </Button>
         </div>
       </div>
@@ -264,14 +264,15 @@ function PropertyListings() {
                   {/* Right: view toggle + count */}
                   <div className="d-flex align-items-center gap-3 ms-auto">
                     <span className="text-muted text-nowrap">
-                      Displaying {filtered.length} of {total} Listings
+                      Displaying {filtered.length} of {total} Deals
                     </span>
                     <ButtonGroup aria-label="View switcher">
                       <Tooltip>
                         <Tooltip.Trigger
                           render={
                             <Button
-                              variant={view === "grid" ? "primary" : "outline"}
+                              variant="outline"
+                              className={view === "grid" ? "active" : ""}
                               size="icon"
                               onClick={() => setView("grid")}
                               aria-pressed={view === "grid"}
@@ -287,7 +288,8 @@ function PropertyListings() {
                         <Tooltip.Trigger
                           render={
                             <Button
-                              variant={view === "map" ? "primary" : "outline"}
+                              variant="outline"
+                              className={view === "map" ? "active" : ""}
                               size="icon"
                               onClick={() => setView("map")}
                               aria-pressed={view === "map"}

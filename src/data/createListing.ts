@@ -6,7 +6,7 @@ import type {
   DealType,
   DealBroker,
 } from './types'
-import { addListing, addProperty, getProperty } from './store'
+import { addListing, addProperty, getProperty, getListingsForProperty } from './store'
 import { TYPE_LABELS } from '#/components/properties/propertyDisplay'
 
 /**
@@ -20,6 +20,14 @@ export interface NewListingDraft {
   address: string
   /** Links to an existing CRM property when one is chosen/matched. */
   propertyId: string
+  /**
+   * Whether this listing markets the whole building or is a new space (suite/unit)
+   * within the linked property. Only meaningful when `propertyId` is set — a
+   * brand-new property is always a whole building.
+   */
+  attachAs: 'building' | 'space'
+  /** Suite/unit/floor label for a space (e.g. "Suite 300", "Pad B"). */
+  spaceLabel: string
   propertyType: PropertyType
   dealType: DealType
   listingPrice: number
@@ -35,6 +43,8 @@ export function emptyDraft(): NewListingDraft {
     name: '',
     address: '',
     propertyId: '',
+    attachAs: 'building',
+    spaceLabel: '',
     propertyType: 'office',
     dealType: 'Sale',
     listingPrice: 0,
@@ -180,7 +190,19 @@ export function createProposalListing(draft: NewListingDraft): Listing {
 
   const id = crypto.randomUUID()
   const dealId = generateDealId()
-  const name = draft.name || addressLabel || property.name || 'Untitled Listing'
+
+  // A space attaches to an existing property as a sibling listing; default its name
+  // and slug off the parent so it reads like "123 Main St — Suite 300".
+  const isSpace = Boolean(linked) && draft.attachAs === 'space'
+  const spaceName =
+    isSpace && draft.spaceLabel.trim()
+      ? `${property.name} — ${draft.spaceLabel.trim()}`
+      : ''
+  const name =
+    draft.name || spaceName || addressLabel || property.name || 'Untitled Listing'
+  const slug = isSpace
+    ? `${property.slug}-${getListingsForProperty(property.id).length + 1}`
+    : `${property.slug}-1`
 
   const commissionAmount =
     draft.listingPrice > 0
@@ -191,7 +213,7 @@ export function createProposalListing(draft: NewListingDraft): Listing {
     id,
     propertyId: property.id,
     name,
-    slug: `${property.slug}-1`,
+    slug,
     status: 'proposal',
     dealType: draft.dealType,
 
