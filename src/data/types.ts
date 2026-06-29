@@ -238,6 +238,7 @@ export interface DealActivity {
   id: string
   type: string
   note: string
+  actor: string
   timestamp: string
 }
 
@@ -246,6 +247,7 @@ export interface DealHistoryEntry {
   label: string
   fromStage: ListingStage | null
   toStage: ListingStage | null
+  actor: string
   timestamp: string
 }
 

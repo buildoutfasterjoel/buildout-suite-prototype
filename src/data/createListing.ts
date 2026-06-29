@@ -274,6 +274,7 @@ export function createProposalListing(draft: NewListingDraft): Listing {
         label: 'Created under',
         fromStage: null,
         toStage: 'proposal',
+        actor: 'You (Listing Broker)',
         timestamp: now,
       },
     ],

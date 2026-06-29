@@ -711,12 +711,14 @@ function generateListings(
     )
 
     const createdAt = property.createdAt
+    const actor = internalBrokers[0].name
     const history: DealHistoryEntry[] = [
       {
         id: faker.string.uuid(),
         label: 'Created under',
         fromStage: null,
         toStage: 'proposal',
+        actor,
         timestamp: createdAt,
       },
     ]
@@ -726,6 +728,7 @@ function generateListings(
         label: 'Stage updated from',
         fromStage: 'proposal',
         toStage: status,
+        actor,
         timestamp: faker.date.recent({ days: 120 }).toISOString(),
       })
     }

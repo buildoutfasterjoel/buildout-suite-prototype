@@ -26,6 +26,22 @@ export function formatDate(iso: string | null): string {
   return `${mm}/${dd}/${d.getFullYear()}`;
 }
 
+/** "Jun 12, 2026 · 3:40 PM" from an ISO string, or a dash when absent. */
+export function formatDateTime(iso: string | null): string {
+  if (!iso) return "--";
+  const d = new Date(iso);
+  const date = d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const time = d.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  return `${date} · ${time}`;
+}
+
 export function initials(name: string): string {
   return name
     .split(" ")
