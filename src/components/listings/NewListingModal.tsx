@@ -6,28 +6,25 @@ import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { Textarea } from "@buildoutinc/blueprint-react/ui/Textarea";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { Combobox } from "@buildoutinc/blueprint-react/ui/Combobox";
-import { RadioGroup } from "@buildoutinc/blueprint-react/ui/RadioGroup";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faMicrophone,
   faPaperPlane,
   faPaperclip,
-  faSparkles,
   faPenToSquare,
   faXmark,
   faSearch,
   faLocationDot,
   faCheck,
+  faSign,
+  faUser,
 } from "@fortawesome/pro-regular-svg-icons";
 import {
   PROPERTY_TYPES,
   TYPE_LABELS,
-  TYPE_ICONS,
   TYPE_COLORS,
 } from "#/components/properties/propertyDisplay";
-import { DealStageBadge } from "#/components/deals/DealStageBadge";
-import type { DealType } from "#/data/types";
 import {
   createProposalListing,
   emptyDraft,
@@ -40,26 +37,28 @@ import {
 import {
   getProperty,
   getPropertyOptions,
-  getListingsForProperty,
+  getOwnersForProperty,
+  getSellerOptions,
+  getContact,
+  contactLabel,
 } from "#/data/store";
 
 type PropertyOption = { value: string; label: string };
-type Scope = NewListingDraft["attachAs"];
+type ContactOption = { value: string; label: string };
 type ChatMessage = {
   id: string;
   role: "user" | "ai";
   text: string;
-  chips?: { label: string; value: Scope }[];
+  /** Inline choices the broker can tap — used to pick the seller among owners. */
+  sellerChips?: ContactOption[];
 };
 
-const DEAL_TYPES: DealType[] = ["Sale", "Lease", "Sale / Lease"];
-
 const GREETING =
-  "Tell me about the deal — talk or type. Drop in an offering memo and I’ll read it, or just describe it in your own words.";
+  "Tell me about the sale — talk or type. Describe the building and I’ll pull the matching property from your CRM. Just tell me your asking price and commission.";
 
-// What the simulated microphone "hears" — rich enough to show the AI fill everything.
+// What the simulated microphone "hears" — locate the property, set the broker's terms.
 const VOICE_TRANSCRIPT =
-  "Subleasing Suite 300 at 123 Main St, Chicago — 12,000 SF office, asking $2.4M at a 3% commission.";
+  "I’m putting my office tower in Charlotte’s Ballantyne submarket up for sale — asking $120M at a 3% commission. Pull it up from my CRM and start the deal.";
 
 /** Animated listening bars shown while the (simulated) mic is capturing. */
 function Waveform() {
@@ -84,15 +83,25 @@ function fmtPrice(n: number): string {
 }
 
 function summarize(draft: NewListingDraft): string {
-  const type = TYPE_LABELS[draft.propertyType];
+  // Deal terms the broker sets — these aren't on the property record.
+  const terms: string[] = [];
+  if (draft.listingPrice > 0) terms.push(`asking ${fmtPrice(draft.listingPrice)}`);
+  if (draft.commissionPct > 0) terms.push(`a ${draft.commissionPct}% commission`);
+  const termsText = terms.length
+    ? ` I’ve set it up as a sale at ${terms.join(" with ")}.`
+    : " I’ve set it up as a sale — just tell me your asking price and commission.";
+
+  // Matched to a CRM property — tell the broker we located it and pulled its facts.
+  const property = draft.propertyId ? getProperty(draft.propertyId) : undefined;
+  if (property) {
+    const cls = property.buildingClass ? `Class ${property.buildingClass} ` : "";
+    const size =
+      draft.availableSqFt > 0 ? `, ${draft.availableSqFt.toLocaleString()} SF` : "";
+    return `Found ${property.name} at ${draft.address} in your CRM — a ${cls}${TYPE_LABELS[draft.propertyType]} property${size}.${termsText}`;
+  }
+
   const where = draft.address ? ` at ${draft.address}` : "";
-  const facts: string[] = [];
-  if (draft.availableSqFt > 0)
-    facts.push(`${draft.availableSqFt.toLocaleString()} SF`);
-  if (draft.listingPrice > 0) facts.push(fmtPrice(draft.listingPrice));
-  if (draft.commissionPct > 0) facts.push(`${draft.commissionPct}% commission`);
-  const tail = facts.length ? ` I’ve pulled in ${facts.join(", ")}.` : "";
-  return `Got it — a ${type} ${draft.dealType.toLowerCase()} deal${where}.${tail}`;
+  return `Got it — a ${TYPE_LABELS[draft.propertyType]} sale${where}.${termsText}`;
 }
 
 export function NewListingModal({
@@ -114,7 +123,6 @@ export function NewListingModal({
   const [analyzing, setAnalyzing] = useState(false);
   const [listening, setListening] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
-  const [scopeAnswered, setScopeAnswered] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<NewListingDraft>(emptyDraft);
 
@@ -125,7 +133,6 @@ export function NewListingModal({
     setAnalyzing(false);
     setListening(false);
     setHasDraft(false);
-    setScopeAnswered(false);
     setEditing(false);
     setDraft(emptyDraft());
   }
@@ -161,8 +168,9 @@ export function NewListingModal({
     setInput("");
     setAnalyzing(true);
 
+    const wasFirst = !hasDraft;
     let next: NewListingDraft;
-    if (!hasDraft) {
+    if (wasFirst) {
       const extracted = await extractListingDraft({
         prompt: text,
         fileName: fileName ?? undefined,
@@ -179,41 +187,39 @@ export function NewListingModal({
     setAnalyzing(false);
     pushMessage({ role: "ai", text: summarize(next) });
 
-    // Surface the one fork the AI can't infer: whole building vs. a new space.
-    const siblings = next.propertyId
-      ? getListingsForProperty(next.propertyId)
-      : [];
-    if (!scopeAnswered && siblings.length > 0) {
-      const property = getProperty(next.propertyId);
+    // After the first match, settle the seller — auto-set when there's one owner,
+    // ask when there are several, note it when the property has none on file.
+    if (wasFirst && next.propertyId) {
+      announceSeller(next);
+    }
+  }
+
+  /** Follow-up message resolving who the seller is, based on the property's owners. */
+  function announceSeller(d: NewListingDraft) {
+    const owners = getOwnersForProperty(d.propertyId);
+    if (owners.length === 1) {
       pushMessage({
         role: "ai",
-        text: `${property?.name ?? "This property"} already has ${siblings.length} ${
-          siblings.length === 1 ? "space" : "spaces"
-        }. Is this the whole building, or a new space inside it?`,
-        chips: [
-          { label: "Whole building", value: "building" },
-          { label: "A new space", value: "space" },
-        ],
+        text: `${contactLabel(owners[0])} is the owner on file — I’ve set them as the seller.`,
+      });
+    } else if (owners.length > 1) {
+      pushMessage({
+        role: "ai",
+        text: `This property has ${owners.length} owners on file. Which one is the seller?`,
+        sellerChips: owners.map((o) => ({ value: o.id, label: contactLabel(o) })),
+      });
+    } else {
+      pushMessage({
+        role: "ai",
+        text: "I couldn’t find an owner on file for this property — pick the seller in the details below.",
       });
     }
   }
 
-  function chooseScope(value: Scope) {
-    updateDraft("attachAs", value);
-    setScopeAnswered(true);
-    pushMessage({
-      role: "user",
-      text: value === "space" ? "A new space" : "The whole building",
-    });
-    pushMessage({
-      role: "ai",
-      text:
-        value === "space"
-          ? `Adding it as a new space${
-              draft.spaceLabel ? ` — ${draft.spaceLabel}` : ""
-            }. You can set the suite label in the details below.`
-          : "Marketing the whole building. You’re set.",
-    });
+  function chooseSeller(option: ContactOption) {
+    updateDraft("sellerContactId", option.value);
+    pushMessage({ role: "user", text: option.label });
+    pushMessage({ role: "ai", text: `Got it — ${option.label} is the seller.` });
   }
 
   function handleFilePicked(e: React.ChangeEvent<HTMLInputElement>) {
@@ -258,15 +264,15 @@ export function NewListingModal({
         <Modal.Body>
           {/* Conversation */}
           <div
-            className="d-flex flex-column gap-3"
+            className="d-flex flex-column gap-3 border rounded p-3"
             style={{ maxHeight: 280, overflowY: "auto" }}
           >
             {messages.map((m) => (
               <ChatBubble
                 key={m.id}
                 message={m}
-                disabled={scopeAnswered}
-                onChip={chooseScope}
+                sellerChosen={draft.sellerContactId !== ""}
+                onSeller={chooseSeller}
               />
             ))}
             {analyzing && <TypingBubble />}
@@ -328,8 +334,8 @@ export function NewListingModal({
                 <Input
                   placeholder={
                     hasDraft
-                      ? "Refine it — e.g. “make it a lease at $30/SF”"
-                      : "Describe the deal, or tap the mic to talk…"
+                      ? "Refine it — e.g. “asking $2.6M” or “10,000 SF”"
+                      : "Describe the building, or tap the mic to talk…"
                   }
                   value={input}
                   onValueChange={(v: string) => setInput(v)}
@@ -392,31 +398,29 @@ const WAVE_CSS = `
 /** A single conversation bubble — AI on the left, broker on the right. */
 function ChatBubble({
   message,
-  disabled,
-  onChip,
+  sellerChosen,
+  onSeller,
 }: {
   message: ChatMessage;
-  disabled: boolean;
-  onChip: (value: Scope) => void;
+  sellerChosen: boolean;
+  onSeller: (option: ContactOption) => void;
 }) {
   const isAi = message.role === "ai";
   return (
-    <div
-      className={`d-flex border rounded p-3 ${isAi ? "" : "justify-content-end"}`}
-    >
+    <div className={`d-flex ${isAi ? "" : "justify-content-end"}`}>
       <div style={{ maxWidth: "85%" }}>
-        <div className={`rounded px-3 py-2 ${isAi ? "" : "text-bg-primary"}`}>
+        <div className={isAi ? "" : "rounded px-3 py-2 text-bg-secondary"}>
           {message.text}
         </div>
-        {message.chips && (
-          <div className="d-flex gap-2 mt-2">
-            {message.chips.map((c) => (
+        {message.sellerChips && (
+          <div className="d-flex flex-wrap gap-2 mt-2">
+            {message.sellerChips.map((c) => (
               <Button
                 key={c.value}
                 variant="outline"
                 size="sm"
-                disabled={disabled}
-                onClick={() => onChip(c.value)}
+                disabled={sellerChosen}
+                onClick={() => onSeller(c)}
               >
                 {c.label}
               </Button>
@@ -457,17 +461,18 @@ function DealSoFarCard({
   const property = draft.propertyId ? getProperty(draft.propertyId) : undefined;
   const facts = [
     TYPE_LABELS[draft.propertyType],
-    draft.dealType,
+    "For sale",
     fmtPrice(draft.listingPrice),
     draft.availableSqFt > 0 ? `${draft.availableSqFt.toLocaleString()} SF` : "",
   ].filter(Boolean);
 
-  const connection =
-    property && draft.attachAs === "space"
-      ? `${draft.spaceLabel || "New space"} in ${property.name}`
-      : property
-        ? `Whole building · ${property.name}`
-        : draft.address || "New property";
+  const connection = property
+    ? property.name
+    : draft.address || "New property";
+
+  const seller = draft.sellerContactId
+    ? getContact(draft.sellerContactId)
+    : undefined;
 
   return (
     <div className="border rounded p-3 mt-3">
@@ -482,7 +487,7 @@ function DealSoFarCard({
             color: TYPE_COLORS[draft.propertyType],
           }}
         >
-          <FontAwesomeIcon icon={TYPE_ICONS[draft.propertyType]} />
+          <FontAwesomeIcon icon={faSign} />
         </span>
         <div className="flex-grow-1">
           <div className="text-muted fs-small mb-1">Deal so far</div>
@@ -493,6 +498,19 @@ function DealSoFarCard({
           <div className="d-flex align-items-center gap-1 mt-1 fs-small">
             <FontAwesomeIcon icon={faLocationDot} className="text-muted" />
             {connection}
+          </div>
+          <div className="d-flex align-items-center gap-1 mt-1 fs-small">
+            <FontAwesomeIcon icon={faUser} className="text-muted" />
+            {seller ? (
+              <span>
+                <span className="text-muted">Seller:</span>{" "}
+                {contactLabel(seller)}
+              </span>
+            ) : (
+              <span className="text-muted">
+                No seller yet — add one in the details below
+              </span>
+            )}
           </div>
         </div>
         <Button variant="ghost" size="sm" onClick={onToggleEdit}>
@@ -529,8 +547,13 @@ function DealEditFields({
   const propertyOptions = useMemo<PropertyOption[]>(getPropertyOptions, []);
   const selectedOption =
     propertyOptions.find((o) => o.value === draft.propertyId) ?? null;
-  const property = draft.propertyId ? getProperty(draft.propertyId) : undefined;
-  const spaces = property ? getListingsForProperty(property.id) : [];
+
+  const sellerOptions = useMemo<ContactOption[]>(
+    () => getSellerOptions(draft.propertyId),
+    [draft.propertyId],
+  );
+  const selectedSeller =
+    sellerOptions.find((o) => o.value === draft.sellerContactId) ?? null;
 
   function selectProperty(option: PropertyOption | null) {
     onChange("propertyId", option?.value ?? "");
@@ -538,9 +561,16 @@ function DealEditFields({
     if (option) {
       const p = getProperty(option.value);
       if (p) onChange("propertyType", p.propertyType);
+      // Re-resolve the seller for the new property: auto-pick a lone owner, else clear.
+      const owners = getOwnersForProperty(option.value);
+      onChange("sellerContactId", owners.length === 1 ? owners[0].id : "");
     } else {
-      onChange("attachAs", "building");
+      onChange("sellerContactId", "");
     }
+  }
+
+  function selectSeller(option: ContactOption | null) {
+    onChange("sellerContactId", option?.value ?? "");
   }
 
   return (
@@ -576,74 +606,33 @@ function DealEditFields({
         </Combobox>
       </div>
 
-      {property && spaces.length > 0 && (
-        <div className="col-12">
-          <div className="text-muted fs-small mb-2">
-            {spaces.length} existing {spaces.length === 1 ? "space" : "spaces"}{" "}
-            on this property
-          </div>
-          <div className="d-flex flex-column gap-2">
-            {spaces.map((s) => (
-              <div
-                key={s.id}
-                className="d-flex align-items-center gap-2 border rounded px-3 py-2"
-              >
-                <span className="flex-grow-1 text-truncate">{s.name}</span>
-                <DealStageBadge stage={s.status} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {property && (
-        <div className="col-12">
-          <label className="form-label">What are you listing?</label>
-          <RadioGroup
-            value={draft.attachAs}
-            onValueChange={(v) => v && onChange("attachAs", v as Scope)}
-          >
-            <div className="row g-2">
-              {(
-                [
-                  { value: "building", title: "The whole building" },
-                  { value: "space", title: "A new space" },
-                ] as const
-              ).map((o) => {
-                const active = draft.attachAs === o.value;
-                return (
-                  <div className="col-6" key={o.value}>
-                    <label
-                      htmlFor={`attach-${o.value}`}
-                      className={`d-flex gap-2 align-items-center border rounded p-3 h-100 ${
-                        active ? "border-primary bg-primary-subtle" : ""
-                      }`}
-                      style={{ cursor: "pointer" }}
-                    >
-                      <RadioGroup.Item
-                        value={o.value}
-                        id={`attach-${o.value}`}
-                      />
-                      <span className="fw-semibold">{o.title}</span>
-                    </label>
-                  </div>
-                );
-              })}
-            </div>
-          </RadioGroup>
-        </div>
-      )}
-
-      {draft.attachAs === "space" && (
-        <div className="col-12">
-          <label className="form-label">Space label</label>
-          <Input
-            placeholder="e.g. Suite 300, Unit B, 4th Floor"
-            value={draft.spaceLabel}
-            onValueChange={(v: string) => onChange("spaceLabel", v)}
-          />
-        </div>
-      )}
+      <div className="col-12">
+        <label className="form-label">Seller</label>
+        <Combobox
+          items={sellerOptions}
+          value={selectedSeller}
+          onValueChange={(v) => selectSeller(v as ContactOption | null)}
+        >
+          <Combobox.InputGroup>
+            <InputGroup.Addon>
+              <FontAwesomeIcon icon={faUser} />
+            </InputGroup.Addon>
+            <Combobox.Input placeholder="Search contacts…" showClear />
+          </Combobox.InputGroup>
+          <Combobox.Content>
+            <Combobox.Empty className="p-3 text-muted">
+              No matching contacts
+            </Combobox.Empty>
+            <Combobox.List>
+              {(item: ContactOption) => (
+                <Combobox.Item key={item.value} value={item}>
+                  {item.label}
+                </Combobox.Item>
+              )}
+            </Combobox.List>
+          </Combobox.Content>
+        </Combobox>
+      </div>
 
       <div className="col-12">
         <label className="form-label">Deal name</label>
@@ -654,7 +643,7 @@ function DealEditFields({
         />
       </div>
 
-      <div className="col-6">
+      <div className="col-4">
         <label className="form-label">Property type</label>
         <Select
           value={draft.propertyType}
@@ -674,31 +663,8 @@ function DealEditFields({
           </Select.Content>
         </Select>
       </div>
-      <div className="col-6">
-        <label className="form-label">Deal type</label>
-        <Select
-          value={draft.dealType}
-          onValueChange={(v) => v && onChange("dealType", v as DealType)}
-        >
-          <Select.Trigger>
-            <Select.Value />
-          </Select.Trigger>
-          <Select.Content>
-            {DEAL_TYPES.map((t) => (
-              <Select.Item key={t} value={t}>
-                {t}
-              </Select.Item>
-            ))}
-          </Select.Content>
-        </Select>
-      </div>
-
-      <div className="col-6">
-        <label className="form-label">
-          {draft.dealType === "Lease"
-            ? "Listing price (optional)"
-            : "Listing price"}
-        </label>
+      <div className="col-4">
+        <label className="form-label">Listing price</label>
         <Input
           inputMode="numeric"
           placeholder="$"
@@ -706,7 +672,7 @@ function DealEditFields({
           onValueChange={(v: string) => onChange("listingPrice", num(v))}
         />
       </div>
-      <div className="col-6">
+      <div className="col-4">
         <label className="form-label">Commission (%)</label>
         <Input
           inputMode="numeric"

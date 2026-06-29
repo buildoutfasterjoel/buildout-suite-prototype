@@ -7,6 +7,7 @@ import { faBuildingCircleExclamation } from "@fortawesome/pro-regular-svg-icons"
 import { getStore } from "#/data/store";
 import { PropertyDetailHeader } from "#/components/properties/PropertyDetailHeader";
 import { PropertyDetailSidebar } from "#/components/properties/PropertyDetailSidebar";
+import { DealContextRail } from "#/components/deals/DealContextRail";
 
 export const Route = createFileRoute("/listings/$listingId")({
   component: PropertyDetail,
@@ -72,6 +73,14 @@ function PropertyDetail() {
             <div className="flex-grow-1 overflow-y-auto overflow-x-hidden">
               <Outlet />
             </div>
+          </Card>
+
+          {/* Deal context rail — persistent across all tabs */}
+          <Card
+            className="overflow-auto shadow flex-shrink-0 d-none d-xl-block"
+            style={{ width: 340 }}
+          >
+            <DealContextRail listing={listing} />
           </Card>
         </div>
       </div>

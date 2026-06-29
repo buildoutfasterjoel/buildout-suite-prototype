@@ -1,6 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DealActivities } from "#/components/deals/DealStubs";
+import { getStore } from "#/data/store";
+import { DealActivity } from "#/components/deals/DealStubs";
 
 export const Route = createFileRoute("/listings/$listingId/activities")({
-  component: DealActivities,
+  component: ActivitiesRoute,
 });
+
+function ActivitiesRoute() {
+  const { listingId } = Route.useParams();
+  const listing = getStore().listings.get(listingId);
+  if (!listing) return null;
+  return <DealActivity listing={listing} />;
+}

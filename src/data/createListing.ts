@@ -6,7 +6,14 @@ import type {
   DealType,
   DealBroker,
 } from './types'
-import { addListing, addProperty, getProperty, getListingsForProperty } from './store'
+import {
+  addListing,
+  addProperty,
+  getProperty,
+  getListingsForProperty,
+  getContact,
+  contactLabel,
+} from './store'
 import { TYPE_LABELS } from '#/components/properties/propertyDisplay'
 
 /**
@@ -35,6 +42,8 @@ export interface NewListingDraft {
   availableSqFt: number
   description: string
   locationDescription: string
+  /** The CRM contact who owns the property and is selling — empty until chosen. */
+  sellerContactId: string
 }
 
 /** A sensible blank draft to seed the manual-entry form. */
@@ -52,6 +61,7 @@ export function emptyDraft(): NewListingDraft {
     availableSqFt: 0,
     description: '',
     locationDescription: '',
+    sellerContactId: '',
   }
 }
 
@@ -209,6 +219,9 @@ export function createProposalListing(draft: NewListingDraft): Listing {
       ? Math.round(draft.listingPrice * (draft.commissionPct / 100))
       : 0
 
+  // The owner the broker named becomes the deal's seller contact.
+  const seller = draft.sellerContactId ? getContact(draft.sellerContactId) : undefined
+
   const listing: Listing = {
     id,
     propertyId: property.id,
@@ -249,7 +262,7 @@ export function createProposalListing(draft: NewListingDraft): Listing {
     closeProbability: 0,
     internalBrokers: [currentUserBroker(commissionAmount)],
     outsideBrokers: [],
-    sellerContactIds: [],
+    sellerContactIds: seller ? [seller.id] : [],
     buyerContactIds: [],
     otherContactIds: [],
     tasks: [],
@@ -271,7 +284,7 @@ export function createProposalListing(draft: NewListingDraft): Listing {
       closeDate: null,
       transactionValue: draft.listingPrice,
       grossCommission: commissionAmount,
-      relatedContactsLabel: '—',
+      relatedContactsLabel: seller ? contactLabel(seller) : '—',
     },
     nextCriticalDate: null,
 

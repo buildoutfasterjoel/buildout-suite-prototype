@@ -1,6 +1,6 @@
-import type { PropertyType, DealType, Property } from './types'
+import type { PropertyType, Property } from './types'
 import type { NewListingDraft } from './createListing'
-import { getStore, getListingsForProperty } from './store'
+import { getStore, getOwnersForProperty } from './store'
 
 /**
  * Simulated AI ingestion. This is a prototype — there is no real document parsing
@@ -20,34 +20,94 @@ const TYPE_KEYWORDS: { type: PropertyType; words: string[] }[] = [
   { type: 'special-purpose', words: ['self-storage', 'storage', 'medical', 'special purpose'] },
 ]
 
-const DESCRIPTION_BY_TYPE: Record<PropertyType, string> = {
-  office:
-    'Well-positioned office offering with flexible floor plates, modern common areas, and on-site parking — a strong fit for professional and corporate tenants.',
-  retail:
-    'High-visibility retail space with excellent frontage, ample parking, and strong surrounding co-tenancy. Ideal for QSR, service, or specialty users.',
-  industrial:
-    'Functional industrial space with generous clear heights, dock access, and efficient column spacing — well-suited for warehouse, distribution, or flex use.',
-  multifamily:
-    'Stabilized multifamily offering with consistent occupancy and value-add upside through unit renovations and operational improvements.',
-  'mixed-use':
-    'Versatile mixed-use asset blending ground-floor commercial with upper-level space in a walkable, amenity-rich setting.',
-  land: 'Developable land parcel in a growing corridor with favorable zoning and strong access — a clean canvas for ground-up development.',
-  hospitality:
-    'Hospitality asset with steady demand drivers, established flag potential, and upside through repositioning and revenue management.',
-  'special-purpose':
-    'Specialty asset with a durable, mission-critical use and dependable in-place income.',
+/** How each type reads as a noun phrase in a marketing blurb. */
+const TYPE_NOUN: Record<PropertyType, string> = {
+  office: 'office building',
+  retail: 'retail property',
+  industrial: 'industrial facility',
+  multifamily: 'multifamily community',
+  'mixed-use': 'mixed-use asset',
+  land: 'land parcel',
+  hospitality: 'hospitality asset',
+  'special-purpose': 'special-purpose asset',
 }
 
-/** Parse "$2.4M", "2,400,000", "$1.2m", "950k" into a dollar number. */
+/** The "why a buyer should care" sentence per type (lowercase lead, capitalized on use). */
+const TYPE_PITCH: Record<PropertyType, string> = {
+  office:
+    'efficient floor plates and modern common areas make it a strong fit for corporate and professional tenants',
+  retail:
+    'strong frontage, ample parking, and established co-tenancy make it ideal for QSR, service, and specialty users',
+  industrial:
+    'generous clear heights, dock access, and efficient column spacing suit warehouse, distribution, and flex users',
+  multifamily:
+    'stabilized occupancy offers value-add upside through unit renovations and operational improvements',
+  'mixed-use':
+    'ground-floor commercial paired with upper-level space anchors a walkable, amenity-rich setting',
+  land: 'favorable zoning and strong access make it a clean canvas for ground-up development',
+  hospitality:
+    'steady demand drivers provide upside through repositioning and revenue management',
+  'special-purpose':
+    'a durable, mission-critical use delivers dependable in-place income',
+}
+
+function cap(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+/** Build a marketing-style listing description from a property's real attributes. */
+function buildDescription(p: Property): string {
+  const cls = p.buildingClass ? `Class ${p.buildingClass} ` : ''
+  const subtype = p.propertySubtype ? `${p.propertySubtype.toLowerCase()} ` : ''
+  const sf = p.buildingSqFt > 0 ? ` totaling ${p.buildingSqFt.toLocaleString()} SF` : ''
+  const stories = p.stories > 1 ? ` across ${p.stories} stories` : ''
+  const lead = `${cls}${subtype}${TYPE_NOUN[p.propertyType]}${sf}${stories}.`
+
+  const facts: string[] = []
+  if (p.yearBuilt > 0) {
+    facts.push(
+      p.yearRenovated
+        ? `built in ${p.yearBuilt} and renovated in ${p.yearRenovated}`
+        : `built in ${p.yearBuilt}`,
+    )
+  }
+  if (p.parkingSpaces > 0) {
+    facts.push(`${p.parkingSpaces.toLocaleString()} on-site parking spaces`)
+  }
+  const detail = facts.length ? ` ${cap(facts.join(', with '))}.` : ''
+
+  const where = p.submarket ? ` in the ${p.submarket} submarket` : ''
+  const pitch = ` ${cap(TYPE_PITCH[p.propertyType])}${where}.`
+
+  return `${lead}${detail}${pitch}`
+}
+
+/** Build a location-description blurb from a property's market and zoning. */
+function buildLocationDescription(p: Property): string {
+  const place = p.submarket
+    ? `the ${p.submarket} submarket of ${p.city}, ${p.state}`
+    : `${p.city}, ${p.state}`
+  const zoning = p.zoning ? ` Zoned ${p.zoning}.` : ''
+  return `Located in ${place}, with convenient access to major corridors, transit, and area amenities.${zoning}`
+}
+
+/**
+ * Parse "$2.4M", "2,400,000", "$1.2m", "950k" into a dollar number. Requires a
+ * `$` sign or a magnitude unit (M/K/B) so it never mistakes a street number like
+ * "123 Main St" for a price.
+ */
 function parsePrice(text: string): number | null {
-  const m = text.match(/\$?\s*([\d,.]+)\s*(m|mm|million|k|thousand)?/i)
+  const m =
+    text.match(/\$\s*([\d,.]+)\s*(b|billion|m|mm|million|k|thousand)?/i) ||
+    text.match(/\b([\d,.]+)\s*(b|billion|m|mm|million|k|thousand)\b/i)
   if (!m) return null
   const n = parseFloat(m[1].replace(/,/g, ''))
   if (Number.isNaN(n)) return null
   const unit = (m[2] || '').toLowerCase()
+  if (unit.startsWith('b')) return Math.round(n * 1_000_000_000)
   if (unit.startsWith('m')) return Math.round(n * 1_000_000)
   if (unit === 'k' || unit === 'thousand') return Math.round(n * 1_000)
-  // Bare number: treat small values as millions, large as literal dollars.
+  // $-prefixed bare number: small → millions, large → literal dollars.
   if (n < 1000) return Math.round(n * 1_000_000)
   return Math.round(n)
 }
@@ -72,25 +132,6 @@ function parseCommissionPct(text: string): number | null {
   return Number.isNaN(n) ? null : n
 }
 
-/** Words that suggest the broker is describing a space within a building, not the whole thing. */
-const SPACE_KEYWORDS = ['suite', 'ste', 'unit', 'sublease', 'floor', 'condo', 'space', 'pad']
-
-/** Normalize a captured space label into a tidy "Suite 300" / "Floor 3" form. */
-function parseSpaceLabel(text: string): string | null {
-  const m = text.match(/\b(suite|ste|unit|pad|floor|fl)\.?\s*#?\s*([a-z0-9-]+)\b/i)
-  if (!m) return null
-  const word = m[1].toLowerCase()
-  const label =
-    word === 'ste' ? 'Suite' : word === 'fl' ? 'Floor' : word[0].toUpperCase() + word.slice(1)
-  return `${label} ${m[2].toUpperCase()}`
-}
-
-/** Does the free text describe a space within a building (vs. the whole property)? */
-function detectsSpace(text: string): boolean {
-  const lower = text.toLowerCase()
-  return SPACE_KEYWORDS.some((w) => new RegExp(`\\b${w}\\b`, 'i').test(lower))
-}
-
 function detectType(text: string): PropertyType | null {
   const lower = text.toLowerCase()
   for (const { type, words } of TYPE_KEYWORDS) {
@@ -99,39 +140,39 @@ function detectType(text: string): PropertyType | null {
   return null
 }
 
-function detectDealType(text: string): DealType | null {
-  const lower = text.toLowerCase()
-  const lease = lower.includes('lease') || lower.includes('for rent') || /\$\s*[\d.]+\s*\/\s*sf/.test(lower)
-  const sale = lower.includes('sale') || lower.includes('for sale') || lower.includes('acquisition')
-  if (lease && sale) return 'Sale / Lease'
-  if (lease) return 'Lease'
-  if (sale) return 'Sale'
-  return null
-}
-
-/** Pick a CRM property to attach to — prefer one matching the desired type. */
+/**
+ * Pick a CRM property to attach to. Prefer one matching the desired type that also
+ * has an owner on file, so the simulated match can demonstrate setting the seller;
+ * otherwise fall back to any property of the type, then anything.
+ */
 function pickProperty(preferredType: PropertyType): Property | undefined {
   const all = [...getStore().properties.values()]
-  return all.find((p) => p.propertyType === preferredType) ?? all[0]
+  const ofType = all.filter((p) => p.propertyType === preferredType)
+  const withOwner = ofType.find((p) => getOwnersForProperty(p.id).length > 0)
+  return withOwner ?? ofType[0] ?? all[0]
 }
 
-/** Derive a listing draft from a real CRM property. */
+/**
+ * Derive a listing draft from a real CRM property. Only property-level facts come
+ * from the record (address, type, size, marketing copy). Deal terms — asking price
+ * and commission — are NOT stored on the property; the broker states those, so they
+ * arrive via {@link parsePromptOverrides}, not here.
+ */
 function draftFromProperty(property: Property): Partial<NewListingDraft> {
   const address = [property.street, property.city, property.state].filter(Boolean).join(', ')
-  const place = property.submarket
-    ? `the ${property.submarket} submarket of ${property.city}, ${property.state}`
-    : `${property.city}, ${property.state}`
+  // Owner on file → assume the seller. With one owner it's unambiguous, so set it;
+  // with several, leave it blank and let the modal ask which one is selling.
+  const owners = getOwnersForProperty(property.id)
   return {
     propertyId: property.id,
     address,
     name: address,
     propertyType: property.propertyType,
     dealType: 'Sale',
-    listingPrice: property.askingPrice,
     availableSqFt: property.buildingSqFt,
-    commissionPct: 3,
-    description: DESCRIPTION_BY_TYPE[property.propertyType],
-    locationDescription: `Located in ${place}, with convenient access to major corridors, transit, and area amenities.`,
+    description: buildDescription(property),
+    locationDescription: buildLocationDescription(property),
+    sellerContactId: owners.length === 1 ? owners[0].id : '',
   }
 }
 
@@ -141,27 +182,25 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-/** Keyword-sniff offering details from a free-text prompt (not the property). */
+/** Keyword-sniff offering details from a free-text prompt to layer over CRM data. */
 function parsePromptOverrides(text: string): Partial<NewListingDraft> {
   const draft: Partial<NewListingDraft> = {}
   const price = parsePrice(text)
   const sqft = parseSqFt(text)
-  const dealType = detectDealType(text)
   const commission = parseCommissionPct(text)
 
   if (price != null) draft.listingPrice = price
   if (sqft != null) draft.availableSqFt = sqft
-  if (dealType) draft.dealType = dealType
   if (commission != null) draft.commissionPct = commission
-  // Seed the listing description from the broker's own words.
-  draft.description = text
   return draft
 }
 
 /**
- * Turn an uploaded document and/or a free-text prompt into a partial listing
- * draft. The AI matches a CRM property (by type) and derives the listing from it,
- * then layers any details typed in the prompt on top. Both inputs are optional.
+ * Turn an uploaded document and/or a free-text prompt into a partial listing draft.
+ * The "AI" locates a matching property in the broker's CRM (by type) and prefills the
+ * deal from that record — address, size, asking price, and a generated description —
+ * then layers on any numbers explicitly stated in the prompt. The resulting draft
+ * carries the matched `propertyId` so the form shows it preselected.
  * Resolves after a short fake latency so the modal can show an "Analyzing…" state.
  */
 export async function extractListingDraft(input: {
@@ -186,20 +225,12 @@ export async function extractListingDraft(input: {
   const base = property ? draftFromProperty(property) : {}
   const overrides = text ? parsePromptOverrides(text) : {}
 
-  // If the broker describes a space (suite/unit/sublease…) and the matched property
-  // already has listings, suggest adding it as a new space rather than a whole building.
-  const space: Partial<NewListingDraft> = {}
-  if (property && detectsSpace(text) && getListingsForProperty(property.id).length > 0) {
-    space.attachAs = 'space'
-    space.spaceLabel = parseSpaceLabel(text) ?? ''
-  }
-
-  return { ...base, ...overrides, ...space }
+  return { ...base, ...overrides }
 }
 
 /**
- * Refine an in-progress draft from a follow-up message (e.g. "make it a lease at
- * $30/SF"). Unlike {@link extractListingDraft} this never re-matches the property —
+ * Refine an in-progress draft from a follow-up message (e.g. "asking $2.6M at
+ * 2.5%"). Unlike {@link extractListingDraft} this never re-matches the property —
  * it only layers structured details sniffed from the text, so the conversation can
  * iterate without clobbering the already-connected property. Returns only the fields
  * it actually found.
@@ -210,17 +241,10 @@ export async function refineListingDraft(text: string): Promise<Partial<NewListi
   const draft: Partial<NewListingDraft> = {}
   const price = parsePrice(text)
   const sqft = parseSqFt(text)
-  const dealType = detectDealType(text)
   const commission = parseCommissionPct(text)
-  const spaceLabel = parseSpaceLabel(text)
 
   if (price != null) draft.listingPrice = price
   if (sqft != null) draft.availableSqFt = sqft
-  if (dealType) draft.dealType = dealType
   if (commission != null) draft.commissionPct = commission
-  if (spaceLabel) {
-    draft.attachAs = 'space'
-    draft.spaceLabel = spaceLabel
-  }
   return draft
 }

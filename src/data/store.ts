@@ -1,4 +1,4 @@
-import type { DataStore, Listing, Property } from './types'
+import type { DataStore, Listing, Property, Contact } from './types'
 import { generateDataset } from './seed'
 
 let _store: DataStore | null = null
@@ -53,4 +53,44 @@ export function getPropertyOptions(): { value: string; label: string }[] {
 /** Insert a listing into the in-memory store. */
 export function addListing(listing: Listing): void {
   getStore().listings.set(listing.id, listing)
+}
+
+export function getContact(contactId: string): Contact | undefined {
+  return getStore().contacts.get(contactId)
+}
+
+/** All contacts linked to a property in the CRM. */
+export function getContactsForProperty(propertyId: string): Contact[] {
+  return [...getStore().contacts.values()].filter((c) =>
+    c.propertyIds.includes(propertyId),
+  )
+}
+
+/** Owner-role contacts linked to a property — the candidate sellers for a sale. */
+export function getOwnersForProperty(propertyId: string): Contact[] {
+  return getContactsForProperty(propertyId).filter((c) => c.role === 'owner')
+}
+
+/** Display name for a contact, e.g. "Jane Doe · Acme Holdings". */
+export function contactLabel(c: Contact): string {
+  const name = `${c.firstName} ${c.lastName}`.trim()
+  return c.company ? `${name} · ${c.company}` : name
+}
+
+/**
+ * { value: contactId, label } options for a seller picker. Prefers the property's
+ * own contacts (owners listed first); falls back to all contacts when the property
+ * has none on file so the broker can still pick someone.
+ */
+export function getSellerOptions(propertyId: string): { value: string; label: string }[] {
+  const linked = propertyId ? getContactsForProperty(propertyId) : []
+  const pool = linked.length > 0 ? linked : [...getStore().contacts.values()]
+  return pool
+    .slice()
+    .sort((a, b) => {
+      if (a.role === 'owner' && b.role !== 'owner') return -1
+      if (b.role === 'owner' && a.role !== 'owner') return 1
+      return contactLabel(a).localeCompare(contactLabel(b))
+    })
+    .map((c) => ({ value: c.id, label: contactLabel(c) }))
 }
