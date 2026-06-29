@@ -51,7 +51,7 @@ const navContexts: NavContext[] = [
     items: [
       { label: "Research", href: "/research/properties" },
       { label: "Prospecting", href: "/crm/prospecting" },
-      { label: "Listings", href: "/listings" },
+      { label: "Deals", href: "/listings" },
       { label: "Comps", href: "/research/comps" },
     ],
   },

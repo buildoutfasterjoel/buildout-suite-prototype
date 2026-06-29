@@ -98,7 +98,7 @@ function PropertyListings() {
     () => [
       {
         id: "status",
-        title: "Listing",
+        title: "Deal",
         options: PROPERTY_STATUSES.map((s) => ({
           value: s,
           label: STATUS_LABELS[s],

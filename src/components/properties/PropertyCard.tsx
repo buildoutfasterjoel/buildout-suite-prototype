@@ -49,7 +49,7 @@ export function PropertyCard({ listing }: { listing: Listing }) {
             <Button
               variant="secondary"
               size="icon-sm"
-              aria-label="Edit listing"
+              aria-label="Edit deal"
             >
               <FontAwesomeIcon icon={faPencil} />
             </Button>

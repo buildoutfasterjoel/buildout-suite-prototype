@@ -664,7 +664,7 @@ function DealEditFields({
         </Select>
       </div>
       <div className="col-4">
-        <label className="form-label">Listing price</label>
+        <label className="form-label">Asking price</label>
         <Input
           inputMode="numeric"
           placeholder="$"
@@ -692,7 +692,7 @@ function DealEditFields({
       </div>
 
       <div className="col-12">
-        <label className="form-label">Listing description</label>
+        <label className="form-label">Description</label>
         <Textarea
           rows={3}
           placeholder="What makes this offering compelling?"

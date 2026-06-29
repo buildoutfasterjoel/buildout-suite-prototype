@@ -157,7 +157,7 @@ const CONTENT_BLOCKS: PaletteEntry[] = [
   { type: "text", icon: BLOCK_ICONS.text, label: "Text", desc: "Paragraph copy" },
   { type: "table", icon: BLOCK_ICONS.table, label: "Table", desc: "Rows & columns" },
   { type: "image", icon: BLOCK_ICONS.image, label: "Image", desc: "Photo or logo" },
-  { type: "dynamic", icon: BLOCK_ICONS.dynamic, label: "Dynamic Field", desc: "Listing data token" },
+  { type: "dynamic", icon: BLOCK_ICONS.dynamic, label: "Dynamic Field", desc: "Deal data token" },
 ];
 
 const LAYOUT_BLOCKS: PaletteEntry[] = [

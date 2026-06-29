@@ -50,11 +50,11 @@ function Home() {
           <Link to="/listings" className="text-decoration-none">
             <Card className="shadow-sm h-100">
               <CardHeader>
-                <CardTitle>Property Listings</CardTitle>
+                <CardTitle>Deals</CardTitle>
               </CardHeader>
               <CardBody>
-                Browse listings in a grid or map, then open one unified workspace
-                where the listing and its deal live together — overview,
+                Browse deals in a grid or map, then open one unified workspace
+                where the listing and its financials live together — overview,
                 transaction, planner, contacts, activities, and back-office voucher.
               </CardBody>
             </Card>

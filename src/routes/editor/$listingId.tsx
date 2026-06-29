@@ -35,7 +35,7 @@ function DocumentEditor() {
           </Empty.Content>
           <Empty.Actions>
             <Button variant="primary" nativeButton={false} render={<Link to="/listings" />}>
-              Back to Listings
+              Back to Deals
             </Button>
           </Empty.Actions>
         </Empty>

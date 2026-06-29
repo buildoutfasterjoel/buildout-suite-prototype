@@ -12,7 +12,7 @@ export function PropertyGrid({ listings }: { listings: Listing[] }) {
     return (
       <div className="d-flex align-items-center justify-content-center h-100 p-8">
         <Empty>
-          <EmptyTitle>No listings match your filters</EmptyTitle>
+          <EmptyTitle>No deals match your filters</EmptyTitle>
           <EmptyContent>
             Try clearing the search or adjusting the type, city, or status
             filters.

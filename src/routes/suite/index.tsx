@@ -114,7 +114,7 @@ function SuiteDashboard() {
         <StatCard label="Avg. days in stage" value={`${avgDays}d`} />
         <div className="vr h-100" />
         <StatCard
-          label="Active listings"
+          label="Active deals"
           value={String(activeListings)}
           sub="in marketing"
         />

@@ -36,7 +36,7 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: "Listing",
+    label: "Marketing",
     items: [
       { label: "Documents", href: "documents", icon: faFileLines },
       { label: "Website", href: "website", icon: faGlobe },

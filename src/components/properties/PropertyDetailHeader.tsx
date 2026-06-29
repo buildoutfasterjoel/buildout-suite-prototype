@@ -110,7 +110,7 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
             </Button>
             <Button variant="primary" className="flex-shrink-0">
               <FontAwesomeIcon icon={faPencil} />
-              Edit Listing
+              Edit Deal
             </Button>
             <Button variant="ghost" size="icon" aria-label="More options">
               <FontAwesomeIcon icon={faEllipsisVertical} />

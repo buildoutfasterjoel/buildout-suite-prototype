@@ -67,7 +67,7 @@ const navItems: NavItem[] = [
     label: "Showcase",
     icon: faBullhorn,
     items: [
-      { label: "Listings", href: "/listings" },
+      { label: "Deals", href: "/listings" },
       { label: "Email", href: "/email/messages" },
       { label: "Comps", href: "/comps" },
       { label: "Leads", href: "/leads" },

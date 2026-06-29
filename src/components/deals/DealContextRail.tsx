@@ -1,7 +1,11 @@
+import { useState } from "react";
 import { Accordion } from "@buildoutinc/blueprint-react/ui/Accordion";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
+import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCirclePlus, faCaretDown } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact, Listing } from "#/data/types";
 import { getProperty, getStore } from "#/data/store";
 import {
@@ -21,14 +25,14 @@ function LinkedProperty({ listing }: { listing: Listing }) {
 
   // TODO: link to property page once a standalone /properties/$id route exists.
   return (
-    <div className="bg-card border rounded overflow-hidden">
+    <div className="bg-card border rounded overflow-hidden d-flex">
       <img
-        src={getPhotoUrl(listing.id, 680, 280)}
+        src={getPhotoUrl(listing.id, 200, 200)}
         alt={property.name}
-        className="w-100"
-        style={{ height: 120, objectFit: "cover" }}
+        className="flex-shrink-0"
+        style={{ width: 88, objectFit: "cover" }}
       />
-      <div className="p-3 d-flex flex-column gap-2">
+      <div className="p-3 d-flex flex-column gap-1" style={{ minWidth: 0 }}>
         <div className="d-flex align-items-center gap-2 text-muted fs-small">
           <FontAwesomeIcon icon={TYPE_ICONS[property.propertyType]} />
           <span>{TYPE_LABELS[property.propertyType]}</span>
@@ -38,7 +42,9 @@ function LinkedProperty({ listing }: { listing: Listing }) {
         <div className="fw-semibold text-truncate" title={property.name}>
           {property.name}
         </div>
-        <div className="text-muted fs-small">{address}</div>
+        <div className="text-muted fs-small text-truncate" title={address}>
+          {address}
+        </div>
       </div>
     </div>
   );
@@ -106,6 +112,10 @@ export function DealContextRail({ listing }: { listing: Listing }) {
   const buyers = resolve(listing.buyerContactIds);
   const others = resolve(listing.otherContactIds);
 
+  const [open, setOpen] = useState<string[]>(["seller"]);
+  const addTo = (section: string) =>
+    setOpen((prev) => (prev.includes(section) ? prev : [...prev, section]));
+
   return (
     <Card>
       <Card.Body>
@@ -113,8 +123,32 @@ export function DealContextRail({ listing }: { listing: Listing }) {
         <LinkedProperty listing={listing} />
       </Card.Body>
 
-      <h6 className="px-3 py-2">Contacts</h6>
-      <Accordion multiple defaultValue={["seller"]}>
+      <div className="d-flex align-items-center justify-content-between px-3 py-2">
+        <h6 className="mb-0">Contacts</h6>
+        <DropdownMenu>
+          <DropdownMenu.Trigger
+            render={
+              <Button variant="outline" size="sm">
+                <FontAwesomeIcon icon={faCirclePlus} />
+                Add
+                <FontAwesomeIcon icon={faCaretDown} />
+              </Button>
+            }
+          />
+          <DropdownMenu.Content>
+            <DropdownMenu.Item onClick={() => addTo("seller")}>
+              Add Seller
+            </DropdownMenu.Item>
+            <DropdownMenu.Item onClick={() => addTo("buyer")}>
+              Add Buyer
+            </DropdownMenu.Item>
+            <DropdownMenu.Item onClick={() => addTo("other")}>
+              Add Other
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
+        </DropdownMenu>
+      </div>
+      <Accordion multiple value={open} onValueChange={setOpen}>
         <ContactSection value="seller" label="Seller" contacts={sellers} />
         <ContactSection value="buyer" label="Buyer" contacts={buyers} />
         <ContactSection value="other" label="Other" contacts={others} />

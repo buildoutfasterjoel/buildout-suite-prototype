@@ -47,7 +47,7 @@ export function CanvasActions({
   onExport: () => void;
 }) {
   const pages = useEditorStore((s) => s.document.pages);
-  const listingName = useEditorStore((s) => s.activeListing?.name ?? "Listing");
+  const listingName = useEditorStore((s) => s.activeListing?.name ?? "Deal");
   const zoom = useEditorStore((s) => s.zoom);
   const zoomIn = useEditorStore((s) => s.zoomIn);
   const zoomOut = useEditorStore((s) => s.zoomOut);
@@ -84,7 +84,7 @@ export function CanvasActions({
               </Link>
             }
           />
-          <Tooltip.Content>Back to listing</Tooltip.Content>
+          <Tooltip.Content>Back to deal</Tooltip.Content>
         </Tooltip>
         {trail.map((crumb, i) => (
           <span key={i} className="d-flex align-items-center gap-1">

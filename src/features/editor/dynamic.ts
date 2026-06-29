@@ -3,7 +3,7 @@ import type { Cell } from "./types";
 
 /** Human label for each dynamic field — used by the future field-insertion UI. */
 export const DYNAMIC_FIELD_LABELS: Partial<Record<keyof Property, string>> = {
-  name: "Listing Name",
+  name: "Deal Name",
   askingPrice: "Asking Price",
   buildingSqFt: "Building SF",
   lotSqFt: "Lot SF",

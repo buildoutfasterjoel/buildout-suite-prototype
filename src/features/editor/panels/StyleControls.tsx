@@ -174,7 +174,7 @@ export function StyleControls({ block, cell }: { block: Block; cell: Cell | null
       <div className="d-flex flex-column gap-3">
         <span className="bo-editor-section-title">Dynamic Field</span>
         <EditorOption label="Field">
-          <FauxSelect value={DYNAMIC_FIELD_LABELS[block.dynamicKey] ?? "Listing Name"} />
+          <FauxSelect value={DYNAMIC_FIELD_LABELS[block.dynamicKey] ?? "Deal Name"} />
         </EditorOption>
         <FontControls style={block.style} />
       </div>

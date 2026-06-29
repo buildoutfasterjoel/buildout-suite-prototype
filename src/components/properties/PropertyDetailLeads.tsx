@@ -231,7 +231,7 @@ export function PropertyDetailLeads({ property }: { property: Property }) {
             <Empty.Title>No leads yet</Empty.Title>
             {search
               ? "No leads match your search."
-              : "Leads interested in this listing will appear here."}
+              : "Leads interested in this deal will appear here."}
           </Empty.Content>
         </Empty>
       ) : (
