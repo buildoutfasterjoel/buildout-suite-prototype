@@ -11,6 +11,7 @@ import {
   getRefId,
 } from "#/components/properties/propertyDisplay";
 import { initials } from "./dealDisplay";
+import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 
 function LinkedProperty({ listing }: { listing: Listing }) {
   const property = getProperty(listing.propertyId);
@@ -106,16 +107,18 @@ export function DealContextRail({ listing }: { listing: Listing }) {
   const others = resolve(listing.otherContactIds);
 
   return (
-    <div className="p-3 d-flex flex-column gap-3">
-      <div className="fw-semibold fs-large">Property</div>
-      <LinkedProperty listing={listing} />
+    <Card>
+      <Card.Body>
+        <h6 className="pb-2">Property</h6>
+        <LinkedProperty listing={listing} />
+      </Card.Body>
 
-      <div className="fw-semibold fs-large mt-2">Contacts</div>
+      <h6 className="px-3 py-2">Contacts</h6>
       <Accordion multiple defaultValue={["seller"]}>
         <ContactSection value="seller" label="Seller" contacts={sellers} />
         <ContactSection value="buyer" label="Buyer" contacts={buyers} />
         <ContactSection value="other" label="Other" contacts={others} />
       </Accordion>
-    </div>
+    </Card>
   );
 }
