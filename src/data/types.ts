@@ -281,6 +281,38 @@ export interface Comp {
   notes: string
 }
 
+/** Where a contact entered the book of business. */
+export type ContactSource =
+  | 'Public records'
+  | 'Cold outreach'
+  | 'Prospect by Buildout'
+  | 'Referral'
+  | 'Networking event'
+
+/** Relationship lifecycle — "from cold to client." */
+export type RelationshipStage =
+  | 'cold'
+  | 'nurturing'
+  | 'active'
+  | 'pitching'
+  | 'client'
+  | 'past_client'
+
+/** Which side of a deal the contact sits on (distinct from `role`). */
+export type DealSide = 'buyer' | 'seller'
+
+/** Stage of the deal a contact is currently engaged in. */
+export type ContactDealStage =
+  | 'active_search'
+  | 'active_listing'
+  | 'pitching'
+  | 'under_contract'
+  | 'closed'
+  | 'lost'
+
+/** Quality of the contact's phone number. */
+export type PhoneStatus = 'valid' | 'invalid' | 'unknown'
+
 export interface Contact {
   id: string
   firstName: string
@@ -290,6 +322,30 @@ export interface Contact {
   company: string
   role: ContactRole
   propertyIds: string[]
+  /** Team member who owns this relationship, e.g. "J. Whitfield". */
+  assignedTo: string
+  source: ContactSource
+  relationship: RelationshipStage
+  /** Deal side, or null when the contact isn't on an active deal. */
+  side: DealSide | null
+  /** Current deal stage, or null when not engaged in a deal. */
+  dealStage: ContactDealStage | null
+  /** Count of open inquiries from this contact. */
+  inquiries: number
+  phoneStatus: PhoneStatus
+  doNotCall: boolean
+  /** Job title / position, e.g. "Managing Member". */
+  title: string
+  /** ISO timestamp the contact was added to the book of business. */
+  createdAt: string
+  /** Human label for the most recent touch, e.g. "Enriched from public records". */
+  lastTouch: string
+  street: string
+  city: string
+  state: string
+  zip: string
+  /** Firm-shared tags used to segment People. */
+  tags: string[]
 }
 
 export interface DataStore {
@@ -297,6 +353,26 @@ export interface DataStore {
   listings: Map<string, Listing>
   comps: Map<string, Comp>
   contacts: Map<string, Contact>
+}
+
+/** A linked deal, summarized for the contact detail page's Deals panel. */
+export interface DealSummary {
+  id: string
+  name: string
+  city: string
+  state: string
+  status: PropertyStatus
+  dealType: DealType
+  planTotal: number
+  planDone: number
+  leadName: string
+}
+
+/** Everything the contact detail page needs, assembled server-side. */
+export interface ContactDetail {
+  contact: Contact
+  deals: DealSummary[]
+  openTaskCount: number
 }
 
 export interface ListPropertiesInput {

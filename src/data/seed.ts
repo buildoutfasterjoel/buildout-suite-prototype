@@ -15,6 +15,11 @@ import type {
   CompType,
   CompSource,
   ContactRole,
+  ContactSource,
+  RelationshipStage,
+  DealSide,
+  ContactDealStage,
+  PhoneStatus,
 } from './types'
 
 const SEED = 20240101
@@ -560,6 +565,81 @@ function generateComp(propertyId: string, buildingSqFt: number, propertyType: Pr
 
 // ── Contact generator ─────────────────────────────────────────────────────────
 
+/** Team members a contact can be assigned to — weighted to a single lead broker. */
+const ASSIGNEES = ['J. Whitfield', 'A. Mendez', 'R. Patel', 'S. Kim']
+
+/** CRE-flavored job titles for the contact's position line. */
+const TITLE_POOL = [
+  'Managing Member',
+  'Principal',
+  'Managing Partner',
+  'Owner',
+  'Acquisitions Lead',
+  'VP of Acquisitions',
+  'Asset Manager',
+  'Portfolio Manager',
+  'Director of Real Estate',
+  'CFO',
+]
+
+/** Firm-shared tags used to segment People. */
+const TAG_POOL = [
+  'Out-of-state',
+  'Investor',
+  'VIP',
+  'Local',
+  'Repeat client',
+  '1031 exchange',
+  'Developer',
+  'Institutional',
+  'Family office',
+]
+
+/** Most-recent-touch label, derived from how the contact entered the book. */
+const LAST_TOUCH_BY_SOURCE: Record<ContactSource, string> = {
+  'Public records': 'Enriched from public records',
+  'Cold outreach': 'Logged a cold call',
+  'Prospect by Buildout': 'Imported from Prospect',
+  Referral: 'Intro email sent',
+  'Networking event': 'Met at a networking event',
+}
+
+/** Likelihood a contact is tied to a deal, by relationship stage. */
+const DEAL_PROBABILITY: Record<RelationshipStage, number> = {
+  cold: 0.15,
+  nurturing: 0.25,
+  active: 0.95,
+  pitching: 1,
+  client: 1,
+  past_client: 1,
+}
+
+/** Picks a deal stage consistent with the relationship + side. */
+function pickDealStage(
+  relationship: RelationshipStage,
+  side: DealSide,
+): ContactDealStage {
+  switch (relationship) {
+    case 'active':
+      return side === 'buyer' ? 'active_search' : 'active_listing'
+    case 'pitching':
+      return 'pitching'
+    case 'client':
+      return faker.helpers.weightedArrayElement([
+        { weight: 50, value: 'under_contract' as const },
+        { weight: 30, value: side === 'buyer' ? 'active_search' : 'active_listing' },
+        { weight: 20, value: 'closed' as const },
+      ])
+    case 'past_client':
+      return faker.helpers.weightedArrayElement([
+        { weight: 70, value: 'closed' as const },
+        { weight: 30, value: 'lost' as const },
+      ])
+    default: // cold / nurturing that still have a (usually dead) deal
+      return 'lost'
+  }
+}
+
 function generateContact(allPropertyIds: string[]): Contact {
   const role: ContactRole = faker.helpers.weightedArrayElement([
     { weight: 30, value: 'broker' as const },
@@ -567,6 +647,46 @@ function generateContact(allPropertyIds: string[]): Contact {
     { weight: 20, value: 'buyer' as const },
     { weight: 15, value: 'tenant' as const },
     { weight: 10, value: 'lender' as const },
+  ])
+
+  const relationship: RelationshipStage = faker.helpers.weightedArrayElement([
+    { weight: 45, value: 'cold' as const },
+    { weight: 18, value: 'nurturing' as const },
+    { weight: 12, value: 'active' as const },
+    { weight: 10, value: 'client' as const },
+    { weight: 8, value: 'past_client' as const },
+    { weight: 7, value: 'pitching' as const },
+  ])
+
+  const source: ContactSource = faker.helpers.weightedArrayElement([
+    { weight: 45, value: 'Public records' as const },
+    { weight: 20, value: 'Referral' as const },
+    { weight: 15, value: 'Cold outreach' as const },
+    { weight: 12, value: 'Networking event' as const },
+    { weight: 8, value: 'Prospect by Buildout' as const },
+  ])
+
+  const hasDeal = faker.datatype.boolean(DEAL_PROBABILITY[relationship])
+  const side: DealSide | null = hasDeal
+    ? faker.helpers.arrayElement(['buyer', 'seller'] as const)
+    : null
+  const dealStage: ContactDealStage | null =
+    side !== null ? pickDealStage(relationship, side) : null
+
+  // Inquiries come from the buy side actively searching.
+  const inquiries =
+    side === 'buyer'
+      ? faker.helpers.weightedArrayElement([
+          { weight: 55, value: 0 },
+          { weight: 30, value: 1 },
+          { weight: 15, value: 2 },
+        ])
+      : 0
+
+  const phoneStatus: PhoneStatus = faker.helpers.weightedArrayElement([
+    { weight: 75, value: 'valid' as const },
+    { weight: 15, value: 'unknown' as const },
+    { weight: 10, value: 'invalid' as const },
   ])
 
   const propertyIds = faker.helpers.arrayElements(
@@ -583,6 +703,30 @@ function generateContact(allPropertyIds: string[]): Contact {
     company: faker.company.name(),
     role,
     propertyIds,
+    assignedTo: faker.helpers.weightedArrayElement([
+      { weight: 70, value: ASSIGNEES[0] },
+      { weight: 12, value: ASSIGNEES[1] },
+      { weight: 10, value: ASSIGNEES[2] },
+      { weight: 8, value: ASSIGNEES[3] },
+    ]),
+    source,
+    relationship,
+    side,
+    dealStage,
+    inquiries,
+    phoneStatus,
+    doNotCall: faker.datatype.boolean(0.04),
+    title: faker.helpers.arrayElement(TITLE_POOL),
+    createdAt: faker.date.past({ years: 1 }).toISOString(),
+    lastTouch: LAST_TOUCH_BY_SOURCE[source],
+    street: faker.location.streetAddress(),
+    city: faker.location.city(),
+    state: faker.location.state({ abbreviated: true }),
+    zip: faker.location.zipCode(),
+    tags: faker.helpers.arrayElements(
+      TAG_POOL,
+      faker.number.int({ min: 0, max: 3 }),
+    ),
   }
 }
 

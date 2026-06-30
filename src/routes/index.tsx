@@ -77,6 +77,21 @@ function Home() {
         </div>
 
         <div className="col-md-4">
+          <Link to="/backoffice/contacts" className="text-decoration-none">
+            <Card className="shadow-sm h-100">
+              <CardHeader>
+                <CardTitle>People</CardTitle>
+              </CardHeader>
+              <CardBody>
+                CRM relationship directory — a filterable, sortable contact table
+                with source, relationship stage, deal side, deal stage, and
+                inquiry tracking. Demonstrates the Blueprint table at data density.
+              </CardBody>
+            </Card>
+          </Link>
+        </div>
+
+        <div className="col-md-4">
           <Link
             to="/editor/$listingId"
             params={{ listingId: sampleListingId }}

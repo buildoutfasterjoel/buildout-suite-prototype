@@ -14,6 +14,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as ListingsRouteImport } from './routes/listings'
 import { Route as EmailRouteImport } from './routes/email'
 import { Route as EditorRouteImport } from './routes/editor'
+import { Route as BackofficeRouteImport } from './routes/backoffice'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SuiteIndexRouteImport } from './routes/suite/index'
@@ -24,6 +25,7 @@ import { Route as ListingsListingIdRouteImport } from './routes/listings/$listin
 import { Route as EmailEmailIdRouteImport } from './routes/email/$emailId'
 import { Route as EditorListingIdRouteImport } from './routes/editor/$listingId'
 import { Route as ListingsListingIdIndexRouteImport } from './routes/listings/$listingId/index'
+import { Route as BackofficeContactsIndexRouteImport } from './routes/backoffice/contacts/index'
 import { Route as ListingsListingIdVoucherRouteImport } from './routes/listings/$listingId/voucher'
 import { Route as ListingsListingIdTransactionRouteImport } from './routes/listings/$listingId/transaction'
 import { Route as ListingsListingIdTasksRouteImport } from './routes/listings/$listingId/tasks'
@@ -32,6 +34,7 @@ import { Route as ListingsListingIdLeadsRouteImport } from './routes/listings/$l
 import { Route as ListingsListingIdEmailRouteImport } from './routes/listings/$listingId/email'
 import { Route as ListingsListingIdDocumentsRouteImport } from './routes/listings/$listingId/documents'
 import { Route as ListingsListingIdActivitiesRouteImport } from './routes/listings/$listingId/activities'
+import { Route as BackofficeContactsContactIdRouteImport } from './routes/backoffice/contacts/$contactId'
 
 const SuiteRoute = SuiteRouteImport.update({
   id: '/suite',
@@ -56,6 +59,11 @@ const EmailRoute = EmailRouteImport.update({
 const EditorRoute = EditorRouteImport.update({
   id: '/editor',
   path: '/editor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BackofficeRoute = BackofficeRouteImport.update({
+  id: '/backoffice',
+  path: '/backoffice',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -108,6 +116,11 @@ const ListingsListingIdIndexRoute = ListingsListingIdIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ListingsListingIdRoute,
 } as any)
+const BackofficeContactsIndexRoute = BackofficeContactsIndexRouteImport.update({
+  id: '/contacts/',
+  path: '/contacts/',
+  getParentRoute: () => BackofficeRoute,
+} as any)
 const ListingsListingIdVoucherRoute =
   ListingsListingIdVoucherRouteImport.update({
     id: '/voucher',
@@ -153,10 +166,17 @@ const ListingsListingIdActivitiesRoute =
     path: '/activities',
     getParentRoute: () => ListingsListingIdRoute,
   } as any)
+const BackofficeContactsContactIdRoute =
+  BackofficeContactsContactIdRouteImport.update({
+    id: '/contacts/$contactId',
+    path: '/contacts/$contactId',
+    getParentRoute: () => BackofficeRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
+  '/backoffice': typeof BackofficeRouteWithChildren
   '/editor': typeof EditorRouteWithChildren
   '/email': typeof EmailRouteWithChildren
   '/listings': typeof ListingsRouteWithChildren
@@ -169,6 +189,7 @@ export interface FileRoutesByFullPath {
   '/email/': typeof EmailIndexRoute
   '/listings/': typeof ListingsIndexRoute
   '/suite/': typeof SuiteIndexRoute
+  '/backoffice/contacts/$contactId': typeof BackofficeContactsContactIdRoute
   '/listings/$listingId/activities': typeof ListingsListingIdActivitiesRoute
   '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
   '/listings/$listingId/email': typeof ListingsListingIdEmailRoute
@@ -177,10 +198,12 @@ export interface FileRoutesByFullPath {
   '/listings/$listingId/tasks': typeof ListingsListingIdTasksRoute
   '/listings/$listingId/transaction': typeof ListingsListingIdTransactionRoute
   '/listings/$listingId/voucher': typeof ListingsListingIdVoucherRoute
+  '/backoffice/contacts/': typeof BackofficeContactsIndexRoute
   '/listings/$listingId/': typeof ListingsListingIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/backoffice': typeof BackofficeRouteWithChildren
   '/editor': typeof EditorRouteWithChildren
   '/login': typeof LoginRoute
   '/editor/$listingId': typeof EditorListingIdRoute
@@ -189,6 +212,7 @@ export interface FileRoutesByTo {
   '/email': typeof EmailIndexRoute
   '/listings': typeof ListingsIndexRoute
   '/suite': typeof SuiteIndexRoute
+  '/backoffice/contacts/$contactId': typeof BackofficeContactsContactIdRoute
   '/listings/$listingId/activities': typeof ListingsListingIdActivitiesRoute
   '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
   '/listings/$listingId/email': typeof ListingsListingIdEmailRoute
@@ -197,12 +221,14 @@ export interface FileRoutesByTo {
   '/listings/$listingId/tasks': typeof ListingsListingIdTasksRoute
   '/listings/$listingId/transaction': typeof ListingsListingIdTransactionRoute
   '/listings/$listingId/voucher': typeof ListingsListingIdVoucherRoute
+  '/backoffice/contacts': typeof BackofficeContactsIndexRoute
   '/listings/$listingId': typeof ListingsListingIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
+  '/backoffice': typeof BackofficeRouteWithChildren
   '/editor': typeof EditorRouteWithChildren
   '/email': typeof EmailRouteWithChildren
   '/listings': typeof ListingsRouteWithChildren
@@ -215,6 +241,7 @@ export interface FileRoutesById {
   '/email/': typeof EmailIndexRoute
   '/listings/': typeof ListingsIndexRoute
   '/suite/': typeof SuiteIndexRoute
+  '/backoffice/contacts/$contactId': typeof BackofficeContactsContactIdRoute
   '/listings/$listingId/activities': typeof ListingsListingIdActivitiesRoute
   '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
   '/listings/$listingId/email': typeof ListingsListingIdEmailRoute
@@ -223,6 +250,7 @@ export interface FileRoutesById {
   '/listings/$listingId/tasks': typeof ListingsListingIdTasksRoute
   '/listings/$listingId/transaction': typeof ListingsListingIdTransactionRoute
   '/listings/$listingId/voucher': typeof ListingsListingIdVoucherRoute
+  '/backoffice/contacts/': typeof BackofficeContactsIndexRoute
   '/listings/$listingId/': typeof ListingsListingIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -230,6 +258,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/app'
+    | '/backoffice'
     | '/editor'
     | '/email'
     | '/listings'
@@ -242,6 +271,7 @@ export interface FileRouteTypes {
     | '/email/'
     | '/listings/'
     | '/suite/'
+    | '/backoffice/contacts/$contactId'
     | '/listings/$listingId/activities'
     | '/listings/$listingId/documents'
     | '/listings/$listingId/email'
@@ -250,10 +280,12 @@ export interface FileRouteTypes {
     | '/listings/$listingId/tasks'
     | '/listings/$listingId/transaction'
     | '/listings/$listingId/voucher'
+    | '/backoffice/contacts/'
     | '/listings/$listingId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/backoffice'
     | '/editor'
     | '/login'
     | '/editor/$listingId'
@@ -262,6 +294,7 @@ export interface FileRouteTypes {
     | '/email'
     | '/listings'
     | '/suite'
+    | '/backoffice/contacts/$contactId'
     | '/listings/$listingId/activities'
     | '/listings/$listingId/documents'
     | '/listings/$listingId/email'
@@ -270,11 +303,13 @@ export interface FileRouteTypes {
     | '/listings/$listingId/tasks'
     | '/listings/$listingId/transaction'
     | '/listings/$listingId/voucher'
+    | '/backoffice/contacts'
     | '/listings/$listingId'
   id:
     | '__root__'
     | '/'
     | '/app'
+    | '/backoffice'
     | '/editor'
     | '/email'
     | '/listings'
@@ -287,6 +322,7 @@ export interface FileRouteTypes {
     | '/email/'
     | '/listings/'
     | '/suite/'
+    | '/backoffice/contacts/$contactId'
     | '/listings/$listingId/activities'
     | '/listings/$listingId/documents'
     | '/listings/$listingId/email'
@@ -295,12 +331,14 @@ export interface FileRouteTypes {
     | '/listings/$listingId/tasks'
     | '/listings/$listingId/transaction'
     | '/listings/$listingId/voucher'
+    | '/backoffice/contacts/'
     | '/listings/$listingId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  BackofficeRoute: typeof BackofficeRouteWithChildren
   EditorRoute: typeof EditorRouteWithChildren
   EmailRoute: typeof EmailRouteWithChildren
   ListingsRoute: typeof ListingsRouteWithChildren
@@ -343,6 +381,13 @@ declare module '@tanstack/react-router' {
       path: '/editor'
       fullPath: '/editor'
       preLoaderRoute: typeof EditorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/backoffice': {
+      id: '/backoffice'
+      path: '/backoffice'
+      fullPath: '/backoffice'
+      preLoaderRoute: typeof BackofficeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app': {
@@ -415,6 +460,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ListingsListingIdIndexRouteImport
       parentRoute: typeof ListingsListingIdRoute
     }
+    '/backoffice/contacts/': {
+      id: '/backoffice/contacts/'
+      path: '/contacts'
+      fullPath: '/backoffice/contacts/'
+      preLoaderRoute: typeof BackofficeContactsIndexRouteImport
+      parentRoute: typeof BackofficeRoute
+    }
     '/listings/$listingId/voucher': {
       id: '/listings/$listingId/voucher'
       path: '/voucher'
@@ -471,6 +523,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ListingsListingIdActivitiesRouteImport
       parentRoute: typeof ListingsListingIdRoute
     }
+    '/backoffice/contacts/$contactId': {
+      id: '/backoffice/contacts/$contactId'
+      path: '/contacts/$contactId'
+      fullPath: '/backoffice/contacts/$contactId'
+      preLoaderRoute: typeof BackofficeContactsContactIdRouteImport
+      parentRoute: typeof BackofficeRoute
+    }
   }
 }
 
@@ -483,6 +542,20 @@ const AppRouteChildren: AppRouteChildren = {
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
+interface BackofficeRouteChildren {
+  BackofficeContactsContactIdRoute: typeof BackofficeContactsContactIdRoute
+  BackofficeContactsIndexRoute: typeof BackofficeContactsIndexRoute
+}
+
+const BackofficeRouteChildren: BackofficeRouteChildren = {
+  BackofficeContactsContactIdRoute: BackofficeContactsContactIdRoute,
+  BackofficeContactsIndexRoute: BackofficeContactsIndexRoute,
+}
+
+const BackofficeRouteWithChildren = BackofficeRoute._addFileChildren(
+  BackofficeRouteChildren,
+)
 
 interface EditorRouteChildren {
   EditorListingIdRoute: typeof EditorListingIdRoute
@@ -561,6 +634,7 @@ const SuiteRouteWithChildren = SuiteRoute._addFileChildren(SuiteRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  BackofficeRoute: BackofficeRouteWithChildren,
   EditorRoute: EditorRouteWithChildren,
   EmailRoute: EmailRouteWithChildren,
   ListingsRoute: ListingsRouteWithChildren,
