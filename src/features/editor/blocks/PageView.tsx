@@ -1,4 +1,3 @@
-import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { useEditorStore } from "../store";
 import { PAGE_WIDTH, PAGE_HEIGHT, type Page, type Selection } from "../types";
 import { BlockList } from "./BlockViews";
@@ -16,10 +15,6 @@ export function PageView({
 
   return (
     <div style={{ position: "relative" }}>
-      <div style={{ position: "absolute", top: 12, left: 12, zIndex: 2 }}>
-        <Badge>Admin Only</Badge>
-      </div>
-
       <div
         className="bo-editor-page"
         style={{ width: PAGE_WIDTH, height: PAGE_HEIGHT }}

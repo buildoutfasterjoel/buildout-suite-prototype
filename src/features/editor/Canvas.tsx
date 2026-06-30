@@ -1,3 +1,4 @@
+import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { useEditorStore } from "./store";
 import { PageView } from "./blocks/PageView";
 
@@ -9,17 +10,22 @@ export function Canvas() {
   const clearSelection = useEditorStore((s) => s.clearSelection);
 
   return (
-    <div
-      className="bo-editor-workspace"
-      onClick={clearSelection}
-    >
-      <div className="bo-editor-pages" style={{ transform: `scale(${zoom})` }}>
-        {pages.map((page) => (
-          <div key={page.id} onClick={(e) => e.stopPropagation()}>
-            <PageView page={page} selection={selection} />
-          </div>
-        ))}
+    <>
+      <div style={{ padding: "8px 24px 0", background: "#f6f7f9", flexShrink: 0 }}>
+        <Badge>Admin Only</Badge>
       </div>
-    </div>
+      <div
+        className="bo-editor-workspace"
+        onClick={clearSelection}
+      >
+        <div className="bo-editor-pages" style={{ transform: `scale(${zoom})` }}>
+          {pages.map((page) => (
+            <div key={page.id} onClick={(e) => e.stopPropagation()}>
+              <PageView page={page} selection={selection} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
   );
 }
