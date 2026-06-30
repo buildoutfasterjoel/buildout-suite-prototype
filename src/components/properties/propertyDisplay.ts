@@ -47,11 +47,11 @@ export const TYPE_LABELS: Record<PropertyType, string> = {
 };
 
 export const STATUS_LABELS: Record<PropertyStatus, string> = {
-  proposal: "Proposal",
+  proposal: "Pitching",
   active: "Active",
   "under-contract": "Under Contract",
   closed: "Closed",
-  inactive: "Inactive",
+  inactive: "Lost",
 };
 
 /** Stage indicator dot color (Badge only supports primary/secondary/outline). */
