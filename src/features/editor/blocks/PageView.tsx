@@ -35,6 +35,7 @@ export function PageView({
             pageId={page.id}
             list={{ kind: "page", pageId: page.id }}
             selection={pageSelection}
+            locked={page.locked ?? false}
           />
         </div>
       </div>

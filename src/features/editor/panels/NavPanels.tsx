@@ -5,12 +5,17 @@ import {
   faFileLines,
   faPlus,
   faGripDotsVertical,
+  faLock,
+  faTableLayout,
 } from "@fortawesome/pro-regular-svg-icons";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
+import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { useEditorStore } from "../store";
 import type { Block, ContentBlock } from "../types";
 import { BLOCK_ICONS, blockLabel } from "../blocks/blockMeta";
 import type { BlockVariant } from "../blocks/blockFactory";
+import { PRESETS } from "../presets";
 
 function PanelHeading({ children }: { children: string }) {
   return <span className="bo-editor-section-title">{children}</span>;
@@ -21,6 +26,7 @@ export function PagesPanel() {
   const pages = useEditorStore((s) => s.document.pages);
   const selection = useEditorStore((s) => s.selection);
   const select = useEditorStore((s) => s.select);
+  const addPage = useEditorStore((s) => s.addPage);
 
   return (
     <div className="d-flex flex-column gap-3">
@@ -54,19 +60,74 @@ export function PagesPanel() {
               >
                 <FontAwesomeIcon icon={faFileLines} />
               </span>
-              <span className="d-flex flex-column">
-                <span className="fw-semibold" style={{ fontSize: 14 }}>
+              <span className="d-flex flex-column flex-grow-1" style={{ minWidth: 0 }}>
+                <span className="fw-semibold text-truncate" style={{ fontSize: 14 }}>
                   {i + 1}. {page.name}
                 </span>
                 <span className="fs-small" style={{ color: "#506079" }}>
                   {page.blocks.length} blocks
                 </span>
               </span>
+              {page.locked && (
+                <Tooltip>
+                  <Tooltip.Trigger
+                    render={
+                      <span
+                        className="d-flex align-items-center flex-shrink-0"
+                        style={{ color: "#94a3b8" }}
+                        aria-label="Preset page — fixed layout"
+                      >
+                        <FontAwesomeIcon icon={faLock} />
+                      </span>
+                    }
+                  />
+                  <Tooltip.Content side="left">Preset — fixed layout</Tooltip.Content>
+                </Tooltip>
+              )}
             </button>
           );
         })}
       </div>
-      <AddButton label="Add Page" />
+
+      <DropdownMenu>
+        <DropdownMenu.Trigger
+          render={
+            <button
+              type="button"
+              className="d-flex align-items-center justify-content-center gap-2 p-2"
+              style={{
+                border: "1px dashed #d5dae2",
+                borderRadius: 6,
+                background: "#fff",
+                color: "#7422ce",
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 600,
+                width: "100%",
+              }}
+            >
+              <FontAwesomeIcon icon={faPlus} />
+              Add Page
+            </button>
+          }
+        />
+        <DropdownMenu.Content align="start" sideOffset={6}>
+          <DropdownMenu.Item onClick={() => addPage("blank")}>
+            <FontAwesomeIcon icon={faFileLines} />
+            Blank page
+          </DropdownMenu.Item>
+          <DropdownMenu.Separator />
+          <DropdownMenu.Group>
+            <DropdownMenu.GroupLabel>Presets</DropdownMenu.GroupLabel>
+            {PRESETS.map((preset) => (
+              <DropdownMenu.Item key={preset.key} onClick={() => addPage(preset.key)}>
+                <FontAwesomeIcon icon={faTableLayout} />
+                {preset.label}
+              </DropdownMenu.Item>
+            ))}
+          </DropdownMenu.Group>
+        </DropdownMenu.Content>
+      </DropdownMenu>
     </div>
   );
 }

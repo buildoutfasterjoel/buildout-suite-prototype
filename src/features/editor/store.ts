@@ -9,6 +9,7 @@ import type {
   Selection,
 } from "./types";
 import { buildSampleDocument } from "./sampleDocument";
+import { buildBlankPage, buildPresetPage, type PresetKey } from "./presets";
 import { createBlock, createCell, type BlockVariant } from "./blocks/blockFactory";
 import {
   findBlock,
@@ -42,10 +43,18 @@ interface EditorState {
   zoomIn: () => void;
   zoomOut: () => void;
 
+  // Page management.
+  addPage: (kind: "blank" | PresetKey) => void;
+
   // Phase 2 actions (structural mutation via drag-and-drop).
   addBlock: (target: DropTarget, type: Block["type"], variant?: BlockVariant) => void;
   moveBlock: (blockId: string, target: DropTarget) => void;
   removeBlock: (blockId: string) => void;
+
+  /** Edit a heading/text block's content in place. */
+  setBlockText: (blockId: string, text: string) => void;
+  /** Swap an image block's source. */
+  setImageSrc: (blockId: string, src: string) => void;
 
   // Phase 3 actions (table row/column editing).
   addColumn: (blockId: string, index: number) => void;
@@ -109,6 +118,22 @@ export const useEditorStore = create<EditorState>((set) => {
   zoomIn: () => set((s) => ({ zoom: clampZoom(s.zoom + ZOOM_STEP) })),
   zoomOut: () => set((s) => ({ zoom: clampZoom(s.zoom - ZOOM_STEP) })),
 
+  addPage: (kind) =>
+    set((s) => {
+      const page =
+        kind === "blank" ? buildBlankPage() : buildPresetPage(kind, s.activeListing);
+      return {
+        document: { ...s.document, pages: [...s.document.pages, page] },
+        // Mirror into the template so table reset keeps working on new pages.
+        templateDocument: {
+          ...s.templateDocument,
+          pages: [...s.templateDocument.pages, clone(page)],
+        },
+        selection: { pageId: page.id },
+        activeNavPanel: "pages",
+      };
+    }),
+
   addBlock: (target, type, variant) =>
     set((s) => {
       // Containers may only be dropped at the top level (one-level nesting).
@@ -144,6 +169,20 @@ export const useEditorStore = create<EditorState>((set) => {
       if (!removed) return s;
       const clears = s.selection?.blockId === blockId;
       return { document: doc, selection: clears ? null : s.selection };
+    }),
+
+  setBlockText: (blockId, text) =>
+    set((s) => {
+      const block = findBlock(s.document, blockId);
+      if (!block || (block.type !== "heading" && block.type !== "text")) return s;
+      return { document: replaceBlock(s.document, blockId, { ...block, text }) };
+    }),
+
+  setImageSrc: (blockId, src) =>
+    set((s) => {
+      const block = findBlock(s.document, blockId);
+      if (!block || block.type !== "image") return s;
+      return { document: replaceBlock(s.document, blockId, { ...block, src }) };
     }),
 
   addColumn: (blockId, index) =>

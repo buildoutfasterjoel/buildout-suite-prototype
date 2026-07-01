@@ -340,6 +340,10 @@
 .bo-editor-table-wrap:hover,
 .bo-editor-table-wrap.is-selected {
   outline-color: transparent;
+  /* While the table is active its affordances (dots/handles) sit in the gutter
+     and can overlap neighbouring blocks — lift the whole table so they stay on
+     top of nearby content. */
+  z-index: 20;
 }
 .bo-editor-table-overlay {
   position: absolute;
@@ -379,12 +383,15 @@
   height: 6px;
   padding: 0;
   border: 0;
+  /* A base shadow keeps the dot legible when it lands on top of an image or a
+     dark background. */
   border-radius: 999px;
   background: tokens.$storm-grey-200;
   color: #fff;
   font-size: 9px;
   cursor: pointer;
   pointer-events: auto;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.28);
   transform: translate(-50%, -50%);
   transition:
     width 0.1s ease,
@@ -443,6 +450,20 @@
   word-break: break-word;
 }
 .bo-editor-cell-edit.is-empty::before {
+  content: attr(data-placeholder);
+  color: #aab2c0;
+  pointer-events: none;
+}
+
+/* Inline-editable heading/text block content. */
+.bo-editor-inline-text {
+  outline: none;
+  min-height: 1em;
+  cursor: text;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.bo-editor-inline-text.is-empty::before {
   content: attr(data-placeholder);
   color: #aab2c0;
   pointer-events: none;

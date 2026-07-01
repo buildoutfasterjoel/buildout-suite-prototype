@@ -57,6 +57,8 @@ function textStyleToCss(style: TextStyle): CSSProperties {
 interface VisualProps {
   pageId: string;
   selection: Selection | null;
+  /** The page is a locked preset: block structure is fixed, content stays editable. */
+  locked: boolean;
 }
 
 function useSelect() {
@@ -69,12 +71,34 @@ export function BlockList({
   pageId,
   list,
   selection,
+  locked,
 }: {
   blocks: ContentBlock[] | Block[];
   pageId: string;
   list: ListLocation;
   selection: Selection | null;
+  locked: boolean;
 }) {
+  // Locked (preset) pages render content only — no sortable chrome or drop
+  // zones, so blocks can't be added, moved, or removed.
+  if (locked) {
+    return (
+      <>
+        {blocks.map((block, index) => (
+          <BlockNode
+            key={block.id}
+            block={block}
+            pageId={pageId}
+            list={list}
+            index={index}
+            selection={selection}
+            locked
+          />
+        ))}
+      </>
+    );
+  }
+
   return (
     <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
       {blocks.map((block, index) => (
@@ -85,6 +109,7 @@ export function BlockList({
           list={list}
           index={index}
           selection={selection}
+          locked={false}
         />
       ))}
       <ListDropZone list={list} length={blocks.length} empty={blocks.length === 0} />
@@ -99,13 +124,24 @@ function BlockNode({
   list,
   index,
   selection,
+  locked,
 }: {
   block: Block;
   pageId: string;
   list: ListLocation;
   index: number;
   selection: Selection | null;
+  locked: boolean;
 }) {
+  const visual = (
+    <BlockVisual block={block} pageId={pageId} selection={selection} locked={locked} />
+  );
+
+  // Locked pages skip the sortable wrapper entirely (no drag handle / delete).
+  if (locked) {
+    return <div className="bo-editor-sortable">{visual}</div>;
+  }
+
   const selected = selection?.blockId === block.id && !selection?.cellId;
   return (
     <SortableBlock
@@ -116,31 +152,31 @@ function BlockNode({
       index={index}
       selected={selected}
     >
-      <BlockVisual block={block} pageId={pageId} selection={selection} />
+      {visual}
     </SortableBlock>
   );
 }
 
-function BlockVisual({ block, pageId, selection }: { block: Block } & VisualProps) {
+function BlockVisual({ block, pageId, selection, locked }: { block: Block } & VisualProps) {
   switch (block.type) {
     case "heading":
-      return <HeadingBlockView block={block} pageId={pageId} selection={selection} />;
+      return <HeadingBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "text":
-      return <TextBlockView block={block} pageId={pageId} selection={selection} />;
+      return <TextBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "table":
-      return <TableBlockView block={block} pageId={pageId} selection={selection} />;
+      return <TableBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "image":
-      return <ImageBlockView block={block} pageId={pageId} selection={selection} />;
+      return <ImageBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "dynamic":
-      return <DynamicBlockView block={block} pageId={pageId} selection={selection} />;
+      return <DynamicBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "spacer":
-      return <SpacerBlockView block={block} pageId={pageId} selection={selection} />;
+      return <SpacerBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "divider":
-      return <DividerBlockView block={block} pageId={pageId} selection={selection} />;
+      return <DividerBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "columns":
-      return <ColumnsBlockView block={block} pageId={pageId} selection={selection} />;
+      return <ColumnsBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "section":
-      return <SectionBlockView block={block} pageId={pageId} selection={selection} />;
+      return <SectionBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
   }
 }
 
@@ -158,26 +194,36 @@ function useBlockSelect(blockId: string, pageId: string, selection: Selection | 
 /* ---------------- Leaf views ---------------- */
 function HeadingBlockView({ block, pageId, selection }: { block: HeadingBlock } & VisualProps) {
   const { selected, onClick } = useBlockSelect(block.id, pageId, selection);
+  const setBlockText = useEditorStore((s) => s.setBlockText);
   return (
     <div
       className={`bo-editor-block${selected ? " is-selected" : ""}`}
       onClick={onClick}
       style={textStyleToCss(block.style)}
     >
-      {block.text}
+      <InlineText
+        value={block.text}
+        placeholder="Heading"
+        onChange={(v) => setBlockText(block.id, v)}
+      />
     </div>
   );
 }
 
 function TextBlockView({ block, pageId, selection }: { block: TextBlock } & VisualProps) {
   const { selected, onClick } = useBlockSelect(block.id, pageId, selection);
+  const setBlockText = useEditorStore((s) => s.setBlockText);
   return (
     <div
       className={`bo-editor-block${selected ? " is-selected" : ""}`}
       onClick={onClick}
       style={textStyleToCss(block.style)}
     >
-      {block.text}
+      <InlineText
+        value={block.text}
+        placeholder="Add your text here."
+        onChange={(v) => setBlockText(block.id, v)}
+      />
     </div>
   );
 }
@@ -239,7 +285,7 @@ function DividerBlockView({ block, pageId, selection }: { block: DividerBlock } 
 }
 
 /* ---------------- Container views ---------------- */
-function ColumnsBlockView({ block, pageId, selection }: { block: ColumnsBlock } & VisualProps) {
+function ColumnsBlockView({ block, pageId, selection, locked }: { block: ColumnsBlock } & VisualProps) {
   const { selected, onClick } = useBlockSelect(block.id, pageId, selection);
   return (
     <div
@@ -253,6 +299,7 @@ function ColumnsBlockView({ block, pageId, selection }: { block: ColumnsBlock } 
             pageId={pageId}
             list={{ kind: "column", blockId: block.id, columnIndex: ci }}
             selection={selection}
+            locked={locked}
           />
         </div>
       ))}
@@ -260,7 +307,7 @@ function ColumnsBlockView({ block, pageId, selection }: { block: ColumnsBlock } 
   );
 }
 
-function SectionBlockView({ block, pageId, selection }: { block: SectionBlock } & VisualProps) {
+function SectionBlockView({ block, pageId, selection, locked }: { block: SectionBlock } & VisualProps) {
   const { selected, onClick } = useBlockSelect(block.id, pageId, selection);
   return (
     <div
@@ -273,6 +320,7 @@ function SectionBlockView({ block, pageId, selection }: { block: SectionBlock } 
         pageId={pageId}
         list={{ kind: "section", blockId: block.id }}
         selection={selection}
+        locked={locked}
       />
     </div>
   );
@@ -863,18 +911,22 @@ function CellView({
 }
 
 /**
- * Inline-editable cell text. The DOM is the source of truth while typing; we
- * only rewrite it when the external value diverges, so committing an edit never
- * resets the caret. A CSS placeholder shows when empty.
+ * Inline-editable text. The DOM is the source of truth while typing; we only
+ * rewrite it when the external value diverges, so committing an edit never
+ * resets the caret. A CSS placeholder shows when empty. Used by heading/text
+ * blocks and (via EditableCellText) table cells — content editing that stays
+ * available even on locked preset pages.
  */
-function EditableCellText({
+function InlineText({
   value,
   placeholder,
   onChange,
+  className = "bo-editor-inline-text",
 }: {
   value: string;
   placeholder: string;
   onChange: (value: string) => void;
+  className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -886,7 +938,7 @@ function EditableCellText({
   return (
     <div
       ref={ref}
-      className={`bo-editor-cell-edit${value === "" ? " is-empty" : ""}`}
+      className={`${className}${value === "" ? " is-empty" : ""}`}
       contentEditable
       suppressContentEditableWarning
       role="textbox"
@@ -900,6 +952,26 @@ function EditableCellText({
           e.currentTarget.blur();
         }
       }}
+    />
+  );
+}
+
+/** Inline-editable table cell text — InlineText styled for the cell context. */
+function EditableCellText({
+  value,
+  placeholder,
+  onChange,
+}: {
+  value: string;
+  placeholder: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <InlineText
+      value={value}
+      placeholder={placeholder}
+      onChange={onChange}
+      className="bo-editor-cell-edit"
     />
   );
 }

@@ -164,6 +164,12 @@ export interface Page {
   name: string;
   /** Optional header logo shown at the top of the page. */
   logoSrc?: string;
+  /**
+   * Preset (template) pages: the layout is fixed — blocks can't be added,
+   * moved, or deleted — but their content (text, headings, table cells, images)
+   * stays editable. Absent/false = fully freeform.
+   */
+  locked?: boolean;
   blocks: Block[];
 }
 

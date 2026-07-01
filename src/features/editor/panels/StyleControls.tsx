@@ -13,9 +13,10 @@ import { Slider } from "../controls/Slider";
 import { SwatchGrid } from "../controls/SwatchGrid";
 import { ToggleButtonGroup, type ToggleItem } from "../controls/ToggleButtonGroup";
 import { FauxSelect } from "./FauxSelect";
-import type { Block, Cell, TextStyle } from "../types";
+import type { Block, Cell, ImageBlock, TextStyle } from "../types";
 import { blockLabel } from "../blocks/blockMeta";
 import { DYNAMIC_FIELD_LABELS } from "../dynamic";
+import { useEditorStore } from "../store";
 
 const FONT_STYLE_ITEMS: ToggleItem<"bold" | "italic" | "underline">[] = [
   { value: "bold", icon: faBold, label: "Bold" },
@@ -134,6 +135,43 @@ function cap(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+/** Picsum seeds offered as swappable images (mirrors the Images panel). */
+const SWAP_SEEDS = Array.from({ length: 9 }, (_, i) => `editor-${i}`);
+
+/** Image block controls — swap the image source without moving/removing it. */
+function ImageStyleControls({ block }: { block: ImageBlock }) {
+  const setImageSrc = useEditorStore((s) => s.setImageSrc);
+  return (
+    <div className="d-flex flex-column gap-3">
+      <span className="bo-editor-section-title">Image</span>
+      <p className="fs-small" style={{ color: "#506079" }}>
+        Choose a replacement image.
+      </p>
+      <div className="d-flex flex-wrap" style={{ gap: 8 }}>
+        {SWAP_SEEDS.map((seed) => {
+          const selected = block.src.includes(`/${seed}/`);
+          return (
+            <img
+              key={seed}
+              src={`https://picsum.photos/seed/${seed}/120/120`}
+              alt=""
+              onClick={() => setImageSrc(block.id, `https://picsum.photos/seed/${seed}/736/300`)}
+              style={{
+                width: 78,
+                height: 78,
+                objectFit: "cover",
+                borderRadius: 6,
+                border: `2px solid ${selected ? "#7422ce" : "#d5dae2"}`,
+                cursor: "pointer",
+              }}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /**
  * Contextual style controls for the current selection. A selected table cell
  * shows the full Table + Cell styles; heading/text blocks show font controls.
@@ -167,6 +205,10 @@ export function StyleControls({ block, cell }: { block: Block; cell: Cell | null
         </EditorOption>
       </div>
     );
+  }
+
+  if (block.type === "image") {
+    return <ImageStyleControls block={block} />;
   }
 
   if (block.type === "dynamic") {
