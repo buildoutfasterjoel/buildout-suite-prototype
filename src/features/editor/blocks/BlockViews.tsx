@@ -12,6 +12,7 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type {
   Block,
@@ -743,10 +744,10 @@ function InsertDots({
 }
 
 /**
- * Floating toolbar shown below a selected table. These tables come pre-built
- * from the document template, so the only action is resetting the table back to
- * its template default (users still add/remove rows & columns via the handles).
- * Rendered outside the pointer-events:none overlay so its controls work.
+ * Floating control shown to the left of a selected (and edited) table. These
+ * tables come pre-built from the document template, so the only action is
+ * resetting the table back to its template default (users still add/remove rows
+ * & columns via the handles). Rendered outside the pointer-events:none overlay.
  */
 function TableToolbar({ block, edges }: { block: TableBlock; edges: TableEdges }) {
   const resetTable = useEditorStore((s) => s.resetTable);
@@ -754,13 +755,24 @@ function TableToolbar({ block, edges }: { block: TableBlock; edges: TableEdges }
   return (
     <div
       className="bo-editor-table-toolbar"
-      style={{ top: edges.height + 12, left: edges.width / 2 }}
+      style={{ top: edges.height / 2, left: edges.cols[0] - 24 }}
       onClick={(e) => e.stopPropagation()}
     >
-      <Button variant="outline" onClick={() => resetTable(block.id)}>
-        <FontAwesomeIcon icon={faArrowRotateLeft} />
-        Reset Table
-      </Button>
+      <Tooltip>
+        <Tooltip.Trigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Reset table"
+              onClick={() => resetTable(block.id)}
+            >
+              <FontAwesomeIcon icon={faArrowRotateLeft} />
+            </Button>
+          }
+        />
+        <Tooltip.Content side="left">Reset table</Tooltip.Content>
+      </Tooltip>
     </div>
   );
 }
