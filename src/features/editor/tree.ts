@@ -141,6 +141,20 @@ export function updateTableRows(
   return { ...doc, pages };
 }
 
+/** Replace a block by id (anywhere in the document) with a new block. */
+export function replaceBlock(
+  doc: EditorDocument,
+  blockId: string,
+  replacement: Block,
+): EditorDocument {
+  const pages = doc.pages.map((page) =>
+    mapPageBlockLists(page, (list) =>
+      list.map((b) => (b.id === blockId ? replacement : b)),
+    ),
+  );
+  return { ...doc, pages };
+}
+
 /** Insert a block at the given drop target, returning a new document. */
 export function insertAt(
   doc: EditorDocument,

@@ -7,7 +7,6 @@ import type {
   EditorDocument,
   NavPanel,
   Selection,
-  TextAlign,
 } from "./types";
 import { buildSampleDocument } from "./sampleDocument";
 import { createBlock, createCell, type BlockVariant } from "./blocks/blockFactory";
@@ -17,11 +16,17 @@ import {
   insertAt,
   isContainer,
   removeBlock as removeBlockFromDoc,
+  replaceBlock,
   updateTableRows,
 } from "./tree";
 
+/** Deep-clone plain document/block data (no functions or dates in the model). */
+const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+
 interface EditorState {
   document: EditorDocument;
+  /** Pristine copy of the initial document, used to reset tables to template. */
+  templateDocument: EditorDocument;
   activeListing: Property | undefined;
   selection: Selection | null;
   /** Active left-rail panel. Null = no panel open (only the rail shows). */
@@ -48,13 +53,10 @@ interface EditorState {
   addRow: (blockId: string, index: number) => void;
   removeRow: (blockId: string, index: number) => void;
 
-  // Table options: header toggles + cell alignment.
-  toggleHeaderRow: (blockId: string) => void;
-  toggleHeaderColumn: (blockId: string) => void;
-  /** Align one cell (by id) or, when cellId is null, every cell in the table. */
-  setCellAlign: (blockId: string, cellId: string | null, align: TextAlign) => void;
   /** Edit a cell's static text value. */
   setCellValue: (blockId: string, cellId: string, value: string) => void;
+  /** Restore a table to its original template state (rows, style, title). */
+  resetTable: (blockId: string) => void;
 }
 
 /** Resolve the page a drop target belongs to (for post-add selection). */
@@ -70,8 +72,11 @@ const ZOOM_STEP = 0.1;
 
 const clampZoom = (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
 
-export const useEditorStore = create<EditorState>((set) => ({
-  document: buildSampleDocument(undefined),
+export const useEditorStore = create<EditorState>((set) => {
+  const initialDocument = buildSampleDocument(undefined);
+  return {
+  document: initialDocument,
+  templateDocument: clone(initialDocument),
   activeListing: undefined,
   // Default to a selected table cell so the contextual style panel shows,
   // matching the Figma reference state.
@@ -79,12 +84,15 @@ export const useEditorStore = create<EditorState>((set) => ({
   activeNavPanel: "blocks",
   zoom: 1,
 
-  initDocument: (listing) =>
+  initDocument: (listing) => {
+    const document = buildSampleDocument(listing);
     set({
       activeListing: listing,
-      document: buildSampleDocument(listing),
+      document,
+      templateDocument: clone(document),
       selection: null,
-    }),
+    });
+  },
 
   select: (selection) =>
     set({
@@ -182,45 +190,25 @@ export const useEditorStore = create<EditorState>((set) => ({
       selection: clearTableCell(s.selection, blockId),
     })),
 
-  toggleHeaderRow: (blockId) =>
-    set((s) => ({
-      document: updateTableRows(s.document, blockId, (rows) => {
-        if (rows.length === 0) return rows;
-        // Toggle off only when the whole first row is already header.
-        const next = !rows[0].every((c) => c.header === true);
-        return rows.map((row, ri) =>
-          ri === 0 ? row.map((c) => ({ ...c, header: next })) : row,
-        );
-      }),
-    })),
-
-  toggleHeaderColumn: (blockId) =>
-    set((s) => ({
-      document: updateTableRows(s.document, blockId, (rows) => {
-        if (rows.length === 0) return rows;
-        const next = !rows.every((row) => row[0]?.header === true);
-        return rows.map((row) =>
-          row.map((c, ci) => (ci === 0 ? { ...c, header: next } : c)),
-        );
-      }),
-    })),
-
-  setCellAlign: (blockId, cellId, align) =>
-    set((s) => ({
-      document: updateTableRows(s.document, blockId, (rows) =>
-        rows.map((row) =>
-          row.map((c) => (cellId === null || c.id === cellId ? { ...c, align } : c)),
-        ),
-      ),
-    })),
-
   setCellValue: (blockId, cellId, value) =>
     set((s) => ({
       document: updateTableRows(s.document, blockId, (rows) =>
         rows.map((row) => row.map((c) => (c.id === cellId ? { ...c, value } : c))),
       ),
     })),
-}));
+
+  resetTable: (blockId) =>
+    set((s) => {
+      const template = findBlock(s.templateDocument, blockId);
+      if (!template || template.type !== "table") return s;
+      return {
+        document: replaceBlock(s.document, blockId, clone(template)),
+        // Drop any cell selection — reset cells may no longer exist.
+        selection: clearTableCell(s.selection, blockId),
+      };
+    }),
+  };
+});
 
 /** Clamp an insertion index into the inclusive range [0, length]. */
 function clampIndex(index: number, length: number): number {

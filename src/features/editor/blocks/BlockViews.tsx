@@ -3,14 +3,13 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPlus,
-  faTable,
+  faArrowRotateLeft,
+  faTableColumnsAddBefore,
+  faTableColumnsAddAfter,
+  faTableRowsAddAbove,
+  faTableRowsAddBelow,
   faTrashCan,
-  faAlignLeft,
-  faAlignCenter,
-  faAlignRight,
-  faCaretDown,
 } from "@fortawesome/pro-regular-svg-icons";
-import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -27,15 +26,14 @@ import type {
   Selection,
   SpacerBlock,
   TableBlock,
-  TextAlign,
   TextBlock,
   TextStyle,
 } from "../types";
 import { useEditorStore } from "../store";
+import { findBlock } from "../tree";
 import { resolveDynamic, resolveField } from "../dynamic";
 import { SortableBlock, ListDropZone } from "../dnd/SortableBlock";
 import type { ListLocation } from "../dnd/dndTypes";
-import { ToggleButtonGroup, type ToggleItem } from "../controls/ToggleButtonGroup";
 import { blockLabel } from "./blockMeta";
 
 function textStyleToCss(style: TextStyle): CSSProperties {
@@ -300,6 +298,13 @@ function TableBlockView({ block, pageId, selection }: { block: TableBlock } & Vi
   const selectedBlock = selection?.blockId === block.id && !selection?.cellId;
   const selectedHere = selection?.blockId === block.id;
 
+  // Reset only applies once the table diverges from its template default.
+  const templateTable = useEditorStore((s) => {
+    const t = findBlock(s.templateDocument, block.id);
+    return t && t.type === "table" ? t : null;
+  });
+  const isEdited = !!templateTable && JSON.stringify(templateTable) !== JSON.stringify(block);
+
   const border =
     block.style.borderWidth > 0 && block.style.borderStyle !== "none"
       ? `${block.style.borderWidth}px ${block.style.borderStyle} ${block.style.borderColor ?? "#d5dae2"}`
@@ -439,8 +444,8 @@ function TableBlockView({ block, pageId, selection }: { block: TableBlock } & Vi
         />
       )}
 
-      {selectedHere && edges.width > 0 && (
-        <TableToolbar block={block} selection={selection} edges={edges} />
+      {selectedHere && edges.width > 0 && isEdited && (
+        <TableToolbar block={block} edges={edges} />
       )}
     </div>
   );
@@ -589,13 +594,16 @@ function ColumnHandles({
             />
             <DropdownMenu.Content align="start" sideOffset={6}>
               <DropdownMenu.Item onClick={() => addColumn(blockId, i)}>
+                <FontAwesomeIcon icon={faTableColumnsAddBefore} />
                 Insert column left
               </DropdownMenu.Item>
               <DropdownMenu.Item onClick={() => addColumn(blockId, i + 1)}>
+                <FontAwesomeIcon icon={faTableColumnsAddAfter} />
                 Insert column right
               </DropdownMenu.Item>
               <DropdownMenu.Separator />
               <DropdownMenu.Item disabled={colCount <= 1} onClick={() => removeColumn(blockId, i)}>
+                <FontAwesomeIcon icon={faTrashCan} />
                 Delete column
               </DropdownMenu.Item>
             </DropdownMenu.Content>
@@ -657,13 +665,16 @@ function RowHandles({
             />
             <DropdownMenu.Content align="start" side="right" sideOffset={6}>
               <DropdownMenu.Item onClick={() => addRow(blockId, i)}>
+                <FontAwesomeIcon icon={faTableRowsAddAbove} />
                 Insert row above
               </DropdownMenu.Item>
               <DropdownMenu.Item onClick={() => addRow(blockId, i + 1)}>
+                <FontAwesomeIcon icon={faTableRowsAddBelow} />
                 Insert row below
               </DropdownMenu.Item>
               <DropdownMenu.Separator />
               <DropdownMenu.Item disabled={rowCount <= 1} onClick={() => removeRow(blockId, i)}>
+                <FontAwesomeIcon icon={faTrashCan} />
                 Delete row
               </DropdownMenu.Item>
             </DropdownMenu.Content>
@@ -731,35 +742,14 @@ function InsertDots({
   );
 }
 
-const TABLE_ALIGN_ITEMS: ToggleItem<TextAlign>[] = [
-  { value: "left", icon: faAlignLeft, label: "Align left" },
-  { value: "center", icon: faAlignCenter, label: "Align center" },
-  { value: "right", icon: faAlignRight, label: "Align right" },
-];
-
 /**
- * Floating toolbar shown below a selected table: Table options menu, cell-text
- * alignment, and a delete-table button. Rendered outside the pointer-events:none
- * overlay so its controls are interactive.
+ * Floating toolbar shown below a selected table. These tables come pre-built
+ * from the document template, so the only action is resetting the table back to
+ * its template default (users still add/remove rows & columns via the handles).
+ * Rendered outside the pointer-events:none overlay so its controls work.
  */
-function TableToolbar({
-  block,
-  selection,
-  edges,
-}: {
-  block: TableBlock;
-  selection: Selection | null;
-  edges: TableEdges;
-}) {
-  const removeBlock = useEditorStore((s) => s.removeBlock);
-  const toggleHeaderRow = useEditorStore((s) => s.toggleHeaderRow);
-  const toggleHeaderColumn = useEditorStore((s) => s.toggleHeaderColumn);
-  const setCellAlign = useEditorStore((s) => s.setCellAlign);
-
-  // Alignment targets the selected cell, or every cell when none is selected.
-  const cellId = selection?.cellId ?? null;
-  const selectedCell = cellId ? block.rows.flat().find((c) => c.id === cellId) : null;
-  const activeAlign = selectedCell?.align ?? "left";
+function TableToolbar({ block, edges }: { block: TableBlock; edges: TableEdges }) {
+  const resetTable = useEditorStore((s) => s.resetTable);
 
   return (
     <div
@@ -767,51 +757,10 @@ function TableToolbar({
       style={{ top: edges.height + 12, left: edges.width / 2 }}
       onClick={(e) => e.stopPropagation()}
     >
-      <DropdownMenu>
-        <DropdownMenu.Trigger
-          render={
-            <Button variant="outline">
-              <FontAwesomeIcon icon={faTable} />
-              Table options
-              <FontAwesomeIcon icon={faCaretDown} />
-            </Button>
-          }
-        />
-        <DropdownMenu.Content align="start">
-          <DropdownMenu.Item onClick={() => toggleHeaderRow(block.id)}>Header row</DropdownMenu.Item>
-          <DropdownMenu.Item onClick={() => toggleHeaderColumn(block.id)}>
-            Header column
-          </DropdownMenu.Item>
-          <DropdownMenu.Separator />
-          <DropdownMenu.Item onClick={() => removeBlock(block.id)}>Delete table</DropdownMenu.Item>
-        </DropdownMenu.Content>
-      </DropdownMenu>
-
-      <span className="bo-editor-table-toolbar-sep" />
-
-      <ToggleButtonGroup
-        items={TABLE_ALIGN_ITEMS}
-        active={[activeAlign]}
-        onToggle={(align) => setCellAlign(block.id, cellId, align)}
-      />
-
-      <span className="bo-editor-table-toolbar-sep" />
-
-      <Tooltip>
-        <Tooltip.Trigger
-          render={
-            <button
-              type="button"
-              className="bo-editor-table-toolbar-delete"
-              aria-label="Delete table"
-              onClick={() => removeBlock(block.id)}
-            >
-              <FontAwesomeIcon icon={faTrashCan} />
-            </button>
-          }
-        />
-        <Tooltip.Content>Delete table</Tooltip.Content>
-      </Tooltip>
+      <Button variant="outline" onClick={() => resetTable(block.id)}>
+        <FontAwesomeIcon icon={faArrowRotateLeft} />
+        Reset Table
+      </Button>
     </div>
   );
 }
