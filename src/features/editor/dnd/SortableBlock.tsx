@@ -66,7 +66,7 @@ export function SortableBlock({
       <button
         ref={setActivatorNodeRef}
         type="button"
-        className="bo-editor-drag-handle"
+        className={`bo-editor-drag-handle${blockType === "table" ? " is-table" : ""}`}
         aria-label="Drag to reorder"
         {...attributes}
         {...listeners}
@@ -74,7 +74,8 @@ export function SortableBlock({
         <FontAwesomeIcon icon={faGripDotsVertical} />
       </button>
 
-      {selected && (
+      {/* Tables provide their own delete in the floating toolbar. */}
+      {selected && blockType !== "table" && (
         <Tooltip>
           <Tooltip.Trigger
             render={

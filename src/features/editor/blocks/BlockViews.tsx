@@ -1,8 +1,18 @@
 import type { CSSProperties } from "react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCirclePlus, faXmark } from "@fortawesome/pro-regular-svg-icons";
+import {
+  faPlus,
+  faTable,
+  faTrashCan,
+  faAlignLeft,
+  faAlignCenter,
+  faAlignRight,
+  faCaretDown,
+} from "@fortawesome/pro-regular-svg-icons";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
+import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
+import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type {
   Block,
@@ -17,6 +27,7 @@ import type {
   Selection,
   SpacerBlock,
   TableBlock,
+  TextAlign,
   TextBlock,
   TextStyle,
 } from "../types";
@@ -24,6 +35,7 @@ import { useEditorStore } from "../store";
 import { resolveDynamic, resolveField } from "../dynamic";
 import { SortableBlock, ListDropZone } from "../dnd/SortableBlock";
 import type { ListLocation } from "../dnd/dndTypes";
+import { ToggleButtonGroup, type ToggleItem } from "../controls/ToggleButtonGroup";
 import { blockLabel } from "./blockMeta";
 
 function textStyleToCss(style: TextStyle): CSSProperties {
@@ -267,8 +279,23 @@ function SectionBlockView({ block, pageId, selection }: { block: SectionBlock } 
 }
 
 /* ---------------- Table (cells selectable, rows/cols editable) ---------------- */
+
+// Handle bars sit flush on the table's outer border; insert dots float in the
+// gutter just outside the table.
+const HANDLE_THICK = 6;
+const DOT_GUTTER = 12;
+// A handle is a short bar centered on its column/row (not the full span), just
+// big enough to click; capped so it never overflows a narrow column/row.
+const HANDLE_LEN = 24;
+// Row handles read as taller than column handles at the same length, so keep
+// them shorter.
+const ROW_HANDLE_LEN = 14;
+// Minimum breathing room at each end so a capped handle keeps a clickable gap.
+const HANDLE_GAP = 3;
+
 function TableBlockView({ block, pageId, selection }: { block: TableBlock } & VisualProps) {
   const select = useSelect();
+  const setCellValue = useEditorStore((s) => s.setCellValue);
   const listing = useEditorStore((s) => s.activeListing);
   const selectedBlock = selection?.blockId === block.id && !selection?.cellId;
   const selectedHere = selection?.blockId === block.id;
@@ -282,44 +309,15 @@ function TableBlockView({ block, pageId, selection }: { block: TableBlock } & Vi
   const tableRef = useRef<HTMLTableElement>(null);
   const [edges, setEdges] = useState<TableEdges>({ cols: [], rows: [], width: 0, height: 0 });
   const [hovered, setHovered] = useState(false);
-  // The single boundary the cursor is hovering near — the gap between two
-  // columns or two rows. Null when the cursor isn't near any gap.
-  const [active, setActive] = useState<ActiveInsert | null>(null);
-
-  // Reveal an insert bar only when the cursor is near a boundary; pick whichever
-  // gap (column or row) is closer.
-  const onMouseMove = (e: React.MouseEvent) => {
-    const wrap = wrapRef.current;
-    if (!wrap || edges.cols.length < 2 || edges.rows.length < 2) return;
-    const box = wrap.getBoundingClientRect();
-    const px = e.clientX - box.left;
-    const py = e.clientY - box.top;
-    const THRESHOLD = 10;
-
-    const nearest = (vals: number[], p: number) => {
-      let index = 0;
-      let dist = Infinity;
-      vals.forEach((v, i) => {
-        const d = Math.abs(p - v);
-        if (d < dist) {
-          dist = d;
-          index = i;
-        }
-      });
-      return { index, dist };
-    };
-
-    const col = nearest(edges.cols, px);
-    const row = nearest(edges.rows, py);
-
-    if (col.dist <= THRESHOLD && col.dist <= row.dist) {
-      setActive({ axis: "col", index: col.index });
-    } else if (row.dist <= THRESHOLD) {
-      setActive({ axis: "row", index: row.index });
-    } else {
-      setActive(null);
-    }
-  };
+  // Which handle the cursor is over — drives the column/row highlight.
+  const [hoverHandle, setHoverHandle] = useState<HandleTarget | null>(null);
+  // Which handle's action menu is open (only one at a time).
+  const [openMenu, setOpenMenu] = useState<HandleTarget | null>(null);
+  // Which column/row the cursor is over — only those handles are shown.
+  const [hoverBand, setHoverBand] = useState<{
+    col: number | null;
+    row: number | null;
+  } | null>(null);
 
   // Measure column/row boundaries relative to the wrap so the affordance
   // overlay lines up with the (auto-width) native table.
@@ -362,6 +360,30 @@ function TableBlockView({ block, pageId, selection }: { block: TableBlock } & Vi
     return () => ro.disconnect();
   }, [block.rows]);
 
+  // Track which column/row band the cursor is over so only those handles show.
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (edges.cols.length < 2 || edges.rows.length < 2) return;
+    const box = wrapRef.current?.getBoundingClientRect();
+    if (!box) return;
+    const px = e.clientX - box.left;
+    const py = e.clientY - box.top;
+    const band = (vals: number[], p: number): number | null => {
+      if (p < vals[0] || p >= vals[vals.length - 1]) return null;
+      for (let i = 0; i < vals.length - 1; i += 1) {
+        if (p < vals[i + 1]) return i;
+      }
+      return null;
+    };
+    const col = band(edges.cols, px);
+    const row = band(edges.rows, py);
+    setHoverBand(col === null && row === null ? null : { col, row });
+  };
+
+  // Keep the overlay mounted while a menu is open even if the pointer has left
+  // the table — the menu portals to the body, so leaving fires mouseleave.
+  const showOverlay = hovered || selectedHere || openMenu != null;
+  const highlight = openMenu ?? hoverHandle;
+
   return (
     <div
       ref={wrapRef}
@@ -373,7 +395,8 @@ function TableBlockView({ block, pageId, selection }: { block: TableBlock } & Vi
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => {
         setHovered(false);
-        setActive(null);
+        setHoverHandle(null);
+        setHoverBand(null);
       }}
       onMouseMove={onMouseMove}
       style={{ width: "100%" }}
@@ -389,6 +412,8 @@ function TableBlockView({ block, pageId, selection }: { block: TableBlock } & Vi
                   border={border}
                   selected={selection?.blockId === block.id && selection?.cellId === cell.id}
                   value={resolveDynamic(cell, listing)}
+                  editable={!cell.dynamicKey}
+                  onChange={(v) => setCellValue(block.id, cell.id, v)}
                   onSelect={(e) => {
                     e.stopPropagation();
                     select({ pageId, blockId: block.id, cellId: cell.id });
@@ -400,14 +425,22 @@ function TableBlockView({ block, pageId, selection }: { block: TableBlock } & Vi
         </tbody>
       </table>
 
-      {(hovered || selectedHere) && (
+      {showOverlay && (
         <TableEditOverlay
           blockId={block.id}
           edges={edges}
-          active={active}
           colCount={block.rows[0]?.length ?? 0}
           rowCount={block.rows.length}
+          highlight={highlight}
+          hoverBand={hoverBand}
+          setHoverHandle={setHoverHandle}
+          openMenu={openMenu}
+          setOpenMenu={setOpenMenu}
         />
+      )}
+
+      {selectedHere && edges.width > 0 && (
+        <TableToolbar block={block} selection={selection} edges={edges} />
       )}
     </div>
   );
@@ -422,135 +455,363 @@ interface TableEdges {
   height: number;
 }
 
-/** The single boundary the cursor is hovering near. */
-interface ActiveInsert {
+/** A column or row handle, identified by axis + index. */
+interface HandleTarget {
   axis: "col" | "row";
   index: number;
 }
 
 /**
- * Hover affordances laid over the table: insert lines + "+" buttons in the gaps
- * between/around rows and columns, and remove handles per row/column. Pointer
- * events pass through the container; only the controls are interactive.
+ * Affordances laid over the table: a column/row highlight, per-column and
+ * per-row handles (each opens an actions menu), and boundary insert dots. The
+ * container is pointer-events:none; only the controls are interactive.
  */
 function TableEditOverlay({
   blockId,
   edges,
-  active,
+  colCount,
+  rowCount,
+  highlight,
+  hoverBand,
+  setHoverHandle,
+  openMenu,
+  setOpenMenu,
+}: {
+  blockId: string;
+  edges: TableEdges;
+  colCount: number;
+  rowCount: number;
+  highlight: HandleTarget | null;
+  hoverBand: { col: number | null; row: number | null } | null;
+  setHoverHandle: (h: HandleTarget | null) => void;
+  openMenu: HandleTarget | null;
+  setOpenMenu: (h: HandleTarget | null) => void;
+}) {
+  if (edges.cols.length < 2 || edges.rows.length < 2) return null;
+
+  return (
+    <div className="bo-editor-table-overlay">
+      <ColumnRowHighlight edges={edges} target={highlight} />
+      <ColumnHandles
+        blockId={blockId}
+        edges={edges}
+        colCount={colCount}
+        hoverCol={hoverBand?.col ?? null}
+        setHoverHandle={setHoverHandle}
+        openMenu={openMenu}
+        setOpenMenu={setOpenMenu}
+      />
+      <RowHandles
+        blockId={blockId}
+        edges={edges}
+        rowCount={rowCount}
+        hoverRow={hoverBand?.row ?? null}
+        setHoverHandle={setHoverHandle}
+        openMenu={openMenu}
+        setOpenMenu={setOpenMenu}
+      />
+      <InsertDots blockId={blockId} edges={edges} colCount={colCount} rowCount={rowCount} />
+    </div>
+  );
+}
+
+/** A translucent rectangle spanning the hovered/active column or row. */
+function ColumnRowHighlight({ edges, target }: { edges: TableEdges; target: HandleTarget | null }) {
+  if (!target) return null;
+  if (target.axis === "col" && target.index + 1 >= edges.cols.length) return null;
+  if (target.axis === "row" && target.index + 1 >= edges.rows.length) return null;
+
+  const style: CSSProperties =
+    target.axis === "col"
+      ? {
+          left: edges.cols[target.index],
+          width: edges.cols[target.index + 1] - edges.cols[target.index],
+          top: 0,
+          height: edges.height,
+        }
+      : {
+          top: edges.rows[target.index],
+          height: edges.rows[target.index + 1] - edges.rows[target.index],
+          left: 0,
+          width: edges.width,
+        };
+  return <div className="bo-editor-table-highlight" style={style} />;
+}
+
+/** Column handles across the top edge; each opens an insert/delete menu. */
+function ColumnHandles({
+  blockId,
+  edges,
+  colCount,
+  hoverCol,
+  setHoverHandle,
+  openMenu,
+  setOpenMenu,
+}: {
+  blockId: string;
+  edges: TableEdges;
+  colCount: number;
+  hoverCol: number | null;
+  setHoverHandle: (h: HandleTarget | null) => void;
+  openMenu: HandleTarget | null;
+  setOpenMenu: (h: HandleTarget | null) => void;
+}) {
+  const addColumn = useEditorStore((s) => s.addColumn);
+  const removeColumn = useEditorStore((s) => s.removeColumn);
+  const stop = (e: React.MouseEvent) => e.stopPropagation();
+
+  return (
+    <>
+      {Array.from({ length: colCount }, (_, i) => {
+        const isOpen = openMenu?.axis === "col" && openMenu.index === i;
+        // Show only the hovered column's handle (or one with its menu open).
+        if (hoverCol !== i && !isOpen) return null;
+        const width = Math.min(HANDLE_LEN, edges.cols[i + 1] - edges.cols[i] - HANDLE_GAP * 2);
+        const left = (edges.cols[i] + edges.cols[i + 1]) / 2 - width / 2;
+        return (
+          <DropdownMenu
+            key={`ch-${i}`}
+            open={isOpen}
+            onOpenChange={(o) => setOpenMenu(o ? { axis: "col", index: i } : null)}
+          >
+            <DropdownMenu.Trigger
+              render={
+                <button
+                  type="button"
+                  className={`bo-editor-col-handle${isOpen ? " is-active" : ""}`}
+                  aria-label={`Column ${i + 1} options`}
+                  style={{ left, width, top: edges.rows[0] - HANDLE_THICK / 2, height: HANDLE_THICK }}
+                  onClick={stop}
+                  onMouseEnter={() => setHoverHandle({ axis: "col", index: i })}
+                  onMouseLeave={() => setHoverHandle(null)}
+                />
+              }
+            />
+            <DropdownMenu.Content align="start" sideOffset={6}>
+              <DropdownMenu.Item onClick={() => addColumn(blockId, i)}>
+                Insert column left
+              </DropdownMenu.Item>
+              <DropdownMenu.Item onClick={() => addColumn(blockId, i + 1)}>
+                Insert column right
+              </DropdownMenu.Item>
+              <DropdownMenu.Separator />
+              <DropdownMenu.Item disabled={colCount <= 1} onClick={() => removeColumn(blockId, i)}>
+                Delete column
+              </DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu>
+        );
+      })}
+    </>
+  );
+}
+
+/** Row handles down the left edge; each opens an insert/delete menu. */
+function RowHandles({
+  blockId,
+  edges,
+  rowCount,
+  hoverRow,
+  setHoverHandle,
+  openMenu,
+  setOpenMenu,
+}: {
+  blockId: string;
+  edges: TableEdges;
+  rowCount: number;
+  hoverRow: number | null;
+  setHoverHandle: (h: HandleTarget | null) => void;
+  openMenu: HandleTarget | null;
+  setOpenMenu: (h: HandleTarget | null) => void;
+}) {
+  const addRow = useEditorStore((s) => s.addRow);
+  const removeRow = useEditorStore((s) => s.removeRow);
+  const stop = (e: React.MouseEvent) => e.stopPropagation();
+
+  return (
+    <>
+      {Array.from({ length: rowCount }, (_, i) => {
+        const isOpen = openMenu?.axis === "row" && openMenu.index === i;
+        // Show only the hovered row's handle (or one with its menu open).
+        if (hoverRow !== i && !isOpen) return null;
+        const height = Math.min(ROW_HANDLE_LEN, edges.rows[i + 1] - edges.rows[i] - HANDLE_GAP * 2);
+        const top = (edges.rows[i] + edges.rows[i + 1]) / 2 - height / 2;
+        return (
+          <DropdownMenu
+            key={`rh-${i}`}
+            open={isOpen}
+            onOpenChange={(o) => setOpenMenu(o ? { axis: "row", index: i } : null)}
+          >
+            <DropdownMenu.Trigger
+              render={
+                <button
+                  type="button"
+                  className={`bo-editor-row-handle${isOpen ? " is-active" : ""}`}
+                  aria-label={`Row ${i + 1} options`}
+                  style={{ top, height, left: edges.cols[0] - HANDLE_THICK / 2, width: HANDLE_THICK }}
+                  onClick={stop}
+                  onMouseEnter={() => setHoverHandle({ axis: "row", index: i })}
+                  onMouseLeave={() => setHoverHandle(null)}
+                />
+              }
+            />
+            <DropdownMenu.Content align="start" side="right" sideOffset={6}>
+              <DropdownMenu.Item onClick={() => addRow(blockId, i)}>
+                Insert row above
+              </DropdownMenu.Item>
+              <DropdownMenu.Item onClick={() => addRow(blockId, i + 1)}>
+                Insert row below
+              </DropdownMenu.Item>
+              <DropdownMenu.Separator />
+              <DropdownMenu.Item disabled={rowCount <= 1} onClick={() => removeRow(blockId, i)}>
+                Delete row
+              </DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu>
+        );
+      })}
+    </>
+  );
+}
+
+/** Small dots at every boundary that grow into a "+" and insert a row/column. */
+function InsertDots({
+  blockId,
+  edges,
   colCount,
   rowCount,
 }: {
   blockId: string;
   edges: TableEdges;
-  active: ActiveInsert | null;
   colCount: number;
   rowCount: number;
 }) {
   const addColumn = useEditorStore((s) => s.addColumn);
-  const removeColumn = useEditorStore((s) => s.removeColumn);
   const addRow = useEditorStore((s) => s.addRow);
-  const removeRow = useEditorStore((s) => s.removeRow);
-
-  if (edges.cols.length < 2 || edges.rows.length < 2) return null;
-
   const stop = (e: React.MouseEvent) => e.stopPropagation();
 
-  // One insert affordance — the gap the cursor is hovering: a full-table bar at
-  // that boundary with a floating "+" outside the table. Bar and button insert.
-  let insert = null;
-  if (active?.axis === "col") {
-    const label = `Insert column ${active.index === 0 ? "before first" : active.index === colCount ? "after last" : `at ${active.index}`}`;
-    const onInsert = (e: React.MouseEvent) => {
-      stop(e);
-      addColumn(blockId, active.index);
-    };
-    insert = (
-      <div className="bo-editor-insert bo-editor-insert--col" style={{ left: edges.cols[active.index] }}>
-        <button type="button" className="bo-editor-insert-bar" aria-label={label} onClick={onInsert} />
-        <button type="button" className="bo-editor-insert-btn" aria-label={label} onClick={onInsert}>
-          <FontAwesomeIcon icon={faCirclePlus} />
-        </button>
-      </div>
-    );
-  } else if (active?.axis === "row") {
-    const label = `Insert row ${active.index === 0 ? "before first" : active.index === rowCount ? "after last" : `at ${active.index}`}`;
-    const onInsert = (e: React.MouseEvent) => {
-      stop(e);
-      addRow(blockId, active.index);
-    };
-    insert = (
-      <div className="bo-editor-insert bo-editor-insert--row" style={{ top: edges.rows[active.index] }}>
-        <button type="button" className="bo-editor-insert-bar" aria-label={label} onClick={onInsert} />
-        <button type="button" className="bo-editor-insert-btn" aria-label={label} onClick={onInsert}>
-          <FontAwesomeIcon icon={faCirclePlus} />
-        </button>
-      </div>
-    );
-  }
+  const colLabel = (i: number) =>
+    `Insert column ${i === 0 ? "before first" : i === colCount ? "after last" : `at ${i}`}`;
+  const rowLabel = (i: number) =>
+    `Insert row ${i === 0 ? "before first" : i === rowCount ? "after last" : `at ${i}`}`;
 
   return (
-    <div className="bo-editor-table-overlay">
-      {insert}
+    <>
+      {edges.cols.map((x, i) => (
+        <button
+          key={`cd-${i}`}
+          type="button"
+          className="bo-editor-insert-dot"
+          aria-label={colLabel(i)}
+          style={{ left: x, top: edges.rows[0] - DOT_GUTTER }}
+          onClick={(e) => {
+            stop(e);
+            addColumn(blockId, i);
+          }}
+        >
+          <FontAwesomeIcon icon={faPlus} />
+        </button>
+      ))}
+      {edges.rows.map((y, i) => (
+        <button
+          key={`rd-${i}`}
+          type="button"
+          className="bo-editor-insert-dot"
+          aria-label={rowLabel(i)}
+          style={{ top: y, left: edges.cols[0] - DOT_GUTTER }}
+          onClick={(e) => {
+            stop(e);
+            addRow(blockId, i);
+          }}
+        >
+          <FontAwesomeIcon icon={faPlus} />
+        </button>
+      ))}
+    </>
+  );
+}
 
-      {/* Column remove handles (top gutter) — hidden when only one column. */}
-      {colCount > 1 &&
-        Array.from({ length: colCount }, (_, i) => {
-          const left = edges.cols[i];
-          const width = edges.cols[i + 1] - edges.cols[i];
-          return (
-            <Tooltip key={`cr-${i}`}>
-              <Tooltip.Trigger
-                render={
-                  <button
-                    type="button"
-                    className="bo-editor-col-remove"
-                    aria-label="Remove column"
-                    style={{ left, width }}
-                    onClick={(e) => {
-                      stop(e);
-                      removeColumn(blockId, i);
-                    }}
-                  >
-                    <span className="bo-editor-remove-handle">
-                      <FontAwesomeIcon icon={faXmark} />
-                    </span>
-                  </button>
-                }
-              />
-              <Tooltip.Content>Remove column</Tooltip.Content>
-            </Tooltip>
-          );
-        })}
+const TABLE_ALIGN_ITEMS: ToggleItem<TextAlign>[] = [
+  { value: "left", icon: faAlignLeft, label: "Align left" },
+  { value: "center", icon: faAlignCenter, label: "Align center" },
+  { value: "right", icon: faAlignRight, label: "Align right" },
+];
 
-      {/* Row remove handles (left gutter) — hidden when only one row. */}
-      {rowCount > 1 &&
-        Array.from({ length: rowCount }, (_, i) => {
-          const top = edges.rows[i];
-          const height = edges.rows[i + 1] - edges.rows[i];
-          return (
-            <Tooltip key={`rr-${i}`}>
-              <Tooltip.Trigger
-                render={
-                  <button
-                    type="button"
-                    className="bo-editor-row-remove"
-                    aria-label="Remove row"
-                    style={{ top, height }}
-                    onClick={(e) => {
-                      stop(e);
-                      removeRow(blockId, i);
-                    }}
-                  >
-                    <span className="bo-editor-remove-handle">
-                      <FontAwesomeIcon icon={faXmark} />
-                    </span>
-                  </button>
-                }
-              />
-              <Tooltip.Content>Remove row</Tooltip.Content>
-            </Tooltip>
-          );
-        })}
+/**
+ * Floating toolbar shown below a selected table: Table options menu, cell-text
+ * alignment, and a delete-table button. Rendered outside the pointer-events:none
+ * overlay so its controls are interactive.
+ */
+function TableToolbar({
+  block,
+  selection,
+  edges,
+}: {
+  block: TableBlock;
+  selection: Selection | null;
+  edges: TableEdges;
+}) {
+  const removeBlock = useEditorStore((s) => s.removeBlock);
+  const toggleHeaderRow = useEditorStore((s) => s.toggleHeaderRow);
+  const toggleHeaderColumn = useEditorStore((s) => s.toggleHeaderColumn);
+  const setCellAlign = useEditorStore((s) => s.setCellAlign);
+
+  // Alignment targets the selected cell, or every cell when none is selected.
+  const cellId = selection?.cellId ?? null;
+  const selectedCell = cellId ? block.rows.flat().find((c) => c.id === cellId) : null;
+  const activeAlign = selectedCell?.align ?? "left";
+
+  return (
+    <div
+      className="bo-editor-table-toolbar"
+      style={{ top: edges.height + 12, left: edges.width / 2 }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <DropdownMenu>
+        <DropdownMenu.Trigger
+          render={
+            <Button variant="outline">
+              <FontAwesomeIcon icon={faTable} />
+              Table options
+              <FontAwesomeIcon icon={faCaretDown} />
+            </Button>
+          }
+        />
+        <DropdownMenu.Content align="start">
+          <DropdownMenu.Item onClick={() => toggleHeaderRow(block.id)}>Header row</DropdownMenu.Item>
+          <DropdownMenu.Item onClick={() => toggleHeaderColumn(block.id)}>
+            Header column
+          </DropdownMenu.Item>
+          <DropdownMenu.Separator />
+          <DropdownMenu.Item onClick={() => removeBlock(block.id)}>Delete table</DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu>
+
+      <span className="bo-editor-table-toolbar-sep" />
+
+      <ToggleButtonGroup
+        items={TABLE_ALIGN_ITEMS}
+        active={[activeAlign]}
+        onToggle={(align) => setCellAlign(block.id, cellId, align)}
+      />
+
+      <span className="bo-editor-table-toolbar-sep" />
+
+      <Tooltip>
+        <Tooltip.Trigger
+          render={
+            <button
+              type="button"
+              className="bo-editor-table-toolbar-delete"
+              aria-label="Delete table"
+              onClick={() => removeBlock(block.id)}
+            >
+              <FontAwesomeIcon icon={faTrashCan} />
+            </button>
+          }
+        />
+        <Tooltip.Content>Delete table</Tooltip.Content>
+      </Tooltip>
     </div>
   );
 }
@@ -560,18 +821,24 @@ function CellView({
   border,
   selected,
   value,
+  editable,
+  onChange,
   onSelect,
 }: {
   cell: Cell;
   border: string;
   selected: boolean;
   value: string;
+  editable: boolean;
+  onChange: (value: string) => void;
   onSelect: (e: React.MouseEvent) => void;
 }) {
   const bottom =
     cell.style.borderBottomWidth > 0 && cell.style.borderBottomStyle !== "none"
       ? `${cell.style.borderBottomWidth}px ${cell.style.borderBottomStyle} ${cell.style.borderBottomColor ?? "#d5dae2"}`
       : undefined;
+
+  const placeholder = cell.header ? "Label" : "Value";
 
   return (
     <td
@@ -591,11 +858,55 @@ function CellView({
         textTransform: cell.style.transform === "none" ? undefined : cell.style.transform,
       }}
     >
-      {value === "" ? (
-        <span className="bo-editor-cell-placeholder">{cell.header ? "Label" : "Value"}</span>
+      {editable ? (
+        <EditableCellText value={value} placeholder={placeholder} onChange={onChange} />
+      ) : value === "" ? (
+        <span className="bo-editor-cell-placeholder">{placeholder}</span>
       ) : (
         value
       )}
     </td>
+  );
+}
+
+/**
+ * Inline-editable cell text. The DOM is the source of truth while typing; we
+ * only rewrite it when the external value diverges, so committing an edit never
+ * resets the caret. A CSS placeholder shows when empty.
+ */
+function EditableCellText({
+  value,
+  placeholder,
+  onChange,
+}: {
+  value: string;
+  placeholder: string;
+  onChange: (value: string) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (el && el.textContent !== value) el.textContent = value;
+  }, [value]);
+
+  return (
+    <div
+      ref={ref}
+      className={`bo-editor-cell-edit${value === "" ? " is-empty" : ""}`}
+      contentEditable
+      suppressContentEditableWarning
+      role="textbox"
+      aria-label={placeholder}
+      data-placeholder={placeholder}
+      onInput={(e) => onChange(e.currentTarget.textContent ?? "")}
+      onKeyDown={(e) => {
+        // Enter commits and exits rather than inserting a newline.
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          e.currentTarget.blur();
+        }
+      }}
+    />
   );
 }

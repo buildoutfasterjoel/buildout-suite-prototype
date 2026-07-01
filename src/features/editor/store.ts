@@ -7,6 +7,7 @@ import type {
   EditorDocument,
   NavPanel,
   Selection,
+  TextAlign,
 } from "./types";
 import { buildSampleDocument } from "./sampleDocument";
 import { createBlock, createCell, type BlockVariant } from "./blocks/blockFactory";
@@ -46,6 +47,14 @@ interface EditorState {
   removeColumn: (blockId: string, index: number) => void;
   addRow: (blockId: string, index: number) => void;
   removeRow: (blockId: string, index: number) => void;
+
+  // Table options: header toggles + cell alignment.
+  toggleHeaderRow: (blockId: string) => void;
+  toggleHeaderColumn: (blockId: string) => void;
+  /** Align one cell (by id) or, when cellId is null, every cell in the table. */
+  setCellAlign: (blockId: string, cellId: string | null, align: TextAlign) => void;
+  /** Edit a cell's static text value. */
+  setCellValue: (blockId: string, cellId: string, value: string) => void;
 }
 
 /** Resolve the page a drop target belongs to (for post-add selection). */
@@ -171,6 +180,45 @@ export const useEditorStore = create<EditorState>((set) => ({
         rows.length <= 1 ? rows : rows.filter((_, ri) => ri !== index),
       ),
       selection: clearTableCell(s.selection, blockId),
+    })),
+
+  toggleHeaderRow: (blockId) =>
+    set((s) => ({
+      document: updateTableRows(s.document, blockId, (rows) => {
+        if (rows.length === 0) return rows;
+        // Toggle off only when the whole first row is already header.
+        const next = !rows[0].every((c) => c.header === true);
+        return rows.map((row, ri) =>
+          ri === 0 ? row.map((c) => ({ ...c, header: next })) : row,
+        );
+      }),
+    })),
+
+  toggleHeaderColumn: (blockId) =>
+    set((s) => ({
+      document: updateTableRows(s.document, blockId, (rows) => {
+        if (rows.length === 0) return rows;
+        const next = !rows.every((row) => row[0]?.header === true);
+        return rows.map((row) =>
+          row.map((c, ci) => (ci === 0 ? { ...c, header: next } : c)),
+        );
+      }),
+    })),
+
+  setCellAlign: (blockId, cellId, align) =>
+    set((s) => ({
+      document: updateTableRows(s.document, blockId, (rows) =>
+        rows.map((row) =>
+          row.map((c) => (cellId === null || c.id === cellId ? { ...c, align } : c)),
+        ),
+      ),
+    })),
+
+  setCellValue: (blockId, cellId, value) =>
+    set((s) => ({
+      document: updateTableRows(s.document, blockId, (rows) =>
+        rows.map((row) => row.map((c) => (c.id === cellId ? { ...c, value } : c))),
+      ),
     })),
 }));
 
