@@ -137,9 +137,20 @@ function BlockNode({
     <BlockVisual block={block} pageId={pageId} selection={selection} locked={locked} />
   );
 
+  // "Located" from the Layers panel — outline it, unless it's already the
+  // selected block (which draws its own outline).
+  const located = useEditorStore(
+    (s) => s.highlightedBlockId === block.id && s.selection?.blockId !== block.id,
+  );
+  const locatedClass = located ? " is-located" : "";
+
   // Locked pages skip the sortable wrapper entirely (no drag handle / delete).
   if (locked) {
-    return <div className="bo-editor-sortable">{visual}</div>;
+    return (
+      <div className={`bo-editor-sortable${locatedClass}`} data-block-id={block.id}>
+        {visual}
+      </div>
+    );
   }
 
   const selected = selection?.blockId === block.id && !selection?.cellId;
@@ -151,6 +162,7 @@ function BlockNode({
       list={list}
       index={index}
       selected={selected}
+      located={located}
     >
       {visual}
     </SortableBlock>

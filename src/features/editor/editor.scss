@@ -181,6 +181,13 @@
 .bo-editor-sortable {
   position: relative;
 }
+/* "Located" from the Layers panel — a dashed outline that reads as "here it is",
+   distinct from the solid selection outline. */
+.bo-editor-sortable.is-located {
+  outline: 2px dashed #7422ce;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
 .bo-editor-drag-handle {
   position: absolute;
   top: 2px;
@@ -493,4 +500,42 @@
   font-size: 14px;
   font-weight: 600;
   color: #22262f;
+}
+
+/* ---- Layers panel rows ---- */
+.bo-editor-layer-grip {
+  border: 0;
+  background: transparent;
+  color: #94a3b8;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  cursor: grab;
+  touch-action: none;
+  flex-shrink: 0;
+}
+.bo-editor-layer-grip:active {
+  cursor: grabbing;
+}
+.bo-editor-layer-action {
+  border: 0;
+  background: transparent;
+  color: #94a3b8;
+  padding: 2px 5px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    color 0.1s ease,
+    background 0.1s ease;
+}
+.bo-editor-layer-action:hover {
+  color: #22262f;
+  background: #eceef2;
+}
+.bo-editor-layer-action-danger:hover {
+  color: #e7000b;
+  background: #fef2f2;
 }

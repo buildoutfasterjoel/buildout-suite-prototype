@@ -21,6 +21,7 @@ export function SortableBlock({
   list,
   index,
   selected,
+  located = false,
   children,
 }: {
   blockId: string;
@@ -29,6 +30,7 @@ export function SortableBlock({
   list: ListLocation;
   index: number;
   selected: boolean;
+  located?: boolean;
   children: ReactNode;
 }) {
   const removeBlock = useEditorStore((s) => s.removeBlock);
@@ -54,7 +56,8 @@ export function SortableBlock({
   return (
     <div
       ref={setNodeRef}
-      className="bo-editor-sortable"
+      className={`bo-editor-sortable${located ? " is-located" : ""}`}
+      data-block-id={blockId}
       style={{
         transform: CSS.Transform.toString(transform),
         transition,

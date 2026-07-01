@@ -37,7 +37,17 @@ export function EditorDndProvider({ children }: { children: ReactNode }) {
     setActive(null);
     const a = e.active.data.current as DragOverData | undefined;
     const o = e.over?.data.current as DragOverData | undefined;
-    if (!a || !o || !o.list) return;
+    if (!a || !o) return;
+
+    // Layers-panel reorder: page-scoped, over another layer row in the same page.
+    if (a.source === "layer" && o.source === "layer" && a.pageId === o.pageId) {
+      if (a.blockId && a.blockId !== o.blockId) {
+        moveBlock(a.blockId, { kind: "page", pageId: a.pageId!, index: o.index ?? 0 });
+      }
+      return;
+    }
+
+    if (!o.list) return;
 
     const index = o.dropKind === "list" ? o.length ?? 0 : o.index ?? 0;
     const target = toDropTarget(o.list, index);

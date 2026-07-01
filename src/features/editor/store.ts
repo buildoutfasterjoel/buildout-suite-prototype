@@ -30,6 +30,14 @@ interface EditorState {
   templateDocument: EditorDocument;
   activeListing: Property | undefined;
   selection: Selection | null;
+  /**
+   * Block "located" from the Layers panel — highlighted on the canvas without
+   * opening its editing controls (unlike `selection`), so the Layers list stays
+   * open. Null = nothing located.
+   */
+  highlightedBlockId: string | null;
+  /** Page currently in view on the canvas — drives the Layers panel scope. */
+  activePageId: string | null;
   /** Active left-rail panel. Null = no panel open (only the rail shows). */
   activeNavPanel: NavPanel | null;
   zoom: number;
@@ -38,6 +46,10 @@ interface EditorState {
   initDocument: (listing: Property | undefined) => void;
   select: (selection: Selection | null) => void;
   clearSelection: () => void;
+  /** Locate a block on the canvas from the Layers panel (highlight + scroll). */
+  highlightBlock: (blockId: string | null) => void;
+  /** Track the page currently in view (set as the canvas scrolls). */
+  setActivePageId: (pageId: string) => void;
   setNavPanel: (panel: NavPanel | null) => void;
   setZoom: (zoom: number) => void;
   zoomIn: () => void;
@@ -90,6 +102,8 @@ export const useEditorStore = create<EditorState>((set) => {
   // Default to a selected table cell so the contextual style panel shows,
   // matching the Figma reference state.
   selection: null,
+  highlightedBlockId: null,
+  activePageId: initialDocument.pages[0]?.id ?? null,
   activeNavPanel: "blocks",
   zoom: 1,
 
@@ -100,6 +114,8 @@ export const useEditorStore = create<EditorState>((set) => {
       document,
       templateDocument: clone(document),
       selection: null,
+      highlightedBlockId: null,
+      activePageId: document.pages[0]?.id ?? null,
     });
   },
 
@@ -110,7 +126,14 @@ export const useEditorStore = create<EditorState>((set) => {
       activeNavPanel: selection ? null : "blocks",
     }),
 
-  clearSelection: () => set({ selection: null, activeNavPanel: "blocks" }),
+  clearSelection: () =>
+    set({ selection: null, highlightedBlockId: null, activeNavPanel: "blocks" }),
+
+  highlightBlock: (blockId) => set({ highlightedBlockId: blockId }),
+
+  // Guard so scroll spam doesn't re-render when the page hasn't changed.
+  setActivePageId: (pageId) =>
+    set((s) => (s.activePageId === pageId ? s : { activePageId: pageId })),
 
   setNavPanel: (panel) => set({ activeNavPanel: panel, selection: null }),
 
