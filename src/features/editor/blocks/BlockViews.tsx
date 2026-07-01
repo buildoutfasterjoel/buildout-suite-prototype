@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPlus,
@@ -296,6 +297,7 @@ function TableBlockView({ block, pageId, selection }: { block: TableBlock } & Vi
   const select = useSelect();
   const setCellValue = useEditorStore((s) => s.setCellValue);
   const listing = useEditorStore((s) => s.activeListing);
+  const zoom = useEditorStore((s) => s.zoom);
   const selectedBlock = selection?.blockId === block.id && !selection?.cellId;
   const selectedHere = selection?.blockId === block.id;
 
@@ -305,6 +307,7 @@ function TableBlockView({ block, pageId, selection }: { block: TableBlock } & Vi
     return t && t.type === "table" ? t : null;
   });
   const isEdited = !!templateTable && JSON.stringify(templateTable) !== JSON.stringify(block);
+  const showReset = selectedHere && isEdited;
 
   const border =
     block.style.borderWidth > 0 && block.style.borderStyle !== "none"
@@ -385,6 +388,29 @@ function TableBlockView({ block, pageId, selection }: { block: TableBlock } & Vi
     setHoverBand(col === null && row === null ? null : { col, row });
   };
 
+  // The reset control is portaled out of the overflow:hidden page so it can
+  // float in the workspace margin; track the table's viewport position for it.
+  const [resetAnchor, setResetAnchor] = useState<{ left: number; top: number } | null>(null);
+  useLayoutEffect(() => {
+    if (!showReset) {
+      setResetAnchor(null);
+      return;
+    }
+    const measure = () => {
+      const el = wrapRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setResetAnchor({ left: r.left, top: r.top + r.height / 2 });
+    };
+    measure();
+    window.addEventListener("scroll", measure, true);
+    window.addEventListener("resize", measure);
+    return () => {
+      window.removeEventListener("scroll", measure, true);
+      window.removeEventListener("resize", measure);
+    };
+  }, [showReset, zoom, edges.height]);
+
   // Keep the overlay mounted while a menu is open even if the pointer has left
   // the table — the menu portals to the body, so leaving fires mouseleave.
   const showOverlay = hovered || selectedHere || openMenu != null;
@@ -445,9 +471,7 @@ function TableBlockView({ block, pageId, selection }: { block: TableBlock } & Vi
         />
       )}
 
-      {selectedHere && edges.width > 0 && isEdited && (
-        <TableToolbar block={block} edges={edges} />
-      )}
+      {showReset && resetAnchor && <TableToolbar blockId={block.id} anchor={resetAnchor} />}
     </div>
   );
 }
@@ -744,18 +768,25 @@ function InsertDots({
 }
 
 /**
- * Floating control shown to the left of a selected (and edited) table. These
- * tables come pre-built from the document template, so the only action is
- * resetting the table back to its template default (users still add/remove rows
- * & columns via the handles). Rendered outside the pointer-events:none overlay.
+ * Reset-to-template control, floating just left of a selected (and edited)
+ * table. Portaled to the body with fixed positioning so it isn't clipped by the
+ * overflow:hidden page; the anchor is the table's viewport-space left edge.
+ * These tables are template-fixed, so reset is the only action (rows & columns
+ * are still added/removed via the handles).
  */
-function TableToolbar({ block, edges }: { block: TableBlock; edges: TableEdges }) {
+function TableToolbar({
+  blockId,
+  anchor,
+}: {
+  blockId: string;
+  anchor: { left: number; top: number };
+}) {
   const resetTable = useEditorStore((s) => s.resetTable);
 
-  return (
+  return createPortal(
     <div
-      className="bo-editor-table-toolbar"
-      style={{ top: edges.height / 2, left: edges.cols[0] - 24 }}
+      className="bo-editor-table-reset"
+      style={{ left: anchor.left - 12, top: anchor.top }}
       onClick={(e) => e.stopPropagation()}
     >
       <Tooltip>
@@ -765,7 +796,7 @@ function TableToolbar({ block, edges }: { block: TableBlock; edges: TableEdges }
               variant="ghost"
               size="icon-sm"
               aria-label="Reset table"
-              onClick={() => resetTable(block.id)}
+              onClick={() => resetTable(blockId)}
             >
               <FontAwesomeIcon icon={faArrowRotateLeft} />
             </Button>
@@ -773,7 +804,8 @@ function TableToolbar({ block, edges }: { block: TableBlock; edges: TableEdges }
         />
         <Tooltip.Content side="left">Reset table</Tooltip.Content>
       </Tooltip>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

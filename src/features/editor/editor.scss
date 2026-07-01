@@ -413,21 +413,19 @@
   z-index: 0;
 }
 
-/* Floating table control, vertically centered just left of the table. */
-.bo-editor-table-toolbar {
-  position: absolute;
+/* Reset-to-template control — portaled to body, fixed to the viewport just left
+   of the table, so the page's overflow:hidden can't clip it. */
+.bo-editor-table-reset {
+  position: fixed;
   display: flex;
   align-items: center;
-  gap: 6px;
   padding: 4px;
   background: #fff;
   border: 1px solid #eceef2;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   transform: translate(-100%, -50%);
-  pointer-events: auto;
-  z-index: 6;
-  white-space: nowrap;
+  z-index: 30;
 }
 
 /* Empty-cell placeholder — gives new cells a visible, clickable target. */
