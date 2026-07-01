@@ -63,16 +63,19 @@ export function SortableBlock({
     >
       {isOver && !isDragging && <div className="bo-editor-drop-line" />}
 
-      <button
-        ref={setActivatorNodeRef}
-        type="button"
-        className={`bo-editor-drag-handle${blockType === "table" ? " is-table" : ""}`}
-        aria-label="Drag to reorder"
-        {...attributes}
-        {...listeners}
-      >
-        <FontAwesomeIcon icon={faGripDotsVertical} />
-      </button>
+      {/* Tables are fixed in the template — no move handle. */}
+      {blockType !== "table" && (
+        <button
+          ref={setActivatorNodeRef}
+          type="button"
+          className="bo-editor-drag-handle"
+          aria-label="Drag to reorder"
+          {...attributes}
+          {...listeners}
+        >
+          <FontAwesomeIcon icon={faGripDotsVertical} />
+        </button>
+      )}
 
       {/* Tables provide their own delete in the floating toolbar. */}
       {selected && blockType !== "table" && (

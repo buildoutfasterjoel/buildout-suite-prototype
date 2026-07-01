@@ -203,12 +203,6 @@
 .bo-editor-sortable:hover > .bo-editor-drag-handle {
   opacity: 1;
 }
-/* Tables use the left gutter for row handles/dots — push the move handle out
-   further and above the table overlay so it stays grabbable. */
-.bo-editor-drag-handle.is-table {
-  left: -44px;
-  z-index: 5;
-}
 .bo-editor-drag-handle:active {
   cursor: grabbing;
 }
