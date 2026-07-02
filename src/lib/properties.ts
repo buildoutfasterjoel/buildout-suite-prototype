@@ -3,7 +3,7 @@ import { getStore } from '#/data/store'
 import type { ListPropertiesInput, Property } from '#/data/types'
 
 export const listProperties = createServerFn({ method: 'GET' })
-  .inputValidator((data: ListPropertiesInput) => data)
+  .validator((data: ListPropertiesInput) => data)
   .handler(async ({ data }): Promise<Property[]> => {
     const { properties } = getStore()
     let results = Array.from(properties.values())
@@ -26,14 +26,14 @@ export const listProperties = createServerFn({ method: 'GET' })
   })
 
 export const getPropertyById = createServerFn({ method: 'GET' })
-  .inputValidator((data: { id: string }) => data)
+  .validator((data: { id: string }) => data)
   .handler(async ({ data }): Promise<Property | null> => {
     const { properties } = getStore()
     return properties.get(data.id) ?? null
   })
 
 export const getPropertyBySlug = createServerFn({ method: 'GET' })
-  .inputValidator((data: { slug: string }) => data)
+  .validator((data: { slug: string }) => data)
   .handler(async ({ data }): Promise<Property | null> => {
     const { properties } = getStore()
     for (const p of properties.values()) {
@@ -43,7 +43,7 @@ export const getPropertyBySlug = createServerFn({ method: 'GET' })
   })
 
 export const getPropertyByApn = createServerFn({ method: 'GET' })
-  .inputValidator((data: { apn: string }) => data)
+  .validator((data: { apn: string }) => data)
   .handler(async ({ data }): Promise<Property | null> => {
     const { properties } = getStore()
     for (const p of properties.values()) {

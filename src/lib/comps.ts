@@ -3,7 +3,7 @@ import { getStore } from '#/data/store'
 import type { Comp, ListCompsInput } from '#/data/types'
 
 export const listComps = createServerFn({ method: 'GET' })
-  .inputValidator((data: ListCompsInput) => data)
+  .validator((data: ListCompsInput) => data)
   .handler(async ({ data }): Promise<Comp[]> => {
     const { comps } = getStore()
     let results = Array.from(comps.values())
@@ -17,14 +17,14 @@ export const listComps = createServerFn({ method: 'GET' })
   })
 
 export const getCompsByPropertyId = createServerFn({ method: 'GET' })
-  .inputValidator((data: { propertyId: string }) => data)
+  .validator((data: { propertyId: string }) => data)
   .handler(async ({ data }): Promise<Comp[]> => {
     const { comps } = getStore()
     return Array.from(comps.values()).filter((c) => c.propertyId === data.propertyId)
   })
 
 export const getCompById = createServerFn({ method: 'GET' })
-  .inputValidator((data: { id: string }) => data)
+  .validator((data: { id: string }) => data)
   .handler(async ({ data }): Promise<Comp | null> => {
     const { comps } = getStore()
     return comps.get(data.id) ?? null

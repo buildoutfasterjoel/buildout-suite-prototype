@@ -9,7 +9,7 @@ import type {
 } from '#/data/types'
 
 export const listContacts = createServerFn({ method: 'GET' })
-  .inputValidator((data: ListContactsInput) => data)
+  .validator((data: ListContactsInput) => data)
   .handler(async ({ data }): Promise<Contact[]> => {
     const { contacts } = getStore()
     let results = Array.from(contacts.values())
@@ -21,14 +21,14 @@ export const listContacts = createServerFn({ method: 'GET' })
   })
 
 export const getContactById = createServerFn({ method: 'GET' })
-  .inputValidator((data: { id: string }) => data)
+  .validator((data: { id: string }) => data)
   .handler(async ({ data }): Promise<Contact | null> => {
     const { contacts } = getStore()
     return contacts.get(data.id) ?? null
   })
 
 export const getContactDetail = createServerFn({ method: 'GET' })
-  .inputValidator((data: { id: string }) => data)
+  .validator((data: { id: string }) => data)
   .handler(async ({ data }): Promise<ContactDetail | null> => {
     const contact = getStore().contacts.get(data.id)
     if (!contact) return null
