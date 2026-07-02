@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { useDraggable } from "@dnd-kit/core";
@@ -16,8 +16,13 @@ import {
   faTableLayout,
   faPencil,
   faTrashCan,
+  faMagnifyingGlass,
+  faBolt,
 } from "@fortawesome/pro-regular-svg-icons";
+import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
+import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
+import { List } from "@buildoutinc/blueprint-react/ui/List";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
@@ -27,107 +32,125 @@ import type { Block, ContentBlock, Page } from "../types";
 import { BLOCK_ICONS, blockLabel } from "../blocks/blockMeta";
 import type { BlockVariant } from "../blocks/blockFactory";
 import { PRESETS } from "../presets";
+import { pageHasDynamicContent } from "../tree";
 
 function PanelHeading({ children }: { children: string }) {
   return <span className="bo-editor-section-title">{children}</span>;
 }
 
 /* ---------------- Pages ---------------- */
+
+/** A row in the flattened Pages list — either a group header or a page. */
+type PageRow =
+  | { kind: "header"; index: number; label: string }
+  | { kind: "page"; index: number; page: Page };
+
+/** Flatten pages into numbered rows, inserting a header row wherever a page starts a new group. */
+function buildPageRows(pages: Page[]): PageRow[] {
+  const rows: PageRow[] = [];
+  let index = 0;
+  for (const page of pages) {
+    if (page.section) {
+      rows.push({ kind: "header", index: (index += 1), label: page.section });
+    }
+    rows.push({ kind: "page", index: (index += 1), page });
+  }
+  return rows;
+}
+
+/** Filter rows by search query, keeping a header only if a matching page follows it. */
+function filterPageRows(rows: PageRow[], query: string): PageRow[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return rows;
+
+  const result: PageRow[] = [];
+  let pendingHeader: PageRow | null = null;
+  for (const row of rows) {
+    if (row.kind === "header") {
+      pendingHeader = row;
+      continue;
+    }
+    if (row.page.name.toLowerCase().includes(q)) {
+      if (pendingHeader) result.push(pendingHeader);
+      pendingHeader = null;
+      result.push(row);
+    }
+  }
+  return result;
+}
+
 export function PagesPanel() {
   const pages = useEditorStore((s) => s.document.pages);
   const selection = useEditorStore((s) => s.selection);
   const select = useEditorStore((s) => s.select);
   const addPage = useEditorStore((s) => s.addPage);
+  const [search, setSearch] = useState("");
+
+  const rows = useMemo(() => filterPageRows(buildPageRows(pages), search), [pages, search]);
 
   return (
     <div className="d-flex flex-column gap-3">
-      <PanelHeading>Pages</PanelHeading>
-      <div className="d-flex flex-column gap-2">
-        {pages.map((page, i) => {
-          const active = selection?.pageId === page.id && !selection?.blockId;
-          return (
-            <button
-              key={page.id}
-              type="button"
-              className="d-flex align-items-center gap-3 p-2 text-start"
-              style={{
-                border: `1px solid ${active ? "#7422ce" : "#d5dae2"}`,
-                borderRadius: 6,
-                background: active ? "#f9f5ff" : "#fff",
-                cursor: "pointer",
-              }}
-              onClick={() => select({ pageId: page.id })}
+      <div className="bo-editor-pages-search d-flex flex-column gap-2">
+        <PanelHeading>Pages</PanelHeading>
+        <InputGroup>
+          <InputGroup.Addon>
+            <FontAwesomeIcon icon={faMagnifyingGlass} />
+          </InputGroup.Addon>
+          <Input
+            type="search"
+            placeholder="Search for a page"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </InputGroup>
+      </div>
+
+      <List flush>
+        {rows.map((row) =>
+          row.kind === "header" ? (
+            <List.Item key={`section-${row.index}`} className="bo-editor-pages-header-row">
+              <span className="bo-editor-pages-row-index">{row.index}</span>
+              <span className="bo-editor-pages-header-label">{row.label}</span>
+            </List.Item>
+          ) : (
+            <List.Item
+              key={row.page.id}
+              asAction
+              active={selection?.pageId === row.page.id && !selection?.blockId}
+              role="button"
+              tabIndex={0}
+              className="bo-editor-pages-row"
+              onClick={() => select({ pageId: row.page.id })}
             >
-              <span
-                className="d-flex align-items-center justify-content-center flex-shrink-0"
-                style={{
-                  width: 34,
-                  height: 44,
-                  background: "#fff",
-                  border: "1px solid #d5dae2",
-                  borderRadius: 3,
-                  color: "#506079",
-                }}
-              >
-                <FontAwesomeIcon icon={faFileLines} />
-              </span>
-              <span
-                className="d-flex flex-column flex-grow-1"
-                style={{ minWidth: 0 }}
-              >
-                <span
-                  className="fw-semibold text-truncate"
-                  style={{ fontSize: 14 }}
-                >
-                  {i + 1}. {page.name}
-                </span>
-                <span className="fs-small" style={{ color: "#506079" }}>
-                  {page.blocks.length} blocks
-                </span>
-              </span>
-              {page.locked && (
+              <span className="bo-editor-pages-row-index">{row.index}</span>
+              <span className="bo-editor-pages-row-name text-truncate">{row.page.name}</span>
+              {pageHasDynamicContent(row.page) && (
                 <Tooltip>
                   <Tooltip.Trigger
                     render={
                       <span
-                        className="d-flex align-items-center flex-shrink-0"
-                        style={{ color: "#94a3b8" }}
-                        aria-label="Preset page — fixed layout"
+                        className="bo-editor-pages-bolt d-flex align-items-center flex-shrink-0"
+                        aria-label="Contains dynamic listing data"
                       >
-                        <FontAwesomeIcon icon={faLock} />
+                        <FontAwesomeIcon icon={faBolt} />
                       </span>
                     }
                   />
-                  <Tooltip.Content side="left">
-                    Preset — fixed layout
-                  </Tooltip.Content>
+                  <Tooltip.Content side="left">Contains dynamic listing data</Tooltip.Content>
                 </Tooltip>
               )}
-            </button>
-          );
-        })}
-      </div>
+            </List.Item>
+          ),
+        )}
+      </List>
 
       <DropdownMenu>
         <DropdownMenu.Trigger
           render={
-            <button
-              type="button"
-              className="d-flex align-items-center justify-content-center gap-2 p-2"
-              style={{
-                border: "1px dashed #d5dae2",
-                borderRadius: 6,
-                background: "#fff",
-                color: "#7422ce",
-                cursor: "pointer",
-                fontSize: 14,
-                fontWeight: 600,
-                width: "100%",
-              }}
-            >
+            <Button variant="secondary" className="w-100">
               <FontAwesomeIcon icon={faPlus} />
               Add Page
-            </button>
+            </Button>
           }
         />
         <DropdownMenu.Content align="start" sideOffset={6}>

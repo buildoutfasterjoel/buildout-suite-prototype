@@ -1,5 +1,14 @@
 import type { Property } from "#/data/types";
-import type { ColumnsBlock, Cell, ImageBlock, Page, TableBlock, TextStyle } from "./types";
+import type {
+  Block,
+  ColumnsBlock,
+  Cell,
+  DynamicKey,
+  ImageBlock,
+  Page,
+  TableBlock,
+  TextStyle,
+} from "./types";
 import { pricePerSf } from "./dynamic";
 import {
   DEFAULT_CELL_STYLE,
@@ -185,4 +194,185 @@ export function buildBlankPage(): Page {
     locked: false,
     blocks: [],
   };
+}
+
+/**
+ * Spec for a lightweight locked page in the sample proposal: a heading, address,
+ * and hero image, plus (when `dynamicKey` is set) a one-row table binding a live
+ * listing field — this is what makes the Pages panel's "has dynamic data" bolt
+ * indicator light up for the page.
+ */
+interface StubPageSpec {
+  name: string;
+  /** Group label — set only for the first page of a new group. */
+  section?: string;
+  /** Picsum seed, for visual variety across pages. */
+  seed: string;
+  dynamicKey?: DynamicKey;
+  dynamicLabel?: string;
+  format?: Cell["format"];
+}
+
+function buildStubPage(property: Property | undefined, spec: StubPageSpec): Page {
+  const blocks: Block[] = [
+    { id: uid("block"), type: "heading", text: spec.name, style: headingStyle },
+    { id: uid("block"), type: "text", text: addressOf(property), style: addressStyle },
+    heroImage(spec.seed),
+  ];
+
+  if (spec.dynamicKey) {
+    const table: TableBlock = {
+      id: uid("block"),
+      type: "table",
+      title: spec.name,
+      style: { borderWidth: 1, borderStyle: "solid", borderColor: "#d5dae2" },
+      rows: [[headerCell(spec.dynamicLabel ?? "Detail"), valueCell("—", spec.dynamicKey, spec.format)]],
+    };
+    blocks.push(table);
+  }
+
+  return {
+    id: uid("page"),
+    name: spec.name,
+    logoSrc: LOGO_SRC,
+    locked: true,
+    section: spec.section,
+    blocks,
+  };
+}
+
+/** Rename a built page (and its heading block, which always leads) in place. */
+function withPageIdentity(page: Page, name: string, section: string): Page {
+  const blocks = page.blocks.map((b, i) => (i === 0 && b.type === "heading" ? { ...b, text: name } : b));
+  return { ...page, name, section, blocks };
+}
+
+/**
+ * The sample "Proposal" document's full page list — an 18-page CRE offering
+ * memorandum across 7 groups (Property Information, Location Information,
+ * Financial Analysis, Sale Comparables, Lease Comparables, Demographics, Advisor
+ * Bios), matching the structure real proposal documents follow. Two pages reuse
+ * the richer hand-built presets above; the rest are lightweight stubs.
+ */
+export function buildDocumentPages(property?: Property): Page[] {
+  const propertySummary = withPageIdentity(
+    buildPropertyOverviewPage(property),
+    "Property Summary",
+    "PROPERTY INFORMATION",
+  );
+  const financialSummary = withPageIdentity(
+    buildFinancialSummaryPage(property),
+    "Financial Summary",
+    "FINANCIAL ANALYSIS",
+  );
+
+  return [
+    buildStubPage(property, { name: "Cover Page", seed: "editor-cover" }),
+    buildStubPage(property, { name: "Table of Contents", seed: "editor-toc" }),
+    propertySummary,
+    buildStubPage(property, {
+      name: "Property Description",
+      seed: "editor-prop-desc",
+      dynamicKey: "propertyType",
+      dynamicLabel: "Property Type",
+      format: "text",
+    }),
+    buildStubPage(property, {
+      name: "Complete Highlights",
+      seed: "editor-highlights",
+      dynamicKey: "buildingSqFt",
+      dynamicLabel: "Building Size",
+      format: "text",
+    }),
+    buildStubPage(property, {
+      name: "Additional Photos",
+      seed: "editor-photos",
+      dynamicKey: "numberOfBuildings",
+      dynamicLabel: "Buildings",
+      format: "text",
+    }),
+    buildStubPage(property, {
+      name: "Regional Map",
+      section: "LOCATION INFORMATION",
+      seed: "editor-regional",
+      dynamicKey: "submarket",
+      dynamicLabel: "Submarket",
+      format: "text",
+    }),
+    buildStubPage(property, {
+      name: "Location Map",
+      seed: "editor-location-map",
+      dynamicKey: "city",
+      dynamicLabel: "City",
+      format: "text",
+    }),
+    buildStubPage(property, {
+      name: "Aerial Map",
+      seed: "editor-aerial",
+      dynamicKey: "lotSqFt",
+      dynamicLabel: "Lot Size",
+      format: "text",
+    }),
+    buildStubPage(property, {
+      name: "Site Plans",
+      seed: "editor-site-plans",
+      dynamicKey: "zoning",
+      dynamicLabel: "Zoning",
+      format: "text",
+    }),
+    financialSummary,
+    buildStubPage(property, {
+      name: "Income & Expenses",
+      seed: "editor-income",
+      dynamicKey: "noi",
+      dynamicLabel: "Net Operating Income",
+      format: "currency",
+    }),
+    buildStubPage(property, {
+      name: "Sale Comps",
+      section: "SALE COMPARABLES",
+      seed: "editor-sale-comps",
+      dynamicKey: "capRate",
+      dynamicLabel: "Cap Rate",
+      format: "percent",
+    }),
+    buildStubPage(property, {
+      name: "Sale Comps Map & Summary",
+      seed: "editor-sale-comps-map",
+      dynamicKey: "askingPrice",
+      dynamicLabel: "Asking Price",
+      format: "currency",
+    }),
+    buildStubPage(property, {
+      name: "Lease Comps",
+      section: "LEASE COMPARABLES",
+      seed: "editor-lease-comps",
+      dynamicKey: "vacancyRate",
+      dynamicLabel: "Vacancy Rate",
+      format: "percent",
+    }),
+    buildStubPage(property, {
+      name: "Lease Comps Map & Summary",
+      seed: "editor-lease-comps-map",
+      dynamicKey: "grossRentMultiplier",
+      dynamicLabel: "Gross Rent Multiplier",
+      format: "text",
+    }),
+    buildStubPage(property, {
+      name: "Demographics Map & Report",
+      section: "DEMOGRAPHICS",
+      seed: "editor-demographics",
+      dynamicKey: "censusTract",
+      dynamicLabel: "Census Tract",
+      format: "text",
+    }),
+    buildStubPage(property, {
+      name: "Advisor Bio 1",
+      section: "ADVISOR BIOS",
+      seed: "editor-advisor",
+      dynamicKey: "name",
+      dynamicLabel: "Prepared For",
+      format: "text",
+    }),
+  ];
 }

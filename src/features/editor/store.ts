@@ -24,6 +24,9 @@ import {
 /** Deep-clone plain document/block data (no functions or dates in the model). */
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
+/** localStorage key for the properties panel's pinned/docked preference. */
+export const SIDEBAR_PIN_STORAGE_KEY = "bo-editor:sidebar-pinned";
+
 interface EditorState {
   document: EditorDocument;
   /** Pristine copy of the initial document, used to reset tables to template. */
@@ -42,6 +45,11 @@ interface EditorState {
   activeNavPanel: NavPanel | null;
   zoom: number;
 
+  /** Docked in-flow (pushes the canvas) and always visible when true. */
+  sidebarPinned: boolean;
+  /** Transient "floating panel currently shown" flag — only meaningful when unpinned. */
+  sidebarPoppedOpen: boolean;
+
   // Phase 1 actions (selection + navigation + view).
   initDocument: (listing: Property | undefined) => void;
   select: (selection: Selection | null) => void;
@@ -54,6 +62,11 @@ interface EditorState {
   setZoom: (zoom: number) => void;
   zoomIn: () => void;
   zoomOut: () => void;
+
+  /** Unpin and hide the properties panel. */
+  collapseSidebar: () => void;
+  /** Toggle docked (pinned) vs. floating (unpinned) mode. */
+  toggleSidebarPin: () => void;
 
   // Page management.
   addPage: (kind: "blank" | PresetKey) => void;
@@ -106,6 +119,10 @@ export const useEditorStore = create<EditorState>((set) => {
   activePageId: initialDocument.pages[0]?.id ?? null,
   activeNavPanel: "blocks",
   zoom: 1,
+  // Hardcoded (not read from localStorage here) so server and first-render
+  // client output match; EditorRoot syncs the real preference after mount.
+  sidebarPinned: true,
+  sidebarPoppedOpen: false,
 
   initDocument: (listing) => {
     const document = buildSampleDocument(listing);
@@ -120,14 +137,22 @@ export const useEditorStore = create<EditorState>((set) => {
   },
 
   select: (selection) =>
-    set({
+    set((s) => ({
       selection,
       // Opening an element's styles supersedes the active nav panel.
       activeNavPanel: selection ? null : "blocks",
-    }),
+      // Selecting an element pops the (unpinned) panel open.
+      sidebarPoppedOpen: selection ? true : s.sidebarPoppedOpen,
+    })),
 
   clearSelection: () =>
-    set({ selection: null, highlightedBlockId: null, activeNavPanel: "blocks" }),
+    set((s) => ({
+      selection: null,
+      highlightedBlockId: null,
+      activeNavPanel: "blocks",
+      // Auto-collapse only when unpinned; a pinned panel stays docked/open.
+      sidebarPoppedOpen: s.sidebarPinned ? s.sidebarPoppedOpen : false,
+    })),
 
   highlightBlock: (blockId) => set({ highlightedBlockId: blockId }),
 
@@ -135,11 +160,29 @@ export const useEditorStore = create<EditorState>((set) => {
   setActivePageId: (pageId) =>
     set((s) => (s.activePageId === pageId ? s : { activePageId: pageId })),
 
-  setNavPanel: (panel) => set({ activeNavPanel: panel, selection: null }),
+  setNavPanel: (panel) =>
+    set({ activeNavPanel: panel, selection: null, sidebarPoppedOpen: true }),
 
   setZoom: (zoom) => set({ zoom: clampZoom(zoom) }),
   zoomIn: () => set((s) => ({ zoom: clampZoom(s.zoom + ZOOM_STEP) })),
   zoomOut: () => set((s) => ({ zoom: clampZoom(s.zoom - ZOOM_STEP) })),
+
+  collapseSidebar: () =>
+    set(() => {
+      if (typeof window !== "undefined") {
+        localStorage.setItem(SIDEBAR_PIN_STORAGE_KEY, "false");
+      }
+      return { sidebarPinned: false, sidebarPoppedOpen: false };
+    }),
+
+  toggleSidebarPin: () =>
+    set((s) => {
+      const next = !s.sidebarPinned;
+      if (typeof window !== "undefined") {
+        localStorage.setItem(SIDEBAR_PIN_STORAGE_KEY, String(next));
+      }
+      return { sidebarPinned: next, sidebarPoppedOpen: next ? s.sidebarPoppedOpen : true };
+    }),
 
   addPage: (kind) =>
     set((s) => {

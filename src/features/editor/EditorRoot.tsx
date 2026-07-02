@@ -4,7 +4,7 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFilePdf } from "@fortawesome/pro-regular-svg-icons";
 import type { Property } from "#/data/types";
-import { useEditorStore } from "./store";
+import { SIDEBAR_PIN_STORAGE_KEY, useEditorStore } from "./store";
 import { DocsNavRail } from "./DocsNavRail";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { CanvasActions } from "./CanvasActions";
@@ -30,11 +30,23 @@ export function EditorRoot({
     initDocument(listing);
   }, [listing, initDocument]);
 
+  // Sync the persisted pin preference after mount (kept out of the store's
+  // initial state so server and first-render client output match).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = localStorage.getItem(SIDEBAR_PIN_STORAGE_KEY);
+    if (stored !== null) {
+      useEditorStore.setState({ sidebarPinned: stored === "true" });
+    }
+  }, []);
+
   return (
     <EditorDndProvider>
       <div className="bo-editor">
-        <DocsNavRail />
-        <PropertiesPanel />
+        <div className="bo-editor-rail-wrap">
+          <DocsNavRail />
+          <PropertiesPanel />
+        </div>
 
         <div className="bo-editor-canvas">
           <CanvasActions listingId={listingId} onExport={() => setExportOpen(true)} />

@@ -12,6 +12,27 @@ export function isContainer(block: Block): boolean {
   return block.type === "columns" || block.type === "section";
 }
 
+/** Whether a single (non-container) block carries a live, listing-bound value. */
+function blockHasDynamicContent(block: Block): boolean {
+  if (block.type === "dynamic") return true;
+  if (block.type === "table") {
+    return block.rows.some((row) => row.some((c) => c.dynamicKey !== undefined));
+  }
+  return false;
+}
+
+/** Whether a page contains any block (top level or one level deep) bound to live listing data. */
+export function pageHasDynamicContent(page: Page): boolean {
+  return page.blocks.some((block) => {
+    if (blockHasDynamicContent(block)) return true;
+    if (block.type === "section") return block.blocks.some(blockHasDynamicContent);
+    if (block.type === "columns") {
+      return block.columns.some((col) => col.some(blockHasDynamicContent));
+    }
+    return false;
+  });
+}
+
 /** Find a block anywhere in the document (top level or one level deep). */
 export function findBlock(doc: EditorDocument, blockId: string): Block | null {
   for (const page of doc.pages) {
