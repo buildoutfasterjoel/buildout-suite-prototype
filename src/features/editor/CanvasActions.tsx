@@ -104,15 +104,29 @@ export function CanvasActions({
 
       {/* Zoom */}
       <div className="d-flex align-items-center justify-content-center gap-2">
-        <Button variant="ghost" size="icon-sm" aria-label="Zoom out" onClick={zoomOut}>
-          <FontAwesomeIcon icon={faMagnifyingGlassMinus} />
-        </Button>
+        <Tooltip>
+          <Tooltip.Trigger
+            render={
+              <Button variant="ghost" size="icon-sm" aria-label="Zoom out" onClick={zoomOut}>
+                <FontAwesomeIcon icon={faMagnifyingGlassMinus} />
+              </Button>
+            }
+          />
+          <Tooltip.Content>Zoom out</Tooltip.Content>
+        </Tooltip>
         <span style={{ fontSize: 14, color: "#22262f", width: 40, textAlign: "center" }}>
           {Math.round(zoom * 100)}%
         </span>
-        <Button variant="ghost" size="icon-sm" aria-label="Zoom in" onClick={zoomIn}>
-          <FontAwesomeIcon icon={faMagnifyingGlassPlus} />
-        </Button>
+        <Tooltip>
+          <Tooltip.Trigger
+            render={
+              <Button variant="ghost" size="icon-sm" aria-label="Zoom in" onClick={zoomIn}>
+                <FontAwesomeIcon icon={faMagnifyingGlassPlus} />
+              </Button>
+            }
+          />
+          <Tooltip.Content>Zoom in</Tooltip.Content>
+        </Tooltip>
       </div>
 
       {/* Status + undo/redo + actions */}

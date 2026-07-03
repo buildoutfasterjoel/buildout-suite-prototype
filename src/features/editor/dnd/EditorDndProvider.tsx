@@ -22,6 +22,7 @@ import { toDropTarget, type DragOverData } from "./dndTypes";
 export function EditorDndProvider({ children }: { children: ReactNode }) {
   const addBlock = useEditorStore((s) => s.addBlock);
   const moveBlock = useEditorStore((s) => s.moveBlock);
+  const movePage = useEditorStore((s) => s.movePage);
   const [active, setActive] = useState<DragOverData | null>(null);
 
   // A small drag threshold keeps single clicks as selections, not drags.
@@ -43,6 +44,14 @@ export function EditorDndProvider({ children }: { children: ReactNode }) {
     if (a.source === "layer" && o.source === "layer" && a.pageId === o.pageId) {
       if (a.blockId && a.blockId !== o.blockId) {
         moveBlock(a.blockId, { kind: "page", pageId: a.pageId!, index: o.index ?? 0 });
+      }
+      return;
+    }
+
+    // Pages-panel reorder: top-level page order, over another page row.
+    if (a.source === "page" && o.source === "page") {
+      if (a.pageId && a.pageId !== o.pageId) {
+        movePage(a.pageId, o.index ?? 0);
       }
       return;
     }

@@ -170,11 +170,6 @@ export interface Page {
    * stays editable. Absent/false = fully freeform.
    */
   locked?: boolean;
-  /**
-   * Group label; set only on the first page of a group. The Pages panel renders
-   * a header row above this page whenever it's present.
-   */
-  section?: string;
   blocks: Block[];
 }
 

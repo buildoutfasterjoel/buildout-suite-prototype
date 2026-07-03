@@ -58,6 +58,12 @@ interface EditorState {
   highlightBlock: (blockId: string | null) => void;
   /** Track the page currently in view (set as the canvas scrolls). */
   setActivePageId: (pageId: string) => void;
+  /**
+   * Navigate to a page from the Pages panel: drops any block selection and
+   * marks the page as in-view, without touching the active nav panel (unlike
+   * `select`/`clearSelection`, which switch it to show style controls / Blocks).
+   */
+  goToPage: (pageId: string) => void;
   setNavPanel: (panel: NavPanel | null) => void;
   setZoom: (zoom: number) => void;
   zoomIn: () => void;
@@ -69,7 +75,10 @@ interface EditorState {
   toggleSidebarPin: () => void;
 
   // Page management.
-  addPage: (kind: "blank" | PresetKey) => void;
+  /** Adds at `atIndex` when given, otherwise appends to the end. */
+  addPage: (kind: "blank" | PresetKey, atIndex?: number) => void;
+  /** Reorder a page to sit at `toIndex` in the document's top-level page list. */
+  movePage: (pageId: string, toIndex: number) => void;
 
   // Phase 2 actions (structural mutation via drag-and-drop).
   addBlock: (target: DropTarget, type: Block["type"], variant?: BlockVariant) => void;
@@ -160,6 +169,8 @@ export const useEditorStore = create<EditorState>((set) => {
   setActivePageId: (pageId) =>
     set((s) => (s.activePageId === pageId ? s : { activePageId: pageId })),
 
+  goToPage: (pageId) => set({ selection: null, highlightedBlockId: null, activePageId: pageId }),
+
   setNavPanel: (panel) =>
     set({ activeNavPanel: panel, selection: null, sidebarPoppedOpen: true }),
 
@@ -184,20 +195,33 @@ export const useEditorStore = create<EditorState>((set) => {
       return { sidebarPinned: next, sidebarPoppedOpen: next ? s.sidebarPoppedOpen : true };
     }),
 
-  addPage: (kind) =>
+  addPage: (kind, atIndex) =>
     set((s) => {
       const page =
         kind === "blank" ? buildBlankPage() : buildPresetPage(kind, s.activeListing);
+      const index = atIndex ?? s.document.pages.length;
+      const pages = [...s.document.pages];
+      pages.splice(index, 0, page);
+      // Mirror into the template so table reset keeps working on new pages.
+      const templatePages = [...s.templateDocument.pages];
+      templatePages.splice(index, 0, clone(page));
       return {
-        document: { ...s.document, pages: [...s.document.pages, page] },
-        // Mirror into the template so table reset keeps working on new pages.
-        templateDocument: {
-          ...s.templateDocument,
-          pages: [...s.templateDocument.pages, clone(page)],
-        },
+        document: { ...s.document, pages },
+        templateDocument: { ...s.templateDocument, pages: templatePages },
         selection: { pageId: page.id },
         activeNavPanel: "pages",
       };
+    }),
+
+  movePage: (pageId, toIndex) =>
+    set((s) => {
+      const fromIndex = s.document.pages.findIndex((p) => p.id === pageId);
+      if (fromIndex === -1) return s;
+      // Remove-then-insert-at-target.index reproduces arrayMove semantics (see moveBlock below).
+      const pages = [...s.document.pages];
+      const [moved] = pages.splice(fromIndex, 1);
+      pages.splice(clampIndex(toIndex, pages.length), 0, moved);
+      return { document: { ...s.document, pages } };
     }),
 
   addBlock: (target, type, variant) =>

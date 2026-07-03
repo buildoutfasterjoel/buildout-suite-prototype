@@ -204,8 +204,6 @@ export function buildBlankPage(): Page {
  */
 interface StubPageSpec {
   name: string;
-  /** Group label — set only for the first page of a new group. */
-  section?: string;
   /** Picsum seed, for visual variety across pages. */
   seed: string;
   dynamicKey?: DynamicKey;
@@ -236,39 +234,47 @@ function buildStubPage(property: Property | undefined, spec: StubPageSpec): Page
     name: spec.name,
     logoSrc: LOGO_SRC,
     locked: true,
-    section: spec.section,
     blocks,
   };
 }
 
+/** A plain section-divider page — just a big centered title, no dynamic content. */
+function buildDividerPage(property: Property | undefined, name: string): Page {
+  return {
+    id: uid("page"),
+    name,
+    logoSrc: LOGO_SRC,
+    locked: true,
+    blocks: [
+      { id: uid("block"), type: "heading", text: name, style: headingStyle },
+      { id: uid("block"), type: "text", text: addressOf(property), style: addressStyle },
+    ],
+  };
+}
+
 /** Rename a built page (and its heading block, which always leads) in place. */
-function withPageIdentity(page: Page, name: string, section: string): Page {
+function withPageIdentity(page: Page, name: string): Page {
   const blocks = page.blocks.map((b, i) => (i === 0 && b.type === "heading" ? { ...b, text: name } : b));
-  return { ...page, name, section, blocks };
+  return { ...page, name, blocks };
 }
 
 /**
- * The sample "Proposal" document's full page list — an 18-page CRE offering
- * memorandum across 7 groups (Property Information, Location Information,
- * Financial Analysis, Sale Comparables, Lease Comparables, Demographics, Advisor
- * Bios), matching the structure real proposal documents follow. Two pages reuse
- * the richer hand-built presets above; the rest are lightweight stubs.
+ * The sample "Proposal" document's full page list — a 25-page CRE offering
+ * memorandum, matching the structure real proposal documents follow: a cover,
+ * a table of contents, then content pages broken up by plain section-divider
+ * pages (Property Information, Location Information, Financial Analysis, Sale
+ * Comparables, Lease Comparables, Demographics, Advisor Bios). Every entry here
+ * is a real, selectable page — two reuse the richer hand-built presets above,
+ * the rest are lightweight stubs.
  */
 export function buildDocumentPages(property?: Property): Page[] {
-  const propertySummary = withPageIdentity(
-    buildPropertyOverviewPage(property),
-    "Property Summary",
-    "PROPERTY INFORMATION",
-  );
-  const financialSummary = withPageIdentity(
-    buildFinancialSummaryPage(property),
-    "Financial Summary",
-    "FINANCIAL ANALYSIS",
-  );
+  const propertySummary = withPageIdentity(buildPropertyOverviewPage(property), "Property Summary");
+  const financialSummary = withPageIdentity(buildFinancialSummaryPage(property), "Financial Summary");
 
   return [
     buildStubPage(property, { name: "Cover Page", seed: "editor-cover" }),
     buildStubPage(property, { name: "Table of Contents", seed: "editor-toc" }),
+    buildDividerPage(property, "Property Information"),
     propertySummary,
     buildStubPage(property, {
       name: "Property Description",
@@ -291,9 +297,9 @@ export function buildDocumentPages(property?: Property): Page[] {
       dynamicLabel: "Buildings",
       format: "text",
     }),
+    buildDividerPage(property, "Location Information"),
     buildStubPage(property, {
       name: "Regional Map",
-      section: "LOCATION INFORMATION",
       seed: "editor-regional",
       dynamicKey: "submarket",
       dynamicLabel: "Submarket",
@@ -320,6 +326,7 @@ export function buildDocumentPages(property?: Property): Page[] {
       dynamicLabel: "Zoning",
       format: "text",
     }),
+    buildDividerPage(property, "Financial Analysis"),
     financialSummary,
     buildStubPage(property, {
       name: "Income & Expenses",
@@ -328,9 +335,9 @@ export function buildDocumentPages(property?: Property): Page[] {
       dynamicLabel: "Net Operating Income",
       format: "currency",
     }),
+    buildDividerPage(property, "Sale Comparables"),
     buildStubPage(property, {
       name: "Sale Comps",
-      section: "SALE COMPARABLES",
       seed: "editor-sale-comps",
       dynamicKey: "capRate",
       dynamicLabel: "Cap Rate",
@@ -343,9 +350,9 @@ export function buildDocumentPages(property?: Property): Page[] {
       dynamicLabel: "Asking Price",
       format: "currency",
     }),
+    buildDividerPage(property, "Lease Comparables"),
     buildStubPage(property, {
       name: "Lease Comps",
-      section: "LEASE COMPARABLES",
       seed: "editor-lease-comps",
       dynamicKey: "vacancyRate",
       dynamicLabel: "Vacancy Rate",
@@ -358,17 +365,17 @@ export function buildDocumentPages(property?: Property): Page[] {
       dynamicLabel: "Gross Rent Multiplier",
       format: "text",
     }),
+    buildDividerPage(property, "Demographics"),
     buildStubPage(property, {
       name: "Demographics Map & Report",
-      section: "DEMOGRAPHICS",
       seed: "editor-demographics",
       dynamicKey: "censusTract",
       dynamicLabel: "Census Tract",
       format: "text",
     }),
+    buildDividerPage(property, "Advisor Bios"),
     buildStubPage(property, {
       name: "Advisor Bio 1",
-      section: "ADVISOR BIOS",
       seed: "editor-advisor",
       dynamicKey: "name",
       dynamicLabel: "Prepared For",

@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { useDraggable } from "@dnd-kit/core";
@@ -40,57 +40,146 @@ function PanelHeading({ children }: { children: string }) {
 
 /* ---------------- Pages ---------------- */
 
-/** A row in the flattened Pages list — either a group header or a page. */
-type PageRow =
-  | { kind: "header"; index: number; label: string }
-  | { kind: "page"; index: number; page: Page };
-
-/** Flatten pages into numbered rows, inserting a header row wherever a page starts a new group. */
-function buildPageRows(pages: Page[]): PageRow[] {
-  const rows: PageRow[] = [];
-  let index = 0;
-  for (const page of pages) {
-    if (page.section) {
-      rows.push({ kind: "header", index: (index += 1), label: page.section });
-    }
-    rows.push({ kind: "page", index: (index += 1), page });
-  }
-  return rows;
+/** Pages matching the search query (by name); shows everything when the query is empty. */
+function filterPages(pages: Page[], query: string): Page[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return pages;
+  return pages.filter((page) => page.name.toLowerCase().includes(q));
 }
 
-/** Filter rows by search query, keeping a header only if a matching page follows it. */
-function filterPageRows(rows: PageRow[], query: string): PageRow[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return rows;
+/** Shared row visual — the reorder grip only renders (and is draggable) for the active page. */
+function PageRowContent({
+  page,
+  index,
+  active,
+  dragHandle,
+}: {
+  page: Page;
+  index: number;
+  active: boolean;
+  dragHandle?: ReactNode;
+}) {
+  return (
+    <>
+      <span className="bo-editor-pages-grip-slot">{active && dragHandle}</span>
+      <span className="bo-editor-pages-row-index">{index}</span>
+      <span className="bo-editor-pages-row-name text-truncate">{page.name}</span>
+      {pageHasDynamicContent(page) && (
+        <Tooltip>
+          <Tooltip.Trigger
+            render={
+              <span
+                className="bo-editor-pages-bolt d-flex align-items-center flex-shrink-0"
+                aria-label="Contains dynamic listing data"
+              >
+                <FontAwesomeIcon icon={faBolt} />
+              </span>
+            }
+          />
+          <Tooltip.Content side="left">Contains dynamic listing data</Tooltip.Content>
+        </Tooltip>
+      )}
+    </>
+  );
+}
 
-  const result: PageRow[] = [];
-  let pendingHeader: PageRow | null = null;
-  for (const row of rows) {
-    if (row.kind === "header") {
-      pendingHeader = row;
-      continue;
-    }
-    if (row.page.name.toLowerCase().includes(q)) {
-      if (pendingHeader) result.push(pendingHeader);
-      pendingHeader = null;
-      result.push(row);
-    }
-  }
-  return result;
+/**
+ * Hover strip between rows — a zero-height flow element (so it never pushes
+ * rows apart) with an absolutely-positioned hit target straddling the seam.
+ * It's a sibling of the rows, not nested inside one, so its stacking isn't at
+ * the mercy of Bootstrap's `.list-group-item.active`/`:hover` z-index bumps —
+ * nesting it inside the preceding row let an *active* following row paint over
+ * it. Mirrors the canvas's inline "Add Page" gap; insertion is by real
+ * document index, so it stays correct even while the list is filtered.
+ */
+function PageRowGap({ index, onAdd }: { index: number; onAdd: (index: number) => void }) {
+  return (
+    <div className="bo-editor-pages-row-gap">
+      <div className="bo-editor-pages-row-gap-hit" onClick={(e) => e.stopPropagation()}>
+        <div className="bo-editor-pages-row-gap-line" />
+        <Button
+          variant="primary"
+          size="sm"
+          className="bo-editor-pages-row-gap-btn"
+          onClick={() => onAdd(index)}
+        >
+          <FontAwesomeIcon icon={faPlus} />
+          Add Page
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/** A draggable page row — reordering is only meaningful against the full, unfiltered list. */
+function SortablePageRow({
+  page,
+  index,
+  active,
+  onSelect,
+}: {
+  page: Page;
+  index: number;
+  active: boolean;
+  onSelect: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
+    useSortable({ id: `page:${page.id}`, data: { source: "page", pageId: page.id, index: index - 1 } });
+
+  const grip = (
+    <button
+      ref={setActivatorNodeRef}
+      type="button"
+      className="bo-editor-layer-grip"
+      aria-label="Drag to reorder"
+      onClick={(e) => e.stopPropagation()}
+      {...attributes}
+      {...listeners}
+    >
+      <FontAwesomeIcon icon={faGripDotsVertical} />
+    </button>
+  );
+
+  return (
+    <List.Item
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
+      asAction
+      active={active}
+      role="button"
+      tabIndex={0}
+      className="bo-editor-pages-row"
+      onClick={onSelect}
+    >
+      <PageRowContent page={page} index={index} active={active} dragHandle={grip} />
+    </List.Item>
+  );
 }
 
 export function PagesPanel() {
   const pages = useEditorStore((s) => s.document.pages);
-  const selection = useEditorStore((s) => s.selection);
-  const select = useEditorStore((s) => s.select);
+  const activePageId = useEditorStore((s) => s.activePageId);
+  const goToPage = useEditorStore((s) => s.goToPage);
   const addPage = useEditorStore((s) => s.addPage);
   const [search, setSearch] = useState("");
 
-  const rows = useMemo(() => filterPageRows(buildPageRows(pages), search), [pages, search]);
+  const isFiltering = search.trim() !== "";
+  const filtered = useMemo(() => filterPages(pages, search), [pages, search]);
+
+  // Clicking a page only navigates the canvas to it — it stays a Pages-panel
+  // concern, distinct from selecting a block (which opens style controls).
+  function handleSelectPage(pageId: string) {
+    goToPage(pageId);
+    document
+      .querySelector(`[data-page-id="${pageId}"]`)
+      ?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }
+
+  const addBlankPageAt = (index: number) => addPage("blank", index);
 
   return (
-    <div className="d-flex flex-column gap-3">
-      <div className="bo-editor-pages-search d-flex flex-column gap-2">
+    <div className="d-flex flex-column gap-3 h-100">
+      <div className="d-flex flex-column gap-2 flex-shrink-0">
         <PanelHeading>Pages</PanelHeading>
         <InputGroup>
           <InputGroup.Addon>
@@ -105,42 +194,41 @@ export function PagesPanel() {
         </InputGroup>
       </div>
 
-      <List flush>
-        {rows.map((row) =>
-          row.kind === "header" ? (
-            <List.Item key={`section-${row.index}`} className="bo-editor-pages-header-row">
-              <span className="bo-editor-pages-row-index">{row.index}</span>
-              <span className="bo-editor-pages-header-label">{row.label}</span>
-            </List.Item>
-          ) : (
-            <List.Item
-              key={row.page.id}
-              asAction
-              active={selection?.pageId === row.page.id && !selection?.blockId}
-              role="button"
-              tabIndex={0}
-              className="bo-editor-pages-row"
-              onClick={() => select({ pageId: row.page.id })}
-            >
-              <span className="bo-editor-pages-row-index">{row.index}</span>
-              <span className="bo-editor-pages-row-name text-truncate">{row.page.name}</span>
-              {pageHasDynamicContent(row.page) && (
-                <Tooltip>
-                  <Tooltip.Trigger
-                    render={
-                      <span
-                        className="bo-editor-pages-bolt d-flex align-items-center flex-shrink-0"
-                        aria-label="Contains dynamic listing data"
-                      >
-                        <FontAwesomeIcon icon={faBolt} />
-                      </span>
-                    }
-                  />
-                  <Tooltip.Content side="left">Contains dynamic listing data</Tooltip.Content>
-                </Tooltip>
-              )}
-            </List.Item>
-          ),
+      <List className="bo-editor-pages-list">
+        {isFiltering ? (
+          filtered.map((page) => {
+            const realIndex = pages.indexOf(page);
+            const active = activePageId === page.id;
+            return (
+              <Fragment key={page.id}>
+                <List.Item
+                  asAction
+                  active={active}
+                  role="button"
+                  tabIndex={0}
+                  className="bo-editor-pages-row"
+                  onClick={() => handleSelectPage(page.id)}
+                >
+                  <PageRowContent page={page} index={realIndex + 1} active={active} />
+                </List.Item>
+                <PageRowGap index={realIndex + 1} onAdd={addBlankPageAt} />
+              </Fragment>
+            );
+          })
+        ) : (
+          <SortableContext items={pages.map((p) => `page:${p.id}`)} strategy={verticalListSortingStrategy}>
+            {pages.map((page, i) => (
+              <Fragment key={page.id}>
+                <SortablePageRow
+                  page={page}
+                  index={i + 1}
+                  active={activePageId === page.id}
+                  onSelect={() => handleSelectPage(page.id)}
+                />
+                <PageRowGap index={i + 1} onAdd={addBlankPageAt} />
+              </Fragment>
+            ))}
+          </SortableContext>
         )}
       </List>
 

@@ -13,12 +13,18 @@ export type ListLocation =
  * list-level drop zone each carry only their relevant half.
  */
 export type DragOverData = {
-  /** Drag source — present on draggables. "layer" = a Layers-panel row. */
-  source?: "palette" | "block" | "layer";
+  /**
+   * Drag source — present on draggables. "layer" = a Layers-panel row.
+   * "page" = a Pages-panel row (top-level page reorder).
+   */
+  source?: "palette" | "block" | "layer" | "page";
   blockType?: Block["type"];
   variant?: BlockVariant;
   blockId?: string;
-  /** Owning page — present on "layer" drags (panel reorder is page-scoped). */
+  /**
+   * Owning page for "layer" drags (panel reorder is page-scoped); the dragged
+   * page itself for "page" drags.
+   */
   pageId?: string;
   label?: string;
   /** Drop target — present on droppables. */

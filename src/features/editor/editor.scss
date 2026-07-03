@@ -156,9 +156,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 24px;
+  gap: 28px;
   transform-origin: top center;
 }
+
 .bo-editor-page {
   background: #fff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
@@ -166,6 +167,14 @@
   flex-direction: column;
   overflow: hidden;
   flex-shrink: 0;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  transition: outline-color 0.1s ease;
+}
+/* The page itself (not a block inside it) is selected — a soft accent outline
+   distinguishes it from the stronger purple block-selection outline. */
+.bo-editor-page.is-page-selected {
+  outline-color: tokens.$buildout-blue-300;
 }
 
 /* ---- Selectable blocks ---- */
@@ -584,28 +593,28 @@
 }
 
 /* ---- Pages panel rows ---- */
-/* Pins the "Pages" heading + search box above the scrolling row list. The 8px
-   bottom padding stands in for the gap once the panel's own p-3 padding has
-   scrolled out from above it. */
-.bo-editor-pages-search {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #fff;
+/* Bordered, self-scrolling page list: grows to fill the panel's remaining
+   height and scrolls internally once there are too many pages to fit, instead
+   of pushing the search box / Add Page button out of view. */
+.bo-editor-pages-list {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  /* Room for the last row's trailing insert-gap, which hangs below its bottom edge. */
   padding-bottom: 8px;
 }
-.bo-editor-pages-row,
-.bo-editor-pages-header-row {
+.bo-editor-pages-row {
   display: flex;
   align-items: center;
   gap: 10px;
-}
-.bo-editor-pages-row {
   cursor: pointer;
 }
-.bo-editor-pages-header-row {
-  background: #f6f7f9;
-  cursor: default;
+.bo-editor-pages-grip-slot {
+  flex-shrink: 0;
+  width: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .bo-editor-pages-row-index {
   flex-shrink: 0;
@@ -613,14 +622,6 @@
   font-size: 12px;
   color: #94a3b8;
   text-align: right;
-}
-.bo-editor-pages-header-label {
-  flex: 1 1 0;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: #506079;
 }
 .bo-editor-pages-row-name {
   flex: 1 1 0;
@@ -630,4 +631,50 @@
 .bo-editor-pages-bolt {
   color: #f5a623;
   flex-shrink: 0;
+}
+
+/* Hover strip nestled between rows — the list-panel counterpart to
+   .bo-editor-page-gap on the canvas. A zero-height flow sibling (so it never
+   pushes rows apart) whose hit target is absolutely positioned to straddle the
+   seam. Kept as a sibling of the rows (not nested inside one) so its stacking
+   isn't at the mercy of Bootstrap's `.list-group-item.active`/`:hover`
+   z-index bumps. */
+.bo-editor-pages-row-gap {
+  position: relative;
+  height: 0;
+}
+.bo-editor-pages-row-gap-hit {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -7px;
+  height: 14px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bo-editor-pages-row-gap-line {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  background: var(--bp-primary);
+  border-radius: 2px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+.bo-editor-pages-row-gap-btn {
+  opacity: 0;
+  transform: scale(0.92);
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+.bo-editor-pages-row-gap-hit:hover .bo-editor-pages-row-gap-line,
+.bo-editor-pages-row-gap-hit:hover .bo-editor-pages-row-gap-btn,
+.bo-editor-pages-row-gap-btn:focus-visible {
+  opacity: 1;
+  transform: scale(1);
 }
