@@ -32,6 +32,8 @@ interface EditorState {
   /** Pristine copy of the initial document, used to reset tables to template. */
   templateDocument: EditorDocument;
   activeListing: Property | undefined;
+  /** True when the document has unsaved edits since the last init/save. */
+  dirty: boolean;
   selection: Selection | null;
   /**
    * Block "located" from the Layers panel — highlighted on the canvas without
@@ -52,6 +54,10 @@ interface EditorState {
 
   // Phase 1 actions (selection + navigation + view).
   initDocument: (listing: Property | undefined) => void;
+  /** Clear the dirty flag — called after a Save & Close. */
+  markSaved: () => void;
+  /** Merge a patch into the bound listing (e.g. from Edit Listing) so dynamic fields refresh. */
+  updateActiveListing: (patch: Partial<Property>) => void;
   select: (selection: Selection | null) => void;
   clearSelection: () => void;
   /** Locate a block on the canvas from the Layers panel (highlight + scroll). */
@@ -121,6 +127,7 @@ export const useEditorStore = create<EditorState>((set) => {
   document: initialDocument,
   templateDocument: clone(initialDocument),
   activeListing: undefined,
+  dirty: false,
   // Default to a selected table cell so the contextual style panel shows,
   // matching the Figma reference state.
   selection: null,
@@ -142,8 +149,16 @@ export const useEditorStore = create<EditorState>((set) => {
       selection: null,
       highlightedBlockId: null,
       activePageId: document.pages[0]?.id ?? null,
+      dirty: false,
     });
   },
+
+  markSaved: () => set({ dirty: false }),
+
+  updateActiveListing: (patch) =>
+    set((s) => ({
+      activeListing: s.activeListing ? { ...s.activeListing, ...patch } : s.activeListing,
+    })),
 
   select: (selection) =>
     set((s) => ({
@@ -210,6 +225,7 @@ export const useEditorStore = create<EditorState>((set) => {
         templateDocument: { ...s.templateDocument, pages: templatePages },
         selection: { pageId: page.id },
         activeNavPanel: "pages",
+        dirty: true,
       };
     }),
 
@@ -221,7 +237,7 @@ export const useEditorStore = create<EditorState>((set) => {
       const pages = [...s.document.pages];
       const [moved] = pages.splice(fromIndex, 1);
       pages.splice(clampIndex(toIndex, pages.length), 0, moved);
-      return { document: { ...s.document, pages } };
+      return { document: { ...s.document, pages }, dirty: true };
     }),
 
   addBlock: (target, type, variant) =>
@@ -236,6 +252,7 @@ export const useEditorStore = create<EditorState>((set) => {
         document,
         selection: { pageId: pageIdForTarget(document, target), blockId: block.id },
         activeNavPanel: null,
+        dirty: true,
       };
     }),
 
@@ -250,7 +267,7 @@ export const useEditorStore = create<EditorState>((set) => {
       // same-list reorder, and inserts before the hovered item across lists.
       const { doc: without, removed } = removeBlockFromDoc(s.document, blockId);
       if (!removed) return s;
-      return { document: insertAt(without, target, removed) };
+      return { document: insertAt(without, target, removed), dirty: true };
     }),
 
   removeBlock: (blockId) =>
@@ -258,21 +275,21 @@ export const useEditorStore = create<EditorState>((set) => {
       const { doc, removed } = removeBlockFromDoc(s.document, blockId);
       if (!removed) return s;
       const clears = s.selection?.blockId === blockId;
-      return { document: doc, selection: clears ? null : s.selection };
+      return { document: doc, selection: clears ? null : s.selection, dirty: true };
     }),
 
   setBlockText: (blockId, text) =>
     set((s) => {
       const block = findBlock(s.document, blockId);
       if (!block || (block.type !== "heading" && block.type !== "text")) return s;
-      return { document: replaceBlock(s.document, blockId, { ...block, text }) };
+      return { document: replaceBlock(s.document, blockId, { ...block, text }), dirty: true };
     }),
 
   setImageSrc: (blockId, src) =>
     set((s) => {
       const block = findBlock(s.document, blockId);
       if (!block || block.type !== "image") return s;
-      return { document: replaceBlock(s.document, blockId, { ...block, src }) };
+      return { document: replaceBlock(s.document, blockId, { ...block, src }), dirty: true };
     }),
 
   addColumn: (blockId, index) =>
@@ -286,6 +303,7 @@ export const useEditorStore = create<EditorState>((set) => {
           return next;
         }),
       ),
+      dirty: true,
     })),
 
   removeColumn: (blockId, index) =>
@@ -295,6 +313,7 @@ export const useEditorStore = create<EditorState>((set) => {
         return rows.map((row) => row.filter((_, ci) => ci !== index));
       }),
       selection: clearTableCell(s.selection, blockId),
+      dirty: true,
     })),
 
   addRow: (blockId, index) =>
@@ -309,6 +328,7 @@ export const useEditorStore = create<EditorState>((set) => {
         next.splice(clampIndex(index, rows.length), 0, newRow);
         return next;
       }),
+      dirty: true,
     })),
 
   removeRow: (blockId, index) =>
@@ -317,6 +337,7 @@ export const useEditorStore = create<EditorState>((set) => {
         rows.length <= 1 ? rows : rows.filter((_, ri) => ri !== index),
       ),
       selection: clearTableCell(s.selection, blockId),
+      dirty: true,
     })),
 
   setCellValue: (blockId, cellId, value) =>
@@ -324,6 +345,7 @@ export const useEditorStore = create<EditorState>((set) => {
       document: updateTableRows(s.document, blockId, (rows) =>
         rows.map((row) => row.map((c) => (c.id === cellId ? { ...c, value } : c))),
       ),
+      dirty: true,
     })),
 
   resetTable: (blockId) =>
@@ -334,6 +356,7 @@ export const useEditorStore = create<EditorState>((set) => {
         document: replaceBlock(s.document, blockId, clone(template)),
         // Drop any cell selection — reset cells may no longer exist.
         selection: clearTableCell(s.selection, blockId),
+        dirty: true,
       };
     }),
   };

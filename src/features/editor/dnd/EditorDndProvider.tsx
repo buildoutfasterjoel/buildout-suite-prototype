@@ -71,6 +71,7 @@ export function EditorDndProvider({ children }: { children: ReactNode }) {
 
   return (
     <DndContext
+      id="editor-dnd"
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragStart={onDragStart}

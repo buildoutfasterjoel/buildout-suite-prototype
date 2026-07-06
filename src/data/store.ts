@@ -40,6 +40,19 @@ export function addProperty(property: Property): void {
   getStore().properties.set(property.id, property)
 }
 
+/** Merge a patch into a stored property (e.g. from an in-editor edit) and return it. */
+export function updateProperty(
+  propertyId: string,
+  patch: Partial<Property>,
+): Property | undefined {
+  const properties = getStore().properties
+  const existing = properties.get(propertyId)
+  if (!existing) return undefined
+  const updated: Property = { ...existing, ...patch, updatedAt: new Date().toISOString() }
+  properties.set(propertyId, updated)
+  return updated
+}
+
 /** { value: propertyId, label: address } options for a property picker. */
 export function getPropertyOptions(): { value: string; label: string }[] {
   return [...getStore().properties.values()]

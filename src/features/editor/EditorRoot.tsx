@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { Dialog } from "@buildoutinc/blueprint-react/ui/Dialog";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -8,6 +9,7 @@ import { SIDEBAR_PIN_STORAGE_KEY, useEditorStore } from "./store";
 import { DocsNavRail } from "./DocsNavRail";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { CanvasActions } from "./CanvasActions";
+import { EditListingDialog } from "./EditListingDialog";
 import { Canvas } from "./Canvas";
 import { EditorDndProvider } from "./dnd/EditorDndProvider";
 import "./editor.scss";
@@ -23,12 +25,20 @@ export function EditorRoot({
   listing: Property | undefined;
   listingId: string;
 }) {
+  const navigate = useNavigate();
   const initDocument = useEditorStore((s) => s.initDocument);
+  const markSaved = useEditorStore((s) => s.markSaved);
   const [exportOpen, setExportOpen] = useState(false);
+  const [editListingOpen, setEditListingOpen] = useState(false);
 
   useEffect(() => {
     initDocument(listing);
   }, [listing, initDocument]);
+
+  function handleSaveAndClose() {
+    markSaved();
+    void navigate({ to: "/listings/$listingId/documents", params: { listingId } });
+  }
 
   // Sync the persisted pin preference after mount (kept out of the store's
   // initial state so server and first-render client output match).
@@ -49,10 +59,16 @@ export function EditorRoot({
         </div>
 
         <div className="bo-editor-canvas">
-          <CanvasActions listingId={listingId} onExport={() => setExportOpen(true)} />
+          <CanvasActions
+            onExport={() => setExportOpen(true)}
+            onSaveAndClose={handleSaveAndClose}
+            onEditListing={() => setEditListingOpen(true)}
+          />
           <Canvas />
         </div>
       </div>
+
+      <EditListingDialog open={editListingOpen} onOpenChange={setEditListingOpen} />
 
       {/* Mocked PDF export (Phase 3 wires the real flow). */}
       <Dialog open={exportOpen} onOpenChange={setExportOpen}>
