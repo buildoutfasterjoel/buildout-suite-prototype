@@ -21,7 +21,7 @@ export const Route = createFileRoute("/listings/$listingId")({
 
 function ListingNotFound() {
   return (
-    <div className="container-fluid py-8 d-flex justify-content-center">
+    <div className="container py-8 d-flex justify-content-center">
       <Empty>
         <Empty.Media>
           <FontAwesomeIcon
@@ -59,7 +59,7 @@ function PropertyDetail() {
       <PropertyDetailHeader listing={listing} />
 
       <div className="flex-grow-1 overflow-hidden d-flex flex-column py-4">
-        <div className="container-fluid flex-grow-1 d-flex overflow-hidden gap-4">
+        <div className="container flex-grow-1 d-flex overflow-hidden gap-4">
           {/* Section nav — its own card */}
           <Card
             className="overflow-auto shadow flex-shrink-0"

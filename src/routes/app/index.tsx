@@ -15,7 +15,7 @@ export const Route = createFileRoute("/app/")({
 
 function AppIndex() {
   return (
-    <div className="d-flex align-items-center justify-content-center h-100 p-8">
+    <div className="container d-flex align-items-center justify-content-center h-100 p-8">
       <Empty>
         <EmptyTitle>No prototype loaded</EmptyTitle>
         <EmptyContent>

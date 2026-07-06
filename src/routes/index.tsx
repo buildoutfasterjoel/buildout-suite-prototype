@@ -18,7 +18,7 @@ function Home() {
   const sampleListingId = getStore().listings.keys().next().value ?? "";
 
   return (
-    <div className="p-8 container-fluid">
+    <div className="p-8 container">
       <Card className="shadow">
         <CardBody className="p-6">
           <h1 className="fs-display2 lh-display2 fw-bold">
@@ -35,12 +35,12 @@ function Home() {
           <Link to="/suite" className="text-decoration-none">
             <Card className="shadow-sm h-100">
               <CardHeader>
-                <CardTitle>Suite Pipeline Dashboard</CardTitle>
+                <CardTitle>Suite Home Dashboard</CardTitle>
               </CardHeader>
               <CardBody>
-                Broker-facing deal lifecycle pipeline with 7 stages, sub-stage
-                drilldown, and deal list. Demonstrates the overarching brokerage
-                workflow from Prospect through Close &amp; Press.
+                Broker home dashboard — weighted pipeline forecast, a
+                seller-signal-to-close pipeline snapshot, an AI-surfaced focus
+                signal, today's tasks, listing engagement, and recent activity.
               </CardBody>
             </Card>
           </Link>

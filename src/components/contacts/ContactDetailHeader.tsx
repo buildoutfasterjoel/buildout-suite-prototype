@@ -21,7 +21,7 @@ function medDate(iso: string): string {
 export function ContactDetailHeader({ contact }: { contact: Contact }) {
   return (
     <div className="bg-card border-bottom">
-      <div className="container-fluid p-4">
+      <div className="container p-4">
         <Breadcrumb className="mb-2">
           <Breadcrumb.List>
             <Breadcrumb.Item>

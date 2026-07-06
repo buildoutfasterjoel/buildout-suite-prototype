@@ -185,7 +185,7 @@ function PropertyListings() {
     <div className="d-flex flex-column h-100 overflow-hidden">
       {/* Page header — matches Pipeline */}
       <div className="border-bottom bg-card">
-        <div className="container-fluid py-4 d-flex align-items-center justify-content-between">
+        <div className="container py-4 d-flex align-items-center justify-content-between">
           <div className="d-flex flex-column">
             <h1 className="fs-4 fw-semibold mb-0">Deals</h1>
             <span className="text-muted">
@@ -204,7 +204,7 @@ function PropertyListings() {
 
       {/* Toolbar card */}
       <div className="py-3 d-flex flex-column gap-3">
-        <div className="container-fluid">
+        <div className="container">
           <div className="row">
             <div className="col">
               <Card className="shadow">
@@ -311,7 +311,7 @@ function PropertyListings() {
       </div>
 
       {/* Sidebar + content */}
-      <div className="container-fluid flex-grow-1 overflow-hidden d-flex flex-column pb-3">
+      <div className="container flex-grow-1 overflow-hidden d-flex flex-column pb-3">
         <div className="row gx-3 flex-grow-1 overflow-hidden">
           <div className="col-2 overflow-auto h-100">
             <PropertyFilters

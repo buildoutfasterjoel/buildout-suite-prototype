@@ -19,7 +19,7 @@ export const Route = createFileRoute("/backoffice/contacts/$contactId")({
 
 function ContactNotFound() {
   return (
-    <div className="container-fluid py-8 d-flex justify-content-center">
+    <div className="container py-8 d-flex justify-content-center">
       <Empty>
         <Empty.Media>
           <FontAwesomeIcon icon={faUserSlash} aria-label="Contact not found" />
@@ -54,7 +54,7 @@ function ContactDetailPage() {
     <div className="d-flex flex-column h-100 overflow-auto">
       <ContactDetailHeader contact={contact} />
 
-      <div className="container-fluid py-4">
+      <div className="container py-4">
         <div className="row g-4">
           <div className="col-12 col-lg-3">
             <ContactDetailsCard contact={contact} deals={deals} />

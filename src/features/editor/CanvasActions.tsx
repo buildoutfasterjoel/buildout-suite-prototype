@@ -55,6 +55,7 @@ export function CanvasActions({
   onSwitchToClassicEditor,
 }: {
   listingId: string;
+  onExport: () => void;
   onSaveAndClose: () => void;
   onEditListing: () => void;
   onSwitchToClassicEditor: () => void;

@@ -18,6 +18,12 @@ export interface ListingTraffic {
   changePct: number;
   /** Daily views for the last 14 days, ending on the prototype "today". */
   series: TrafficDayMetric[];
+  /** Outreach emails sent about this listing in the last 30 days. */
+  sent: number;
+  /** Replies received to those sends. */
+  replies: number;
+  /** Confidentiality Agreements Signed — prospective buyers who executed an NDA. */
+  cas: number;
 }
 
 const MONTHS_SHORT = [
@@ -49,11 +55,17 @@ export function getListingTraffic(listingId: string): ListingTraffic {
   const changePct = prev7 === 0 ? 0 : Math.round(((last7 - prev7) / prev7) * 100);
 
   const pageViews = 400 + (h % 1600); // 400–1999 over 30 days
+  const sent = 8 + (h % 40); // 8–47
+  const replies = Math.round(sent * (0.1 + ((h >>> 3) % 30) / 100)); // ~10–40% reply rate
+  const cas = Math.round(replies * (0.2 + ((h >>> 5) % 25) / 100)); // subset of replies
   return {
     pageViews,
     uniqueVisitors: Math.round(pageViews * (0.55 + ((h >>> 2) % 25) / 100)),
     leads: 3 + (h % 40), // 3–42
     changePct,
     series,
+    sent,
+    replies,
+    cas,
   };
 }

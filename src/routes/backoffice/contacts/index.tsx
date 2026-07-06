@@ -128,7 +128,7 @@ function PeoplePage() {
     <div className="d-flex flex-column h-100 overflow-auto">
       {/* Header bar */}
       <div className="bg-white border-bottom shadow-sm">
-        <div className="container-fluid py-3">
+        <div className="container py-3">
           <div className="d-flex align-items-start gap-3">
             <div className="flex-grow-1">
               <h1 className="fs-4 fw-semibold mb-0">People</h1>
@@ -162,7 +162,7 @@ function PeoplePage() {
       </div>
 
       {/* Content */}
-      <div className="container-fluid py-4">
+      <div className="container py-4">
         <Card>
           <Card.Body className="d-flex flex-column gap-3">
             {/* Toolbar */}

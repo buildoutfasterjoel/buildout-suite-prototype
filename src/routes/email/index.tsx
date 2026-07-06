@@ -156,7 +156,7 @@ function EmailsPage() {
     <div className="d-flex flex-column h-100 overflow-auto">
       {/* Header bar */}
       <div className="bg-white border-bottom shadow-sm">
-        <div className="container-fluid py-3">
+        <div className="container py-3">
           <div className="d-flex align-items-center gap-3">
             <FontAwesomeIcon
               icon={faEnvelopesBulk}
@@ -245,7 +245,7 @@ function EmailsPage() {
       </div>
 
       {/* Content */}
-      <div className="container-fluid py-4 d-flex flex-column gap-4">
+      <div className="container py-4 d-flex flex-column gap-4">
         <EmailPerformanceStats />
 
         <Card>
