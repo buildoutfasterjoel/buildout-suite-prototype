@@ -16,7 +16,7 @@ function TaskRow({ task }: { task: DashboardTask }) {
         <div className="d-flex align-items-center gap-2">
           {task.urgency === "overdue" ? (
             <Badge
-              variant="outline"
+              variant="secondary"
               className="fs-xs border-danger text-danger bg-danger-subtle"
             >
               {task.daysOverdue}D OVERDUE
