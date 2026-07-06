@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Dialog } from "@buildoutinc/blueprint-react/ui/Dialog";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFilePdf, faClockRotateLeft } from "@fortawesome/pro-regular-svg-icons";
+import { faClockRotateLeft } from "@fortawesome/pro-regular-svg-icons";
 import type { Property } from "#/data/types";
 import { SIDEBAR_PIN_STORAGE_KEY, useEditorStore } from "./store";
 import { DocsNavRail } from "./DocsNavRail";
@@ -28,7 +28,6 @@ export function EditorRoot({
   const navigate = useNavigate();
   const initDocument = useEditorStore((s) => s.initDocument);
   const markSaved = useEditorStore((s) => s.markSaved);
-  const [exportOpen, setExportOpen] = useState(false);
   const [editListingOpen, setEditListingOpen] = useState(false);
   const [switchToClassicOpen, setSwitchToClassicOpen] = useState(false);
 
@@ -62,7 +61,6 @@ export function EditorRoot({
         <div className="bo-editor-canvas">
           <CanvasActions
             listingId={listingId}
-            onExport={() => setExportOpen(true)}
             onSaveAndClose={handleSaveAndClose}
             onEditListing={() => setEditListingOpen(true)}
             onSwitchToClassicEditor={() => setSwitchToClassicOpen(true)}
@@ -72,33 +70,6 @@ export function EditorRoot({
       </div>
 
       <EditListingDialog open={editListingOpen} onOpenChange={setEditListingOpen} />
-
-      {/* Mocked PDF export (Phase 3 wires the real flow). */}
-      <Dialog open={exportOpen} onOpenChange={setExportOpen}>
-        <Dialog.Portal>
-          <Dialog.Overlay />
-          <Dialog.Content>
-            <Dialog.Header>
-              <Dialog.Title>
-                <FontAwesomeIcon icon={faFilePdf} className="me-2" />
-                Export to PDF
-              </Dialog.Title>
-            </Dialog.Header>
-            <Dialog.Body>
-              <Dialog.Description>
-                This is a prototype — PDF generation isn&apos;t wired up yet. In the
-                real editor this would render your document to a downloadable PDF.
-              </Dialog.Description>
-            </Dialog.Body>
-            <Dialog.Footer>
-              <Dialog.Cancel variant="outline">Close</Dialog.Cancel>
-              <Button variant="primary" onClick={() => setExportOpen(false)}>
-                Got it
-              </Button>
-            </Dialog.Footer>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog>
 
       {/* Mocked revert to the classic editor (Phase 3 wires the real flow). */}
       <Dialog open={switchToClassicOpen} onOpenChange={setSwitchToClassicOpen}>
