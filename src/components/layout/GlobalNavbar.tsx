@@ -6,6 +6,7 @@ import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faSquareCheck,
   faBuilding,
   faUsers,
   faHandshake,
@@ -13,77 +14,26 @@ import {
   faBell,
   faCirclePlus,
 } from "@fortawesome/pro-regular-svg-icons";
-import { faDiamonds4 } from "@fortawesome/pro-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import BuildoutIcon from "#/features/assets/buildout-icon";
 import BuildoutWordmark from "#/features/assets/buildout-wordmark";
 
 type Role = "principal" | "broker" | "marketing";
 
-type NavDropdownItem = {
-  label: string;
-  href: string;
-};
-
 type NavContext = {
   label: string;
-  icon: IconDefinition;
-  allowedRoles: Role[];
-} & ({ href: string } | { items: NavDropdownItem[] });
-
-const ALL_ROLES: Role[] = ["principal", "broker", "marketing"];
+  href: string;
+  icon?: IconDefinition;
+  isLive?: boolean;
+};
 
 const navContexts: NavContext[] = [
-  {
-    label: "Brokerage",
-    icon: faDiamonds4,
-    allowedRoles: ["principal"],
-    items: [
-      { label: "Dashboard", href: "/suite" },
-      { label: "Team", href: "#" },
-      { label: "Revenue", href: "#" },
-    ],
-  },
-  {
-    label: "Properties",
-    icon: faBuilding,
-    allowedRoles: ALL_ROLES,
-    items: [
-      { label: "Research", href: "/research/properties" },
-      { label: "Prospecting", href: "/crm/prospecting" },
-      { label: "Deals", href: "/listings" },
-      { label: "Comps", href: "/research/comps" },
-    ],
-  },
-  {
-    label: "Contacts",
-    icon: faUsers,
-    allowedRoles: ALL_ROLES,
-    items: [
-      { label: "Leads", href: "/leads" },
-      { label: "People", href: "/backoffice/contacts" },
-      { label: "Companies", href: "#" },
-      { label: "Lists", href: "#" },
-      { label: "Sequences", href: "#" },
-      { label: "Campaigns", href: "/email" },
-    ],
-  },
-  {
-    label: "Deals",
-    icon: faHandshake,
-    allowedRoles: ["principal", "broker"],
-    items: [
-      { label: "Transactions", href: "/deals/transactions" },
-      { label: "Tasks", href: "/deals/planner" },
-      { label: "Commissions", href: "/backoffice/broker_earnings" },
-    ],
-  },
-  {
-    label: "Reports",
-    icon: faSignal,
-    allowedRoles: ALL_ROLES,
-    href: "/reports",
-  },
+  { label: "NOW", href: "/suite", isLive: true },
+  { label: "Tasks", href: "/tasks", icon: faSquareCheck },
+  { label: "Properties", href: "/properties", icon: faBuilding },
+  { label: "People", href: "/backoffice/contacts", icon: faUsers },
+  { label: "Deals", href: "/listings", icon: faHandshake },
+  { label: "Reports", href: "/reports", icon: faSignal },
 ];
 
 const ROLE_LABELS: Record<Role, string> = {
@@ -95,11 +45,6 @@ const ROLE_LABELS: Record<Role, string> = {
 function isPathActive(href: string, pathname: string): boolean {
   if (!href || href === "#") return false;
   return pathname === href || pathname.startsWith(href + "/");
-}
-
-function isContextActive(ctx: NavContext, pathname: string): boolean {
-  if ("href" in ctx) return isPathActive(ctx.href, pathname);
-  return ctx.items.some((item) => isPathActive(item.href, pathname));
 }
 
 export function GlobalNavbar() {
@@ -118,10 +63,6 @@ export function GlobalNavbar() {
     setRole(newRole);
   }
 
-  const visibleContexts = navContexts.filter((ctx) =>
-    ctx.allowedRoles.includes(role),
-  );
-
   return (
     <Navbar expand="lg">
       <Navbar.Brand
@@ -137,47 +78,27 @@ export function GlobalNavbar() {
 
       <Navbar.Content className="flex-nowrap">
         <Navbar.Nav>
-          {visibleContexts.map((ctx) =>
-            "items" in ctx ? (
-              <Navbar.Group key={ctx.label}>
-                <Navbar.GroupTrigger
-                  className={
-                    isContextActive(ctx, pathname) ? "active" : undefined
-                  }
-                >
-                  <Navbar.ItemLinkIcon>
-                    <FontAwesomeIcon icon={ctx.icon} />
-                  </Navbar.ItemLinkIcon>
-                  <Navbar.ItemLinkLabel>{ctx.label}</Navbar.ItemLinkLabel>
-                </Navbar.GroupTrigger>
-                <Navbar.GroupMenu>
-                  {ctx.items.map((sub) => (
-                    <Navbar.GroupMenuItem
-                      key={sub.label}
-                      render={<a href={sub.href} />}
-                      className={
-                        isPathActive(sub.href, pathname) ? "active" : undefined
-                      }
-                    >
-                      {sub.label}
-                    </Navbar.GroupMenuItem>
-                  ))}
-                </Navbar.GroupMenu>
-              </Navbar.Group>
-            ) : (
-              <Navbar.Item key={ctx.label}>
-                <Navbar.ItemLink
-                  isActive={isContextActive(ctx, pathname)}
-                  render={<a href={ctx.href} />}
-                >
-                  <Navbar.ItemLinkIcon>
-                    <FontAwesomeIcon icon={ctx.icon} />
-                  </Navbar.ItemLinkIcon>
-                  <Navbar.ItemLinkLabel>{ctx.label}</Navbar.ItemLinkLabel>
-                </Navbar.ItemLink>
-              </Navbar.Item>
-            ),
-          )}
+          {navContexts.map((ctx) => (
+            <Navbar.Item key={ctx.label}>
+              <Navbar.ItemLink
+                isActive={isPathActive(ctx.href, pathname)}
+                render={<a href={ctx.href} />}
+              >
+                <Navbar.ItemLinkIcon>
+                  {ctx.isLive ? (
+                    <span
+                      className="rounded-circle bg-success d-inline-block"
+                      style={{ width: 8, height: 8 }}
+                      aria-hidden
+                    />
+                  ) : (
+                    ctx.icon && <FontAwesomeIcon icon={ctx.icon} />
+                  )}
+                </Navbar.ItemLinkIcon>
+                <Navbar.ItemLinkLabel>{ctx.label}</Navbar.ItemLinkLabel>
+              </Navbar.ItemLink>
+            </Navbar.Item>
+          ))}
         </Navbar.Nav>
       </Navbar.Content>
 

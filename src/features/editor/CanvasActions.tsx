@@ -1,19 +1,25 @@
+import { useEffect } from "react";
+import { Link } from "@tanstack/react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faSign,
   faPenToSquare,
   faMagnifyingGlassPlus,
   faMagnifyingGlassMinus,
   faCircleCheck,
-  faCircleDot,
   faArrowRotateLeft,
   faArrowRotateRight,
-  faSave,
   faEllipsisVertical,
+  faClockRotateLeft,
 } from "@fortawesome/pro-regular-svg-icons";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
+import { CircularProgress } from "@buildoutinc/blueprint-react/ui/Progress";
 import { useEditorStore, useSelectedEntities } from "./store";
+
+/** Debounce window (ms): how long the doc must sit still before the fake autosave "completes". */
+const AUTOSAVE_DEBOUNCE_MS = 600;
 
 function blockCrumb(
   block: ReturnType<typeof useSelectedEntities>["block"],
@@ -43,21 +49,35 @@ function blockCrumb(
 
 /** Top canvas bar: save & close, breadcrumb trail, zoom, save status, undo/redo, actions. */
 export function CanvasActions({
-  onExport,
+  listingId,
   onSaveAndClose,
   onEditListing,
+  onSwitchToClassicEditor,
 }: {
+  listingId: string;
   onExport: () => void;
   onSaveAndClose: () => void;
   onEditListing: () => void;
+  onSwitchToClassicEditor: () => void;
 }) {
-  const pages = useEditorStore((s) => s.document.pages);
+  const doc = useEditorStore((s) => s.document);
+  const pages = doc.pages;
   const listingName = useEditorStore((s) => s.activeListing?.name ?? "Deal");
   const dirty = useEditorStore((s) => s.dirty);
+  const markSaved = useEditorStore((s) => s.markSaved);
   const zoom = useEditorStore((s) => s.zoom);
   const zoomIn = useEditorStore((s) => s.zoomIn);
   const zoomOut = useEditorStore((s) => s.zoomOut);
   const { page, block, cell } = useSelectedEntities();
+
+  // Fake autosave: every edit re-arms the timer, so the indicator keeps
+  // "saving" while the user is actively editing and only settles back to
+  // saved after a brief quiet period.
+  useEffect(() => {
+    if (!dirty) return;
+    const timeout = setTimeout(markSaved, AUTOSAVE_DEBOUNCE_MS);
+    return () => clearTimeout(timeout);
+  }, [doc, dirty, markSaved]);
 
   // Page → Block → Sub-block, drilling in as the user refines their selection.
   const currentPage = page ?? pages[0];
@@ -69,27 +89,27 @@ export function CanvasActions({
 
   return (
     <div className="d-flex align-items-center gap-2 p-3 w-100 flex-shrink-0 bg-white border-bottom">
-      {/* Listing name (edit entry point) / Page / Block / Sub-block */}
+      {/* Deal (link) / Page / Block / Sub-block */}
       <div className="d-flex align-items-center gap-1 flex-grow-1">
-        <span
-          className={`text-truncate text-body fs-small ${trail.length === 0 ? "fw-semibold" : "fw-normal"}`}
-        >
-          {listingName}
-        </span>
         <Tooltip>
           <Tooltip.Trigger
             render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Edit listing details"
-                onClick={onEditListing}
-              >
-                <FontAwesomeIcon icon={faPenToSquare} />
-              </Button>
+              <Link
+                to="/listings/$listingId/documents"
+                params={{ listingId }}
+                aria-label={`Back to ${listingName}`}
+                className="d-flex align-items-center gap-1 text-truncate text-body fs-small"
+              />
             }
-          />
-          <Tooltip.Content>Edit listing details</Tooltip.Content>
+          >
+            <FontAwesomeIcon icon={faSign} style={{ fontSize: 12 }} />
+            <span
+              className={`text-truncate ${trail.length === 0 ? "fw-semibold" : "fw-normal"}`}
+            >
+              {listingName}
+            </span>
+          </Tooltip.Trigger>
+          <Tooltip.Content>Back to deal</Tooltip.Content>
         </Tooltip>
         {trail.map((crumb, i) => (
           <span key={i} className="d-flex align-items-center gap-1">
@@ -144,15 +164,22 @@ export function CanvasActions({
       <div className="d-flex align-items-center justify-content-end gap-3 flex-grow-1">
         <span className="d-flex align-items-center gap-1">
           {dirty ? (
-            <>
-              <FontAwesomeIcon icon={faCircleDot} className="text-warning" />
-              <span className="text-body">Unsaved Changes</span>
-            </>
+            <Tooltip>
+              <Tooltip.Trigger render={<span aria-label="Saving changes" />}>
+                <CircularProgress size="sm" label="Saving changes" />
+              </Tooltip.Trigger>
+              <Tooltip.Content>Saving changes…</Tooltip.Content>
+            </Tooltip>
           ) : (
-            <>
-              <FontAwesomeIcon icon={faCircleCheck} className="text-success" />
-              <span className="text-body">All Changes Saved</span>
-            </>
+            <Tooltip>
+              <Tooltip.Trigger render={<span aria-label="All Changes Saved" />}>
+                <FontAwesomeIcon
+                  icon={faCircleCheck}
+                  className="text-success"
+                />
+              </Tooltip.Trigger>
+              <Tooltip.Content>All Changes Saved</Tooltip.Content>
+            </Tooltip>
           )}
         </span>
 
@@ -166,25 +193,26 @@ export function CanvasActions({
         </div>
 
         <Button variant="outline" onClick={onSaveAndClose}>
-          <FontAwesomeIcon icon={faSave} />
-          Save &amp; Close
+          Close
         </Button>
 
         <DropdownMenu>
           <DropdownMenu.Trigger
             render={
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" aria-label="More actions">
                 <FontAwesomeIcon icon={faEllipsisVertical} />
               </Button>
             }
           />
           <DropdownMenu.Content align="end">
-            <DropdownMenu.Item onClick={onExport}>Export PDF</DropdownMenu.Item>
-            <DropdownMenu.Item onClick={onExport}>Download</DropdownMenu.Item>
-            <DropdownMenu.Item onClick={onExport}>Share Link</DropdownMenu.Item>
+            <DropdownMenu.Item onClick={onEditListing}>
+              <FontAwesomeIcon icon={faPenToSquare} />
+              Edit Listing Details
+            </DropdownMenu.Item>
             <DropdownMenu.Separator />
-            <DropdownMenu.Item onClick={onExport}>
-              Duplicate Document
+            <DropdownMenu.Item onClick={onSwitchToClassicEditor}>
+              <FontAwesomeIcon icon={faClockRotateLeft} />
+              Switch to Classic Editor
             </DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu>

@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Dialog } from "@buildoutinc/blueprint-react/ui/Dialog";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFilePdf } from "@fortawesome/pro-regular-svg-icons";
+import { faFilePdf, faClockRotateLeft } from "@fortawesome/pro-regular-svg-icons";
 import type { Property } from "#/data/types";
 import { SIDEBAR_PIN_STORAGE_KEY, useEditorStore } from "./store";
 import { DocsNavRail } from "./DocsNavRail";
@@ -30,6 +30,7 @@ export function EditorRoot({
   const markSaved = useEditorStore((s) => s.markSaved);
   const [exportOpen, setExportOpen] = useState(false);
   const [editListingOpen, setEditListingOpen] = useState(false);
+  const [switchToClassicOpen, setSwitchToClassicOpen] = useState(false);
 
   useEffect(() => {
     initDocument(listing);
@@ -60,9 +61,11 @@ export function EditorRoot({
 
         <div className="bo-editor-canvas">
           <CanvasActions
+            listingId={listingId}
             onExport={() => setExportOpen(true)}
             onSaveAndClose={handleSaveAndClose}
             onEditListing={() => setEditListingOpen(true)}
+            onSwitchToClassicEditor={() => setSwitchToClassicOpen(true)}
           />
           <Canvas />
         </div>
@@ -91,6 +94,34 @@ export function EditorRoot({
               <Dialog.Cancel variant="outline">Close</Dialog.Cancel>
               <Button variant="primary" onClick={() => setExportOpen(false)}>
                 Got it
+              </Button>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog>
+
+      {/* Mocked revert to the classic editor (Phase 3 wires the real flow). */}
+      <Dialog open={switchToClassicOpen} onOpenChange={setSwitchToClassicOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay />
+          <Dialog.Content>
+            <Dialog.Header>
+              <Dialog.Title>
+                <FontAwesomeIcon icon={faClockRotateLeft} className="me-2" />
+                Switch to Classic Editor
+              </Dialog.Title>
+            </Dialog.Header>
+            <Dialog.Body>
+              <Dialog.Description>
+                This is a prototype — switching editors isn&apos;t wired up yet. In
+                the real app this would take you back to the classic document
+                editor for this listing.
+              </Dialog.Description>
+            </Dialog.Body>
+            <Dialog.Footer>
+              <Dialog.Cancel variant="outline">Cancel</Dialog.Cancel>
+              <Button variant="primary" onClick={() => setSwitchToClassicOpen(false)}>
+                Switch to Classic Editor
               </Button>
             </Dialog.Footer>
           </Dialog.Content>
