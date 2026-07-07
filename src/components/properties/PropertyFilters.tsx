@@ -13,6 +13,7 @@ export interface Facet {
   getValue: (l: Listing) => string;
   selected: Set<string>;
   toggle: (value: string) => void;
+  clear?: () => void;
 }
 
 export interface ActiveChip {

@@ -14,20 +14,19 @@ import {
   faUserGroupSimple,
   faArrowDownWideShort,
   faCirclePlus,
+  faTableColumns,
+  faBuilding,
 } from "@fortawesome/pro-regular-svg-icons";
 import { getStore } from "#/data/store";
-import type { Listing } from "#/data/types";
+import type { Listing, PropertyStatus } from "#/data/types";
 import { PropertyGrid } from "#/components/properties/PropertyGrid";
+import { DealBoard } from "#/components/deals/DealBoard";
 import { PropertyMap } from "#/components/properties/PropertyMap";
-import {
-  PropertyFilters,
-  type Facet,
-} from "#/components/properties/PropertyFilters";
+import type { Facet } from "#/components/properties/PropertyFilters";
+import { FacetDropdown } from "#/components/properties/FacetDropdown";
 import {
   PROPERTY_TYPES,
-  PROPERTY_STATUSES,
   TYPE_LABELS,
-  STATUS_LABELS,
 } from "#/components/properties/propertyDisplay";
 import {
   SALE_LEASE_OPTIONS,
@@ -45,7 +44,7 @@ export const Route = createFileRoute("/listings/")({
   }),
 });
 
-type ViewMode = "grid" | "map";
+type ViewMode = "board" | "grid" | "map";
 type SortBy =
   | "default"
   | "name-asc"
@@ -82,38 +81,47 @@ function useToggleSet<T extends string>() {
 }
 
 function PropertyListings() {
-  const listings = useMemo(() => Array.from(getStore().listings.values()), []);
+  // Bumped when a deal is re-staged so the derived lists recompute.
+  const [version, setVersion] = useState(0);
+  const listings = useMemo(
+    () => Array.from(getStore().listings.values()),
+    [version],
+  );
 
-  const [view, setView] = useState<ViewMode>("grid");
+  const [view, setView] = useState<ViewMode>("board");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortBy>("default");
   const [newOpen, setNewOpen] = useState(false);
 
-  const status = useToggleSet<string>();
+  const isProperty = view === "grid" || view === "map";
+
+  const onRestage = useCallback((listingId: string, stage: PropertyStatus) => {
+    const listing = getStore().listings.get(listingId);
+    if (!listing || listing.status === stage) return;
+    // In-place mutation persists app-wide (the store holds this object ref);
+    // the version bump re-derives the filtered/sorted lists.
+    listing.status = stage;
+    setVersion((v) => v + 1);
+  }, []);
+
   const type = useToggleSet<string>();
   const saleLease = useToggleSet<string>();
   const expiration = useToggleSet<string>();
 
+  // The stage/"Deal" facet lives on the board columns now, so it's dropped here.
   const facets: Facet[] = useMemo(
     () => [
       {
-        id: "status",
-        title: "Deal",
-        options: PROPERTY_STATUSES.map((s) => ({
-          value: s,
-          label: STATUS_LABELS[s],
+        id: "type",
+        title: "Property Type",
+        options: PROPERTY_TYPES.map((t) => ({
+          value: t,
+          label: TYPE_LABELS[t],
         })),
-        getValue: (l: Listing) => l.status,
-        selected: status.set,
-        toggle: status.toggle,
-      },
-      {
-        id: "expiration",
-        title: "Expiration",
-        options: EXPIRATION_OPTIONS.map((e) => ({ value: e, label: e })),
-        getValue: getExpiration,
-        selected: expiration.set,
-        toggle: expiration.toggle,
+        getValue: (l: Listing) => l.propertyType,
+        selected: type.set,
+        toggle: type.toggle,
+        clear: type.clear,
       },
       {
         id: "saleLease",
@@ -122,28 +130,42 @@ function PropertyListings() {
         getValue: getSaleLease,
         selected: saleLease.set,
         toggle: saleLease.toggle,
+        clear: saleLease.clear,
       },
       {
-        id: "type",
-        title: "Property Types",
-        options: PROPERTY_TYPES.map((t) => ({
-          value: t,
-          label: TYPE_LABELS[t],
-        })),
-        getValue: (l: Listing) => l.propertyType,
-        selected: type.set,
-        toggle: type.toggle,
+        id: "expiration",
+        title: "Expiration",
+        options: EXPIRATION_OPTIONS.map((e) => ({ value: e, label: e })),
+        getValue: getExpiration,
+        selected: expiration.set,
+        toggle: expiration.toggle,
+        clear: expiration.clear,
       },
     ],
-    [status, expiration, saleLease, type],
+    [expiration, saleLease, type],
   );
 
   const clearAll = useCallback(() => {
-    status.clear();
     type.clear();
     saleLease.clear();
     expiration.clear();
-  }, [status, type, saleLease, expiration]);
+  }, [type, saleLease, expiration]);
+
+  // Option counts across the full dataset for the dropdown badges.
+  const countsByFacet = useMemo(() => {
+    const result: Record<string, Record<string, number>> = {};
+    for (const facet of facets) {
+      const counts: Record<string, number> = {};
+      for (const l of listings) {
+        const v = facet.getValue(l);
+        counts[v] = (counts[v] ?? 0) + 1;
+      }
+      result[facet.id] = counts;
+    }
+    return result;
+  }, [facets, listings]);
+
+  const activeFilterCount = facets.reduce((n, f) => n + f.selected.size, 0);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -259,6 +281,24 @@ function PropertyListings() {
                         </Select.Content>
                       </Select>
                     </div>
+
+                    {/* Facet filters */}
+                    {facets.map((facet) => (
+                      <FacetDropdown
+                        key={facet.id}
+                        facet={facet}
+                        counts={countsByFacet[facet.id]}
+                      />
+                    ))}
+                    {activeFilterCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={clearAll}
+                        className="btn btn-link btn-sm text-decoration-none text-nowrap"
+                      >
+                        Clear filters
+                      </button>
+                    )}
                   </div>
 
                   {/* Right: view toggle + count */}
@@ -266,42 +306,83 @@ function PropertyListings() {
                     <span className="text-muted text-nowrap">
                       Displaying {filtered.length} of {total} Deals
                     </span>
+                    {/* Primary: Board vs Property */}
                     <ButtonGroup aria-label="View switcher">
                       <Tooltip>
                         <Tooltip.Trigger
                           render={
                             <Button
                               variant="outline"
-                              className={view === "grid" ? "active" : ""}
+                              className={view === "board" ? "active" : ""}
                               size="icon"
-                              onClick={() => setView("grid")}
-                              aria-pressed={view === "grid"}
-                              aria-label="Grid view"
+                              onClick={() => setView("board")}
+                              aria-pressed={view === "board"}
+                              aria-label="Board view"
                             >
-                              <FontAwesomeIcon icon={faTableCellsLarge} />
+                              <FontAwesomeIcon icon={faTableColumns} />
                             </Button>
                           }
                         />
-                        <Tooltip.Content>Grid</Tooltip.Content>
+                        <Tooltip.Content>Board</Tooltip.Content>
                       </Tooltip>
                       <Tooltip>
                         <Tooltip.Trigger
                           render={
                             <Button
                               variant="outline"
-                              className={view === "map" ? "active" : ""}
+                              className={isProperty ? "active" : ""}
                               size="icon"
-                              onClick={() => setView("map")}
-                              aria-pressed={view === "map"}
-                              aria-label="Map view"
+                              onClick={() => setView("grid")}
+                              aria-pressed={isProperty}
+                              aria-label="Property view"
                             >
-                              <FontAwesomeIcon icon={faLocationDot} />
+                              <FontAwesomeIcon icon={faBuilding} />
                             </Button>
                           }
                         />
-                        <Tooltip.Content>Map</Tooltip.Content>
+                        <Tooltip.Content>Property</Tooltip.Content>
                       </Tooltip>
                     </ButtonGroup>
+
+                    {/* Secondary: Grid vs Map (only within Property view) */}
+                    {isProperty && (
+                      <ButtonGroup aria-label="Property layout switcher">
+                        <Tooltip>
+                          <Tooltip.Trigger
+                            render={
+                              <Button
+                                variant="outline"
+                                className={view === "grid" ? "active" : ""}
+                                size="icon"
+                                onClick={() => setView("grid")}
+                                aria-pressed={view === "grid"}
+                                aria-label="Grid view"
+                              >
+                                <FontAwesomeIcon icon={faTableCellsLarge} />
+                              </Button>
+                            }
+                          />
+                          <Tooltip.Content>Grid</Tooltip.Content>
+                        </Tooltip>
+                        <Tooltip>
+                          <Tooltip.Trigger
+                            render={
+                              <Button
+                                variant="outline"
+                                className={view === "map" ? "active" : ""}
+                                size="icon"
+                                onClick={() => setView("map")}
+                                aria-pressed={view === "map"}
+                                aria-label="Map view"
+                              >
+                                <FontAwesomeIcon icon={faLocationDot} />
+                              </Button>
+                            }
+                          />
+                          <Tooltip.Content>Map</Tooltip.Content>
+                        </Tooltip>
+                      </ButtonGroup>
+                    )}
                   </div>
                 </Card.Body>
               </Card>
@@ -310,32 +391,25 @@ function PropertyListings() {
         </div>
       </div>
 
-      {/* Sidebar + content */}
+      {/* Full-width content */}
       <div className="container flex-grow-1 overflow-hidden d-flex flex-column pb-3">
-        <div className="row gx-3 flex-grow-1 overflow-hidden">
-          <div className="col-2 overflow-auto h-100">
-            <PropertyFilters
-              listings={listings}
-              facets={facets}
-              onClearAll={clearAll}
-            />
-          </div>
-          <div className="col-10 d-flex flex-column overflow-hidden h-100">
-            <Card className="flex-grow-1 overflow-hidden d-flex flex-column">
-              {view === "grid" ? (
-                <div className="flex-grow-1 overflow-y-auto overflow-x-hidden">
-                  <Card.Body>
-                    <PropertyGrid listings={sorted} />
-                  </Card.Body>
-                </div>
-              ) : (
-                <Card.Body>
-                  <PropertyMap listings={sorted} />
-                </Card.Body>
-              )}
-            </Card>
-          </div>
-        </div>
+        <Card className="flex-grow-1 overflow-hidden d-flex flex-column">
+          {view === "board" ? (
+            <Card.Body className="flex-grow-1 overflow-hidden d-flex flex-column">
+              <DealBoard listings={sorted} onRestage={onRestage} />
+            </Card.Body>
+          ) : view === "grid" ? (
+            <div className="flex-grow-1 overflow-y-auto overflow-x-hidden">
+              <Card.Body>
+                <PropertyGrid listings={sorted} />
+              </Card.Body>
+            </div>
+          ) : (
+            <Card.Body>
+              <PropertyMap listings={sorted} />
+            </Card.Body>
+          )}
+        </Card>
       </div>
     </div>
   );

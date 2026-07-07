@@ -217,7 +217,7 @@ function ProposalGettingStarted({ listing }: { listing: Listing }) {
           style={{
             width: 44,
             height: 44,
-            backgroundColor: `${STATUS_COLORS.proposal}1a`,
+            backgroundColor: `color-mix(in srgb, ${STATUS_COLORS.proposal} 10%, transparent)`,
             color: STATUS_COLORS.proposal,
           }}
         >

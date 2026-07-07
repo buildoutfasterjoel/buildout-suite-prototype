@@ -8,7 +8,7 @@ export function DealStageBadge({ stage }: { stage: ListingStage }) {
     <span
       className="d-inline-flex align-items-center gap-2 fw-semibold text-nowrap"
       style={{
-        backgroundColor: `${color}1a`,
+        backgroundColor: `color-mix(in srgb, ${color} 10%, transparent)`,
         color,
         borderRadius: 6,
         padding: "3px 10px",

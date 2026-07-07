@@ -1,5 +1,16 @@
+@use "@buildoutinc/blueprint-tokens/scss/colors" as colors;
 @import "@fortawesome/fontawesome-svg-core/styles.css" layer(components);
 @import "@buildoutinc/blueprint-theme/scss/theme";
+
+// Deal stage colors — sourced from Blueprint palette tokens, exposed as CSS
+// variables so components reference the tokens rather than hard-coded hex.
+:root {
+  --stage-proposal: #{colors.$purple-heart-500};
+  --stage-active: #{colors.$mountain-meadow-500};
+  --stage-under-contract: #{colors.$harvest-gold-600};
+  --stage-closed: #{colors.$buildout-blue-600};
+  --stage-inactive: #{colors.$storm-grey-500};
+}
 
 .global-nav-role-select {
   opacity: 0.5;

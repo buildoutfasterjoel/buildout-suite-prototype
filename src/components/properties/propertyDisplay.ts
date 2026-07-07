@@ -54,13 +54,18 @@ export const STATUS_LABELS: Record<PropertyStatus, string> = {
   inactive: "Lost",
 };
 
-/** Stage indicator dot color (Badge only supports primary/secondary/outline). */
+/**
+ * Stage indicator color per deal stage. Values are Blueprint palette tokens
+ * exposed as CSS variables in `main.scss` (Badge only supports
+ * primary/secondary/outline, so stages reference these directly).
+ * For translucent fills, wrap in `color-mix()` rather than hex-alpha.
+ */
 export const STATUS_COLORS: Record<PropertyStatus, string> = {
-  proposal: "#6366f1",
-  active: "#16a34a",
-  "under-contract": "#d97706",
-  closed: "#2563eb",
-  inactive: "#64748b",
+  proposal: "var(--stage-proposal)", // purple-heart-500
+  active: "var(--stage-active)", // mountain-meadow-500
+  "under-contract": "var(--stage-under-contract)", // harvest-gold-600
+  closed: "var(--stage-closed)", // buildout-blue-600
+  inactive: "var(--stage-inactive)", // storm-grey-500
 };
 
 export const PROPERTY_TYPES = Object.keys(TYPE_LABELS) as PropertyType[];
