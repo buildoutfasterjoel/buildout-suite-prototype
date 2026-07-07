@@ -6,12 +6,12 @@ import {
   faPenToSquare,
   faMagnifyingGlassPlus,
   faMagnifyingGlassMinus,
-  faCircleCheck,
   faArrowRotateLeft,
   faArrowRotateRight,
   faEllipsisVertical,
   faClockRotateLeft,
 } from "@fortawesome/pro-regular-svg-icons";
+import { faCircleCheck } from "@fortawesome/pro-solid-svg-icons";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";

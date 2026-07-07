@@ -70,12 +70,34 @@ function PageToolbar({ page, open }: { page: Page; open: boolean }) {
         className="w-auto"
       >
         <div
-          className="d-flex align-items-center gap-2 p-1 px-2 position-relative"
+          className="d-flex align-items-center gap-2 p-1 position-relative"
           onClick={(e) => e.stopPropagation()}
         >
-          <span className="fs-small fw-semibold text-nowrap d-inline-block">
-            {page.name}
-          </span>
+          {page.locked && (
+            <>
+              <Tooltip>
+                <Tooltip.Trigger
+                  render={
+                    <span className="fs-small fw-semibold text-nowrap d-inline-flex align-items-center gap-0-5">
+                      <Badge
+                        variant="secondary"
+                        appearance="muted"
+                        className="bg-transparent"
+                      >
+                        <FontAwesomeIcon icon={faSwatchbook} />
+                      </Badge>
+                      <span className="user-select-none">{page.name}</span>
+                    </span>
+                  }
+                />
+                <Tooltip.Content>
+                  Preset Layout: the structure of this page is fixed, but its
+                  content is editable.
+                </Tooltip.Content>
+              </Tooltip>
+            </>
+          )}
+
           <Separator orientation="vertical" />
           <div className="d-flex gap-0-5 align-items-center">
             <PageToolbarButton icon={faSliders} label="Page Options" />
@@ -87,24 +109,6 @@ function PageToolbar({ page, open }: { page: Page; open: boolean }) {
             <PageToolbarButton icon={faBolt} label="Powerpage Information" />
             <PageToolbarButton icon={faArrowRotateLeft} label="Reset" />
           </div>
-          {page.locked && (
-            <>
-              <Separator orientation="vertical" />
-              <Tooltip>
-                <Tooltip.Trigger
-                  render={
-                    <Badge variant="secondary" appearance="accent">
-                      <FontAwesomeIcon icon={faSwatchbook} />
-                      Preset
-                    </Badge>
-                  }
-                />
-                <Tooltip.Content>
-                  Preset layout — locked structure, editable content.
-                </Tooltip.Content>
-              </Tooltip>
-            </>
-          )}
         </div>
       </Popover.Content>
     </Popover>
