@@ -10,6 +10,10 @@
   --stage-under-contract: #{colors.$harvest-gold-600};
   --stage-closed: #{colors.$buildout-blue-600};
   --stage-inactive: #{colors.$storm-grey-500};
+
+  // Deal side accents — distinct from the stage palette above.
+  --side-seller: #{colors.$buildout-blue-600};
+  --side-buyer: #{colors.$mountain-meadow-600};
 }
 
 .global-nav-role-select {

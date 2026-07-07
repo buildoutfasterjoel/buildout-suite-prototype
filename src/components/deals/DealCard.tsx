@@ -2,18 +2,43 @@ import { Link } from "@tanstack/react-router";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faCalendarCircleExclamation } from "@fortawesome/pro-regular-svg-icons";
-import type { Listing, Contact } from "#/data/types";
+import {
+  faUser,
+  faCalendarCircleExclamation,
+  faSignHanging,
+  faMagnifyingGlassDollar,
+} from "@fortawesome/pro-regular-svg-icons";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+import type { Listing, Contact, DealSide } from "#/data/types";
 import { getContact } from "#/data/store";
 import { TYPE_ICONS, TYPE_LABELS, formatPrice } from "../properties/propertyDisplay";
 
-/** The person attached to a deal — prefers seller, then buyer, then other. */
+/** Label, icon, and accent color per deal side. */
+const SIDE_DISPLAY: Record<
+  DealSide,
+  { label: string; icon: IconDefinition; color: string }
+> = {
+  seller: { label: "Seller", icon: faSignHanging, color: "var(--side-seller)" },
+  buyer: {
+    label: "Buyer",
+    icon: faMagnifyingGlassDollar,
+    color: "var(--side-buyer)",
+  },
+};
+
+/**
+ * The primary contact on a deal — the party the broker represents, so a
+ * buyer-side deal leads with the buyer and a sell-side deal with the seller.
+ */
 export function getPrimaryContact(listing: Listing): Contact | undefined {
-  const id =
-    listing.sellerContactIds[0] ??
-    listing.buyerContactIds[0] ??
-    listing.otherContactIds[0];
-  return id ? getContact(id) : undefined;
+  const order =
+    listing.dealSide === "buyer"
+      ? [listing.buyerContactIds, listing.sellerContactIds, listing.otherContactIds]
+      : [listing.sellerContactIds, listing.buyerContactIds, listing.otherContactIds];
+  for (const ids of order) {
+    if (ids[0]) return getContact(ids[0]);
+  }
+  return undefined;
 }
 
 function initials(c: Contact): string {
@@ -31,6 +56,7 @@ function formatCriticalDate(date: string | null): string | null {
 /** Presentational card body — reused for both the column card and the drag overlay. */
 export function DealCardView({ listing }: { listing: Listing }) {
   const contact = getPrimaryContact(listing);
+  const sideDisplay = SIDE_DISPLAY[listing.dealSide];
   const isLease = listing.dealType === "Lease";
   const price =
     isLease && listing.leaseRate != null
@@ -43,17 +69,32 @@ export function DealCardView({ listing }: { listing: Listing }) {
       className="bg-card rounded border d-flex flex-column"
       style={{ borderRadius: 6, padding: 12, gap: 8 }}
     >
-      {/* Property type + address */}
+      {/* Property type + deal side */}
       <div className="d-flex flex-column" style={{ gap: 2 }}>
-        <div
-          className="d-flex align-items-center gap-1 text-muted"
-          style={{ fontSize: 10 }}
-        >
-          <FontAwesomeIcon
-            icon={TYPE_ICONS[listing.propertyType]}
+        <div className="d-flex align-items-center gap-2">
+          <div
+            className="d-flex align-items-center gap-1 text-muted"
             style={{ fontSize: 10 }}
-          />
-          <span>{TYPE_LABELS[listing.propertyType]}</span>
+          >
+            <FontAwesomeIcon
+              icon={TYPE_ICONS[listing.propertyType]}
+              style={{ fontSize: 10 }}
+            />
+            <span>{TYPE_LABELS[listing.propertyType]}</span>
+          </div>
+          <span
+            className="d-inline-flex align-items-center gap-1 fw-semibold text-nowrap"
+            style={{
+              backgroundColor: `color-mix(in srgb, ${sideDisplay.color} 12%, transparent)`,
+              color: sideDisplay.color,
+              borderRadius: 6,
+              padding: "2px 6px",
+              fontSize: 10,
+            }}
+          >
+            <FontAwesomeIcon icon={sideDisplay.icon} style={{ fontSize: 9 }} />
+            {sideDisplay.label}
+          </span>
         </div>
         <div
           className="fw-semibold text-truncate"

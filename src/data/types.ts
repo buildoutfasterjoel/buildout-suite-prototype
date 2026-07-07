@@ -151,6 +151,7 @@ export interface Listing {
   slug: string
   status: PropertyStatus // unified listing + deal stage
   dealType: DealType
+  dealSide: DealSide // whether the broker represents the seller or the buyer
 
   // Offering-specific
   availableSqFt: number

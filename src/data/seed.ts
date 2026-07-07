@@ -838,8 +838,18 @@ function generateListings(
       ? [generateBroker('outside', commissionAmount)]
       : []
 
+    // Which side of the deal the broker represents.
+    const dealSide: DealSide = faker.helpers.weightedArrayElement([
+      { weight: 65, value: 'seller' },
+      { weight: 35, value: 'buyer' },
+    ])
+
     const sellerContacts = faker.helpers.arrayElements(contacts, faker.number.int({ min: 1, max: 2 }))
-    const buyerContacts = status === 'proposal' ? [] : faker.helpers.arrayElements(contacts, 1)
+    // Buyer-side deals always have a buyer; sell-side gains one once it's progressed.
+    const buyerContacts =
+      dealSide === 'buyer' || status !== 'proposal'
+        ? faker.helpers.arrayElements(contacts, 1)
+        : []
     const sellerName = `${sellerContacts[0].firstName} ${sellerContacts[0].lastName}`
 
     const tasks = generateTasks(status)
@@ -892,6 +902,7 @@ function generateListings(
       slug: `${property.slug}-${i + 1}`,
       status,
       dealType,
+      dealSide,
       availableSqFt,
       askingPrice: salePrice,
       leaseRate: dealType === 'Sale' ? null : faker.number.float({ min: 8, max: 55, fractionDigits: 2 }),

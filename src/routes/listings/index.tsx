@@ -5,23 +5,16 @@ import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { ButtonGroup } from "@buildoutinc/blueprint-react/ui/ButtonGroup";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
-import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faTableCellsLarge,
-  faLocationDot,
   faMagnifyingGlass,
   faUserGroupSimple,
   faArrowDownWideShort,
   faCirclePlus,
-  faTableColumns,
-  faBuilding,
 } from "@fortawesome/pro-regular-svg-icons";
 import { getStore } from "#/data/store";
-import type { Listing, PropertyStatus } from "#/data/types";
-import { PropertyGrid } from "#/components/properties/PropertyGrid";
+import type { Listing, PropertyStatus, DealSide } from "#/data/types";
 import { DealBoard } from "#/components/deals/DealBoard";
-import { PropertyMap } from "#/components/properties/PropertyMap";
 import type { Facet } from "#/components/properties/PropertyFilters";
 import { FacetDropdown } from "#/components/properties/FacetDropdown";
 import {
@@ -44,7 +37,6 @@ export const Route = createFileRoute("/listings/")({
   }),
 });
 
-type ViewMode = "board" | "grid" | "map";
 type SortBy =
   | "default"
   | "name-asc"
@@ -64,6 +56,12 @@ const SORT_OPTIONS: { value: SortBy; label: string }[] = [
 const SORT_LABELS = Object.fromEntries(
   SORT_OPTIONS.map((o) => [o.value, o.label]),
 ) as Record<SortBy, string>;
+
+const SIDE_OPTIONS: { value: DealSide | "all"; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "seller", label: "Seller" },
+  { value: "buyer", label: "Buyer" },
+];
 
 /** Toggle a value in a Set held in state. */
 function useToggleSet<T extends string>() {
@@ -88,12 +86,10 @@ function PropertyListings() {
     [version],
   );
 
-  const [view, setView] = useState<ViewMode>("board");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortBy>("default");
+  const [side, setSide] = useState<DealSide | "all">("all");
   const [newOpen, setNewOpen] = useState(false);
-
-  const isProperty = view === "grid" || view === "map";
 
   const onRestage = useCallback((listingId: string, stage: PropertyStatus) => {
     const listing = getStore().listings.get(listingId);
@@ -170,6 +166,7 @@ function PropertyListings() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return listings.filter((l) => {
+      if (side !== "all" && l.dealSide !== side) return false;
       for (const facet of facets) {
         if (facet.selected.size && !facet.selected.has(facet.getValue(l)))
           return false;
@@ -181,7 +178,7 @@ function PropertyListings() {
       }
       return true;
     });
-  }, [listings, facets, search]);
+  }, [listings, facets, search, side]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -231,7 +228,7 @@ function PropertyListings() {
             <div className="col">
               <Card className="shadow">
                 <Card.Body className="d-flex align-items-center gap-2 p-3">
-                  {/* Left: search + members + sort */}
+                  {/* Left: search + members + sort + filters */}
                   <div className="d-flex align-items-center gap-2 flex-grow-1">
                     <div className="flex-grow-1" style={{ maxWidth: 320 }}>
                       <InputGroup>
@@ -301,88 +298,11 @@ function PropertyListings() {
                     )}
                   </div>
 
-                  {/* Right: view toggle + count */}
+                  {/* Right: count */}
                   <div className="d-flex align-items-center gap-3 ms-auto">
                     <span className="text-muted text-nowrap">
                       Displaying {filtered.length} of {total} Deals
                     </span>
-                    {/* Primary: Board vs Property */}
-                    <ButtonGroup aria-label="View switcher">
-                      <Tooltip>
-                        <Tooltip.Trigger
-                          render={
-                            <Button
-                              variant="outline"
-                              className={view === "board" ? "active" : ""}
-                              size="icon"
-                              onClick={() => setView("board")}
-                              aria-pressed={view === "board"}
-                              aria-label="Board view"
-                            >
-                              <FontAwesomeIcon icon={faTableColumns} />
-                            </Button>
-                          }
-                        />
-                        <Tooltip.Content>Board</Tooltip.Content>
-                      </Tooltip>
-                      <Tooltip>
-                        <Tooltip.Trigger
-                          render={
-                            <Button
-                              variant="outline"
-                              className={isProperty ? "active" : ""}
-                              size="icon"
-                              onClick={() => setView("grid")}
-                              aria-pressed={isProperty}
-                              aria-label="Property view"
-                            >
-                              <FontAwesomeIcon icon={faBuilding} />
-                            </Button>
-                          }
-                        />
-                        <Tooltip.Content>Property</Tooltip.Content>
-                      </Tooltip>
-                    </ButtonGroup>
-
-                    {/* Secondary: Grid vs Map (only within Property view) */}
-                    {isProperty && (
-                      <ButtonGroup aria-label="Property layout switcher">
-                        <Tooltip>
-                          <Tooltip.Trigger
-                            render={
-                              <Button
-                                variant="outline"
-                                className={view === "grid" ? "active" : ""}
-                                size="icon"
-                                onClick={() => setView("grid")}
-                                aria-pressed={view === "grid"}
-                                aria-label="Grid view"
-                              >
-                                <FontAwesomeIcon icon={faTableCellsLarge} />
-                              </Button>
-                            }
-                          />
-                          <Tooltip.Content>Grid</Tooltip.Content>
-                        </Tooltip>
-                        <Tooltip>
-                          <Tooltip.Trigger
-                            render={
-                              <Button
-                                variant="outline"
-                                className={view === "map" ? "active" : ""}
-                                size="icon"
-                                onClick={() => setView("map")}
-                                aria-pressed={view === "map"}
-                                aria-label="Map view"
-                              >
-                                <FontAwesomeIcon icon={faLocationDot} />
-                              </Button>
-                            }
-                          />
-                          <Tooltip.Content>Map</Tooltip.Content>
-                        </Tooltip>
-                      </ButtonGroup>
-                    )}
                   </div>
                 </Card.Body>
               </Card>
@@ -391,24 +311,30 @@ function PropertyListings() {
         </div>
       </div>
 
-      {/* Full-width content */}
+      {/* Full-width board */}
       <div className="container flex-grow-1 overflow-hidden d-flex flex-column pb-3">
         <Card className="flex-grow-1 overflow-hidden d-flex flex-column">
-          {view === "board" ? (
-            <Card.Body className="flex-grow-1 overflow-hidden d-flex flex-column">
-              <DealBoard listings={sorted} onRestage={onRestage} />
-            </Card.Body>
-          ) : view === "grid" ? (
-            <div className="flex-grow-1 overflow-y-auto overflow-x-hidden">
-              <Card.Body>
-                <PropertyGrid listings={sorted} />
-              </Card.Body>
+          <Card.Body className="flex-grow-1 overflow-hidden d-flex flex-column gap-3">
+            <div>
+              <ButtonGroup aria-label="Deal side">
+                {SIDE_OPTIONS.map((opt) => (
+                  <Button
+                    key={opt.value}
+                    variant="outline"
+                    className={` border-storm-grey-300 ${side === opt.value ? "active" : ""}`}
+                    onClick={() => setSide(opt.value)}
+                    aria-pressed={side === opt.value}
+                    appearance="muted"
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </ButtonGroup>
             </div>
-          ) : (
-            <Card.Body>
-              <PropertyMap listings={sorted} />
-            </Card.Body>
-          )}
+            <div className="flex-grow-1 overflow-hidden">
+              <DealBoard listings={sorted} onRestage={onRestage} />
+            </div>
+          </Card.Body>
         </Card>
       </div>
     </div>

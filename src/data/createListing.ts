@@ -229,6 +229,7 @@ export function createProposalListing(draft: NewListingDraft): Listing {
     slug,
     status: 'proposal',
     dealType: draft.dealType,
+    dealSide: 'seller', // the New Deal flow names an owner, so it's sell-side
 
     availableSqFt: draft.availableSqFt,
     askingPrice: draft.listingPrice,
