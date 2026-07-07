@@ -88,9 +88,12 @@ export function CanvasActions({
   ].filter((c): c is string => Boolean(c));
 
   return (
-    <div className="d-flex align-items-center gap-2 p-3 w-100 flex-shrink-0 bg-white border-bottom">
-      {/* Deal (link) / Page / Block / Sub-block */}
-      <div className="d-flex align-items-center gap-1 flex-grow-1">
+    <div
+      className="d-grid align-items-center gap-2 p-3 w-100 flex-shrink-0 bg-white border-bottom"
+      style={{ gridTemplateColumns: "minmax(0, 1fr) auto minmax(0, 1fr)" }}
+    >
+      {/* Deal (link) / Page / Block / Sub-block — shrinks and ellipsizes to keep the zoom controls centered */}
+      <div className="d-flex align-items-center gap-1 overflow-hidden">
         <Tooltip>
           <Tooltip.Trigger
             render={
@@ -98,11 +101,15 @@ export function CanvasActions({
                 to="/listings/$listingId/documents"
                 params={{ listingId }}
                 aria-label={`Back to ${listingName}`}
-                className="d-flex align-items-center gap-1 text-truncate text-body fs-small"
+                className="d-flex align-items-center gap-1 text-body fs-small overflow-hidden"
               />
             }
           >
-            <FontAwesomeIcon icon={faSign} style={{ fontSize: 12 }} />
+            <FontAwesomeIcon
+              icon={faSign}
+              className="flex-shrink-0"
+              style={{ fontSize: 12 }}
+            />
             <span
               className={`text-truncate ${trail.length === 0 ? "fw-semibold" : "fw-normal"}`}
             >
@@ -111,16 +118,20 @@ export function CanvasActions({
           </Tooltip.Trigger>
           <Tooltip.Content>Back to deal</Tooltip.Content>
         </Tooltip>
-        {trail.map((crumb, i) => (
-          <span key={i} className="d-flex align-items-center gap-1">
-            <span className="text-muted fs-small">/</span>
-            <span
-              className={`text-body fs-small ${i === trail.length - 1 ? "fw-semibold" : "fw-normal"}`}
-            >
-              {crumb}
-            </span>
+        {trail.length > 0 && (
+          <span className="text-truncate fs-small">
+            {trail.map((crumb, i) => (
+              <span key={i}>
+                <span className="text-muted"> / </span>
+                <span
+                  className={`text-body ${i === trail.length - 1 ? "fw-semibold" : "fw-normal"}`}
+                >
+                  {crumb}
+                </span>
+              </span>
+            ))}
           </span>
-        ))}
+        )}
       </div>
 
       {/* Zoom */}
@@ -161,7 +172,7 @@ export function CanvasActions({
       </div>
 
       {/* Status + undo/redo + actions */}
-      <div className="d-flex align-items-center justify-content-end gap-3 flex-grow-1">
+      <div className="d-flex align-items-center justify-content-end gap-3 overflow-hidden">
         <span className="d-flex align-items-center gap-1">
           {dirty ? (
             <Tooltip>
@@ -193,7 +204,7 @@ export function CanvasActions({
         </div>
 
         <Button variant="outline" onClick={onSaveAndClose}>
-          Close
+          Done
         </Button>
 
         <DropdownMenu>

@@ -98,7 +98,10 @@ function PageToolbar({ page, open }: { page: Page; open: boolean }) {
             </>
           )}
 
-          <Separator orientation="vertical" />
+          <Separator
+            orientation="vertical"
+            className="align-self-stretch h-auto"
+          />
           <div className="d-flex gap-0-5 align-items-center">
             <PageToolbarButton icon={faSliders} label="Page Options" />
             <PageToolbarButton
