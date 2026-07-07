@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { useEditorStore } from "./store";
 import { PageView } from "./blocks/PageView";
+import { RichTextToolbar } from "./RichTextToolbar";
 
 /** Gray workspace that renders the document's pages at the current zoom. */
 export function Canvas() {
@@ -62,6 +63,7 @@ export function Canvas() {
 
   return (
     <>
+      <RichTextToolbar />
       <div style={{ padding: "8px 24px 0", background: "#f6f7f9", flexShrink: 0 }}>
         <Badge>Admin Only</Badge>
       </div>

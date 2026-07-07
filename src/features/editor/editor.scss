@@ -2,6 +2,7 @@
    pseudo-elements, range thumbs). Component layout uses Bootstrap utilities. */
 
 @use "@buildoutinc/blueprint-tokens/scss/colors" as tokens;
+@use "@buildoutinc/blueprint-theme/scss/bridge/vars" as motion;
 
 .bo-editor {
   width: 100%;
@@ -119,32 +120,11 @@
   outline-offset: 1px;
 }
 
-/* ---- Toggle button group (B/I/U, alignment) ---- */
+/* ---- Toggle button group (B/I/U/S, alignment) — ghost buttons ---- */
 .bo-editor-toggle-group {
   display: inline-flex;
-  border: 1px solid #424e62;
-  border-radius: 6px;
-  overflow: hidden;
-}
-.bo-editor-toggle-btn {
-  width: 24px;
-  height: 24px;
-  display: flex;
   align-items: center;
-  justify-content: center;
-  border: 0;
-  border-right: 1px solid #424e62;
-  background: #fff;
-  color: #424e62;
-  font-size: 12px;
-  cursor: pointer;
-}
-.bo-editor-toggle-btn:last-child {
-  border-right: 0;
-}
-.bo-editor-toggle-btn.is-active {
-  background: #424e62;
-  color: #fff;
+  gap: 2px;
 }
 
 /* ---- Canvas + page ---- */
@@ -155,6 +135,107 @@
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  position: relative;
+}
+
+/* ---- Rich-text toolbar (floating, centered near the canvas top) ---- */
+// Positioning wrapper: centers the toolbar horizontally near the top of the
+// canvas and floats it above the workspace. Kept separate from the animated
+// popover so its translateX centering never fights the slide transform.
+.bo-editor-rt-anchor {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+}
+// Standalone popover-look container (not Blueprint's Popover — that component's
+// built-in fade overrode our slide, so we roll our own animated div). Durations
+// and easings come from Blueprint's motion tokens.
+.bo-editor-rt-popover {
+  min-width: 0;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid #eceef2;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+
+  &[data-state="open"] {
+    animation: bo-rt-slide-in motion.$medium2 motion.$emphasized-decelerate both;
+  }
+  &[data-state="closed"] {
+    animation: bo-rt-slide-out motion.$short4 motion.$emphasized-accelerate
+      forwards;
+  }
+}
+
+@keyframes bo-rt-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bo-rt-slide-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+.bo-editor-rt-toolbar {
+  position: relative;
+}
+
+/* Font-size stepper — matches the toggle group's height/border. */
+.bo-editor-rt-stepper {
+  display: inline-flex;
+  align-items: stretch;
+  height: 26px;
+  border: 1px solid #d5dae2;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.bo-editor-rt-step-btn {
+  width: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: #fff;
+  color: #424e62;
+  font-size: 11px;
+  cursor: pointer;
+}
+.bo-editor-rt-step-btn:hover {
+  background: #f2f4f7;
+}
+.bo-editor-rt-size-input {
+  width: 38px;
+  border: 0;
+  border-left: 1px solid #d5dae2;
+  border-right: 1px solid #d5dae2;
+  text-align: center;
+  font-size: 13px;
+  color: #22262f;
+  background: #fff;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.bo-editor-rt-size-input:focus {
+  outline: none;
+}
+.bo-editor-rt-size-input::-webkit-outer-spin-button,
+.bo-editor-rt-size-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 .bo-editor-workspace {
   flex: 1 0 0;

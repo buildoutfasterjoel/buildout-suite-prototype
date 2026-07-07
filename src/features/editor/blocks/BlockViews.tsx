@@ -942,9 +942,12 @@ function InlineText({
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
+  // The stored value is HTML (the rich-text toolbar formats via execCommand,
+  // which writes inline tags). Rewrite only when it diverges from the DOM so
+  // committing an edit or applying formatting never resets the caret.
   useLayoutEffect(() => {
     const el = ref.current;
-    if (el && el.textContent !== value) el.textContent = value;
+    if (el && el.innerHTML !== value) el.innerHTML = value;
   }, [value]);
 
   return (
@@ -956,7 +959,7 @@ function InlineText({
       role="textbox"
       aria-label={placeholder}
       data-placeholder={placeholder}
-      onInput={(e) => onChange(e.currentTarget.textContent ?? "")}
+      onInput={(e) => onChange(e.currentTarget.innerHTML)}
       onKeyDown={(e) => {
         // Enter commits and exits rather than inserting a newline.
         if (e.key === "Enter" && !e.shiftKey) {
