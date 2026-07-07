@@ -53,19 +53,21 @@ export function EditorRoot({
   return (
     <EditorDndProvider>
       <div className="bo-editor">
-        <div className="bo-editor-rail-wrap">
-          <DocsNavRail />
-          <PropertiesPanel />
-        </div>
+        <CanvasActions
+          onSaveAndClose={handleSaveAndClose}
+          onEditListing={() => setEditListingOpen(true)}
+          onSwitchToClassicEditor={() => setSwitchToClassicOpen(true)}
+        />
 
-        <div className="bo-editor-canvas">
-          <CanvasActions
-            listingId={listingId}
-            onSaveAndClose={handleSaveAndClose}
-            onEditListing={() => setEditListingOpen(true)}
-            onSwitchToClassicEditor={() => setSwitchToClassicOpen(true)}
-          />
-          <Canvas />
+        <div className="bo-editor-body">
+          <div className="bo-editor-rail-wrap">
+            <DocsNavRail />
+            <PropertiesPanel />
+          </div>
+
+          <div className="bo-editor-canvas">
+            <Canvas />
+          </div>
         </div>
       </div>
 

@@ -1,15 +1,14 @@
 import { useEffect } from "react";
-import { Link } from "@tanstack/react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faSign,
+  faFileLines,
   faPenToSquare,
   faMagnifyingGlassPlus,
   faMagnifyingGlassMinus,
   faArrowRotateLeft,
   faArrowRotateRight,
-  faEllipsisVertical,
   faClockRotateLeft,
+  faEllipsisVertical,
 } from "@fortawesome/pro-regular-svg-icons";
 import { faCircleCheck } from "@fortawesome/pro-solid-svg-icons";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
@@ -49,12 +48,10 @@ function blockCrumb(
 
 /** Top canvas bar: save & close, breadcrumb trail, zoom, save status, undo/redo, actions. */
 export function CanvasActions({
-  listingId,
   onSaveAndClose,
   onEditListing,
   onSwitchToClassicEditor,
 }: {
-  listingId: string;
   onExport: () => void;
   onSaveAndClose: () => void;
   onEditListing: () => void;
@@ -62,7 +59,6 @@ export function CanvasActions({
 }) {
   const doc = useEditorStore((s) => s.document);
   const pages = doc.pages;
-  const listingName = useEditorStore((s) => s.activeListing?.name ?? "Deal");
   const dirty = useEditorStore((s) => s.dirty);
   const markSaved = useEditorStore((s) => s.markSaved);
   const zoom = useEditorStore((s) => s.zoom);
@@ -92,46 +88,25 @@ export function CanvasActions({
       className="d-grid align-items-center gap-2 p-3 w-100 flex-shrink-0 bg-white border-bottom"
       style={{ gridTemplateColumns: "minmax(0, 1fr) auto minmax(0, 1fr)" }}
     >
-      {/* Deal (link) / Page / Block / Sub-block — shrinks and ellipsizes to keep the zoom controls centered */}
+      {/* Page / Block / Sub-block — shrinks and ellipsizes to keep the zoom controls centered */}
       <div className="d-flex align-items-center gap-1 overflow-hidden">
-        <Tooltip>
-          <Tooltip.Trigger
-            render={
-              <Link
-                to="/listings/$listingId/documents"
-                params={{ listingId }}
-                aria-label={`Back to ${listingName}`}
-                className="d-flex align-items-center gap-1 text-body fs-small overflow-hidden"
-              />
-            }
-          >
-            <FontAwesomeIcon
-              icon={faSign}
-              className="flex-shrink-0"
-              style={{ fontSize: 12 }}
-            />
-            <span
-              className={`text-truncate ${trail.length === 0 ? "fw-semibold" : "fw-normal"}`}
-            >
-              {listingName}
-            </span>
-          </Tooltip.Trigger>
-          <Tooltip.Content>Back to deal</Tooltip.Content>
-        </Tooltip>
-        {trail.length > 0 && (
-          <span className="text-truncate fs-small">
-            {trail.map((crumb, i) => (
-              <span key={i}>
-                <span className="text-muted"> / </span>
-                <span
-                  className={`text-body ${i === trail.length - 1 ? "fw-semibold" : "fw-normal"}`}
-                >
-                  {crumb}
-                </span>
+        <FontAwesomeIcon
+          icon={faFileLines}
+          className="flex-shrink-0 text-muted"
+          style={{ fontSize: 12 }}
+        />
+        <span className="text-truncate fs-small">
+          {trail.map((crumb, i) => (
+            <span key={i}>
+              {i > 0 && <span className="text-muted"> / </span>}
+              <span
+                className={`text-body ${i === trail.length - 1 ? "fw-semibold" : "fw-normal"}`}
+              >
+                {crumb}
               </span>
-            ))}
-          </span>
-        )}
+            </span>
+          ))}
+        </span>
       </div>
 
       {/* Zoom */}
@@ -203,7 +178,12 @@ export function CanvasActions({
           </Button>
         </div>
 
-        <Button variant="outline" onClick={onSaveAndClose}>
+        <Button variant="ghost" onClick={onEditListing}>
+          <FontAwesomeIcon icon={faPenToSquare} />
+          Edit Listing
+        </Button>
+
+        <Button variant="primary" onClick={onSaveAndClose}>
           Done
         </Button>
 
@@ -216,11 +196,6 @@ export function CanvasActions({
             }
           />
           <DropdownMenu.Content align="end">
-            <DropdownMenu.Item onClick={onEditListing}>
-              <FontAwesomeIcon icon={faPenToSquare} />
-              Edit Listing Details
-            </DropdownMenu.Item>
-            <DropdownMenu.Separator />
             <DropdownMenu.Item onClick={onSwitchToClassicEditor}>
               <FontAwesomeIcon icon={faClockRotateLeft} />
               Switch to Classic Editor
