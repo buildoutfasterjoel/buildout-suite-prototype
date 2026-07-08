@@ -1,7 +1,11 @@
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faSidebar } from "@fortawesome/pro-regular-svg-icons";
+import {
+  faArrowLeft,
+  faThumbTack,
+  faThumbTackSlash,
+} from "@fortawesome/pro-regular-svg-icons";
 import { useEditorStore, useSelectedEntities } from "./store";
 import { StyleControls } from "./panels/StyleControls";
 import {
@@ -46,11 +50,7 @@ export function PropertiesPanel() {
         className="p-3 d-flex align-items-center justify-content-between"
         style={{ borderBottom: "1px solid #eceef2" }}
       >
-        <Button
-          variant="ghost"
-          onClick={clearSelection}
-          disabled={!showStyles}
-        >
+        <Button variant="ghost" onClick={clearSelection} disabled={!showStyles}>
           <FontAwesomeIcon icon={faArrowLeft} />
           Back
         </Button>
@@ -63,7 +63,9 @@ export function PropertiesPanel() {
                 size="icon-sm"
                 onClick={sidebarPinned ? collapseSidebar : toggleSidebarPin}
               >
-                <FontAwesomeIcon icon={faSidebar} />
+                <FontAwesomeIcon
+                  icon={sidebarPinned ? faThumbTackSlash : faThumbTack}
+                />
               </Button>
             }
           />
@@ -84,7 +86,11 @@ export function PropertiesPanel() {
   );
 }
 
-function NavPanelContent({ panel }: { panel: ReturnType<typeof useEditorStore.getState>["activeNavPanel"] }) {
+function NavPanelContent({
+  panel,
+}: {
+  panel: ReturnType<typeof useEditorStore.getState>["activeNavPanel"];
+}) {
   switch (panel) {
     case "pages":
       return <PagesPanel />;
