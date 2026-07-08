@@ -58,27 +58,25 @@ function PropertyDetail() {
     <div className="d-flex flex-column h-100 overflow-hidden">
       <PropertyDetailHeader listing={listing} />
 
-      <div className="flex-grow-1 overflow-hidden d-flex flex-column py-4">
-        <div className="container flex-grow-1 d-flex overflow-hidden gap-4">
+      <div className="flex-grow-1 overflow-y-auto overflow-x-hidden py-4">
+        <div className="container d-flex align-items-start gap-4">
           {/* Section nav — its own card */}
           <Card
-            className="overflow-auto shadow flex-shrink-0"
-            style={{ width: 248 }}
+            className="shadow flex-shrink-0 position-sticky"
+            style={{ width: 248, top: 0 }}
           >
             <PropertyDetailSidebar />
           </Card>
 
           {/* Detail content — its own card */}
-          <Card className="flex-grow-1 overflow-hidden d-flex flex-column">
-            <div className="flex-grow-1 overflow-y-auto overflow-x-hidden">
-              <Outlet />
-            </div>
+          <Card className="flex-grow-1 shadow">
+            <Outlet />
           </Card>
 
           {/* Deal context rail — persistent across all tabs */}
           <Card
-            className="overflow-auto shadow flex-shrink-0 d-none d-xl-block"
-            style={{ width: 340 }}
+            className="shadow flex-shrink-0 d-none d-xl-block position-sticky"
+            style={{ width: 340, top: 0 }}
           >
             <DealContextRail listing={listing} />
           </Card>

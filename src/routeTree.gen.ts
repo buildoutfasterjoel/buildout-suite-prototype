@@ -26,6 +26,7 @@ import { Route as EmailEmailIdRouteImport } from './routes/email/$emailId'
 import { Route as EditorListingIdRouteImport } from './routes/editor/$listingId'
 import { Route as ListingsListingIdIndexRouteImport } from './routes/listings/$listingId/index'
 import { Route as BackofficeContactsIndexRouteImport } from './routes/backoffice/contacts/index'
+import { Route as ListingsListingIdWebsiteRouteImport } from './routes/listings/$listingId/website'
 import { Route as ListingsListingIdVoucherRouteImport } from './routes/listings/$listingId/voucher'
 import { Route as ListingsListingIdTransactionRouteImport } from './routes/listings/$listingId/transaction'
 import { Route as ListingsListingIdTasksRouteImport } from './routes/listings/$listingId/tasks'
@@ -121,6 +122,12 @@ const BackofficeContactsIndexRoute = BackofficeContactsIndexRouteImport.update({
   path: '/contacts/',
   getParentRoute: () => BackofficeRoute,
 } as any)
+const ListingsListingIdWebsiteRoute =
+  ListingsListingIdWebsiteRouteImport.update({
+    id: '/website',
+    path: '/website',
+    getParentRoute: () => ListingsListingIdRoute,
+  } as any)
 const ListingsListingIdVoucherRoute =
   ListingsListingIdVoucherRouteImport.update({
     id: '/voucher',
@@ -198,6 +205,7 @@ export interface FileRoutesByFullPath {
   '/listings/$listingId/tasks': typeof ListingsListingIdTasksRoute
   '/listings/$listingId/transaction': typeof ListingsListingIdTransactionRoute
   '/listings/$listingId/voucher': typeof ListingsListingIdVoucherRoute
+  '/listings/$listingId/website': typeof ListingsListingIdWebsiteRoute
   '/backoffice/contacts/': typeof BackofficeContactsIndexRoute
   '/listings/$listingId/': typeof ListingsListingIdIndexRoute
 }
@@ -221,6 +229,7 @@ export interface FileRoutesByTo {
   '/listings/$listingId/tasks': typeof ListingsListingIdTasksRoute
   '/listings/$listingId/transaction': typeof ListingsListingIdTransactionRoute
   '/listings/$listingId/voucher': typeof ListingsListingIdVoucherRoute
+  '/listings/$listingId/website': typeof ListingsListingIdWebsiteRoute
   '/backoffice/contacts': typeof BackofficeContactsIndexRoute
   '/listings/$listingId': typeof ListingsListingIdIndexRoute
 }
@@ -250,6 +259,7 @@ export interface FileRoutesById {
   '/listings/$listingId/tasks': typeof ListingsListingIdTasksRoute
   '/listings/$listingId/transaction': typeof ListingsListingIdTransactionRoute
   '/listings/$listingId/voucher': typeof ListingsListingIdVoucherRoute
+  '/listings/$listingId/website': typeof ListingsListingIdWebsiteRoute
   '/backoffice/contacts/': typeof BackofficeContactsIndexRoute
   '/listings/$listingId/': typeof ListingsListingIdIndexRoute
 }
@@ -280,6 +290,7 @@ export interface FileRouteTypes {
     | '/listings/$listingId/tasks'
     | '/listings/$listingId/transaction'
     | '/listings/$listingId/voucher'
+    | '/listings/$listingId/website'
     | '/backoffice/contacts/'
     | '/listings/$listingId/'
   fileRoutesByTo: FileRoutesByTo
@@ -303,6 +314,7 @@ export interface FileRouteTypes {
     | '/listings/$listingId/tasks'
     | '/listings/$listingId/transaction'
     | '/listings/$listingId/voucher'
+    | '/listings/$listingId/website'
     | '/backoffice/contacts'
     | '/listings/$listingId'
   id:
@@ -331,6 +343,7 @@ export interface FileRouteTypes {
     | '/listings/$listingId/tasks'
     | '/listings/$listingId/transaction'
     | '/listings/$listingId/voucher'
+    | '/listings/$listingId/website'
     | '/backoffice/contacts/'
     | '/listings/$listingId/'
   fileRoutesById: FileRoutesById
@@ -467,6 +480,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BackofficeContactsIndexRouteImport
       parentRoute: typeof BackofficeRoute
     }
+    '/listings/$listingId/website': {
+      id: '/listings/$listingId/website'
+      path: '/website'
+      fullPath: '/listings/$listingId/website'
+      preLoaderRoute: typeof ListingsListingIdWebsiteRouteImport
+      parentRoute: typeof ListingsListingIdRoute
+    }
     '/listings/$listingId/voucher': {
       id: '/listings/$listingId/voucher'
       path: '/voucher'
@@ -589,6 +609,7 @@ interface ListingsListingIdRouteChildren {
   ListingsListingIdTasksRoute: typeof ListingsListingIdTasksRoute
   ListingsListingIdTransactionRoute: typeof ListingsListingIdTransactionRoute
   ListingsListingIdVoucherRoute: typeof ListingsListingIdVoucherRoute
+  ListingsListingIdWebsiteRoute: typeof ListingsListingIdWebsiteRoute
   ListingsListingIdIndexRoute: typeof ListingsListingIdIndexRoute
 }
 
@@ -601,6 +622,7 @@ const ListingsListingIdRouteChildren: ListingsListingIdRouteChildren = {
   ListingsListingIdTasksRoute: ListingsListingIdTasksRoute,
   ListingsListingIdTransactionRoute: ListingsListingIdTransactionRoute,
   ListingsListingIdVoucherRoute: ListingsListingIdVoucherRoute,
+  ListingsListingIdWebsiteRoute: ListingsListingIdWebsiteRoute,
   ListingsListingIdIndexRoute: ListingsListingIdIndexRoute,
 }
 

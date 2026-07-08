@@ -2,13 +2,11 @@ import { useMemo, useState } from "react";
 import {
   DndContext,
   DragOverlay,
-  MeasuringStrategy,
   PointerSensor,
   closestCorners,
   useSensor,
   useSensors,
   type DragEndEvent,
-  type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
 import type { Listing, PropertyStatus } from "#/data/types";
@@ -50,27 +48,11 @@ export function DealBoard({
     setActiveId(String(e.active.id));
   }
 
-  /** Stage the card is dragged over — a column droppable or a card, both carry `stage`. */
-  function resolveOverStage(e: DragOverEvent | DragEndEvent): PropertyStatus | undefined {
-    return e.over?.data.current?.stage as PropertyStatus | undefined;
-  }
-
-  // Relocate the card into a column the moment it's dragged over one in a
-  // different stage — this is what enables cross-column moves (per-column
-  // SortableContexts otherwise trap the drop target in the source column).
-  function onDragOver(e: DragOverEvent) {
-    const listingId = String(e.active.id);
-    const overStage = resolveOverStage(e);
-    if (!overStage) return;
-    const current = listings.find((l) => l.id === listingId)?.status;
-    if (!current || current === overStage) return;
-    onRestage(listingId, overStage);
-  }
-
+  // Restage on drop: the target column droppable carries its stage in `data`.
   function onDragEnd(e: DragEndEvent) {
     setActiveId(null);
     const listingId = String(e.active.id);
-    const overStage = resolveOverStage(e);
+    const overStage = e.over?.data.current?.stage as PropertyStatus | undefined;
     const current = listings.find((l) => l.id === listingId)?.status;
     if (!overStage || !current || current === overStage) return;
     onRestage(listingId, overStage);
@@ -81,9 +63,7 @@ export function DealBoard({
       id="deal-board-dnd"
       sensors={sensors}
       collisionDetection={closestCorners}
-      measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
       onDragStart={onDragStart}
-      onDragOver={onDragOver}
       onDragEnd={onDragEnd}
       onDragCancel={() => setActiveId(null)}
     >

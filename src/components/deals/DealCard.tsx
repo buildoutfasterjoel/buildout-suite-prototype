@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { useDraggable } from "@dnd-kit/core";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faUser,
@@ -11,7 +11,11 @@ import {
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { Listing, Contact, DealSide } from "#/data/types";
 import { getContact } from "#/data/store";
-import { TYPE_ICONS, TYPE_LABELS, formatPrice } from "../properties/propertyDisplay";
+import {
+  TYPE_ICONS,
+  TYPE_LABELS,
+  formatPrice,
+} from "../properties/propertyDisplay";
 
 /** Label, icon, and accent color per deal side. */
 const SIDE_DISPLAY: Record<
@@ -33,8 +37,16 @@ const SIDE_DISPLAY: Record<
 export function getPrimaryContact(listing: Listing): Contact | undefined {
   const order =
     listing.dealSide === "buyer"
-      ? [listing.buyerContactIds, listing.sellerContactIds, listing.otherContactIds]
-      : [listing.sellerContactIds, listing.buyerContactIds, listing.otherContactIds];
+      ? [
+          listing.buyerContactIds,
+          listing.sellerContactIds,
+          listing.otherContactIds,
+        ]
+      : [
+          listing.sellerContactIds,
+          listing.buyerContactIds,
+          listing.otherContactIds,
+        ];
   for (const ids of order) {
     if (ids[0]) return getContact(ids[0]);
   }
@@ -63,47 +75,46 @@ export function DealCardView({ listing }: { listing: Listing }) {
       ? `$${listing.leaseRate}/SF`
       : formatPrice(listing.askingPrice);
   const critical = formatCriticalDate(listing.nextCriticalDate);
+  // The critical date is the next open task's due date — name that milestone.
+  const criticalTask = listing.tasks.find(
+    (t) => t.status !== "complete" && t.date,
+  );
+  // Lost deals get a muted background to set them apart from the active pipeline.
+  const isLost = listing.status === "inactive";
 
   return (
     <div
-      className="bg-card rounded border d-flex flex-column"
+      className={`rounded border d-flex flex-column ${isLost ? "bg-storm-grey-100" : "bg-card"}`}
       style={{ borderRadius: 6, padding: 12, gap: 8 }}
     >
       {/* Property type + deal side */}
       <div className="d-flex flex-column" style={{ gap: 2 }}>
         <div className="d-flex align-items-center gap-2">
-          <div
-            className="d-flex align-items-center gap-1 text-muted"
-            style={{ fontSize: 10 }}
-          >
-            <FontAwesomeIcon
-              icon={TYPE_ICONS[listing.propertyType]}
-              style={{ fontSize: 10 }}
-            />
+          <div className="d-flex align-items-center gap-1 text-muted fs-small">
+            <FontAwesomeIcon icon={TYPE_ICONS[listing.propertyType]} />
             <span>{TYPE_LABELS[listing.propertyType]}</span>
           </div>
           <span
-            className="d-inline-flex align-items-center gap-1 fw-semibold text-nowrap"
+            className="d-inline-flex align-items-center gap-1 fw-semibold text-nowrap fs-small"
             style={{
               backgroundColor: `color-mix(in srgb, ${sideDisplay.color} 12%, transparent)`,
               color: sideDisplay.color,
               borderRadius: 6,
               padding: "2px 6px",
-              fontSize: 10,
             }}
           >
-            <FontAwesomeIcon icon={sideDisplay.icon} style={{ fontSize: 9 }} />
+            <FontAwesomeIcon icon={sideDisplay.icon} />
             {sideDisplay.label}
           </span>
         </div>
         <div
           className="fw-semibold text-truncate"
-          style={{ fontSize: 13, lineHeight: "18px", color: "#22262f" }}
+          style={{ color: "#22262f" }}
           title={listing.name}
         >
           {listing.name}
         </div>
-        <div className="text-muted text-truncate" style={{ fontSize: 11 }}>
+        <div className="text-muted text-truncate fs-small">
           {listing.city}, {listing.state}
         </div>
       </div>
@@ -111,24 +122,13 @@ export function DealCardView({ listing }: { listing: Listing }) {
       {/* Attached person */}
       <div className="d-flex align-items-center gap-2 text-truncate">
         <span
-          className="d-inline-flex align-items-center justify-content-center rounded-circle text-white flex-shrink-0 fw-semibold"
-          style={{
-            width: 22,
-            height: 22,
-            fontSize: 9,
-            backgroundColor: "#62748e",
-          }}
+          className="d-inline-flex align-items-center justify-content-center rounded-circle text-white flex-shrink-0 fw-semibold fs-xs"
+          style={{ width: 26, height: 26, backgroundColor: "#62748e" }}
         >
-          {contact ? (
-            initials(contact)
-          ) : (
-            <FontAwesomeIcon icon={faUser} style={{ fontSize: 10 }} />
-          )}
+          {contact ? initials(contact) : <FontAwesomeIcon icon={faUser} />}
         </span>
-        <span className="text-truncate" style={{ fontSize: 12 }}>
-          {contact
-            ? `${contact.firstName} ${contact.lastName}`
-            : "Unassigned"}
+        <span className="text-truncate">
+          {contact ? `${contact.firstName} ${contact.lastName}` : "Unassigned"}
         </span>
       </div>
 
@@ -137,20 +137,25 @@ export function DealCardView({ listing }: { listing: Listing }) {
         className="d-flex align-items-center justify-content-between border-top"
         style={{ paddingTop: 8 }}
       >
-        <span className="fw-semibold" style={{ fontSize: 12, color: "#22262f" }}>
+        <span className="fw-semibold" style={{ color: "#22262f" }}>
           {price}
         </span>
         {critical && (
-          <span
-            className="d-inline-flex align-items-center gap-1 text-muted"
-            style={{ fontSize: 11 }}
-          >
-            <FontAwesomeIcon
-              icon={faCalendarCircleExclamation}
-              style={{ fontSize: 12 }}
+          <Tooltip>
+            <Tooltip.Trigger
+              render={
+                <span className="d-inline-flex align-items-center gap-1 text-muted fs-small">
+                  <FontAwesomeIcon icon={faCalendarCircleExclamation} />
+                  {critical}
+                </span>
+              }
             />
-            {critical}
-          </span>
+            <Tooltip.Content>
+              {criticalTask
+                ? `Next critical date · ${criticalTask.label}`
+                : "Next critical date"}
+            </Tooltip.Content>
+          </Tooltip>
         )}
       </div>
     </div>
@@ -159,24 +164,16 @@ export function DealCardView({ listing }: { listing: Listing }) {
 
 /** Draggable, click-through deal card for a board column. */
 export function DealCard({ listing }: { listing: Listing }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: listing.id,
     data: { stage: listing.status, listingId: listing.id },
   });
 
+  // The source stays in place (dimmed) while the DragOverlay follows the cursor.
   return (
     <div
       ref={setNodeRef}
       style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
         opacity: isDragging ? 0.4 : 1,
         cursor: "grab",
         touchAction: "none",

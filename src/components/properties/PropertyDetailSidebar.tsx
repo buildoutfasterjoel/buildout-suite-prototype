@@ -61,7 +61,7 @@ export function PropertyDetailSidebar() {
   }
 
   return (
-    <nav className="p-3" aria-label="Property sections">
+    <nav className="px-3 py-1" aria-label="Property sections">
       {NAV_GROUPS.map((group, i) => {
         const activeInGroup =
           group.items.find((item) => pathname.endsWith(`/${item.href}`))

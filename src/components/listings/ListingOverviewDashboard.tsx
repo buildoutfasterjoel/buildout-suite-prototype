@@ -1,20 +1,9 @@
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip as ChartTooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { Link } from "@tanstack/react-router";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faArrowDown,
-  faArrowUp,
   faCheck,
   faChevronRight,
   faDownload,
@@ -36,74 +25,8 @@ import {
   EMAIL_STATUS_DISPLAY,
   type Email,
 } from "#/data/emails";
-import { getListingTraffic } from "#/data/listingTraffic";
 import { ListingPageHeader } from "./ListingPageHeader";
-
-const TRAFFIC_COLOR = "#8833ea";
-
-/** Card shell with a title header (+ optional action) and padded body. */
-function SectionCard({
-  title,
-  action,
-  children,
-  bodyClassName = "p-4",
-}: {
-  title: string;
-  action?: React.ReactNode;
-  children: React.ReactNode;
-  bodyClassName?: string;
-}) {
-  return (
-    <div className="bg-card border rounded h-100" style={{ borderRadius: 6 }}>
-      <div className="d-flex align-items-center justify-content-between px-4 py-3 border-bottom">
-        <h2 className="fs-6 fw-semibold mb-0">{title}</h2>
-        {action}
-      </div>
-      <div className={bodyClassName}>{children}</div>
-    </div>
-  );
-}
-
-/** Small KPI tile: muted label, big value, optional +/- delta. */
-function KpiTile({
-  label,
-  value,
-  delta,
-  accent,
-}: {
-  label: string;
-  value: string | number;
-  delta?: number;
-  accent?: boolean;
-}) {
-  return (
-    <div
-      className="bg-card border rounded h-100 p-3"
-      style={{ borderRadius: 6 }}
-    >
-      <div className="text-muted text-truncate" style={{ fontSize: 13 }}>
-        {label}
-      </div>
-      <div className="d-flex align-items-baseline gap-2 mt-1">
-        <span
-          className={`fw-bold ${accent ? "text-danger" : ""}`}
-          style={{ fontSize: 28, lineHeight: 1 }}
-        >
-          {typeof value === "number" ? value.toLocaleString() : value}
-        </span>
-        {delta !== undefined && delta !== 0 && (
-          <span
-            className={delta > 0 ? "text-success" : "text-danger"}
-            style={{ fontSize: 13 }}
-          >
-            <FontAwesomeIcon icon={delta > 0 ? faArrowUp : faArrowDown} />{" "}
-            {Math.abs(delta)}%
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
+import { KpiTile, SectionCard } from "./listingWidgets";
 
 function OverdueTaskRow({ task }: { task: DealTask }) {
   return (
@@ -273,8 +196,6 @@ export function ListingOverviewDashboard({ listing }: { listing: Listing }) {
     return <ProposalGettingStarted listing={listing} />;
   }
 
-  const traffic = getListingTraffic(listing.id);
-
   const overdueTasks = listing.tasks.filter((t) => t.status === "overdue");
 
   const campaigns = getEmails()
@@ -303,19 +224,6 @@ export function ListingOverviewDashboard({ listing }: { listing: Listing }) {
       {/* KPI strip */}
       <div className="row g-3">
         <div className="col-6 col-md">
-          <KpiTile
-            label="Page Views (30d)"
-            value={traffic.pageViews}
-            delta={traffic.changePct}
-          />
-        </div>
-        <div className="col-6 col-md">
-          <KpiTile label="Unique Visitors" value={traffic.uniqueVisitors} />
-        </div>
-        <div className="col-6 col-md">
-          <KpiTile label="Leads" value={traffic.leads} />
-        </div>
-        <div className="col-6 col-md">
           <KpiTile label="Active Campaigns" value={campaigns.length} />
         </div>
         <div className="col-6 col-md">
@@ -326,45 +234,6 @@ export function ListingOverviewDashboard({ listing }: { listing: Listing }) {
           />
         </div>
       </div>
-
-      {/* Website traffic chart */}
-      <SectionCard title="Website Traffic">
-        <div style={{ height: 260 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
-              data={traffic.series}
-              margin={{ top: 8, right: 8, bottom: 0, left: -16 }}
-            >
-              <defs>
-                <linearGradient id="trafficFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop
-                    offset="0%"
-                    stopColor={TRAFFIC_COLOR}
-                    stopOpacity={0.3}
-                  />
-                  <stop
-                    offset="100%"
-                    stopColor={TRAFFIC_COLOR}
-                    stopOpacity={0}
-                  />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="date" tickLine={false} fontSize={12} />
-              <YAxis tickLine={false} axisLine={false} fontSize={12} />
-              <ChartTooltip />
-              <Area
-                type="monotone"
-                dataKey="views"
-                name="Views"
-                stroke={TRAFFIC_COLOR}
-                strokeWidth={2}
-                fill="url(#trafficFill)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </SectionCard>
 
       {/* Widget grid */}
       <div className="row g-4">

@@ -1,5 +1,4 @@
 import { useDroppable } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { Listing, PropertyStatus } from "#/data/types";
 import { STATUS_LABELS, STATUS_COLORS } from "../properties/propertyDisplay";
 import { DealCard } from "./DealCard";
@@ -25,36 +24,30 @@ export function DealBoardColumn({
           className="rounded-circle flex-shrink-0"
           style={{ width: 8, height: 8, backgroundColor: color }}
         />
-        <span className="fw-semibold text-truncate" style={{ fontSize: 13 }}>
+        <span className="fw-semibold text-truncate">
           {STATUS_LABELS[stage]}
         </span>
-        <span className="text-muted ms-auto" style={{ fontSize: 12 }}>
-          {listings.length}
-        </span>
+        <span className="text-muted ms-auto fs-small">{listings.length}</span>
       </div>
 
       {/* Droppable body */}
       <div
         ref={setNodeRef}
-        className="flex-grow-1 overflow-y-auto overflow-x-hidden rounded d-flex flex-column"
+        className="flex-grow-1 overflow-y-auto overflow-x-hidden rounded d-flex flex-column gap-2 p-2"
         style={{
-          gap: 8,
-          padding: 8,
           backgroundColor: isOver
             ? `color-mix(in srgb, ${color} 8%, transparent)`
             : "#f1f5f9",
-          border: `1px solid ${isOver ? color : "transparent"}`,
-          borderTop: `2px solid ${color}`,
+          borderStyle: "solid",
+          borderWidth: "2px 1px 1px 1px",
+          borderColor: isOver
+            ? color
+            : `${color} transparent transparent transparent`,
         }}
       >
-        <SortableContext
-          items={listings.map((l) => l.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          {listings.map((listing) => (
-            <DealCard key={listing.id} listing={listing} />
-          ))}
-        </SortableContext>
+        {listings.map((listing) => (
+          <DealCard key={listing.id} listing={listing} />
+        ))}
         {listings.length === 0 && (
           <div className="text-muted text-center small py-4">No deals</div>
         )}

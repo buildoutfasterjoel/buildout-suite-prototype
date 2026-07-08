@@ -1,12 +1,15 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
+import { Breadcrumb } from "@buildoutinc/blueprint-react/ui/Breadcrumb";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPencil,
   faUserGear,
   faEllipsisVertical,
+  faHandshake,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing, ListingStage } from "#/data/types";
 import {
@@ -35,12 +38,12 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
         <div className="d-flex align-items-center gap-3">
           {/* Thumbnail */}
           <img
-            src={getPhotoUrl(listing.id, 328, 164)}
+            src={getPhotoUrl(listing.id, 328, 200)}
             alt={listing.name}
-            className="flex-shrink-0 d-none d-sm-block"
+            className="flex-shrink-0 d-none d-sm-block align-self-stretch"
             style={{
               width: 164,
-              height: 82,
+              height: "auto",
               objectFit: "cover",
               borderRadius: 4,
             }}
@@ -48,6 +51,20 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
 
           {/* Identity */}
           <div className="flex-grow-1" style={{ minWidth: 0 }}>
+            <Breadcrumb className="mb-1">
+              <Breadcrumb.List>
+                <Breadcrumb.Item>
+                  <Breadcrumb.Link render={<Link to="/listings" />}>
+                    <FontAwesomeIcon icon={faHandshake} />
+                    All Deals
+                  </Breadcrumb.Link>
+                </Breadcrumb.Item>
+                <Breadcrumb.Separator />
+                <Breadcrumb.Item>
+                  <Breadcrumb.Page>{listing.name}</Breadcrumb.Page>
+                </Breadcrumb.Item>
+              </Breadcrumb.List>
+            </Breadcrumb>
             <h1
               className="fs-4 fw-semibold mb-0 text-truncate"
               title={listing.name}

@@ -31,7 +31,7 @@ export function FacetDropdown({
           >
             {facet.title}
             {count > 0 && <Badge variant="primary">{count}</Badge>}
-            <FontAwesomeIcon icon={faChevronDown} style={{ fontSize: 11 }} />
+            <FontAwesomeIcon icon={faChevronDown} className="fs-small" />
           </Button>
         }
       />
@@ -46,8 +46,7 @@ export function FacetDropdown({
           {count > 0 && (
             <button
               type="button"
-              className="btn btn-link btn-sm p-0 text-decoration-none"
-              style={{ fontSize: 12 }}
+              className="btn btn-link btn-sm p-0 text-decoration-none fs-small"
               onClick={clear}
             >
               Clear

@@ -20,6 +20,7 @@ import { FacetDropdown } from "#/components/properties/FacetDropdown";
 import {
   PROPERTY_TYPES,
   TYPE_LABELS,
+  formatPrice,
 } from "#/components/properties/propertyDisplay";
 import {
   SALE_LEASE_OPTIONS,
@@ -200,6 +201,17 @@ function PropertyListings() {
 
   const total = listings.length;
 
+  // Weighted pipeline forecast: each deal's value discounted by its close
+  // probability (Closed = 100%, Lost ≈ 0%), summed over the visible deals.
+  const weightedForecast = useMemo(
+    () =>
+      filtered.reduce(
+        (sum, l) => sum + l.askingPrice * (l.closeProbability / 100),
+        0,
+      ),
+    [filtered],
+  );
+
   return (
     <div className="d-flex flex-column h-100 overflow-hidden">
       {/* Page header — matches Pipeline */}
@@ -315,7 +327,7 @@ function PropertyListings() {
       <div className="container flex-grow-1 overflow-hidden d-flex flex-column pb-3">
         <Card className="flex-grow-1 overflow-hidden d-flex flex-column">
           <Card.Body className="flex-grow-1 overflow-hidden d-flex flex-column gap-3">
-            <div>
+            <div className="d-flex align-items-baseline justify-content-between gap-3">
               <ButtonGroup aria-label="Deal side">
                 {SIDE_OPTIONS.map((opt) => (
                   <Button
@@ -330,6 +342,17 @@ function PropertyListings() {
                   </Button>
                 ))}
               </ButtonGroup>
+              <div className="d-flex align-items-baseline gap-2">
+                <span
+                  className="text-muted fs-xs text-uppercase"
+                  style={{ letterSpacing: "0.04em" }}
+                >
+                  Weighted forecast
+                </span>
+                <span className="fw-bold fs-5">
+                  {formatPrice(weightedForecast)}
+                </span>
+              </div>
             </div>
             <div className="flex-grow-1 overflow-hidden">
               <DealBoard listings={sorted} onRestage={onRestage} />
