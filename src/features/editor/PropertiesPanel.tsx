@@ -60,7 +60,7 @@ export function PropertiesPanel() {
             render={
               <Button
                 variant="ghost"
-                size="icon-sm"
+                size="icon"
                 onClick={sidebarPinned ? collapseSidebar : toggleSidebarPin}
               >
                 <FontAwesomeIcon
