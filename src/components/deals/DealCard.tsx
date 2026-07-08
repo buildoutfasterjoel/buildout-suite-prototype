@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useDraggable } from "@dnd-kit/core";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
+import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faUser,
@@ -121,12 +122,11 @@ export function DealCardView({ listing }: { listing: Listing }) {
 
       {/* Attached person */}
       <div className="d-flex align-items-center gap-2 text-truncate">
-        <span
-          className="d-inline-flex align-items-center justify-content-center rounded-circle text-white flex-shrink-0 fw-semibold fs-xs"
-          style={{ width: 26, height: 26, backgroundColor: "#62748e" }}
-        >
-          {contact ? initials(contact) : <FontAwesomeIcon icon={faUser} />}
-        </span>
+        <Avatar size="sm" className="flex-shrink-0">
+          <Avatar.Fallback className="fw-semibold">
+            {contact ? initials(contact) : <FontAwesomeIcon icon={faUser} />}
+          </Avatar.Fallback>
+        </Avatar>
         <span className="text-truncate">
           {contact ? `${contact.firstName} ${contact.lastName}` : "Unassigned"}
         </span>

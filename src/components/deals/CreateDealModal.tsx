@@ -4,6 +4,7 @@ import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Field } from "@buildoutinc/blueprint-react/ui/Field";
 import { Combobox } from "@buildoutinc/blueprint-react/ui/Combobox";
+import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
@@ -23,9 +24,17 @@ import {
   emptyDraft,
   type NewListingDraft,
 } from "#/data/createListing";
-import { getPropertyOptions, getContactOptions } from "#/data/store";
-
-type Option = { value: string; label: string };
+import {
+  getPropertyOptions,
+  getContactOptions,
+  type PropertyOption,
+  type ContactOption,
+} from "#/data/store";
+import {
+  TYPE_ICONS,
+  TYPE_LABELS,
+} from "#/components/properties/propertyDisplay";
+import { RelationshipPill } from "#/components/contacts/pills";
 
 /** The two sides a broker can start a deal on, in display order. */
 const SIDES: {
@@ -72,21 +81,32 @@ export function CreateDealModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [side, setSide] = useState<DealSide | null>(null);
-  const [contactOption, setContactOption] = useState<Option | null>(null);
-  const [propertyOption, setPropertyOption] = useState<Option | null>(null);
+  const [contactOption, setContactOption] = useState<ContactOption | null>(
+    null,
+  );
+  const [propertyOption, setPropertyOption] = useState<PropertyOption | null>(
+    null,
+  );
   const [propertyInput, setPropertyInput] = useState("");
   const [files, setFiles] = useState<DealDocument[]>([]);
   const [dragging, setDragging] = useState(false);
 
-  const propertyOptions = useMemo<Option[]>(getPropertyOptions, []);
-  const contactOptions = useMemo<Option[]>(getContactOptions, []);
+  const propertyOptions = useMemo<PropertyOption[]>(getPropertyOptions, []);
+  const contactOptions = useMemo<ContactOption[]>(getContactOptions, []);
 
   // Seed from the initiating contact each time the modal opens: prefill the
   // contact and pre-select the side from how they sit on their current deal.
   useEffect(() => {
     if (!open) return;
     if (contact) {
-      setContactOption({ value: contact.id, label: contactName(contact) });
+      setContactOption({
+        value: contact.id,
+        label: contactName(contact),
+        name: contactName(contact),
+        company: contact.company,
+        title: contact.title,
+        relationship: contact.relationship,
+      });
       setSide(contact.side);
     } else {
       setContactOption(null);
@@ -115,7 +135,7 @@ export function CreateDealModal({
     });
   }
 
-  function selectProperty(option: Option | null) {
+  function selectProperty(option: PropertyOption | null) {
     setPropertyOption(option);
     setPropertyInput(option?.label ?? "");
   }
@@ -208,7 +228,9 @@ export function CreateDealModal({
               <Combobox
                 items={contactOptions}
                 value={contactOption}
-                onValueChange={(v) => setContactOption(v as Option | null)}
+                onValueChange={(v) =>
+                  setContactOption(v as ContactOption | null)
+                }
               >
                 <Combobox.InputGroup>
                   <InputGroup.Addon>
@@ -217,15 +239,46 @@ export function CreateDealModal({
                   <Combobox.Input placeholder="Search contacts…" showClear />
                 </Combobox.InputGroup>
                 <Combobox.Content>
-                  <Combobox.Empty className="p-3 text-muted">
+                  <Combobox.Empty className="text-muted">
                     No matching contacts
                   </Combobox.Empty>
                   <Combobox.List>
-                    {(item: Option) => (
-                      <Combobox.Item key={item.value} value={item}>
-                        {item.label}
-                      </Combobox.Item>
-                    )}
+                    {(item: ContactOption) => {
+                      const meta = [item.title, item.company]
+                        .filter(Boolean)
+                        .join(" · ");
+                      return (
+                        <Combobox.Item key={item.value} value={item}>
+                          <span
+                            className="d-flex gap-2 user-select-none"
+                            style={{ minWidth: 0 }}
+                          >
+                            <FontAwesomeIcon
+                              icon={faUser}
+                              className="text-muted flex-shrink-0 d-inline-block mt-1"
+                            />
+                            <span
+                              className="d-flex flex-column"
+                              style={{ minWidth: 0 }}
+                            >
+                              <span className="d-flex align-items-center gap-2">
+                                <span className="text-truncate">
+                                  {item.name}
+                                </span>
+                                <span className="flex-shrink-0">
+                                  <RelationshipPill value={item.relationship} />
+                                </span>
+                              </span>
+                              {meta && (
+                                <span className="text-muted fs-small text-truncate">
+                                  {meta}
+                                </span>
+                              )}
+                            </span>
+                          </span>
+                        </Combobox.Item>
+                      );
+                    }}
                   </Combobox.List>
                 </Combobox.Content>
               </Combobox>
@@ -238,7 +291,7 @@ export function CreateDealModal({
             <Combobox
               items={propertyOptions}
               value={propertyOption}
-              onValueChange={(v) => selectProperty(v as Option | null)}
+              onValueChange={(v) => selectProperty(v as PropertyOption | null)}
               inputValue={propertyInput}
               onInputValueChange={(v: string) => typeProperty(v)}
             >
@@ -252,13 +305,40 @@ export function CreateDealModal({
                 />
               </Combobox.InputGroup>
               <Combobox.Content>
-                <Combobox.Empty className="p-3 text-muted">
+                <Combobox.Empty className="text-muted">
                   No match — we’ll create a new property from what you typed.
                 </Combobox.Empty>
                 <Combobox.List>
-                  {(item: Option) => (
+                  {(item: PropertyOption) => (
                     <Combobox.Item key={item.value} value={item}>
-                      {item.label}
+                      <span
+                        className="d-flex gap-2 user-select-none"
+                        style={{ minWidth: 0 }}
+                      >
+                        <FontAwesomeIcon
+                          icon={TYPE_ICONS[item.propertyType]}
+                          className="text-muted flex-shrink-0 d-inline-block mt-1"
+                        />
+                        <span
+                          className="d-flex flex-column"
+                          style={{ minWidth: 0 }}
+                        >
+                          <span className="d-flex align-items-center gap-2">
+                            <span className="text-truncate">{item.label}</span>
+                            <Badge
+                              variant="secondary"
+                              appearance="muted"
+                              className="flex-shrink-0"
+                            >
+                              {TYPE_LABELS[item.propertyType]}
+                            </Badge>
+                          </span>
+                          <span className="text-muted fs-small text-truncate">
+                            {item.subtype}
+                            {item.sizeLabel ? ` · ${item.sizeLabel}` : ""}
+                          </span>
+                        </span>
+                      </span>
                     </Combobox.Item>
                   )}
                 </Combobox.List>
@@ -333,7 +413,10 @@ export function CreateDealModal({
                     key={f.id}
                     className="d-flex align-items-center gap-2 border rounded px-3 py-2"
                   >
-                    <FontAwesomeIcon icon={faFileLines} className="text-muted" />
+                    <FontAwesomeIcon
+                      icon={faFileLines}
+                      className="text-muted"
+                    />
                     <span className="flex-grow-1 text-truncate fs-small">
                       {f.name}
                     </span>
@@ -358,7 +441,11 @@ export function CreateDealModal({
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button variant="primary" disabled={!canCreate} onClick={handleCreate}>
+          <Button
+            variant="primary"
+            disabled={!canCreate}
+            onClick={handleCreate}
+          >
             <FontAwesomeIcon icon={faCheck} />
             Create deal
           </Button>

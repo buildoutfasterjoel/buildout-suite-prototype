@@ -22,8 +22,8 @@ export function Pill({
 }) {
   return (
     <Badge
-      variant="outline"
-      className={`border-0 text-nowrap fw-semibold ${className}`}
+      variant="secondary"
+      className={`text-nowrap fw-semibold ${className}`}
     >
       {children}
     </Badge>

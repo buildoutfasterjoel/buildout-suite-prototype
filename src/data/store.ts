@@ -1,4 +1,11 @@
-import type { DataStore, Listing, Property, Contact } from './types'
+import type {
+  DataStore,
+  Listing,
+  Property,
+  Contact,
+  PropertyType,
+  RelationshipStage,
+} from './types'
 import { generateDataset } from './seed'
 
 let _store: DataStore | null = null
@@ -53,12 +60,27 @@ export function updateProperty(
   return updated
 }
 
-/** { value: propertyId, label: address } options for a property picker. */
-export function getPropertyOptions(): { value: string; label: string }[] {
+/** A property picker option — carries `label` (address) plus display metadata. */
+export interface PropertyOption {
+  value: string
+  /** Full address — used for filtering and the input display. */
+  label: string
+  propertyType: PropertyType
+  /** Subtype label, e.g. "Multi-Tenant". */
+  subtype: string
+  /** Building size, e.g. "45,000 SF", or null when unknown. */
+  sizeLabel: string | null
+}
+
+/** Rich options for a property picker (address label + type/size metadata). */
+export function getPropertyOptions(): PropertyOption[] {
   return [...getStore().properties.values()]
     .map((p) => ({
       value: p.id,
       label: [p.street, p.city, p.state].filter(Boolean).join(', '),
+      propertyType: p.propertyType,
+      subtype: p.propertySubtype,
+      sizeLabel: p.buildingSqFt > 0 ? `${p.buildingSqFt.toLocaleString()} SF` : null,
     }))
     .sort((a, b) => a.label.localeCompare(b.label))
 }
@@ -90,11 +112,31 @@ export function contactLabel(c: Contact): string {
   return c.company ? `${name} · ${c.company}` : name
 }
 
-/** { value: contactId, label } options over all contacts, for a contact picker. */
-export function getContactOptions(): { value: string; label: string }[] {
+/** A contact picker option — carries `label` (name · company) plus display metadata. */
+export interface ContactOption {
+  value: string
+  /** "Name · Company" — used for filtering and the input display. */
+  label: string
+  /** Full name, shown as the option's primary line. */
+  name: string
+  company: string
+  title: string
+  /** Relationship stage (client, active, past client, …) surfaced as a pill. */
+  relationship: RelationshipStage
+}
+
+/** Rich options over all contacts, for a contact picker. */
+export function getContactOptions(): ContactOption[] {
   return [...getStore().contacts.values()]
-    .map((c) => ({ value: c.id, label: contactLabel(c) }))
-    .sort((a, b) => a.label.localeCompare(b.label))
+    .map((c) => ({
+      value: c.id,
+      label: contactLabel(c),
+      name: `${c.firstName} ${c.lastName}`.trim(),
+      company: c.company,
+      title: c.title,
+      relationship: c.relationship,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
 }
 
 /**
