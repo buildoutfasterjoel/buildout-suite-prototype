@@ -26,6 +26,16 @@ export function formatDate(iso: string | null): string {
   return `${mm}/${dd}/${d.getFullYear()}`;
 }
 
+/** "Jul 4, 2026" from an ISO string, or a dash when absent. */
+export function formatLongDate(iso: string | null): string {
+  if (!iso) return "--";
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 /** "Jun 12, 2026 · 3:40 PM" from an ISO string, or a dash when absent. */
 export function formatDateTime(iso: string | null): string {
   if (!iso) return "--";

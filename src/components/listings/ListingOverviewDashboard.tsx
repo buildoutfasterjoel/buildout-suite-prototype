@@ -9,16 +9,11 @@ import {
   faDownload,
   faEnvelopeOpen,
   faTriangleExclamation,
-  faWandMagicSparkles,
-  faListCheck,
-  faAddressCard,
-  faFileLines,
-  faTag,
 } from "@fortawesome/pro-regular-svg-icons";
-import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { Listing, DealTask } from "#/data/types";
 import { STATUS_COLORS } from "#/components/properties/propertyDisplay";
 import { formatDate } from "#/components/deals/dealDisplay";
+import { ProposalOverview } from "#/components/deals/ProposalOverview";
 import {
   getEmails,
   getEmailPerformance,
@@ -90,110 +85,10 @@ function CampaignRow({ email }: { email: Email }) {
   );
 }
 
-type SetupStep = {
-  href: "contacts" | "transaction" | "tasks" | "documents";
-  icon: IconDefinition;
-  title: string;
-  description: string;
-};
-
-const PROPOSAL_STEPS: SetupStep[] = [
-  {
-    href: "contacts",
-    icon: faAddressCard,
-    title: "Add contacts",
-    description: "Link the seller, buyer, and other deal parties.",
-  },
-  {
-    href: "transaction",
-    icon: faTag,
-    title: "Set pricing & commission",
-    description: "Enter the asking price, deal terms, and broker splits.",
-  },
-  {
-    href: "tasks",
-    icon: faListCheck,
-    title: "Plan the deal",
-    description: "Add the tasks and critical dates to move this forward.",
-  },
-  {
-    href: "documents",
-    icon: faFileLines,
-    title: "Upload documents",
-    description: "Add the offering memo, agreement, and marketing files.",
-  },
-];
-
-/** Getting-started state for a brand-new proposal — no traffic/deal data yet. */
-function ProposalGettingStarted({ listing }: { listing: Listing }) {
-  return (
-    <div className="d-flex flex-column gap-4 p-4">
-      <ListingPageHeader title="Overview" />
-
-      {/* Hero */}
-      <div
-        className="bg-card border rounded p-4 d-flex align-items-start gap-3"
-        style={{ borderRadius: 6 }}
-      >
-        <span
-          className="d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
-          style={{
-            width: 44,
-            height: 44,
-            backgroundColor: `color-mix(in srgb, ${STATUS_COLORS.proposal} 10%, transparent)`,
-            color: STATUS_COLORS.proposal,
-          }}
-        >
-          <FontAwesomeIcon icon={faWandMagicSparkles} />
-        </span>
-        <div className="flex-grow-1">
-          <h2 className="fs-5 fw-semibold mb-1">Proposal created</h2>
-          <p className="text-muted mb-0">
-            {listing.name} is in proposal mode. Complete the steps below to get it
-            ready, then publish it as an active listing.
-          </p>
-        </div>
-        <Button variant="primary" className="flex-shrink-0">
-          Publish listing
-        </Button>
-      </div>
-
-      {/* Next steps checklist */}
-      <SectionCard title="Next steps" bodyClassName="">
-        {PROPOSAL_STEPS.map((step) => (
-          <Link
-            key={step.href}
-            to={`/listings/$listingId/${step.href}` as string}
-            params={{ listingId: listing.id } as never}
-            className="d-flex align-items-center gap-3 px-4 py-3 border-bottom text-decoration-none text-body"
-          >
-            <span
-              className="d-inline-flex align-items-center justify-content-center rounded flex-shrink-0 text-muted bg-body-secondary"
-              style={{ width: 36, height: 36 }}
-            >
-              <FontAwesomeIcon icon={step.icon} />
-            </span>
-            <div className="flex-grow-1" style={{ minWidth: 0 }}>
-              <div className="fw-medium">{step.title}</div>
-              <div className="text-muted text-truncate" style={{ fontSize: 13 }}>
-                {step.description}
-              </div>
-            </div>
-            <FontAwesomeIcon
-              icon={faChevronRight}
-              className="text-muted flex-shrink-0"
-            />
-          </Link>
-        ))}
-      </SectionCard>
-    </div>
-  );
-}
-
 /** At-a-glance dashboard: website traffic, active campaigns, and overdue tasks. */
 export function ListingOverviewDashboard({ listing }: { listing: Listing }) {
   if (listing.status === "proposal") {
-    return <ProposalGettingStarted listing={listing} />;
+    return <ProposalOverview listing={listing} />;
   }
 
   const overdueTasks = listing.tasks.filter((t) => t.status === "overdue");

@@ -68,17 +68,21 @@ function PropertyDetail() {
             <PropertyDetailSidebar />
           </Card>
 
-          {/* Detail content — its own card */}
-          <Card className="flex-grow-1 shadow">
-            <Outlet />
-          </Card>
-
-          {/* Deal context rail — persistent across all tabs */}
-          <Card
-            className="shadow flex-shrink-0 d-none d-xl-block position-sticky"
-            style={{ width: 340, top: 0 }}
-          >
-            <DealContextRail listing={listing} />
+          {/* Detail content + deal context rail share one card, split into two
+              columns divided by a single vertical line. */}
+          <Card className="flex-grow-1 shadow" style={{ minWidth: 0 }}>
+            <div className="d-flex align-items-stretch">
+              <div className="flex-grow-1" style={{ minWidth: 0 }}>
+                <Outlet />
+              </div>
+              {/* Deal context rail — persistent across all tabs */}
+              <div
+                className="flex-shrink-0 d-none d-xl-block border-start"
+                style={{ width: 340 }}
+              >
+                <DealContextRail listing={listing} />
+              </div>
+            </div>
           </Card>
         </div>
       </div>

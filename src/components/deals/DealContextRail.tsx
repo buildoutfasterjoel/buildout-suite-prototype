@@ -1,12 +1,24 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { Accordion } from "@buildoutinc/blueprint-react/ui/Accordion";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
+import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCirclePlus, faCaretDown } from "@fortawesome/pro-regular-svg-icons";
-import type { Contact, Listing } from "#/data/types";
+import {
+  faCirclePlus,
+  faCaretDown,
+  faCloudArrowUp,
+  faFileLines,
+  faFilePdf,
+  faFileExcel,
+  faUserGroup,
+} from "@fortawesome/pro-regular-svg-icons";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+import type { Contact, Listing, DealDocument } from "#/data/types";
 import { getProperty, getStore } from "#/data/store";
 import {
   TYPE_ICONS,
@@ -14,8 +26,104 @@ import {
   getPhotoUrl,
   getRefId,
 } from "#/components/properties/propertyDisplay";
-import { initials } from "./dealDisplay";
+import { initials, formatLongDate } from "./dealDisplay";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
+
+function iconForFile(name: string): IconDefinition {
+  if (name.toLowerCase().endsWith(".pdf")) return faFilePdf;
+  if (/\.(xlsx?|csv)$/i.test(name)) return faFileExcel;
+  return faFileLines;
+}
+
+function FileRow({ doc }: { doc: DealDocument }) {
+  return (
+    <div className="d-flex align-items-center gap-2">
+      <span
+        className="d-inline-flex align-items-center justify-content-center rounded flex-shrink-0 bg-body-secondary text-muted"
+        style={{ width: 32, height: 32 }}
+      >
+        <FontAwesomeIcon icon={iconForFile(doc.name)} />
+      </span>
+      <div className="flex-grow-1" style={{ minWidth: 0 }}>
+        <div className="fw-semibold text-truncate fs-small">{doc.name}</div>
+        {doc.size && <div className="text-muted fs-small">{doc.size}</div>}
+      </div>
+    </div>
+  );
+}
+
+function FilesSection({ documents }: { documents: DealDocument[] }) {
+  return (
+    <Card.Body>
+      <div className="d-flex align-items-center justify-content-between mb-2">
+        <h6 className="mb-0">Files</h6>
+        <Button variant="outline" size="sm" aria-label="Add file">
+          <FontAwesomeIcon icon={faCirclePlus} />
+          Add
+        </Button>
+      </div>
+
+      <Empty className="py-3">
+        <Empty.Media>
+          <FontAwesomeIcon icon={faCloudArrowUp} aria-hidden />
+        </Empty.Media>
+        <Empty.Content>Drop files here or click to upload.</Empty.Content>
+      </Empty>
+
+      <div className="d-flex flex-column gap-2 mt-3">
+        {documents.map((d) => (
+          <FileRow key={d.id} doc={d} />
+        ))}
+      </div>
+    </Card.Body>
+  );
+}
+
+function DealSection({ listing }: { listing: Listing }) {
+  return (
+    <Card.Body>
+      <div className="d-flex align-items-center justify-content-between mb-2">
+        <h6 className="mb-0">Deal</h6>
+        <Badge variant="secondary" appearance="muted">
+          <FontAwesomeIcon icon={faUserGroup} />
+          Shared
+        </Badge>
+      </div>
+
+      <div className="d-flex align-items-center justify-content-between">
+        <span className="text-muted fs-small">Started</span>
+        <span className="fw-semibold fs-small">
+          {formatLongDate(listing.createdAt)}
+        </span>
+      </div>
+      <div className="fst-italic text-muted fs-small mb-3">
+        New listing pursuit
+      </div>
+
+      <div
+        className="text-muted text-uppercase fw-semibold mb-2"
+        style={{ fontSize: 11, letterSpacing: 0.4 }}
+      >
+        Commission Split
+      </div>
+      {listing.internalBrokers.map((broker, i) => (
+        <div key={broker.id} className="d-flex align-items-center gap-2 py-1">
+          <span className="fw-semibold flex-grow-1 text-truncate fs-small">
+            {broker.name}
+          </span>
+          {i === 0 && (
+            <Badge variant="secondary" appearance="muted">
+              Lead
+            </Badge>
+          )}
+          <span className="fw-semibold fs-small">
+            {broker.commissionSplitPct}%
+          </span>
+        </div>
+      ))}
+    </Card.Body>
+  );
+}
 
 function LinkedProperty({ listing }: { listing: Listing }) {
   const property = getProperty(listing.propertyId);
@@ -53,19 +161,23 @@ function LinkedProperty({ listing }: { listing: Listing }) {
 function ContactRow({ contact }: { contact: Contact }) {
   const name = `${contact.firstName} ${contact.lastName}`;
   return (
-    <div className="d-flex align-items-center gap-2 py-2">
-      <Avatar size="sm">
+    <Link
+      to="/backoffice/contacts/$contactId"
+      params={{ contactId: contact.id }}
+      className="d-flex align-items-center gap-2 py-2 text-reset text-decoration-none"
+    >
+      <Avatar size="lg">
         <Avatar.Fallback>{initials(name)}</Avatar.Fallback>
       </Avatar>
       <div className="flex-grow-1" style={{ minWidth: 0 }}>
         <div className="fw-semibold text-truncate">{name}</div>
-        {contact.email && (
-          <div className="text-primary text-truncate fs-small">
-            {contact.email}
+        {contact.company && (
+          <div className="text-muted text-truncate fs-small">
+            {contact.company}
           </div>
         )}
       </div>
-    </div>
+    </Link>
   );
 }
 
@@ -100,14 +212,15 @@ function ContactSection({
 }
 
 /**
- * Persistent right-hand "deal context" rail — keeps the linked property and the
- * deal's contacts in view across every tab of the listing/deal page.
+ * Persistent right-hand "deal context" rail — keeps files, the linked property,
+ * the deal's contacts, and the deal summary in view across every tab.
  */
 export function DealContextRail({ listing }: { listing: Listing }) {
   const { contacts } = getStore();
   const resolve = (ids: string[]) =>
     ids.map((id) => contacts.get(id)).filter((c): c is Contact => c != null);
 
+  const documents = listing.documents ?? [];
   const sellers = resolve(listing.sellerContactIds);
   const buyers = resolve(listing.buyerContactIds);
   const others = resolve(listing.otherContactIds);
@@ -117,11 +230,17 @@ export function DealContextRail({ listing }: { listing: Listing }) {
     setOpen((prev) => (prev.includes(section) ? prev : [...prev, section]));
 
   return (
-    <Card>
+    <div>
+      <FilesSection documents={documents} />
+
+      <Separator />
+
       <Card.Body>
         <h6 className="pb-2">Property</h6>
         <LinkedProperty listing={listing} />
       </Card.Body>
+
+      <Separator />
 
       <div className="d-flex align-items-center justify-content-between px-3 py-2">
         <h6 className="mb-0">Contacts</h6>
@@ -153,6 +272,8 @@ export function DealContextRail({ listing }: { listing: Listing }) {
         <ContactSection value="buyer" label="Buyer" contacts={buyers} />
         <ContactSection value="other" label="Other" contacts={others} />
       </Accordion>
-    </Card>
+
+      <DealSection listing={listing} />
+    </div>
   );
 }
