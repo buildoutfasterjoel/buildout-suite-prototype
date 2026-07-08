@@ -4,7 +4,9 @@ import type {
   PropertyType,
   PropertySubtype,
   DealType,
+  DealSide,
   DealBroker,
+  DealDocument,
 } from './types'
 import {
   addListing,
@@ -42,8 +44,14 @@ export interface NewListingDraft {
   availableSqFt: number
   description: string
   locationDescription: string
+  /** Whether the broker represents the seller (sell-side) or the buyer (buy-side). */
+  dealSide: DealSide
   /** The CRM contact who owns the property and is selling — empty until chosen. */
   sellerContactId: string
+  /** The CRM contact the broker represents on a buy-side deal — empty until chosen. */
+  buyerContactId: string
+  /** Context files attached in the create-deal flow. */
+  documents: DealDocument[]
 }
 
 /** A sensible blank draft to seed the manual-entry form. */
@@ -61,7 +69,10 @@ export function emptyDraft(): NewListingDraft {
     availableSqFt: 0,
     description: '',
     locationDescription: '',
+    dealSide: 'seller',
     sellerContactId: '',
+    buyerContactId: '',
+    documents: [],
   }
 }
 
@@ -219,8 +230,16 @@ export function createProposalListing(draft: NewListingDraft): Listing {
       ? Math.round(draft.listingPrice * (draft.commissionPct / 100))
       : 0
 
-  // The owner the broker named becomes the deal's seller contact.
-  const seller = draft.sellerContactId ? getContact(draft.sellerContactId) : undefined
+  // Resolve the deal's primary contact and place them on the represented side.
+  const seller =
+    draft.dealSide === 'seller' && draft.sellerContactId
+      ? getContact(draft.sellerContactId)
+      : undefined
+  const buyer =
+    draft.dealSide === 'buyer' && draft.buyerContactId
+      ? getContact(draft.buyerContactId)
+      : undefined
+  const primaryContact = seller ?? buyer
 
   const listing: Listing = {
     id,
@@ -229,7 +248,7 @@ export function createProposalListing(draft: NewListingDraft): Listing {
     slug,
     status: 'proposal',
     dealType: draft.dealType,
-    dealSide: 'seller', // the New Deal flow names an owner, so it's sell-side
+    dealSide: draft.dealSide,
 
     availableSqFt: draft.availableSqFt,
     askingPrice: draft.listingPrice,
@@ -264,7 +283,7 @@ export function createProposalListing(draft: NewListingDraft): Listing {
     internalBrokers: [currentUserBroker(commissionAmount)],
     outsideBrokers: [],
     sellerContactIds: seller ? [seller.id] : [],
-    buyerContactIds: [],
+    buyerContactIds: buyer ? [buyer.id] : [],
     otherContactIds: [],
     tasks: [],
     messages: [],
@@ -279,6 +298,7 @@ export function createProposalListing(draft: NewListingDraft): Listing {
         timestamp: now,
       },
     ],
+    documents: draft.documents,
     voucher: {
       name,
       identifier: dealId,
@@ -286,7 +306,7 @@ export function createProposalListing(draft: NewListingDraft): Listing {
       closeDate: null,
       transactionValue: draft.listingPrice,
       grossCommission: commissionAmount,
-      relatedContactsLabel: seller ? contactLabel(seller) : '—',
+      relatedContactsLabel: primaryContact ? contactLabel(primaryContact) : '—',
     },
     nextCriticalDate: null,
 

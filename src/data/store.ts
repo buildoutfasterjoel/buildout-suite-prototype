@@ -90,6 +90,13 @@ export function contactLabel(c: Contact): string {
   return c.company ? `${name} · ${c.company}` : name
 }
 
+/** { value: contactId, label } options over all contacts, for a contact picker. */
+export function getContactOptions(): { value: string; label: string }[] {
+  return [...getStore().contacts.values()]
+    .map((c) => ({ value: c.id, label: contactLabel(c) }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+}
+
 /**
  * { value: contactId, label } options for a seller picker. Prefers the property's
  * own contacts (owners listed first); falls back to all contacts when the property

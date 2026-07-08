@@ -198,10 +198,20 @@ export interface Listing {
   history: DealHistoryEntry[]
   voucher: DealVoucher
 
+  /** Context files attached when the deal was created (OMs, financials, notes). */
+  documents?: DealDocument[]
+
   nextCriticalDate: string | null
 
   createdAt: string
   updatedAt: string
+}
+
+/** A file attached to a deal (e.g. uploaded in the create-deal flow). */
+export interface DealDocument {
+  id: string
+  name: string
+  uploadedAt: string
 }
 
 /** A broker on a deal, internal (own brokerage) or an outside co-broker. */

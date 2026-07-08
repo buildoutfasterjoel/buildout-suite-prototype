@@ -29,7 +29,7 @@ import {
   getExpiration,
 } from "#/components/properties/propertyFacets";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
-import { NewListingModal } from "#/components/listings/NewListingModal";
+import { CreateDealModal } from "#/components/deals/CreateDealModal";
 
 export const Route = createFileRoute("/listings/")({
   component: PropertyListings,
@@ -231,7 +231,7 @@ function PropertyListings() {
         </div>
       </div>
 
-      <NewListingModal open={newOpen} onOpenChange={setNewOpen} />
+      <CreateDealModal open={newOpen} onOpenChange={setNewOpen} />
 
       {/* Toolbar card */}
       <div className="py-3 d-flex flex-column gap-3">
