@@ -5,7 +5,6 @@ import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
   faGaugeHigh,
   faAddressBook,
-  faListCheck,
   faBolt,
   faHandshake,
   faFileInvoiceDollar,
@@ -25,7 +24,6 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Project",
     items: [
       { label: "Overview", href: "overview", icon: faGaugeHigh },
-      { label: "Tasks", href: "tasks", icon: faListCheck },
       { label: "Activity", href: "activities", icon: faBolt },
     ],
   },

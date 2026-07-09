@@ -104,7 +104,6 @@ export function EmailsTable({
           <Table.Head>Campaign</Table.Head>
           <Table.Head>Subject</Table.Head>
           <Table.Head>Type</Table.Head>
-          <Table.Head>Primary Broker</Table.Head>
           <Table.Head>Created At</Table.Head>
           <Table.Head>Last Edited</Table.Head>
           <Table.Head sticky="end" aria-label="Actions" />
@@ -148,9 +147,6 @@ export function EmailsTable({
             <Table.Cell className="text-nowrap">{email.subject}</Table.Cell>
             <Table.Cell className="text-nowrap">
               {TYPE_LABELS[email.type]}
-            </Table.Cell>
-            <Table.Cell className="text-nowrap">
-              {email.primaryBroker}
             </Table.Cell>
             <Table.Cell className="text-nowrap">{email.createdAt}</Table.Cell>
             <Table.Cell className="text-nowrap">

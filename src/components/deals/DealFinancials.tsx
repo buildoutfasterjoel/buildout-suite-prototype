@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip as ChartTooltip } from "recharts";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { Table } from "@buildoutinc/blueprint-react/ui/Table";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus } from "@fortawesome/pro-regular-svg-icons";
@@ -30,11 +32,21 @@ function Section({
   return (
     <section className="d-flex flex-column gap-3">
       <div className="d-flex align-items-center justify-content-between gap-2">
-        <h2 className="fs-6 fw-semibold mb-0">{title}</h2>
+        <h3 className="fs-large fw-semibold mb-0">{title}</h3>
         {action}
       </div>
       {children}
     </section>
+  );
+}
+
+/** A person's name — links to their contact record when one is resolvable, plain text otherwise. */
+function PersonLink({ name, contactId }: { name: string; contactId?: string }) {
+  if (!contactId) return <>{name}</>;
+  return (
+    <Link to="/backoffice/contacts/$contactId" params={{ contactId }}>
+      {name}
+    </Link>
   );
 }
 
@@ -121,11 +133,6 @@ function BreakdownSection({ listing }: { listing: Listing }) {
   return (
     <Section
       title="Gross Commission Breakdown"
-      action={
-        <Button variant="ghost" size="sm">
-          View more
-        </Button>
-      }
     >
       <div className="row g-4 align-items-center">
         <div className="col-md-7">
@@ -195,7 +202,7 @@ function InternalCommissionsSection({ listing }: { listing: Listing }) {
             {brokers.map((b) => (
               <Table.Row key={b.id}>
                 <Table.Cell>
-                  <span className="text-primary fw-semibold">{b.name}</span>
+                  <PersonLink name={b.name} contactId={b.id} />
                 </Table.Cell>
                 <Table.Cell>{dealSideLabel(listing)}</Table.Cell>
                 <Table.Cell className="text-end">{b.commissionSplitPct}</Table.Cell>
@@ -228,7 +235,7 @@ function InternalCommissionsSection({ listing }: { listing: Listing }) {
               return (
                 <Table.Row key={b.id}>
                   <Table.Cell>
-                    <span className="text-primary fw-semibold">{b.name}</span>
+                    <PersonLink name={b.name} contactId={b.id} />
                   </Table.Cell>
                   <Table.Cell>{b.commissionPlan ?? "No Plan"}</Table.Cell>
                   <Table.Cell className="text-end">{splitPct}</Table.Cell>
@@ -274,7 +281,7 @@ function OutsideCommissionsSection({ brokers }: { brokers: DealBroker[] }) {
             {brokers.map((b) => (
               <Table.Row key={b.id}>
                 <Table.Cell>
-                  <span className="text-primary fw-semibold">{b.name}</span>
+                  <PersonLink name={b.name} contactId={b.id} />
                 </Table.Cell>
                 <Table.Cell className="text-end">{b.commissionSplitPct}</Table.Cell>
                 <Table.Cell className="text-end">{formatCurrency(b.grossCommission)}</Table.Cell>
@@ -352,6 +359,8 @@ function ReceivablesSection({ listing }: { listing: Listing }) {
   const receivables = listing.financials.receivables;
   const amountTotal = sum(receivables.map((r) => r.amount));
   const creditedTotal = sum(receivables.map((r) => r.credited));
+  // Receivables don't carry a payer id, but every payer is the deal's buyer (or seller) contact.
+  const payerContactId = listing.buyerContactIds[0] ?? listing.sellerContactIds[0];
 
   return (
     <Section
@@ -385,7 +394,9 @@ function ReceivablesSection({ listing }: { listing: Listing }) {
             {receivables.map((r) => (
               <Table.Row key={r.id}>
                 <Table.Cell>
-                  <div className="text-primary fw-semibold">{r.payerName}</div>
+                  <div>
+                    <PersonLink name={r.payerName} contactId={payerContactId} />
+                  </div>
                   <div className="text-muted fs-small">{r.payerEmail}</div>
                 </Table.Cell>
                 <Table.Cell>{formatDate(r.dueDate)}</Table.Cell>
@@ -440,9 +451,15 @@ export function DealFinancials({ listing }: { listing: Listing }) {
       </Section>
 
       <BreakdownSection listing={listing} />
+
+      <Separator />
+
       <OutsideCommissionsSection brokers={listing.outsideBrokers} />
       <PreSplitDeductionsSection listing={listing} />
       <InternalCommissionsSection listing={listing} />
+
+      <Separator />
+
       <ReceivablesSection listing={listing} />
 
       <Section title="Payables">

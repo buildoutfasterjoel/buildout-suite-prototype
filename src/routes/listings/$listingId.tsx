@@ -7,7 +7,6 @@ import { faBuildingCircleExclamation } from "@fortawesome/pro-regular-svg-icons"
 import { getStore } from "#/data/store";
 import { PropertyDetailHeader } from "#/components/properties/PropertyDetailHeader";
 import { PropertyDetailSidebar } from "#/components/properties/PropertyDetailSidebar";
-import { DealContextRail } from "#/components/deals/DealContextRail";
 
 export const Route = createFileRoute("/listings/$listingId")({
   component: PropertyDetail,
@@ -55,36 +54,23 @@ function PropertyDetail() {
   if (!listing) return <ListingNotFound />;
 
   return (
-    <div className="d-flex flex-column h-100 overflow-hidden">
+    <div className="h-100 overflow-y-auto overflow-x-hidden">
       <PropertyDetailHeader listing={listing} />
 
-      <div className="flex-grow-1 overflow-y-auto overflow-x-hidden py-4">
-        <div className="container d-flex align-items-start gap-4">
-          {/* Section nav — its own card */}
-          <Card
-            className="shadow flex-shrink-0 position-sticky"
-            style={{ width: 180, top: 0 }}
-          >
-            <PropertyDetailSidebar />
-          </Card>
+      <div className="container d-flex align-items-start gap-4 py-4">
+        {/* Section nav — its own card */}
+        <Card
+          className="shadow flex-shrink-0 position-sticky"
+          style={{ width: 180, top: 0 }}
+        >
+          <PropertyDetailSidebar />
+        </Card>
 
-          {/* Detail content + deal context rail share one card, split into two
-              columns divided by a single vertical line. */}
-          <Card className="flex-grow-1 shadow" style={{ minWidth: 0 }}>
-            <div className="d-flex align-items-stretch">
-              <div className="flex-grow-1" style={{ minWidth: 0 }}>
-                <Outlet />
-              </div>
-              {/* Deal context rail — persistent across all tabs */}
-              <div
-                className="flex-shrink-0 d-none d-xl-block border-start"
-                style={{ width: 340 }}
-              >
-                <DealContextRail listing={listing} />
-              </div>
-            </div>
-          </Card>
-        </div>
+        {/* Detail content — each tab renders its own layout, including
+            the deal context rail where applicable (e.g. Overview). */}
+        <Card className="flex-grow-1 shadow" style={{ minWidth: 0 }}>
+          <Outlet />
+        </Card>
       </div>
     </div>
   );

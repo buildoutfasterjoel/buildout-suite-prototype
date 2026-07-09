@@ -28,7 +28,6 @@ import { Route as ListingsListingIdIndexRouteImport } from './routes/listings/$l
 import { Route as BackofficeContactsIndexRouteImport } from './routes/backoffice/contacts/index'
 import { Route as ListingsListingIdWebsiteRouteImport } from './routes/listings/$listingId/website'
 import { Route as ListingsListingIdTransactionRouteImport } from './routes/listings/$listingId/transaction'
-import { Route as ListingsListingIdTasksRouteImport } from './routes/listings/$listingId/tasks'
 import { Route as ListingsListingIdOverviewRouteImport } from './routes/listings/$listingId/overview'
 import { Route as ListingsListingIdLeadsRouteImport } from './routes/listings/$listingId/leads'
 import { Route as ListingsListingIdFinancialsRouteImport } from './routes/listings/$listingId/financials'
@@ -134,11 +133,6 @@ const ListingsListingIdTransactionRoute =
     path: '/transaction',
     getParentRoute: () => ListingsListingIdRoute,
   } as any)
-const ListingsListingIdTasksRoute = ListingsListingIdTasksRouteImport.update({
-  id: '/tasks',
-  path: '/tasks',
-  getParentRoute: () => ListingsListingIdRoute,
-} as any)
 const ListingsListingIdOverviewRoute =
   ListingsListingIdOverviewRouteImport.update({
     id: '/overview',
@@ -203,7 +197,6 @@ export interface FileRoutesByFullPath {
   '/listings/$listingId/financials': typeof ListingsListingIdFinancialsRoute
   '/listings/$listingId/leads': typeof ListingsListingIdLeadsRoute
   '/listings/$listingId/overview': typeof ListingsListingIdOverviewRoute
-  '/listings/$listingId/tasks': typeof ListingsListingIdTasksRoute
   '/listings/$listingId/transaction': typeof ListingsListingIdTransactionRoute
   '/listings/$listingId/website': typeof ListingsListingIdWebsiteRoute
   '/backoffice/contacts/': typeof BackofficeContactsIndexRoute
@@ -227,7 +220,6 @@ export interface FileRoutesByTo {
   '/listings/$listingId/financials': typeof ListingsListingIdFinancialsRoute
   '/listings/$listingId/leads': typeof ListingsListingIdLeadsRoute
   '/listings/$listingId/overview': typeof ListingsListingIdOverviewRoute
-  '/listings/$listingId/tasks': typeof ListingsListingIdTasksRoute
   '/listings/$listingId/transaction': typeof ListingsListingIdTransactionRoute
   '/listings/$listingId/website': typeof ListingsListingIdWebsiteRoute
   '/backoffice/contacts': typeof BackofficeContactsIndexRoute
@@ -257,7 +249,6 @@ export interface FileRoutesById {
   '/listings/$listingId/financials': typeof ListingsListingIdFinancialsRoute
   '/listings/$listingId/leads': typeof ListingsListingIdLeadsRoute
   '/listings/$listingId/overview': typeof ListingsListingIdOverviewRoute
-  '/listings/$listingId/tasks': typeof ListingsListingIdTasksRoute
   '/listings/$listingId/transaction': typeof ListingsListingIdTransactionRoute
   '/listings/$listingId/website': typeof ListingsListingIdWebsiteRoute
   '/backoffice/contacts/': typeof BackofficeContactsIndexRoute
@@ -288,7 +279,6 @@ export interface FileRouteTypes {
     | '/listings/$listingId/financials'
     | '/listings/$listingId/leads'
     | '/listings/$listingId/overview'
-    | '/listings/$listingId/tasks'
     | '/listings/$listingId/transaction'
     | '/listings/$listingId/website'
     | '/backoffice/contacts/'
@@ -312,7 +302,6 @@ export interface FileRouteTypes {
     | '/listings/$listingId/financials'
     | '/listings/$listingId/leads'
     | '/listings/$listingId/overview'
-    | '/listings/$listingId/tasks'
     | '/listings/$listingId/transaction'
     | '/listings/$listingId/website'
     | '/backoffice/contacts'
@@ -341,7 +330,6 @@ export interface FileRouteTypes {
     | '/listings/$listingId/financials'
     | '/listings/$listingId/leads'
     | '/listings/$listingId/overview'
-    | '/listings/$listingId/tasks'
     | '/listings/$listingId/transaction'
     | '/listings/$listingId/website'
     | '/backoffice/contacts/'
@@ -494,13 +482,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ListingsListingIdTransactionRouteImport
       parentRoute: typeof ListingsListingIdRoute
     }
-    '/listings/$listingId/tasks': {
-      id: '/listings/$listingId/tasks'
-      path: '/tasks'
-      fullPath: '/listings/$listingId/tasks'
-      preLoaderRoute: typeof ListingsListingIdTasksRouteImport
-      parentRoute: typeof ListingsListingIdRoute
-    }
     '/listings/$listingId/overview': {
       id: '/listings/$listingId/overview'
       path: '/overview'
@@ -607,7 +588,6 @@ interface ListingsListingIdRouteChildren {
   ListingsListingIdFinancialsRoute: typeof ListingsListingIdFinancialsRoute
   ListingsListingIdLeadsRoute: typeof ListingsListingIdLeadsRoute
   ListingsListingIdOverviewRoute: typeof ListingsListingIdOverviewRoute
-  ListingsListingIdTasksRoute: typeof ListingsListingIdTasksRoute
   ListingsListingIdTransactionRoute: typeof ListingsListingIdTransactionRoute
   ListingsListingIdWebsiteRoute: typeof ListingsListingIdWebsiteRoute
   ListingsListingIdIndexRoute: typeof ListingsListingIdIndexRoute
@@ -620,7 +600,6 @@ const ListingsListingIdRouteChildren: ListingsListingIdRouteChildren = {
   ListingsListingIdFinancialsRoute: ListingsListingIdFinancialsRoute,
   ListingsListingIdLeadsRoute: ListingsListingIdLeadsRoute,
   ListingsListingIdOverviewRoute: ListingsListingIdOverviewRoute,
-  ListingsListingIdTasksRoute: ListingsListingIdTasksRoute,
   ListingsListingIdTransactionRoute: ListingsListingIdTransactionRoute,
   ListingsListingIdWebsiteRoute: ListingsListingIdWebsiteRoute,
   ListingsListingIdIndexRoute: ListingsListingIdIndexRoute,

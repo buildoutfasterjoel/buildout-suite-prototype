@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { Table } from "@buildoutinc/blueprint-react/ui/Table";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
@@ -295,9 +296,12 @@ export function PropertyDetailLeads({ property }: { property: Property }) {
                   </div>
                 </Table.Cell>
                 <Table.Cell sticky style={{ left: CHECKBOX_COL_W }}>
-                  <span className="text-primary fw-semibold text-nowrap">
+                  <Link
+                    to="/backoffice/contacts/$contactId"
+                    params={{ contactId: lead.id }}
+                  >
                     {lead.name}
-                  </span>
+                  </Link>
                 </Table.Cell>
                 <Table.Cell>{lead.email}</Table.Cell>
                 <Table.Cell>{lead.phone || muted}</Table.Cell>
