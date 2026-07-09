@@ -13,6 +13,8 @@ import {
   faGlobe,
   faEnvelope,
   faImage,
+  faFileInvoice,
+  faMoneyCheckDollar,
 } from "@fortawesome/pro-regular-svg-icons";
 
 type NavItem = { label: string; href: string; icon: IconDefinition };
@@ -23,25 +25,27 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Project",
     items: [
       { label: "Overview", href: "overview", icon: faGaugeHigh },
-      { label: "Leads", href: "leads", icon: faAddressBook },
       { label: "Tasks", href: "tasks", icon: faListCheck },
       { label: "Activity", href: "activities", icon: faBolt },
     ],
   },
   {
-    label: "Deal",
-    items: [
-      { label: "Transaction", href: "transaction", icon: faHandshake },
-      { label: "Voucher", href: "voucher", icon: faFileInvoiceDollar },
-    ],
-  },
-  {
     label: "Marketing",
     items: [
+      { label: "Leads", href: "leads", icon: faAddressBook },
       { label: "Documents", href: "documents", icon: faFileLines },
       { label: "Website", href: "website", icon: faGlobe },
       { label: "Email", href: "email", icon: faEnvelope },
       { label: "Media", href: "media", icon: faImage },
+    ],
+  },
+  {
+    label: "Back Office",
+    items: [
+      { label: "Transaction", href: "transaction", icon: faHandshake },
+      { label: "Voucher", href: "voucher", icon: faFileInvoiceDollar },
+      { label: "Invoices", href: "invoices", icon: faFileInvoice },
+      { label: "Deposits", href: "deposits", icon: faMoneyCheckDollar },
     ],
   },
 ];

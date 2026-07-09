@@ -12,7 +12,7 @@ export function ListingPageHeader({
 }) {
   return (
     <div className="d-flex align-items-center justify-content-between gap-3">
-      <h2 className="fs-4 mb-0">{title}</h2>
+      <h2 className="fs-6 mb-0 fw-semibold">{title}</h2>
       {actions && (
         <div className="d-flex align-items-center gap-2">{actions}</div>
       )}

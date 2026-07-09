@@ -66,7 +66,7 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
               </Breadcrumb.List>
             </Breadcrumb>
             <h1
-              className="fs-4 fw-semibold mb-0 text-truncate"
+              className="fs-5 fw-semibold mb-0 text-truncate"
               title={listing.name}
             >
               {listing.name}
