@@ -22,11 +22,11 @@ import { cn } from "@buildoutinc/blueprint-react/lib/utils";
 const SPINE = "#e2e8f0";
 
 /** "3 AUG, 2026" — the compact planner date style. */
-function formatPlannerDate(iso: string | null): string {
+export function formatPlannerDate(iso: string | null): string {
   if (!iso) return "TBD";
   const d = new Date(iso);
-  const mon = d.toLocaleDateString("en-US", { month: "short" }).toUpperCase();
-  return `${d.getDate()} ${mon}, ${d.getFullYear()}`;
+  const mon = d.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" }).toUpperCase();
+  return `${d.getUTCDate()} ${mon}, ${d.getUTCFullYear()}`;
 }
 
 /** `iso` shifted by `days`, as a full ISO timestamp. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { endMilestone, stageStartDate } from './TodayPlanner'
+import { endMilestone, stageStartDate, formatPlannerDate } from './TodayPlanner'
 import type { DealHistoryEntry } from '#/data/types'
 
 const CREATED_AT = '2026-01-01T00:00:00.000Z'
@@ -56,5 +56,24 @@ describe('endMilestone', () => {
 
   it('inactive has no forward milestone', () => {
     expect(endMilestone('inactive', CREATED_AT, null)).toBeNull()
+  })
+})
+
+describe('formatPlannerDate', () => {
+  it('formats a date-only string (e.g. "2026-07-02") as UTC calendar date, not local', () => {
+    // This is the regression test for the timezone bug.
+    // A date-only string like "2026-07-02" should always format to "2 JUL, 2026"
+    // on any machine, regardless of the local timezone.
+    // Before the fix, machines west of UTC would render this as "1 JUL, 2026".
+    expect(formatPlannerDate('2026-07-02')).toBe('2 JUL, 2026')
+  })
+
+  it('formats a full UTC timestamp (e.g. "2026-01-01T00:00:00.000Z") correctly', () => {
+    // Confirms that full timestamps still work after applying the UTC fix.
+    expect(formatPlannerDate('2026-01-01T00:00:00.000Z')).toBe('1 JAN, 2026')
+  })
+
+  it('returns "TBD" for null input', () => {
+    expect(formatPlannerDate(null)).toBe('TBD')
   })
 })
