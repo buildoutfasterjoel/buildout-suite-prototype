@@ -63,7 +63,7 @@ function PropertyDetail() {
           {/* Section nav — its own card */}
           <Card
             className="shadow flex-shrink-0 position-sticky"
-            style={{ width: 248, top: 0 }}
+            style={{ width: 180, top: 0 }}
           >
             <PropertyDetailSidebar />
           </Card>

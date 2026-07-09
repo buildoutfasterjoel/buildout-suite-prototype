@@ -196,7 +196,7 @@ export interface Listing {
   messages: DealMessage[]
   activities: DealActivity[]
   history: DealHistoryEntry[]
-  voucher: DealVoucher
+  financials: DealFinancials
 
   /** Context files attached when the deal was created (OMs, financials, notes). */
   documents?: DealDocument[]
@@ -225,6 +225,10 @@ export interface DealBroker {
   side: 'internal' | 'outside'
   commissionSplitPct: number
   grossCommission: number
+  /** This broker's personal payout plan, e.g. "No Plan" — used on the Financials tab. */
+  commissionPlan?: string
+  /** This broker's personal split % of their own grossCommission — used on the Financials tab. */
+  personalSplitPct?: number
 }
 
 export type DealTaskStatus = 'open' | 'complete' | 'overdue'
@@ -268,14 +272,36 @@ export interface DealHistoryEntry {
   timestamp: string
 }
 
-export interface DealVoucher {
+export interface DealFinancials {
   name: string
   identifier: string
   status: 'Approved' | 'Pending' | 'Draft'
   closeDate: string | null
-  transactionValue: number
-  grossCommission: number
   relatedContactsLabel: string
+  preSplitDeductions: FinancialDeduction[]
+  receivables: FinancialReceivable[]
+}
+
+/** A line item deducted from gross commission before broker splits, e.g. a marketing fee. */
+export interface FinancialDeduction {
+  id: string
+  category: string
+  description: string
+  pct: number
+  amount: number
+  /** Amount already covered/reimbursed, or null when none. */
+  covered: number | null
+}
+
+/** Money owed to the brokerage on a deal — shown on the Financials tab. */
+export interface FinancialReceivable {
+  id: string
+  payerName: string
+  payerEmail: string
+  dueDate: string
+  billingDescription: string
+  amount: number
+  credited: number
 }
 
 export interface Comp {

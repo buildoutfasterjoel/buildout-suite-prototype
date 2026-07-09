@@ -376,14 +376,14 @@ export function createProposalListing(draft: NewListingDraft): Listing {
       },
     ],
     documents,
-    voucher: {
+    financials: {
       name,
       identifier: dealId,
       status: 'Draft',
       closeDate: null,
-      transactionValue: draft.listingPrice,
-      grossCommission: commissionAmount,
       relatedContactsLabel: primaryContact ? contactLabel(primaryContact) : '—',
+      preSplitDeductions: [],
+      receivables: [],
     },
     nextCriticalDate,
 

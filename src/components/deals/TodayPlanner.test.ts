@@ -44,7 +44,7 @@ describe('endMilestone', () => {
     expect(m).toEqual({ label: 'Target closing', date: expectedAddDays(CREATED_AT, 45) })
   })
 
-  it('closed uses the actual voucher close date when present', () => {
+  it('closed uses the actual financials close date when present', () => {
     const m = endMilestone('closed', CREATED_AT, '2026-02-01')
     expect(m).toEqual({ label: 'Closed', date: '2026-02-01' })
   })

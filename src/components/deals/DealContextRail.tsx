@@ -15,7 +15,6 @@ import {
   faFileLines,
   faFilePdf,
   faFileExcel,
-  faUserGroup,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { Contact, Listing, DealDocument } from "#/data/types";
@@ -26,7 +25,7 @@ import {
   getPhotoUrl,
   getRefId,
 } from "#/components/properties/propertyDisplay";
-import { initials, formatLongDate } from "./dealDisplay";
+import { initials } from "./dealDisplay";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 
 function iconForFile(name: string): IconDefinition {
@@ -79,51 +78,6 @@ function FilesSection({ documents }: { documents: DealDocument[] }) {
   );
 }
 
-function DealSection({ listing }: { listing: Listing }) {
-  return (
-    <Card.Body>
-      <div className="d-flex align-items-center justify-content-between mb-2">
-        <h6 className="mb-0">Deal</h6>
-        <Badge variant="secondary" appearance="muted">
-          <FontAwesomeIcon icon={faUserGroup} />
-          Shared
-        </Badge>
-      </div>
-
-      <div className="d-flex align-items-center justify-content-between">
-        <span className="text-muted fs-small">Started</span>
-        <span className="fw-semibold fs-small">
-          {formatLongDate(listing.createdAt)}
-        </span>
-      </div>
-      <div className="fst-italic text-muted fs-small mb-3">
-        New listing pursuit
-      </div>
-
-      <div
-        className="text-muted text-uppercase fw-semibold mb-2"
-        style={{ fontSize: 11, letterSpacing: 0.4 }}
-      >
-        Commission Split
-      </div>
-      {listing.internalBrokers.map((broker, i) => (
-        <div key={broker.id} className="d-flex align-items-center gap-2 py-1">
-          <span className="fw-semibold flex-grow-1 text-truncate fs-small">
-            {broker.name}
-          </span>
-          {i === 0 && (
-            <Badge variant="secondary" appearance="muted">
-              Lead
-            </Badge>
-          )}
-          <span className="fw-semibold fs-small">
-            {broker.commissionSplitPct}%
-          </span>
-        </div>
-      ))}
-    </Card.Body>
-  );
-}
 
 function LinkedProperty({ listing }: { listing: Listing }) {
   const property = getProperty(listing.propertyId);
@@ -272,8 +226,6 @@ export function DealContextRail({ listing }: { listing: Listing }) {
         <ContactSection value="buyer" label="Buyer" contacts={buyers} />
         <ContactSection value="other" label="Other" contacts={others} />
       </Accordion>
-
-      <DealSection listing={listing} />
     </div>
   );
 }

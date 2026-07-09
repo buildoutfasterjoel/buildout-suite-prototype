@@ -1,6 +1,5 @@
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
-import { Table } from "@buildoutinc/blueprint-react/ui/Table";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -13,7 +12,7 @@ import {
 import type { Listing } from "#/data/types";
 import { STATUS_LABELS } from "../properties/propertyDisplay";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
-import { formatCurrency, formatDate, formatDateTime, initials } from "./dealDisplay";
+import { formatDateTime, initials } from "./dealDisplay";
 
 export function DealAttachments() {
   return (
@@ -136,54 +135,6 @@ export function DealActivity({ listing }: { listing: Listing }) {
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-export function DealVoucher({ listing }: { listing: Listing }) {
-  const v = listing.voucher;
-  return (
-    <div className="d-flex flex-column gap-3 p-4">
-      <ListingPageHeader title="Voucher" />
-      <Table>
-        <Table.Header>
-          <Table.Row>
-            <Table.Head>Voucher Name</Table.Head>
-            <Table.Head>Close Date</Table.Head>
-            <Table.Head>Identifier</Table.Head>
-            <Table.Head>Status</Table.Head>
-            <Table.Head>Related Contacts</Table.Head>
-            <Table.Head className="text-end">Transaction Value</Table.Head>
-            <Table.Head className="text-end">Gross Commission</Table.Head>
-          </Table.Row>
-        </Table.Header>
-        <Table.Body>
-          <Table.Row>
-            <Table.Cell>
-              <span className="text-primary fw-semibold">{v.name}</span>
-            </Table.Cell>
-            <Table.Cell>{formatDate(v.closeDate)}</Table.Cell>
-            <Table.Cell>{v.identifier}</Table.Cell>
-            <Table.Cell>
-              <Badge
-                variant={v.status === "Approved" ? "primary" : "secondary"}
-                appearance={v.status === "Approved" ? "accent" : "muted"}
-              >
-                {v.status}
-              </Badge>
-            </Table.Cell>
-            <Table.Cell>
-              <span className="text-primary">{v.relatedContactsLabel}</span>
-            </Table.Cell>
-            <Table.Cell className="text-end">
-              {formatCurrency(v.transactionValue)}
-            </Table.Cell>
-            <Table.Cell className="text-end">
-              {formatCurrency(v.grossCommission)}
-            </Table.Cell>
-          </Table.Row>
-        </Table.Body>
-      </Table>
     </div>
   );
 }

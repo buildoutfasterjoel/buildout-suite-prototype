@@ -5,6 +5,7 @@ import type {
   ListingStage,
   DealBroker,
   DealHistoryEntry,
+  FinancialDeduction,
   DealTask,
   DealTaskStatus,
   DealType,
@@ -759,8 +760,17 @@ function generateBroker(side: 'internal' | 'outside', commissionAmount: number):
     side,
     commissionSplitPct: splitPct,
     grossCommission: Math.round(commissionAmount * (splitPct / 100)),
+    commissionPlan: side === 'internal' ? 'No Plan' : undefined,
+    personalSplitPct: side === 'internal' ? faker.helpers.arrayElement([45, 55, 60, 70]) : undefined,
   }
 }
+
+const DEDUCTION_CATEGORIES = [
+  { category: 'Marketing', description: 'Billboard Fees' },
+  { category: 'Marketing', description: 'Digital Ad Spend' },
+  { category: 'Legal', description: 'Closing Review' },
+  { category: 'Admin', description: 'Processing Fee' },
+]
 
 const TASK_ASSIGNEE_INITIALS = ['OW', 'MT', 'KN', 'SP', 'JR']
 
@@ -886,7 +896,23 @@ function generateListings(
     const commissionAmount = Math.round(salePrice * (commissionPct / 100))
     const [pMin, pMax] = STAGE_CLOSE_PROBABILITY[status]
 
-    const internalBrokers = [generateBroker('internal', commissionAmount)]
+    // Pre-split deductions come off the top before brokers are paid out.
+    const deductionPick = faker.helpers.arrayElement(DEDUCTION_CATEGORIES)
+    const deductionPct = faker.number.float({ min: 3, max: 8, fractionDigits: 1 })
+    const deductionAmount = Math.round(commissionAmount * (deductionPct / 100))
+    const preSplitDeductions: FinancialDeduction[] = [
+      {
+        id: faker.string.uuid(),
+        category: deductionPick.category,
+        description: deductionPick.description,
+        pct: deductionPct,
+        amount: deductionAmount,
+        covered: null,
+      },
+    ]
+    const netCommission = commissionAmount - deductionAmount
+
+    const internalBrokers = [generateBroker('internal', netCommission)]
     const outsideBrokers = faker.datatype.boolean({ probability: 0.4 })
       ? [generateBroker('outside', commissionAmount)]
       : []
@@ -990,14 +1016,29 @@ function generateListings(
       messages,
       activities: [],
       history,
-      voucher: {
+      financials: {
         name,
         identifier: dealId,
         status: voucherStatus,
         closeDate: status === 'closed' ? faker.date.recent({ days: 90 }).toISOString().slice(0, 10) : null,
-        transactionValue: salePrice,
-        grossCommission: commissionAmount,
         relatedContactsLabel: `${sellerName}${sellerContacts.length + buyerContacts.length > 1 ? ` & ${sellerContacts.length + buyerContacts.length - 1} more` : ''}`,
+        preSplitDeductions,
+        receivables: status === 'closed'
+          ? (() => {
+              const payer = buyerContacts[0] ?? sellerContacts[0]
+              return [
+                {
+                  id: faker.string.uuid(),
+                  payerName: `${payer.firstName} ${payer.lastName}`,
+                  payerEmail: payer.email,
+                  dueDate: faker.date.recent({ days: 30 }).toISOString().slice(0, 10),
+                  billingDescription: 'Full Payment',
+                  amount: commissionAmount,
+                  credited: 0,
+                },
+              ]
+            })()
+          : [],
       },
       nextCriticalDate: nextTask?.date ?? null,
 

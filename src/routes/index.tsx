@@ -55,7 +55,7 @@ function Home() {
               <CardBody>
                 Browse deals in a grid or map, then open one unified workspace
                 where the listing and its financials live together — overview,
-                transaction, planner, contacts, activities, and back-office voucher.
+                transaction, planner, contacts, activities, and back-office financials.
               </CardBody>
             </Card>
           </Link>

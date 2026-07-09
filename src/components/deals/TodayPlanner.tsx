@@ -2,15 +2,10 @@ import { useState } from "react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
 import { Progress } from "@buildoutinc/blueprint-react/ui/Progress";
-import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCheck,
   faCalendar,
-  faPhone,
-  faEnvelope,
-  faNoteSticky,
-  faClockRotateLeft,
   faCirclePlus,
   faArrowRotateRight,
 } from "@fortawesome/pro-regular-svg-icons";
@@ -79,27 +74,6 @@ export function endMilestone(
     case "inactive":
       return null;
   }
-}
-
-/** Borderless section with a rail-style h6 heading (+ optional action). */
-function Section({
-  title,
-  action,
-  children,
-}: {
-  title: string;
-  action?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <section>
-      <div className="d-flex align-items-center justify-content-between gap-2 mb-3">
-        <h6 className="mb-0">{title}</h6>
-        {action}
-      </div>
-      {children}
-    </section>
-  );
 }
 
 type SpinePosition = "start" | "middle" | "end";
@@ -171,7 +145,7 @@ function TaskMarker({
       style={{ lineHeight: 0 }}
     >
       <span
-        className={cn('d-inline-flex align-items-center justify-content-center border border-2 rounded-3', {
+        className={cn('d-inline-flex align-items-center justify-content-center border border-2 rounded-3 fs-xs', {
           'text-bg-accent': complete,
           'bg-card': !complete,
         })}
@@ -179,7 +153,6 @@ function TaskMarker({
           width: 22,
           height: 22,
           color: "#fff",
-          fontSize: 11,
         }}
       >
         {complete && <FontAwesomeIcon icon={faCheck} />}
@@ -202,7 +175,7 @@ function Milestone({
   return (
     <PlannerRow marker={<MilestoneMarker accent={accent} />} spine={spine}>
       <div className="fw-semibold">{label}</div>
-      <div className="fw-semibold" style={{ fontSize: 13, color: accent }}>
+      <div className="fw-semibold fs-small" style={{ color: accent }}>
         {formatPlannerDate(date)}
       </div>
     </PlannerRow>
@@ -231,12 +204,12 @@ function TaskRow({ task, onToggle }: { task: DealTask; onToggle: () => void }) {
     >
       <div className="fw-semibold">{task.label}</div>
       {task.detail && (
-        <div className="text-muted" style={{ fontSize: 13 }}>
+        <div className="text-muted fs-small">
           {task.detail}
         </div>
       )}
       {!complete && task.date && (
-        <div className="text-muted" style={{ fontSize: 13 }}>
+        <div className="text-muted fs-small">
           {formatPlannerDate(task.date)}
           {task.relativeDue ? ` · ${task.relativeDue}` : ""}
         </div>
@@ -263,21 +236,17 @@ function Planner({ listing }: { listing: Listing }) {
     );
 
   const start = stageStartDate(listing.history, listing.status, listing.createdAt);
-  const end = endMilestone(listing.status, start, listing.voucher.closeDate);
+  const end = endMilestone(listing.status, start, listing.financials.closeDate);
 
   return (
-    <>
-      <div className="d-flex align-items-center justify-content-between mb-2">
-        <span className="fw-semibold">
-          {done} of {total} tasks done
-        </span>
-        <span className="fw-semibold" style={{ color: accent }}>
-          {pct}%
-        </span>
-      </div>
-      <Progress value={pct} />
+    <div className="d-flex flex-column">
+      <Progress
+        value={pct}
+        label={`${done} of ${total} tasks done`}
+        showPercentage
+      />
 
-      <div className="mt-3">
+      <div>
         <Milestone
           label={STAGE_START_LABEL[listing.status]}
           date={start}
@@ -291,37 +260,7 @@ function Planner({ listing }: { listing: Listing }) {
           <Milestone label={end.label} date={end.date} spine="end" accent={accent} />
         )}
       </div>
-    </>
-  );
-}
-
-function Activity() {
-  return (
-    <Section title="Activity Timeline">
-      <div className="d-flex gap-2 mb-3">
-        <Button variant="outline" size="sm">
-          <FontAwesomeIcon icon={faPhone} />
-          Log call
-        </Button>
-        <Button variant="outline" size="sm">
-          <FontAwesomeIcon icon={faEnvelope} />
-          Log email
-        </Button>
-        <Button variant="outline" size="sm">
-          <FontAwesomeIcon icon={faNoteSticky} />
-          Add note
-        </Button>
-      </div>
-      <Empty className="py-4">
-        <Empty.Media>
-          <FontAwesomeIcon icon={faClockRotateLeft} aria-hidden />
-        </Empty.Media>
-        <Empty.Content>
-          <Empty.Title>No activity logged yet</Empty.Title>
-          Log a call, email, or note above.
-        </Empty.Content>
-      </Empty>
-    </Section>
+    </div>
   );
 }
 
@@ -350,19 +289,16 @@ function HeaderActions({ listing }: { listing: Listing }) {
 
 /**
  * The "Today" tab: an action-oriented planner (progress bar + milestone
- * timeline) plus an activity timeline — always the first thing a broker sees
- * for a listing, regardless of its stage. Content (milestones, tasks, header
- * actions) adapts to `listing.status`; the shape stays constant. Files and
- * deal facts live in the persistent right rail; sections here are separated
- * by whitespace rather than card borders, since the page already sits inside
- * the detail card.
+ * timeline) — always the first thing a broker sees for a listing, regardless
+ * of its stage. Content (milestones, tasks, header actions) adapts to
+ * `listing.status`; the shape stays constant. Files and deal facts live in
+ * the persistent right rail.
  */
 export function TodayPlanner({ listing }: { listing: Listing }) {
   return (
     <div className="d-flex flex-column gap-5 p-4">
       <ListingPageHeader title="Planner" actions={<HeaderActions listing={listing} />} />
       <Planner listing={listing} />
-      <Activity />
     </div>
   );
 }

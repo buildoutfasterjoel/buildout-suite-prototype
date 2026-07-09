@@ -43,7 +43,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Back Office",
     items: [
       { label: "Transaction", href: "transaction", icon: faHandshake },
-      { label: "Voucher", href: "voucher", icon: faFileInvoiceDollar },
+      { label: "Financials", href: "financials", icon: faFileInvoiceDollar },
       { label: "Invoices", href: "invoices", icon: faFileInvoice },
       { label: "Deposits", href: "deposits", icon: faMoneyCheckDollar },
     ],

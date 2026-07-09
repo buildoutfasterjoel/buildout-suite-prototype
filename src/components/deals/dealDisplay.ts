@@ -7,7 +7,7 @@ export function formatMoney(value: number): string {
   });
 }
 
-/** Full currency, e.g. $10,000,000.00 — matches the deal overview / voucher. */
+/** Full currency, e.g. $10,000,000.00 — matches the deal overview / financials. */
 export function formatCurrency(value: number): string {
   return value.toLocaleString("en-US", {
     style: "currency",
