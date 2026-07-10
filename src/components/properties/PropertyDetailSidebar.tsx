@@ -15,6 +15,7 @@ import {
   faFileInvoice,
   faMoneyCheckDollar,
   faTableCells,
+  faMapLocationDot,
 } from "@fortawesome/pro-regular-svg-icons";
 
 type NavItem = { label: string; href: string; icon: IconDefinition };
@@ -22,7 +23,7 @@ type NavGroup = { label?: string; items: NavItem[] };
 
 const NAV_GROUPS: NavGroup[] = [
   {
-    label: "Project",
+    label: "Deal",
     items: [
       { label: "Overview", href: "overview", icon: faGaugeHigh },
       { label: "Activity", href: "activities", icon: faBolt },
@@ -36,6 +37,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Website", href: "website", icon: faGlobe },
       { label: "Email", href: "email", icon: faEnvelope },
       { label: "Media", href: "media", icon: faImage },
+      { label: "Demographics", href: "demographics", icon: faMapLocationDot },
     ],
   },
   {

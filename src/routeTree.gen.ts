@@ -29,11 +29,13 @@ import { Route as BackofficeContactsIndexRouteImport } from './routes/backoffice
 import { Route as ListingsListingIdWebsiteRouteImport } from './routes/listings/$listingId/website'
 import { Route as ListingsListingIdTransactionRouteImport } from './routes/listings/$listingId/transaction'
 import { Route as ListingsListingIdOverviewRouteImport } from './routes/listings/$listingId/overview'
+import { Route as ListingsListingIdMediaRouteImport } from './routes/listings/$listingId/media'
 import { Route as ListingsListingIdLeadsRouteImport } from './routes/listings/$listingId/leads'
 import { Route as ListingsListingIdGridsRouteImport } from './routes/listings/$listingId/grids'
 import { Route as ListingsListingIdFinancialsRouteImport } from './routes/listings/$listingId/financials'
 import { Route as ListingsListingIdEmailRouteImport } from './routes/listings/$listingId/email'
 import { Route as ListingsListingIdDocumentsRouteImport } from './routes/listings/$listingId/documents'
+import { Route as ListingsListingIdDemographicsRouteImport } from './routes/listings/$listingId/demographics'
 import { Route as ListingsListingIdActivitiesRouteImport } from './routes/listings/$listingId/activities'
 import { Route as BackofficeContactsContactIdRouteImport } from './routes/backoffice/contacts/$contactId'
 
@@ -140,6 +142,11 @@ const ListingsListingIdOverviewRoute =
     path: '/overview',
     getParentRoute: () => ListingsListingIdRoute,
   } as any)
+const ListingsListingIdMediaRoute = ListingsListingIdMediaRouteImport.update({
+  id: '/media',
+  path: '/media',
+  getParentRoute: () => ListingsListingIdRoute,
+} as any)
 const ListingsListingIdLeadsRoute = ListingsListingIdLeadsRouteImport.update({
   id: '/leads',
   path: '/leads',
@@ -165,6 +172,12 @@ const ListingsListingIdDocumentsRoute =
   ListingsListingIdDocumentsRouteImport.update({
     id: '/documents',
     path: '/documents',
+    getParentRoute: () => ListingsListingIdRoute,
+  } as any)
+const ListingsListingIdDemographicsRoute =
+  ListingsListingIdDemographicsRouteImport.update({
+    id: '/demographics',
+    path: '/demographics',
     getParentRoute: () => ListingsListingIdRoute,
   } as any)
 const ListingsListingIdActivitiesRoute =
@@ -198,11 +211,13 @@ export interface FileRoutesByFullPath {
   '/suite/': typeof SuiteIndexRoute
   '/backoffice/contacts/$contactId': typeof BackofficeContactsContactIdRoute
   '/listings/$listingId/activities': typeof ListingsListingIdActivitiesRoute
+  '/listings/$listingId/demographics': typeof ListingsListingIdDemographicsRoute
   '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
   '/listings/$listingId/email': typeof ListingsListingIdEmailRoute
   '/listings/$listingId/financials': typeof ListingsListingIdFinancialsRoute
   '/listings/$listingId/grids': typeof ListingsListingIdGridsRoute
   '/listings/$listingId/leads': typeof ListingsListingIdLeadsRoute
+  '/listings/$listingId/media': typeof ListingsListingIdMediaRoute
   '/listings/$listingId/overview': typeof ListingsListingIdOverviewRoute
   '/listings/$listingId/transaction': typeof ListingsListingIdTransactionRoute
   '/listings/$listingId/website': typeof ListingsListingIdWebsiteRoute
@@ -222,11 +237,13 @@ export interface FileRoutesByTo {
   '/suite': typeof SuiteIndexRoute
   '/backoffice/contacts/$contactId': typeof BackofficeContactsContactIdRoute
   '/listings/$listingId/activities': typeof ListingsListingIdActivitiesRoute
+  '/listings/$listingId/demographics': typeof ListingsListingIdDemographicsRoute
   '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
   '/listings/$listingId/email': typeof ListingsListingIdEmailRoute
   '/listings/$listingId/financials': typeof ListingsListingIdFinancialsRoute
   '/listings/$listingId/grids': typeof ListingsListingIdGridsRoute
   '/listings/$listingId/leads': typeof ListingsListingIdLeadsRoute
+  '/listings/$listingId/media': typeof ListingsListingIdMediaRoute
   '/listings/$listingId/overview': typeof ListingsListingIdOverviewRoute
   '/listings/$listingId/transaction': typeof ListingsListingIdTransactionRoute
   '/listings/$listingId/website': typeof ListingsListingIdWebsiteRoute
@@ -252,11 +269,13 @@ export interface FileRoutesById {
   '/suite/': typeof SuiteIndexRoute
   '/backoffice/contacts/$contactId': typeof BackofficeContactsContactIdRoute
   '/listings/$listingId/activities': typeof ListingsListingIdActivitiesRoute
+  '/listings/$listingId/demographics': typeof ListingsListingIdDemographicsRoute
   '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
   '/listings/$listingId/email': typeof ListingsListingIdEmailRoute
   '/listings/$listingId/financials': typeof ListingsListingIdFinancialsRoute
   '/listings/$listingId/grids': typeof ListingsListingIdGridsRoute
   '/listings/$listingId/leads': typeof ListingsListingIdLeadsRoute
+  '/listings/$listingId/media': typeof ListingsListingIdMediaRoute
   '/listings/$listingId/overview': typeof ListingsListingIdOverviewRoute
   '/listings/$listingId/transaction': typeof ListingsListingIdTransactionRoute
   '/listings/$listingId/website': typeof ListingsListingIdWebsiteRoute
@@ -283,11 +302,13 @@ export interface FileRouteTypes {
     | '/suite/'
     | '/backoffice/contacts/$contactId'
     | '/listings/$listingId/activities'
+    | '/listings/$listingId/demographics'
     | '/listings/$listingId/documents'
     | '/listings/$listingId/email'
     | '/listings/$listingId/financials'
     | '/listings/$listingId/grids'
     | '/listings/$listingId/leads'
+    | '/listings/$listingId/media'
     | '/listings/$listingId/overview'
     | '/listings/$listingId/transaction'
     | '/listings/$listingId/website'
@@ -307,11 +328,13 @@ export interface FileRouteTypes {
     | '/suite'
     | '/backoffice/contacts/$contactId'
     | '/listings/$listingId/activities'
+    | '/listings/$listingId/demographics'
     | '/listings/$listingId/documents'
     | '/listings/$listingId/email'
     | '/listings/$listingId/financials'
     | '/listings/$listingId/grids'
     | '/listings/$listingId/leads'
+    | '/listings/$listingId/media'
     | '/listings/$listingId/overview'
     | '/listings/$listingId/transaction'
     | '/listings/$listingId/website'
@@ -336,11 +359,13 @@ export interface FileRouteTypes {
     | '/suite/'
     | '/backoffice/contacts/$contactId'
     | '/listings/$listingId/activities'
+    | '/listings/$listingId/demographics'
     | '/listings/$listingId/documents'
     | '/listings/$listingId/email'
     | '/listings/$listingId/financials'
     | '/listings/$listingId/grids'
     | '/listings/$listingId/leads'
+    | '/listings/$listingId/media'
     | '/listings/$listingId/overview'
     | '/listings/$listingId/transaction'
     | '/listings/$listingId/website'
@@ -501,6 +526,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ListingsListingIdOverviewRouteImport
       parentRoute: typeof ListingsListingIdRoute
     }
+    '/listings/$listingId/media': {
+      id: '/listings/$listingId/media'
+      path: '/media'
+      fullPath: '/listings/$listingId/media'
+      preLoaderRoute: typeof ListingsListingIdMediaRouteImport
+      parentRoute: typeof ListingsListingIdRoute
+    }
     '/listings/$listingId/leads': {
       id: '/listings/$listingId/leads'
       path: '/leads'
@@ -534,6 +566,13 @@ declare module '@tanstack/react-router' {
       path: '/documents'
       fullPath: '/listings/$listingId/documents'
       preLoaderRoute: typeof ListingsListingIdDocumentsRouteImport
+      parentRoute: typeof ListingsListingIdRoute
+    }
+    '/listings/$listingId/demographics': {
+      id: '/listings/$listingId/demographics'
+      path: '/demographics'
+      fullPath: '/listings/$listingId/demographics'
+      preLoaderRoute: typeof ListingsListingIdDemographicsRouteImport
       parentRoute: typeof ListingsListingIdRoute
     }
     '/listings/$listingId/activities': {
@@ -602,11 +641,13 @@ const EmailRouteWithChildren = EmailRoute._addFileChildren(EmailRouteChildren)
 
 interface ListingsListingIdRouteChildren {
   ListingsListingIdActivitiesRoute: typeof ListingsListingIdActivitiesRoute
+  ListingsListingIdDemographicsRoute: typeof ListingsListingIdDemographicsRoute
   ListingsListingIdDocumentsRoute: typeof ListingsListingIdDocumentsRoute
   ListingsListingIdEmailRoute: typeof ListingsListingIdEmailRoute
   ListingsListingIdFinancialsRoute: typeof ListingsListingIdFinancialsRoute
   ListingsListingIdGridsRoute: typeof ListingsListingIdGridsRoute
   ListingsListingIdLeadsRoute: typeof ListingsListingIdLeadsRoute
+  ListingsListingIdMediaRoute: typeof ListingsListingIdMediaRoute
   ListingsListingIdOverviewRoute: typeof ListingsListingIdOverviewRoute
   ListingsListingIdTransactionRoute: typeof ListingsListingIdTransactionRoute
   ListingsListingIdWebsiteRoute: typeof ListingsListingIdWebsiteRoute
@@ -615,11 +656,13 @@ interface ListingsListingIdRouteChildren {
 
 const ListingsListingIdRouteChildren: ListingsListingIdRouteChildren = {
   ListingsListingIdActivitiesRoute: ListingsListingIdActivitiesRoute,
+  ListingsListingIdDemographicsRoute: ListingsListingIdDemographicsRoute,
   ListingsListingIdDocumentsRoute: ListingsListingIdDocumentsRoute,
   ListingsListingIdEmailRoute: ListingsListingIdEmailRoute,
   ListingsListingIdFinancialsRoute: ListingsListingIdFinancialsRoute,
   ListingsListingIdGridsRoute: ListingsListingIdGridsRoute,
   ListingsListingIdLeadsRoute: ListingsListingIdLeadsRoute,
+  ListingsListingIdMediaRoute: ListingsListingIdMediaRoute,
   ListingsListingIdOverviewRoute: ListingsListingIdOverviewRoute,
   ListingsListingIdTransactionRoute: ListingsListingIdTransactionRoute,
   ListingsListingIdWebsiteRoute: ListingsListingIdWebsiteRoute,
