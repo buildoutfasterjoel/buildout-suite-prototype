@@ -36,6 +36,7 @@ import { Route as ListingsListingIdFinancialsRouteImport } from './routes/listin
 import { Route as ListingsListingIdEmailRouteImport } from './routes/listings/$listingId/email'
 import { Route as ListingsListingIdDocumentsRouteImport } from './routes/listings/$listingId/documents'
 import { Route as ListingsListingIdDemographicsRouteImport } from './routes/listings/$listingId/demographics'
+import { Route as ListingsListingIdClientReportRouteImport } from './routes/listings/$listingId/client-report'
 import { Route as ListingsListingIdActivitiesRouteImport } from './routes/listings/$listingId/activities'
 import { Route as BackofficeContactsContactIdRouteImport } from './routes/backoffice/contacts/$contactId'
 
@@ -180,6 +181,12 @@ const ListingsListingIdDemographicsRoute =
     path: '/demographics',
     getParentRoute: () => ListingsListingIdRoute,
   } as any)
+const ListingsListingIdClientReportRoute =
+  ListingsListingIdClientReportRouteImport.update({
+    id: '/client-report',
+    path: '/client-report',
+    getParentRoute: () => ListingsListingIdRoute,
+  } as any)
 const ListingsListingIdActivitiesRoute =
   ListingsListingIdActivitiesRouteImport.update({
     id: '/activities',
@@ -211,6 +218,7 @@ export interface FileRoutesByFullPath {
   '/suite/': typeof SuiteIndexRoute
   '/backoffice/contacts/$contactId': typeof BackofficeContactsContactIdRoute
   '/listings/$listingId/activities': typeof ListingsListingIdActivitiesRoute
+  '/listings/$listingId/client-report': typeof ListingsListingIdClientReportRoute
   '/listings/$listingId/demographics': typeof ListingsListingIdDemographicsRoute
   '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
   '/listings/$listingId/email': typeof ListingsListingIdEmailRoute
@@ -237,6 +245,7 @@ export interface FileRoutesByTo {
   '/suite': typeof SuiteIndexRoute
   '/backoffice/contacts/$contactId': typeof BackofficeContactsContactIdRoute
   '/listings/$listingId/activities': typeof ListingsListingIdActivitiesRoute
+  '/listings/$listingId/client-report': typeof ListingsListingIdClientReportRoute
   '/listings/$listingId/demographics': typeof ListingsListingIdDemographicsRoute
   '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
   '/listings/$listingId/email': typeof ListingsListingIdEmailRoute
@@ -269,6 +278,7 @@ export interface FileRoutesById {
   '/suite/': typeof SuiteIndexRoute
   '/backoffice/contacts/$contactId': typeof BackofficeContactsContactIdRoute
   '/listings/$listingId/activities': typeof ListingsListingIdActivitiesRoute
+  '/listings/$listingId/client-report': typeof ListingsListingIdClientReportRoute
   '/listings/$listingId/demographics': typeof ListingsListingIdDemographicsRoute
   '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
   '/listings/$listingId/email': typeof ListingsListingIdEmailRoute
@@ -302,6 +312,7 @@ export interface FileRouteTypes {
     | '/suite/'
     | '/backoffice/contacts/$contactId'
     | '/listings/$listingId/activities'
+    | '/listings/$listingId/client-report'
     | '/listings/$listingId/demographics'
     | '/listings/$listingId/documents'
     | '/listings/$listingId/email'
@@ -328,6 +339,7 @@ export interface FileRouteTypes {
     | '/suite'
     | '/backoffice/contacts/$contactId'
     | '/listings/$listingId/activities'
+    | '/listings/$listingId/client-report'
     | '/listings/$listingId/demographics'
     | '/listings/$listingId/documents'
     | '/listings/$listingId/email'
@@ -359,6 +371,7 @@ export interface FileRouteTypes {
     | '/suite/'
     | '/backoffice/contacts/$contactId'
     | '/listings/$listingId/activities'
+    | '/listings/$listingId/client-report'
     | '/listings/$listingId/demographics'
     | '/listings/$listingId/documents'
     | '/listings/$listingId/email'
@@ -575,6 +588,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ListingsListingIdDemographicsRouteImport
       parentRoute: typeof ListingsListingIdRoute
     }
+    '/listings/$listingId/client-report': {
+      id: '/listings/$listingId/client-report'
+      path: '/client-report'
+      fullPath: '/listings/$listingId/client-report'
+      preLoaderRoute: typeof ListingsListingIdClientReportRouteImport
+      parentRoute: typeof ListingsListingIdRoute
+    }
     '/listings/$listingId/activities': {
       id: '/listings/$listingId/activities'
       path: '/activities'
@@ -641,6 +661,7 @@ const EmailRouteWithChildren = EmailRoute._addFileChildren(EmailRouteChildren)
 
 interface ListingsListingIdRouteChildren {
   ListingsListingIdActivitiesRoute: typeof ListingsListingIdActivitiesRoute
+  ListingsListingIdClientReportRoute: typeof ListingsListingIdClientReportRoute
   ListingsListingIdDemographicsRoute: typeof ListingsListingIdDemographicsRoute
   ListingsListingIdDocumentsRoute: typeof ListingsListingIdDocumentsRoute
   ListingsListingIdEmailRoute: typeof ListingsListingIdEmailRoute
@@ -656,6 +677,7 @@ interface ListingsListingIdRouteChildren {
 
 const ListingsListingIdRouteChildren: ListingsListingIdRouteChildren = {
   ListingsListingIdActivitiesRoute: ListingsListingIdActivitiesRoute,
+  ListingsListingIdClientReportRoute: ListingsListingIdClientReportRoute,
   ListingsListingIdDemographicsRoute: ListingsListingIdDemographicsRoute,
   ListingsListingIdDocumentsRoute: ListingsListingIdDocumentsRoute,
   ListingsListingIdEmailRoute: ListingsListingIdEmailRoute,

@@ -16,6 +16,7 @@ import {
   faMoneyCheckDollar,
   faTableCells,
   faMapLocationDot,
+  faFileChartColumn,
 } from "@fortawesome/pro-regular-svg-icons";
 
 type NavItem = { label: string; href: string; icon: IconDefinition };
@@ -38,6 +39,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Email", href: "email", icon: faEnvelope },
       { label: "Media", href: "media", icon: faImage },
       { label: "Demographics", href: "demographics", icon: faMapLocationDot },
+      { label: "Client Report", href: "client-report", icon: faFileChartColumn },
     ],
   },
   {
