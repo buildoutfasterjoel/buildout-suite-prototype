@@ -374,7 +374,7 @@ function PropertyListings() {
                             </Button>
                           }
                         />
-                        <Tooltip.Content>Pipeline</Tooltip.Content>
+                        <Tooltip.Content>Pipeline View</Tooltip.Content>
                       </Tooltip>
                       <Tooltip>
                         <Tooltip.Trigger
@@ -391,7 +391,7 @@ function PropertyListings() {
                             </Button>
                           }
                         />
-                        <Tooltip.Content>Listings</Tooltip.Content>
+                        <Tooltip.Content>Listings View</Tooltip.Content>
                       </Tooltip>
                     </ButtonGroup>
                   </div>
