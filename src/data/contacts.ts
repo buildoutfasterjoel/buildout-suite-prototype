@@ -87,36 +87,51 @@ export const SIDE_DISPLAY: Record<DealSide, { label: string; pillClass: string }
   seller: { label: "Seller", pillClass: "bg-seagull-100 text-seagull-700" },
 };
 
-/** Deal-stage pill. */
+/**
+ * Deal-stage display: soft `pillClass` (used in the detail views) plus a
+ * `dotClass` for the People table, which renders a colored dot + label.
+ */
 export const DEAL_STAGE_DISPLAY: Record<
   ContactDealStage,
-  { label: string; pillClass: string }
+  { label: string; pillClass: string; dotClass: string }
 > = {
   active_search: {
     label: "Active Search",
     pillClass: "bg-buildout-blue-100 text-buildout-blue-700",
+    dotClass: "bg-buildout-blue-500",
   },
   active_listing: {
     label: "Active Listing",
     pillClass: "bg-buildout-blue-100 text-buildout-blue-700",
+    dotClass: "bg-buildout-blue-500",
   },
   pitching: {
     label: "Pitching",
     pillClass: "bg-solid-pink-100 text-solid-pink-700",
+    dotClass: "bg-solid-pink-500",
   },
   under_contract: {
     label: "Under Contract",
     pillClass: "bg-harvest-gold-100 text-harvest-gold-700",
+    dotClass: "bg-harvest-gold-500",
   },
   closed: {
     label: "Closed",
     pillClass: "bg-mountain-meadow-100 text-mountain-meadow-700",
+    dotClass: "bg-mountain-meadow-500",
   },
   lost: {
     label: "Lost",
     pillClass: "text-destructive",
+    dotClass: "bg-destructive",
   },
 };
+
+/** Label + grey dot shown in the Deal Stage column when a contact has no deal. */
+export const NO_DEAL_STAGE = {
+  label: "None Active",
+  dotClass: "bg-storm-grey-400",
+} as const;
 
 /** Phone indicator dot color per status. */
 export const PHONE_STATUS_DOT: Record<PhoneStatus, string> = {

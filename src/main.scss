@@ -30,3 +30,32 @@
   flex-direction: row;
   align-items: center;
 }
+
+// Contact Lists sidebar: make the vertical pill tabs fill the panel width so
+// the count badge pins to the end of each row, and let long list names truncate
+// instead of forcing a horizontal scrollbar.
+.contact-lists-sidebar {
+  .nav-link {
+    width: 100%;
+  }
+
+  .nav-link-text {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .nav-link-text .text-truncate {
+    min-width: 0;
+  }
+
+  // Collapsed rail: center each pill's icon and drop the (empty) label slot.
+  &.is-collapsed {
+    .nav-link {
+      justify-content: center;
+    }
+
+    .nav-link-text {
+      display: none;
+    }
+  }
+}
