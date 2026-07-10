@@ -1,26 +1,24 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowDown, faArrowUp } from "@fortawesome/pro-regular-svg-icons";
 
-/** Card shell with a title header (+ optional action) and padded body. */
-export function SectionCard({
+/** Borderless group: a heading (+ optional action) over its content — sections are set apart by gap, not a card. */
+export function Section({
   title,
   action,
   children,
-  bodyClassName = "p-4",
 }: {
   title: string;
   action?: React.ReactNode;
   children: React.ReactNode;
-  bodyClassName?: string;
 }) {
   return (
-    <div className="bg-card border rounded h-100" style={{ borderRadius: 6 }}>
-      <div className="d-flex align-items-center justify-content-between px-4 py-3 border-bottom">
-        <h2 className="fs-6 fw-semibold mb-0">{title}</h2>
+    <section className="d-flex flex-column gap-3">
+      <div className="d-flex align-items-center justify-content-between gap-2">
+        <h3 className="fs-large fw-semibold mb-0">{title}</h3>
         {action}
       </div>
-      <div className={bodyClassName}>{children}</div>
-    </div>
+      {children}
+    </section>
   );
 }
 

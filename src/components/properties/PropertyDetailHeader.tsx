@@ -21,6 +21,7 @@ import {
   getPhotoUrl,
 } from "./propertyDisplay";
 import { AvatarGroup } from "./AvatarGroup";
+import { SyndicationStatus } from "#/components/listings/SyndicationStatus";
 
 /**
  * Full-bleed page header for a listing (which is its deal, 1:1) — identity on the
@@ -79,11 +80,12 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
               <Badge variant="secondary" appearance="muted">
                 #{refId}
               </Badge>
+              <SyndicationStatus listing={listing} />
             </div>
           </div>
 
           {/* Actions + stage */}
-          <div className="d-flex align-items-center gap-2 flex-shrink-0">
+          <div className="d-flex align-items-cente gap-2 flex-shrink-0">
             <Select
               value={stage}
               onValueChange={(v) => v && setStage(v as ListingStage)}
