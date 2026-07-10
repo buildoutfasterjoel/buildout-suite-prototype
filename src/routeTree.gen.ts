@@ -30,6 +30,7 @@ import { Route as ListingsListingIdWebsiteRouteImport } from './routes/listings/
 import { Route as ListingsListingIdTransactionRouteImport } from './routes/listings/$listingId/transaction'
 import { Route as ListingsListingIdOverviewRouteImport } from './routes/listings/$listingId/overview'
 import { Route as ListingsListingIdLeadsRouteImport } from './routes/listings/$listingId/leads'
+import { Route as ListingsListingIdGridsRouteImport } from './routes/listings/$listingId/grids'
 import { Route as ListingsListingIdFinancialsRouteImport } from './routes/listings/$listingId/financials'
 import { Route as ListingsListingIdEmailRouteImport } from './routes/listings/$listingId/email'
 import { Route as ListingsListingIdDocumentsRouteImport } from './routes/listings/$listingId/documents'
@@ -144,6 +145,11 @@ const ListingsListingIdLeadsRoute = ListingsListingIdLeadsRouteImport.update({
   path: '/leads',
   getParentRoute: () => ListingsListingIdRoute,
 } as any)
+const ListingsListingIdGridsRoute = ListingsListingIdGridsRouteImport.update({
+  id: '/grids',
+  path: '/grids',
+  getParentRoute: () => ListingsListingIdRoute,
+} as any)
 const ListingsListingIdFinancialsRoute =
   ListingsListingIdFinancialsRouteImport.update({
     id: '/financials',
@@ -195,6 +201,7 @@ export interface FileRoutesByFullPath {
   '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
   '/listings/$listingId/email': typeof ListingsListingIdEmailRoute
   '/listings/$listingId/financials': typeof ListingsListingIdFinancialsRoute
+  '/listings/$listingId/grids': typeof ListingsListingIdGridsRoute
   '/listings/$listingId/leads': typeof ListingsListingIdLeadsRoute
   '/listings/$listingId/overview': typeof ListingsListingIdOverviewRoute
   '/listings/$listingId/transaction': typeof ListingsListingIdTransactionRoute
@@ -218,6 +225,7 @@ export interface FileRoutesByTo {
   '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
   '/listings/$listingId/email': typeof ListingsListingIdEmailRoute
   '/listings/$listingId/financials': typeof ListingsListingIdFinancialsRoute
+  '/listings/$listingId/grids': typeof ListingsListingIdGridsRoute
   '/listings/$listingId/leads': typeof ListingsListingIdLeadsRoute
   '/listings/$listingId/overview': typeof ListingsListingIdOverviewRoute
   '/listings/$listingId/transaction': typeof ListingsListingIdTransactionRoute
@@ -247,6 +255,7 @@ export interface FileRoutesById {
   '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
   '/listings/$listingId/email': typeof ListingsListingIdEmailRoute
   '/listings/$listingId/financials': typeof ListingsListingIdFinancialsRoute
+  '/listings/$listingId/grids': typeof ListingsListingIdGridsRoute
   '/listings/$listingId/leads': typeof ListingsListingIdLeadsRoute
   '/listings/$listingId/overview': typeof ListingsListingIdOverviewRoute
   '/listings/$listingId/transaction': typeof ListingsListingIdTransactionRoute
@@ -277,6 +286,7 @@ export interface FileRouteTypes {
     | '/listings/$listingId/documents'
     | '/listings/$listingId/email'
     | '/listings/$listingId/financials'
+    | '/listings/$listingId/grids'
     | '/listings/$listingId/leads'
     | '/listings/$listingId/overview'
     | '/listings/$listingId/transaction'
@@ -300,6 +310,7 @@ export interface FileRouteTypes {
     | '/listings/$listingId/documents'
     | '/listings/$listingId/email'
     | '/listings/$listingId/financials'
+    | '/listings/$listingId/grids'
     | '/listings/$listingId/leads'
     | '/listings/$listingId/overview'
     | '/listings/$listingId/transaction'
@@ -328,6 +339,7 @@ export interface FileRouteTypes {
     | '/listings/$listingId/documents'
     | '/listings/$listingId/email'
     | '/listings/$listingId/financials'
+    | '/listings/$listingId/grids'
     | '/listings/$listingId/leads'
     | '/listings/$listingId/overview'
     | '/listings/$listingId/transaction'
@@ -496,6 +508,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ListingsListingIdLeadsRouteImport
       parentRoute: typeof ListingsListingIdRoute
     }
+    '/listings/$listingId/grids': {
+      id: '/listings/$listingId/grids'
+      path: '/grids'
+      fullPath: '/listings/$listingId/grids'
+      preLoaderRoute: typeof ListingsListingIdGridsRouteImport
+      parentRoute: typeof ListingsListingIdRoute
+    }
     '/listings/$listingId/financials': {
       id: '/listings/$listingId/financials'
       path: '/financials'
@@ -586,6 +605,7 @@ interface ListingsListingIdRouteChildren {
   ListingsListingIdDocumentsRoute: typeof ListingsListingIdDocumentsRoute
   ListingsListingIdEmailRoute: typeof ListingsListingIdEmailRoute
   ListingsListingIdFinancialsRoute: typeof ListingsListingIdFinancialsRoute
+  ListingsListingIdGridsRoute: typeof ListingsListingIdGridsRoute
   ListingsListingIdLeadsRoute: typeof ListingsListingIdLeadsRoute
   ListingsListingIdOverviewRoute: typeof ListingsListingIdOverviewRoute
   ListingsListingIdTransactionRoute: typeof ListingsListingIdTransactionRoute
@@ -598,6 +618,7 @@ const ListingsListingIdRouteChildren: ListingsListingIdRouteChildren = {
   ListingsListingIdDocumentsRoute: ListingsListingIdDocumentsRoute,
   ListingsListingIdEmailRoute: ListingsListingIdEmailRoute,
   ListingsListingIdFinancialsRoute: ListingsListingIdFinancialsRoute,
+  ListingsListingIdGridsRoute: ListingsListingIdGridsRoute,
   ListingsListingIdLeadsRoute: ListingsListingIdLeadsRoute,
   ListingsListingIdOverviewRoute: ListingsListingIdOverviewRoute,
   ListingsListingIdTransactionRoute: ListingsListingIdTransactionRoute,

@@ -14,6 +14,7 @@ import {
   faImage,
   faFileInvoice,
   faMoneyCheckDollar,
+  faTableCells,
 } from "@fortawesome/pro-regular-svg-icons";
 
 type NavItem = { label: string; href: string; icon: IconDefinition };
@@ -42,6 +43,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Transaction", href: "transaction", icon: faHandshake },
       { label: "Financials", href: "financials", icon: faFileInvoiceDollar },
+      { label: "Grids", href: "grids", icon: faTableCells },
       { label: "Invoices", href: "invoices", icon: faFileInvoice },
       { label: "Deposits", href: "deposits", icon: faMoneyCheckDollar },
     ],
