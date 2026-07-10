@@ -5,21 +5,31 @@ import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { ButtonGroup } from "@buildoutinc/blueprint-react/ui/ButtonGroup";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faMagnifyingGlass,
   faUserGroupSimple,
   faArrowDownWideShort,
   faCirclePlus,
+  faSign,
+  faTableColumns,
+  faTableCellsLarge,
+  faLocationDot,
 } from "@fortawesome/pro-regular-svg-icons";
 import { getStore } from "#/data/store";
 import type { Listing, PropertyStatus, DealSide } from "#/data/types";
 import { DealBoard } from "#/components/deals/DealBoard";
 import type { Facet } from "#/components/properties/PropertyFilters";
+import { PropertyFilters } from "#/components/properties/PropertyFilters";
 import { FacetDropdown } from "#/components/properties/FacetDropdown";
+import { PropertyGrid } from "#/components/properties/PropertyGrid";
+import { PropertyMap } from "#/components/properties/PropertyMap";
 import {
   PROPERTY_TYPES,
   TYPE_LABELS,
+  PROPERTY_STATUSES,
+  STATUS_LABELS,
   formatPrice,
 } from "#/components/properties/propertyDisplay";
 import {
@@ -58,6 +68,8 @@ const SORT_LABELS = Object.fromEntries(
   SORT_OPTIONS.map((o) => [o.value, o.label]),
 ) as Record<SortBy, string>;
 
+type ViewMode = "board" | "grid" | "map";
+
 const SIDE_OPTIONS: { value: DealSide | "all"; label: string }[] = [
   { value: "all", label: "All" },
   { value: "seller", label: "Seller" },
@@ -91,6 +103,8 @@ function PropertyListings() {
   const [sortBy, setSortBy] = useState<SortBy>("default");
   const [side, setSide] = useState<DealSide | "all">("all");
   const [newOpen, setNewOpen] = useState(false);
+  const [view, setView] = useState<ViewMode>("board");
+  const isListings = view === "grid" || view === "map";
 
   const onRestage = useCallback((listingId: string, stage: PropertyStatus) => {
     const listing = getStore().listings.get(listingId);
@@ -104,6 +118,7 @@ function PropertyListings() {
   const type = useToggleSet<string>();
   const saleLease = useToggleSet<string>();
   const expiration = useToggleSet<string>();
+  const stage = useToggleSet<PropertyStatus>();
 
   // The stage/"Deal" facet lives on the board columns now, so it's dropped here.
   const facets: Facet[] = useMemo(
@@ -142,16 +157,40 @@ function PropertyListings() {
     [expiration, saleLease, type],
   );
 
+  // Stage/deal-status facet — only surfaced in the Listings sidebar since the
+  // Kanban board already visualizes stage via its columns.
+  const stageFacet: Facet = useMemo(
+    () => ({
+      id: "status",
+      title: "Stage",
+      options: PROPERTY_STATUSES.map((s) => ({
+        value: s,
+        label: STATUS_LABELS[s],
+      })),
+      getValue: (l: Listing) => l.status,
+      selected: stage.set,
+      toggle: (v: string) => stage.toggle(v as PropertyStatus),
+      clear: stage.clear,
+    }),
+    [stage],
+  );
+
+  const sidebarFacets = useMemo(
+    () => [stageFacet, ...facets],
+    [facets, stageFacet],
+  );
+
   const clearAll = useCallback(() => {
     type.clear();
     saleLease.clear();
     expiration.clear();
-  }, [type, saleLease, expiration]);
+    stage.clear();
+  }, [type, saleLease, expiration, stage]);
 
-  // Option counts across the full dataset for the dropdown badges.
+  // Option counts across the full dataset for the dropdown/sidebar badges.
   const countsByFacet = useMemo(() => {
     const result: Record<string, Record<string, number>> = {};
-    for (const facet of facets) {
+    for (const facet of sidebarFacets) {
       const counts: Record<string, number> = {};
       for (const l of listings) {
         const v = facet.getValue(l);
@@ -160,7 +199,7 @@ function PropertyListings() {
       result[facet.id] = counts;
     }
     return result;
-  }, [facets, listings]);
+  }, [sidebarFacets, listings]);
 
   const activeFilterCount = facets.reduce((n, f) => n + f.selected.size, 0);
 
@@ -168,7 +207,7 @@ function PropertyListings() {
     const q = search.trim().toLowerCase();
     return listings.filter((l) => {
       if (side !== "all" && l.dealSide !== side) return false;
-      for (const facet of facets) {
+      for (const facet of sidebarFacets) {
         if (facet.selected.size && !facet.selected.has(facet.getValue(l)))
           return false;
       }
@@ -179,7 +218,7 @@ function PropertyListings() {
       }
       return true;
     });
-  }, [listings, facets, search, side]);
+  }, [listings, sidebarFacets, search, side]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -291,30 +330,70 @@ function PropertyListings() {
                       </Select>
                     </div>
 
-                    {/* Facet filters */}
-                    {facets.map((facet) => (
-                      <FacetDropdown
-                        key={facet.id}
-                        facet={facet}
-                        counts={countsByFacet[facet.id]}
-                      />
-                    ))}
-                    {activeFilterCount > 0 && (
-                      <button
-                        type="button"
-                        onClick={clearAll}
-                        className="btn btn-link btn-sm text-decoration-none text-nowrap"
-                      >
-                        Clear filters
-                      </button>
+                    {/* Facet filters — move to the sidebar in Listings view */}
+                    {!isListings && (
+                      <>
+                        {facets.map((facet) => (
+                          <FacetDropdown
+                            key={facet.id}
+                            facet={facet}
+                            counts={countsByFacet[facet.id]}
+                          />
+                        ))}
+                        {activeFilterCount > 0 && (
+                          <button
+                            type="button"
+                            onClick={clearAll}
+                            className="btn btn-link btn-sm text-decoration-none text-nowrap"
+                          >
+                            Clear filters
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
 
-                  {/* Right: count */}
+                  {/* Right: count + view switcher */}
                   <div className="d-flex align-items-center gap-3 ms-auto">
                     <span className="text-muted text-nowrap">
                       Displaying {filtered.length} of {total} Deals
                     </span>
+                    <ButtonGroup aria-label="View switcher">
+                      <Tooltip>
+                        <Tooltip.Trigger
+                          render={
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className={view === "board" ? "active" : ""}
+                              onClick={() => setView("board")}
+                              aria-pressed={view === "board"}
+                              aria-label="Pipeline view"
+                            >
+                              <FontAwesomeIcon icon={faTableColumns} />
+                            </Button>
+                          }
+                        />
+                        <Tooltip.Content>Pipeline</Tooltip.Content>
+                      </Tooltip>
+                      <Tooltip>
+                        <Tooltip.Trigger
+                          render={
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className={isListings ? "active" : ""}
+                              onClick={() => setView("grid")}
+                              aria-pressed={isListings}
+                              aria-label="Listings view"
+                            >
+                              <FontAwesomeIcon icon={faSign} />
+                            </Button>
+                          }
+                        />
+                        <Tooltip.Content>Listings</Tooltip.Content>
+                      </Tooltip>
+                    </ButtonGroup>
                   </div>
                 </Card.Body>
               </Card>
@@ -323,43 +402,101 @@ function PropertyListings() {
         </div>
       </div>
 
-      {/* Full-width board */}
-      <div className="container flex-grow-1 overflow-hidden d-flex flex-column pb-3">
-        <Card className="flex-grow-1 overflow-hidden d-flex flex-column">
-          <Card.Body className="flex-grow-1 overflow-hidden d-flex flex-column gap-3">
-            <div className="d-flex align-items-baseline justify-content-between gap-3">
-              <ButtonGroup aria-label="Deal side">
-                {SIDE_OPTIONS.map((opt) => (
-                  <Button
-                    key={opt.value}
-                    variant="outline"
-                    className={` border-storm-grey-300 ${side === opt.value ? "active" : ""}`}
-                    onClick={() => setSide(opt.value)}
-                    aria-pressed={side === opt.value}
-                    appearance="muted"
+      {view === "board" ? (
+        <div className="container flex-grow-1 overflow-hidden d-flex flex-column pb-3">
+          <Card className="flex-grow-1 overflow-hidden d-flex flex-column">
+            <Card.Body className="flex-grow-1 overflow-hidden d-flex flex-column gap-3">
+              <div className="d-flex align-items-baseline justify-content-between gap-3">
+                <ButtonGroup aria-label="Deal side">
+                  {SIDE_OPTIONS.map((opt) => (
+                    <Button
+                      key={opt.value}
+                      variant="outline"
+                      className={` border-storm-grey-300 ${side === opt.value ? "active" : ""}`}
+                      onClick={() => setSide(opt.value)}
+                      aria-pressed={side === opt.value}
+                      appearance="muted"
+                    >
+                      {opt.label}
+                    </Button>
+                  ))}
+                </ButtonGroup>
+                <div className="d-flex align-items-baseline gap-2">
+                  <span
+                    className="text-muted fs-xs text-uppercase"
+                    style={{ letterSpacing: "0.04em" }}
                   >
-                    {opt.label}
-                  </Button>
-                ))}
-              </ButtonGroup>
-              <div className="d-flex align-items-baseline gap-2">
-                <span
-                  className="text-muted fs-xs text-uppercase"
-                  style={{ letterSpacing: "0.04em" }}
-                >
-                  Weighted forecast
-                </span>
-                <span className="fw-bold fs-5">
-                  {formatPrice(weightedForecast)}
-                </span>
+                    Weighted forecast
+                  </span>
+                  <span className="fw-bold fs-5">
+                    {formatPrice(weightedForecast)}
+                  </span>
+                </div>
               </div>
-            </div>
-            <div className="flex-grow-1 overflow-hidden">
-              <DealBoard listings={sorted} onRestage={onRestage} />
-            </div>
-          </Card.Body>
-        </Card>
-      </div>
+              <div className="flex-grow-1 overflow-hidden">
+                <DealBoard listings={sorted} onRestage={onRestage} />
+              </div>
+            </Card.Body>
+          </Card>
+        </div>
+      ) : (
+        <div className="container flex-grow-1 d-flex overflow-hidden gap-4 pb-3">
+          <PropertyFilters
+            listings={listings}
+            facets={sidebarFacets}
+            onClearAll={clearAll}
+          />
+          <Card className="flex-grow-1 overflow-hidden d-flex flex-column">
+            <Card.Body className="flex-grow-1 overflow-hidden d-flex flex-column gap-3">
+              <div className="align-self-end">
+                <ButtonGroup aria-label="Property layout switcher">
+                  <Tooltip>
+                    <Tooltip.Trigger
+                      render={
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className={view === "grid" ? "active" : ""}
+                          onClick={() => setView("grid")}
+                          aria-pressed={view === "grid"}
+                          aria-label="Grid view"
+                        >
+                          <FontAwesomeIcon icon={faTableCellsLarge} />
+                        </Button>
+                      }
+                    />
+                    <Tooltip.Content>Grid</Tooltip.Content>
+                  </Tooltip>
+                  <Tooltip>
+                    <Tooltip.Trigger
+                      render={
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className={view === "map" ? "active" : ""}
+                          onClick={() => setView("map")}
+                          aria-pressed={view === "map"}
+                          aria-label="Map view"
+                        >
+                          <FontAwesomeIcon icon={faLocationDot} />
+                        </Button>
+                      }
+                    />
+                    <Tooltip.Content>Map</Tooltip.Content>
+                  </Tooltip>
+                </ButtonGroup>
+              </div>
+              <div className="flex-grow-1 overflow-y-auto overflow-x-hidden">
+                {view === "grid" ? (
+                  <PropertyGrid listings={sorted} />
+                ) : (
+                  <PropertyMap listings={sorted} />
+                )}
+              </div>
+            </Card.Body>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

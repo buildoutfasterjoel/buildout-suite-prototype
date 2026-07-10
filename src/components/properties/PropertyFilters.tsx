@@ -99,7 +99,7 @@ export function PropertyFilters({
   );
 
   return (
-    <Card className="overflow-auto shadow flex-shrink-0">
+    <Card className="overflow-auto shadow flex-shrink-0" style={{ width: 240 }}>
       {/* Active Filters */}
       <Card.Body className="mb-4">
         <div className="d-flex align-items-baseline justify-content-between mb-2">
