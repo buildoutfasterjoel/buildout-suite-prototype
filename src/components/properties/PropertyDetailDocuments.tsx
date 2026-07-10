@@ -23,7 +23,6 @@ import {
   faCircleInfo,
 } from "@fortawesome/pro-regular-svg-icons";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
-import { getListing } from "#/data/store";
 
 type Document = {
   id: string;
@@ -71,25 +70,11 @@ export function PropertyDetailDocuments({ listingId }: { listingId: string }) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  // Context files attached when the deal was created lead the list.
-  const attached: Document[] = (getListing(listingId)?.documents ?? []).map(
-    (d) => ({
-      id: d.id,
-      name: d.name,
-      adminBadge: false,
-      accessLevel: "Private",
-      lastModified: "just now",
-      primary: false,
-      viewCount: 0,
-    }),
-  );
-  const documents = [...attached, ...DOCUMENTS];
-
   const filtered = search.trim()
-    ? documents.filter((d) =>
+    ? DOCUMENTS.filter((d) =>
         d.name.toLowerCase().includes(search.trim().toLowerCase()),
       )
-    : documents;
+    : DOCUMENTS;
 
   const allSelected =
     filtered.length > 0 && filtered.every((d) => selected.has(d.id));

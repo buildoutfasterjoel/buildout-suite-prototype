@@ -12,11 +12,10 @@ import {
   faGlobe,
   faEnvelope,
   faImage,
-  faFileInvoice,
-  faMoneyCheckDollar,
   faTableCells,
   faMapLocationDot,
   faFileChartColumn,
+  faFolder,
 } from "@fortawesome/pro-regular-svg-icons";
 
 type NavItem = { label: string; href: string; icon: IconDefinition };
@@ -27,7 +26,13 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Deal",
     items: [
       { label: "Overview", href: "overview", icon: faGaugeHigh },
+      {
+        label: "Client Report",
+        href: "client-report",
+        icon: faFileChartColumn,
+      },
       { label: "Activity", href: "activities", icon: faBolt },
+      { label: "Files", href: "files", icon: faFolder },
     ],
   },
   {
@@ -39,7 +44,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Email", href: "email", icon: faEnvelope },
       { label: "Media", href: "media", icon: faImage },
       { label: "Demographics", href: "demographics", icon: faMapLocationDot },
-      { label: "Client Report", href: "client-report", icon: faFileChartColumn },
+      { label: "Grids", href: "grids", icon: faTableCells },
     ],
   },
   {
@@ -47,9 +52,8 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Transaction", href: "transaction", icon: faHandshake },
       { label: "Financials", href: "financials", icon: faFileInvoiceDollar },
-      { label: "Grids", href: "grids", icon: faTableCells },
-      { label: "Invoices", href: "invoices", icon: faFileInvoice },
-      { label: "Deposits", href: "deposits", icon: faMoneyCheckDollar },
+      // { label: "Invoices", href: "invoices", icon: faFileInvoice },
+      // { label: "Deposits", href: "deposits", icon: faMoneyCheckDollar },
     ],
   },
 ];

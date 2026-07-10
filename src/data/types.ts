@@ -216,6 +216,22 @@ export interface DealDocument {
   size?: string
 }
 
+/** A folder or file in a deal's internal Files workspace (the "lite Dropbox" page). */
+export interface DealFileItem {
+  id: string
+  name: string
+  kind: 'folder' | 'file'
+  /** Parent folder id, or null for items at the root. */
+  parentId: string | null
+  createdAt: string
+  /** Files only. */
+  sizeBytes?: number
+  /** Set when soft-deleted; powers the Recycle Bin. */
+  deletedAt?: string | null
+  /** Files only — the real Blob for files uploaded/dropped in this session, enabling a real download. Seed files have none. */
+  blob?: File
+}
+
 /** A broker on a deal, internal (own brokerage) or an outside co-broker. */
 export interface DealBroker {
   id: string

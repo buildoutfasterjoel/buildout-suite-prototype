@@ -33,6 +33,7 @@ import { Route as ListingsListingIdMediaRouteImport } from './routes/listings/$l
 import { Route as ListingsListingIdLeadsRouteImport } from './routes/listings/$listingId/leads'
 import { Route as ListingsListingIdGridsRouteImport } from './routes/listings/$listingId/grids'
 import { Route as ListingsListingIdFinancialsRouteImport } from './routes/listings/$listingId/financials'
+import { Route as ListingsListingIdFilesRouteImport } from './routes/listings/$listingId/files'
 import { Route as ListingsListingIdEmailRouteImport } from './routes/listings/$listingId/email'
 import { Route as ListingsListingIdDocumentsRouteImport } from './routes/listings/$listingId/documents'
 import { Route as ListingsListingIdDemographicsRouteImport } from './routes/listings/$listingId/demographics'
@@ -164,6 +165,11 @@ const ListingsListingIdFinancialsRoute =
     path: '/financials',
     getParentRoute: () => ListingsListingIdRoute,
   } as any)
+const ListingsListingIdFilesRoute = ListingsListingIdFilesRouteImport.update({
+  id: '/files',
+  path: '/files',
+  getParentRoute: () => ListingsListingIdRoute,
+} as any)
 const ListingsListingIdEmailRoute = ListingsListingIdEmailRouteImport.update({
   id: '/email',
   path: '/email',
@@ -222,6 +228,7 @@ export interface FileRoutesByFullPath {
   '/listings/$listingId/demographics': typeof ListingsListingIdDemographicsRoute
   '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
   '/listings/$listingId/email': typeof ListingsListingIdEmailRoute
+  '/listings/$listingId/files': typeof ListingsListingIdFilesRoute
   '/listings/$listingId/financials': typeof ListingsListingIdFinancialsRoute
   '/listings/$listingId/grids': typeof ListingsListingIdGridsRoute
   '/listings/$listingId/leads': typeof ListingsListingIdLeadsRoute
@@ -249,6 +256,7 @@ export interface FileRoutesByTo {
   '/listings/$listingId/demographics': typeof ListingsListingIdDemographicsRoute
   '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
   '/listings/$listingId/email': typeof ListingsListingIdEmailRoute
+  '/listings/$listingId/files': typeof ListingsListingIdFilesRoute
   '/listings/$listingId/financials': typeof ListingsListingIdFinancialsRoute
   '/listings/$listingId/grids': typeof ListingsListingIdGridsRoute
   '/listings/$listingId/leads': typeof ListingsListingIdLeadsRoute
@@ -282,6 +290,7 @@ export interface FileRoutesById {
   '/listings/$listingId/demographics': typeof ListingsListingIdDemographicsRoute
   '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
   '/listings/$listingId/email': typeof ListingsListingIdEmailRoute
+  '/listings/$listingId/files': typeof ListingsListingIdFilesRoute
   '/listings/$listingId/financials': typeof ListingsListingIdFinancialsRoute
   '/listings/$listingId/grids': typeof ListingsListingIdGridsRoute
   '/listings/$listingId/leads': typeof ListingsListingIdLeadsRoute
@@ -316,6 +325,7 @@ export interface FileRouteTypes {
     | '/listings/$listingId/demographics'
     | '/listings/$listingId/documents'
     | '/listings/$listingId/email'
+    | '/listings/$listingId/files'
     | '/listings/$listingId/financials'
     | '/listings/$listingId/grids'
     | '/listings/$listingId/leads'
@@ -343,6 +353,7 @@ export interface FileRouteTypes {
     | '/listings/$listingId/demographics'
     | '/listings/$listingId/documents'
     | '/listings/$listingId/email'
+    | '/listings/$listingId/files'
     | '/listings/$listingId/financials'
     | '/listings/$listingId/grids'
     | '/listings/$listingId/leads'
@@ -375,6 +386,7 @@ export interface FileRouteTypes {
     | '/listings/$listingId/demographics'
     | '/listings/$listingId/documents'
     | '/listings/$listingId/email'
+    | '/listings/$listingId/files'
     | '/listings/$listingId/financials'
     | '/listings/$listingId/grids'
     | '/listings/$listingId/leads'
@@ -567,6 +579,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ListingsListingIdFinancialsRouteImport
       parentRoute: typeof ListingsListingIdRoute
     }
+    '/listings/$listingId/files': {
+      id: '/listings/$listingId/files'
+      path: '/files'
+      fullPath: '/listings/$listingId/files'
+      preLoaderRoute: typeof ListingsListingIdFilesRouteImport
+      parentRoute: typeof ListingsListingIdRoute
+    }
     '/listings/$listingId/email': {
       id: '/listings/$listingId/email'
       path: '/email'
@@ -665,6 +684,7 @@ interface ListingsListingIdRouteChildren {
   ListingsListingIdDemographicsRoute: typeof ListingsListingIdDemographicsRoute
   ListingsListingIdDocumentsRoute: typeof ListingsListingIdDocumentsRoute
   ListingsListingIdEmailRoute: typeof ListingsListingIdEmailRoute
+  ListingsListingIdFilesRoute: typeof ListingsListingIdFilesRoute
   ListingsListingIdFinancialsRoute: typeof ListingsListingIdFinancialsRoute
   ListingsListingIdGridsRoute: typeof ListingsListingIdGridsRoute
   ListingsListingIdLeadsRoute: typeof ListingsListingIdLeadsRoute
@@ -681,6 +701,7 @@ const ListingsListingIdRouteChildren: ListingsListingIdRouteChildren = {
   ListingsListingIdDemographicsRoute: ListingsListingIdDemographicsRoute,
   ListingsListingIdDocumentsRoute: ListingsListingIdDocumentsRoute,
   ListingsListingIdEmailRoute: ListingsListingIdEmailRoute,
+  ListingsListingIdFilesRoute: ListingsListingIdFilesRoute,
   ListingsListingIdFinancialsRoute: ListingsListingIdFinancialsRoute,
   ListingsListingIdGridsRoute: ListingsListingIdGridsRoute,
   ListingsListingIdLeadsRoute: ListingsListingIdLeadsRoute,
