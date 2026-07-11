@@ -340,41 +340,45 @@ git add src/data/dataStore.ts src/data/dataStore.test.ts
 git commit -m "feat(data): add hydrate, debounced persist, and reset to the data store"
 ```
 
-### Task 4: Client hydrator component + reset control
+### Task 4: Client auto-hydration + reset control
+
+**Decision (supersedes the earlier `__root.tsx` mount):** `src/routes/__root.tsx` is bo-spark-CLI-managed (same overwrite warning as `login.tsx`), so mounting a hydrator component there risks silently disabling persistence on a CLI regen. Instead, trigger hydration from the non-route `dataStore.ts` module, guarded to the client. **Do NOT modify `src/routes/__root.tsx`.**
 
 **Files:**
-- Create: `src/components/system/DataStoreHydrator.tsx`
-- Modify: `src/routes/__root.tsx` (mount the hydrator in the global shell)
+- Modify: `src/data/dataStore.ts` (append a client-only auto-hydration trigger at the bottom)
+- Create: `src/components/system/ResetDemoButton.tsx` (the reset control, mounted into demo chrome later — not auto-mounted here)
 
 **Interfaces:**
-- Consumes: `useDataStore` (`hydrate`, `hydrated`, `reset`).
-- Produces: `<DataStoreHydrator />` — runs `hydrate()` once on mount; renders nothing until decided. Reset control is a named export `ResetDemoButton`.
+- Consumes: `useDataStore` (`hydrate`, `reset`).
+- Produces: side-effecting auto-hydration on first client import of `dataStore.ts`; `ResetDemoButton` named export.
 
-**Why `__root.tsx`:** it is the documented global shell (always mounted). The hydrator is a client-only `useEffect` that renders `null`, so mounting it globally is harmless before auth — it only loads data into memory; the existing `beforeLoad` gate still controls screen access. Mount `ResetDemoButton` wherever the demo chrome lives when that UI is added; it is not auto-mounted here.
+**Why the client guard is test-safe:** Vitest has no configured environment, so it runs in `node` where `typeof window === 'undefined'` — the guard skips auto-hydration during tests, leaving the existing store/persistence tests deterministic. In the browser, `window` exists and hydration runs once when the singleton module is first imported.
 
-- [ ] **Step 1: Read the mount point**
+- [ ] **Step 1: Append the auto-hydration trigger** to the very bottom of `src/data/dataStore.ts` (after the `create(...)` call):
 
-Run: `sed -n '1,80p' src/routes/__root.tsx`
-Expected: identify the component that renders the app tree (where a global `<DataStoreHydrator />` belongs, alongside the existing devtools).
+```ts
+// Kick off hydration once, on the client only. `__root.tsx` is CLI-managed, so
+// hydration lives here (a non-route module) rather than in a mounted component,
+// so a bo-spark regen can never silently disable persistence. In tests
+// (node env, no `window`) this is skipped, keeping the suite deterministic.
+if (typeof window !== 'undefined') {
+  void useDataStore.getState().hydrate()
+}
+```
 
-- [ ] **Step 2: Implement the hydrator**
+- [ ] **Step 2: Run the full suite to confirm the guard doesn't disturb tests**
+
+Run: `bun --bun run test`
+Expected: PASS (same count as after Task 3; auto-hydration is skipped under node).
+
+- [ ] **Step 3: Implement the reset control**
 
 ```tsx
-// src/components/system/DataStoreHydrator.tsx
-import { useEffect } from 'react'
+// src/components/system/ResetDemoButton.tsx
 import { Button } from '@buildoutinc/blueprint-react/ui/Button'
 import { faArrowsRotate } from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useDataStore } from '#/data/dataStore'
-
-/** Loads the persisted world on the client, once, after mount. Renders nothing. */
-export function DataStoreHydrator() {
-  const hydrate = useDataStore((s) => s.hydrate)
-  useEffect(() => {
-    void hydrate()
-  }, [hydrate])
-  return null
-}
 
 /** Wipes the demo world back to the deterministic clean state (keeps the session). */
 export function ResetDemoButton() {
@@ -394,22 +398,20 @@ export function ResetDemoButton() {
 }
 ```
 
-- [ ] **Step 3: Mount `<DataStoreHydrator />`** in the component that `src/routes/__root.tsx` renders (alongside the existing devtools/outlet). Add `import { DataStoreHydrator } from '#/components/system/DataStoreHydrator'`.
-
 - [ ] **Step 4: Verify build + existing tests**
 
 Run: `bun --bun run test && bun --bun run build`
 Expected: tests PASS; build succeeds.
 
-- [ ] **Step 5: Runtime check (ask the user)**
+- [ ] **Step 5: Runtime check (deferred to final user verification)**
 
-Ask the user to run `bun --bun run dev`, add a deal, refresh (persists), then click **Reset demo** (returns to clean state). We do not use Playwright.
+The browser round-trip (add a deal → refresh persists → Reset demo restores clean state) is verified by the user at the plan's Final Verification, not in this task. We do not use Playwright.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/components/system/DataStoreHydrator.tsx src/routes/__root.tsx
-git commit -m "feat(data): hydrate persisted world on mount and add Reset demo control"
+git add src/data/dataStore.ts src/components/system/ResetDemoButton.tsx
+git commit -m "feat(data): auto-hydrate persisted world on client and add Reset demo control"
 ```
 
 ---
