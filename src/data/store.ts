@@ -6,27 +6,12 @@ import type {
   PropertyType,
   RelationshipStage,
 } from './types'
-import { generateDataset } from './seed'
+import { useDataStore } from './dataStore'
 
-let _store: DataStore | null = null
-
+/** Live view of the four entity maps from the Zustand store. */
 export function getStore(): DataStore {
-  if (_store !== null) return _store
-
-  const { properties, listings, comps, contacts } = generateDataset()
-
-  _store = {
-    properties: new Map(properties.map((p) => [p.id, p])),
-    listings: new Map(listings.map((l) => [l.id, l])),
-    comps: new Map(comps.map((c) => [c.id, c])),
-    contacts: new Map(contacts.map((ct) => [ct.id, ct])),
-  }
-
-  return _store
-}
-
-export function _resetStore(): void {
-  _store = null
+  const { properties, listings, comps, contacts } = useDataStore.getState()
+  return { properties, listings, comps, contacts }
 }
 
 export function getProperty(propertyId: string): Property | undefined {
@@ -44,7 +29,12 @@ export function getListingsForProperty(propertyId: string): Listing[] {
 
 /** Insert a property into the in-memory store. */
 export function addProperty(property: Property): void {
-  getStore().properties.set(property.id, property)
+  useDataStore.setState((s) => {
+    const properties = new Map(s.properties)
+    properties.set(property.id, property)
+    return { properties }
+  })
+  useDataStore.getState().persist()
 }
 
 /** Merge a patch into a stored property (e.g. from an in-editor edit) and return it. */
@@ -52,11 +42,15 @@ export function updateProperty(
   propertyId: string,
   patch: Partial<Property>,
 ): Property | undefined {
-  const properties = getStore().properties
-  const existing = properties.get(propertyId)
+  const existing = useDataStore.getState().properties.get(propertyId)
   if (!existing) return undefined
   const updated: Property = { ...existing, ...patch, updatedAt: new Date().toISOString() }
-  properties.set(propertyId, updated)
+  useDataStore.setState((s) => {
+    const properties = new Map(s.properties)
+    properties.set(propertyId, updated)
+    return { properties }
+  })
+  useDataStore.getState().persist()
   return updated
 }
 
@@ -87,7 +81,12 @@ export function getPropertyOptions(): PropertyOption[] {
 
 /** Insert a listing into the in-memory store. */
 export function addListing(listing: Listing): void {
-  getStore().listings.set(listing.id, listing)
+  useDataStore.setState((s) => {
+    const listings = new Map(s.listings)
+    listings.set(listing.id, listing)
+    return { listings }
+  })
+  useDataStore.getState().persist()
 }
 
 export function getContact(contactId: string): Contact | undefined {
