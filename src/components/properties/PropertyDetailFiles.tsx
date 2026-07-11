@@ -25,7 +25,7 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
 import { getListing } from "#/data/store";
-import { buildInitialFiles } from "#/data/dealFiles";
+import { addDealFile, getDealFiles, softDeleteDealFile } from "#/data/dealFilesActions";
 import { formatBytes } from "#/lib/formatBytes";
 import { fileTypeIcon } from "#/lib/fileTypeIcon";
 import type { DealFileItem } from "#/data/types";
@@ -74,9 +74,7 @@ function descendantIds(items: DealFileItem[], id: string): Set<string> {
 
 export function PropertyDetailFiles({ listingId }: { listingId: string }) {
   const listing = getListing(listingId);
-  const [items, setItems] = useState<DealFileItem[]>(() =>
-    listing ? buildInitialFiles(listing) : [],
-  );
+  const [items, setItems] = useState<DealFileItem[]>(() => getDealFiles(listingId));
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [view, setView] = useState<"files" | "recycle-bin">("files");
   const [search, setSearch] = useState("");
@@ -162,6 +160,7 @@ export function PropertyDetailFiles({ listingId }: { listingId: string }) {
       sizeBytes: file.size,
       blob: file,
     }));
+    for (const item of newItems) addDealFile(listingId, item);
     setItems((prev) => [...prev, ...newItems]);
   }
 
@@ -217,6 +216,7 @@ export function PropertyDetailFiles({ listingId }: { listingId: string }) {
   function handleDelete(item: DealFileItem) {
     const now = new Date().toISOString();
     const ids = new Set([item.id, ...descendantIds(items, item.id)]);
+    for (const id of ids) softDeleteDealFile(listingId, id);
     setItems((prev) => prev.map((i) => (ids.has(i.id) ? { ...i, deletedAt: now } : i)));
   }
 

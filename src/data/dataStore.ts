@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Comp, Contact, Listing, Property } from './types'
+import type { Comp, Contact, DealFileItem, Listing, Property } from './types'
 import { generateDataset } from './seed'
 import { clearSnapshot, loadSnapshot, saveSnapshot } from './persistence'
 
@@ -8,6 +8,8 @@ export interface DataSlice {
   listings: Map<string, Listing>
   comps: Map<string, Comp>
   contacts: Map<string, Contact>
+  /** Deal Files workspace per listing/deal id — lazily seeded on first read via dealFilesActions. */
+  dealFiles: Map<string, DealFileItem[]>
 }
 
 export interface DataState extends DataSlice {
@@ -32,6 +34,7 @@ export function seedSlice(): DataSlice {
     listings: new Map(listings.map((l) => [l.id, l])),
     comps: new Map(comps.map((c) => [c.id, c])),
     contacts: new Map(contacts.map((ct) => [ct.id, ct])),
+    dealFiles: new Map(),
   }
 }
 
@@ -53,8 +56,8 @@ export const useDataStore = create<DataState>((set) => ({
       set({ ...slice, hydrated: true })
     } else {
       // First visit: persist the seed so the world is stable from here on.
-      const { properties, listings, comps, contacts } = useDataStore.getState()
-      await saveSnapshot({ properties, listings, comps, contacts })
+      const { properties, listings, comps, contacts, dealFiles } = useDataStore.getState()
+      await saveSnapshot({ properties, listings, comps, contacts, dealFiles })
       set({ hydrated: true })
     }
   },
@@ -62,8 +65,8 @@ export const useDataStore = create<DataState>((set) => ({
   persist: () => {
     if (_persistTimer) clearTimeout(_persistTimer)
     _persistTimer = setTimeout(() => {
-      const { properties, listings, comps, contacts } = useDataStore.getState()
-      void saveSnapshot({ properties, listings, comps, contacts })
+      const { properties, listings, comps, contacts, dealFiles } = useDataStore.getState()
+      void saveSnapshot({ properties, listings, comps, contacts, dealFiles })
     }, 300)
   },
 
