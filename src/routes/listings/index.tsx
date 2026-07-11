@@ -18,6 +18,7 @@ import {
   faLocationDot,
 } from "@fortawesome/pro-regular-svg-icons";
 import { getStore } from "#/data/store";
+import { updateDealStage } from "#/data/actions";
 import type { Listing, PropertyStatus, DealSide } from "#/data/types";
 import { DealBoard } from "#/components/deals/DealBoard";
 import type { Facet } from "#/components/properties/PropertyFilters";
@@ -109,9 +110,9 @@ function PropertyListings() {
   const onRestage = useCallback((listingId: string, stage: PropertyStatus) => {
     const listing = getStore().listings.get(listingId);
     if (!listing || listing.status === stage) return;
-    // In-place mutation persists app-wide (the store holds this object ref);
-    // the version bump re-derives the filtered/sorted lists.
-    listing.status = stage;
+    updateDealStage(listingId, stage);
+    // Local re-render bump: this list reads getStore() non-reactively and
+    // re-derives the filtered/sorted board from the now-updated store.
     setVersion((v) => v + 1);
   }, []);
 
