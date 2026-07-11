@@ -19,11 +19,8 @@ import {
   faCheck,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact, DealSide, DealDocument } from "#/data/types";
-import {
-  createProposalListing,
-  emptyDraft,
-  type NewListingDraft,
-} from "#/data/createListing";
+import { emptyDraft, type NewListingDraft } from "#/data/createListing";
+import { createDeal } from "#/data/actions";
 import {
   getPropertyOptions,
   getContactOptions,
@@ -161,7 +158,7 @@ export function CreateDealModal({
       buyerContactId: side === "buyer" ? contactId : "",
       documents: files,
     };
-    const listing = createProposalListing(draft);
+    const { deal: listing } = createDeal(draft);
     onOpenChange(false);
     void navigate({
       to: "/listings/$listingId/overview",
