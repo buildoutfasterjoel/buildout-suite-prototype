@@ -15,7 +15,7 @@ import {
   faFlag,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact, DealSummary } from "#/data/types";
-import { buildActivity, buildBriefing } from "#/data/contacts";
+import { buildActivity, buildBriefing } from "#/components/contacts/contactDisplay";
 
 type EngageTab = "note" | "call" | "email" | "task";
 

@@ -32,9 +32,8 @@ import {
   EMAIL_TYPES,
   EMAIL_BROKERS,
   EMAIL_LISTS,
-  EMAIL_STATUS_DISPLAY,
-  TYPE_LABELS,
 } from "#/data/emails";
+import { EMAIL_STATUS_DISPLAY, TYPE_LABELS } from "#/components/email/emailDisplay";
 import { EmailPerformanceStats } from "#/components/email/EmailPerformanceStats";
 import { EmailsTable } from "#/components/email/EmailsTable";
 import { EmailsCalendar } from "#/components/email/EmailsCalendar";

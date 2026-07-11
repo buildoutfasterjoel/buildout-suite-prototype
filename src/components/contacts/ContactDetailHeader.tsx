@@ -6,7 +6,7 @@ import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLock } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact } from "#/data/types";
-import { contactFullName } from "#/data/contacts";
+import { contactFullName } from "#/components/contacts/contactDisplay";
 import { initials as nameInitials } from "#/components/deals/dealDisplay";
 import { RelationshipPill, SidePill } from "#/components/contacts/pills";
 

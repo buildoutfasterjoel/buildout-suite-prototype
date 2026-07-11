@@ -4,7 +4,7 @@ import {
   SIDE_DISPLAY,
   DEAL_STAGE_DISPLAY,
   LISTING_STATUS_PILL,
-} from "#/data/contacts";
+} from "#/components/contacts/contactDisplay";
 import type {
   RelationshipStage,
   DealSide,

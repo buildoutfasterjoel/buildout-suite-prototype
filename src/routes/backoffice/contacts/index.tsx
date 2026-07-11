@@ -34,7 +34,7 @@ import {
   SIDE_DISPLAY,
   DEAL_STAGE_DISPLAY,
   contactFullName,
-} from "#/data/contacts";
+} from "#/components/contacts/contactDisplay";
 
 export const Route = createFileRoute("/backoffice/contacts/")({
   component: PeoplePage,

@@ -10,7 +10,8 @@ import {
   faEllipsisVertical,
   faEnvelopeOpen,
 } from "@fortawesome/pro-regular-svg-icons";
-import { EMAIL_STATUS_DISPLAY, TYPE_LABELS, type Email } from "#/data/emails";
+import type { Email } from "#/data/emails";
+import { EMAIL_STATUS_DISPLAY, TYPE_LABELS } from "#/components/email/emailDisplay";
 
 /**
  * Blueprint's `.sticky-cell` hardcodes `left: 0`, so freezing more than one left

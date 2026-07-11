@@ -1,21 +1,7 @@
 import type { PropertyType } from "#/data/types";
-import {
-  hash,
-  TYPE_LABELS,
-  PROPERTY_TYPES,
-} from "#/components/properties/propertyDisplay";
+import { hash, PROPERTY_TYPES } from "#/components/properties/propertyDisplay";
 
 export type EmailStatus = "draft" | "sent" | "scheduled";
-
-/** Status pill: label + indicator dot color (matches the mock's colored dots). */
-export const EMAIL_STATUS_DISPLAY: Record<
-  EmailStatus,
-  { label: string; dotColor: string }
-> = {
-  draft: { label: "Draft", dotColor: "#94a3b8" },
-  sent: { label: "Sent", dotColor: "#16a34a" },
-  scheduled: { label: "Scheduled", dotColor: "#2563eb" },
-};
 
 export interface Email {
   id: string;
@@ -261,6 +247,3 @@ export function getEmailPerformance(email: Email): EmailPerformance {
     series,
   };
 }
-
-/** Property-type display label (re-exported for convenience on the page). */
-export { TYPE_LABELS };

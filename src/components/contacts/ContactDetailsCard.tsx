@@ -18,7 +18,7 @@ import {
   faShareNodes,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact, DealSummary } from "#/data/types";
-import { contactAddressLines } from "#/data/contacts";
+import { contactAddressLines } from "#/components/contacts/contactDisplay";
 import { initials as nameInitials } from "#/components/deals/dealDisplay";
 import { Pill } from "#/components/contacts/pills";
 

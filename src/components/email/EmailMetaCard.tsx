@@ -3,11 +3,8 @@ import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faRectangleHistoryCircleUser } from "@fortawesome/pro-regular-svg-icons";
-import {
-  EMAIL_STATUS_DISPLAY,
-  type Email,
-  type EmailPerformance,
-} from "#/data/emails";
+import type { Email, EmailPerformance } from "#/data/emails";
+import { EMAIL_STATUS_DISPLAY } from "#/components/email/emailDisplay";
 
 /** A labelled value in the meta grid. */
 function MetaField({

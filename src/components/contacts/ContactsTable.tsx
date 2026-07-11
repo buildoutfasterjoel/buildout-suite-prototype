@@ -23,7 +23,7 @@ import {
   PHONE_STATUS_DOT,
   contactFullName,
   contactInitials,
-} from "#/data/contacts";
+} from "#/components/contacts/contactDisplay";
 
 /**
  * Blueprint's `.sticky-cell` hardcodes `left: 0`, so freezing the checkbox +
