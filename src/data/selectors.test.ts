@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { useDataStore } from './dataStore'
 import {
+  getContactDetailClient,
   listContactsForDeal,
   listDealsForContact,
   listDealsForProperty,
@@ -20,6 +21,30 @@ describe('reverse-relationship selectors', () => {
   it('listDealsForProperty includes a listing for its own property', () => {
     const listing = [...useDataStore.getState().listings.values()][0]!
     expect(listDealsForProperty(listing.propertyId).map((l) => l.id)).toContain(listing.id)
+  })
+})
+
+describe('getContactDetailClient', () => {
+  it('composes deals from listings on the contact’s linked properties', () => {
+    const { contacts, listings } = useDataStore.getState()
+    const contact = [...contacts.values()].find((c) =>
+      c.propertyIds.some((pid) => [...listings.values()].some((l) => l.propertyId === pid)),
+    )!
+    const expectedListingIds = new Set(
+      [...listings.values()]
+        .filter((l) => contact.propertyIds.includes(l.propertyId))
+        .map((l) => l.id),
+    )
+
+    const detail = getContactDetailClient(contact.id)
+
+    expect(detail).not.toBeNull()
+    expect(detail!.contact.id).toBe(contact.id)
+    expect(new Set(detail!.deals.map((d) => d.id))).toEqual(expectedListingIds)
+  })
+
+  it('returns null for an unknown contact id', () => {
+    expect(getContactDetailClient('nonexistent-contact-id')).toBeNull()
   })
 })
 

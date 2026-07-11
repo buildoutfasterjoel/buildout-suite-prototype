@@ -16,7 +16,7 @@ import {
   faPhone,
   faPlus,
 } from "@fortawesome/pro-regular-svg-icons";
-import { listContacts } from "#/lib/contacts";
+import { getStore } from "#/data/store";
 import { ContactsTable } from "#/components/contacts/ContactsTable";
 import { ContactListsSidebar } from "#/components/contacts/ContactListsSidebar";
 import { ContactListsOverview } from "#/components/contacts/ContactListsOverview";
@@ -38,7 +38,6 @@ import {
 
 export const Route = createFileRoute("/backoffice/contacts/")({
   component: PeoplePage,
-  loader: () => listContacts({ data: {} }),
   head: () => ({
     meta: [{ title: "People | Buildout Suite" }],
   }),
@@ -69,7 +68,9 @@ const DEAL_STAGE_FILTER_LABELS: Record<string, string> = {
 };
 
 function PeoplePage() {
-  const contacts = Route.useLoaderData();
+  // `listContacts({ data: {} })` (no role/propertyId filters) is equivalent to the
+  // unfiltered list — read directly from the live client store so mutations reflect.
+  const contacts = Array.from(getStore().contacts.values());
 
   const [view, setView] = useState<"contacts" | "lists">("contacts");
   const [activeListId, setActiveListId] = useState(ALL_CONTACTS_ID);

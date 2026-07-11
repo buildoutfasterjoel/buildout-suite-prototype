@@ -3,7 +3,7 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUserSlash } from "@fortawesome/pro-regular-svg-icons";
-import { getContactDetail } from "#/lib/contacts";
+import { getContactDetailClient } from "#/data/selectors";
 import { ContactDetailHeader } from "#/components/contacts/ContactDetailHeader";
 import { ContactDetailsCard } from "#/components/contacts/ContactDetailsCard";
 import { ContactEngagementPanel } from "#/components/contacts/ContactEngagementPanel";
@@ -11,7 +11,6 @@ import { ContactDealsPanel } from "#/components/contacts/ContactDealsPanel";
 
 export const Route = createFileRoute("/backoffice/contacts/$contactId")({
   component: ContactDetailPage,
-  loader: ({ params }) => getContactDetail({ data: { id: params.contactId } }),
   head: () => ({
     meta: [{ title: "Contact | Buildout Suite" }],
   }),
@@ -44,7 +43,8 @@ function ContactNotFound() {
 }
 
 function ContactDetailPage() {
-  const detail = Route.useLoaderData();
+  const { contactId } = Route.useParams();
+  const detail = getContactDetailClient(contactId);
 
   if (!detail) return <ContactNotFound />;
 
