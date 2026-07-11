@@ -979,6 +979,49 @@ git commit -m "refactor(data): move display metadata out of src/data into compon
 
 ---
 
+## Phase 4 (addendum) — write-path consumer cleanup
+
+### Task 12: Route the in-place deal-restage mutation through `updateDealStage`
+
+**Files:**
+- Modify: `src/routes/listings/index.tsx` (the `onRestage` callback, ~line 109–116)
+
+**Why:** `onRestage` currently does `const listing = getStore().listings.get(listingId); listing.status = stage` — an in-place mutation. Under the old module singleton this "worked" (it held the same object ref), but it never persists and never notifies store subscribers. Now that `getStore()` returns objects backed by the live Zustand store and IndexedDB is the source of truth, restaging a deal on the board **silently fails to persist across refresh** — breaking the core "mutations persist" goal. Route it through the `updateDealStage` action (Task 7), which does an immutable `setState` + `persist()`. This is the only in-place store mutation in the codebase (verified by grep: `\.status =` / field-assignment scan returns just this one site).
+
+**Interfaces:**
+- Consumes: `updateDealStage(dealId, status): { deal: Listing | null }` from `src/data/actions.ts`; `getStore` from `src/data/store.ts` (for the guard read).
+
+- [ ] **Step 1: Read the current `onRestage`** in `src/routes/listings/index.tsx` (around lines 109–116) to preserve its guard and the local `setVersion` re-render bump.
+
+- [ ] **Step 2: Replace the in-place mutation** with the action call. Add `import { updateDealStage } from "#/data/actions"` to the imports, then change the callback body:
+
+```tsx
+const onRestage = useCallback((listingId: string, stage: PropertyStatus) => {
+  const listing = getStore().listings.get(listingId);
+  if (!listing || listing.status === stage) return;
+  updateDealStage(listingId, stage);
+  // Local re-render bump: this list reads getStore() non-reactively and
+  // re-derives the filtered/sorted board from the now-updated store.
+  setVersion((v) => v + 1);
+}, []);
+```
+
+Keep everything else in the file unchanged. Do not remove `setVersion` (the list re-derives on it).
+
+- [ ] **Step 3: Verify build + tests**
+
+Run: `bun --bun run test && bun --bun run build`
+Expected: PASS; build succeeds.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add src/routes/listings/index.tsx
+git commit -m "fix(listings): persist deal restage via updateDealStage action"
+```
+
+---
+
 ## Final verification
 
 - [ ] `bun --bun run test` — all green, including `seed.test.ts` (parity guard).
