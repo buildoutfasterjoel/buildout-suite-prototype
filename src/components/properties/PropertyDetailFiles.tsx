@@ -25,7 +25,16 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
 import { getListing } from "#/data/store";
-import { addDealFile, getDealFiles, softDeleteDealFile } from "#/data/dealFilesActions";
+import {
+  addDealFile,
+  createDealFolder,
+  getDealFiles,
+  moveDealFile,
+  permanentlyDeleteDealFile,
+  renameDealFile,
+  restoreDealFile,
+  softDeleteDealFile,
+} from "#/data/dealFilesActions";
 import { formatBytes } from "#/lib/formatBytes";
 import { fileTypeIcon } from "#/lib/fileTypeIcon";
 import type { DealFileItem } from "#/data/types";
@@ -173,16 +182,15 @@ export function PropertyDetailFiles({ listingId }: { listingId: string }) {
   function handleCreateFolder() {
     const name = newFolderName.trim();
     if (!name) return;
-    setItems((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        name,
-        kind: "folder",
-        parentId: currentFolderId,
-        createdAt: new Date().toISOString(),
-      },
-    ]);
+    const folder: DealFileItem = {
+      id: crypto.randomUUID(),
+      name,
+      kind: "folder",
+      parentId: currentFolderId,
+      createdAt: new Date().toISOString(),
+    };
+    createDealFolder(listingId, folder);
+    setItems(getDealFiles(listingId));
     setNewFolderName("");
     setCreateFolderOpen(false);
   }
@@ -196,7 +204,8 @@ export function PropertyDetailFiles({ listingId }: { listingId: string }) {
     if (!renameTarget) return;
     const name = renameValue.trim();
     if (!name) return;
-    setItems((prev) => prev.map((i) => (i.id === renameTarget.id ? { ...i, name } : i)));
+    renameDealFile(listingId, renameTarget.id, name);
+    setItems(getDealFiles(listingId));
     setRenameTarget(null);
   }
 
@@ -207,27 +216,27 @@ export function PropertyDetailFiles({ listingId }: { listingId: string }) {
 
   function handleMove() {
     if (!moveTarget) return;
-    setItems((prev) =>
-      prev.map((i) => (i.id === moveTarget.id ? { ...i, parentId: moveDestination } : i)),
-    );
+    moveDealFile(listingId, moveTarget.id, moveDestination);
+    setItems(getDealFiles(listingId));
     setMoveTarget(null);
   }
 
   function handleDelete(item: DealFileItem) {
-    const now = new Date().toISOString();
     const ids = new Set([item.id, ...descendantIds(items, item.id)]);
     for (const id of ids) softDeleteDealFile(listingId, id);
-    setItems((prev) => prev.map((i) => (ids.has(i.id) ? { ...i, deletedAt: now } : i)));
+    setItems(getDealFiles(listingId));
   }
 
   function handleRestore(item: DealFileItem) {
     const ids = new Set([item.id, ...descendantIds(items, item.id)]);
-    setItems((prev) => prev.map((i) => (ids.has(i.id) ? { ...i, deletedAt: null } : i)));
+    for (const id of ids) restoreDealFile(listingId, id);
+    setItems(getDealFiles(listingId));
   }
 
   function handleDeletePermanently(item: DealFileItem) {
     const ids = new Set([item.id, ...descendantIds(items, item.id)]);
-    setItems((prev) => prev.filter((i) => !ids.has(i.id)));
+    for (const id of ids) permanentlyDeleteDealFile(listingId, id);
+    setItems(getDealFiles(listingId));
   }
 
   function handleDownload(item: DealFileItem) {

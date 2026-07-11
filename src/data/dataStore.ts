@@ -53,7 +53,7 @@ export const useDataStore = create<DataState>((set) => ({
     }
     const slice = await loadSnapshot()
     if (slice) {
-      set({ ...slice, hydrated: true })
+      set({ ...slice, dealFiles: slice.dealFiles ?? new Map(), hydrated: true })
     } else {
       // First visit: persist the seed so the world is stable from here on.
       const { properties, listings, comps, contacts, dealFiles } = useDataStore.getState()

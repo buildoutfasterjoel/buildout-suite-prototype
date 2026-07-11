@@ -34,3 +34,27 @@ export function softDeleteDealFile(dealId: string, fileId: string): void {
     items.map((i) => (i.id === fileId ? { ...i, deletedAt: new Date().toISOString() } : i)),
   )
 }
+
+export function createDealFolder(dealId: string, folder: DealFileItem): void {
+  write(dealId, (items) => [...items, folder])
+}
+
+export function renameDealFile(dealId: string, fileId: string, name: string): void {
+  write(dealId, (items) => items.map((i) => (i.id === fileId ? { ...i, name } : i)))
+}
+
+export function moveDealFile(dealId: string, fileId: string, newParentId: string | null): void {
+  write(dealId, (items) =>
+    items.map((i) => (i.id === fileId ? { ...i, parentId: newParentId } : i)),
+  )
+}
+
+export function restoreDealFile(dealId: string, fileId: string): void {
+  write(dealId, (items) =>
+    items.map((i) => (i.id === fileId ? { ...i, deletedAt: null } : i)),
+  )
+}
+
+export function permanentlyDeleteDealFile(dealId: string, fileId: string): void {
+  write(dealId, (items) => items.filter((i) => i.id !== fileId))
+}
