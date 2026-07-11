@@ -1,5 +1,4 @@
 import { useDataStore } from './dataStore'
-import { addListing } from './store'
 import { createProposalListing, type NewListingDraft } from './createListing'
 import type { Listing, PropertyStatus } from './types'
 
@@ -18,8 +17,8 @@ function patchListing(dealId: string, patch: (l: Listing) => Listing): Listing |
 
 /** Create a proposal-stage deal (1:1 with a listing) from the New Deal flow. */
 export function createDeal(draft: NewListingDraft): { deal: Listing } {
+  // createProposalListing already inserts the listing (and its property) into the store.
   const deal = createProposalListing(draft)
-  addListing(deal) // addListing already persists
   return { deal }
 }
 
