@@ -13,10 +13,12 @@ import {
   faSignal,
   faBell,
   faCirclePlus,
+  faArrowsRotate,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import BuildoutIcon from "#/features/assets/buildout-icon";
 import BuildoutWordmark from "#/features/assets/buildout-wordmark";
+import { useDataStore } from "#/data/dataStore";
 
 type Role = "principal" | "broker" | "marketing";
 
@@ -56,11 +58,23 @@ export function GlobalNavbar() {
         : null) ?? "principal",
   );
 
+  const resetDemo = useDataStore((s) => s.reset);
+
   function handleRoleChange(newRole: Role) {
     if (typeof window !== "undefined") {
       localStorage.setItem("dev_role", newRole);
     }
     setRole(newRole);
+  }
+
+  // Wipe the demo world back to the deterministic clean state, then reload so
+  // every screen re-reads the fresh store. Reload fires even if the reset throws.
+  async function handleResetDemo() {
+    try {
+      await resetDemo();
+    } finally {
+      window.location.reload();
+    }
   }
 
   return (
@@ -188,6 +202,13 @@ export function GlobalNavbar() {
                   {ROLE_LABELS[r]}
                 </Navbar.GroupMenuItem>
               ))}
+              <Navbar.GroupMenuItem
+                onClick={handleResetDemo}
+                className="border-top d-flex align-items-center gap-2"
+              >
+                <FontAwesomeIcon icon={faArrowsRotate} />
+                Reset demo
+              </Navbar.GroupMenuItem>
             </Navbar.GroupMenu>
           </Navbar.Group>
         </Navbar.Nav>
