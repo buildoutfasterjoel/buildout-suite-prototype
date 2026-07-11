@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useDataStore } from './dataStore'
 import 'fake-indexeddb/auto'
 import { clearSnapshot, loadSnapshot } from './persistence'
+import * as persistence from './persistence'
 
 describe('useDataStore', () => {
   it('seeds all four entity maps deterministically on creation', () => {
@@ -47,5 +48,26 @@ describe('hydrate / reset', () => {
     await useDataStore.getState().hydrate()
     expect(useDataStore.getState().properties.size).toBe(1)
     expect(useDataStore.getState().hydrated).toBe(true)
+  })
+})
+
+describe('persist debounce', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  it('collapses rapid persist() calls into a single saveSnapshot after 300ms', () => {
+    vi.useFakeTimers()
+    const saveSnapshotSpy = vi.spyOn(persistence, 'saveSnapshot').mockResolvedValue(undefined)
+
+    useDataStore.getState().persist()
+    useDataStore.getState().persist()
+
+    expect(saveSnapshotSpy).not.toHaveBeenCalled()
+
+    vi.advanceTimersByTime(300)
+
+    expect(saveSnapshotSpy).toHaveBeenCalledTimes(1)
   })
 })

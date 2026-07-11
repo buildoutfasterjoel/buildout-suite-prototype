@@ -44,6 +44,10 @@ export const useDataStore = create<DataState>((set) => ({
   _setHydrated: (v) => set({ hydrated: v }),
 
   hydrate: async () => {
+    if (_persistTimer) {
+      clearTimeout(_persistTimer)
+      _persistTimer = null
+    }
     const slice = await loadSnapshot()
     if (slice) {
       set({ ...slice, hydrated: true })
@@ -64,6 +68,10 @@ export const useDataStore = create<DataState>((set) => ({
   },
 
   reset: async () => {
+    if (_persistTimer) {
+      clearTimeout(_persistTimer)
+      _persistTimer = null
+    }
     await clearSnapshot()
     const slice = seedSlice()
     set({ ...slice })
