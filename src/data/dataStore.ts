@@ -78,3 +78,11 @@ export const useDataStore = create<DataState>((set) => ({
     await saveSnapshot(slice)
   },
 }))
+
+// Kick off hydration once, on the client only. `__root.tsx` is CLI-managed, so
+// hydration lives here (a non-route module) rather than in a mounted component,
+// so a bo-spark regen can never silently disable persistence. In tests
+// (node env, no `window`) this is skipped, keeping the suite deterministic.
+if (typeof window !== 'undefined') {
+  void useDataStore.getState().hydrate()
+}
