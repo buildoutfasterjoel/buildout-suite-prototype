@@ -10,8 +10,11 @@ export function ResetDemoButton() {
     <Button
       variant="secondary"
       onClick={async () => {
-        await reset()
-        window.location.reload()
+        try {
+          await reset()
+        } finally {
+          window.location.reload()
+        }
       }}
     >
       <FontAwesomeIcon icon={faArrowsRotate} />
