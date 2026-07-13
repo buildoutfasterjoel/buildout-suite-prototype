@@ -33,8 +33,7 @@ export function listDealsForProperty(propertyId: string): Listing[] {
 
 /**
  * Everything the contact detail page needs, assembled client-side from the live
- * store. Mirrors `getContactDetail` in `#/lib/contacts` (the server fn) so it never
- * sees client mutations; this is the client-owned equivalent used by the People routes.
+ * store so it always reflects client mutations. Used by the People routes.
  */
 export function getContactDetailClient(id: string): ContactDetail | null {
   const { contacts } = useDataStore.getState()

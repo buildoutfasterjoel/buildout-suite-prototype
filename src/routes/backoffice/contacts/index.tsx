@@ -68,8 +68,8 @@ const DEAL_STAGE_FILTER_LABELS: Record<string, string> = {
 };
 
 function PeoplePage() {
-  // `listContacts({ data: {} })` (no role/propertyId filters) is equivalent to the
-  // unfiltered list — read directly from the live client store so mutations reflect.
+  // Read the full contact list directly from the live client store so mutations
+  // reflect (no server round-trip, no role/propertyId filters needed here).
   const contacts = Array.from(getStore().contacts.values());
 
   const [view, setView] = useState<"contacts" | "lists">("contacts");
