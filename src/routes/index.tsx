@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Card, CardBody, CardHeader, CardTitle } from "@buildoutinc/blueprint-react/ui/Card";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faSparkles } from "@fortawesome/pro-regular-svg-icons";
 import { getStore } from "#/data/store";
 
 export const Route = createFileRoute("/")({
@@ -31,6 +33,26 @@ function Home() {
       </Card>
 
       <div className="row g-4 mt-2">
+        <div className="col-md-4">
+          <Card className="shadow-sm h-100">
+            <CardHeader>
+              <CardTitle>
+                <FontAwesomeIcon
+                  icon={faSparkles}
+                  className="text-buildout-blue-700 me-2"
+                />
+                AI Assistant
+              </CardTitle>
+            </CardHeader>
+            <CardBody>
+              A chat assistant available on every page from the right sidebar.
+              Streams from Claude and runs tools in the browser against the live
+              data — answer questions, navigate, restage deals, draft emails,
+              build call lists, and generate client-report summaries.
+            </CardBody>
+          </Card>
+        </div>
+
         <div className="col-md-4">
           <Link to="/suite" className="text-decoration-none">
             <Card className="shadow-sm h-100">

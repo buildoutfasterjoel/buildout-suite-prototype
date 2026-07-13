@@ -17,6 +17,7 @@ import {
   faPlus,
 } from "@fortawesome/pro-regular-svg-icons";
 import { getStore } from "#/data/store";
+import { useDataStore } from "#/data/dataStore";
 import { ContactsTable } from "#/components/contacts/ContactsTable";
 import { ContactListsSidebar } from "#/components/contacts/ContactListsSidebar";
 import { ContactListsOverview } from "#/components/contacts/ContactListsOverview";
@@ -72,6 +73,10 @@ function PeoplePage() {
   // reflect (no server round-trip, no role/propertyId filters needed here).
   const contacts = Array.from(getStore().contacts.values());
 
+  // User/AI-created call lists (reactive) — shown alongside the built-in lists.
+  const callListsMap = useDataStore((s) => s.callLists);
+  const userLists = useMemo(() => [...callListsMap.values()], [callListsMap]);
+
   const [view, setView] = useState<"contacts" | "lists">("contacts");
   const [activeListId, setActiveListId] = useState(ALL_CONTACTS_ID);
   const [showFilters, setShowFilters] = useState(false);
@@ -94,7 +99,9 @@ function PeoplePage() {
     ...Object.fromEntries(assignees.map((a) => [a, a])),
   };
 
-  const activeList = CONTACT_LISTS.find((l) => l.id === activeListId);
+  const activeList =
+    CONTACT_LISTS.find((l) => l.id === activeListId) ??
+    userLists.find((l) => l.id === activeListId);
   const heading = activeList ? activeList.label : "All Contacts";
 
   // The primary tab value: "all" / "mylists", or "" when a specific list filters.
@@ -126,7 +133,7 @@ function PeoplePage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const inList = listPredicate(activeListId);
+    const inList = listPredicate(activeListId, userLists);
     const rows = contacts.filter((c) => {
       if (!inList(c)) return false;
       if (source !== ALL && c.source !== source) return false;
@@ -149,6 +156,7 @@ function PeoplePage() {
     return rows;
   }, [
     contacts,
+    userLists,
     activeListId,
     source,
     relationship,
@@ -181,6 +189,7 @@ function PeoplePage() {
     <div className="d-flex gap-4 h-100 p-4 overflow-hidden">
       <ContactListsSidebar
         contacts={contacts}
+        userLists={userLists}
         topValue={topValue}
         onTopChange={handleTopChange}
         activeListId={activeListId}
@@ -212,6 +221,7 @@ function PeoplePage() {
               </div>
               <ContactListsOverview
                 contacts={contacts}
+                userLists={userLists}
                 onOpenList={handleSelectList}
               />
             </>

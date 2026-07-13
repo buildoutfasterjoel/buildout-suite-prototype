@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import type { Comp, Contact, DealFileItem, Listing, Property } from './types'
 import { generateDataset } from './seed'
+import { getEmails, type Email } from './emails'
+import type { CallList } from './contactLists'
 import { clearSnapshot, loadSnapshot, saveSnapshot } from './persistence'
 
 export interface DataSlice {
@@ -10,6 +12,10 @@ export interface DataSlice {
   contacts: Map<string, Contact>
   /** Deal Files workspace per listing/deal id — lazily seeded on first read via dealFilesActions. */
   dealFiles: Map<string, DealFileItem[]>
+  /** Email campaigns — seeded from the deterministic mock; AI/user drafts are prepended here. */
+  emails: Map<string, Email>
+  /** User/AI-created contact "call lists" (membership snapshots). Built-in lists stay static in contactLists.ts. */
+  callLists: Map<string, CallList>
 }
 
 export interface DataState extends DataSlice {
@@ -35,6 +41,8 @@ export function seedSlice(): DataSlice {
     comps: new Map(comps.map((c) => [c.id, c])),
     contacts: new Map(contacts.map((ct) => [ct.id, ct])),
     dealFiles: new Map(),
+    emails: new Map(getEmails().map((e) => [e.id, e])),
+    callLists: new Map(),
   }
 }
 
@@ -53,11 +61,18 @@ export const useDataStore = create<DataState>((set) => ({
     }
     const slice = await loadSnapshot()
     if (slice) {
-      set({ ...slice, dealFiles: slice.dealFiles ?? new Map(), hydrated: true })
+      set({
+        ...slice,
+        dealFiles: slice.dealFiles ?? new Map(),
+        emails: slice.emails ?? new Map(getEmails().map((e) => [e.id, e])),
+        callLists: slice.callLists ?? new Map(),
+        hydrated: true,
+      })
     } else {
       // First visit: persist the seed so the world is stable from here on.
-      const { properties, listings, comps, contacts, dealFiles } = useDataStore.getState()
-      await saveSnapshot({ properties, listings, comps, contacts, dealFiles })
+      const { properties, listings, comps, contacts, dealFiles, emails, callLists } =
+        useDataStore.getState()
+      await saveSnapshot({ properties, listings, comps, contacts, dealFiles, emails, callLists })
       set({ hydrated: true })
     }
   },
@@ -65,8 +80,9 @@ export const useDataStore = create<DataState>((set) => ({
   persist: () => {
     if (_persistTimer) clearTimeout(_persistTimer)
     _persistTimer = setTimeout(() => {
-      const { properties, listings, comps, contacts, dealFiles } = useDataStore.getState()
-      void saveSnapshot({ properties, listings, comps, contacts, dealFiles })
+      const { properties, listings, comps, contacts, dealFiles, emails, callLists } =
+        useDataStore.getState()
+      void saveSnapshot({ properties, listings, comps, contacts, dealFiles, emails, callLists })
     }, 300)
   },
 

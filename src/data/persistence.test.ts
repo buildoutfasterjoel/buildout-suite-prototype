@@ -8,6 +8,9 @@ const slice = (): DataSlice => ({
   listings: new Map(),
   comps: new Map(),
   contacts: new Map(),
+  dealFiles: new Map(),
+  emails: new Map(),
+  callLists: new Map(),
 })
 
 describe('persistence', () => {

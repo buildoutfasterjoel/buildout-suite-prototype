@@ -27,12 +27,12 @@ import {
   faChevronRight,
 } from "@fortawesome/pro-regular-svg-icons";
 import {
-  getEmails,
   EMAIL_STATUSES,
   EMAIL_TYPES,
   EMAIL_BROKERS,
   EMAIL_LISTS,
 } from "#/data/emails";
+import { useDataStore } from "#/data/dataStore";
 import { EMAIL_STATUS_DISPLAY, TYPE_LABELS } from "#/components/email/emailDisplay";
 import { EmailPerformanceStats } from "#/components/email/EmailPerformanceStats";
 import { EmailsTable } from "#/components/email/EmailsTable";
@@ -110,7 +110,8 @@ function QuotaRing({ percent }: { percent: number }) {
 }
 
 function EmailsPage() {
-  const emails = useMemo(() => getEmails(), []);
+  const emailsMap = useDataStore((s) => s.emails);
+  const emails = useMemo(() => [...emailsMap.values()], [emailsMap]);
 
   const [tab, setTab] = useState<"active" | "archived">("active");
   const [search, setSearch] = useState("");

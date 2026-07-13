@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { useDataStore } from './dataStore'
-import { createDeal, linkContactToDeal, unlinkContactFromDeal, updateDealStage } from './actions'
+import {
+  createCallList,
+  createDeal,
+  createEmailDraft,
+  linkContactToDeal,
+  unlinkContactFromDeal,
+  updateDealStage,
+} from './actions'
 import { emptyDraft } from './createListing'
 import { listContactsForDeal } from './selectors'
 
@@ -22,6 +29,24 @@ describe('actions', () => {
     const draft = { ...emptyDraft(), name: 'Test Deal', address: '123 Test St' }
     const { deal } = createDeal(draft)
     expect(useDataStore.getState().listings.has(deal.id)).toBe(true)
+  })
+
+  it('createEmailDraft prepends a draft campaign to the store', () => {
+    const before = useDataStore.getState().emails.size
+    const { email } = createEmailDraft({ subject: 'Price Reduction', list: 'Investors' })
+    const emails = useDataStore.getState().emails
+    expect(emails.size).toBe(before + 1)
+    expect(emails.get(email.id)?.status).toBe('draft')
+    // Prepended: the new draft is the first entry.
+    expect([...emails.keys()][0]).toBe(email.id)
+  })
+
+  it('createCallList stores a list with the given membership snapshot', () => {
+    const contactIds = [...useDataStore.getState().contacts.keys()].slice(0, 3)
+    const { callList } = createCallList({ name: 'Cold prospects', contactIds })
+    const stored = useDataStore.getState().callLists.get(callList.id)
+    expect(stored?.label).toBe('Cold prospects')
+    expect(stored?.contactIds).toEqual(contactIds)
   })
 
   it('unlinkContactFromDeal removes the contact from every contact-role list', () => {

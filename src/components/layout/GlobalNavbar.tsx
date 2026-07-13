@@ -14,11 +14,19 @@ import {
   faBell,
   faCirclePlus,
   faArrowsRotate,
+  faSparkles,
+  faMagnifyingGlass,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+import { formatForDisplay } from "@tanstack/hotkeys";
 import BuildoutIcon from "#/features/assets/buildout-icon";
 import BuildoutWordmark from "#/features/assets/buildout-wordmark";
 import { useDataStore } from "#/data/dataStore";
+import { useAssistant } from "#/ai/useAssistant";
+import { useOmniSearch } from "#/components/search/useOmniSearch";
+
+/** Platform-aware shortcut hint, e.g. "⌘K" on macOS, "Ctrl K" elsewhere. */
+const SEARCH_HINT = formatForDisplay("Mod+K");
 
 type Role = "principal" | "broker" | "marketing";
 
@@ -59,6 +67,9 @@ export function GlobalNavbar() {
   );
 
   const resetDemo = useDataStore((s) => s.reset);
+  const assistantOpen = useAssistant((s) => s.open);
+  const toggleAssistant = useAssistant((s) => s.toggle);
+  const openOmniSearch = useOmniSearch((s) => s.setOpen);
 
   function handleRoleChange(newRole: Role) {
     if (typeof window !== "undefined") {
@@ -113,6 +124,28 @@ export function GlobalNavbar() {
               </Navbar.ItemLink>
             </Navbar.Item>
           ))}
+
+          {/* Omni search — a nav item so it shares the navbar-nav flex row and
+              stays inline with the other items instead of wrapping to a second
+              line. Opposite color from the navbar (buildout-blue-50) so it
+              stands out; a trigger, not a live input, that opens the overlay. */}
+          <Navbar.Item className="d-flex align-items-center ms-2">
+            <button
+              type="button"
+              onClick={() => openOmniSearch(true)}
+              aria-label="Search properties, people, and deals"
+              className="omni-search-trigger btn bg-buildout-blue-50 border d-inline-flex align-items-center gap-2 rounded-pill px-3 py-2 flex-shrink-0"
+              style={{ width: 260 }}
+            >
+              <FontAwesomeIcon icon={faMagnifyingGlass} className="text-muted" />
+              <span className="flex-grow-1 text-start text-muted text-truncate">
+                Search…
+              </span>
+              <kbd className="bg-white border text-muted rounded px-2 py-0 fs-xs flex-shrink-0">
+                {SEARCH_HINT}
+              </kbd>
+            </button>
+          </Navbar.Item>
         </Navbar.Nav>
       </Navbar.Content>
 
@@ -150,6 +183,30 @@ export function GlobalNavbar() {
               </Navbar.GroupMenuItem>
             </Navbar.GroupMenu>
           </Navbar.Group>
+
+          {/* AI Assistant launcher */}
+          <Navbar.Item>
+            <Tooltip>
+              <Tooltip.Trigger
+                render={
+                  <Navbar.ItemLink
+                    aria-label="Assistant"
+                    isActive={assistantOpen}
+                    render={<a href="#" />}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      toggleAssistant();
+                    }}
+                  >
+                    <Navbar.ItemLinkIcon>
+                      <FontAwesomeIcon icon={faSparkles} />
+                    </Navbar.ItemLinkIcon>
+                  </Navbar.ItemLink>
+                }
+              />
+              <Tooltip.Content>Assistant</Tooltip.Content>
+            </Tooltip>
+          </Navbar.Item>
 
           {/* Notifications */}
           <Navbar.Item>

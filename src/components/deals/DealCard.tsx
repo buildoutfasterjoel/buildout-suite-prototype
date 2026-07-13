@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { useDraggable } from "@dnd-kit/core";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
@@ -11,7 +12,8 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { Listing, Contact, DealSide } from "#/data/types";
-import { getContact } from "#/data/store";
+import { getContact, getListing } from "#/data/store";
+import { DealStageBadge } from "./DealStageBadge";
 import {
   TYPE_ICONS,
   TYPE_LABELS,
@@ -66,8 +68,26 @@ function formatCriticalDate(date: string | null): string | null {
   });
 }
 
-/** Presentational card body — reused for both the column card and the drag overlay. */
-export function DealCardView({ listing }: { listing: Listing }) {
+/**
+ * Presentational deal card — the universal card used across the suite (Deals
+ * board, contact detail, and the AI assistant). Optional slots let a context
+ * add its own chrome without forking the card:
+ * - `showStatus` renders a stage badge (off on the board, where the column is the stage).
+ * - `action` renders a top-right control (e.g. a per-deal menu); its clicks are
+ *   isolated so they don't trigger a wrapping card link.
+ * - `footer` renders extra content inside the card (e.g. plan progress + lead).
+ */
+export function DealCardView({
+  listing,
+  showStatus = false,
+  action,
+  footer,
+}: {
+  listing: Listing;
+  showStatus?: boolean;
+  action?: ReactNode;
+  footer?: ReactNode;
+}) {
   const contact = getPrimaryContact(listing);
   const sideDisplay = SIDE_DISPLAY[listing.dealSide];
   const isLease = listing.dealType === "Lease";
@@ -107,6 +127,21 @@ export function DealCardView({ listing }: { listing: Listing }) {
             <FontAwesomeIcon icon={sideDisplay.icon} />
             {sideDisplay.label}
           </span>
+          {(showStatus || action) && (
+            <div className="ms-auto d-flex align-items-center gap-2">
+              {showStatus && <DealStageBadge stage={listing.status} />}
+              {action && (
+                <span
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                >
+                  {action}
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <div
           className="fw-semibold text-truncate"
@@ -158,7 +193,47 @@ export function DealCardView({ listing }: { listing: Listing }) {
           </Tooltip>
         )}
       </div>
+
+      {footer && (
+        <div className="border-top" style={{ paddingTop: 8 }}>
+          {footer}
+        </div>
+      )}
     </div>
+  );
+}
+
+/**
+ * Store-backed, clickable deal card — looks up the listing by id and links to
+ * its workspace. The universal entry point for contexts that only have a deal
+ * id (the AI assistant, the contact page). Renders nothing if the id is unknown.
+ */
+export function DealCardById({
+  listingId,
+  showStatus = false,
+  action,
+  footer,
+}: {
+  listingId: string;
+  showStatus?: boolean;
+  action?: ReactNode;
+  footer?: ReactNode;
+}) {
+  const listing = getListing(listingId);
+  if (!listing) return null;
+  return (
+    <Link
+      to="/listings/$listingId"
+      params={{ listingId }}
+      className="text-decoration-none text-reset d-block"
+    >
+      <DealCardView
+        listing={listing}
+        showStatus={showStatus}
+        action={action}
+        footer={footer}
+      />
+    </Link>
   );
 }
 

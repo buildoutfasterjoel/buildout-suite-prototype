@@ -16,7 +16,12 @@ import {
   faSidebar,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact } from "#/data/types";
-import { CONTACT_LISTS, ALL_CONTACTS_ID } from "#/data/contactLists";
+import {
+  CONTACT_LISTS,
+  ALL_CONTACTS_ID,
+  callListToContactList,
+  type CallList,
+} from "#/data/contactLists";
 
 /** Label + count laid out across the full width of a pill tab. */
 function TabLabel({ label, count }: { label: string; count: number }) {
@@ -35,12 +40,15 @@ function TabLabel({ label, count }: { label: string; count: number }) {
 
 export function ContactListsSidebar({
   contacts,
+  userLists,
   topValue,
   onTopChange,
   activeListId,
   onSelectList,
 }: {
   contacts: Contact[];
+  /** User/AI-created call lists, rendered alongside the built-in lists. */
+  userLists: CallList[];
   /** "all" | "mylists" | "" (empty when a specific list filter is active). */
   topValue: string;
   onTopChange: (value: string) => void;
@@ -50,20 +58,26 @@ export function ContactListsSidebar({
   const [search, setSearch] = useState("");
   const [collapsed, setCollapsed] = useState(false);
 
+  // Built-in lists plus user/AI call lists, unified into one display shape.
+  const allLists = useMemo(
+    () => [...CONTACT_LISTS, ...userLists.map(callListToContactList)],
+    [userLists],
+  );
+
   // Real counts derived from the dataset.
   const counts = useMemo(() => {
     const map: Record<string, number> = { [ALL_CONTACTS_ID]: contacts.length };
-    for (const list of CONTACT_LISTS) {
+    for (const list of allLists) {
       map[list.id] = contacts.filter(list.predicate).length;
     }
     return map;
-  }, [contacts]);
+  }, [contacts, allLists]);
 
   const visibleLists = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return CONTACT_LISTS;
-    return CONTACT_LISTS.filter((l) => l.label.toLowerCase().includes(q));
-  }, [search]);
+    if (!q) return allLists;
+    return allLists.filter((l) => l.label.toLowerCase().includes(q));
+  }, [search, allLists]);
 
   // When collapsed, tab icons carry a native tooltip so the rail stays usable.
   const tabIcon = (icon: IconDefinition, label: string, className?: string) =>
@@ -130,7 +144,7 @@ export function ContactListsSidebar({
             </Tabs.Tab>
             <Tabs.Tab value="mylists" icon={tabIcon(faLayerGroup, "My Lists")}>
               {!collapsed && (
-                <TabLabel label="My Lists" count={CONTACT_LISTS.length} />
+                <TabLabel label="My Lists" count={allLists.length} />
               )}
             </Tabs.Tab>
           </Tabs.List>

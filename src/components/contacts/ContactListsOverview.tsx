@@ -9,7 +9,11 @@ import {
   faArrowUpArrowDown,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact } from "#/data/types";
-import { CONTACT_LISTS } from "#/data/contactLists";
+import {
+  CONTACT_LISTS,
+  callListToContactList,
+  type CallList,
+} from "#/data/contactLists";
 
 type SortDir = "asc" | "desc";
 type SortKey =
@@ -71,16 +75,19 @@ function SortHeader({
  */
 export function ContactListsOverview({
   contacts,
+  userLists,
   onOpenList,
 }: {
   contacts: Contact[];
+  userLists: CallList[];
   onOpenList: (id: string) => void;
 }) {
   const [sortKey, setSortKey] = useState<SortKey>("label");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const rows = useMemo<ListRow[]>(() => {
-    const withCounts = CONTACT_LISTS.map((list) => ({
+    const allLists = [...CONTACT_LISTS, ...userLists.map(callListToContactList)];
+    const withCounts = allLists.map((list) => ({
       ...list,
       count: contacts.filter(list.predicate).length,
     }));
@@ -111,7 +118,7 @@ export function ContactListsOverview({
       return sortDir === "asc" ? cmp : -cmp;
     });
     return withCounts;
-  }, [contacts, sortKey, sortDir]);
+  }, [contacts, userLists, sortKey, sortDir]);
 
   const handleSort = (key: SortKey) => {
     if (key === sortKey) {

@@ -13,7 +13,8 @@ import {
   faEnvelopeCircleCheck,
   faPersonDigging,
 } from "@fortawesome/pro-regular-svg-icons";
-import { getEmailById, getEmailPerformance } from "#/data/emails";
+import { getEmailPerformance } from "#/data/emails";
+import { getEmailById } from "#/data/store";
 import { EmailCampaignHeader } from "#/components/email/EmailCampaignHeader";
 import { EmailMetaCard } from "#/components/email/EmailMetaCard";
 import { EmailPerformanceTab } from "#/components/email/EmailPerformanceTab";

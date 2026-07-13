@@ -6,6 +6,7 @@ import {
   faFire,
   faStar,
   faSackDollar,
+  faListUl,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact } from "#/data/types";
 
@@ -137,11 +138,65 @@ export const CONTACT_LISTS: ContactList[] = [
   },
 ];
 
+/**
+ * A user/AI-created contact "call list". Unlike the built-in {@link ContactList}s
+ * (which filter live via a `predicate`), these persist to the store as a **membership
+ * snapshot** (`contactIds`) — predicate functions can't be serialized to IndexedDB.
+ */
+export interface CallList {
+  id: string;
+  label: string;
+  description: string;
+  /** ISO date created. */
+  createdOn: string;
+  /** Materialized membership — the contact ids captured when the list was made. */
+  contactIds: string[];
+  /** Where the list came from. */
+  source: "user" | "ai";
+}
+
 /** The "All Contacts" pseudo-list id — pass-through, no filtering. */
 export const ALL_CONTACTS_ID = "all";
 
-/** Resolve the active predicate; "all" (and unknown ids) match everything. */
-export function listPredicate(listId: string): (c: Contact) => boolean {
-  const list = CONTACT_LISTS.find((l) => l.id === listId);
-  return list ? list.predicate : () => true;
+/** Membership predicate for a user/AI call list (snapshot by contact id). */
+export function callListPredicate(list: CallList): (c: Contact) => boolean {
+  const ids = new Set(list.contactIds);
+  return (c) => ids.has(c.id);
+}
+
+/**
+ * Adapt a persisted {@link CallList} into the {@link ContactList} display shape so
+ * the People UI (sidebar + overview) can render built-in and user/AI lists
+ * uniformly. Its `predicate` filters by the stored membership snapshot.
+ */
+export function callListToContactList(cl: CallList): ContactList {
+  return {
+    id: cl.id,
+    label: cl.label,
+    icon: faListUl,
+    iconClass: "text-buildout-blue-700",
+    iconBgClass: "bg-buildout-blue-100",
+    description: cl.description,
+    type: "static",
+    createdOn: cl.createdOn,
+    lastUpdated: cl.createdOn,
+    lastUpdatedBy: cl.source === "ai" ? "Assistant" : "You",
+    lastActivityDays: 0,
+    pctReached: 0,
+    predicate: callListPredicate(cl),
+  };
+}
+
+/**
+ * Resolve the active predicate across built-in lists and user/AI call lists.
+ * "all" (and unknown ids) match everything.
+ */
+export function listPredicate(
+  listId: string,
+  callLists: CallList[] = [],
+): (c: Contact) => boolean {
+  const builtIn = CONTACT_LISTS.find((l) => l.id === listId);
+  if (builtIn) return builtIn.predicate;
+  const userList = callLists.find((l) => l.id === listId);
+  return userList ? callListPredicate(userList) : () => true;
 }

@@ -176,9 +176,42 @@ export function getEmails(): Email[] {
   return _emails;
 }
 
-/** Look up a single campaign by id. */
-export function getEmailById(id: string): Email | undefined {
-  return getEmails().find((e) => e.id === id);
+/** Fields the assistant (or a form) supplies to draft a new campaign. */
+export interface NewEmailDraft {
+  subject: string;
+  /** Audience list — one of EMAIL_LISTS. Defaults to "All Contacts". */
+  list?: string;
+  /** Property type this campaign targets. Defaults to the first known type. */
+  type?: PropertyType;
+  /** Sending broker. Defaults to the first known broker. */
+  primaryBroker?: string;
+  /** Campaign name. Defaults to "Draft — {subject}". */
+  campaign?: string;
+}
+
+let _draftSeq = 0;
+
+/**
+ * Build a new `draft`-status Email with correctly-formatted dates. Pure — the
+ * store insertion + persistence lives in `createEmailDraft` (actions.ts).
+ */
+export function makeEmailDraft(input: NewEmailDraft): Email {
+  const now = new Date();
+  _draftSeq += 1;
+  return {
+    id: `email-draft-${now.getTime()}-${_draftSeq}`,
+    status: "draft",
+    campaign: input.campaign ?? `Draft — ${input.subject}`,
+    subject: input.subject,
+    type: input.type ?? PROPERTY_TYPES[0],
+    primaryBroker: input.primaryBroker ?? BROKERS[0],
+    list: input.list ?? EMAIL_LISTS[0],
+    createdAt: fmtDateTime(now),
+    lastEditedAt: fmtDate(now),
+    lastEditedBy: EDITORS[0],
+    archived: false,
+    calendarDate: isoDate(now),
+  };
 }
 
 const MONTHS = [

@@ -6,7 +6,18 @@ import type {
   PropertyType,
   RelationshipStage,
 } from './types'
+import type { Email } from './emails'
 import { useDataStore } from './dataStore'
+
+/** All email campaigns from the live store (seeded mocks + any AI/user drafts). */
+export function getEmailsList(): Email[] {
+  return [...useDataStore.getState().emails.values()]
+}
+
+/** Look up a single campaign by id from the live store. */
+export function getEmailById(id: string): Email | undefined {
+  return useDataStore.getState().emails.get(id)
+}
 
 /** Live view of the four entity maps from the Zustand store. */
 export function getStore(): DataStore {

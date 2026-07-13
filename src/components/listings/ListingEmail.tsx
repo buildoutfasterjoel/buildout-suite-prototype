@@ -5,7 +5,7 @@ import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faCirclePlus } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing } from "#/data/types";
-import { getEmails } from "#/data/emails";
+import { useDataStore } from "#/data/dataStore";
 import { EmailsTable } from "#/components/email/EmailsTable";
 import { ListingPageHeader } from "./ListingPageHeader";
 
@@ -13,10 +13,13 @@ import { ListingPageHeader } from "./ListingPageHeader";
 export function ListingEmail({ listing }: { listing: Listing }) {
   const [search, setSearch] = useState("");
 
+  const emailsMap = useDataStore((s) => s.emails);
   const campaigns = useMemo(
     () =>
-      getEmails().filter((e) => e.type === listing.propertyType && !e.archived),
-    [listing.propertyType],
+      [...emailsMap.values()].filter(
+        (e) => e.type === listing.propertyType && !e.archived,
+      ),
+    [emailsMap, listing.propertyType],
   );
 
   const filtered = useMemo(() => {

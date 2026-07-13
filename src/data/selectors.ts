@@ -75,13 +75,17 @@ export function searchAll(query: string): {
   const q = query.trim().toLowerCase()
   const { properties, listings, contacts } = useDataStore.getState()
   if (!q) return { properties: [], deals: [], contacts: [] }
+  const matches = (...fields: Array<string | null | undefined>) =>
+    fields.filter(Boolean).join(' ').toLowerCase().includes(q)
   return {
     properties: [...properties.values()].filter((p) =>
-      [p.street, p.city, p.state].filter(Boolean).join(' ').toLowerCase().includes(q),
+      matches(p.name, p.street, p.city, p.state, p.zip, p.submarket, p.propertyType, p.apn),
     ),
-    deals: [...listings.values()].filter((l) => l.name.toLowerCase().includes(q)),
+    deals: [...listings.values()].filter((l) =>
+      matches(l.name, l.city, l.state, l.dealType),
+    ),
     contacts: [...contacts.values()].filter((c) =>
-      `${c.firstName} ${c.lastName} ${c.company}`.toLowerCase().includes(q),
+      matches(c.firstName, c.lastName, c.company, c.email, c.title, c.phone),
     ),
   }
 }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
@@ -16,9 +16,8 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact, DealSummary } from "#/data/types";
 import { CreateDealModal } from "#/components/deals/CreateDealModal";
-import { getPhotoUrl } from "#/components/properties/propertyDisplay";
+import { DealCardById } from "#/components/deals/DealCard";
 import { initials as nameInitials } from "#/components/deals/dealDisplay";
-import { Pill, ListingStatusPill } from "#/components/contacts/pills";
 
 function medDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
@@ -28,71 +27,46 @@ function medDate(iso: string): string {
   });
 }
 
+/**
+ * A contact's linked deal, rendered with the universal {@link DealCardById} core
+ * plus contact-specific extras (started date, plan progress, lead, actions menu)
+ * threaded in through the card's `footer`/`action` slots.
+ */
 function DealCard({ deal, startedAt }: { deal: DealSummary; startedAt: string }) {
   const navigate = useNavigate();
   const pct = deal.planTotal
     ? Math.round((deal.planDone / deal.planTotal) * 100)
     : 0;
 
-  return (
-    <div className="border rounded p-3 d-flex flex-column gap-2">
-      <div className="d-flex gap-2">
-        <Link
-          to="/listings/$listingId"
-          params={{ listingId: deal.id }}
-          className="flex-shrink-0"
-          aria-label={`Open ${deal.name}`}
+  const action = (
+    <DropdownMenu>
+      <DropdownMenu.Trigger
+        render={
+          <Button variant="ghost" size="icon-sm" aria-label="Deal actions">
+            <FontAwesomeIcon icon={faEllipsisVertical} />
+          </Button>
+        }
+      />
+      <DropdownMenu.Content align="end">
+        <DropdownMenu.Item
+          onClick={() =>
+            void navigate({
+              to: "/listings/$listingId",
+              params: { listingId: deal.id },
+            })
+          }
         >
-          <img
-            src={getPhotoUrl(deal.id, 112, 112)}
-            alt={deal.name}
-            className="rounded"
-            style={{ width: 56, height: 56, objectFit: "cover" }}
-          />
-        </Link>
-        <div className="flex-grow-1" style={{ minWidth: 0 }}>
-          <div className="d-flex align-items-start justify-content-between gap-1">
-            <Link
-              to="/listings/$listingId"
-              params={{ listingId: deal.id }}
-              className="fw-semibold text-truncate text-reset text-decoration-none"
-            >
-              {deal.name}
-            </Link>
-            <DropdownMenu>
-              <DropdownMenu.Trigger
-                render={
-                  <Button variant="ghost" size="icon-sm" aria-label="Deal actions">
-                    <FontAwesomeIcon icon={faEllipsisVertical} />
-                  </Button>
-                }
-              />
-              <DropdownMenu.Content align="end">
-                <DropdownMenu.Item
-                  onClick={() =>
-                    void navigate({
-                      to: "/listings/$listingId",
-                      params: { listingId: deal.id },
-                    })
-                  }
-                >
-                  Open deal
-                </DropdownMenu.Item>
-                <DropdownMenu.Item>Edit</DropdownMenu.Item>
-                <DropdownMenu.Item>Remove link</DropdownMenu.Item>
-              </DropdownMenu.Content>
-            </DropdownMenu>
-          </div>
-          <div className="d-flex flex-wrap gap-1 mt-1">
-            <Pill className="bg-storm-grey-100 text-storm-grey-700">Listing</Pill>
-            <ListingStatusPill value={deal.status} />
-          </div>
-        </div>
-      </div>
+          Open deal
+        </DropdownMenu.Item>
+        <DropdownMenu.Item>Edit</DropdownMenu.Item>
+        <DropdownMenu.Item>Remove link</DropdownMenu.Item>
+      </DropdownMenu.Content>
+    </DropdownMenu>
+  );
 
-      <div className="text-muted fs-small">
-        Started {medDate(startedAt)} · {deal.city}, {deal.state}
-      </div>
+  const footer = (
+    <div className="d-flex flex-column gap-2">
+      <div className="text-muted fs-small">Started {medDate(startedAt)}</div>
 
       {/* Plan */}
       <div className="d-flex flex-column gap-1">
@@ -106,20 +80,26 @@ function DealCard({ deal, startedAt }: { deal: DealSummary; startedAt: string })
       </div>
 
       {/* Lead */}
-      <div className="d-flex align-items-center justify-content-between">
-        <span className="d-inline-flex align-items-center gap-2">
-          <Avatar size="sm">
-            <Avatar.Fallback className="fw-semibold">
-              {nameInitials(deal.leadName)}
-            </Avatar.Fallback>
-          </Avatar>
-          <span>
-            {deal.leadName} <span className="text-muted">Lead</span>
-          </span>
+      <div className="d-flex align-items-center gap-2">
+        <Avatar size="sm">
+          <Avatar.Fallback className="fw-semibold">
+            {nameInitials(deal.leadName)}
+          </Avatar.Fallback>
+        </Avatar>
+        <span>
+          {deal.leadName} <span className="text-muted">Lead</span>
         </span>
-        <span className="fw-semibold">100%</span>
       </div>
     </div>
+  );
+
+  return (
+    <DealCardById
+      listingId={deal.id}
+      showStatus
+      action={action}
+      footer={footer}
+    />
   );
 }
 

@@ -28,7 +28,12 @@
     "@fortawesome/pro-regular-svg-icons": "^7.3.0",
     "@fortawesome/pro-solid-svg-icons": "^7.3.0",
     "@fortawesome/react-fontawesome": "^3.3.1",
+    "@tanstack/ai": "^0.40.0",
+    "@tanstack/ai-anthropic": "^0.16.1",
+    "@tanstack/ai-react": "^0.16.4",
+    "@tanstack/hotkeys": "^0.8.0",
     "@tanstack/react-devtools": "latest",
+    "@tanstack/react-hotkeys": "^0.10.0",
     "@tanstack/react-router": "latest",
     "@tanstack/react-router-devtools": "latest",
     "@tanstack/react-router-ssr-query": "latest",
@@ -40,7 +45,9 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-leaflet": "^5.0.0",
+    "react-markdown": "^10.1.0",
     "recharts": "^3.9.0",
+    "remark-gfm": "^4.0.1",
     "zustand": "^5.0.14"
   },
   "devDependencies": {
