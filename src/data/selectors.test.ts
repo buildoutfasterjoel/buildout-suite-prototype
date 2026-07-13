@@ -25,22 +25,31 @@ describe('reverse-relationship selectors', () => {
 })
 
 describe('getContactDetailClient', () => {
-  it('composes deals from listings on the contact’s linked properties', () => {
+  it('shows the deals the contact is a party to, reciprocally (one coherent graph)', () => {
     const { contacts, listings } = useDataStore.getState()
-    const contact = [...contacts.values()].find((c) =>
-      c.propertyIds.some((pid) => [...listings.values()].some((l) => l.propertyId === pid)),
+    // A contact who is a direct party to at least one deal.
+    const contact = [...contacts.values()].find(
+      (c) => listDealsForContact(c.id).length > 0,
     )!
-    const expectedListingIds = new Set(
-      [...listings.values()]
-        .filter((l) => contact.propertyIds.includes(l.propertyId))
-        .map((l) => l.id),
-    )
 
     const detail = getContactDetailClient(contact.id)
-
     expect(detail).not.toBeNull()
     expect(detail!.contact.id).toBe(contact.id)
-    expect(new Set(detail!.deals.map((d) => d.id))).toEqual(expectedListingIds)
+    expect(detail!.deals.length).toBeGreaterThan(0)
+
+    // The deals shown are exactly the deals the contact is a direct party to.
+    expect(new Set(detail!.deals.map((d) => d.id))).toEqual(
+      new Set(listDealsForContact(contact.id).map((l) => l.id)),
+    )
+
+    // Reciprocity ("feels like 1"): opening any shown deal shows this contact
+    // back among its parties, and the deal's property is one the contact is
+    // associated with.
+    for (const deal of detail!.deals) {
+      expect(listContactsForDeal(deal.id).map((c) => c.id)).toContain(contact.id)
+      const listing = listings.get(deal.id)!
+      expect(contact.propertyIds).toContain(listing.propertyId)
+    }
   })
 
   it('returns null for an unknown contact id', () => {

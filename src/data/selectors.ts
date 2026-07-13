@@ -1,5 +1,4 @@
 import { useDataStore } from './dataStore'
-import { getListingsForProperty } from './store'
 import type { Contact, ContactDetail, DealSummary, Listing, Property } from './types'
 
 /** All contacts attached to a deal (seller + buyer + other), deduped. */
@@ -42,17 +41,10 @@ export function getContactDetailClient(id: string): ContactDetail | null {
   const contact = contacts.get(id)
   if (!contact) return null
 
-  // Linked properties → their listings (deduped by listing id).
-  const seen = new Set<string>()
-  const listings: Listing[] = []
-  for (const propertyId of contact.propertyIds) {
-    for (const listing of getListingsForProperty(propertyId)) {
-      if (!seen.has(listing.id)) {
-        seen.add(listing.id)
-        listings.push(listing)
-      }
-    }
-  }
+  // The deals a contact is a direct party to (seller/buyer/other) — the single
+  // source of truth for the contact↔deal relationship. Reciprocal with the deal
+  // detail page: every deal shown here lists this contact back among its parties.
+  const listings: Listing[] = listDealsForContact(id)
 
   const deals: DealSummary[] = listings.map((l) => ({
     id: l.id,

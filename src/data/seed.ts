@@ -866,7 +866,7 @@ export function generateTasks(stage: ListingStage, stageStartedAt: string): Deal
  */
 function generateListings(
   property: Property,
-  contacts: Contact[],
+  propertyContacts: Contact[],
   dealIdRef: { n: number },
 ): Listing[] {
   const count = faker.helpers.weightedArrayElement([
@@ -923,11 +923,18 @@ function generateListings(
       { weight: 35, value: 'buyer' },
     ])
 
-    const sellerContacts = faker.helpers.arrayElements(contacts, faker.number.int({ min: 1, max: 2 }))
-    // Buyer-side deals always have a buyer; sell-side gains one once it's progressed.
+    // Parties are drawn from THIS property's associated contacts so the graph
+    // stays reciprocal (a deal's contacts are linked to the deal's property).
+    const sellerContacts = faker.helpers.arrayElements(
+      propertyContacts,
+      Math.min(faker.number.int({ min: 1, max: 2 }), propertyContacts.length),
+    )
+    // Buyer-side deals always have a buyer; sell-side gains one once it's
+    // progressed. Buyer is a different party than the seller(s).
+    const buyerPool = propertyContacts.filter((c) => !sellerContacts.includes(c))
     const buyerContacts =
-      dealSide === 'buyer' || status !== 'proposal'
-        ? faker.helpers.arrayElements(contacts, 1)
+      (dealSide === 'buyer' || status !== 'proposal') && buyerPool.length > 0
+        ? faker.helpers.arrayElements(buyerPool, 1)
         : []
     const sellerName = `${sellerContacts[0].firstName} ${sellerContacts[0].lastName}`
 
@@ -1059,8 +1066,37 @@ export function generateDataset() {
 
   const contacts = Array.from({ length: CONTACT_COUNT }, () => generateContact(allPropertyIds))
 
+  // Reconcile the Contact↔Property graph so every property has associated
+  // contacts, then draw each deal's parties from its own property's contacts.
+  // This keeps the graph reciprocal: a contact's deals are deals they're a
+  // party to, and those deals sit on a property the contact is linked to — so
+  // clicking through Contact → Deal → Property "feels like one system".
+  const contactsByProperty = new Map<string, Contact[]>()
+  for (const c of contacts) {
+    for (const pid of c.propertyIds) {
+      const arr = contactsByProperty.get(pid) ?? []
+      arr.push(c)
+      contactsByProperty.set(pid, arr)
+    }
+  }
+  // Guarantee at least two associated contacts per property (so a deal can have
+  // a distinct seller and buyer), adding links deterministically where short.
+  for (const p of properties) {
+    const linked = contactsByProperty.get(p.id) ?? []
+    for (const c of contacts) {
+      if (linked.length >= 2) break
+      if (!c.propertyIds.includes(p.id)) {
+        c.propertyIds.push(p.id)
+        linked.push(c)
+      }
+    }
+    contactsByProperty.set(p.id, linked)
+  }
+
   const dealIdRef = { n: 100 }
-  const listings = properties.flatMap((p) => generateListings(p, contacts, dealIdRef))
+  const listings = properties.flatMap((p) =>
+    generateListings(p, contactsByProperty.get(p.id) ?? contacts, dealIdRef),
+  )
 
   const comps = properties.flatMap((p) => {
     const count = faker.number.int({ min: 1, max: 5 })
