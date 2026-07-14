@@ -130,7 +130,7 @@ function PropertyListings() {
           value: t,
           label: TYPE_LABELS[t],
         })),
-        getValue: (l: Listing) => l.propertyType,
+        getValue: (l: Listing) => getProperty(l.propertyId)?.propertyType ?? "",
         selected: type.set,
         toggle: type.toggle,
         clear: type.clear,
