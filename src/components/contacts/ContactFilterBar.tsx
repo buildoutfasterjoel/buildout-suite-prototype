@@ -7,6 +7,7 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import {
   contactFilterChips,
   type ContactFilterState,
@@ -111,10 +112,17 @@ export function ContactFilterBar({
               </DropdownMenu.Content>
             </DropdownMenu>
           </div>
-          <Button variant="ghost" size="sm" onClick={onRevert}>
-            <FontAwesomeIcon icon={faArrowRotateLeft} />
-            Revert
-          </Button>
+          <Tooltip>
+            <Tooltip.Trigger
+              render={
+                <Button variant="ghost" size="sm" onClick={onRevert}>
+                  <FontAwesomeIcon icon={faArrowRotateLeft} />
+                  Revert
+                </Button>
+              }
+            />
+            <Tooltip.Content>Reverts to list's saved filters</Tooltip.Content>
+          </Tooltip>
         </div>
       )}
 

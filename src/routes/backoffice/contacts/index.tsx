@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Dialog } from "@buildoutinc/blueprint-react/ui/Dialog";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
@@ -461,20 +462,34 @@ function PeoplePage() {
                   <span className="text-muted">{filtered.length} contacts</span>
 
                   <div className="ms-auto d-flex align-items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      aria-label="Email contacts"
-                    >
-                      <FontAwesomeIcon icon={faEnvelope} />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      aria-label="Call contacts"
-                    >
-                      <FontAwesomeIcon icon={faPhone} />
-                    </Button>
+                    <Tooltip>
+                      <Tooltip.Trigger
+                        render={
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            aria-label="Email this list"
+                          >
+                            <FontAwesomeIcon icon={faEnvelope} />
+                          </Button>
+                        }
+                      />
+                      <Tooltip.Content>Email this list</Tooltip.Content>
+                    </Tooltip>
+                    <Tooltip>
+                      <Tooltip.Trigger
+                        render={
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            aria-label="Call this list"
+                          >
+                            <FontAwesomeIcon icon={faPhone} />
+                          </Button>
+                        }
+                      />
+                      <Tooltip.Content>Call this list</Tooltip.Content>
+                    </Tooltip>
                   </div>
                 </div>
 
