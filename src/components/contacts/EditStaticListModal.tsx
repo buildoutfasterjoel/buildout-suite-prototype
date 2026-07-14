@@ -10,7 +10,10 @@ import { Textarea } from "@buildoutinc/blueprint-react/ui/Textarea";
 import { Combobox } from "@buildoutinc/blueprint-react/ui/Combobox";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
-import { SWATCHES } from "#/features/editor/tokens";
+import {
+  DEFAULT_LIST_COLOR,
+  ListColorPicker,
+} from "#/components/contacts/ListColorPicker";
 import type { CallList } from "#/data/contactLists";
 import type { Contact } from "#/data/types";
 import {
@@ -36,7 +39,7 @@ interface ContactOption {
   label: string;
 }
 
-const DEFAULT_COLOR = SWATCHES[0];
+const DEFAULT_COLOR = DEFAULT_LIST_COLOR;
 
 export function EditStaticListModal({
   open,
@@ -132,27 +135,7 @@ export function EditStaticListModal({
               Sets the color of this list's icon in the list menu for easier
               navigation.
             </Field.Description>
-            <div className="d-flex flex-wrap gap-2 mt-1">
-              {SWATCHES.map((swatch) => (
-                <button
-                  key={swatch}
-                  type="button"
-                  aria-label={swatch}
-                  aria-pressed={color === swatch}
-                  onClick={() => setColor(swatch)}
-                  className="border-0 p-0 rounded-circle"
-                  style={{
-                    width: 24,
-                    height: 24,
-                    background: swatch,
-                    cursor: "pointer",
-                    outline:
-                      color === swatch ? "2px solid var(--bs-body-color)" : "none",
-                    outlineOffset: 2,
-                  }}
-                />
-              ))}
-            </div>
+            <ListColorPicker value={color} onChange={setColor} />
           </Field>
 
           <Field>

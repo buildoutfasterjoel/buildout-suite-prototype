@@ -1134,7 +1134,7 @@ export function seedCallLists(): CallList[] {
       label: 'Cold Prospects to Revive',
       description:
         "Owners I haven't talked to in 3+ months with nothing scheduled. Time to reach back out before they forget about me.",
-      color: '#1976d2',
+      color: '#3f86f2',
       createdOn: '2024-05-01',
       filters: listFilters({
         relationship: ['cold'],
@@ -1147,7 +1147,7 @@ export function seedCallLists(): CallList[] {
       label: 'Active Buyers - No Recent Touch',
       description:
         "My active buyers I haven't checked in with in 1–3 months. Need to follow up before they go cold or buy somewhere else.",
-      color: '#009688',
+      color: '#00bc7d',
       createdOn: '2024-05-14',
       filters: listFilters({
         side: ['buyer'],
@@ -1161,7 +1161,7 @@ export function seedCallLists(): CallList[] {
       label: 'Pitching - Needs Follow-Up',
       description:
         "Sellers I'm actively pitching with no next step on the calendar. These are slipping through the cracks - gotta follow up before momentum dies.",
-      color: '#6035e6',
+      color: '#9f55f7',
       createdOn: '2024-06-02',
       filters: listFilters({
         relationship: ['pitching'],
@@ -1173,7 +1173,7 @@ export function seedCallLists(): CallList[] {
       label: 'Never Touched - Needs First Outreach',
       description:
         "Contacts in my book I've never actually reached out to. These came in from public records or imports and just sat there.",
-      color: '#f46925',
+      color: '#fd9a00',
       createdOn: '2024-06-18',
       filters: listFilters({
         source: ['Public records', 'Manual entry'],
@@ -1186,7 +1186,7 @@ export function seedCallLists(): CallList[] {
       label: 'Past Seller Clients - No Recent Touch',
       description:
         "Sellers I've closed with who I haven't talked to in 3+ months. Good for portfolio check-ins and staying top of mind for the next deal.",
-      color: '#33c759',
+      color: '#00b8d8',
       createdOn: '2024-06-30',
       filters: listFilters({
         relationship: ['past_client'],
@@ -1219,7 +1219,7 @@ export function seedCallLists(): CallList[] {
       contactIds: [],
       source: 'user',
       type: 'static',
-      color: '#e71e9b',
+      color: '#ff2630',
     },
     {
       id: 'seed-referral-sources',
@@ -1230,7 +1230,7 @@ export function seedCallLists(): CallList[] {
       contactIds: [],
       source: 'user',
       type: 'static',
-      color: '#ffc107',
+      color: '#ffd346',
     },
   ]
 

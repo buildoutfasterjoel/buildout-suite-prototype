@@ -176,7 +176,11 @@ export function ContactListsOverview({
                 onClick={() => onOpenList(list.id)}
                 className="btn btn-link p-0 text-reset text-decoration-none d-inline-flex align-items-center gap-2 fw-semibold text-nowrap"
               >
-                <FontAwesomeIcon icon={list.icon} className={list.iconClass} />
+                <FontAwesomeIcon
+                  icon={list.icon}
+                  className={list.iconColor ? undefined : list.iconClass}
+                  style={list.iconColor ? { color: list.iconColor } : undefined}
+                />
                 {list.label}
               </button>
             </Table.Cell>

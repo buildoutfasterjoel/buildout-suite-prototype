@@ -12,6 +12,7 @@ import { Pagination } from "@buildoutinc/blueprint-react/ui/Pagination";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faFilter,
+  faListUl,
   faCaretDown,
   faMagnifyingGlass,
   faEnvelope,
@@ -364,6 +365,13 @@ function PeoplePage() {
               <div className="d-flex align-items-start gap-3">
                 <div className="flex-grow-1">
                   <div className="d-flex align-items-center gap-2">
+                    {activeCallList && (isDynamicList || isStaticList) && (
+                      <FontAwesomeIcon
+                        icon={isDynamicList ? faFilter : faListUl}
+                        className="fs-4"
+                        style={{ color: activeCallList.color }}
+                      />
+                    )}
                     <h1 className="fs-4 fw-semibold mb-0">{heading}</h1>
                     {isDynamicList && (
                       <Badge variant="primary" appearance="muted">
