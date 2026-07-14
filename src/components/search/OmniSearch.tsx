@@ -16,8 +16,8 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { searchAll } from "#/data/selectors";
-import { getListingsForProperty } from "#/data/store";
 import { useAssistant } from "#/ai/useAssistant";
+import { useCreateDeal } from "#/data/useCreateDeal";
 import { useOmniSearch } from "#/components/search/useOmniSearch";
 
 /** Max rows shown per entity group in the palette. */
@@ -58,6 +58,13 @@ type Entry =
       icon: IconDefinition;
       title: string;
       activate: () => void;
+    }
+  | {
+      kind: "create";
+      key: "create";
+      icon: IconDefinition;
+      title: string;
+      activate: () => void;
     };
 
 export function OmniSearch() {
@@ -88,7 +95,6 @@ export function OmniSearch() {
     const list: Entry[] = [];
 
     for (const p of properties.slice(0, GROUP_CAP)) {
-      const listing = getListingsForProperty(p.id)[0];
       list.push({
         kind: "record",
         key: `property-${p.id}`,
@@ -98,8 +104,7 @@ export function OmniSearch() {
         meta: [p.street, [p.city, p.state].filter(Boolean).join(", ")]
           .filter(Boolean)
           .join(" · "),
-        activate: () =>
-          navigate(listing ? `/listings/${listing.id}` : "/properties"),
+        activate: () => navigate(`/properties/${p.id}`),
       });
     }
 
@@ -130,6 +135,19 @@ export function OmniSearch() {
         activate: () => navigate(`/listings/${d.id}`),
       });
     }
+
+    // A "Create deal" quick action is always available for a non-empty query,
+    // seeding the create-deal modal's address field with the raw query text.
+    list.push({
+      kind: "create",
+      key: "create",
+      icon: faHandshake,
+      title: `Create deal for “${q}”`,
+      activate: () => {
+        useCreateDeal.getState().openFor({ initialAddress: q });
+        close();
+      },
+    });
 
     // The Ask-AI action is always available for a non-empty query. When there
     // are no record matches it becomes the only (and thus auto-highlighted) row.
@@ -227,7 +245,10 @@ export function OmniSearch() {
                     entries[index - 1].kind !== "record" ||
                     (entries[index - 1] as Extract<Entry, { kind: "record" }>)
                       .group !== entry.group);
-                const showAiSeparator = entry.kind === "ai" && index > 0;
+                const showTopSeparator =
+                  (entry.kind === "ai" || entry.kind === "create") &&
+                  index > 0 &&
+                  entries[index - 1].kind === "record";
 
                 return (
                   <div key={entry.key}>
@@ -236,7 +257,7 @@ export function OmniSearch() {
                         {entry.group}
                       </div>
                     )}
-                    {showAiSeparator && <hr className="my-2" />}
+                    {showTopSeparator && <hr className="my-2" />}
                     <button
                       type="button"
                       data-omni-index={index}
@@ -249,9 +270,9 @@ export function OmniSearch() {
                       <FontAwesomeIcon
                         icon={entry.icon}
                         className={
-                          entry.kind === "ai"
-                            ? "text-buildout-blue-700"
-                            : "text-muted"
+                          entry.kind === "record"
+                            ? "text-muted"
+                            : "text-buildout-blue-700"
                         }
                       />
                       <span className="flex-grow-1" style={{ minWidth: 0 }}>
