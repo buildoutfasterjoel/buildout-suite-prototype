@@ -5,6 +5,7 @@ import { faPlus, faPencil } from "@fortawesome/pro-regular-svg-icons";
 import type { DealBroker, Listing, Property } from "#/data/types";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
 import { formatCurrency, initials } from "./dealDisplay";
+import { TYPE_LABELS } from "../properties/propertyDisplay";
 
 function SectionCard({
   title,
@@ -122,9 +123,9 @@ export function ListingOverview({
       <div className="row g-4">
         <div className="col-lg-6">
           <SectionCard title="Property">
-            <Field label="Property Type" value={listing.propertyTypeLabel} />
-            <Field label="Address" value={listing.street} />
-            <Field label="City / State / Zip" value={`${listing.location} ${listing.zip}`} />
+            <Field label="Property Type" value={TYPE_LABELS[property.propertyType]} />
+            <Field label="Address" value={property.street} />
+            <Field label="City / State / Zip" value={`${property.city}, ${property.state} ${property.zip}`} />
             <Field label="Available (SF)" value={listing.marketing.availableSqFt.toLocaleString()} />
             <Field label="Building Size (SF)" value={property.buildingSqFt.toLocaleString()} />
             <Field label="Year Built" value={property.yearBuilt} />

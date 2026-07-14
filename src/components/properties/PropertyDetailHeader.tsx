@@ -12,6 +12,7 @@ import {
   faHandshake,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing, ListingStage } from "#/data/types";
+import { getProperty } from "#/data/store";
 import {
   STATUS_LABELS,
   STATUS_COLORS,
@@ -30,7 +31,8 @@ import { SyndicationStatus } from "#/components/listings/SyndicationStatus";
 export function PropertyDetailHeader({ listing }: { listing: Listing }) {
   const seed = hash(listing.id);
   const refId = getRefId(listing.id);
-  const address = `${listing.street}, ${listing.city}, ${listing.state} ${listing.zip}`;
+  const property = getProperty(listing.propertyId);
+  const address = `${property?.street}, ${property?.city}, ${property?.state} ${property?.zip}`;
   const [stage, setStage] = useState<ListingStage>(listing.status);
 
   return (

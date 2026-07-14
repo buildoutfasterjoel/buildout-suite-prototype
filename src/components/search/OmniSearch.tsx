@@ -16,6 +16,7 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { searchAll } from "#/data/selectors";
+import { getProperty } from "#/data/store";
 import { useAssistant } from "#/ai/useAssistant";
 import { useCreateDeal } from "#/data/useCreateDeal";
 import { useOmniSearch } from "#/components/search/useOmniSearch";
@@ -124,13 +125,14 @@ export function OmniSearch() {
     }
 
     for (const d of deals.slice(0, GROUP_CAP)) {
+      const p = getProperty(d.propertyId);
       list.push({
         kind: "record",
         key: `deal-${d.id}`,
         group: "Deals",
         icon: faHandshake,
         title: d.name,
-        meta: [d.city, d.state].filter(Boolean).join(", "),
+        meta: [p?.city, p?.state].filter(Boolean).join(", "),
         badge: statusLabel(d.status),
         activate: () => navigate(`/listings/${d.id}`),
       });

@@ -7,6 +7,7 @@ import {
   listDealsForContact,
   listDealsForProperty,
   searchAll,
+  selectDealWithProperty,
 } from './selectors'
 
 describe('reverse-relationship selectors', () => {
@@ -116,5 +117,16 @@ describe('getPropertyDetailClient', () => {
 
   it('returns null for an unknown property id', () => {
     expect(getPropertyDetailClient('nonexistent-property-id')).toBeNull()
+  })
+})
+
+describe('selectDealWithProperty', () => {
+  it('resolves the deal, its property, and its unit', () => {
+    const anyDeal = [...useDataStore.getState().listings.values()][0]
+    const resolved = selectDealWithProperty(anyDeal.id)
+    expect(resolved).toBeTruthy()
+    expect(resolved!.deal.id).toBe(anyDeal.id)
+    expect(resolved!.property?.id).toBe(anyDeal.propertyId)
+    if (anyDeal.unitId) expect(resolved!.unit?.id).toBe(anyDeal.unitId)
   })
 })

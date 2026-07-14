@@ -1,5 +1,5 @@
 import { useDataStore } from './dataStore'
-import type { Comp, Contact, ContactDetail, DealSummary, Listing, Property, PropertyDetail, PropertyFinancialRecord } from './types'
+import type { Comp, Contact, ContactDetail, DealSummary, Listing, Property, PropertyDetail, PropertyFinancialRecord, PropertyUnit } from './types'
 import { getContactsForProperty, getOwnersForProperty } from './store'
 
 /** All contacts attached to a deal (seller + buyer + other), deduped. */
@@ -46,17 +46,20 @@ export function getContactDetailClient(id: string): ContactDetail | null {
   // detail page: every deal shown here lists this contact back among its parties.
   const listings: Listing[] = listDealsForContact(id)
 
-  const deals: DealSummary[] = listings.map((l) => ({
-    id: l.id,
-    name: l.name,
-    city: l.city,
-    state: l.state,
-    status: l.status,
-    dealType: l.dealType,
-    planTotal: l.tasks.length,
-    planDone: l.tasks.filter((t) => t.status === 'complete').length,
-    leadName: l.internalBrokers[0]?.name ?? contact.assignedTo,
-  }))
+  const deals: DealSummary[] = listings.map((l) => {
+    const property = useDataStore.getState().properties.get(l.propertyId)
+    return {
+      id: l.id,
+      name: l.name,
+      city: property?.city ?? '',
+      state: property?.state ?? '',
+      status: l.status,
+      dealType: l.dealType,
+      planTotal: l.tasks.length,
+      planDone: l.tasks.filter((t) => t.status === 'complete').length,
+      leadName: l.internalBrokers[0]?.name ?? contact.assignedTo,
+    }
+  })
 
   const openTaskCount = listings.reduce(
     (n, l) =>
@@ -82,9 +85,10 @@ export function searchAll(query: string): {
     properties: [...properties.values()].filter((p) =>
       matches(p.name, p.street, p.city, p.state, p.zip, p.submarket, p.propertyType, p.apn),
     ),
-    deals: [...listings.values()].filter((l) =>
-      matches(l.name, l.city, l.state, l.dealType),
-    ),
+    deals: [...listings.values()].filter((l) => {
+      const p = properties.get(l.propertyId)
+      return matches(l.name, p?.city, p?.state, l.dealType)
+    }),
     contacts: [...contacts.values()].filter((c) =>
       matches(c.firstName, c.lastName, c.company, c.email, c.title, c.phone),
     ),
@@ -118,4 +122,19 @@ export function getPropertyDetailClient(id: string): PropertyDetail | null {
 /** The current (newest) in-place financial record for a property, or undefined if none. */
 export function latestFinancialRecord(property: Property): PropertyFinancialRecord | undefined {
   return property.financialRecords[0]
+}
+
+/**
+ * Resolve a deal together with the property facts it references. Deals hold no
+ * property data of their own — views join through `propertyId` (+ optional `unitId`).
+ */
+export function selectDealWithProperty(dealId: string):
+  | { deal: Listing; property: Property | undefined; unit: PropertyUnit | undefined }
+  | undefined {
+  const { listings, properties } = useDataStore.getState()
+  const deal = listings.get(dealId)
+  if (!deal) return undefined
+  const property = properties.get(deal.propertyId)
+  const unit = deal.unitId && property ? property.units.find((u) => u.id === deal.unitId) : undefined
+  return { deal, property, unit }
 }

@@ -17,7 +17,7 @@ import {
   faTableCellsLarge,
   faLocationDot,
 } from "@fortawesome/pro-regular-svg-icons";
-import { getStore } from "#/data/store";
+import { getProperty, getStore } from "#/data/store";
 import { updateDealStage } from "#/data/actions";
 import { useCreateDeal } from "#/data/useCreateDeal";
 import type { Listing, PropertyStatus, DealSide } from "#/data/types";
@@ -212,8 +212,9 @@ function PropertyListings() {
           return false;
       }
       if (q) {
+        const p = getProperty(l.propertyId);
         const haystack =
-          `${l.name} ${l.street} ${l.city} ${l.state}`.toLowerCase();
+          `${l.name} ${p?.street ?? ""} ${p?.city ?? ""} ${p?.state ?? ""}`.toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       return true;

@@ -6,6 +6,7 @@ import {
   faCalendarCircleExclamation,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing } from "#/data/types";
+import { getProperty } from "#/data/store";
 import {
   TYPE_ICONS,
   TYPE_LABELS,
@@ -21,6 +22,7 @@ import { AvatarGroup } from "./AvatarGroup";
 export function PropertyCard({ listing }: { listing: Listing }) {
   const seed = hash(listing.id);
   const refId = getRefId(listing.id);
+  const property = getProperty(listing.propertyId);
 
   return (
     <div
@@ -92,11 +94,13 @@ export function PropertyCard({ listing }: { listing: Listing }) {
             className="d-flex align-items-center gap-1 text-muted"
             style={{ fontSize: 10 }}
           >
-            <FontAwesomeIcon
-              icon={TYPE_ICONS[listing.propertyType]}
-              style={{ fontSize: 10 }}
-            />
-            <span>{TYPE_LABELS[listing.propertyType]}</span>
+            {property && (
+              <FontAwesomeIcon
+                icon={TYPE_ICONS[property.propertyType]}
+                style={{ fontSize: 10 }}
+              />
+            )}
+            <span>{property ? TYPE_LABELS[property.propertyType] : ""}</span>
           </div>
           <div
             className="fw-bold text-truncate"
@@ -106,7 +110,7 @@ export function PropertyCard({ listing }: { listing: Listing }) {
             {listing.name}
           </div>
           <div className="text-muted text-truncate" style={{ fontSize: 12 }}>
-            {listing.city}, {listing.state}
+            {property?.city}, {property?.state}
           </div>
         </div>
       </div>
