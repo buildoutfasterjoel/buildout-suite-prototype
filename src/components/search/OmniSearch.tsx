@@ -98,7 +98,8 @@ export function OmniSearch() {
         meta: [p.street, [p.city, p.state].filter(Boolean).join(", ")]
           .filter(Boolean)
           .join(" · "),
-        activate: () => navigate(listing ? `/listings/${listing.id}` : "/properties"),
+        activate: () =>
+          navigate(listing ? `/listings/${listing.id}` : "/properties"),
       });
     }
 
@@ -111,7 +112,7 @@ export function OmniSearch() {
         title: `${c.firstName} ${c.lastName}`.trim(),
         meta: [c.title, c.company].filter(Boolean).join(" · "),
         badge: c.relationship
-          ? RELATIONSHIP_LABELS[c.relationship] ?? c.relationship
+          ? (RELATIONSHIP_LABELS[c.relationship] ?? c.relationship)
           : undefined,
         activate: () => navigate(`/backoffice/contacts/${c.id}`),
       });
@@ -186,7 +187,7 @@ export function OmniSearch() {
 
   return (
     <Modal open={open} onOpenChange={(o) => (o ? setOpen(true) : close())}>
-      <Modal.Content className="p-0" scrollable>
+      <Modal.Content className="p-0" scrollable centered>
         <Modal.Title className="visually-hidden">
           Search properties, people, and deals
         </Modal.Title>
@@ -196,7 +197,10 @@ export function OmniSearch() {
           <div className="p-2 border-bottom">
             <InputGroup>
               <InputGroup.Addon>
-                <FontAwesomeIcon icon={faMagnifyingGlass} className="text-muted" />
+                <FontAwesomeIcon
+                  icon={faMagnifyingGlass}
+                  className="text-muted"
+                />
               </InputGroup.Addon>
               <Input
                 value={query}
@@ -211,19 +215,19 @@ export function OmniSearch() {
           <div className="overflow-auto py-2" style={{ maxHeight: 440 }}>
             {query.trim() === "" ? (
               <div className="text-muted small px-3 py-4 text-center">
-                Search across properties, people, and deals. Ask a question and the
-                assistant will take it from here.
+                Search across properties, people, and deals. Ask a question and
+                the assistant will take it from here.
               </div>
             ) : (
               entries.map((entry, index) => {
                 const active = index === activeIndex;
                 const showHeader =
                   entry.kind === "record" &&
-                  (index === 0 || entries[index - 1].kind !== "record" ||
-                    (entries[index - 1] as Extract<Entry, { kind: "record" }>).group !==
-                      entry.group);
-                const showAiSeparator =
-                  entry.kind === "ai" && index > 0;
+                  (index === 0 ||
+                    entries[index - 1].kind !== "record" ||
+                    (entries[index - 1] as Extract<Entry, { kind: "record" }>)
+                      .group !== entry.group);
+                const showAiSeparator = entry.kind === "ai" && index > 0;
 
                 return (
                   <div key={entry.key}>
@@ -245,7 +249,9 @@ export function OmniSearch() {
                       <FontAwesomeIcon
                         icon={entry.icon}
                         className={
-                          entry.kind === "ai" ? "text-buildout-blue-700" : "text-muted"
+                          entry.kind === "ai"
+                            ? "text-buildout-blue-700"
+                            : "text-muted"
                         }
                       />
                       <span className="flex-grow-1" style={{ minWidth: 0 }}>
@@ -259,7 +265,11 @@ export function OmniSearch() {
                         )}
                       </span>
                       {entry.kind === "record" && entry.badge && (
-                        <Badge variant="secondary" appearance="muted" className="flex-shrink-0">
+                        <Badge
+                          variant="secondary"
+                          appearance="muted"
+                          className="flex-shrink-0"
+                        >
                           {entry.badge}
                         </Badge>
                       )}
