@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SuiteRouteImport } from './routes/suite'
+import { Route as PropertiesRouteImport } from './routes/properties'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ListingsRouteImport } from './routes/listings'
 import { Route as EmailRouteImport } from './routes/email'
@@ -18,6 +19,7 @@ import { Route as BackofficeRouteImport } from './routes/backoffice'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SuiteIndexRouteImport } from './routes/suite/index'
+import { Route as PropertiesIndexRouteImport } from './routes/properties/index'
 import { Route as ListingsIndexRouteImport } from './routes/listings/index'
 import { Route as EmailIndexRouteImport } from './routes/email/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
@@ -44,6 +46,11 @@ import { Route as BackofficeContactsContactIdRouteImport } from './routes/backof
 const SuiteRoute = SuiteRouteImport.update({
   id: '/suite',
   path: '/suite',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PropertiesRoute = PropertiesRouteImport.update({
+  id: '/properties',
+  path: '/properties',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -85,6 +92,11 @@ const SuiteIndexRoute = SuiteIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => SuiteRoute,
+} as any)
+const PropertiesIndexRoute = PropertiesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PropertiesRoute,
 } as any)
 const ListingsIndexRoute = ListingsIndexRouteImport.update({
   id: '/',
@@ -214,6 +226,7 @@ export interface FileRoutesByFullPath {
   '/email': typeof EmailRouteWithChildren
   '/listings': typeof ListingsRouteWithChildren
   '/login': typeof LoginRoute
+  '/properties': typeof PropertiesRouteWithChildren
   '/suite': typeof SuiteRouteWithChildren
   '/editor/$listingId': typeof EditorListingIdRoute
   '/email/$emailId': typeof EmailEmailIdRoute
@@ -221,6 +234,7 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AppIndexRoute
   '/email/': typeof EmailIndexRoute
   '/listings/': typeof ListingsIndexRoute
+  '/properties/': typeof PropertiesIndexRoute
   '/suite/': typeof SuiteIndexRoute
   '/backoffice/contacts/$contactId': typeof BackofficeContactsContactIdRoute
   '/listings/$listingId/activities': typeof ListingsListingIdActivitiesRoute
@@ -249,6 +263,7 @@ export interface FileRoutesByTo {
   '/app': typeof AppIndexRoute
   '/email': typeof EmailIndexRoute
   '/listings': typeof ListingsIndexRoute
+  '/properties': typeof PropertiesIndexRoute
   '/suite': typeof SuiteIndexRoute
   '/backoffice/contacts/$contactId': typeof BackofficeContactsContactIdRoute
   '/listings/$listingId/activities': typeof ListingsListingIdActivitiesRoute
@@ -276,6 +291,7 @@ export interface FileRoutesById {
   '/email': typeof EmailRouteWithChildren
   '/listings': typeof ListingsRouteWithChildren
   '/login': typeof LoginRoute
+  '/properties': typeof PropertiesRouteWithChildren
   '/suite': typeof SuiteRouteWithChildren
   '/editor/$listingId': typeof EditorListingIdRoute
   '/email/$emailId': typeof EmailEmailIdRoute
@@ -283,6 +299,7 @@ export interface FileRoutesById {
   '/app/': typeof AppIndexRoute
   '/email/': typeof EmailIndexRoute
   '/listings/': typeof ListingsIndexRoute
+  '/properties/': typeof PropertiesIndexRoute
   '/suite/': typeof SuiteIndexRoute
   '/backoffice/contacts/$contactId': typeof BackofficeContactsContactIdRoute
   '/listings/$listingId/activities': typeof ListingsListingIdActivitiesRoute
@@ -311,6 +328,7 @@ export interface FileRouteTypes {
     | '/email'
     | '/listings'
     | '/login'
+    | '/properties'
     | '/suite'
     | '/editor/$listingId'
     | '/email/$emailId'
@@ -318,6 +336,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/email/'
     | '/listings/'
+    | '/properties/'
     | '/suite/'
     | '/backoffice/contacts/$contactId'
     | '/listings/$listingId/activities'
@@ -346,6 +365,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/email'
     | '/listings'
+    | '/properties'
     | '/suite'
     | '/backoffice/contacts/$contactId'
     | '/listings/$listingId/activities'
@@ -372,6 +392,7 @@ export interface FileRouteTypes {
     | '/email'
     | '/listings'
     | '/login'
+    | '/properties'
     | '/suite'
     | '/editor/$listingId'
     | '/email/$emailId'
@@ -379,6 +400,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/email/'
     | '/listings/'
+    | '/properties/'
     | '/suite/'
     | '/backoffice/contacts/$contactId'
     | '/listings/$listingId/activities'
@@ -406,6 +428,7 @@ export interface RootRouteChildren {
   EmailRoute: typeof EmailRouteWithChildren
   ListingsRoute: typeof ListingsRouteWithChildren
   LoginRoute: typeof LoginRoute
+  PropertiesRoute: typeof PropertiesRouteWithChildren
   SuiteRoute: typeof SuiteRouteWithChildren
 }
 
@@ -416,6 +439,13 @@ declare module '@tanstack/react-router' {
       path: '/suite'
       fullPath: '/suite'
       preLoaderRoute: typeof SuiteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/properties': {
+      id: '/properties'
+      path: '/properties'
+      fullPath: '/properties'
+      preLoaderRoute: typeof PropertiesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -473,6 +503,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/suite/'
       preLoaderRoute: typeof SuiteIndexRouteImport
       parentRoute: typeof SuiteRoute
+    }
+    '/properties/': {
+      id: '/properties/'
+      path: '/'
+      fullPath: '/properties/'
+      preLoaderRoute: typeof PropertiesIndexRouteImport
+      parentRoute: typeof PropertiesRoute
     }
     '/listings/': {
       id: '/listings/'
@@ -729,6 +766,18 @@ const ListingsRouteWithChildren = ListingsRoute._addFileChildren(
   ListingsRouteChildren,
 )
 
+interface PropertiesRouteChildren {
+  PropertiesIndexRoute: typeof PropertiesIndexRoute
+}
+
+const PropertiesRouteChildren: PropertiesRouteChildren = {
+  PropertiesIndexRoute: PropertiesIndexRoute,
+}
+
+const PropertiesRouteWithChildren = PropertiesRoute._addFileChildren(
+  PropertiesRouteChildren,
+)
+
 interface SuiteRouteChildren {
   SuiteIndexRoute: typeof SuiteIndexRoute
 }
@@ -747,6 +796,7 @@ const rootRouteChildren: RootRouteChildren = {
   EmailRoute: EmailRouteWithChildren,
   ListingsRoute: ListingsRouteWithChildren,
   LoginRoute: LoginRoute,
+  PropertiesRoute: PropertiesRouteWithChildren,
   SuiteRoute: SuiteRouteWithChildren,
 }
 export const routeTree = rootRouteImport
