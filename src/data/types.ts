@@ -409,7 +409,12 @@ export interface Contact {
   tags: string[]
 }
 
-export interface DataStore {
+/**
+ * The four core entity maps, as returned by `getStore()`. This is the subset of
+ * the live `DataSlice` (`src/data/dataStore.ts`) that read-side helpers need —
+ * `dealFiles`/`emails`/`callLists` are accessed through their own helpers.
+ */
+export interface EntityMaps {
   properties: Map<string, Property>
   listings: Map<string, Listing>
   comps: Map<string, Comp>
