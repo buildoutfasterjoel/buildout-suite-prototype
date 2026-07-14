@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
+import { Dialog } from "@buildoutinc/blueprint-react/ui/Dialog";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
@@ -77,6 +78,7 @@ function PeoplePage() {
   const [showCreateList, setShowCreateList] = useState(false);
   const [showCreateStaticList, setShowCreateStaticList] = useState(false);
   const [showAddToList, setShowAddToList] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState(emptyContactFilters());
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -172,6 +174,7 @@ function PeoplePage() {
     removeCallList(activeListId);
     setActiveListId(ALL_CONTACTS_ID);
     setFilters(emptyContactFilters());
+    setShowDeleteConfirm(false);
   };
 
   // Row selection (lifted from the table) drives the bulk-actions bar.
@@ -339,7 +342,7 @@ function PeoplePage() {
                     variant="outline"
                     size="icon"
                     aria-label="Delete list"
-                    onClick={handleDeleteList}
+                    onClick={() => setShowDeleteConfirm(true)}
                   >
                     <FontAwesomeIcon icon={faTrash} />
                   </Button>
@@ -470,6 +473,27 @@ function PeoplePage() {
                 contactCount={selected.size}
                 onAdd={handleAddToList}
               />
+
+              <Dialog
+                open={showDeleteConfirm}
+                onOpenChange={setShowDeleteConfirm}
+              >
+                <Dialog.Content>
+                  <Dialog.Header>
+                    <Dialog.Title>Delete list?</Dialog.Title>
+                    <Dialog.Description>
+                      “{heading}” will be permanently deleted. The contacts on it
+                      won’t be affected.
+                    </Dialog.Description>
+                  </Dialog.Header>
+                  <Dialog.Footer>
+                    <Dialog.Cancel>Cancel</Dialog.Cancel>
+                    <Button variant="destructive" onClick={handleDeleteList}>
+                      Delete List
+                    </Button>
+                  </Dialog.Footer>
+                </Dialog.Content>
+              </Dialog>
 
               {/* Table */}
               <ContactsTable
