@@ -181,7 +181,29 @@ function buildStubProperty(draft: NewListingDraft, now: string): Property {
 
     occupancyPct: 0,
     notes: '',
-    units: [],
+    units: [
+      {
+        id: crypto.randomUUID(),
+        label: 'Whole Property',
+        unitType:
+          draft.propertyType === 'multifamily'
+            ? 'residential'
+            : draft.propertyType === 'office' ||
+                draft.propertyType === 'retail' ||
+                draft.propertyType === 'industrial'
+              ? draft.propertyType
+              : 'other',
+        sqft: Math.max(1, draft.availableSqFt),
+        beds: null,
+        baths: null,
+        suite: null,
+        floor: null,
+        ceilingHeight: null,
+        offices: null,
+        conferenceRooms: null,
+        furnished: false,
+      },
+    ],
     financialRecords: [
       {
         id: crypto.randomUUID(),
