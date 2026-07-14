@@ -19,6 +19,7 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import { getStore } from "#/data/store";
 import { updateDealStage } from "#/data/actions";
+import { useCreateDeal } from "#/data/useCreateDeal";
 import type { Listing, PropertyStatus, DealSide } from "#/data/types";
 import { DealBoard } from "#/components/deals/DealBoard";
 import type { Facet } from "#/components/properties/PropertyFilters";
@@ -40,7 +41,6 @@ import {
   getExpiration,
 } from "#/components/properties/propertyFacets";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
-import { CreateDealModal } from "#/components/deals/CreateDealModal";
 
 export const Route = createFileRoute("/listings/")({
   component: PropertyListings,
@@ -103,7 +103,6 @@ function PropertyListings() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortBy>("default");
   const [side, setSide] = useState<DealSide | "all">("all");
-  const [newOpen, setNewOpen] = useState(false);
   const [view, setView] = useState<ViewMode>("board");
   const isListings = view === "grid" || view === "map";
 
@@ -264,14 +263,15 @@ function PropertyListings() {
               {filtered.length !== total && ` of ${total}`}
             </span>
           </div>
-          <Button variant="primary" onClick={() => setNewOpen(true)}>
+          <Button
+            variant="primary"
+            onClick={() => useCreateDeal.getState().openFor()}
+          >
             <FontAwesomeIcon icon={faCirclePlus} />
             New Deal
           </Button>
         </div>
       </div>
-
-      <CreateDealModal open={newOpen} onOpenChange={setNewOpen} />
 
       {/* Toolbar card */}
       <div className="py-3 d-flex flex-column gap-3">

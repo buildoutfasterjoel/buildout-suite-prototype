@@ -6,6 +6,7 @@ import { GlobalNavbar } from "#/components/layout/GlobalNavbar";
 import { AssistantSidebar } from "#/components/ai/AssistantSidebar";
 import { OmniSearch } from "#/components/search/OmniSearch";
 import { useOmniSearch } from "#/components/search/useOmniSearch";
+import { GlobalCreateDealModal } from "#/components/deals/GlobalCreateDealModal";
 import { useDataStore } from "#/data/dataStore";
 
 export function AppShell() {
@@ -30,6 +31,7 @@ export function AppShell() {
         {hydrated && <AssistantSidebar />}
       </div>
       {hydrated && <OmniSearch />}
+      {hydrated && <GlobalCreateDealModal />}
     </div>
   );
 }
