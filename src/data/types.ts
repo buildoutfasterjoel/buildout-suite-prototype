@@ -133,8 +133,56 @@ export interface Property {
   grossRentMultiplier: number
   parkingSpaces: number
 
+  // Occupancy + notes + child records (source of truth for the asset)
+  occupancyPct: number
+  notes: string
+  units: PropertyUnit[]
+  /** Dated in-place financial actuals, newest first; [0] mirrors the flat current fields above. */
+  financialRecords: PropertyFinancialRecord[]
+
   createdAt: string
   updatedAt: string
+}
+
+export type UnitType = 'residential' | 'office' | 'retail' | 'industrial' | 'other'
+
+/** A physical child shell of a Property (condo unit, pad, suite, apartment). Source of truth on the asset. */
+export interface PropertyUnit {
+  id: string
+  /** Display label, e.g. "Unit 4B" or "Suite 200". */
+  label: string
+  unitType: UnitType
+  sqft: number
+  // Residential shell
+  beds: number | null
+  baths: number | null
+  // Commercial shell
+  suite: string | null
+  floor: number | null
+  /** Overrides the building-level ceiling height when set. */
+  ceilingHeight: number | null
+  offices: number | null
+  conferenceRooms: number | null
+  furnished: boolean
+}
+
+export type FinancialRecordSource = 'T-12 actuals' | 'Assessor' | 'Owner-provided' | 'Broker estimate'
+
+/** A dated snapshot of the asset's in-place operating performance. Newest record = current. */
+export interface PropertyFinancialRecord {
+  id: string
+  /** ISO date (YYYY-MM-DD) the figures are as-of. */
+  asOf: string
+  source: FinancialRecordSource
+  potentialGrossIncome: number
+  vacancyRate: number
+  effectiveGrossIncome: number
+  operatingExpenses: number
+  noi: number
+  capRate: number
+  grossRentMultiplier: number
+  cashOnCashReturn: number
+  occupancyPct: number
 }
 
 /**

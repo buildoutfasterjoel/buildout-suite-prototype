@@ -1,5 +1,5 @@
 import { useDataStore } from './dataStore'
-import type { Comp, Contact, ContactDetail, DealSummary, Listing, Property, PropertyDetail } from './types'
+import type { Comp, Contact, ContactDetail, DealSummary, Listing, Property, PropertyDetail, PropertyFinancialRecord } from './types'
 import { getContactsForProperty, getOwnersForProperty } from './store'
 
 /** All contacts attached to a deal (seller + buyer + other), deduped. */
@@ -113,4 +113,9 @@ export function getPropertyDetailClient(id: string): PropertyDetail | null {
     contacts: getContactsForProperty(id),
     comps: listCompsForProperty(id),
   }
+}
+
+/** The current (newest) in-place financial record for a property, or undefined if none. */
+export function latestFinancialRecord(property: Property): PropertyFinancialRecord | undefined {
+  return property.financialRecords[0]
 }

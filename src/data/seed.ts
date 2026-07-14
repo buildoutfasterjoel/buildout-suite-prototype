@@ -22,6 +22,10 @@ import type {
   DealSide,
   ContactDealStage,
   PhoneStatus,
+  PropertyUnit,
+  UnitType,
+  PropertyFinancialRecord,
+  FinancialRecordSource,
 } from './types'
 import type { CallList } from './contactLists'
 import type { SerializedContactFilters } from '#/components/contacts/contactFilterModel'
@@ -341,6 +345,84 @@ function generateLegalDescription(): string {
   return `LO${lot} ${sub} SUB BM${year}-${seq}`
 }
 
+// ── Property children (units + financial records) ─────────────────────────────
+
+function generateUnits(
+  propertyType: PropertyType,
+  buildingSqFt: number,
+  residentialUnits: number | null,
+): PropertyUnit[] {
+  const unitType: UnitType =
+    propertyType === 'multifamily'
+      ? 'residential'
+      : propertyType === 'office' || propertyType === 'retail' || propertyType === 'industrial'
+        ? propertyType
+        : 'other'
+
+  // Multifamily: a handful of residential shells. Everything else: 1–3 commercial suites.
+  const count =
+    propertyType === 'multifamily'
+      ? Math.min(residentialUnits ?? 4, 6)
+      : faker.helpers.weightedArrayElement([
+          { weight: 60, value: 1 },
+          { weight: 28, value: 2 },
+          { weight: 12, value: 3 },
+        ])
+  const per = Math.max(400, Math.round(buildingSqFt / count))
+
+  return Array.from({ length: count }, (_, i): PropertyUnit => {
+    const residential = unitType === 'residential'
+    return {
+      id: faker.string.uuid(),
+      label: residential ? `Unit ${i + 1}` : `Suite ${(i + 1) * 100}`,
+      unitType,
+      sqft: per,
+      beds: residential ? faker.number.int({ min: 1, max: 3 }) : null,
+      baths: residential ? faker.number.int({ min: 1, max: 2 }) : null,
+      suite: residential ? null : `${(i + 1) * 100}`,
+      floor: residential ? null : faker.number.int({ min: 1, max: 5 }),
+      ceilingHeight: residential ? null : faker.number.int({ min: 9, max: 16 }),
+      offices: residential ? null : faker.number.int({ min: 0, max: 6 }),
+      conferenceRooms: residential ? null : faker.number.int({ min: 0, max: 2 }),
+      furnished: !residential && faker.datatype.boolean({ probability: 0.25 }),
+    }
+  })
+}
+
+function generateFinancialRecords(current: {
+  pgi: number
+  vacancyRate: number
+  egi: number
+  operatingExpenses: number
+  noi: number
+  capRate: number
+  grm: number
+  cashOnCashReturn: number
+  occupancyPct: number
+}): PropertyFinancialRecord[] {
+  // Newest first: the current year mirrors the flat Property fields exactly; two
+  // prior years scale figures down a little so the history reads plausibly.
+  const currentYear = 2026
+  const sources: FinancialRecordSource[] = ['T-12 actuals', 'Owner-provided', 'Broker estimate']
+  return [0, 1, 2].map((back): PropertyFinancialRecord => {
+    const f = back === 0 ? 1 : 1 - back * faker.number.float({ min: 0.03, max: 0.07, fractionDigits: 3 })
+    return {
+      id: faker.string.uuid(),
+      asOf: `${currentYear - back}-12-31`,
+      source: sources[back],
+      potentialGrossIncome: Math.round(current.pgi * f),
+      vacancyRate: current.vacancyRate,
+      effectiveGrossIncome: Math.round(current.egi * f),
+      operatingExpenses: Math.round(current.operatingExpenses * f),
+      noi: back === 0 ? current.noi : Math.round(current.noi * f),
+      capRate: current.capRate,
+      grossRentMultiplier: current.grm,
+      cashOnCashReturn: current.cashOnCashReturn,
+      occupancyPct: current.occupancyPct,
+    }
+  })
+}
+
 // ── Property generator ────────────────────────────────────────────────────────
 
 function generateProperty(): Property {
@@ -430,6 +512,13 @@ function generateProperty(): Property {
   const baseName = generatePropertyName(propertyType)
   const slug = baseName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + id.slice(0, 6)
 
+  const cashOnCashReturn = faker.number.float({ min: capRate * 0.7, max: capRate * 1.1, fractionDigits: 4 })
+  const occupancyPct = Math.round((1 - vacancyRate) * 1000) / 10
+  const units = generateUnits(propertyType, buildingSqFt, residentialUnits)
+  const financialRecords = generateFinancialRecords({
+    pgi, vacancyRate, egi, operatingExpenses, noi, capRate, grm, cashOnCashReturn, occupancyPct,
+  })
+
   return {
     id,
     name: baseName,
@@ -508,9 +597,19 @@ function generateProperty(): Property {
     operatingExpenses,
     noi,
     capRate,
-    cashOnCashReturn: faker.number.float({ min: capRate * 0.7, max: capRate * 1.1, fractionDigits: 4 }),
+    cashOnCashReturn,
     grossRentMultiplier: grm,
     parkingSpaces,
+
+    occupancyPct,
+    notes: faker.helpers.arrayElement([
+      'Well-maintained asset; roof replaced within the last 5 years.',
+      'Value-add opportunity — below-market rents on renewal.',
+      'Stabilized; long-term credit tenancy in place.',
+      'Deferred maintenance noted on the last inspection.',
+    ]),
+    units,
+    financialRecords,
 
     createdAt: faker.date.past({ years: 3 }).toISOString(),
     updatedAt: faker.date.recent({ days: 90 }).toISOString(),

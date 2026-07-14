@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { generateTasks } from './seed'
+import { generateTasks, generateDataset } from './seed'
 
 const START = '2026-01-01T00:00:00.000Z'
 
@@ -65,5 +65,39 @@ describe('generateTasks', () => {
     const tasks = generateTasks('proposal', START)
     const upload = tasks.find((t) => t.label === 'Upload executed listing agreement')
     expect(upload?.date).toBe('2026-01-03')
+  })
+})
+
+describe('property units + financial records seed', () => {
+  const { properties } = generateDataset()
+
+  it('gives every property at least one unit with a physical shell', () => {
+    for (const p of properties) {
+      expect(p.units.length).toBeGreaterThan(0)
+      for (const u of p.units) {
+        expect(u.sqft).toBeGreaterThan(0)
+        expect(typeof u.label).toBe('string')
+      }
+    }
+  })
+
+  it('gives every property dated financial records, newest first, latest mirroring flat actuals', () => {
+    for (const p of properties) {
+      expect(p.financialRecords.length).toBeGreaterThan(0)
+      const dates = p.financialRecords.map((r) => r.asOf)
+      const sorted = [...dates].sort().reverse()
+      expect(dates).toEqual(sorted) // newest-first
+      const latest = p.financialRecords[0]
+      expect(latest.noi).toBe(p.noi)
+      expect(latest.capRate).toBe(p.capRate)
+    }
+  })
+
+  it('derives occupancyPct from vacancy and gives a notes string', () => {
+    for (const p of properties) {
+      expect(p.occupancyPct).toBeGreaterThanOrEqual(0)
+      expect(p.occupancyPct).toBeLessThanOrEqual(100)
+      expect(typeof p.notes).toBe('string')
+    }
   })
 })

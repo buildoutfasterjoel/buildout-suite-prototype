@@ -179,6 +179,26 @@ function buildStubProperty(draft: NewListingDraft, now: string): Property {
     grossRentMultiplier: 0,
     parkingSpaces: 0,
 
+    occupancyPct: 0,
+    notes: '',
+    units: [],
+    financialRecords: [
+      {
+        id: crypto.randomUUID(),
+        asOf: now.slice(0, 10),
+        source: 'Broker estimate',
+        potentialGrossIncome: 0,
+        vacancyRate: 0,
+        effectiveGrossIncome: 0,
+        operatingExpenses: 0,
+        noi: 0,
+        capRate: 0,
+        grossRentMultiplier: 0,
+        cashOnCashReturn: 0,
+        occupancyPct: 0,
+      },
+    ],
+
     createdAt: now,
     updatedAt: now,
   }
