@@ -220,6 +220,14 @@
   }
 }
 
+// Blueprint 1.3.0's `.modal-dialog-centered` is a flex row with the default
+// `justify-content`, so a max-width-constrained modal content pins to the left
+// of the (wider) sized dialog. Center it horizontally. Remove once the
+// component handles this.
+.modal-dialog-centered {
+  justify-content: center;
+}
+
 // Add-to-list modal: selectable list rows with a clear hover affordance.
 .add-to-list__row {
   cursor: pointer;
