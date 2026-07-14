@@ -203,7 +203,7 @@ export function callListToContactList(cl: CallList): ContactList {
     // filter-driven; static/AI lists keep the neutral list glyph.
     icon: isDynamic ? faFilter : faListUl,
     iconClass: "text-buildout-blue-700",
-    iconColor: isDynamic ? cl.color : undefined,
+    iconColor: cl.color,
     iconBgClass: "bg-buildout-blue-100",
     description: cl.description,
     type: isDynamic ? "dynamic" : "static",

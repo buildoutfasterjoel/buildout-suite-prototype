@@ -20,11 +20,17 @@ import {
 import { getStore } from "#/data/store";
 import { useDataStore } from "#/data/dataStore";
 import {
+  addContactsToCallList,
+  createCallList,
   createDynamicList,
   removeCallList,
+  removeContactsFromCallList,
   updateCallListFilters,
 } from "#/data/actions";
 import { ContactsTable } from "#/components/contacts/ContactsTable";
+import { ContactSelectionBar } from "#/components/contacts/ContactSelectionBar";
+import { CreateStaticListModal } from "#/components/contacts/CreateStaticListModal";
+import { AddToListModal } from "#/components/contacts/AddToListModal";
 import { ContactListsSidebar } from "#/components/contacts/ContactListsSidebar";
 import { ContactListsOverview } from "#/components/contacts/ContactListsOverview";
 import {
@@ -69,10 +75,13 @@ function PeoplePage() {
   const [activeListId, setActiveListId] = useState(ALL_CONTACTS_ID);
   const [showFilters, setShowFilters] = useState(false);
   const [showCreateList, setShowCreateList] = useState(false);
+  const [showCreateStaticList, setShowCreateStaticList] = useState(false);
+  const [showAddToList, setShowAddToList] = useState(false);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState(emptyContactFilters());
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // Assignee + tag options come from the data so the filters match reality.
   const assignees = useMemo(
@@ -102,6 +111,11 @@ function PeoplePage() {
   const filterContext: FilterBarContext =
     activeListId === ALL_CONTACTS_ID ? "all" : isDynamicList ? "dynamic" : "other";
   const dirty = savedFilters ? !filtersEqual(filters, savedFilters) : false;
+
+  // A user-created static list (not a built-in, not dynamic).
+  const isStaticList = !!activeCallList && !isDynamicList;
+  // Filters are only a tool for All Contacts and Dynamic lists.
+  const filtersEnabled = activeListId === ALL_CONTACTS_ID || isDynamicList;
 
   // The primary tab value: "all" / "mylists", or "" when a specific list filters.
   const topValue =
@@ -160,6 +174,52 @@ function PeoplePage() {
     setFilters(emptyContactFilters());
   };
 
+  // Row selection (lifted from the table) drives the bulk-actions bar.
+  const clearSelection = () => setSelected(new Set());
+  const toggleOne = (id: string, checked: boolean) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  const toggleAll = (pageContacts: typeof contacts, checked: boolean) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const c of pageContacts)
+        if (checked) next.add(c.id);
+        else next.delete(c.id);
+      return next;
+    });
+
+  const handleCreateStaticList = (input: {
+    name: string;
+    color: string;
+    description: string;
+  }) => {
+    const { callList } = createCallList({
+      ...input,
+      contactIds: [...selected],
+    });
+    setView("contacts");
+    setActiveListId(callList.id);
+    clearSelection();
+  };
+
+  // Static user lists selected contacts can be added to.
+  const staticLists = useMemo(
+    () => userLists.filter((l) => l.type !== "dynamic"),
+    [userLists],
+  );
+  const handleAddToList = (listId: string) => {
+    addContactsToCallList(listId, [...selected]);
+    clearSelection();
+  };
+  const handleRemoveFromList = () => {
+    removeContactsFromCallList(activeListId, [...selected]);
+    clearSelection();
+  };
+
   const filtersActive =
     activeListId !== ALL_CONTACTS_ID ||
     search.trim() !== "" ||
@@ -193,6 +253,17 @@ function PeoplePage() {
   useEffect(() => {
     setPage(1);
   }, [activeListId, filters, search, sortDir]);
+
+  // Changing the active list, filters, or search drops any row selection.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    setSelected(new Set());
+  }, [activeListId, filters, search]);
+
+  const allFilteredSelected =
+    filtered.length > 0 && filtered.every((c) => selected.has(c.id));
+  const selectAllFiltered = () =>
+    setSelected(new Set(filtered.map((c) => c.id)));
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, pageCount);
@@ -250,14 +321,20 @@ function PeoplePage() {
                         Dynamic
                       </Badge>
                     )}
+                    {isStaticList && (
+                      <Badge variant="secondary" appearance="muted">
+                        Static
+                      </Badge>
+                    )}
                   </div>
-                  {isDynamicList && activeCallList?.description && (
-                    <p className="text-muted mb-0 mt-1">
-                      {activeCallList.description}
-                    </p>
-                  )}
+                  {(isDynamicList || isStaticList) &&
+                    activeCallList?.description && (
+                      <p className="text-muted mb-0 mt-1">
+                        {activeCallList.description}
+                      </p>
+                    )}
                 </div>
-                {isDynamicList && (
+                {(isDynamicList || isStaticList) && (
                   <Button
                     variant="outline"
                     size="icon"
@@ -301,16 +378,18 @@ function PeoplePage() {
                       />
                     </InputGroup>
                   </div>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowFilters((v) => !v)}
-                    aria-pressed={showFilters}
-                  >
-                    <FontAwesomeIcon icon={faFilter} />
-                    Filters
-                    {countActiveContactFilters(filters) > 0 &&
-                      ` (${countActiveContactFilters(filters)})`}
-                  </Button>
+                  {filtersEnabled && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowFilters((v) => !v)}
+                      aria-pressed={showFilters}
+                    >
+                      <FontAwesomeIcon icon={faFilter} />
+                      Filters
+                      {countActiveContactFilters(filters) > 0 &&
+                        ` (${countActiveContactFilters(filters)})`}
+                    </Button>
+                  )}
                   <span className="text-muted">{filtered.length} contacts</span>
 
                   <div className="ms-auto d-flex align-items-center gap-2">
@@ -331,18 +410,34 @@ function PeoplePage() {
                   </div>
                 </div>
 
-                <ContactFilterBar
-                  filters={filters}
-                  onChange={setFilters}
-                  context={filterContext}
-                  dirty={dirty}
-                  filteredCount={filtered.length}
-                  onSaveDynamic={() => setShowCreateList(true)}
-                  onSaveAsNew={() => setShowCreateList(true)}
-                  onSaveFilters={handleSaveFilters}
-                  onRevert={handleRevert}
-                  onClear={handleClearFilters}
-                />
+                {selected.size > 0 && (
+                  <ContactSelectionBar
+                    selectedCount={selected.size}
+                    totalCount={filtered.length}
+                    allFilteredSelected={allFilteredSelected}
+                    onSelectAll={selectAllFiltered}
+                    onClear={clearSelection}
+                    onNewList={() => setShowCreateStaticList(true)}
+                    onAddToList={() => setShowAddToList(true)}
+                    canRemoveFromList={isStaticList}
+                    onRemoveFromList={handleRemoveFromList}
+                  />
+                )}
+
+                {filtersEnabled && (
+                  <ContactFilterBar
+                    filters={filters}
+                    onChange={setFilters}
+                    context={filterContext}
+                    dirty={dirty}
+                    filteredCount={filtered.length}
+                    onSaveDynamic={() => setShowCreateList(true)}
+                    onSaveAsNew={() => setShowCreateList(true)}
+                    onSaveFilters={handleSaveFilters}
+                    onRevert={handleRevert}
+                    onClear={handleClearFilters}
+                  />
+                )}
               </div>
 
               <ContactFilters
@@ -361,6 +456,21 @@ function PeoplePage() {
                 onCreate={handleCreateList}
               />
 
+              <CreateStaticListModal
+                open={showCreateStaticList}
+                onOpenChange={setShowCreateStaticList}
+                contactCount={selected.size}
+                onCreate={handleCreateStaticList}
+              />
+
+              <AddToListModal
+                open={showAddToList}
+                onOpenChange={setShowAddToList}
+                lists={staticLists}
+                contactCount={selected.size}
+                onAdd={handleAddToList}
+              />
+
               {/* Table */}
               <ContactsTable
                 contacts={paged}
@@ -369,6 +479,9 @@ function PeoplePage() {
                 onToggleSort={() =>
                   setSortDir((d) => (d === "asc" ? "desc" : "asc"))
                 }
+                selected={selected}
+                onToggleOne={toggleOne}
+                onToggleAll={(checked) => toggleAll(paged, checked)}
               />
 
               {filtered.length > 0 && (

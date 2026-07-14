@@ -75,6 +75,7 @@ export function createCallList(input: {
   contactIds: string[]
   description?: string
   source?: 'user' | 'ai'
+  color?: string
 }): { callList: CallList } {
   _callListSeq += 1
   const callList: CallList = {
@@ -84,6 +85,8 @@ export function createCallList(input: {
     createdOn: new Date().toISOString().slice(0, 10),
     contactIds: [...input.contactIds],
     source: input.source ?? 'user',
+    type: 'static',
+    color: input.color,
   }
   useDataStore.setState((s) => {
     const callLists = new Map(s.callLists)
@@ -146,6 +149,39 @@ export function removeCallList(id: string): void {
     if (!s.callLists.has(id)) return {}
     const callLists = new Map(s.callLists)
     callLists.delete(id)
+    return { callLists }
+  })
+  useDataStore.getState().persist()
+}
+
+/** Add contacts to a static list's membership snapshot (union, no duplicates). */
+export function addContactsToCallList(id: string, contactIds: string[]): void {
+  useDataStore.setState((s) => {
+    const existing = s.callLists.get(id)
+    if (!existing) return {}
+    const merged = new Set(existing.contactIds)
+    for (const cid of contactIds) merged.add(cid)
+    const callLists = new Map(s.callLists)
+    callLists.set(id, { ...existing, contactIds: [...merged] })
+    return { callLists }
+  })
+  useDataStore.getState().persist()
+}
+
+/** Remove contacts from a static list's membership snapshot. */
+export function removeContactsFromCallList(
+  id: string,
+  contactIds: string[],
+): void {
+  useDataStore.setState((s) => {
+    const existing = s.callLists.get(id)
+    if (!existing) return {}
+    const drop = new Set(contactIds)
+    const callLists = new Map(s.callLists)
+    callLists.set(id, {
+      ...existing,
+      contactIds: existing.contactIds.filter((cid) => !drop.has(cid)),
+    })
     return { callLists }
   })
   useDataStore.getState().persist()

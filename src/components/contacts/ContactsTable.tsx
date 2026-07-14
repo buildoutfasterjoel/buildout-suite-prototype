@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Table } from "@buildoutinc/blueprint-react/ui/Table";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
@@ -73,34 +72,23 @@ export function ContactsTable({
   filtersActive,
   sortDir,
   onToggleSort,
+  selected,
+  onToggleOne,
+  onToggleAll,
 }: {
   contacts: Contact[];
   filtersActive: boolean;
   sortDir: SortDir;
   onToggleSort: () => void;
+  selected: Set<string>;
+  onToggleOne: (id: string, checked: boolean) => void;
+  onToggleAll: (checked: boolean) => void;
 }) {
-  const [selected, setSelected] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
 
   const allSelected =
     contacts.length > 0 && contacts.every((c) => selected.has(c.id));
   const someSelected = contacts.some((c) => selected.has(c.id));
-
-  const toggleAll = (checked: boolean) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      for (const c of contacts) checked ? next.add(c.id) : next.delete(c.id);
-      return next;
-    });
-  };
-
-  const toggleOne = (id: string, checked: boolean) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      checked ? next.add(id) : next.delete(id);
-      return next;
-    });
-  };
 
   if (contacts.length === 0) {
     return (
@@ -130,7 +118,7 @@ export function ContactsTable({
               <Checkbox
                 checked={allSelected}
                 indeterminate={!allSelected && someSelected}
-                onCheckedChange={(c) => toggleAll(c === true)}
+                onCheckedChange={(c) => onToggleAll(c === true)}
                 aria-label="Select all contacts"
               />
             </div>
@@ -166,7 +154,10 @@ export function ContactsTable({
             : NO_DEAL_STAGE;
           const fullName = contactFullName(contact);
           return (
-            <Table.Row key={contact.id}>
+            <Table.Row
+              key={contact.id}
+              className={selected.has(contact.id) ? "table-active" : undefined}
+            >
               <Table.Cell
                 sticky
                 style={{
@@ -178,7 +169,7 @@ export function ContactsTable({
                 <div className="position-absolute top-0 start-0 d-flex h-100 w-100 align-items-center justify-content-center">
                   <Checkbox
                     checked={selected.has(contact.id)}
-                    onCheckedChange={(c) => toggleOne(contact.id, c === true)}
+                    onCheckedChange={(c) => onToggleOne(contact.id, c === true)}
                     aria-label={`Select ${fullName}`}
                   />
                 </div>
