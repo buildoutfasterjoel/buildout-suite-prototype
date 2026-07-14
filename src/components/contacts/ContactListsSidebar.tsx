@@ -5,6 +5,7 @@ import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
@@ -79,20 +80,25 @@ export function ContactListsSidebar({
     return allLists.filter((l) => l.label.toLowerCase().includes(q));
   }, [search, allLists]);
 
-  // When collapsed, tab icons carry a native tooltip so the rail stays usable.
+  // When collapsed, each tab icon reveals its label in a tooltip to the right
+  // so the rail stays usable without the text labels.
   const tabIcon = (
     icon: IconDefinition,
     label: string,
     className?: string,
     color?: string,
-  ) =>
-    collapsed ? (
-      <span title={label}>
-        <FontAwesomeIcon icon={icon} className={className} style={{ color }} />
-      </span>
-    ) : (
+  ) => {
+    const glyph = (
       <FontAwesomeIcon icon={icon} className={className} style={{ color }} />
     );
+    if (!collapsed) return glyph;
+    return (
+      <Tooltip>
+        <Tooltip.Trigger render={<span className="d-inline-flex">{glyph}</span>} />
+        <Tooltip.Content side="right">{label}</Tooltip.Content>
+      </Tooltip>
+    );
+  };
 
   return (
     <Card
