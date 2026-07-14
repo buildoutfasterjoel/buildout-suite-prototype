@@ -2,6 +2,10 @@ import { useDataStore } from './dataStore'
 import { createProposalListing, type NewListingDraft } from './createListing'
 import { makeEmailDraft, type Email, type NewEmailDraft } from './emails'
 import type { CallList } from './contactLists'
+import {
+  serializeContactFilters,
+  type ContactFilterState,
+} from '#/components/contacts/contactFilterModel'
 import type { Listing, PropertyStatus } from './types'
 
 let _callListSeq = 0
@@ -71,6 +75,7 @@ export function createCallList(input: {
   contactIds: string[]
   description?: string
   source?: 'user' | 'ai'
+  color?: string
 }): { callList: CallList } {
   _callListSeq += 1
   const callList: CallList = {
@@ -80,6 +85,8 @@ export function createCallList(input: {
     createdOn: new Date().toISOString().slice(0, 10),
     contactIds: [...input.contactIds],
     source: input.source ?? 'user',
+    type: 'static',
+    color: input.color,
   }
   useDataStore.setState((s) => {
     const callLists = new Map(s.callLists)
@@ -88,6 +95,96 @@ export function createCallList(input: {
   })
   useDataStore.getState().persist()
   return { callList }
+}
+
+/**
+ * Create a dynamic list from a filter set. Membership is evaluated live from the
+ * saved criteria (no `contactIds` snapshot) — see {@link callListPredicate}.
+ */
+export function createDynamicList(input: {
+  name: string
+  filters: ContactFilterState
+  description?: string
+  color?: string
+}): { callList: CallList } {
+  _callListSeq += 1
+  const callList: CallList = {
+    id: `calllist-${Date.now()}-${_callListSeq}`,
+    label: input.name,
+    description: input.description ?? '',
+    createdOn: new Date().toISOString().slice(0, 10),
+    contactIds: [],
+    source: 'user',
+    type: 'dynamic',
+    filters: serializeContactFilters(input.filters),
+    color: input.color,
+  }
+  useDataStore.setState((s) => {
+    const callLists = new Map(s.callLists)
+    callLists.set(callList.id, callList)
+    return { callLists }
+  })
+  useDataStore.getState().persist()
+  return { callList }
+}
+
+/** Replace a dynamic list's saved filter criteria (the "Save Filters" action). */
+export function updateCallListFilters(
+  id: string,
+  filters: ContactFilterState,
+): void {
+  useDataStore.setState((s) => {
+    const existing = s.callLists.get(id)
+    if (!existing) return {}
+    const callLists = new Map(s.callLists)
+    callLists.set(id, { ...existing, filters: serializeContactFilters(filters) })
+    return { callLists }
+  })
+  useDataStore.getState().persist()
+}
+
+/** Remove a user/dynamic list from the store. */
+export function removeCallList(id: string): void {
+  useDataStore.setState((s) => {
+    if (!s.callLists.has(id)) return {}
+    const callLists = new Map(s.callLists)
+    callLists.delete(id)
+    return { callLists }
+  })
+  useDataStore.getState().persist()
+}
+
+/** Add contacts to a static list's membership snapshot (union, no duplicates). */
+export function addContactsToCallList(id: string, contactIds: string[]): void {
+  useDataStore.setState((s) => {
+    const existing = s.callLists.get(id)
+    if (!existing) return {}
+    const merged = new Set(existing.contactIds)
+    for (const cid of contactIds) merged.add(cid)
+    const callLists = new Map(s.callLists)
+    callLists.set(id, { ...existing, contactIds: [...merged] })
+    return { callLists }
+  })
+  useDataStore.getState().persist()
+}
+
+/** Remove contacts from a static list's membership snapshot. */
+export function removeContactsFromCallList(
+  id: string,
+  contactIds: string[],
+): void {
+  useDataStore.setState((s) => {
+    const existing = s.callLists.get(id)
+    if (!existing) return {}
+    const drop = new Set(contactIds)
+    const callLists = new Map(s.callLists)
+    callLists.set(id, {
+      ...existing,
+      contactIds: existing.contactIds.filter((cid) => !drop.has(cid)),
+    })
+    return { callLists }
+  })
+  useDataStore.getState().persist()
 }
 
 export function unlinkContactFromDeal(dealId: string, contactId: string): { deal: Listing | null } {

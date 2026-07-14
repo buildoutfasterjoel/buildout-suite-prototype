@@ -106,3 +106,161 @@
     }
   }
 }
+
+// Contacts Filters flyout: a left-anchored slide-over. Widen past the default
+// offcanvas, tint the header, round the trailing edge, and give the clickable
+// checkbox/radio rows a full-width hover + two-column layout to match the design.
+.contact-filters {
+  // Blueprint's offcanvas sets `width` directly rather than reading the
+  // Bootstrap var, so pin the width with matching specificity (the element
+  // also carries `.offcanvas-start`). Cap on small screens.
+  --bs-offcanvas-width: 30rem;
+  border-top-right-radius: var(--bp-border-radius-xl, 0.75rem);
+  border-bottom-right-radius: var(--bp-border-radius-xl, 0.75rem);
+
+  &.offcanvas-start {
+    width: 30rem;
+    max-width: 90vw;
+  }
+
+  .contact-filters__header {
+    background: var(--color-purple-heart-50, #f9f5ff);
+  }
+
+  // Two-column wrap for multi-select checkbox groups.
+  .contact-filters__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 0.5rem;
+  }
+
+  // Full-row clickable option with a clear hover state.
+  .contact-filters__row {
+    cursor: pointer;
+    min-height: 32px;
+    transition: background-color 0.12s ease-in-out;
+
+    &:hover {
+      background: var(--color-storm-grey-100, #f1f3f7);
+    }
+  }
+}
+
+// Active-filter chip (toolbar). Default + X-hover states per Figma; the chip
+// border darkens and the X gets a soft circle only while the X is hovered.
+.contact-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 4px 4px 4px 8px;
+  border-radius: var(--bp-border-radius, 6px);
+  background: var(--color-purple-heart-50, #f9f5ff);
+  border: 1px solid var(--color-purple-heart-400, #b984fc);
+  color: var(--color-purple-heart-950, #360764);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 13px;
+  white-space: nowrap;
+  transition: border-color 0.12s ease-in-out;
+
+  // Darken the border while the remove button is hovered.
+  &:has(.contact-chip__remove:hover) {
+    border-color: var(--color-purple-heart-600, #8833ea);
+  }
+
+  &__label {
+    display: inline-flex;
+  }
+
+  &__remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color-purple-heart-950, #360764);
+    font-size: 10px;
+    cursor: pointer;
+    transition: background-color 0.12s ease-in-out;
+
+    &:hover {
+      background: var(--color-purple-heart-300, #d4b4fe);
+    }
+  }
+}
+
+// Toolbar action buttons (Save / Clear / Revert): Blueprint's "sm" size, pinned
+// to the 28px chip height with a 14px label. Scoped to the filter bar so the
+// override is contained until the Blueprint components are updated directly.
+.contact-filter-bar {
+  .btn {
+    height: 28px;
+    min-height: 28px;
+    font-size: 14px;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}
+
+// Bulk-selection actions bar (People table): a tinted blue band that appears
+// when contacts are selected.
+.contact-selection-bar {
+  padding: 8px 12px 8px 20px;
+  border: 1px solid var(--color-buildout-blue-500, #3f86f2);
+  border-radius: var(--bp-border-radius-lg, 8px);
+  background: var(--color-buildout-blue-50, #eff6ff);
+
+  .contact-selection-bar__link {
+    color: var(--color-buildout-blue-800, #203d88);
+  }
+}
+
+// Add-to-list modal: selectable list rows with a clear hover affordance.
+.add-to-list__row {
+  cursor: pointer;
+  transition: background-color 0.12s ease-in-out;
+
+  &:hover {
+    background: var(--color-storm-grey-100, #f1f3f7);
+  }
+}
+
+// Updated checkbox styling, layered on top of Blueprint's component until the
+// component itself is updated. Bigger box (18px), thicker rounded border, and
+// refreshed selected/hover colors. Scoped to role="checkbox" so radios — which
+// share the `.form-check-input` class — are left untouched.
+.form-check-input[role="checkbox"] {
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--color-storm-grey-200, #d5dae2);
+  border-radius: var(--bp-border-radius-md, 6px);
+  // Check / minus indicator color (FontAwesome icon uses currentColor).
+  color: #182753;
+
+  &[aria-checked="false"]:hover {
+    background-color: var(--color-buildout-blue-50, #eff6ff);
+    border-color: var(--color-storm-grey-300, #afb9ca);
+  }
+
+  &[aria-checked="true"],
+  &[aria-checked="mixed"] {
+    background-color: var(--color-buildout-blue-50, #eff6ff);
+    border-color: var(--color-buildout-blue-500, #3f86f2);
+  }
+
+  &[data-disabled] {
+    background-color: var(--color-storm-grey-100, #eceef2);
+    border-color: var(--color-storm-grey-200, #d5dae2);
+  }
+
+  // Size the indicator glyph (12px) — overrides the indicator's own font-size.
+  svg {
+    font-size: 12px !important;
+    height: 12px !important;
+  }
+}
