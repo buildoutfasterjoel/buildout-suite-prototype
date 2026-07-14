@@ -24,6 +24,7 @@ import BuildoutWordmark from "#/features/assets/buildout-wordmark";
 import { useDataStore } from "#/data/dataStore";
 import { useAssistant } from "#/ai/useAssistant";
 import { useOmniSearch } from "#/components/search/useOmniSearch";
+import { useCreateDeal } from "#/data/useCreateDeal";
 
 /** Platform-aware shortcut hint, e.g. "⌘K" on macOS, "Ctrl K" elsewhere. */
 const SEARCH_HINT = formatForDisplay("Mod+K");
@@ -185,7 +186,7 @@ export function GlobalNavbar() {
               <Navbar.GroupMenuItem onClick={() => console.log("new contact")}>
                 New Contact
               </Navbar.GroupMenuItem>
-              <Navbar.GroupMenuItem onClick={() => console.log("new deal")}>
+              <Navbar.GroupMenuItem onClick={() => useCreateDeal.getState().openFor()}>
                 New Deal
               </Navbar.GroupMenuItem>
             </Navbar.GroupMenu>
