@@ -1,5 +1,6 @@
 import { useDataStore } from './dataStore'
-import type { Contact, ContactDetail, DealSummary, Listing, Property } from './types'
+import type { Comp, Contact, ContactDetail, DealSummary, Listing, Property, PropertyDetail } from './types'
+import { getContactsForProperty, getOwnersForProperty } from './store'
 
 /** All contacts attached to a deal (seller + buyer + other), deduped. */
 export function listContactsForDeal(dealId: string): Contact[] {
@@ -87,5 +88,29 @@ export function searchAll(query: string): {
     contacts: [...contacts.values()].filter((c) =>
       matches(c.firstName, c.lastName, c.company, c.email, c.title, c.phone),
     ),
+  }
+}
+
+/** All comps recorded against a property. */
+export function listCompsForProperty(propertyId: string): Comp[] {
+  const { comps } = useDataStore.getState()
+  return [...comps.values()].filter((c) => c.propertyId === propertyId)
+}
+
+/**
+ * Everything the property record page needs, assembled client-side from the live
+ * store so it always reflects client mutations. Property analogue of
+ * {@link getContactDetailClient}.
+ */
+export function getPropertyDetailClient(id: string): PropertyDetail | null {
+  const { properties } = useDataStore.getState()
+  const property = properties.get(id)
+  if (!property) return null
+  return {
+    property,
+    deals: listDealsForProperty(id),
+    owners: getOwnersForProperty(id),
+    contacts: getContactsForProperty(id),
+    comps: listCompsForProperty(id),
   }
 }

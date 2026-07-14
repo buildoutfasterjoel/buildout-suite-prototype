@@ -436,6 +436,15 @@ export interface ContactDetail {
   openTaskCount: number
 }
 
+/** Everything the property record page needs, assembled client-side from the live store. */
+export interface PropertyDetail {
+  property: Property
+  deals: Listing[]
+  owners: Contact[]
+  contacts: Contact[]
+  comps: Comp[]
+}
+
 export interface ListPropertiesInput {
   status?: PropertyStatus
   propertyType?: PropertyType

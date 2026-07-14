@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { useDataStore } from './dataStore'
 import {
   getContactDetailClient,
+  getPropertyDetailClient,
   listContactsForDeal,
   listDealsForContact,
   listDealsForProperty,
@@ -84,5 +85,36 @@ describe('searchAll', () => {
     const substring = listing.name.slice(0, Math.max(3, Math.ceil(listing.name.length / 2)))
     const result = searchAll(substring)
     expect(result.deals.map((l) => l.id)).toContain(listing.id)
+  })
+})
+
+describe('getPropertyDetailClient', () => {
+  it('assembles the property, its deals, owners, contacts, and comps', () => {
+    const { properties } = useDataStore.getState()
+    // A property that has at least one deal (every seeded property has ≥2 contacts).
+    const property = [...properties.values()].find(
+      (p) => listDealsForProperty(p.id).length > 0,
+    )!
+
+    const detail = getPropertyDetailClient(property.id)
+    expect(detail).not.toBeNull()
+    expect(detail!.property.id).toBe(property.id)
+    expect(detail!.deals.map((d) => d.id)).toEqual(
+      listDealsForProperty(property.id).map((d) => d.id),
+    )
+    // Owners are a subset of the property's contacts.
+    expect(detail!.contacts.length).toBeGreaterThan(0)
+    for (const owner of detail!.owners) {
+      expect(detail!.contacts.map((c) => c.id)).toContain(owner.id)
+      expect(owner.role).toBe('owner')
+    }
+    // Comps all belong to this property.
+    for (const comp of detail!.comps) {
+      expect(comp.propertyId).toBe(property.id)
+    }
+  })
+
+  it('returns null for an unknown property id', () => {
+    expect(getPropertyDetailClient('nonexistent-property-id')).toBeNull()
   })
 })
