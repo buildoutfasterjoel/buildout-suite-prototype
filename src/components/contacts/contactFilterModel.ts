@@ -6,6 +6,12 @@ import type {
   RelationshipStage,
 } from "#/data/types";
 import { getProperty } from "#/data/store";
+import {
+  DEAL_STAGE_DISPLAY,
+  RELATIONSHIP_DISPLAY,
+  SIDE_DISPLAY,
+} from "#/components/contacts/contactDisplay";
+import { TYPE_LABELS } from "#/components/properties/propertyDisplay";
 
 /**
  * Filter model + predicate for the People directory's Filters flyout.
@@ -135,18 +141,186 @@ export function matchesContactFilters(
   return true;
 }
 
-/** Total count of active selections — drives the "N selected" footer. */
+/**
+ * One removable chip per active *wired* filter value. Drives the toolbar chips,
+ * the "Filters (N)" count, and the flyout footer count. Visual-only fields
+ * (`hasOpenTasks`, `listingInquiries`) are intentionally excluded so chips,
+ * count, and results always agree.
+ */
+export interface ContactFilterChip {
+  key: string;
+  group: string;
+  value: string;
+  /** Returns a new filter state with just this value cleared. */
+  clear: (f: ContactFilterState) => ContactFilterState;
+}
+
+function withoutSetValue<T>(set: Set<T>, value: T): Set<T> {
+  const next = new Set(set);
+  next.delete(value);
+  return next;
+}
+
+export function contactFilterChips(f: ContactFilterState): ContactFilterChip[] {
+  const chips: ContactFilterChip[] = [];
+
+  if (f.assignedTo !== ALL) {
+    chips.push({
+      key: "assignedTo",
+      group: "Assigned To",
+      value: f.assignedTo,
+      clear: (s) => ({ ...s, assignedTo: ALL }),
+    });
+  }
+  if (f.source !== ALL) {
+    chips.push({
+      key: "source",
+      group: "Source",
+      value: f.source,
+      clear: (s) => ({ ...s, source: ALL }),
+    });
+  }
+  for (const v of f.side) {
+    chips.push({
+      key: `side:${v}`,
+      group: "Side",
+      value: SIDE_DISPLAY[v].label,
+      clear: (s) => ({ ...s, side: withoutSetValue(s.side, v) }),
+    });
+  }
+  for (const v of f.relationship) {
+    chips.push({
+      key: `relationship:${v}`,
+      group: "Contact Stage",
+      value: RELATIONSHIP_DISPLAY[v].label,
+      clear: (s) => ({ ...s, relationship: withoutSetValue(s.relationship, v) }),
+    });
+  }
+  for (const v of f.dealStage) {
+    chips.push({
+      key: `dealStage:${v}`,
+      group: "Deal Stage",
+      value: DEAL_STAGE_DISPLAY[v].label,
+      clear: (s) => ({ ...s, dealStage: withoutSetValue(s.dealStage, v) }),
+    });
+  }
+  for (const v of f.propertyTypes) {
+    chips.push({
+      key: `propertyType:${v}`,
+      group: "Property Type",
+      value: TYPE_LABELS[v],
+      clear: (s) => ({ ...s, propertyTypes: withoutSetValue(s.propertyTypes, v) }),
+    });
+  }
+  for (const v of f.tags) {
+    chips.push({
+      key: `tag:${v}`,
+      group: "Tag",
+      value: v,
+      clear: (s) => ({ ...s, tags: withoutSetValue(s.tags, v) }),
+    });
+  }
+  if (f.lastActivity !== "any") {
+    const opt = LAST_ACTIVITY_OPTIONS.find((o) => o.key === f.lastActivity);
+    chips.push({
+      key: "lastActivity",
+      group: "Last Activity",
+      value: opt?.label ?? f.lastActivity,
+      clear: (s) => ({ ...s, lastActivity: "any" }),
+    });
+  }
+  if (f.excludeDoNotCall) {
+    chips.push({
+      key: "excludeDoNotCall",
+      group: "Exclude",
+      value: "Do Not Call",
+      clear: (s) => ({ ...s, excludeDoNotCall: false }),
+    });
+  }
+
+  return chips;
+}
+
+/** Count of active filters — number of chips (visual-only fields excluded). */
 export function countActiveContactFilters(f: ContactFilterState): number {
-  let n = 0;
-  if (f.assignedTo !== ALL) n += 1;
-  if (f.source !== ALL) n += 1;
-  n += f.side.size;
-  n += f.relationship.size;
-  n += f.dealStage.size;
-  n += f.propertyTypes.size;
-  n += f.tags.size;
-  if (f.lastActivity !== "any") n += 1;
-  if (f.excludeDoNotCall) n += 1;
-  if (f.hasOpenTasks) n += 1;
-  return n;
+  return contactFilterChips(f).length;
+}
+
+/** A friendly default name for a dynamic list built from the active filters. */
+export function autoDynamicListName(f: ContactFilterState): string {
+  const values = contactFilterChips(f).map((c) => c.value);
+  if (values.length === 0) return "Filtered Contacts";
+  const head = values.slice(0, 3).join(", ");
+  const extra = values.length - 3;
+  return extra > 0 ? `${head} +${extra}` : head;
+}
+
+/** JSON-safe form of {@link ContactFilterState} for persisting on a list. */
+export interface SerializedContactFilters {
+  assignedTo: string;
+  source: string;
+  side: DealSide[];
+  relationship: RelationshipStage[];
+  dealStage: ContactDealStage[];
+  propertyTypes: PropertyType[];
+  tags: string[];
+  lastActivity: LastActivityKey;
+  excludeDoNotCall: boolean;
+}
+
+export function serializeContactFilters(
+  f: ContactFilterState,
+): SerializedContactFilters {
+  return {
+    assignedTo: f.assignedTo,
+    source: f.source,
+    side: [...f.side],
+    relationship: [...f.relationship],
+    dealStage: [...f.dealStage],
+    propertyTypes: [...f.propertyTypes],
+    tags: [...f.tags],
+    lastActivity: f.lastActivity,
+    excludeDoNotCall: f.excludeDoNotCall,
+  };
+}
+
+export function deserializeContactFilters(
+  s: SerializedContactFilters,
+): ContactFilterState {
+  return {
+    assignedTo: s.assignedTo ?? ALL,
+    source: s.source ?? ALL,
+    side: new Set(s.side ?? []),
+    relationship: new Set(s.relationship ?? []),
+    dealStage: new Set(s.dealStage ?? []),
+    propertyTypes: new Set(s.propertyTypes ?? []),
+    tags: new Set(s.tags ?? []),
+    lastActivity: s.lastActivity ?? "any",
+    excludeDoNotCall: s.excludeDoNotCall ?? false,
+    hasOpenTasks: false,
+  };
+}
+
+function setsEqual<T>(a: Set<T>, b: Set<T>): boolean {
+  if (a.size !== b.size) return false;
+  for (const v of a) if (!b.has(v)) return false;
+  return true;
+}
+
+/** Structural equality over the *wired* filter fields (ignores visual-only). */
+export function filtersEqual(
+  a: ContactFilterState,
+  b: ContactFilterState,
+): boolean {
+  return (
+    a.assignedTo === b.assignedTo &&
+    a.source === b.source &&
+    a.lastActivity === b.lastActivity &&
+    a.excludeDoNotCall === b.excludeDoNotCall &&
+    setsEqual(a.side, b.side) &&
+    setsEqual(a.relationship, b.relationship) &&
+    setsEqual(a.dealStage, b.dealStage) &&
+    setsEqual(a.propertyTypes, b.propertyTypes) &&
+    setsEqual(a.tags, b.tags)
+  );
 }

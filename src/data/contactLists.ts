@@ -7,8 +7,14 @@ import {
   faStar,
   faSackDollar,
   faListUl,
+  faFilter,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact } from "#/data/types";
+import {
+  deserializeContactFilters,
+  matchesContactFilters,
+  type SerializedContactFilters,
+} from "#/components/contacts/contactFilterModel";
 
 /**
  * Saved "Contact Lists" segments shown in the People left panel. Each list is a
@@ -27,6 +33,8 @@ export interface ContactList {
   icon: IconDefinition;
   /** Palette text-color utility for the leading icon. */
   iconClass: string;
+  /** Optional raw hex applied inline to the icon (dynamic lists pick a color). */
+  iconColor?: string;
   /** Soft-pill background utility used behind the icon in the overview cards. */
   iconBgClass: string;
   /** One-line summary of what the list contains. */
@@ -153,13 +161,30 @@ export interface CallList {
   contactIds: string[];
   /** Where the list came from. */
   source: "user" | "ai";
+  /**
+   * How membership is maintained. Omitted/`"static"` lists use the `contactIds`
+   * snapshot; `"dynamic"` lists evaluate {@link filters} live.
+   */
+  type?: ContactListType;
+  /** Saved filter criteria for a dynamic list (evaluated live, JSON-safe). */
+  filters?: SerializedContactFilters;
+  /** Raw hex for the list's icon color (chosen in the create modal). */
+  color?: string;
 }
 
 /** The "All Contacts" pseudo-list id — pass-through, no filtering. */
 export const ALL_CONTACTS_ID = "all";
 
-/** Membership predicate for a user/AI call list (snapshot by contact id). */
+/**
+ * Membership predicate for a user/AI call list. Dynamic lists evaluate their
+ * saved filter criteria live (so contacts join/leave as their data changes);
+ * static lists match the stored contact-id snapshot.
+ */
 export function callListPredicate(list: CallList): (c: Contact) => boolean {
+  if (list.type === "dynamic" && list.filters) {
+    const filters = deserializeContactFilters(list.filters);
+    return (c) => matchesContactFilters(c, filters);
+  }
   const ids = new Set(list.contactIds);
   return (c) => ids.has(c.id);
 }
@@ -170,14 +195,18 @@ export function callListPredicate(list: CallList): (c: Contact) => boolean {
  * uniformly. Its `predicate` filters by the stored membership snapshot.
  */
 export function callListToContactList(cl: CallList): ContactList {
+  const isDynamic = cl.type === "dynamic";
   return {
     id: cl.id,
     label: cl.label,
-    icon: faListUl,
+    // Dynamic lists get a funnel icon in their chosen color so they read as
+    // filter-driven; static/AI lists keep the neutral list glyph.
+    icon: isDynamic ? faFilter : faListUl,
     iconClass: "text-buildout-blue-700",
+    iconColor: isDynamic ? cl.color : undefined,
     iconBgClass: "bg-buildout-blue-100",
     description: cl.description,
-    type: "static",
+    type: isDynamic ? "dynamic" : "static",
     createdOn: cl.createdOn,
     lastUpdated: cl.createdOn,
     lastUpdatedBy: cl.source === "ai" ? "Assistant" : "You",

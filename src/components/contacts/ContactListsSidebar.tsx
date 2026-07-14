@@ -80,13 +80,18 @@ export function ContactListsSidebar({
   }, [search, allLists]);
 
   // When collapsed, tab icons carry a native tooltip so the rail stays usable.
-  const tabIcon = (icon: IconDefinition, label: string, className?: string) =>
+  const tabIcon = (
+    icon: IconDefinition,
+    label: string,
+    className?: string,
+    color?: string,
+  ) =>
     collapsed ? (
       <span title={label}>
-        <FontAwesomeIcon icon={icon} className={className} />
+        <FontAwesomeIcon icon={icon} className={className} style={{ color }} />
       </span>
     ) : (
-      <FontAwesomeIcon icon={icon} className={className} />
+      <FontAwesomeIcon icon={icon} className={className} style={{ color }} />
     );
 
   return (
@@ -188,7 +193,12 @@ export function ContactListsSidebar({
               <Tabs.Tab
                 key={list.id}
                 value={list.id}
-                icon={tabIcon(list.icon, list.label, list.iconClass)}
+                icon={tabIcon(
+                  list.icon,
+                  list.label,
+                  list.iconColor ? undefined : list.iconClass,
+                  list.iconColor,
+                )}
               >
                 {!collapsed && (
                   <TabLabel label={list.label} count={counts[list.id]} />

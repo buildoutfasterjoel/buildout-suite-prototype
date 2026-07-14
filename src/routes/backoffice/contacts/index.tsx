@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
@@ -14,9 +15,15 @@ import {
   faEnvelope,
   faPhone,
   faPlus,
+  faTrash,
 } from "@fortawesome/pro-regular-svg-icons";
 import { getStore } from "#/data/store";
 import { useDataStore } from "#/data/dataStore";
+import {
+  createDynamicList,
+  removeCallList,
+  updateCallListFilters,
+} from "#/data/actions";
 import { ContactsTable } from "#/components/contacts/ContactsTable";
 import { ContactListsSidebar } from "#/components/contacts/ContactListsSidebar";
 import { ContactListsOverview } from "#/components/contacts/ContactListsOverview";
@@ -28,8 +35,15 @@ import {
 import { contactFullName } from "#/components/contacts/contactDisplay";
 import { ContactFilters } from "#/components/contacts/ContactFilters";
 import {
+  ContactFilterBar,
+  type FilterBarContext,
+} from "#/components/contacts/ContactFilterBar";
+import { CreateDynamicListModal } from "#/components/contacts/CreateDynamicListModal";
+import {
   countActiveContactFilters,
+  deserializeContactFilters,
   emptyContactFilters,
+  filtersEqual,
   matchesContactFilters,
 } from "#/components/contacts/contactFilterModel";
 
@@ -54,6 +68,7 @@ function PeoplePage() {
   const [view, setView] = useState<"contacts" | "lists">("contacts");
   const [activeListId, setActiveListId] = useState(ALL_CONTACTS_ID);
   const [showFilters, setShowFilters] = useState(false);
+  const [showCreateList, setShowCreateList] = useState(false);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState(emptyContactFilters());
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -74,6 +89,20 @@ function PeoplePage() {
     userLists.find((l) => l.id === activeListId);
   const heading = activeList ? activeList.label : "All Contacts";
 
+  // The active user list (if any) + whether it's a dynamic, filter-driven list.
+  const activeCallList = callListsMap.get(activeListId);
+  const isDynamicList = activeCallList?.type === "dynamic";
+  const savedFilters = useMemo(
+    () =>
+      isDynamicList && activeCallList?.filters
+        ? deserializeContactFilters(activeCallList.filters)
+        : null,
+    [isDynamicList, activeCallList],
+  );
+  const filterContext: FilterBarContext =
+    activeListId === ALL_CONTACTS_ID ? "all" : isDynamicList ? "dynamic" : "other";
+  const dirty = savedFilters ? !filtersEqual(filters, savedFilters) : false;
+
   // The primary tab value: "all" / "mylists", or "" when a specific list filters.
   const topValue =
     view === "lists"
@@ -82,18 +111,53 @@ function PeoplePage() {
         ? ALL_CONTACTS_ID
         : "";
 
+  // Selecting a dynamic list loads its saved filters as the working set; any
+  // other list (or All Contacts) starts from a clean filter slate.
+  const loadFiltersForList = (id: string) => {
+    const cl = callListsMap.get(id);
+    if (cl?.type === "dynamic" && cl.filters) {
+      setFilters(deserializeContactFilters(cl.filters));
+    } else {
+      setFilters(emptyContactFilters());
+    }
+  };
+
   const handleTopChange = (value: string) => {
     if (value === "mylists") {
       setView("lists");
     } else {
       setView("contacts");
       setActiveListId(ALL_CONTACTS_ID);
+      setFilters(emptyContactFilters());
     }
   };
 
   const handleSelectList = (id: string) => {
     setView("contacts");
     setActiveListId(id);
+    loadFiltersForList(id);
+  };
+
+  const handleCreateList = (input: {
+    name: string;
+    color: string;
+    description: string;
+  }) => {
+    const { callList } = createDynamicList({ ...input, filters });
+    setView("contacts");
+    setActiveListId(callList.id);
+    // `filters` already equals the saved set, so the list opens un-dirty.
+  };
+
+  const handleSaveFilters = () => updateCallListFilters(activeListId, filters);
+  const handleRevert = () => {
+    if (savedFilters) setFilters(savedFilters);
+  };
+  const handleClearFilters = () => setFilters(emptyContactFilters());
+  const handleDeleteList = () => {
+    removeCallList(activeListId);
+    setActiveListId(ALL_CONTACTS_ID);
+    setFilters(emptyContactFilters());
   };
 
   const filtersActive =
@@ -105,7 +169,10 @@ function PeoplePage() {
     const q = search.trim().toLowerCase();
     const inList = listPredicate(activeListId, userLists);
     const rows = contacts.filter((c) => {
-      if (!inList(c)) return false;
+      // Dynamic lists ARE their working filters, so we skip the saved predicate
+      // (it would AND with `filters` and hide live edits). Built-in/static lists
+      // apply their predicate plus any ad-hoc filters.
+      if (filterContext !== "dynamic" && !inList(c)) return false;
       if (!matchesContactFilters(c, filters)) return false;
       if (q) {
         const haystack =
@@ -120,7 +187,7 @@ function PeoplePage() {
       return sortDir === "asc" ? cmp : -cmp;
     });
     return rows;
-  }, [contacts, userLists, activeListId, filters, search, sortDir]);
+  }, [contacts, userLists, activeListId, filterContext, filters, search, sortDir]);
 
   // Any change to the active view resets to the first page.
   useEffect(() => {
@@ -174,8 +241,32 @@ function PeoplePage() {
           ) : (
             <>
               {/* Header */}
-              <div className="d-flex align-items-center gap-3">
-                <h1 className="fs-4 fw-semibold mb-0 flex-grow-1">{heading}</h1>
+              <div className="d-flex align-items-start gap-3">
+                <div className="flex-grow-1">
+                  <div className="d-flex align-items-center gap-2">
+                    <h1 className="fs-4 fw-semibold mb-0">{heading}</h1>
+                    {isDynamicList && (
+                      <Badge variant="primary" appearance="muted">
+                        Dynamic
+                      </Badge>
+                    )}
+                  </div>
+                  {isDynamicList && activeCallList?.description && (
+                    <p className="text-muted mb-0 mt-1">
+                      {activeCallList.description}
+                    </p>
+                  )}
+                </div>
+                {isDynamicList && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    aria-label="Delete list"
+                    onClick={handleDeleteList}
+                  >
+                    <FontAwesomeIcon icon={faTrash} />
+                  </Button>
+                )}
                 <DropdownMenu>
                   <DropdownMenu.Trigger
                     render={
@@ -221,6 +312,8 @@ function PeoplePage() {
                   >
                     <FontAwesomeIcon icon={faFilter} />
                     Filters
+                    {countActiveContactFilters(filters) > 0 &&
+                      ` (${countActiveContactFilters(filters)})`}
                   </Button>
                   <span className="text-muted">{filtered.length} contacts</span>
 
@@ -242,6 +335,18 @@ function PeoplePage() {
                   </div>
                 </div>
 
+                <ContactFilterBar
+                  filters={filters}
+                  onChange={setFilters}
+                  context={filterContext}
+                  dirty={dirty}
+                  filteredCount={filtered.length}
+                  onSaveDynamic={() => setShowCreateList(true)}
+                  onSaveAsNew={() => setShowCreateList(true)}
+                  onSaveFilters={handleSaveFilters}
+                  onRevert={handleRevert}
+                  onClear={handleClearFilters}
+                />
               </div>
 
               <ContactFilters
@@ -251,6 +356,13 @@ function PeoplePage() {
                 onChange={setFilters}
                 assignees={assignees}
                 allTags={allTags}
+              />
+
+              <CreateDynamicListModal
+                open={showCreateList}
+                onOpenChange={setShowCreateList}
+                filters={filters}
+                onCreate={handleCreateList}
               />
 
               {/* Table */}
