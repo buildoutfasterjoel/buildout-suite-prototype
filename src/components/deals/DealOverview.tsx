@@ -97,14 +97,14 @@ function TransactionCard({ listing }: { listing: Listing }) {
       }
     >
       <Field label="Deal ID" value={listing.dealId} />
-      <Field label="Sale Price" value={formatCurrency(listing.salePrice)} />
+      <Field label="Sale Price" value={formatCurrency(listing.transaction.salePrice)} />
       <Field
         label="Price / SF"
         value={`$${listing.pricePerSqFt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
       />
-      <Field label="Commission %" value={`${listing.commissionPct}%`} />
-      <Field label="Commission $" value={formatCurrency(listing.commissionAmount)} />
-      <Field label="Close Probability" value={`${listing.closeProbability}%`} />
+      <Field label="Commission %" value={`${listing.transaction.commissionPct}%`} />
+      <Field label="Commission $" value={formatCurrency(listing.transaction.commissionAmount)} />
+      <Field label="Close Probability" value={`${listing.transaction.closeProbability}%`} />
     </SectionCard>
   );
 }

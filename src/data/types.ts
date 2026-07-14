@@ -245,6 +245,7 @@ export interface Listing {
   activities: DealActivity[]
   history: DealHistoryEntry[]
   financials: DealFinancials
+  transaction: DealTransaction
 
   /** Context files attached when the deal was created (OMs, financials, notes). */
   documents?: DealDocument[]
@@ -344,6 +345,28 @@ export interface DealFinancials {
   relatedContactsLabel: string
   preSplitDeductions: FinancialDeduction[]
   receivables: FinancialReceivable[]
+}
+
+/**
+ * The transaction facts of a deal — the accepted parties (via the deal's contact-id
+ * arrays), critical dates, the transacted price/commission, and the back-office
+ * settlement records. Populated across Under Contract → Close.
+ */
+export interface DealTransaction {
+  /** The transacted sale price (distinct from the pitch/asking price on `financials`). */
+  salePrice: number
+  pricePerSqFt: number
+  commissionPct: number
+  commissionAmount: number
+  closeProbability: number
+  contractExecutedDate: string | null
+  closeDate: string | null
+  listedOnDate: string | null
+  listingExpirationDate: string | null
+  deadReason: string | null
+  nextCriticalDate: string | null
+  /** Voucher / receivables / deductions — the Close-phase settlement records. */
+  backOffice: DealFinancials
 }
 
 /** A line item deducted from gross commission before broker splits, e.g. a marketing fee. */

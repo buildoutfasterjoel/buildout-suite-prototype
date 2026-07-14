@@ -427,6 +427,31 @@ export function createProposalListing(draft: NewListingDraft): Listing {
       preSplitDeductions: [],
       receivables: [],
     },
+    transaction: {
+      salePrice: draft.listingPrice,
+      pricePerSqFt:
+        draft.availableSqFt > 0
+          ? Math.round((draft.listingPrice / draft.availableSqFt) * 100) / 100
+          : 0,
+      commissionPct: draft.commissionPct,
+      commissionAmount,
+      closeProbability: 0,
+      contractExecutedDate: null,
+      closeDate: null,
+      listedOnDate: null,
+      listingExpirationDate: null,
+      deadReason: null,
+      nextCriticalDate,
+      backOffice: {
+        name,
+        identifier: dealId,
+        status: 'Draft',
+        closeDate: null,
+        relatedContactsLabel: primaryContact ? contactLabel(primaryContact) : '—',
+        preSplitDeductions: [],
+        receivables: [],
+      },
+    },
     nextCriticalDate,
 
     createdAt: now,

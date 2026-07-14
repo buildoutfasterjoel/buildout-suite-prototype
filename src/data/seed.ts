@@ -1175,6 +1175,41 @@ function generateListings(
             })()
           : [],
       },
+      transaction: {
+        salePrice,
+        pricePerSqFt,
+        commissionPct,
+        commissionAmount,
+        closeProbability: faker.number.int({ min: pMin, max: pMax }),
+        contractExecutedDate: status === 'under-contract' || status === 'closed'
+          ? faker.date.recent({ days: 120 }).toISOString().slice(0, 10) : null,
+        closeDate: status === 'closed' ? faker.date.recent({ days: 90 }).toISOString().slice(0, 10) : null,
+        listedOnDate: status !== 'proposal' ? faker.date.recent({ days: 200 }).toISOString().slice(0, 10) : null,
+        listingExpirationDate: status !== 'proposal' ? faker.date.future({ years: 1 }).toISOString().slice(0, 10) : null,
+        deadReason: null,
+        nextCriticalDate: nextTask?.date ?? null,
+        backOffice: {
+          name,
+          identifier: dealId,
+          status: voucherStatus,
+          closeDate: status === 'closed' ? faker.date.recent({ days: 90 }).toISOString().slice(0, 10) : null,
+          relatedContactsLabel: `${sellerName}${sellerContacts.length + buyerContacts.length > 1 ? ` & ${sellerContacts.length + buyerContacts.length - 1} more` : ''}`,
+          preSplitDeductions,
+          receivables: status === 'closed'
+            ? [
+                {
+                  id: faker.string.uuid(),
+                  payerName: `${(buyerContacts[0] ?? sellerContacts[0]).firstName} ${(buyerContacts[0] ?? sellerContacts[0]).lastName}`,
+                  payerEmail: (buyerContacts[0] ?? sellerContacts[0]).email,
+                  dueDate: faker.date.recent({ days: 30 }).toISOString().slice(0, 10),
+                  billingDescription: 'Full Payment',
+                  amount: commissionAmount,
+                  credited: 0,
+                },
+              ]
+            : [],
+        },
+      },
       nextCriticalDate: nextTask?.date ?? null,
 
       createdAt,

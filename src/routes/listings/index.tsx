@@ -245,7 +245,7 @@ function PropertyListings() {
   const weightedForecast = useMemo(
     () =>
       filtered.reduce(
-        (sum, l) => sum + l.askingPrice * (l.closeProbability / 100),
+        (sum, l) => sum + l.askingPrice * (l.transaction.closeProbability / 100),
         0,
       ),
     [filtered],
