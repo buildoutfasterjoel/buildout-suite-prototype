@@ -57,9 +57,13 @@ Property
   deal-owned — see §3).
 - `PropertyFinancialRecord` = a dated in-place snapshot: `{ id, asOf, source ('T-12 actuals' |
   'Assessor' | 'Owner-provided'), pgi, vacancyRate, egi, operatingExpenses, noi, capRate, grm,
-  occupancyPct }`. The **latest record is the current source of truth**; older records are the
-  asset's financial history. The flat CRE-metrics block on `Property` today (`types.ts` 125–134)
-  **migrates into the latest record**.
+  cashOnCashReturn, occupancyPct }`. Property **keeps its flat current-headline actuals**
+  (`noi`, `capRate`, `vacancyRate`, `grm`, … — `types.ts` 125–134) as the current view;
+  `financialRecords[]` **adds dated history**, with the **latest record mirroring the flat
+  values**. (Amended 2026-07-14 from "migrate flat block into records": the document editor binds
+  dynamic fields to flat Property keys by name — `dynamic.ts:34`, `presets.ts` `dynamicKey` —
+  so keeping the flat fields avoids churning ~5 editor files, and mirrors the `occupancyPct`
+  pattern, which is likewise flat-current + carried in each record.)
 
 ### Deal / Listing (engagement-only — nested by home)
 
@@ -102,7 +106,7 @@ Deal (= Listing, 1:1)
 | Field / group | Decision | Rationale |
 |---|---|---|
 | **Occupancy %** | Canonical on **Property** (`occupancyPct`); deal-marketing carries an optional **snapshot override** | Physical fact of the building today, but a headline pitch number. Snapshot lets the pitch move without corrupting source of truth. |
-| **In-place financials** (NOI, cap rate, income/expense, GRM, vacancy) | **Property** as dated `financialRecords[]` (actuals) | True about the asset over time, independent of marketing. Latest = current; older = history. |
+| **In-place financials** (NOI, cap rate, income/expense, GRM, vacancy) | **Property** — flat current-headline actuals (kept) + dated `financialRecords[]` history (latest mirrors flat) | True about the asset over time, independent of marketing. Flat kept so the editor's flat-key dynamic fields keep resolving (see §2). |
 | **Pro forma financials** (projected income, stabilized NOI, cap on asking, scenarios) | **Deal** (`financials`) | The broker's underwriting for *this* deal; resets per engagement. Snapshots + overrides property actuals. |
 | **Back-office** (voucher, receivables, deductions, broker earnings) | **Deal** (`transaction.backOffice`), separate from pitch | Different lifecycle phase (Close) than the pitch (Proposal); keeping them apart keeps Timing legible. |
 | **Rent Roll** | **Deal** (`financials.rentRoll`), rows referencing `Property.units` | Presented in the listing (production reality); curated per engagement. Physical shell stays on the unit. |
@@ -113,8 +117,10 @@ Deal (= Listing, 1:1)
 | **Units / lease spaces** | Generic **`PropertyUnit`** children of Property (not lease-only) | Generalizes to condo-unit sales, pads, apartments; a deal scopes to a unit and `dealType` labels it. |
 
 ### Duplicates removed from the current model
-- `capRate` — currently on both `Property` (131, actual) and `Listing` (160, pitch). → actual on Property `financialRecords`; pitch on `deal.financials`.
-- `askingPrice` — on both `Property` (84) and `Listing` (158). → asset target/list on Property; this deal's asking/pitch on the deal.
+- `capRate` — currently on both `Property` (131, actual) and `Listing` (160, pitch). → **actual stays on Property** (flat current + records); pitch moves to `deal.financials`, **removed from `Listing`**.
+- `askingPrice` — on both `Property` (84) and `Listing` (158). → asset target/list **stays on Property**; this deal's asking/pitch moves to `deal.financials`, **removed from `Listing`**.
+
+The de-duplication is **Deal-side only**: Property keeps its financial fields; the `Listing` copies are what get removed/relocated into the nested deal homes.
 
 ---
 
@@ -197,8 +203,8 @@ edited/shown; `—` means not surfaced this phase (data-model only until P3/P4).
 
 | Field | Home | Surface | Timing | Public? | Notes |
 |---|---|---|---|---|---|
-| PGI, Vacancy %, EGI, Operating Expenses | property | Property · Financials (actuals) | durable | no | On `financialRecords[]`, dated. |
-| NOI, Cap Rate, GRM, Cash-on-Cash | property | Property · Financials (actuals) | durable | no | Actuals; deal pro forma snapshots these. |
+| PGI, Vacancy %, EGI, Operating Expenses | property | Property · Financials (actuals) | durable | no | Flat current + mirrored in dated `financialRecords[]`. |
+| NOI, Cap Rate, GRM, Cash-on-Cash | property | Property · Financials (actuals) | durable | no | Flat current (kept) + history in `financialRecords[]`; deal pro forma snapshots these. |
 | Occupancy % | property | Property · Overview | durable | yes | Canonical headline; deal snapshots it. |
 | asOf, source (per record) | property | Property · Financials | durable | no | Latest record = current source of truth. |
 
@@ -263,13 +269,17 @@ edited/shown; `—` means not surfaced this phase (data-model only until P3/P4).
 ## 5. Model & code changes this phase makes
 
 1. **`src/data/types.ts`** — full 1:1 mirror of the catalog:
-   - Regroup `Property` into nested concerns; add `occupancyPct`, `notes`, `units: PropertyUnit[]`,
-     `financialRecords: PropertyFinancialRecord[]`; new `PropertyUnit`, `PropertyFinancialRecord`.
+   - `Property` changes are **purely additive** (flat fields untouched): add `occupancyPct`, `notes`,
+     `units: PropertyUnit[]`, `financialRecords: PropertyFinancialRecord[]`; new `PropertyUnit`,
+     `PropertyFinancialRecord`.
    - Restructure `Listing` into `marketing: DealMarketing`, `financials: DealPitchFinancials`
      (+ `RentRollRow[]`, scenarios), `transaction: DealTransaction` (+ `backOffice`). Keep
-     `propertyId`, add `unitId?`. **Remove** denormalized property fields.
+     `propertyId`, add `unitId?` and `internalNotes`. **Remove** the 10 denormalized property fields
+     and relocate the moved scalars into their nested homes.
    - Distinguish the existing back-office `DealFinancials` (→ folded under `transaction.backOffice`)
      from the new `DealPitchFinancials`.
+   - **No Property-CRE migration** and **no Group-6 consumer churn** (editor, `EditListingDialog`,
+     `PropertyFactsCard`, `ai/tools`, `lib/properties` keep reading flat `property.noi`/`capRate`/…).
 2. **Reconcile `DataStore` → `DataSlice`** — the stale legacy type (`types.ts:410`) is missing
    `dealFiles`/`emails`/`callLists`; its only consumer is `getStore()` in `src/data/store.ts:23`.
    Replace with `DataSlice` (or alias) and delete the stale type.
