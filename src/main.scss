@@ -229,3 +229,38 @@
     background: var(--color-storm-grey-100, #f1f3f7);
   }
 }
+
+// Updated checkbox styling, layered on top of Blueprint's component until the
+// component itself is updated. Bigger box (18px), thicker rounded border, and
+// refreshed selected/hover colors. Scoped to role="checkbox" so radios — which
+// share the `.form-check-input` class — are left untouched.
+.form-check-input[role="checkbox"] {
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--color-storm-grey-200, #d5dae2);
+  border-radius: var(--bp-border-radius-md, 6px);
+  // Check / minus indicator color (FontAwesome icon uses currentColor).
+  color: #182753;
+
+  &[aria-checked="false"]:hover {
+    background-color: var(--color-buildout-blue-50, #eff6ff);
+    border-color: var(--color-storm-grey-300, #afb9ca);
+  }
+
+  &[aria-checked="true"],
+  &[aria-checked="mixed"] {
+    background-color: var(--color-buildout-blue-50, #eff6ff);
+    border-color: var(--color-buildout-blue-500, #3f86f2);
+  }
+
+  &[data-disabled] {
+    background-color: var(--color-storm-grey-100, #eceef2);
+    border-color: var(--color-storm-grey-200, #d5dae2);
+  }
+
+  // Size the indicator glyph (12px) — overrides the indicator's own font-size.
+  svg {
+    font-size: 12px !important;
+    height: 12px !important;
+  }
+}
