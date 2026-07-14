@@ -17,7 +17,6 @@ import {
   getContact,
   contactLabel,
 } from './store'
-import { TYPE_LABELS } from '#/components/properties/propertyDisplay'
 
 /**
  * The editable subset of a listing the New Listing modal collects — just the
@@ -370,36 +369,8 @@ export function createProposalListing(draft: NewListingDraft): Listing {
     dealSide: draft.dealSide,
     unitId: null,
 
-    availableSqFt: draft.availableSqFt,
-    askingPrice: draft.listingPrice,
-    leaseRate: null,
-    capRate: 0,
-    description: draft.description,
-    locationDescription: draft.locationDescription,
-
-    propertyType: property.propertyType,
-    propertySubtype: property.propertySubtype,
-    street: property.street,
-    city: property.city,
-    state: property.state,
-    zip: property.zip,
-    lat: property.lat,
-    lng: property.lng,
-
     // Deal (1:1) — empty/zeroed for a brand-new proposal
     dealId,
-    location: linked
-      ? [property.city, property.state].filter(Boolean).join(', ')
-      : addressLabel,
-    propertyTypeLabel: TYPE_LABELS[property.propertyType],
-    salePrice: draft.listingPrice,
-    pricePerSqFt:
-      draft.availableSqFt > 0
-        ? Math.round((draft.listingPrice / draft.availableSqFt) * 100) / 100
-        : 0,
-    commissionPct: draft.commissionPct,
-    commissionAmount,
-    closeProbability: 0,
     internalBrokers: [currentUserBroker(commissionAmount)],
     outsideBrokers: [],
     sellerContactIds: seller ? [seller.id] : [],
@@ -510,7 +481,6 @@ export function createProposalListing(draft: NewListingDraft): Listing {
         description: null,
       },
     },
-    nextCriticalDate,
     internalNotes: '',
 
     createdAt: now,

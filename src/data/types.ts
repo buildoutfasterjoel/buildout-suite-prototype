@@ -189,8 +189,8 @@ export interface PropertyFinancialRecord {
  * A Listing is a marketable space/offering that belongs to a Property (a building
  * can have several — e.g. retail pads or office suites). It IS its deal (1:1), so it
  * also carries the deal's transaction, brokers, contacts, planner, and back-office
- * data. Display fields (location, type) are denormalized from the parent Property so
- * listing views render without a join; building/tax/physical facts live on `Property`.
+ * data. Display/property fields (location, type, physical facts) are not denormalized
+ * here — they're resolved from the parent `Property` via `selectDealWithProperty`.
  */
 export interface Listing {
   id: string
@@ -203,37 +203,8 @@ export interface Listing {
   /** The Property unit this deal is scoped to, or null when it covers the whole property. */
   unitId: string | null
 
-  // Offering-specific
-  availableSqFt: number
-  askingPrice: number
-  leaseRate: number | null
-  capRate: number
-
-  // Listing marketing copy (optional — surfaced in the New Listing flow)
-  description?: string
-  locationDescription?: string
-
-  // Denormalized from parent Property for display
-  propertyType: PropertyType
-  propertySubtype: PropertySubtype
-  street: string
-  city: string
-  state: string
-  zip: string
-  lat: number
-  lng: number
-
   // ── Deal data (1:1) ──────────────────────────────────────────────
   dealId: string
-  location: string
-  propertyTypeLabel: string
-
-  // Transaction
-  salePrice: number
-  pricePerSqFt: number
-  commissionPct: number
-  commissionAmount: number
-  closeProbability: number
 
   internalBrokers: DealBroker[]
   outsideBrokers: DealBroker[]
@@ -252,8 +223,6 @@ export interface Listing {
 
   /** Context files attached when the deal was created (OMs, financials, notes). */
   documents?: DealDocument[]
-
-  nextCriticalDate: string | null
 
   /** Broker-only notes on this engagement — never published. */
   internalNotes: string
