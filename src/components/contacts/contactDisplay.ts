@@ -27,6 +27,7 @@ export const RELATIONSHIP_STAGES: RelationshipStage[] = [
 
 export const CONTACT_SOURCES: ContactSource[] = [
   "Public records",
+  "Manual entry",
   "Cold outreach",
   "Prospect by Buildout",
   "Referral",

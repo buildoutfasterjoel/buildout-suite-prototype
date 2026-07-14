@@ -19,6 +19,7 @@ import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { Switch } from "@buildoutinc/blueprint-react/ui/Switch";
 import type {
   ContactDealStage,
+  ContactSource,
   DealSide,
   PropertyType,
   RelationshipStage,
@@ -38,6 +39,7 @@ import {
   countActiveContactFilters,
   emptyContactFilters,
   LAST_ACTIVITY_OPTIONS,
+  OPEN_TASKS_OPTIONS,
   type ContactFilterState,
 } from "#/components/contacts/contactFilterModel";
 
@@ -129,7 +131,7 @@ export function ContactFilters({
     relationship: groupMatches(query, "Contact Stage", relLabels),
     dealStage: groupMatches(query, "Deal Stage", dealLabels),
     lastActivity: groupMatches(query, "Last Activity", activityLabels),
-    hasOpenTasks: groupMatches(query, "Has Open Tasks", []),
+    openTasks: groupMatches(query, "Open Tasks", []),
     listingInquiries: groupMatches(query, "Listing Inquiries", []),
     propertyType: groupMatches(query, "Property Type", propLabels),
     source: groupMatches(query, "Source", CONTACT_SOURCES),
@@ -266,17 +268,29 @@ export function ContactFilters({
       ),
     },
     {
-      key: "hasOpenTasks",
-      visible: show.hasOpenTasks,
+      key: "openTasks",
+      visible: show.openTasks,
       node: (
-        <label className="d-flex align-items-center gap-2 mb-0">
-          <Switch
-            checked={filters.hasOpenTasks}
-            onCheckedChange={(c) => set({ hasOpenTasks: c })}
-            aria-label="Has open tasks"
-          />
-          <span className="fw-semibold">Has Open Tasks</span>
-        </label>
+        <div className="d-flex flex-column gap-2">
+          <GroupHeading title="Open Tasks" />
+          <RadioGroup
+            value={filters.openTasks}
+            onValueChange={(v) =>
+              set({ openTasks: v as ContactFilterState["openTasks"] })
+            }
+            className="d-flex flex-column gap-1"
+          >
+            {OPEN_TASKS_OPTIONS.map((o) => (
+              <label
+                key={o.key}
+                className="contact-filters__row d-flex align-items-center gap-2 mb-0 px-2 py-1 rounded-3"
+              >
+                <RadioGroup.Item value={o.key} />
+                <span>{o.label}</span>
+              </label>
+            ))}
+          </RadioGroup>
+        </div>
       ),
     },
     {
@@ -330,26 +344,20 @@ export function ContactFilters({
       key: "source",
       visible: show.source,
       node: (
-        <div className="d-flex flex-column gap-1">
-          <span className="fw-bold">Source</span>
-          <Select
-            value={filters.source}
-            onValueChange={(v) => set({ source: v ?? ALL })}
-          >
-            <Select.Trigger>
-              <Select.Value>
-                {(v) => (v && v !== ALL ? v : "Select lead source")}
-              </Select.Value>
-            </Select.Trigger>
-            <Select.Content>
-              <Select.Item value={ALL}>All Sources</Select.Item>
-              {CONTACT_SOURCES.map((s) => (
-                <Select.Item key={s} value={s}>
-                  {s}
-                </Select.Item>
-              ))}
-            </Select.Content>
-          </Select>
+        <div className="d-flex flex-column gap-2">
+          <GroupHeading title="Source" />
+          <div className="contact-filters__grid">
+            {CONTACT_SOURCES.map((s) => (
+              <CheckRow
+                key={s}
+                label={s}
+                checked={filters.source.has(s)}
+                onToggle={() =>
+                  set({ source: toggled<ContactSource>(filters.source, s) })
+                }
+              />
+            ))}
+          </div>
         </div>
       ),
     },

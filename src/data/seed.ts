@@ -23,6 +23,8 @@ import type {
   ContactDealStage,
   PhoneStatus,
 } from './types'
+import type { CallList } from './contactLists'
+import type { SerializedContactFilters } from '#/components/contacts/contactFilterModel'
 
 const SEED = 20240101
 const PROPERTY_COUNT = 50
@@ -600,6 +602,7 @@ const TAG_POOL = [
 /** Most-recent-touch label, derived from how the contact entered the book. */
 const LAST_TOUCH_BY_SOURCE: Record<ContactSource, string> = {
   'Public records': 'Enriched from public records',
+  'Manual entry': 'Added manually',
   'Cold outreach': 'Logged a cold call',
   'Prospect by Buildout': 'Imported from Prospect',
   Referral: 'Intro email sent',
@@ -661,11 +664,45 @@ function generateContact(allPropertyIds: string[]): Contact {
   ])
 
   const source: ContactSource = faker.helpers.weightedArrayElement([
-    { weight: 45, value: 'Public records' as const },
-    { weight: 20, value: 'Referral' as const },
-    { weight: 15, value: 'Cold outreach' as const },
-    { weight: 12, value: 'Networking event' as const },
-    { weight: 8, value: 'Prospect by Buildout' as const },
+    { weight: 40, value: 'Public records' as const },
+    { weight: 12, value: 'Manual entry' as const },
+    { weight: 18, value: 'Referral' as const },
+    { weight: 13, value: 'Cold outreach' as const },
+    { weight: 10, value: 'Networking event' as const },
+    { weight: 7, value: 'Prospect by Buildout' as const },
+  ])
+
+  // Real last-contacted timestamp (or null = never contacted), spread across
+  // recency buckets so the pre-defined lists return meaningful results.
+  const DAY_MS = 86_400_000
+  const daysAgo = (n: number) => new Date(Date.now() - n * DAY_MS)
+  const contactedBucket = faker.helpers.weightedArrayElement([
+    { weight: 15, value: 'never' as const },
+    { weight: 20, value: 'recent' as const }, // < 30 days
+    { weight: 25, value: 'mid' as const }, // 30–90 days
+    { weight: 25, value: 'stale' as const }, // 90 days – 1 year
+    { weight: 15, value: 'old' as const }, // > 1 year
+  ])
+  const lastContactedAt: string | null =
+    contactedBucket === 'never'
+      ? null
+      : faker.date
+          .between(
+            contactedBucket === 'recent'
+              ? { from: daysAgo(29), to: daysAgo(0) }
+              : contactedBucket === 'mid'
+                ? { from: daysAgo(90), to: daysAgo(31) }
+                : contactedBucket === 'stale'
+                  ? { from: daysAgo(365), to: daysAgo(91) }
+                  : { from: daysAgo(730), to: daysAgo(366) },
+          )
+          .toISOString()
+
+  const openTaskCount = faker.helpers.weightedArrayElement([
+    { weight: 60, value: 0 },
+    { weight: 25, value: 1 },
+    { weight: 10, value: 2 },
+    { weight: 5, value: 3 },
   ])
 
   const hasDeal = faker.datatype.boolean(DEAL_PROBABILITY[relationship])
@@ -721,6 +758,8 @@ function generateContact(allPropertyIds: string[]): Contact {
     title: faker.helpers.arrayElement(TITLE_POOL),
     createdAt: faker.date.past({ years: 1 }).toISOString(),
     lastTouch: LAST_TOUCH_BY_SOURCE[source],
+    lastContactedAt,
+    openTaskCount,
     street: faker.location.streetAddress(),
     city: faker.location.city(),
     state: faker.location.state({ abbreviated: true }),
@@ -1053,6 +1092,121 @@ function generateListings(
       updatedAt: faker.date.recent({ days: 60 }).toISOString(),
     }
   })
+}
+
+// ── Pre-defined dynamic lists ─────────────────────────────────────────────────
+
+/** Build a fully-specified serialized filter set (empty defaults + overrides). */
+function listFilters(
+  overrides: Partial<SerializedContactFilters>,
+): SerializedContactFilters {
+  return {
+    assignedTo: 'all',
+    source: [],
+    side: [],
+    relationship: [],
+    dealStage: [],
+    propertyTypes: [],
+    tags: [],
+    lastActivity: 'any',
+    openTasks: 'any',
+    excludeDoNotCall: false,
+    ...overrides,
+  }
+}
+
+/**
+ * The pre-defined dynamic lists shipped with the demo. Seeded into the call-list
+ * store (deterministic ids) so they behave exactly like user-created dynamic
+ * lists — editable filters, Save/Revert, delete.
+ */
+export function seedCallLists(): CallList[] {
+  const defs: {
+    id: string
+    label: string
+    description: string
+    color: string
+    createdOn: string
+    filters: SerializedContactFilters
+  }[] = [
+    {
+      id: 'seed-cold-prospects-revive',
+      label: 'Cold Prospects to Revive',
+      description:
+        "Owners I haven't talked to in 3+ months with nothing scheduled. Time to reach back out before they forget about me.",
+      color: '#1976d2',
+      createdOn: '2024-05-01',
+      filters: listFilters({
+        relationship: ['cold'],
+        lastActivity: 'over90',
+        openTasks: 'none',
+      }),
+    },
+    {
+      id: 'seed-active-buyers-no-touch',
+      label: 'Active Buyers - No Recent Touch',
+      description:
+        "My active buyers I haven't checked in with in 1–3 months. Need to follow up before they go cold or buy somewhere else.",
+      color: '#009688',
+      createdOn: '2024-05-14',
+      filters: listFilters({
+        side: ['buyer'],
+        relationship: ['nurturing', 'client'],
+        lastActivity: '30to90',
+        openTasks: 'none',
+      }),
+    },
+    {
+      id: 'seed-pitching-needs-follow-up',
+      label: 'Pitching - Needs Follow-Up',
+      description:
+        "Sellers I'm actively pitching with no next step on the calendar. These are slipping through the cracks - gotta follow up before momentum dies.",
+      color: '#6035e6',
+      createdOn: '2024-06-02',
+      filters: listFilters({
+        relationship: ['pitching'],
+        openTasks: 'none',
+      }),
+    },
+    {
+      id: 'seed-never-touched-first-outreach',
+      label: 'Never Touched - Needs First Outreach',
+      description:
+        "Contacts in my book I've never actually reached out to. These came in from public records or imports and just sat there.",
+      color: '#f46925',
+      createdOn: '2024-06-18',
+      filters: listFilters({
+        source: ['Public records', 'Manual entry'],
+        lastActivity: 'never',
+        relationship: ['cold'],
+      }),
+    },
+    {
+      id: 'seed-past-seller-clients-no-touch',
+      label: 'Past Seller Clients - No Recent Touch',
+      description:
+        "Sellers I've closed with who I haven't talked to in 3+ months. Good for portfolio check-ins and staying top of mind for the next deal.",
+      color: '#33c759',
+      createdOn: '2024-06-30',
+      filters: listFilters({
+        relationship: ['past_client'],
+        side: ['seller'],
+        lastActivity: 'over90',
+      }),
+    },
+  ]
+
+  return defs.map((d) => ({
+    id: d.id,
+    label: d.label,
+    description: d.description,
+    createdOn: d.createdOn,
+    contactIds: [],
+    source: 'user',
+    type: 'dynamic',
+    filters: d.filters,
+    color: d.color,
+  }))
 }
 
 // ── Top-level export ──────────────────────────────────────────────────────────
