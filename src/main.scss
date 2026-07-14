@@ -220,6 +220,25 @@
   }
 }
 
+// Clickable table rows (People contacts + My Lists overview): the whole row
+// navigates on a plain left-click. Hover tints the row storm-grey-50 and
+// recolors the name to the link color. Setting Bootstrap's `--bp-table-bg-state`
+// on the row paints every cell — including the frozen `.sticky-cell` columns,
+// which read that variable through the same inset box-shadow — so the highlight
+// spans the horizontally-scrolled table uniformly.
+.contacts-row,
+.list-row {
+  cursor: pointer;
+
+  &:hover {
+    --bp-table-bg-state: var(--color-storm-grey-50, #f6f7f9);
+  }
+
+  &:hover .row-link {
+    color: var(--bp-link-color, #2042a7);
+  }
+}
+
 // Blueprint 1.3.0's `.modal-dialog-centered` is a flex row with the default
 // `justify-content`, so a max-width-constrained modal content pins to the left
 // of the (wider) sized dialog. Center it horizontally. Remove once the
