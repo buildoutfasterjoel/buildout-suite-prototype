@@ -83,7 +83,7 @@ function LinkedProperty({ listing }: { listing: Listing }) {
   const property = getProperty(listing.propertyId);
   if (!property) return null;
 
-  const address = `${property?.street}, ${property?.city}, ${property?.state} ${property?.zip}`;
+  const address = `${property.street}, ${property.city}, ${property.state} ${property.zip}`;
 
   // TODO: link to property page once a standalone /properties/$id route exists.
   return (

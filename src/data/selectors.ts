@@ -119,7 +119,10 @@ export function getPropertyDetailClient(id: string): PropertyDetail | null {
   }
 }
 
-/** The current (newest) in-place financial record for a property, or undefined if none. */
+/**
+ * The current (newest) in-place financial record for a property, or undefined if none.
+ * Forward-looking API for Phase 3/4 (Property·Financials history views); not yet wired to a consumer.
+ */
 export function latestFinancialRecord(property: Property): PropertyFinancialRecord | undefined {
   return property.financialRecords[0]
 }
@@ -127,6 +130,7 @@ export function latestFinancialRecord(property: Property): PropertyFinancialReco
 /**
  * Resolve a deal together with the property facts it references. Deals hold no
  * property data of their own — views join through `propertyId` (+ optional `unitId`).
+ * Forward-looking API for Phase 3/4 consumers that hold only a deal id and need the deal+property(+unit) bundle. Views that already hold a Listing resolve property facts with getProperty(listing.propertyId) directly, which is why this isn't yet called in-app.
  */
 export function selectDealWithProperty(dealId: string):
   | { deal: Listing; property: Property | undefined; unit: PropertyUnit | undefined }
