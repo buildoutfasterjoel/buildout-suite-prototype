@@ -117,7 +117,7 @@ export function PropertyCard({ listing }: { listing: Listing }) {
         style={{ gap: 10, padding: 8 }}
       >
         <span className="text-muted flex-grow-1" style={{ fontSize: 10 }}>
-          {formatPrice(listing.askingPrice)}
+          {formatPrice(listing.financials.askingPrice)}
         </span>
         <FontAwesomeIcon
           icon={faCalendarCircleExclamation}

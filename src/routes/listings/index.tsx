@@ -228,11 +228,11 @@ function PropertyListings() {
       case "name-desc":
         return arr.sort((a, b) => b.name.localeCompare(a.name));
       case "price-desc":
-        return arr.sort((a, b) => b.askingPrice - a.askingPrice);
+        return arr.sort((a, b) => b.financials.askingPrice - a.financials.askingPrice);
       case "price-asc":
-        return arr.sort((a, b) => a.askingPrice - b.askingPrice);
+        return arr.sort((a, b) => a.financials.askingPrice - b.financials.askingPrice);
       case "cap-rate-desc":
-        return arr.sort((a, b) => b.capRate - a.capRate);
+        return arr.sort((a, b) => b.financials.capRate - a.financials.capRate);
       default:
         return arr;
     }
@@ -245,7 +245,7 @@ function PropertyListings() {
   const weightedForecast = useMemo(
     () =>
       filtered.reduce(
-        (sum, l) => sum + l.askingPrice * (l.transaction.closeProbability / 100),
+        (sum, l) => sum + l.financials.askingPrice * (l.transaction.closeProbability / 100),
         0,
       ),
     [filtered],

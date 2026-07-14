@@ -100,7 +100,7 @@ function TransactionCard({ listing }: { listing: Listing }) {
       <Field label="Sale Price" value={formatCurrency(listing.transaction.salePrice)} />
       <Field
         label="Price / SF"
-        value={`$${listing.pricePerSqFt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+        value={`$${listing.financials.pricePerSqFt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
       />
       <Field label="Commission %" value={`${listing.transaction.commissionPct}%`} />
       <Field label="Commission $" value={formatCurrency(listing.transaction.commissionAmount)} />

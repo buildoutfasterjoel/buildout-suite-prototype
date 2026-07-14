@@ -78,7 +78,7 @@ export default function PropertyMapInner({ listings }: { listings: Listing[] }) 
               <div className="d-flex justify-content-between gap-3">
                 <span>{TYPE_LABELS[p.propertyType]}</span>
                 <span className="fw-semibold">
-                  {formatPrice(p.askingPrice)}
+                  {formatPrice(p.financials.askingPrice)}
                 </span>
               </div>
               <div className="text-muted fs-xs mt-1">

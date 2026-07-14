@@ -244,7 +244,7 @@ export interface Listing {
   messages: DealMessage[]
   activities: DealActivity[]
   history: DealHistoryEntry[]
-  financials: DealFinancials
+  financials: DealPitchFinancials
   transaction: DealTransaction
 
   /** Context files attached when the deal was created (OMs, financials, notes). */
@@ -367,6 +367,63 @@ export interface DealTransaction {
   nextCriticalDate: string | null
   /** Voucher / receivables / deductions — the Close-phase settlement records. */
   backOffice: DealFinancials
+}
+
+export interface IncomeLineItem { id: string; label: string; amount: number }
+export interface ExpenseLineItem { id: string; label: string; amount: number }
+
+/** A named, reorderable underwriting scenario (e.g. Worst Case / Best Case). */
+export interface FinancialScenario {
+  id: string
+  name: string
+  noi: number
+  capRate: number
+  cashFlow: number
+}
+
+/** One row of the deal's presented rent roll — a lease on a property unit. */
+export interface RentRollRow {
+  id: string
+  /** References a `Property.units` shell, or null for an unassigned row. */
+  unitId: string | null
+  tenant: string
+  actualRent: number
+  marketRent: number
+  rentPerSf: number
+  securityDeposit: number
+  leaseStart: string | null
+  leaseEnd: string | null
+}
+
+/**
+ * The broker's pro-forma pitch financials for this deal — the underwriting shown
+ * in marketing. Snapshots the property's actuals and can move independently.
+ */
+export interface DealPitchFinancials {
+  askingPrice: number
+  askingPriceUnits: string
+  hidePrice: boolean
+  pricePerSqFt: number
+  capRate: number
+  income: IncomeLineItem[]
+  grossScheduledIncome: number
+  otherIncome: number
+  totalScheduledIncome: number
+  vacancyPct: number
+  vacancyCost: number
+  grossIncome: number
+  expenses: ExpenseLineItem[]
+  operatingExpenses: number
+  noi: number
+  loanAmount: number
+  downPayment: number
+  debtService: number
+  cashFlow: number
+  debtCoverageRatio: number
+  grossRentMultiplier: number
+  cashOnCash: number
+  scenarios: FinancialScenario[]
+  rentRoll: RentRollRow[]
 }
 
 /** A line item deducted from gross commission before broker splits, e.g. a marketing fee. */

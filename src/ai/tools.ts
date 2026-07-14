@@ -59,7 +59,7 @@ const dealSummary = (l: Listing) => ({
   dealType: l.dealType,
   city: l.city,
   state: l.state,
-  askingPrice: l.askingPrice,
+  askingPrice: l.financials.askingPrice,
 });
 
 const propertySummary = (p: Property) => ({

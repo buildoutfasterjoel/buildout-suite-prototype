@@ -26,6 +26,7 @@ import type {
   UnitType,
   PropertyFinancialRecord,
   FinancialRecordSource,
+  RentRollRow,
 } from './types'
 import type { CallList } from './contactLists'
 import type { SerializedContactFilters } from '#/components/contacts/contactFilterModel'
@@ -1112,6 +1113,33 @@ function generateListings(
           { weight: 20, value: 'Draft' as const },
         ])
 
+    const grossScheduledIncome = Math.round(salePrice * 0.09)
+    const otherIncome = Math.round(grossScheduledIncome * 0.04)
+    const totalScheduledIncome = grossScheduledIncome + otherIncome
+    const vacancyPct = faker.number.float({ min: 3, max: 9, fractionDigits: 1 })
+    const vacancyCost = Math.round(totalScheduledIncome * (vacancyPct / 100))
+    const grossIncome = totalScheduledIncome - vacancyCost
+    const pitchOpEx = Math.round(grossIncome * 0.38)
+    const pitchNoi = grossIncome - pitchOpEx
+    const loanAmount = Math.round(salePrice * 0.65)
+    const downPayment = salePrice - loanAmount
+    const debtService = Math.round(loanAmount * 0.07)
+    const pitchCapRate = Math.max(0, property.capRate + faker.number.float({ min: -0.005, max: 0.005, fractionDigits: 4 }))
+    const rentRoll: RentRollRow[] = property.units.map((u): RentRollRow => {
+      const rent = Math.round(u.sqft * faker.number.float({ min: 1.2, max: 3.5, fractionDigits: 2 }))
+      return {
+        id: faker.string.uuid(),
+        unitId: u.id,
+        tenant: faker.company.name(),
+        actualRent: rent,
+        marketRent: Math.round(rent * faker.number.float({ min: 1.0, max: 1.15, fractionDigits: 2 })),
+        rentPerSf: u.sqft > 0 ? Math.round((rent / u.sqft) * 100) / 100 : 0,
+        securityDeposit: rent,
+        leaseStart: faker.date.past({ years: 3 }).toISOString().slice(0, 10),
+        leaseEnd: faker.date.future({ years: 3 }).toISOString().slice(0, 10),
+      }
+    })
+
     return {
       id,
       propertyId: property.id,
@@ -1152,28 +1180,38 @@ function generateListings(
       activities: [],
       history,
       financials: {
-        name,
-        identifier: dealId,
-        status: voucherStatus,
-        closeDate: status === 'closed' ? faker.date.recent({ days: 90 }).toISOString().slice(0, 10) : null,
-        relatedContactsLabel: `${sellerName}${sellerContacts.length + buyerContacts.length > 1 ? ` & ${sellerContacts.length + buyerContacts.length - 1} more` : ''}`,
-        preSplitDeductions,
-        receivables: status === 'closed'
-          ? (() => {
-              const payer = buyerContacts[0] ?? sellerContacts[0]
-              return [
-                {
-                  id: faker.string.uuid(),
-                  payerName: `${payer.firstName} ${payer.lastName}`,
-                  payerEmail: payer.email,
-                  dueDate: faker.date.recent({ days: 30 }).toISOString().slice(0, 10),
-                  billingDescription: 'Full Payment',
-                  amount: commissionAmount,
-                  credited: 0,
-                },
-              ]
-            })()
-          : [],
+        askingPrice: salePrice,
+        askingPriceUnits: 'total',
+        hidePrice: false,
+        pricePerSqFt,
+        capRate: pitchCapRate,
+        income: [
+          { id: faker.string.uuid(), label: 'Base Rent', amount: grossScheduledIncome },
+          { id: faker.string.uuid(), label: 'Other Income', amount: otherIncome },
+        ],
+        grossScheduledIncome,
+        otherIncome,
+        totalScheduledIncome,
+        vacancyPct,
+        vacancyCost,
+        grossIncome,
+        expenses: [
+          { id: faker.string.uuid(), label: 'Operating Expenses', amount: pitchOpEx },
+        ],
+        operatingExpenses: pitchOpEx,
+        noi: pitchNoi,
+        loanAmount,
+        downPayment,
+        debtService,
+        cashFlow: pitchNoi - debtService,
+        debtCoverageRatio: debtService > 0 ? Math.round((pitchNoi / debtService) * 100) / 100 : 0,
+        grossRentMultiplier: grossScheduledIncome > 0 ? Math.round((salePrice / grossScheduledIncome) * 10) / 10 : 0,
+        cashOnCash: downPayment > 0 ? Math.round(((pitchNoi - debtService) / downPayment) * 1000) / 10 : 0,
+        scenarios: [
+          { id: faker.string.uuid(), name: 'Worst Case', noi: Math.round(pitchNoi * 0.85), capRate: pitchCapRate + 0.005, cashFlow: Math.round((pitchNoi - debtService) * 0.7) },
+          { id: faker.string.uuid(), name: 'Best Case', noi: Math.round(pitchNoi * 1.12), capRate: Math.max(0, pitchCapRate - 0.005), cashFlow: Math.round((pitchNoi - debtService) * 1.3) },
+        ],
+        rentRoll,
       },
       transaction: {
         salePrice,
