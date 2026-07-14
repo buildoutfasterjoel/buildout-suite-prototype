@@ -200,6 +200,8 @@ export interface Listing {
   status: PropertyStatus // unified listing + deal stage
   dealType: DealType
   dealSide: DealSide // whether the broker represents the seller or the buyer
+  /** The Property unit this deal is scoped to, or null when it covers the whole property. */
+  unitId: string | null
 
   // Offering-specific
   availableSqFt: number
@@ -246,11 +248,15 @@ export interface Listing {
   history: DealHistoryEntry[]
   financials: DealPitchFinancials
   transaction: DealTransaction
+  marketing: DealMarketing
 
   /** Context files attached when the deal was created (OMs, financials, notes). */
   documents?: DealDocument[]
 
   nextCriticalDate: string | null
+
+  /** Broker-only notes on this engagement — never published. */
+  internalNotes: string
 
   createdAt: string
   updatedAt: string
@@ -424,6 +430,65 @@ export interface DealPitchFinancials {
   cashOnCash: number
   scenarios: FinancialScenario[]
   rentRoll: RentRollRow[]
+}
+
+export type PropertyUse = 'Net Leased Investment' | 'Investment' | 'Owner/User' | 'Business for Sale' | 'Development'
+export type InvestmentType = 'Core' | 'Core Plus' | 'Value Add' | 'Opportunistic' | 'Distressed'
+export type MarketingChannel = 'None' | 'Buildout Buyer Network' | 'My Brokerage Website' | 'Buildout Syndication Network'
+export type VisibilityTier = 'Fully Private' | 'Private' | 'Semi-Public' | 'Fully Public'
+export type LeaseRateUnits = 'SF/Yr' | 'SF/Mo' | 'Monthly'
+export type SpaceLeaseType = 'Gross' | 'Modified Gross' | 'NNN' | 'Modified Net' | 'Full Service' | 'Ground Lease'
+
+/** Deal-level terms for transacting a unit (reset per engagement). */
+export interface LeaseTerms {
+  leaseRate: number | null
+  leaseRateUnits: LeaseRateUnits
+  hideLeaseRate: boolean
+  leaseType: SpaceLeaseType
+  leaseTermMonths: number | null
+  dateAvailable: string | null
+  minDivisibleSqFt: number | null
+  maxContiguousSqFt: number | null
+  tiAllowance: number | null
+  freeRentMonths: number | null
+  signageAvailable: boolean
+  rentEscalators: string | null
+  sublease: boolean
+  description: string | null
+}
+
+/** Per-item public/private flags — Active publishes the flagged set (wired in Phase 3/4). */
+export interface PublishFlags {
+  title: boolean
+  description: boolean
+  bullets: boolean
+  financials: boolean
+  photos: boolean
+}
+
+/** The deal's marketing content — copy, terms, channel/visibility, publish flags. */
+export interface DealMarketing {
+  saleTitle: string
+  saleDescription: string
+  saleBullets: string[]
+  saleClosingInfo: string
+  leaseTitle: string
+  leaseDescription: string
+  leaseBullets: string[]
+  propertyUse: PropertyUse
+  investmentType: InvestmentType
+  includesRealEstate: boolean
+  auction: boolean
+  saleTerms: string
+  reimbursement: string
+  marketingChannel: MarketingChannel
+  visibilityTier: VisibilityTier
+  publishFlags: PublishFlags
+  /** Snapshot of `Property.occupancyPct` taken at Active, or null before publish. */
+  occupancySnapshot: number | null
+  availableSqFt: number
+  locationDescription: string
+  leaseTerms: LeaseTerms
 }
 
 /** A line item deducted from gross commission before broker splits, e.g. a marketing fee. */

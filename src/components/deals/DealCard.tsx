@@ -92,8 +92,8 @@ export function DealCardView({
   const sideDisplay = SIDE_DISPLAY[listing.dealSide];
   const isLease = listing.dealType === "Lease";
   const price =
-    isLease && listing.leaseRate != null
-      ? `$${listing.leaseRate}/SF`
+    isLease && listing.marketing.leaseTerms.leaseRate != null
+      ? `$${listing.marketing.leaseTerms.leaseRate}/SF`
       : formatPrice(listing.financials.askingPrice);
   const critical = formatCriticalDate(listing.transaction.nextCriticalDate);
   // The critical date is the next open task's due date — name that milestone.

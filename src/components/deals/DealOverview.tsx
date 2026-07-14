@@ -125,7 +125,7 @@ export function ListingOverview({
             <Field label="Property Type" value={listing.propertyTypeLabel} />
             <Field label="Address" value={listing.street} />
             <Field label="City / State / Zip" value={`${listing.location} ${listing.zip}`} />
-            <Field label="Available (SF)" value={listing.availableSqFt.toLocaleString()} />
+            <Field label="Available (SF)" value={listing.marketing.availableSqFt.toLocaleString()} />
             <Field label="Building Size (SF)" value={property.buildingSqFt.toLocaleString()} />
             <Field label="Year Built" value={property.yearBuilt} />
           </SectionCard>

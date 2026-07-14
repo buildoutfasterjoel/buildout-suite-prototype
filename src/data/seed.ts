@@ -1140,6 +1140,9 @@ function generateListings(
       }
     })
 
+    const isLease = dealType !== 'Sale'
+    const marketingUnitId = property.units.length > 0 ? property.units[i % property.units.length].id : null
+
     return {
       id,
       propertyId: property.id,
@@ -1148,6 +1151,7 @@ function generateListings(
       status,
       dealType,
       dealSide,
+      unitId: marketingUnitId,
       availableSqFt,
       askingPrice: salePrice,
       leaseRate: dealType === 'Sale' ? null : faker.number.float({ min: 8, max: 55, fractionDigits: 2 }),
@@ -1248,7 +1252,48 @@ function generateListings(
             : [],
         },
       },
+      marketing: {
+        saleTitle: `${property.name} — ${TYPE_LABEL[property.propertyType]} Offering`,
+        saleDescription: faker.lorem.paragraph(),
+        saleBullets: faker.helpers.arrayElements(
+          ['Prime location', 'Below-market rents', 'Recent capital improvements', 'Strong tenancy', 'Value-add upside'],
+          faker.number.int({ min: 2, max: 4 }),
+        ),
+        saleClosingInfo: 'Offers due by the date noted in the OM.',
+        leaseTitle: isLease ? `${property.name} — Space Available` : '',
+        leaseDescription: isLease ? faker.lorem.sentence() : '',
+        leaseBullets: isLease ? ['Flexible terms', 'Move-in ready'] : [],
+        propertyUse: faker.helpers.arrayElement(['Net Leased Investment', 'Investment', 'Owner/User', 'Business for Sale', 'Development'] as const),
+        investmentType: faker.helpers.arrayElement(['Core', 'Core Plus', 'Value Add', 'Opportunistic', 'Distressed'] as const),
+        includesRealEstate: true,
+        auction: false,
+        saleTerms: 'All cash or conventional financing.',
+        reimbursement: 'NNN',
+        marketingChannel: faker.helpers.arrayElement(['None', 'Buildout Buyer Network', 'My Brokerage Website', 'Buildout Syndication Network'] as const),
+        visibilityTier: faker.helpers.arrayElement(['Fully Private', 'Private', 'Semi-Public', 'Fully Public'] as const),
+        publishFlags: { title: true, description: true, bullets: true, financials: false, photos: true },
+        occupancySnapshot: status === 'proposal' ? null : property.occupancyPct,
+        availableSqFt,
+        locationDescription: `Located in ${property.submarket}, ${property.city}.`,
+        leaseTerms: {
+          leaseRate: isLease ? faker.number.float({ min: 8, max: 55, fractionDigits: 2 }) : null,
+          leaseRateUnits: 'SF/Yr',
+          hideLeaseRate: false,
+          leaseType: faker.helpers.arrayElement(['Gross', 'Modified Gross', 'NNN', 'Modified Net', 'Full Service', 'Ground Lease'] as const),
+          leaseTermMonths: isLease ? faker.number.int({ min: 12, max: 120 }) : null,
+          dateAvailable: isLease ? faker.date.soon({ days: 90 }).toISOString().slice(0, 10) : null,
+          minDivisibleSqFt: null,
+          maxContiguousSqFt: null,
+          tiAllowance: isLease ? faker.number.int({ min: 0, max: 60 }) : null,
+          freeRentMonths: isLease ? faker.number.int({ min: 0, max: 6 }) : null,
+          signageAvailable: true,
+          rentEscalators: isLease ? '3% annual' : null,
+          sublease: false,
+          description: isLease ? faker.lorem.sentence() : null,
+        },
+      },
       nextCriticalDate: nextTask?.date ?? null,
+      internalNotes: faker.helpers.arrayElement(['', '', 'Seller motivated — wants to close before year-end.', 'Waiting on estoppels.']),
 
       createdAt,
       updatedAt: faker.date.recent({ days: 60 }).toISOString(),

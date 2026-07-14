@@ -48,6 +48,6 @@ export function getListingWebsiteSettings(
     websiteUrl: `https://properties.buildout.com/${listing.slug}`,
     visibility: VISIBILITY_OPTIONS[h % VISIBILITY_OPTIONS.length],
     metaTitle: `${listing.name} | ${listing.propertyTypeLabel} for ${listing.dealType} in ${listing.city}, ${listing.state}`,
-    metaDescription: `${listing.availableSqFt.toLocaleString()} SF ${listing.propertyTypeLabel.toLowerCase()} property located at ${listing.street}, ${listing.city}, ${listing.state}. Contact us to learn more about this ${listing.dealType.toLowerCase()} opportunity.`,
+    metaDescription: `${listing.marketing.availableSqFt.toLocaleString()} SF ${listing.propertyTypeLabel.toLowerCase()} property located at ${listing.street}, ${listing.city}, ${listing.state}. Contact us to learn more about this ${listing.dealType.toLowerCase()} opportunity.`,
   };
 }
