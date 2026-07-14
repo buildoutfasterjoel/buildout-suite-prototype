@@ -343,6 +343,7 @@ export interface Comp {
 /** Where a contact entered the book of business. */
 export type ContactSource =
   | 'Public records'
+  | 'Manual entry'
   | 'Cold outreach'
   | 'Prospect by Buildout'
   | 'Referral'
@@ -399,6 +400,10 @@ export interface Contact {
   createdAt: string
   /** Human label for the most recent touch, e.g. "Enriched from public records". */
   lastTouch: string
+  /** ISO timestamp of the last real contact, or null if never contacted. */
+  lastContactedAt: string | null
+  /** Number of open tasks on this contact (0 = none). */
+  openTaskCount: number
   street: string
   city: string
   state: string

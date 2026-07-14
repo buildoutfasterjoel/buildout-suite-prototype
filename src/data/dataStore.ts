@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { Comp, Contact, DealFileItem, Listing, Property } from './types'
-import { generateDataset } from './seed'
+import { generateDataset, seedCallLists } from './seed'
 import { getEmails, type Email } from './emails'
 import type { CallList } from './contactLists'
 import { clearSnapshot, loadSnapshot, saveSnapshot } from './persistence'
@@ -42,7 +42,7 @@ export function seedSlice(): DataSlice {
     contacts: new Map(contacts.map((ct) => [ct.id, ct])),
     dealFiles: new Map(),
     emails: new Map(getEmails().map((e) => [e.id, e])),
-    callLists: new Map(),
+    callLists: new Map(seedCallLists().map((l) => [l.id, l])),
   }
 }
 

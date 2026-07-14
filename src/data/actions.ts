@@ -154,6 +154,21 @@ export function removeCallList(id: string): void {
   useDataStore.getState().persist()
 }
 
+/** Update a call list's metadata (name/color/description) and/or membership. */
+export function updateCallList(
+  id: string,
+  patch: Partial<Pick<CallList, 'label' | 'color' | 'description' | 'contactIds'>>,
+): void {
+  useDataStore.setState((s) => {
+    const existing = s.callLists.get(id)
+    if (!existing) return {}
+    const callLists = new Map(s.callLists)
+    callLists.set(id, { ...existing, ...patch })
+    return { callLists }
+  })
+  useDataStore.getState().persist()
+}
+
 /** Add contacts to a static list's membership snapshot (union, no duplicates). */
 export function addContactsToCallList(id: string, contactIds: string[]): void {
   useDataStore.setState((s) => {

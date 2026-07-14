@@ -1,6 +1,7 @@
 import type {
   Contact,
   ContactDealStage,
+  ContactSource,
   DealSide,
   PropertyType,
   RelationshipStage,
@@ -22,44 +23,78 @@ import { TYPE_LABELS } from "#/components/properties/propertyDisplay";
  * `propertyDisplay.ts` — this module only owns filter *state* and *matching*.
  */
 
-/** Sentinel for the single-select fields (Assigned To, Source) = "no filter". */
+/** Sentinel for the single-select fields (Assigned To) = "no filter". */
 export const ALL = "all";
 
-/** Last-activity buckets, matched against a contact's `lastTouch` date. */
+/**
+ * Last-activity buckets, matched against a contact's real `lastContactedAt`
+ * date. "within" buckets require a contact date within N days; "over" buckets
+ * require it older than N days; `never` matches contacts never contacted.
+ */
 export type LastActivityKey =
   | "any"
   | "7d"
   | "30d"
   | "90d"
-  | "6m"
-  | "1y"
-  | "over1y";
+  | "30to90"
+  | "over90"
+  | "over1y"
+  | "never";
 
 export const LAST_ACTIVITY_OPTIONS: { key: LastActivityKey; label: string }[] = [
   { key: "any", label: "Any Time" },
   { key: "7d", label: "Past 7 Days" },
   { key: "30d", label: "Past 30 Days" },
   { key: "90d", label: "Past 90 Days" },
-  { key: "6m", label: "Past 6 Months" },
-  { key: "1y", label: "Past Year" },
+  { key: "30to90", label: "30–90 Days Ago" },
+  { key: "over90", label: "Over 90 Days Ago" },
   { key: "over1y", label: "Over a Year Ago" },
+  { key: "never", label: "Never Contacted" },
 ];
 
-/** Millisecond windows for the "within the last …" buckets. */
 const DAY = 24 * 60 * 60 * 1000;
-const LAST_ACTIVITY_WINDOW_MS: Partial<Record<LastActivityKey, number>> = {
-  "7d": 7 * DAY,
-  "30d": 30 * DAY,
-  "90d": 90 * DAY,
-  "6m": 182 * DAY,
-  "1y": 365 * DAY,
-};
+
+/** Whether a contact's last-contact date satisfies a last-activity bucket. */
+function matchesLastActivity(
+  lastContactedAt: string | null,
+  key: LastActivityKey,
+): boolean {
+  if (key === "any") return true;
+  if (key === "never") return lastContactedAt === null;
+  if (lastContactedAt === null) return false; // date buckets need a real date
+  const age = Date.now() - Date.parse(lastContactedAt);
+  switch (key) {
+    case "7d":
+      return age <= 7 * DAY;
+    case "30d":
+      return age <= 30 * DAY;
+    case "90d":
+      return age <= 90 * DAY;
+    case "30to90":
+      return age >= 30 * DAY && age <= 90 * DAY;
+    case "over90":
+      return age > 90 * DAY;
+    case "over1y":
+      return age > 365 * DAY;
+    default:
+      return true;
+  }
+}
+
+/** Tri-state open-tasks filter. */
+export type OpenTasksFilter = "any" | "has" | "none";
+
+export const OPEN_TASKS_OPTIONS: { key: OpenTasksFilter; label: string }[] = [
+  { key: "any", label: "Any" },
+  { key: "has", label: "Has open tasks" },
+  { key: "none", label: "No open tasks" },
+];
 
 export interface ContactFilterState {
   /** Single-select (ALL = no filter). */
   assignedTo: string;
-  source: string;
   /** Multi-select checkbox groups (empty set = no filter). */
+  source: Set<ContactSource>;
   side: Set<DealSide>;
   relationship: Set<RelationshipStage>;
   dealStage: Set<ContactDealStage>;
@@ -67,24 +102,24 @@ export interface ContactFilterState {
   tags: Set<string>;
   /** Single-select radio group. */
   lastActivity: LastActivityKey;
+  /** Tri-state open-tasks filter. */
+  openTasks: OpenTasksFilter;
   /** Wired toggle. */
   excludeDoNotCall: boolean;
-  /** Visual-only for now — not applied in `matchesContactFilters`. */
-  hasOpenTasks: boolean;
 }
 
 export function emptyContactFilters(): ContactFilterState {
   return {
     assignedTo: ALL,
-    source: ALL,
+    source: new Set(),
     side: new Set(),
     relationship: new Set(),
     dealStage: new Set(),
     propertyTypes: new Set(),
     tags: new Set(),
     lastActivity: "any",
+    openTasks: "any",
     excludeDoNotCall: false,
-    hasOpenTasks: false,
   };
 }
 
@@ -104,9 +139,9 @@ export function matchesContactFilters(
   f: ContactFilterState,
 ): boolean {
   if (f.assignedTo !== ALL && c.assignedTo !== f.assignedTo) return false;
-  if (f.source !== ALL && c.source !== f.source) return false;
 
   // Multi-select groups: OR within a group, AND across groups.
+  if (f.source.size && !f.source.has(c.source)) return false;
   if (f.side.size && (!c.side || !f.side.has(c.side))) return false;
   if (f.relationship.size && !f.relationship.has(c.relationship)) return false;
   if (f.dealStage.size && (!c.dealStage || !f.dealStage.has(c.dealStage)))
@@ -127,17 +162,11 @@ export function matchesContactFilters(
 
   if (f.excludeDoNotCall && c.doNotCall) return false;
 
-  if (f.lastActivity !== "any") {
-    const age = Date.now() - Date.parse(c.lastTouch);
-    if (f.lastActivity === "over1y") {
-      if (age <= 365 * DAY) return false;
-    } else {
-      const window = LAST_ACTIVITY_WINDOW_MS[f.lastActivity];
-      if (window !== undefined && age > window) return false;
-    }
-  }
+  if (!matchesLastActivity(c.lastContactedAt, f.lastActivity)) return false;
 
-  // `hasOpenTasks` is intentionally not applied yet (visual-only).
+  if (f.openTasks === "has" && c.openTaskCount <= 0) return false;
+  if (f.openTasks === "none" && c.openTaskCount > 0) return false;
+
   return true;
 }
 
@@ -172,12 +201,12 @@ export function contactFilterChips(f: ContactFilterState): ContactFilterChip[] {
       clear: (s) => ({ ...s, assignedTo: ALL }),
     });
   }
-  if (f.source !== ALL) {
+  for (const v of f.source) {
     chips.push({
-      key: "source",
+      key: `source:${v}`,
       group: "Source",
-      value: f.source,
-      clear: (s) => ({ ...s, source: ALL }),
+      value: v,
+      clear: (s) => ({ ...s, source: withoutSetValue(s.source, v) }),
     });
   }
   for (const v of f.side) {
@@ -229,6 +258,14 @@ export function contactFilterChips(f: ContactFilterState): ContactFilterChip[] {
       clear: (s) => ({ ...s, lastActivity: "any" }),
     });
   }
+  if (f.openTasks !== "any") {
+    chips.push({
+      key: "openTasks",
+      group: "Open Tasks",
+      value: f.openTasks === "has" ? "Has open tasks" : "No open tasks",
+      clear: (s) => ({ ...s, openTasks: "any" }),
+    });
+  }
   if (f.excludeDoNotCall) {
     chips.push({
       key: "excludeDoNotCall",
@@ -258,13 +295,14 @@ export function autoDynamicListName(f: ContactFilterState): string {
 /** JSON-safe form of {@link ContactFilterState} for persisting on a list. */
 export interface SerializedContactFilters {
   assignedTo: string;
-  source: string;
+  source: ContactSource[];
   side: DealSide[];
   relationship: RelationshipStage[];
   dealStage: ContactDealStage[];
   propertyTypes: PropertyType[];
   tags: string[];
   lastActivity: LastActivityKey;
+  openTasks: OpenTasksFilter;
   excludeDoNotCall: boolean;
 }
 
@@ -273,13 +311,14 @@ export function serializeContactFilters(
 ): SerializedContactFilters {
   return {
     assignedTo: f.assignedTo,
-    source: f.source,
+    source: [...f.source],
     side: [...f.side],
     relationship: [...f.relationship],
     dealStage: [...f.dealStage],
     propertyTypes: [...f.propertyTypes],
     tags: [...f.tags],
     lastActivity: f.lastActivity,
+    openTasks: f.openTasks,
     excludeDoNotCall: f.excludeDoNotCall,
   };
 }
@@ -289,15 +328,15 @@ export function deserializeContactFilters(
 ): ContactFilterState {
   return {
     assignedTo: s.assignedTo ?? ALL,
-    source: s.source ?? ALL,
+    source: new Set(s.source ?? []),
     side: new Set(s.side ?? []),
     relationship: new Set(s.relationship ?? []),
     dealStage: new Set(s.dealStage ?? []),
     propertyTypes: new Set(s.propertyTypes ?? []),
     tags: new Set(s.tags ?? []),
     lastActivity: s.lastActivity ?? "any",
+    openTasks: s.openTasks ?? "any",
     excludeDoNotCall: s.excludeDoNotCall ?? false,
-    hasOpenTasks: false,
   };
 }
 
@@ -314,9 +353,10 @@ export function filtersEqual(
 ): boolean {
   return (
     a.assignedTo === b.assignedTo &&
-    a.source === b.source &&
     a.lastActivity === b.lastActivity &&
+    a.openTasks === b.openTasks &&
     a.excludeDoNotCall === b.excludeDoNotCall &&
+    setsEqual(a.source, b.source) &&
     setsEqual(a.side, b.side) &&
     setsEqual(a.relationship, b.relationship) &&
     setsEqual(a.dealStage, b.dealStage) &&

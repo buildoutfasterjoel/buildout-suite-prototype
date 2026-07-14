@@ -1,14 +1,5 @@
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import {
-  faSnowflake,
-  faFlag,
-  faClock,
-  faFire,
-  faStar,
-  faSackDollar,
-  faListUl,
-  faFilter,
-} from "@fortawesome/pro-regular-svg-icons";
+import { faListUl, faFilter } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact } from "#/data/types";
 import {
   deserializeContactFilters,
@@ -53,98 +44,13 @@ export interface ContactList {
   predicate: (c: Contact) => boolean;
 }
 
-export const CONTACT_LISTS: ContactList[] = [
-  {
-    id: "cold-prospects",
-    label: "Cold prospects to warm",
-    icon: faSnowflake,
-    iconClass: "text-seagull-700",
-    iconBgClass: "bg-seagull-100",
-    description: "Cold contacts worth an intro touch.",
-    type: "dynamic",
-    createdOn: "2024-05-01",
-    lastUpdated: "2026-06-26",
-    lastUpdatedBy: "Peter Parker",
-    lastActivityDays: 1,
-    pctReached: 50,
-    predicate: (c) => c.relationship === "cold",
-  },
-  {
-    id: "open-follow-up",
-    label: "Has an open follow-up",
-    icon: faFlag,
-    iconClass: "text-harvest-gold-700",
-    iconBgClass: "bg-harvest-gold-100",
-    description: "Contacts with an open inquiry to follow up on.",
-    type: "dynamic",
-    createdOn: "2024-03-15",
-    lastUpdated: "2026-06-20",
-    lastUpdatedBy: "Natasha Romanoff",
-    lastActivityDays: 2,
-    pctReached: 42,
-    predicate: (c) => c.inquiries > 0,
-  },
-  {
-    id: "stale-clients",
-    label: "Clients, haven't reached in 30 days",
-    icon: faClock,
-    iconClass: "text-storm-grey-700",
-    iconBgClass: "bg-storm-grey-100",
-    description: "Past clients you haven't reached recently.",
-    type: "dynamic",
-    createdOn: "2023-11-02",
-    lastUpdated: "2026-05-30",
-    lastUpdatedBy: "Bruce Wayne",
-    lastActivityDays: 5,
-    pctReached: 28,
-    predicate: (c) => c.relationship === "past_client",
-  },
-  {
-    id: "hot-list",
-    label: "Hot List",
-    icon: faFire,
-    iconClass: "text-solid-pink-700",
-    iconBgClass: "bg-solid-pink-100",
-    description: "Active and pitching — your hottest opportunities.",
-    type: "static",
-    createdOn: "2024-01-10",
-    lastUpdated: "2026-06-25",
-    lastUpdatedBy: "Tony Stark",
-    lastActivityDays: 1,
-    pctReached: 76,
-    predicate: (c) => c.relationship === "pitching" || c.relationship === "active",
-  },
-  {
-    id: "a-list",
-    label: "A List",
-    icon: faStar,
-    iconClass: "text-buildout-blue-700",
-    iconBgClass: "bg-buildout-blue-100",
-    description: "Your VIP relationships.",
-    type: "static",
-    createdOn: "2022-08-21",
-    lastUpdated: "2026-04-12",
-    lastUpdatedBy: "Diana Prince",
-    lastActivityDays: 12,
-    pctReached: 88,
-    predicate: (c) => c.tags.includes("VIP"),
-  },
-  {
-    id: "investors",
-    label: "Investors",
-    icon: faSackDollar,
-    iconClass: "text-mountain-meadow-700",
-    iconBgClass: "bg-mountain-meadow-100",
-    description: "Contacts tagged as investors.",
-    type: "static",
-    createdOn: "2023-06-05",
-    lastUpdated: "2026-06-18",
-    lastUpdatedBy: "Steve Rogers",
-    lastActivityDays: 3,
-    pctReached: 64,
-    predicate: (c) => c.tags.includes("Investor"),
-  },
-];
+/**
+ * The pre-defined lists now ship as seeded, editable **dynamic** call lists
+ * (see `seedCallLists()` in `seed.ts`) rather than hardcoded predicates, so
+ * this built-in array is intentionally empty. Kept for the type + consumers
+ * that merge `[...CONTACT_LISTS, ...userLists]`.
+ */
+export const CONTACT_LISTS: ContactList[] = [];
 
 /**
  * A user/AI-created contact "call list". Unlike the built-in {@link ContactList}s

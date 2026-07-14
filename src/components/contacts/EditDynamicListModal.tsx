@@ -8,44 +8,65 @@ import {
   DEFAULT_LIST_COLOR,
   ListColorPicker,
 } from "#/components/contacts/ListColorPicker";
+import type { CallList } from "#/data/contactLists";
+import { ContactFilterFields } from "#/components/contacts/ContactFilterFields";
+import {
+  countActiveContactFilters,
+  deserializeContactFilters,
+  emptyContactFilters,
+  type ContactFilterState,
+} from "#/components/contacts/contactFilterModel";
 
-interface CreateStaticListModalProps {
+interface EditDynamicListModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  contactCount: number;
-  onCreate: (input: {
+  list: CallList;
+  assignees: string[];
+  allTags: string[];
+  onSave: (input: {
     name: string;
     color: string;
     description: string;
+    filters: ContactFilterState;
   }) => void;
 }
 
 const DEFAULT_COLOR = DEFAULT_LIST_COLOR;
 
-export function CreateStaticListModal({
+export function EditDynamicListModal({
   open,
   onOpenChange,
-  contactCount,
-  onCreate,
-}: CreateStaticListModalProps) {
+  list,
+  assignees,
+  allTags,
+  onSave,
+}: EditDynamicListModalProps) {
   const [name, setName] = useState("");
   const [color, setColor] = useState(DEFAULT_COLOR);
   const [description, setDescription] = useState("");
+  const [filters, setFilters] = useState<ContactFilterState>(
+    emptyContactFilters(),
+  );
 
-  // Re-seed the form each time the modal opens.
+  // Seed from the list each time the modal opens.
   useEffect(() => {
     if (open) {
-      setName("New Static List");
-      setColor(DEFAULT_COLOR);
-      setDescription("");
+      setName(list.label);
+      setColor(list.color ?? DEFAULT_COLOR);
+      setDescription(list.description);
+      setFilters(
+        list.filters
+          ? deserializeContactFilters(list.filters)
+          : emptyContactFilters(),
+      );
     }
-  }, [open]);
+  }, [open, list]);
 
-  const canCreate = name.trim().length > 0;
+  const canSave = name.trim().length > 0;
 
-  const handleCreate = () => {
-    if (!canCreate) return;
-    onCreate({ name: name.trim(), color, description: description.trim() });
+  const handleSave = () => {
+    if (!canSave) return;
+    onSave({ name: name.trim(), color, description: description.trim(), filters });
     onOpenChange(false);
   };
 
@@ -58,18 +79,13 @@ export function CreateStaticListModal({
         style={{ maxWidth: "34.375rem" }}
       >
         <Modal.Header>
-          <Modal.Title>New Static List</Modal.Title>
-          <Modal.Description>Create a fixed set of contacts</Modal.Description>
+          <Modal.Title>Edit Dynamic List</Modal.Title>
         </Modal.Header>
 
         <Modal.Body className="d-flex flex-column gap-4">
           <Field>
             <Field.Label>List Name</Field.Label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="New Static List"
-            />
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
 
           <Field>
@@ -90,21 +106,29 @@ export function CreateStaticListModal({
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe who belongs in this list"
             />
           </Field>
+
+          <ContactFilterFields
+            filters={filters}
+            onChange={setFilters}
+            assignees={assignees}
+            allTags={allTags}
+          />
         </Modal.Body>
 
         <Modal.Footer className="d-flex align-items-center">
           <span className="text-muted flex-grow-1">
-            <span className="fw-bold text-body">{contactCount}</span> contacts
-            selected
+            <span className="fw-bold text-body">
+              {countActiveContactFilters(filters)}
+            </span>{" "}
+            filters selected
           </span>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={handleCreate} disabled={!canCreate}>
-            Create Static List
+          <Button variant="primary" onClick={handleSave} disabled={!canSave}>
+            Done
           </Button>
         </Modal.Footer>
       </Modal.Content>
