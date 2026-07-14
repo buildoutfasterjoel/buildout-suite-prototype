@@ -1196,7 +1196,7 @@ export function seedCallLists(): CallList[] {
     },
   ]
 
-  return defs.map((d) => ({
+  const dynamicLists: CallList[] = defs.map((d) => ({
     id: d.id,
     label: d.label,
     description: d.description,
@@ -1207,6 +1207,34 @@ export function seedCallLists(): CallList[] {
     filters: d.filters,
     color: d.color,
   }))
+
+  // Empty static lists — placeholders the user curates by hand.
+  const staticLists: CallList[] = [
+    {
+      id: 'seed-a-list-owners',
+      label: 'A-List Owners',
+      description:
+        'My best owner relationships. People with real portfolios who I expect to do business with again.',
+      createdOn: '2024-05-08',
+      contactIds: [],
+      source: 'user',
+      type: 'static',
+      color: '#e71e9b',
+    },
+    {
+      id: 'seed-referral-sources',
+      label: 'Referral Sources',
+      description:
+        'My attorneys, lenders, property managers, and other professionals who send me business. Not buyers or sellers themselves, just the people in my network who open doors.',
+      createdOn: '2024-05-22',
+      contactIds: [],
+      source: 'user',
+      type: 'static',
+      color: '#ffc107',
+    },
+  ]
+
+  return [...dynamicLists, ...staticLists]
 }
 
 // ── Top-level export ──────────────────────────────────────────────────────────

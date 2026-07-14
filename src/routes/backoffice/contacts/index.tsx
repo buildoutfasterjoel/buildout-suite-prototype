@@ -4,6 +4,7 @@ import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Dialog } from "@buildoutinc/blueprint-react/ui/Dialog";
+import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
@@ -16,7 +17,9 @@ import {
   faEnvelope,
   faPhone,
   faPlus,
+  faPen,
   faTrash,
+  faUsers,
 } from "@fortawesome/pro-regular-svg-icons";
 import { getStore } from "#/data/store";
 import { useDataStore } from "#/data/dataStore";
@@ -26,12 +29,16 @@ import {
   createDynamicList,
   removeCallList,
   removeContactsFromCallList,
+  updateCallList,
   updateCallListFilters,
 } from "#/data/actions";
 import { ContactsTable } from "#/components/contacts/ContactsTable";
 import { ContactSelectionBar } from "#/components/contacts/ContactSelectionBar";
 import { CreateStaticListModal } from "#/components/contacts/CreateStaticListModal";
 import { AddToListModal } from "#/components/contacts/AddToListModal";
+import { AddContactsToListModal } from "#/components/contacts/AddContactsToListModal";
+import { EditDynamicListModal } from "#/components/contacts/EditDynamicListModal";
+import { EditStaticListModal } from "#/components/contacts/EditStaticListModal";
 import { ContactListsSidebar } from "#/components/contacts/ContactListsSidebar";
 import { ContactListsOverview } from "#/components/contacts/ContactListsOverview";
 import {
@@ -52,6 +59,7 @@ import {
   emptyContactFilters,
   filtersEqual,
   matchesContactFilters,
+  type ContactFilterState,
 } from "#/components/contacts/contactFilterModel";
 
 export const Route = createFileRoute("/backoffice/contacts/")({
@@ -78,6 +86,8 @@ function PeoplePage() {
   const [showCreateList, setShowCreateList] = useState(false);
   const [showCreateStaticList, setShowCreateStaticList] = useState(false);
   const [showAddToList, setShowAddToList] = useState(false);
+  const [showAddContacts, setShowAddContacts] = useState(false);
+  const [showEditList, setShowEditList] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState(emptyContactFilters());
@@ -222,6 +232,42 @@ function PeoplePage() {
     removeContactsFromCallList(activeListId, [...selected]);
     clearSelection();
   };
+  const handleAddContactsToActiveList = (ids: string[]) =>
+    addContactsToCallList(activeListId, ids);
+
+  const handleEditDynamic = (input: {
+    name: string;
+    color: string;
+    description: string;
+    filters: ContactFilterState;
+  }) => {
+    updateCallList(activeListId, {
+      label: input.name,
+      color: input.color,
+      description: input.description,
+    });
+    updateCallListFilters(activeListId, input.filters);
+    // Keep the live view in sync with the saved criteria (un-dirty).
+    setFilters(input.filters);
+  };
+
+  const handleEditStatic = (input: {
+    name: string;
+    color: string;
+    description: string;
+    contactIds: string[];
+  }) => {
+    updateCallList(activeListId, {
+      label: input.name,
+      color: input.color,
+      description: input.description,
+      contactIds: input.contactIds,
+    });
+  };
+
+  // A static list with no members yet — shows a "search & add" empty state.
+  const emptyStaticList =
+    isStaticList && (activeCallList?.contactIds.length ?? 0) === 0;
 
   const filtersActive =
     activeListId !== ALL_CONTACTS_ID ||
@@ -338,31 +384,42 @@ function PeoplePage() {
                     )}
                 </div>
                 {(isDynamicList || isStaticList) && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    aria-label="Delete list"
-                    onClick={() => setShowDeleteConfirm(true)}
-                  >
-                    <FontAwesomeIcon icon={faTrash} />
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowEditList(true)}
+                    >
+                      <FontAwesomeIcon icon={faPen} />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      aria-label="Delete list"
+                      onClick={() => setShowDeleteConfirm(true)}
+                    >
+                      <FontAwesomeIcon icon={faTrash} />
+                    </Button>
+                  </>
                 )}
-                <DropdownMenu>
-                  <DropdownMenu.Trigger
-                    render={
-                      <Button variant="primary">
-                        <FontAwesomeIcon icon={faPlus} />
-                        Add Contacts
-                        <FontAwesomeIcon icon={faCaretDown} />
-                      </Button>
-                    }
-                  />
-                  <DropdownMenu.Content align="end">
-                    <DropdownMenu.Item>New Contact</DropdownMenu.Item>
-                    <DropdownMenu.Item>Import Contacts</DropdownMenu.Item>
-                    <DropdownMenu.Item>Export Contacts</DropdownMenu.Item>
-                  </DropdownMenu.Content>
-                </DropdownMenu>
+                {activeListId === ALL_CONTACTS_ID && (
+                  <DropdownMenu>
+                    <DropdownMenu.Trigger
+                      render={
+                        <Button variant="primary">
+                          <FontAwesomeIcon icon={faPlus} />
+                          Add Contacts
+                          <FontAwesomeIcon icon={faCaretDown} />
+                        </Button>
+                      }
+                    />
+                    <DropdownMenu.Content align="end">
+                      <DropdownMenu.Item>New Contact</DropdownMenu.Item>
+                      <DropdownMenu.Item>Import Contacts</DropdownMenu.Item>
+                      <DropdownMenu.Item>Export Contacts</DropdownMenu.Item>
+                    </DropdownMenu.Content>
+                  </DropdownMenu>
+                )}
               </div>
 
               {/* Toolbar */}
@@ -474,6 +531,26 @@ function PeoplePage() {
                 onAdd={handleAddToList}
               />
 
+              {activeCallList &&
+                (isDynamicList ? (
+                  <EditDynamicListModal
+                    open={showEditList}
+                    onOpenChange={setShowEditList}
+                    list={activeCallList}
+                    assignees={assignees}
+                    allTags={allTags}
+                    onSave={handleEditDynamic}
+                  />
+                ) : (
+                  <EditStaticListModal
+                    open={showEditList}
+                    onOpenChange={setShowEditList}
+                    list={activeCallList}
+                    contacts={contacts}
+                    onSave={handleEditStatic}
+                  />
+                ))}
+
               <Dialog
                 open={showDeleteConfirm}
                 onOpenChange={setShowDeleteConfirm}
@@ -495,21 +572,52 @@ function PeoplePage() {
                 </Dialog.Content>
               </Dialog>
 
-              {/* Table */}
-              <ContactsTable
-                contacts={paged}
-                filtersActive={filtersActive}
-                sortDir={sortDir}
-                onToggleSort={() =>
-                  setSortDir((d) => (d === "asc" ? "desc" : "asc"))
-                }
-                selected={selected}
-                onToggleOne={toggleOne}
-                onToggleAll={(checked) => toggleAll(paged, checked)}
+              <AddContactsToListModal
+                open={showAddContacts}
+                onOpenChange={setShowAddContacts}
+                listLabel={heading}
+                contacts={contacts}
+                existingIds={new Set(activeCallList?.contactIds ?? [])}
+                onAdd={handleAddContactsToActiveList}
               />
 
-              {filtered.length > 0 && (
-                <Pagination className="d-flex justify-content-center">
+              {emptyStaticList ? (
+                /* Empty static list — invite the user to search & add contacts. */
+                <Empty className="py-6">
+                  <Empty.Media>
+                    <FontAwesomeIcon icon={faUsers} aria-label="Empty list" />
+                  </Empty.Media>
+                  <Empty.Content>
+                    <Empty.Title>This list is empty</Empty.Title>
+                    Add contacts to “{heading}” to start building it out.
+                  </Empty.Content>
+                  <Empty.Actions>
+                    <Button
+                      variant="primary"
+                      onClick={() => setShowAddContacts(true)}
+                    >
+                      <FontAwesomeIcon icon={faPlus} />
+                      Add Contacts
+                    </Button>
+                  </Empty.Actions>
+                </Empty>
+              ) : (
+                <>
+                  {/* Table */}
+                  <ContactsTable
+                    contacts={paged}
+                    filtersActive={filtersActive}
+                    sortDir={sortDir}
+                    onToggleSort={() =>
+                      setSortDir((d) => (d === "asc" ? "desc" : "asc"))
+                    }
+                    selected={selected}
+                    onToggleOne={toggleOne}
+                    onToggleAll={(checked) => toggleAll(paged, checked)}
+                  />
+
+                  {filtered.length > 0 && (
+                    <Pagination className="d-flex justify-content-center">
                   <Pagination.Content>
                     <Pagination.Item>
                       <Pagination.Previous
@@ -547,8 +655,10 @@ function PeoplePage() {
                         }}
                       />
                     </Pagination.Item>
-                  </Pagination.Content>
-                </Pagination>
+                      </Pagination.Content>
+                    </Pagination>
+                  )}
+                </>
               )}
             </>
           )}
