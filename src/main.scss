@@ -106,3 +106,42 @@
     }
   }
 }
+
+// Contacts Filters flyout: a left-anchored slide-over. Widen past the default
+// offcanvas, tint the header, round the trailing edge, and give the clickable
+// checkbox/radio rows a full-width hover + two-column layout to match the design.
+.contact-filters {
+  // Blueprint's offcanvas sets `width` directly rather than reading the
+  // Bootstrap var, so pin the width with matching specificity (the element
+  // also carries `.offcanvas-start`). Cap on small screens.
+  --bs-offcanvas-width: 30rem;
+  border-top-right-radius: var(--bp-border-radius-xl, 0.75rem);
+  border-bottom-right-radius: var(--bp-border-radius-xl, 0.75rem);
+
+  &.offcanvas-start {
+    width: 30rem;
+    max-width: 90vw;
+  }
+
+  .contact-filters__header {
+    background: var(--color-purple-heart-50, #f9f5ff);
+  }
+
+  // Two-column wrap for multi-select checkbox groups.
+  .contact-filters__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 0.5rem;
+  }
+
+  // Full-row clickable option with a clear hover state.
+  .contact-filters__row {
+    cursor: pointer;
+    min-height: 32px;
+    transition: background-color 0.12s ease-in-out;
+
+    &:hover {
+      background: var(--color-storm-grey-100, #f1f3f7);
+    }
+  }
+}

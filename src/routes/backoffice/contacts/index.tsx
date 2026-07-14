@@ -4,7 +4,6 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
-import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { Pagination } from "@buildoutinc/blueprint-react/ui/Pagination";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -26,16 +25,13 @@ import {
   ALL_CONTACTS_ID,
   listPredicate,
 } from "#/data/contactLists";
+import { contactFullName } from "#/components/contacts/contactDisplay";
+import { ContactFilters } from "#/components/contacts/ContactFilters";
 import {
-  RELATIONSHIP_STAGES,
-  CONTACT_SOURCES,
-  DEAL_SIDES,
-  CONTACT_DEAL_STAGES,
-  RELATIONSHIP_DISPLAY,
-  SIDE_DISPLAY,
-  DEAL_STAGE_DISPLAY,
-  contactFullName,
-} from "#/components/contacts/contactDisplay";
+  countActiveContactFilters,
+  emptyContactFilters,
+  matchesContactFilters,
+} from "#/components/contacts/contactFilterModel";
 
 export const Route = createFileRoute("/backoffice/contacts/")({
   component: PeoplePage,
@@ -44,29 +40,7 @@ export const Route = createFileRoute("/backoffice/contacts/")({
   }),
 });
 
-const ALL = "all";
 const PAGE_SIZE = 25;
-
-const SOURCE_FILTER_LABELS: Record<string, string> = {
-  [ALL]: "All Sources",
-  ...Object.fromEntries(CONTACT_SOURCES.map((s) => [s, s])),
-};
-const RELATIONSHIP_FILTER_LABELS: Record<string, string> = {
-  [ALL]: "All Relationships",
-  ...Object.fromEntries(
-    RELATIONSHIP_STAGES.map((s) => [s, RELATIONSHIP_DISPLAY[s].label]),
-  ),
-};
-const SIDE_FILTER_LABELS: Record<string, string> = {
-  [ALL]: "All Sides",
-  ...Object.fromEntries(DEAL_SIDES.map((s) => [s, SIDE_DISPLAY[s].label])),
-};
-const DEAL_STAGE_FILTER_LABELS: Record<string, string> = {
-  [ALL]: "All Deal Stages",
-  ...Object.fromEntries(
-    CONTACT_DEAL_STAGES.map((s) => [s, DEAL_STAGE_DISPLAY[s].label]),
-  ),
-};
 
 function PeoplePage() {
   // Read the full contact list directly from the live client store so mutations
@@ -81,23 +55,19 @@ function PeoplePage() {
   const [activeListId, setActiveListId] = useState(ALL_CONTACTS_ID);
   const [showFilters, setShowFilters] = useState(false);
   const [search, setSearch] = useState("");
-  const [source, setSource] = useState(ALL);
-  const [relationship, setRelationship] = useState(ALL);
-  const [side, setSide] = useState(ALL);
-  const [dealStage, setDealStage] = useState(ALL);
-  const [assignee, setAssignee] = useState(ALL);
+  const [filters, setFilters] = useState(emptyContactFilters());
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
 
-  // Assignee options come from the data so the filter always matches reality.
+  // Assignee + tag options come from the data so the filters match reality.
   const assignees = useMemo(
     () => Array.from(new Set(contacts.map((c) => c.assignedTo))).sort(),
     [contacts],
   );
-  const ASSIGNEE_FILTER_LABELS: Record<string, string> = {
-    [ALL]: "All Assignees",
-    ...Object.fromEntries(assignees.map((a) => [a, a])),
-  };
+  const allTags = useMemo(
+    () => Array.from(new Set(contacts.flatMap((c) => c.tags))).sort(),
+    [contacts],
+  );
 
   const activeList =
     CONTACT_LISTS.find((l) => l.id === activeListId) ??
@@ -129,18 +99,14 @@ function PeoplePage() {
   const filtersActive =
     activeListId !== ALL_CONTACTS_ID ||
     search.trim() !== "" ||
-    [source, relationship, side, dealStage, assignee].some((v) => v !== ALL);
+    countActiveContactFilters(filters) > 0;
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     const inList = listPredicate(activeListId, userLists);
     const rows = contacts.filter((c) => {
       if (!inList(c)) return false;
-      if (source !== ALL && c.source !== source) return false;
-      if (relationship !== ALL && c.relationship !== relationship) return false;
-      if (side !== ALL && c.side !== side) return false;
-      if (dealStage !== ALL && c.dealStage !== dealStage) return false;
-      if (assignee !== ALL && c.assignedTo !== assignee) return false;
+      if (!matchesContactFilters(c, filters)) return false;
       if (q) {
         const haystack =
           `${contactFullName(c)} ${c.email} ${c.company} ${c.phone}`.toLowerCase();
@@ -154,32 +120,12 @@ function PeoplePage() {
       return sortDir === "asc" ? cmp : -cmp;
     });
     return rows;
-  }, [
-    contacts,
-    userLists,
-    activeListId,
-    source,
-    relationship,
-    side,
-    dealStage,
-    assignee,
-    search,
-    sortDir,
-  ]);
+  }, [contacts, userLists, activeListId, filters, search, sortDir]);
 
   // Any change to the active view resets to the first page.
   useEffect(() => {
     setPage(1);
-  }, [
-    activeListId,
-    source,
-    relationship,
-    side,
-    dealStage,
-    assignee,
-    search,
-    sortDir,
-  ]);
+  }, [activeListId, filters, search, sortDir]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, pageCount);
@@ -265,7 +211,11 @@ function PeoplePage() {
                     </InputGroup>
                   </div>
                   <Button
-                    variant={showFilters ? "primary" : "outline"}
+                    variant={
+                      showFilters || countActiveContactFilters(filters) > 0
+                        ? "primary"
+                        : "outline"
+                    }
                     onClick={() => setShowFilters((v) => !v)}
                     aria-pressed={showFilters}
                   >
@@ -292,103 +242,16 @@ function PeoplePage() {
                   </div>
                 </div>
 
-                {/* Filters */}
-                {showFilters && (
-                  <div className="d-flex align-items-center gap-2 flex-wrap">
-                    <Select
-                      value={source}
-                      onValueChange={(v) => setSource(v ?? ALL)}
-                    >
-                      <Select.Trigger className="w-auto">
-                        <Select.Value>
-                          {(v) => SOURCE_FILTER_LABELS[v ?? ALL]}
-                        </Select.Value>
-                      </Select.Trigger>
-                      <Select.Content>
-                        <Select.Item value={ALL}>All Sources</Select.Item>
-                        {CONTACT_SOURCES.map((s) => (
-                          <Select.Item key={s} value={s}>
-                            {s}
-                          </Select.Item>
-                        ))}
-                      </Select.Content>
-                    </Select>
-
-                    <Select
-                      value={relationship}
-                      onValueChange={(v) => setRelationship(v ?? ALL)}
-                    >
-                      <Select.Trigger className="w-auto">
-                        <Select.Value>
-                          {(v) => RELATIONSHIP_FILTER_LABELS[v ?? ALL]}
-                        </Select.Value>
-                      </Select.Trigger>
-                      <Select.Content>
-                        <Select.Item value={ALL}>All Relationships</Select.Item>
-                        {RELATIONSHIP_STAGES.map((s) => (
-                          <Select.Item key={s} value={s}>
-                            {RELATIONSHIP_DISPLAY[s].label}
-                          </Select.Item>
-                        ))}
-                      </Select.Content>
-                    </Select>
-
-                    <Select value={side} onValueChange={(v) => setSide(v ?? ALL)}>
-                      <Select.Trigger className="w-auto">
-                        <Select.Value>
-                          {(v) => SIDE_FILTER_LABELS[v ?? ALL]}
-                        </Select.Value>
-                      </Select.Trigger>
-                      <Select.Content>
-                        <Select.Item value={ALL}>All Sides</Select.Item>
-                        {DEAL_SIDES.map((s) => (
-                          <Select.Item key={s} value={s}>
-                            {SIDE_DISPLAY[s].label}
-                          </Select.Item>
-                        ))}
-                      </Select.Content>
-                    </Select>
-
-                    <Select
-                      value={dealStage}
-                      onValueChange={(v) => setDealStage(v ?? ALL)}
-                    >
-                      <Select.Trigger className="w-auto">
-                        <Select.Value>
-                          {(v) => DEAL_STAGE_FILTER_LABELS[v ?? ALL]}
-                        </Select.Value>
-                      </Select.Trigger>
-                      <Select.Content>
-                        <Select.Item value={ALL}>All Deal Stages</Select.Item>
-                        {CONTACT_DEAL_STAGES.map((s) => (
-                          <Select.Item key={s} value={s}>
-                            {DEAL_STAGE_DISPLAY[s].label}
-                          </Select.Item>
-                        ))}
-                      </Select.Content>
-                    </Select>
-
-                    <Select
-                      value={assignee}
-                      onValueChange={(v) => setAssignee(v ?? ALL)}
-                    >
-                      <Select.Trigger className="w-auto">
-                        <Select.Value>
-                          {(v) => ASSIGNEE_FILTER_LABELS[v ?? ALL]}
-                        </Select.Value>
-                      </Select.Trigger>
-                      <Select.Content>
-                        <Select.Item value={ALL}>All Assignees</Select.Item>
-                        {assignees.map((a) => (
-                          <Select.Item key={a} value={a}>
-                            {a}
-                          </Select.Item>
-                        ))}
-                      </Select.Content>
-                    </Select>
-                  </div>
-                )}
               </div>
+
+              <ContactFilters
+                open={showFilters}
+                onOpenChange={setShowFilters}
+                filters={filters}
+                onChange={setFilters}
+                assignees={assignees}
+                allTags={allTags}
+              />
 
               {/* Table */}
               <ContactsTable
