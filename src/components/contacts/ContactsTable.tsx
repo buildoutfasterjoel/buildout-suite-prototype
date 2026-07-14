@@ -23,6 +23,7 @@ import {
   contactFullName,
   contactInitials,
 } from "#/components/contacts/contactDisplay";
+import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
 
 /**
  * Blueprint's `.sticky-cell` hardcodes `left: 0`, so freezing the checkbox +
@@ -156,7 +157,16 @@ export function ContactsTable({
           return (
             <Table.Row
               key={contact.id}
-              className={selected.has(contact.id) ? "table-active" : undefined}
+              className={`contacts-row${
+                selected.has(contact.id) ? " table-active" : ""
+              }`}
+              onClick={(e) => {
+                if (shouldIgnoreRowClick(e)) return;
+                void navigate({
+                  to: "/backoffice/contacts/$contactId",
+                  params: { contactId: contact.id },
+                });
+              }}
             >
               <Table.Cell
                 sticky
@@ -188,7 +198,7 @@ export function ContactsTable({
                       <Link
                         to="/backoffice/contacts/$contactId"
                         params={{ contactId: contact.id }}
-                        className="fw-semibold text-reset text-decoration-none"
+                        className="row-link fw-semibold text-reset text-decoration-none"
                       >
                         {fullName}
                       </Link>

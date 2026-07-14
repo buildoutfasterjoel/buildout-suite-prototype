@@ -9,6 +9,7 @@ import {
   faArrowUpArrowDown,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact } from "#/data/types";
+import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
 import {
   CONTACT_LISTS,
   callListToContactList,
@@ -168,13 +169,20 @@ export function ContactListsOverview({
       </Table.Header>
       <Table.Body>
         {rows.map((list) => (
-          <Table.Row key={list.id}>
+          <Table.Row
+            key={list.id}
+            className="list-row"
+            onClick={(e) => {
+              if (shouldIgnoreRowClick(e)) return;
+              onOpenList(list.id);
+            }}
+          >
             {/* List */}
             <Table.Cell>
               <button
                 type="button"
                 onClick={() => onOpenList(list.id)}
-                className="btn btn-link p-0 text-reset text-decoration-none d-inline-flex align-items-center gap-2 fw-semibold text-nowrap"
+                className="row-link btn btn-link p-0 text-reset text-decoration-none d-inline-flex align-items-center gap-2 fw-semibold text-nowrap"
               >
                 <FontAwesomeIcon
                   icon={list.icon}
