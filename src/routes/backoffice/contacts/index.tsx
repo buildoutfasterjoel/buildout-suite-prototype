@@ -43,6 +43,7 @@ import { EditDynamicListModal } from "#/components/contacts/EditDynamicListModal
 import { EditStaticListModal } from "#/components/contacts/EditStaticListModal";
 import { ContactListsSidebar } from "#/components/contacts/ContactListsSidebar";
 import { ContactListsOverview } from "#/components/contacts/ContactListsOverview";
+import { QuickPipelineFilters } from "#/components/contacts/QuickPipelineFilters";
 import {
   CONTACT_LISTS,
   ALL_CONTACTS_ID,
@@ -430,6 +431,17 @@ function PeoplePage() {
                   </DropdownMenu>
                 )}
               </div>
+
+              {/* Quick pipeline filters — an entry point on All Contacts,
+                  shown only until any filter is set (then hidden until
+                  filters are cleared again). */}
+              {activeListId === ALL_CONTACTS_ID &&
+                countActiveContactFilters(filters) === 0 && (
+                  <QuickPipelineFilters
+                    contacts={contacts}
+                    onSelect={setFilters}
+                  />
+                )}
 
               {/* Toolbar */}
               <div className="d-flex flex-column gap-3">
