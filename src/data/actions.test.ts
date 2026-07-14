@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { useDataStore } from './dataStore'
 import {
   createCallList,
+  createContact,
   createDeal,
   createEmailDraft,
   linkContactToDeal,
@@ -58,5 +59,16 @@ describe('actions', () => {
     expect(updated?.sellerContactIds).not.toContain(contact.id)
     expect(updated?.buyerContactIds).not.toContain(contact.id)
     expect(updated?.otherContactIds).not.toContain(contact.id)
+  })
+
+  it('createContact inserts a lightweight contact into the store', () => {
+    const before = useDataStore.getState().contacts.size
+    const { contact } = createContact({ firstName: 'Dana', lastName: 'Reed', company: 'Reed Holdings' })
+    const stored = useDataStore.getState().contacts.get(contact.id)
+    expect(useDataStore.getState().contacts.size).toBe(before + 1)
+    expect(stored?.firstName).toBe('Dana')
+    expect(stored?.company).toBe('Reed Holdings')
+    expect(stored?.role).toBe('owner') // default role
+    expect(stored?.propertyIds).toEqual([])
   })
 })

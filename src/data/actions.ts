@@ -6,7 +6,7 @@ import {
   serializeContactFilters,
   type ContactFilterState,
 } from '#/components/contacts/contactFilterModel'
-import type { Listing, PropertyStatus } from './types'
+import type { Contact, ContactRole, Listing, PropertyStatus } from './types'
 
 let _callListSeq = 0
 
@@ -211,4 +211,56 @@ export function unlinkContactFromDeal(dealId: string, contactId: string): { deal
       otherContactIds: l.otherContactIds.filter((id) => id !== contactId),
     })),
   }
+}
+
+export interface NewContactInput {
+  firstName: string
+  lastName: string
+  company?: string
+  email?: string
+  phone?: string
+  role?: ContactRole
+  propertyIds?: string[]
+}
+
+/**
+ * Create a lightweight CRM contact — enough to link as a deal party from the
+ * create-deal flow when no existing contact matches. Non-essential CRM fields
+ * default to blank/neutral values; the broker can enrich later.
+ */
+export function createContact(input: NewContactInput): { contact: Contact } {
+  const now = new Date().toISOString()
+  const contact: Contact = {
+    id: crypto.randomUUID(),
+    firstName: input.firstName.trim(),
+    lastName: input.lastName.trim(),
+    email: input.email ?? '',
+    phone: input.phone ?? '',
+    company: input.company ?? '',
+    role: input.role ?? 'owner',
+    propertyIds: input.propertyIds ?? [],
+    assignedTo: 'You',
+    source: 'Referral',
+    relationship: 'active',
+    side: null,
+    dealStage: null,
+    inquiries: 0,
+    phoneStatus: 'unknown',
+    doNotCall: false,
+    title: '',
+    createdAt: now,
+    lastTouch: 'Added manually',
+    street: '',
+    city: '',
+    state: '',
+    zip: '',
+    tags: [],
+  }
+  useDataStore.setState((s) => {
+    const contacts = new Map(s.contacts)
+    contacts.set(contact.id, contact)
+    return { contacts }
+  })
+  useDataStore.getState().persist()
+  return { contact }
 }
