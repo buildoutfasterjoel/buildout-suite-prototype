@@ -1,11 +1,10 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowRotateLeft,
-  faBookmark,
   faCaretDown,
+  faFloppyDisk,
   faXmark,
 } from "@fortawesome/pro-regular-svg-icons";
-import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import {
@@ -48,34 +47,31 @@ export function ContactFilterBar({
   if (chips.length === 0 && !(context === "dynamic" && dirty)) return null;
 
   return (
-    <div className="d-flex align-items-center gap-2 flex-wrap">
+    <div className="contact-filter-bar d-flex align-items-center gap-2 flex-wrap">
       {chips.map((chip) => (
-        <Badge
-          key={chip.key}
-          variant="secondary"
-          appearance="muted"
-          className="d-inline-flex align-items-center gap-1"
-        >
-          <span className="text-muted">{chip.group}:</span> {chip.value}
+        <span key={chip.key} className="contact-chip">
+          <span className="contact-chip__label">
+            {chip.group}: {chip.value}
+          </span>
           <button
             type="button"
-            className="btn btn-link p-0 border-0 d-inline-flex text-reset"
+            className="contact-chip__remove"
             aria-label={`Remove ${chip.group}: ${chip.value}`}
             onClick={() => onChange(chip.clear(filters))}
           >
-            <FontAwesomeIcon icon={faXmark} className="fs-small" />
+            <FontAwesomeIcon icon={faXmark} />
           </button>
-        </Badge>
+        </span>
       ))}
 
       {/* All Contacts + active filters → save the set as a new dynamic list. */}
       {context === "all" && chips.length > 0 && (
         <div className="d-flex align-items-center gap-2 ms-1">
-          <Button variant="primary" onClick={onSaveDynamic}>
-            <FontAwesomeIcon icon={faBookmark} />
+          <Button variant="primary" size="sm" onClick={onSaveDynamic}>
+            <FontAwesomeIcon icon={faFloppyDisk} />
             Save Dynamic List ({filteredCount})
           </Button>
-          <Button variant="ghost" onClick={onClear}>
+          <Button variant="ghost" size="sm" onClick={onClear}>
             <FontAwesomeIcon icon={faXmark} />
             Clear Filters
           </Button>
@@ -88,9 +84,11 @@ export function ContactFilterBar({
           <div className="d-inline-flex">
             <Button
               variant="primary"
+              size="sm"
               onClick={onSaveFilters}
               className="rounded-end-0"
             >
+              <FontAwesomeIcon icon={faFloppyDisk} />
               Save Filters
             </Button>
             <DropdownMenu>
@@ -98,7 +96,7 @@ export function ContactFilterBar({
                 render={
                   <Button
                     variant="primary"
-                    size="icon"
+                    size="icon-sm"
                     aria-label="More save options"
                     className="rounded-start-0 border-start-0"
                   >
@@ -113,7 +111,7 @@ export function ContactFilterBar({
               </DropdownMenu.Content>
             </DropdownMenu>
           </div>
-          <Button variant="ghost" onClick={onRevert}>
+          <Button variant="ghost" size="sm" onClick={onRevert}>
             <FontAwesomeIcon icon={faArrowRotateLeft} />
             Revert
           </Button>
@@ -122,7 +120,7 @@ export function ContactFilterBar({
 
       {/* Built-in/static list with ad-hoc filters → clear only. */}
       {context === "other" && chips.length > 0 && (
-        <Button variant="ghost" onClick={onClear} className="ms-1">
+        <Button variant="ghost" size="sm" onClick={onClear} className="ms-1">
           <FontAwesomeIcon icon={faXmark} />
           Clear Filters
         </Button>

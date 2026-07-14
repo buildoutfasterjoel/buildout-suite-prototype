@@ -302,11 +302,7 @@ function PeoplePage() {
                     </InputGroup>
                   </div>
                   <Button
-                    variant={
-                      showFilters || countActiveContactFilters(filters) > 0
-                        ? "primary"
-                        : "outline"
-                    }
+                    variant="outline"
                     onClick={() => setShowFilters((v) => !v)}
                     aria-pressed={showFilters}
                   >
