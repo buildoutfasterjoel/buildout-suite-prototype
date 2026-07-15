@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
@@ -23,17 +22,19 @@ import {
 } from "./propertyDisplay";
 import { AvatarGroup } from "./AvatarGroup";
 import { SyndicationStatus } from "#/components/listings/SyndicationStatus";
+import { useStageGate } from "#/components/deals/useStageGate";
 
 /**
  * Full-bleed page header for a listing (which is its deal, 1:1) — identity on the
- * left, the unified lifecycle stage selector on the right. Stage is local-only.
+ * left, the unified lifecycle stage selector on the right. Selecting a new stage
+ * opens the stage gate; the Select is bound to the live status so a cancelled
+ * gate auto-reverts.
  */
 export function PropertyDetailHeader({ listing }: { listing: Listing }) {
   const seed = hash(listing.id);
   const refId = getRefId(listing.id);
   const property = getProperty(listing.propertyId);
   const address = `${property?.street}, ${property?.city}, ${property?.state} ${property?.zip}`;
-  const [stage, setStage] = useState<ListingStage>(listing.status);
 
   return (
     <div className="bg-card border-bottom">
@@ -89,8 +90,14 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
           {/* Actions + stage */}
           <div className="d-flex align-items-cente gap-2 flex-shrink-0">
             <Select
-              value={stage}
-              onValueChange={(v) => v && setStage(v as ListingStage)}
+              value={listing.status}
+              onValueChange={(v) => {
+                if (v && v !== listing.status) {
+                  useStageGate
+                    .getState()
+                    .openGate(listing.id, v as ListingStage);
+                }
+              }}
             >
               <Select.Trigger style={{ minWidth: 168 }}>
                 <span className="d-inline-flex align-items-center gap-2">
@@ -99,7 +106,7 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
                     style={{
                       width: 8,
                       height: 8,
-                      backgroundColor: STATUS_COLORS[stage],
+                      backgroundColor: STATUS_COLORS[listing.status],
                     }}
                   />
                   <Select.Value>
