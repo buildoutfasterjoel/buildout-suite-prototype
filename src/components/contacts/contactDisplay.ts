@@ -81,6 +81,15 @@ export const SIDE_DISPLAY: Record<DealSide, { label: string; pillClass: string }
 };
 
 /**
+ * Deal-side badge colors (hex of Blueprint family tokens), per Figma — used on
+ * the deal and property cards. Seller = buildout-blue, Buyer = mountain-meadow.
+ */
+export const SIDE_BADGE_COLORS: Record<DealSide, { bg: string; text: string }> = {
+  seller: { bg: "#dcebfd", text: "#182753" }, // buildout-blue 100 / 950
+  buyer: { bg: "#cdfee5", text: "#003024" }, // mountain-meadow 100 / 950
+};
+
+/**
  * Deal-stage display: soft `pillClass` (used in the detail views) plus a
  * `dotClass` for the People table, which renders a colored dot + label.
  */

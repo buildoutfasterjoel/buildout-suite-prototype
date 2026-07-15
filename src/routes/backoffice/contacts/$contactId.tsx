@@ -63,7 +63,7 @@ function ContactDetailPage() {
       <div className="d-flex gap-4 flex-grow-1 overflow-hidden">
         <div
           className="flex-shrink-0 h-100 overflow-auto"
-          style={{ width: 360 }}
+          style={{ width: 380 }}
         >
           <ContactOverviewColumn contact={contact} deals={deals} />
         </div>
@@ -72,7 +72,7 @@ function ContactDetailPage() {
         </div>
         <div
           className="flex-shrink-0 h-100 overflow-hidden"
-          style={{ width: 340 }}
+          style={{ width: 380 }}
         >
           <ContactTasksPanel contact={contact} openTaskCount={openTaskCount} />
         </div>

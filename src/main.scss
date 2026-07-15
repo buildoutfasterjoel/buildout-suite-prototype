@@ -316,6 +316,15 @@
     0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
+// The expanded "Contact Details" panel in the hero: a tinted, bordered, rounded
+// container that sets the details apart from the white card behind it.
+.contact-details-panel {
+  background: var(--color-storm-grey-50, #f6f7f9);
+  border: 1px solid var(--color-storm-grey-100, #eceef2);
+  border-radius: var(--bp-border-radius-lg, 8px);
+  padding: 12px;
+}
+
 // The per-section action button (e.g. "Add"), overlaid at the header's right.
 // z-index must beat Bootstrap's `.accordion-button:not(.collapsed)` (z-index: 3),
 // which otherwise paints the expanded header over this button and hides it.

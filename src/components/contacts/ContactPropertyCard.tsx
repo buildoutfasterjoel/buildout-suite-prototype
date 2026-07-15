@@ -5,7 +5,10 @@ import { faLink } from "@fortawesome/pro-regular-svg-icons";
 import type { PropertyStatus } from "#/data/types";
 import { getListing, getProperty } from "#/data/store";
 import { TYPE_LABELS, formatPrice } from "#/components/properties/propertyDisplay";
-import { SIDE_DISPLAY } from "#/components/contacts/contactDisplay";
+import {
+  SIDE_DISPLAY,
+  SIDE_BADGE_COLORS,
+} from "#/components/contacts/contactDisplay";
 import { STAGE_CHIP_COLORS } from "#/components/deals/DealStageChip";
 import { STATUS_LABELS } from "#/components/properties/propertyDisplay";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
@@ -69,7 +72,11 @@ export function ContactPropertyCard({ listingId }: { listingId: string }) {
         </div>
       </div>
       <div className="d-flex flex-wrap align-items-center gap-2">
-        <Badge variant="secondary" appearance="muted">
+        <Badge
+          variant="secondary"
+          appearance="muted"
+          style={{ backgroundColor: "#eceef2" }}
+        >
           Owner
         </Badge>
         {hasActiveDeal && (
@@ -94,7 +101,15 @@ export function ContactPropertyCard({ listingId }: { listingId: string }) {
             Deal
           </button>
         )}
-        <Badge variant="secondary">{side.label}</Badge>
+        <Badge
+          variant="secondary"
+          style={{
+            backgroundColor: SIDE_BADGE_COLORS[listing.dealSide].bg,
+            color: SIDE_BADGE_COLORS[listing.dealSide].text,
+          }}
+        >
+          {side.label}
+        </Badge>
       </div>
     </div>
   );

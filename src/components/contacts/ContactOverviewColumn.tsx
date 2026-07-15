@@ -10,7 +10,6 @@ import {
   faEnvelope,
   faLocationDot,
   faPlus,
-  faXmark,
   faChevronDown,
   faChevronRight,
   faPencil,
@@ -21,7 +20,8 @@ import {
   contactFullName,
   contactInitials,
 } from "#/components/contacts/contactDisplay";
-import { RelationshipPill, SidePill } from "#/components/contacts/pills";
+import { ContactStageBadge } from "#/components/contacts/ContactStageBadge";
+import { ContactChip } from "#/components/contacts/ContactChip";
 import { initials as nameInitials } from "#/components/deals/dealDisplay";
 import { ContactDealCard } from "#/components/contacts/ContactDealCard";
 import { ContactPropertyCard } from "#/components/contacts/ContactPropertyCard";
@@ -219,23 +219,37 @@ export function ContactOverviewColumn({
         </div>
 
         <div className="d-flex align-items-center flex-wrap gap-2">
-          <RelationshipPill value={contact.relationship} />
-          {contact.side && <SidePill value={contact.side} />}
+          <ContactStageBadge
+            relationship={contact.relationship}
+            className="d-inline-flex align-items-center"
+            style={{ height: 28, fontSize: 14 }}
+          />
           <SharedAccess owner={contact.assignedTo} />
         </div>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="align-self-start px-0"
-          onClick={() => setShowDetails((v) => !v)}
-        >
-          {showDetails ? "Hide" : "Show"} Contact Details
-        </Button>
+        {!showDetails ? (
+          <Button
+            variant="ghost"
+            className="w-100"
+            onClick={() => setShowDetails(true)}
+          >
+            Show Contact Details
+          </Button>
+        ) : (
+          <div className="contact-details-panel d-flex flex-column gap-3">
+            {/* Hide toggle */}
+            <div className="border-bottom pb-2">
+              <Button
+                variant="ghost"
+                className="w-100"
+                onClick={() => setShowDetails(false)}
+              >
+                Hide Contact Details
+              </Button>
+            </div>
 
-        {showDetails && (
-          <div className="d-flex flex-column gap-3">
-            <div className="d-flex flex-column gap-2">
+            {/* Contact info */}
+            <div className="d-flex flex-column gap-2 border-bottom pb-3">
               <InfoRow icon={faPhone}>
                 <span
                   className={
@@ -259,34 +273,22 @@ export function ContactOverviewColumn({
               </InfoRow>
             </div>
 
-            <div className="d-flex flex-column gap-1">
+            {/* Details */}
+            <div className="d-flex flex-column gap-2">
               <FieldRow label="Source" value={contact.source} />
               <FieldRow label="Company" value={contact.company} />
               <FieldRow label="Title" value={contact.title} />
-            </div>
-
-            <div className="d-flex flex-column gap-2">
-              <span className="fw-semibold">Tags</span>
-              <div className="d-flex flex-wrap align-items-center gap-2">
+              <div className="d-flex flex-wrap align-items-center gap-2 pt-1">
+                <span className="fw-semibold">Tags</span>
                 {tags.map((t) => (
-                  <Badge
+                  <ContactChip
                     key={t}
-                    variant="secondary"
-                    appearance="muted"
-                    className="d-inline-flex align-items-center gap-1"
-                  >
-                    {t}
-                    <button
-                      type="button"
-                      className="btn btn-link p-0 text-reset d-inline-flex"
-                      aria-label={`Remove tag ${t}`}
-                      onClick={() =>
-                        setTags((prev) => prev.filter((x) => x !== t))
-                      }
-                    >
-                      <FontAwesomeIcon icon={faXmark} className="fs-xs" />
-                    </button>
-                  </Badge>
+                    label={t}
+                    removeLabel={`Remove tag ${t}`}
+                    onRemove={() =>
+                      setTags((prev) => prev.filter((x) => x !== t))
+                    }
+                  />
                 ))}
                 <Button variant="ghost" size="icon-sm" aria-label="Add tag">
                   <FontAwesomeIcon icon={faPlus} />
@@ -330,15 +332,10 @@ export function ContactOverviewColumn({
                 {activeDeals.map((d) => (
                   <ContactDealCard key={d.id} listingId={d.id} />
                 ))}
-                {showPastDeals &&
-                  pastDeals.map((d) => (
-                    <ContactDealCard key={d.id} listingId={d.id} />
-                  ))}
                 {pastDeals.length > 0 && (
                   <Button
                     variant="ghost"
-                    size="sm"
-                    className="align-self-center"
+                    className="w-100"
                     onClick={() => setShowPastDeals((v) => !v)}
                   >
                     {showPastDeals
@@ -348,6 +345,10 @@ export function ContactOverviewColumn({
                         }`}
                   </Button>
                 )}
+                {showPastDeals &&
+                  pastDeals.map((d) => (
+                    <ContactDealCard key={d.id} listingId={d.id} />
+                  ))}
               </>
             )}
           </div>

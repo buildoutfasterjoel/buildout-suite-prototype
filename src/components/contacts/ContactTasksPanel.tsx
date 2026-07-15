@@ -71,8 +71,8 @@ export function ContactTasksPanel({
             ))
           )}
 
-          <Button variant="ghost" size="sm" className="align-self-center mt-1">
-            Show completed tasks
+          <Button variant="ghost" className="w-100 mt-1">
+            Show Completed Tasks
           </Button>
         </div>
       </Card.Body>
