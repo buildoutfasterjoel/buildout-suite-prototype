@@ -20,7 +20,10 @@ import {
   formatPrice,
   getPhotoUrl,
 } from "#/components/properties/propertyDisplay";
-import { SIDE_DISPLAY } from "#/components/contacts/contactDisplay";
+import {
+  SIDE_DISPLAY,
+  SIDE_BADGE_COLORS,
+} from "#/components/contacts/contactDisplay";
 import { DealStageChip } from "#/components/deals/DealStageChip";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
 
@@ -189,9 +192,13 @@ export function ContactDealCard({ listingId }: { listingId: string }) {
       <div className="d-flex flex-wrap align-items-center gap-2">
         <DealStageChip value={stage} onChange={setStage} />
         <Badge
-          variant="secondary"
           className="d-inline-flex align-items-center fw-semibold"
-          style={{ height: 28, fontSize: 14 }}
+          style={{
+            height: 28,
+            fontSize: 14,
+            backgroundColor: SIDE_BADGE_COLORS[listing.dealSide].bg,
+            color: SIDE_BADGE_COLORS[listing.dealSide].text,
+          }}
         >
           {side.label}
         </Badge>
@@ -200,7 +207,7 @@ export function ContactDealCard({ listingId }: { listingId: string }) {
             variant="secondary"
             appearance="muted"
             className="d-inline-flex align-items-center gap-1 fw-semibold"
-            style={{ height: 28, fontSize: 14 }}
+            style={{ height: 28, fontSize: 14, backgroundColor: "#eceef2" }}
           >
             <FontAwesomeIcon icon={TYPE_ICONS[property.propertyType]} />
             {TYPE_LABELS[property.propertyType]}

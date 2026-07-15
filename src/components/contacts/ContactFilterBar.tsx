@@ -12,6 +12,7 @@ import {
   contactFilterChips,
   type ContactFilterState,
 } from "#/components/contacts/contactFilterModel";
+import { ContactChip } from "#/components/contacts/ContactChip";
 
 /** Which list is active, which drives the available save actions. */
 export type FilterBarContext = "all" | "dynamic" | "pipeline" | "other";
@@ -54,19 +55,12 @@ export function ContactFilterBar({
   return (
     <div className="contact-filter-bar d-flex align-items-center gap-2 flex-wrap">
       {chips.map((chip) => (
-        <span key={chip.key} className="contact-chip">
-          <span className="contact-chip__label">
-            {chip.group}: {chip.value}
-          </span>
-          <button
-            type="button"
-            className="contact-chip__remove"
-            aria-label={`Remove ${chip.group}: ${chip.value}`}
-            onClick={() => onChange(chip.clear(filters))}
-          >
-            <FontAwesomeIcon icon={faXmark} />
-          </button>
-        </span>
+        <ContactChip
+          key={chip.key}
+          label={`${chip.group}: ${chip.value}`}
+          removeLabel={`Remove ${chip.group}: ${chip.value}`}
+          onRemove={() => onChange(chip.clear(filters))}
+        />
       ))}
 
       {/* All Contacts + active filters → save the set as a new dynamic list. */}
