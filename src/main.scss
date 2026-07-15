@@ -288,11 +288,32 @@
     display: none;
   }
 
-  // Body: white, flush with the header (no dividing line).
+  // Body: white, flush with the header (no dividing line). Blueprint nests an
+  // inner `.accordion-content` with its own padding — zero it so content is
+  // inset a single 12px (aligned with the header), not doubled.
   .accordion-body {
     background: var(--bp-card-bg, #fff);
     padding: 0 12px 12px;
   }
+  .accordion-content {
+    padding: 0;
+  }
+}
+
+// Contact deal card: 8px radius, a base shadow, and a pointer + deeper shadow
+// on hover to signal it navigates to the deal.
+.contact-deal-card {
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow:
+    0 1px 2px -1px rgba(0, 0, 0, 0.1),
+    0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.15s ease;
+}
+.contact-deal-card:hover {
+  box-shadow:
+    0 2px 4px -2px rgba(0, 0, 0, 0.1),
+    0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 // The per-section action button (e.g. "Add"), overlaid at the header's right.
