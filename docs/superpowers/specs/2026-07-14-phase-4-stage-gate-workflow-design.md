@@ -159,9 +159,13 @@ field capture.
   honored. Seed sets it for listings at Active/Under Contract/Closed; new proposals start `null`. Bump
   `SEED_VERSION`.
 - **Repurpose `SyndicationStatus`** (`src/components/listings/SyndicationStatus.tsx`) to be
-  **publish-aware**: shows "Not published" when `publishedAt` is null, else "Published · syndicating to
-  N/M." (The per-network `getListingSyndication` health data stays; it's layered under the
-  published/not-published headline.)
+  **publish-aware** with three states derived from `publishedAt` + `status`:
+  - `publishedAt` null → **"Not published"** (never went live) — muted dot.
+  - `publishedAt` set and `status` is `closed` or `inactive` (Lost) → **"Previously published"** (was
+    live, now off-market — preserves the history that it was published) — muted dot.
+  - `publishedAt` set otherwise (active / under-contract) → **"Published"** or **"Published ·
+    syndicating to N/M"** — active/warning dot.
+  (The per-network `getListingSyndication` health data stays; it's layered under this headline.)
 - Stage-transition commits append a `DealHistoryEntry` (`fromStage`/`toStage`/`actor`/`timestamp`).
 
 ## What does NOT change
