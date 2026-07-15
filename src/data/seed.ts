@@ -24,6 +24,7 @@ import type {
   PhoneStatus,
   PropertyUnit,
   UnitType,
+  UnitSaleEvent,
   PropertyFinancialRecord,
   FinancialRecordSource,
   RentRollRow,
@@ -352,6 +353,7 @@ function generateUnits(
   propertyType: PropertyType,
   buildingSqFt: number,
   residentialUnits: number | null,
+  pricePerSf: number,
 ): PropertyUnit[] {
   const unitType: UnitType =
     propertyType === 'multifamily'
@@ -386,6 +388,37 @@ function generateUnits(
       offices: residential ? null : faker.number.int({ min: 0, max: 6 }),
       conferenceRooms: residential ? null : faker.number.int({ min: 0, max: 2 }),
       furnished: !residential && faker.datatype.boolean({ probability: 0.25 }),
+      saleHistory: generateUnitSaleHistory(per, pricePerSf),
+    }
+  })
+}
+
+/**
+ * A unit's prior sales, newest first. Each older sale is a couple of years further
+ * back and priced a little lower, so the ownership history trends up toward today.
+ * Some units have never traded separately (empty history).
+ */
+function generateUnitSaleHistory(sqft: number, pricePerSf: number): UnitSaleEvent[] {
+  const count = faker.helpers.weightedArrayElement([
+    { weight: 25, value: 0 },
+    { weight: 35, value: 1 },
+    { weight: 25, value: 2 },
+    { weight: 15, value: 3 },
+  ])
+  let year = 2026
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return Array.from({ length: count }, (_, i): UnitSaleEvent => {
+    year -= faker.number.int({ min: 2, max: 5 })
+    const recencyFactor = 1 - i * faker.number.float({ min: 0.05, max: 0.12, fractionDigits: 3 })
+    const price = Math.max(1, Math.round(sqft * pricePerSf * recencyFactor))
+    return {
+      id: faker.string.uuid(),
+      date: `${year}-${pad(faker.number.int({ min: 1, max: 12 }))}-${pad(faker.number.int({ min: 1, max: 28 }))}`,
+      price,
+      pricePerSf: sqft > 0 ? Math.round((price / sqft) * 100) / 100 : 0,
+      buyer: faker.company.name(),
+      seller: faker.company.name(),
+      capRateAtSale: faker.number.float({ min: 0.045, max: 0.085, fractionDigits: 4 }),
     }
   })
 }
@@ -400,26 +433,65 @@ function generateFinancialRecords(current: {
   grm: number
   cashOnCashReturn: number
   occupancyPct: number
+  /** Asset value (asking price) — held constant across years so cap rate/GRM move with the figures. */
+  value: number
+  /** Operating expense ratio (opex / EGI) — carried across years. */
+  expenseRatio: number
 }): PropertyFinancialRecord[] {
-  // Newest first: the current year mirrors the flat Property fields exactly; two
-  // prior years scale figures down a little so the history reads plausibly.
+  // Newest first. Year 0 is the flat current fields verbatim (the seed test pins
+  // record[0] to them). Prior years are VACANCY-DRIVEN and internally consistent:
+  // vacancy drifts (occupancy was a little lower back then), income was a little
+  // lower, and EGI/NOI/occupancy/cap rate/GRM are all DERIVED from that year's
+  // vacancy + income against a constant asset value — so a rendered multi-year
+  // table reads like a real T-12 series, not the same numbers copied down.
   const currentYear = 2026
   const sources: FinancialRecordSource[] = ['T-12 actuals', 'Owner-provided', 'Broker estimate']
+
   return [0, 1, 2].map((back): PropertyFinancialRecord => {
-    const f = back === 0 ? 1 : 1 - back * faker.number.float({ min: 0.03, max: 0.07, fractionDigits: 3 })
+    if (back === 0) {
+      return {
+        id: faker.string.uuid(),
+        asOf: `${currentYear}-12-31`,
+        source: sources[0],
+        potentialGrossIncome: current.pgi,
+        vacancyRate: current.vacancyRate,
+        effectiveGrossIncome: current.egi,
+        operatingExpenses: current.operatingExpenses,
+        noi: current.noi,
+        capRate: current.capRate,
+        grossRentMultiplier: current.grm,
+        cashOnCashReturn: current.cashOnCashReturn,
+        occupancyPct: current.occupancyPct,
+      }
+    }
+
+    // Older years: higher vacancy, lower income. Everything else derives from these.
+    const vacancyRate = Math.min(
+      0.4,
+      Math.round((current.vacancyRate + back * faker.number.float({ min: 0.005, max: 0.02, fractionDigits: 4 })) * 10000) / 10000,
+    )
+    const pgi = Math.round(current.pgi * (1 - back * faker.number.float({ min: 0.02, max: 0.05, fractionDigits: 3 })))
+    const egi = Math.round(pgi * (1 - vacancyRate))
+    const operatingExpenses = Math.round(egi * current.expenseRatio)
+    const noi = egi - operatingExpenses
+    const capRate = current.value > 0 ? Math.round((noi / current.value) * 10000) / 10000 : current.capRate
+    const grm = pgi > 0 ? Math.round((current.value / pgi) * 10) / 10 : current.grm
+    const cashOnCashReturn = Math.round(capRate * faker.number.float({ min: 0.7, max: 1.1, fractionDigits: 4 }) * 10000) / 10000
+    const occupancyPct = Math.round((1 - vacancyRate) * 1000) / 10
+
     return {
       id: faker.string.uuid(),
       asOf: `${currentYear - back}-12-31`,
       source: sources[back],
-      potentialGrossIncome: Math.round(current.pgi * f),
-      vacancyRate: current.vacancyRate,
-      effectiveGrossIncome: Math.round(current.egi * f),
-      operatingExpenses: Math.round(current.operatingExpenses * f),
-      noi: back === 0 ? current.noi : Math.round(current.noi * f),
-      capRate: current.capRate,
-      grossRentMultiplier: current.grm,
-      cashOnCashReturn: current.cashOnCashReturn,
-      occupancyPct: current.occupancyPct,
+      potentialGrossIncome: pgi,
+      vacancyRate,
+      effectiveGrossIncome: egi,
+      operatingExpenses,
+      noi,
+      capRate,
+      grossRentMultiplier: grm,
+      cashOnCashReturn,
+      occupancyPct,
     }
   })
 }
@@ -515,9 +587,10 @@ function generateProperty(): Property {
 
   const cashOnCashReturn = faker.number.float({ min: capRate * 0.7, max: capRate * 1.1, fractionDigits: 4 })
   const occupancyPct = Math.round((1 - vacancyRate) * 1000) / 10
-  const units = generateUnits(propertyType, buildingSqFt, residentialUnits)
+  const units = generateUnits(propertyType, buildingSqFt, residentialUnits, pricePerSqFt)
   const financialRecords = generateFinancialRecords({
     pgi, vacancyRate, egi, operatingExpenses, noi, capRate, grm, cashOnCashReturn, occupancyPct,
+    value: askingPrice, expenseRatio,
   })
 
   return {

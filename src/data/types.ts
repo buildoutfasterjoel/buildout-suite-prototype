@@ -164,6 +164,20 @@ export interface PropertyUnit {
   offices: number | null
   conferenceRooms: number | null
   furnished: boolean
+  /** Prior sale transactions on this unit, newest first — the asset's ownership history. */
+  saleHistory: UnitSaleEvent[]
+}
+
+/** One prior sale of a unit — a transaction fact on the asset (surfaced by Sale-side deals). */
+export interface UnitSaleEvent {
+  id: string
+  /** ISO date (YYYY-MM-DD) of the sale. */
+  date: string
+  price: number
+  pricePerSf: number
+  buyer: string
+  seller: string
+  capRateAtSale: number
 }
 
 export type FinancialRecordSource = 'T-12 actuals' | 'Assessor' | 'Owner-provided' | 'Broker estimate'

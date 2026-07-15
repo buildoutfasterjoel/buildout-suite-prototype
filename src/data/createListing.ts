@@ -201,6 +201,7 @@ function buildStubProperty(draft: NewListingDraft, now: string): Property {
         offices: null,
         conferenceRooms: null,
         furnished: false,
+        saleHistory: [],
       },
     ],
     financialRecords: [

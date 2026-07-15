@@ -100,4 +100,52 @@ describe('property units + financial records seed', () => {
       expect(typeof p.notes).toBe('string')
     }
   })
+
+  it('makes each financial record internally consistent (NOI = EGI − OpEx, occupancy = 1 − vacancy)', () => {
+    for (const p of properties) {
+      for (const r of p.financialRecords) {
+        expect(r.noi).toBe(r.effectiveGrossIncome - r.operatingExpenses)
+        expect(Math.abs(r.occupancyPct - (1 - r.vacancyRate) * 100)).toBeLessThan(0.1)
+      }
+    }
+  })
+
+  it('varies figures year-to-year (history is not the same numbers copied down)', () => {
+    // Income trends down into the past, so NOI is distinct per year for every
+    // income-producing property. Land / zero-NOI assets stay flat at 0 — skip those.
+    let checked = 0
+    for (const p of properties) {
+      if (p.noi <= 0) continue
+      checked++
+      expect(new Set(p.financialRecords.map((r) => r.noi)).size).toBeGreaterThan(1)
+    }
+    expect(checked).toBeGreaterThan(0) // guard against a vacuous pass
+    // Vacancy drifts across years too (dataset-level, robust against a clamped edge case).
+    expect(
+      properties.some((p) => new Set(p.financialRecords.map((r) => r.vacancyRate)).size > 1),
+    ).toBe(true)
+  })
+})
+
+describe('unit sale history seed', () => {
+  const { properties } = generateDataset()
+
+  it('is newest-first with positive prices, consistent $/SF, and plausible cap rates', () => {
+    let sawSome = false
+    for (const p of properties) {
+      for (const u of p.units) {
+        expect(Array.isArray(u.saleHistory)).toBe(true)
+        if (u.saleHistory.length > 0) sawSome = true
+        const dates = u.saleHistory.map((s) => s.date)
+        expect(dates).toEqual([...dates].sort().reverse()) // newest first
+        for (const s of u.saleHistory) {
+          expect(s.price).toBeGreaterThan(0)
+          expect(s.capRateAtSale).toBeGreaterThan(0)
+          expect(s.capRateAtSale).toBeLessThan(0.15)
+          if (u.sqft > 0) expect(Math.abs(s.pricePerSf - s.price / u.sqft)).toBeLessThan(1)
+        }
+      }
+    }
+    expect(sawSome).toBe(true) // at least some units carry a sale history
+  })
 })
