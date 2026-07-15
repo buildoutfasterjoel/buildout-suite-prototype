@@ -4,10 +4,10 @@ import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUserSlash } from "@fortawesome/pro-regular-svg-icons";
 import { getContactDetailClient } from "#/data/selectors";
-import { ContactDetailHeader } from "#/components/contacts/ContactDetailHeader";
-import { ContactDetailsCard } from "#/components/contacts/ContactDetailsCard";
+import { ContactDetailTopBar } from "#/components/contacts/ContactDetailTopBar";
+import { ContactOverviewColumn } from "#/components/contacts/ContactOverviewColumn";
 import { ContactEngagementPanel } from "#/components/contacts/ContactEngagementPanel";
-import { ContactDealsPanel } from "#/components/contacts/ContactDealsPanel";
+import { ContactTasksPanel } from "#/components/contacts/ContactTasksPanel";
 
 export const Route = createFileRoute("/backoffice/contacts/$contactId")({
   component: ContactDetailPage,
@@ -51,24 +51,30 @@ function ContactDetailPage() {
   const { contact, deals, openTaskCount } = detail;
 
   return (
-    <div className="d-flex flex-column h-100 overflow-auto">
-      <ContactDetailHeader contact={contact} />
+    <div
+      className="d-flex flex-column h-100 overflow-hidden p-4 gap-3 mx-auto w-100"
+      style={{ maxWidth: "96rem" }}
+    >
+      {/* Fixed top bar */}
+      <ContactDetailTopBar contact={contact} />
 
-      <div className="container py-4">
-        <div className="row g-4">
-          <div className="col-12 col-lg-3">
-            <ContactDetailsCard contact={contact} deals={deals} />
-          </div>
-          <div className="col-12 col-lg-6">
-            <ContactEngagementPanel contact={contact} deals={deals} />
-          </div>
-          <div className="col-12 col-lg-3">
-            <ContactDealsPanel
-              contact={contact}
-              deals={deals}
-              openTaskCount={openTaskCount}
-            />
-          </div>
+      {/* Full-height 3-column row; each column scrolls independently and the
+          page itself never scrolls. */}
+      <div className="d-flex gap-4 flex-grow-1 overflow-hidden">
+        <div
+          className="flex-shrink-0 h-100 overflow-auto"
+          style={{ width: 360 }}
+        >
+          <ContactOverviewColumn contact={contact} deals={deals} />
+        </div>
+        <div className="flex-grow-1 h-100 overflow-auto">
+          <ContactEngagementPanel contact={contact} deals={deals} />
+        </div>
+        <div
+          className="flex-shrink-0 h-100 overflow-hidden"
+          style={{ width: 340 }}
+        >
+          <ContactTasksPanel contact={contact} openTaskCount={openTaskCount} />
         </div>
       </div>
     </div>
