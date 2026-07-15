@@ -32,8 +32,8 @@ export function ContactTasksPanel({
       <Card.Body className="d-flex flex-column gap-3 overflow-hidden">
         <div className="d-flex align-items-center justify-content-between gap-2">
           <Card.Title
-            className="fw-bold d-inline-flex align-items-center gap-2 mb-0"
-            style={{ fontSize: 17 }}
+            className="fw-semibold d-inline-flex align-items-center gap-2 mb-0"
+            style={{ fontSize: 20, lineHeight: "26px" }}
           >
             Tasks
             <Badge variant="secondary" appearance="muted">

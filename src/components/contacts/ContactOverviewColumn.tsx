@@ -110,7 +110,7 @@ function Section({
             className="text-muted"
             style={{ width: 12 }}
           />
-          <span className="fw-bold" style={{ fontSize: 17 }}>
+          <span className="fw-semibold" style={{ fontSize: 20, lineHeight: "26px" }}>
             {label}
           </span>
           {count !== undefined && (
