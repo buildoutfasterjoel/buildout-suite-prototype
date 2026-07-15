@@ -97,21 +97,43 @@ export function ContactListsSidebar({
     return allLists.filter((l) => l.label.toLowerCase().includes(q));
   }, [search, allLists]);
 
-  // When collapsed, each tab icon reveals its label in a tooltip to the right
-  // so the rail stays usable without the text labels.
-  const tabIcon = (
-    icon: IconDefinition,
-    label: string,
-    className?: string,
-    color?: string,
-  ) => {
-    const glyph = (
-      <FontAwesomeIcon icon={icon} className={className} style={{ color }} />
+  // A vertical-pill nav tab. When the rail is collapsed the label is hidden and
+  // the whole tab (not just the icon) becomes the tooltip trigger, so the label
+  // reveals on hover anywhere over the button — a larger hover target.
+  const navTab = ({
+    value,
+    icon,
+    label,
+    count,
+    iconClassName,
+    iconColor,
+  }: {
+    value: string;
+    icon: IconDefinition;
+    label: string;
+    count: number;
+    iconClassName?: string;
+    iconColor?: string;
+  }) => {
+    const tab = (
+      <Tabs.Tab
+        key={value}
+        value={value}
+        icon={
+          <FontAwesomeIcon
+            icon={icon}
+            className={iconClassName}
+            style={iconColor ? { color: iconColor } : undefined}
+          />
+        }
+      >
+        {!collapsed && <TabLabel label={label} count={count} />}
+      </Tabs.Tab>
     );
-    if (!collapsed) return glyph;
+    if (!collapsed) return tab;
     return (
-      <Tooltip>
-        <Tooltip.Trigger render={<span className="d-inline-flex">{glyph}</span>} />
+      <Tooltip key={value}>
+        <Tooltip.Trigger render={tab} />
         <Tooltip.Content side="right">{label}</Tooltip.Content>
       </Tooltip>
     );
@@ -162,19 +184,18 @@ export function ContactListsSidebar({
           orientation="vertical"
         >
           <Tabs.List variant="pills" orientation="vertical">
-            <Tabs.Tab
-              value={ALL_CONTACTS_ID}
-              icon={tabIcon(faListUl, "All Contacts")}
-            >
-              {!collapsed && (
-                <TabLabel label="All Contacts" count={counts[ALL_CONTACTS_ID]} />
-              )}
-            </Tabs.Tab>
-            <Tabs.Tab value="mylists" icon={tabIcon(faLayerGroup, "My Lists")}>
-              {!collapsed && (
-                <TabLabel label="My Lists" count={allLists.length} />
-              )}
-            </Tabs.Tab>
+            {navTab({
+              value: ALL_CONTACTS_ID,
+              icon: faListUl,
+              label: "All Contacts",
+              count: counts[ALL_CONTACTS_ID],
+            })}
+            {navTab({
+              value: "mylists",
+              icon: faLayerGroup,
+              label: "My Lists",
+              count: allLists.length,
+            })}
           </Tabs.List>
         </Tabs>
 
@@ -200,20 +221,15 @@ export function ContactListsSidebar({
             orientation="vertical"
           >
             <Tabs.List variant="pills" orientation="vertical">
-              {PIPELINE_STAGES.map((stage) => (
-                <Tabs.Tab
-                  key={stage.id}
-                  value={stage.id}
-                  icon={tabIcon(stage.icon, stage.label, undefined, stage.color)}
-                >
-                  {!collapsed && (
-                    <TabLabel
-                      label={stage.label}
-                      count={pipelineCounts[stage.id]}
-                    />
-                  )}
-                </Tabs.Tab>
-              ))}
+              {PIPELINE_STAGES.map((stage) =>
+                navTab({
+                  value: stage.id,
+                  icon: stage.icon,
+                  label: stage.label,
+                  count: pipelineCounts[stage.id],
+                  iconColor: stage.color,
+                }),
+              )}
             </Tabs.List>
           </Tabs>
         )}
@@ -252,22 +268,16 @@ export function ContactListsSidebar({
           orientation="vertical"
         >
           <Tabs.List variant="pills" orientation="vertical">
-            {visibleLists.map((list) => (
-              <Tabs.Tab
-                key={list.id}
-                value={list.id}
-                icon={tabIcon(
-                  list.icon,
-                  list.label,
-                  list.iconColor ? undefined : list.iconClass,
-                  list.iconColor,
-                )}
-              >
-                {!collapsed && (
-                  <TabLabel label={list.label} count={counts[list.id]} />
-                )}
-              </Tabs.Tab>
-            ))}
+            {visibleLists.map((list) =>
+              navTab({
+                value: list.id,
+                icon: list.icon,
+                label: list.label,
+                count: counts[list.id],
+                iconClassName: list.iconColor ? undefined : list.iconClass,
+                iconColor: list.iconColor,
+              }),
+            )}
           </Tabs.List>
         </Tabs>
         {!collapsed && visibleLists.length === 0 && (
