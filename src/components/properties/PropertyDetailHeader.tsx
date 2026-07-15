@@ -22,7 +22,7 @@ import {
 } from "./propertyDisplay";
 import { AvatarGroup } from "./AvatarGroup";
 import { SyndicationStatus } from "#/components/listings/SyndicationStatus";
-import { useStageGate } from "#/components/deals/useStageGate";
+import { requestStageChange } from "#/components/deals/useStageGate";
 
 /**
  * Full-bleed page header for a listing (which is its deal, 1:1) — identity on the
@@ -83,7 +83,11 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
               <Badge variant="secondary" appearance="muted">
                 #{refId}
               </Badge>
-              <SyndicationStatus listing={listing} />
+              {/* Publishing is a sell-side listing concept — buy-side deals have
+                  no listing to syndicate. */}
+              {listing.dealSide === "seller" && (
+                <SyndicationStatus listing={listing} />
+              )}
             </div>
           </div>
 
@@ -93,9 +97,7 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
               value={listing.status}
               onValueChange={(v) => {
                 if (v && v !== listing.status) {
-                  useStageGate
-                    .getState()
-                    .openGate(listing.id, v as ListingStage);
+                  requestStageChange(listing.id, v as ListingStage);
                 }
               }}
             >

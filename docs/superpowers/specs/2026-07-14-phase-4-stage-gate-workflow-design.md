@@ -59,6 +59,13 @@ proposal(0) → active(1) → under-contract(2) → closed(3)
   target stage.
 - **target index < current index** → **confirm** gate (backward move).
 
+> **Gates are sell-side only.** The gated lifecycle — publishing, review attestations, the gates
+> themselves — is a **listing** concept, and a listing is a sell-side engagement. Both entry points route
+> through `requestStageChange(dealId, targetStage)`: when `dealSide === 'buyer'` the deal is not a
+> listing, so it **commits the stage move directly with no gate** (and never shows the publish /
+> `SyndicationStatus` surface); only `dealSide === 'seller'` deals open a gate. `resolveGate` therefore
+> only ever runs for sell-side deals.
+
 Three gate **kinds**:
 
 | Kind | When | Behavior |

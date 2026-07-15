@@ -22,7 +22,7 @@ import { useDataStore } from "#/data/dataStore";
 import { useCreateDeal } from "#/data/useCreateDeal";
 import type { Listing, PropertyStatus, DealSide } from "#/data/types";
 import { DealBoard } from "#/components/deals/DealBoard";
-import { useStageGate } from "#/components/deals/useStageGate";
+import { requestStageChange } from "#/components/deals/useStageGate";
 import type { Facet } from "#/components/properties/PropertyFilters";
 import { PropertyFilters } from "#/components/properties/PropertyFilters";
 import { FacetDropdown } from "#/components/properties/FacetDropdown";
@@ -116,13 +116,11 @@ function PropertyListings() {
   const isListings = view === "grid" || view === "map";
 
   const onRestage = useCallback((listingId: string, stage: PropertyStatus) => {
-    const listing = getStore().listings.get(listingId);
-    if (!listing || listing.status === stage) return;
-    // Open the gate instead of committing. The card is never optimistically
-    // moved, so a cancelled gate leaves the board unchanged. The board
-    // re-derives when the gate commits, via the useDataStore subscribe effect
-    // above bumping `version`.
-    useStageGate.getState().openGate(listingId, stage);
+    // Sell-side deals open the gate; buy-side deals move directly (no listing to
+    // publish). The card is never optimistically moved, so a cancelled gate
+    // leaves the board unchanged. The board re-derives when the store commits,
+    // via the useDataStore subscribe effect above bumping `version`.
+    requestStageChange(listingId, stage);
   }, []);
 
   const type = useToggleSet<string>();
