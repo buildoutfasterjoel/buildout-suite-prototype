@@ -34,6 +34,7 @@ import type {
   VisibilityTier,
 } from "#/data/types";
 import { updateDeal } from "#/data/actions";
+import { commissionAmountFromPct, commissionPctFromAmount } from "#/data/commission";
 import { emptySpaceLeaseTerms } from "#/data/createListing";
 import {
   STATUS_LABELS,
@@ -762,6 +763,36 @@ export function DealMarketingEditor({
   const patchTransaction = (patch: Partial<DealTransaction>) =>
     setTransaction((t) => ({ ...t, ...patch }));
 
+  // Sale Price / Gross Commission % / Gross Commission $ — bi-directional, sale
+  // price anchors (same math as the stage gate and Edit Transaction dialog).
+  const setSalePrice = (v: number | null) =>
+    setTransaction((t) => ({
+      ...t,
+      salePrice: v ?? 0,
+      commissionAmount:
+        v != null && t.commissionPct != null
+          ? commissionAmountFromPct(v, t.commissionPct)
+          : t.commissionAmount,
+    }));
+  const setCommissionPct = (v: number | null) =>
+    setTransaction((t) => ({
+      ...t,
+      commissionPct: v ?? 0,
+      commissionAmount:
+        v != null && t.salePrice != null
+          ? commissionAmountFromPct(t.salePrice, v)
+          : t.commissionAmount,
+    }));
+  const setCommissionAmount = (v: number | null) =>
+    setTransaction((t) => ({
+      ...t,
+      commissionAmount: v ?? 0,
+      commissionPct:
+        v != null && t.salePrice > 0
+          ? commissionPctFromAmount(t.salePrice, v)
+          : t.commissionPct,
+    }));
+
   // Tolerate a stale snapshot that predates the per-unit array.
   const spaceLeaseTerms = marketing.spaceLeaseTerms ?? [];
 
@@ -871,6 +902,54 @@ export function DealMarketingEditor({
           side="outside"
           onChange={setOutsideBrokers}
         />
+      </Section>
+
+      {/* ── Transaction terms (parity with the stage gate + Edit Transaction dialog) ── */}
+      <Section title="Transaction Terms">
+        <FieldGrid>
+          <Col>
+            <NumberField
+              label="Sale Price"
+              value={transaction.salePrice || null}
+              onChange={setSalePrice}
+            />
+          </Col>
+          <Col>
+            <NumberField
+              label="Gross Commission %"
+              value={transaction.commissionPct || null}
+              onChange={setCommissionPct}
+            />
+          </Col>
+          <Col>
+            <NumberField
+              label="Gross Commission $"
+              value={transaction.commissionAmount || null}
+              onChange={setCommissionAmount}
+            />
+          </Col>
+          <Col>
+            <NumberField
+              label="Close Probability (%)"
+              value={transaction.closeProbability || null}
+              onChange={(v) => patchTransaction({ closeProbability: v ?? 0 })}
+            />
+          </Col>
+          <Col>
+            <DateField
+              label="Contract Executed"
+              value={transaction.contractExecutedDate}
+              onChange={(v) => patchTransaction({ contractExecutedDate: v })}
+            />
+          </Col>
+          <Col>
+            <DateField
+              label="Close Date"
+              value={transaction.closeDate}
+              onChange={(v) => patchTransaction({ closeDate: v })}
+            />
+          </Col>
+        </FieldGrid>
       </Section>
 
       {/* ── Sale-side marketing + terms ── */}
