@@ -24,10 +24,19 @@ import {
 import { RelationshipPill, SidePill } from "#/components/contacts/pills";
 import { initials as nameInitials } from "#/components/deals/dealDisplay";
 import { ContactDealCard } from "#/components/contacts/ContactDealCard";
+import { ContactPropertyCard } from "#/components/contacts/ContactPropertyCard";
 import { CreateDealModal } from "#/components/deals/CreateDealModal";
 
 /** Deal statuses considered "past" (shown behind a toggle). */
 const PAST_STATUSES = new Set<PropertyStatus>(["closed", "inactive"]);
+
+function medDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 /** A labelled icon row in the contact info block. */
 function InfoRow({
@@ -160,30 +169,51 @@ export function ContactOverviewColumn({
       />
 
       {/* Contact hero */}
-      <div className="p-3 d-flex flex-column gap-3">
-        <div className="d-flex align-items-start gap-2">
-          <Avatar size="lg">
-            <Avatar.Fallback className="fw-semibold">
+      <div className="p-5 d-flex flex-column gap-3 position-relative">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Edit contact"
+          className="position-absolute"
+          style={{ top: 8, right: 8 }}
+        >
+          <FontAwesomeIcon icon={faPencil} />
+        </Button>
+
+        <div className="d-flex align-items-center gap-3">
+          {/* TODO(blueprint): drop the inline 56px size + gradient overrides once
+              the Blueprint Avatar supports a large gradient-filled variant. */}
+          <Avatar
+            className="flex-shrink-0"
+            style={{
+              width: 56,
+              height: 56,
+              backgroundImage:
+                "linear-gradient(225deg, var(--color-storm-grey-100, #eceef2) 0%, var(--color-storm-grey-200, #d5dae2) 72%, var(--color-storm-grey-300, #afb9ca) 100%)",
+            }}
+          >
+            <Avatar.Fallback
+              className="fw-semibold bg-transparent"
+              style={{ fontSize: 24, letterSpacing: "0.34px", color: "#22262f" }}
+            >
               {contactInitials(contact)}
             </Avatar.Fallback>
           </Avatar>
-          <div className="flex-grow-1" style={{ minWidth: 0 }}>
-            <div className="d-flex align-items-center gap-2">
-              <span className="fw-bold fs-6">{contactFullName(contact)}</span>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Edit contact"
-                className="ms-auto"
-              >
-                <FontAwesomeIcon icon={faPencil} />
-              </Button>
-            </div>
-            <div className="text-muted fs-small">
-              {contact.title} · {contact.company}
-            </div>
-            <div className="text-muted fs-small">
-              Last touch: {contact.lastTouch}
+          <div
+            className="flex-grow-1 d-flex flex-column"
+            style={{ minWidth: 0, gap: 4 }}
+          >
+            <span className="fw-bold" style={{ fontSize: 24, lineHeight: 1.1 }}>
+              {contactFullName(contact)}
+            </span>
+            <div className="text-muted d-flex flex-column">
+              <span style={{ fontSize: 16, fontWeight: 500 }}>
+                {contact.title} · {contact.company}
+              </span>
+              <span style={{ fontSize: 14 }}>
+                Created:{" "}
+                <span className="fw-bold">{medDate(contact.createdAt)}</span>
+              </span>
             </div>
           </div>
         </div>
@@ -329,26 +359,12 @@ export function ContactOverviewColumn({
           count={deals.length}
           open={open.includes("properties")}
         >
-          <div className="d-flex flex-column gap-2">
+          <div className="d-flex flex-column gap-3">
             {deals.length === 0 ? (
               <span className="text-muted fs-small">None on file.</span>
             ) : (
               deals.map((d) => (
-                <div
-                  key={d.id}
-                  className="d-flex align-items-center justify-content-between gap-2"
-                >
-                  <span className="d-inline-flex align-items-center gap-2 text-truncate">
-                    <FontAwesomeIcon
-                      icon={faLocationDot}
-                      className="text-muted"
-                    />
-                    <span className="text-truncate">{d.name}</span>
-                  </span>
-                  <Badge variant="secondary" appearance="muted" className="fs-xs">
-                    DEAL
-                  </Badge>
-                </div>
+                <ContactPropertyCard key={d.id} listingId={d.id} />
               ))
             )}
           </div>
