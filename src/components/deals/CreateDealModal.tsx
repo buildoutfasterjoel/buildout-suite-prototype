@@ -18,12 +18,13 @@ import {
   faUser,
   faCheck,
 } from "@fortawesome/pro-regular-svg-icons";
-import type { Contact, DealSide, DealDocument } from "#/data/types";
+import type { Contact, DealSide, DealDocument, Property } from "#/data/types";
 import { emptyDraft, type NewListingDraft } from "#/data/createListing";
 import { createDeal } from "#/data/actions";
 import {
   getPropertyOptions,
   getContactOptions,
+  getOwnersForProperty,
   type PropertyOption,
   type ContactOption,
 } from "#/data/store";
@@ -68,11 +69,17 @@ export function CreateDealModal({
   open,
   onOpenChange,
   contact,
+  property,
+  initialAddress,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** When present, the deal is initiated for this contact (contact field prefilled). */
+  /** When present, the deal is initiated for this contact (contact field prefilled + hidden). */
   contact?: Contact;
+  /** When present, the deal is initiated for this property (property field prefilled + locked). */
+  property?: Property;
+  /** Seed text for the property address field when starting from a raw query. */
+  initialAddress?: string;
 }) {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -88,13 +95,24 @@ export function CreateDealModal({
   const [files, setFiles] = useState<DealDocument[]>([]);
   const [dragging, setDragging] = useState(false);
 
-  const propertyOptions = useMemo<PropertyOption[]>(getPropertyOptions, []);
+  const propertyOptions = useMemo<PropertyOption[]>(() => {
+    const all = getPropertyOptions();
+    if (!contact || contact.propertyIds.length === 0) return all;
+    const owned = new Set(contact.propertyIds);
+    // Contact's own properties first (likely the deal's subject), then the rest.
+    return [...all].sort((a, b) => {
+      const ao = owned.has(a.value) ? 0 : 1;
+      const bo = owned.has(b.value) ? 0 : 1;
+      return ao - bo || a.label.localeCompare(b.label);
+    });
+  }, [contact]);
   const contactOptions = useMemo<ContactOption[]>(getContactOptions, []);
 
-  // Seed from the initiating contact each time the modal opens: prefill the
-  // contact and pre-select the side from how they sit on their current deal.
+  // Seed from the initiating contact/property each time the modal opens.
   useEffect(() => {
     if (!open) return;
+
+    // Contact context: prefill the contact and infer the side from their deal.
     if (contact) {
       setContactOption({
         value: contact.id,
@@ -109,11 +127,46 @@ export function CreateDealModal({
       setContactOption(null);
       setSide(null);
     }
-    setPropertyOption(null);
-    setPropertyInput("");
+
+    // Property context: lock the property, default to sell-side, and suggest the
+    // property's primary owner as the seller (editable).
+    if (property) {
+      const label = [property.street, property.city, property.state]
+        .filter(Boolean)
+        .join(", ");
+      setPropertyOption({
+        value: property.id,
+        label,
+        propertyType: property.propertyType,
+        subtype: property.propertySubtype,
+        sizeLabel:
+          property.buildingSqFt > 0
+            ? `${property.buildingSqFt.toLocaleString()} SF`
+            : null,
+      });
+      setPropertyInput(label);
+      if (!contact) {
+        setSide("seller");
+        const owner = getOwnersForProperty(property.id)[0];
+        if (owner) {
+          setContactOption({
+            value: owner.id,
+            label: contactName(owner),
+            name: contactName(owner),
+            company: owner.company,
+            title: owner.title,
+            relationship: owner.relationship,
+          });
+        }
+      }
+    } else {
+      setPropertyOption(null);
+      setPropertyInput(initialAddress ?? "");
+    }
+
     setFiles([]);
     setDragging(false);
-  }, [open, contact]);
+  }, [open, contact, property, initialAddress]);
 
   function addFiles(list: FileList | null) {
     if (!list?.length) return;
@@ -283,65 +336,85 @@ export function CreateDealModal({
           )}
 
           {/* Property */}
-          <Field>
-            <Field.Label>Property</Field.Label>
-            <Combobox
-              items={propertyOptions}
-              value={propertyOption}
-              onValueChange={(v) => selectProperty(v as PropertyOption | null)}
-              inputValue={propertyInput}
-              onInputValueChange={(v: string) => typeProperty(v)}
-            >
-              <Combobox.InputGroup>
-                <InputGroup.Addon>
-                  <FontAwesomeIcon icon={faMagnifyingGlass} />
-                </InputGroup.Addon>
-                <Combobox.Input
-                  placeholder="Search a listing or type an address…"
-                  showClear
+          {property ? (
+            <Field>
+              <Field.Label>Property</Field.Label>
+              <div className="d-flex align-items-center gap-2 border rounded px-3 py-2">
+                <FontAwesomeIcon
+                  icon={TYPE_ICONS[property.propertyType]}
+                  className="text-muted"
                 />
-              </Combobox.InputGroup>
-              <Combobox.Content>
-                <Combobox.Empty className="text-muted">
-                  No match — we’ll create a new property from what you typed.
-                </Combobox.Empty>
-                <Combobox.List>
-                  {(item: PropertyOption) => (
-                    <Combobox.Item key={item.value} value={item}>
-                      <span
-                        className="d-flex gap-2 user-select-none"
-                        style={{ minWidth: 0 }}
-                      >
-                        <FontAwesomeIcon
-                          icon={TYPE_ICONS[item.propertyType]}
-                          className="text-muted flex-shrink-0 d-inline-block mt-1"
-                        />
+                <span className="flex-grow-1 text-truncate">
+                  {[property.street, property.city, property.state]
+                    .filter(Boolean)
+                    .join(", ") || property.name}
+                </span>
+                <Badge variant="secondary" appearance="muted" className="flex-shrink-0">
+                  {TYPE_LABELS[property.propertyType]}
+                </Badge>
+              </div>
+            </Field>
+          ) : (
+            <Field>
+              <Field.Label>Property</Field.Label>
+              <Combobox
+                items={propertyOptions}
+                value={propertyOption}
+                onValueChange={(v) => selectProperty(v as PropertyOption | null)}
+                inputValue={propertyInput}
+                onInputValueChange={(v: string) => typeProperty(v)}
+              >
+                <Combobox.InputGroup>
+                  <InputGroup.Addon>
+                    <FontAwesomeIcon icon={faMagnifyingGlass} />
+                  </InputGroup.Addon>
+                  <Combobox.Input
+                    placeholder="Search a listing or type an address…"
+                    showClear
+                  />
+                </Combobox.InputGroup>
+                <Combobox.Content>
+                  <Combobox.Empty className="text-muted">
+                    No match — we’ll create a new property from what you typed.
+                  </Combobox.Empty>
+                  <Combobox.List>
+                    {(item: PropertyOption) => (
+                      <Combobox.Item key={item.value} value={item}>
                         <span
-                          className="d-flex flex-column"
+                          className="d-flex gap-2 user-select-none"
                           style={{ minWidth: 0 }}
                         >
-                          <span className="d-flex align-items-center gap-2">
-                            <span className="text-truncate">{item.label}</span>
-                            <Badge
-                              variant="secondary"
-                              appearance="muted"
-                              className="flex-shrink-0"
-                            >
-                              {TYPE_LABELS[item.propertyType]}
-                            </Badge>
-                          </span>
-                          <span className="text-muted fs-small text-truncate">
-                            {item.subtype}
-                            {item.sizeLabel ? ` · ${item.sizeLabel}` : ""}
+                          <FontAwesomeIcon
+                            icon={TYPE_ICONS[item.propertyType]}
+                            className="text-muted flex-shrink-0 d-inline-block mt-1"
+                          />
+                          <span
+                            className="d-flex flex-column"
+                            style={{ minWidth: 0 }}
+                          >
+                            <span className="d-flex align-items-center gap-2">
+                              <span className="text-truncate">{item.label}</span>
+                              <Badge
+                                variant="secondary"
+                                appearance="muted"
+                                className="flex-shrink-0"
+                              >
+                                {TYPE_LABELS[item.propertyType]}
+                              </Badge>
+                            </span>
+                            <span className="text-muted fs-small text-truncate">
+                              {item.subtype}
+                              {item.sizeLabel ? ` · ${item.sizeLabel}` : ""}
+                            </span>
                           </span>
                         </span>
-                      </span>
-                    </Combobox.Item>
-                  )}
-                </Combobox.List>
-              </Combobox.Content>
-            </Combobox>
-          </Field>
+                      </Combobox.Item>
+                    )}
+                  </Combobox.List>
+                </Combobox.Content>
+              </Combobox>
+            </Field>
+          )}
 
           {/* Context files */}
           <Field>

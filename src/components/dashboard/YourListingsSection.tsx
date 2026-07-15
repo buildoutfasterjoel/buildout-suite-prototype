@@ -6,7 +6,7 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Progress } from "@buildoutinc/blueprint-react/ui/Progress";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faEnvelope } from "@fortawesome/pro-regular-svg-icons";
-import { getStore } from "#/data/store";
+import { getProperty, getStore } from "#/data/store";
 import type { Listing } from "#/data/types";
 import {
   STATUS_LABELS,
@@ -27,6 +27,7 @@ function StatColumn({ label, value }: { label: string; value: number }) {
 
 function ListingRow({ listing, isLast }: { listing: Listing; isLast: boolean }) {
   const traffic = getListingTraffic(listing.id);
+  const property = getProperty(listing.propertyId);
   // Presentational-only unread-message bubble — real `listing.messages` arrays
   // are too short (0–2) to match the reference design's counts.
   const messageCount = 1 + (hash(listing.id) % 9);
@@ -59,7 +60,7 @@ function ListingRow({ listing, isLast }: { listing: Listing; isLast: boolean }) 
           {STATUS_LABELS[listing.status].toUpperCase()}
         </Badge>
         <span className="text-muted fs-xs">
-          {listing.street}, {listing.city}, {listing.state}
+          {property?.street}, {property?.city}, {property?.state}
         </span>
       </div>
 

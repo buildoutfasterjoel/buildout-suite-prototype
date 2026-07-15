@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Listing } from "#/data/types";
+import { getProperty } from "#/data/store";
 import {
   getDefaultRings,
   getInitialLastRefreshed,
@@ -18,6 +19,7 @@ export function ListingDemographics({ listing }: { listing: Listing }) {
     getInitialLastRefreshed(listing.id),
   );
   const [refreshNonce, setRefreshNonce] = useState(0);
+  const property = getProperty(listing.propertyId);
 
   function handleSaveRings() {
     setSavedRings(draftRings);
@@ -37,7 +39,7 @@ export function ListingDemographics({ listing }: { listing: Listing }) {
       <ListingPageHeader title="Demographics" />
 
       <DemographicsMapCard
-        center={{ lat: listing.lat, lng: listing.lng }}
+        center={{ lat: property?.lat ?? 0, lng: property?.lng ?? 0 }}
         savedRings={savedRings}
         draftRings={draftRings}
         onDraftRingsChange={setDraftRings}

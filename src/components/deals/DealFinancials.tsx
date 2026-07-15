@@ -103,7 +103,8 @@ function BreakdownListRow({ row, isLast }: { row: BreakdownRow; isLast: boolean 
 
 /** Gross Commission Breakdown: a list (doubling as the donut's legend) with the chart alongside it. */
 function BreakdownSection({ listing }: { listing: Listing }) {
-  const { financials, commissionAmount } = listing;
+  const { transaction } = listing;
+  const { backOffice: financials, commissionAmount } = transaction;
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -295,7 +296,7 @@ function OutsideCommissionsSection({ brokers }: { brokers: DealBroker[] }) {
 }
 
 function PreSplitDeductionsSection({ listing }: { listing: Listing }) {
-  const deductions = listing.financials.preSplitDeductions;
+  const deductions = listing.transaction.backOffice.preSplitDeductions;
   const amountTotal = sum(deductions.map((d) => d.amount));
   const coveredTotal = sum(deductions.map((d) => d.covered ?? 0));
 
@@ -356,7 +357,7 @@ function PreSplitDeductionsSection({ listing }: { listing: Listing }) {
 }
 
 function ReceivablesSection({ listing }: { listing: Listing }) {
-  const receivables = listing.financials.receivables;
+  const receivables = listing.transaction.backOffice.receivables;
   const amountTotal = sum(receivables.map((r) => r.amount));
   const creditedTotal = sum(receivables.map((r) => r.credited));
   // Receivables don't carry a payer id, but every payer is the deal's buyer (or seller) contact.
@@ -438,13 +439,13 @@ export function DealFinancials({ listing }: { listing: Listing }) {
       <Section title="Gross Commission">
         <div className="row g-3">
           <div className="col-md-4">
-            <StatTile label="Transaction Value (TV)" value={formatCurrency(listing.salePrice)} />
+            <StatTile label="Transaction Value (TV)" value={formatCurrency(listing.transaction.salePrice)} />
           </div>
           <div className="col-md-4">
-            <StatTile label="Gross Commission Percent *" value={`${listing.commissionPct}%`} />
+            <StatTile label="Gross Commission Percent *" value={`${listing.transaction.commissionPct}%`} />
           </div>
           <div className="col-md-4">
-            <StatTile label="Gross Commission Amount *" value={formatCurrency(listing.commissionAmount)} />
+            <StatTile label="Gross Commission Amount *" value={formatCurrency(listing.transaction.commissionAmount)} />
           </div>
         </div>
         <p className="text-muted fs-small mb-0">* Required to submit financials for this deal.</p>

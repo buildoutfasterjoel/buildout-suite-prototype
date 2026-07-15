@@ -16,8 +16,9 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { searchAll } from "#/data/selectors";
-import { getListingsForProperty } from "#/data/store";
+import { getProperty } from "#/data/store";
 import { useAssistant } from "#/ai/useAssistant";
+import { useCreateDeal } from "#/data/useCreateDeal";
 import { useOmniSearch } from "#/components/search/useOmniSearch";
 
 /** Max rows shown per entity group in the palette. */
@@ -58,6 +59,13 @@ type Entry =
       icon: IconDefinition;
       title: string;
       activate: () => void;
+    }
+  | {
+      kind: "create";
+      key: "create";
+      icon: IconDefinition;
+      title: string;
+      activate: () => void;
     };
 
 export function OmniSearch() {
@@ -88,7 +96,6 @@ export function OmniSearch() {
     const list: Entry[] = [];
 
     for (const p of properties.slice(0, GROUP_CAP)) {
-      const listing = getListingsForProperty(p.id)[0];
       list.push({
         kind: "record",
         key: `property-${p.id}`,
@@ -98,7 +105,7 @@ export function OmniSearch() {
         meta: [p.street, [p.city, p.state].filter(Boolean).join(", ")]
           .filter(Boolean)
           .join(" · "),
-        activate: () => navigate(listing ? `/listings/${listing.id}` : "/properties"),
+        activate: () => navigate(`/properties/${p.id}`),
       });
     }
 
@@ -111,24 +118,38 @@ export function OmniSearch() {
         title: `${c.firstName} ${c.lastName}`.trim(),
         meta: [c.title, c.company].filter(Boolean).join(" · "),
         badge: c.relationship
-          ? RELATIONSHIP_LABELS[c.relationship] ?? c.relationship
+          ? (RELATIONSHIP_LABELS[c.relationship] ?? c.relationship)
           : undefined,
         activate: () => navigate(`/backoffice/contacts/${c.id}`),
       });
     }
 
     for (const d of deals.slice(0, GROUP_CAP)) {
+      const p = getProperty(d.propertyId);
       list.push({
         kind: "record",
         key: `deal-${d.id}`,
         group: "Deals",
         icon: faHandshake,
         title: d.name,
-        meta: [d.city, d.state].filter(Boolean).join(", "),
+        meta: [p?.city, p?.state].filter(Boolean).join(", "),
         badge: statusLabel(d.status),
         activate: () => navigate(`/listings/${d.id}`),
       });
     }
+
+    // A "Create deal" quick action is always available for a non-empty query,
+    // seeding the create-deal modal's address field with the raw query text.
+    list.push({
+      kind: "create",
+      key: "create",
+      icon: faHandshake,
+      title: `Create deal for “${q}”`,
+      activate: () => {
+        useCreateDeal.getState().openFor({ initialAddress: q });
+        close();
+      },
+    });
 
     // The Ask-AI action is always available for a non-empty query. When there
     // are no record matches it becomes the only (and thus auto-highlighted) row.
@@ -186,7 +207,7 @@ export function OmniSearch() {
 
   return (
     <Modal open={open} onOpenChange={(o) => (o ? setOpen(true) : close())}>
-      <Modal.Content className="p-0" scrollable>
+      <Modal.Content className="p-0" scrollable centered>
         <Modal.Title className="visually-hidden">
           Search properties, people, and deals
         </Modal.Title>
@@ -196,7 +217,10 @@ export function OmniSearch() {
           <div className="p-2 border-bottom">
             <InputGroup>
               <InputGroup.Addon>
-                <FontAwesomeIcon icon={faMagnifyingGlass} className="text-muted" />
+                <FontAwesomeIcon
+                  icon={faMagnifyingGlass}
+                  className="text-muted"
+                />
               </InputGroup.Addon>
               <Input
                 value={query}
@@ -211,19 +235,22 @@ export function OmniSearch() {
           <div className="overflow-auto py-2" style={{ maxHeight: 440 }}>
             {query.trim() === "" ? (
               <div className="text-muted small px-3 py-4 text-center">
-                Search across properties, people, and deals. Ask a question and the
-                assistant will take it from here.
+                Search across properties, people, and deals. Ask a question and
+                the assistant will take it from here.
               </div>
             ) : (
               entries.map((entry, index) => {
                 const active = index === activeIndex;
                 const showHeader =
                   entry.kind === "record" &&
-                  (index === 0 || entries[index - 1].kind !== "record" ||
-                    (entries[index - 1] as Extract<Entry, { kind: "record" }>).group !==
-                      entry.group);
-                const showAiSeparator =
-                  entry.kind === "ai" && index > 0;
+                  (index === 0 ||
+                    entries[index - 1].kind !== "record" ||
+                    (entries[index - 1] as Extract<Entry, { kind: "record" }>)
+                      .group !== entry.group);
+                const showTopSeparator =
+                  (entry.kind === "ai" || entry.kind === "create") &&
+                  index > 0 &&
+                  entries[index - 1].kind === "record";
 
                 return (
                   <div key={entry.key}>
@@ -232,7 +259,7 @@ export function OmniSearch() {
                         {entry.group}
                       </div>
                     )}
-                    {showAiSeparator && <hr className="my-2" />}
+                    {showTopSeparator && <hr className="my-2" />}
                     <button
                       type="button"
                       data-omni-index={index}
@@ -245,7 +272,9 @@ export function OmniSearch() {
                       <FontAwesomeIcon
                         icon={entry.icon}
                         className={
-                          entry.kind === "ai" ? "text-buildout-blue-700" : "text-muted"
+                          entry.kind === "record"
+                            ? "text-muted"
+                            : "text-buildout-blue-700"
                         }
                       />
                       <span className="flex-grow-1" style={{ minWidth: 0 }}>
@@ -259,7 +288,11 @@ export function OmniSearch() {
                         )}
                       </span>
                       {entry.kind === "record" && entry.badge && (
-                        <Badge variant="secondary" appearance="muted" className="flex-shrink-0">
+                        <Badge
+                          variant="secondary"
+                          appearance="muted"
+                          className="flex-shrink-0"
+                        >
                           {entry.badge}
                         </Badge>
                       )}

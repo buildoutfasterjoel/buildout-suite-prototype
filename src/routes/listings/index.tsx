@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
@@ -17,10 +17,12 @@ import {
   faTableCellsLarge,
   faLocationDot,
 } from "@fortawesome/pro-regular-svg-icons";
-import { getStore } from "#/data/store";
-import { updateDealStage } from "#/data/actions";
+import { getProperty, getStore } from "#/data/store";
+import { useDataStore } from "#/data/dataStore";
+import { useCreateDeal } from "#/data/useCreateDeal";
 import type { Listing, PropertyStatus, DealSide } from "#/data/types";
 import { DealBoard } from "#/components/deals/DealBoard";
+import { requestStageChange } from "#/components/deals/useStageGate";
 import type { Facet } from "#/components/properties/PropertyFilters";
 import { PropertyFilters } from "#/components/properties/PropertyFilters";
 import { FacetDropdown } from "#/components/properties/FacetDropdown";
@@ -40,7 +42,6 @@ import {
   getExpiration,
 } from "#/components/properties/propertyFacets";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
-import { CreateDealModal } from "#/components/deals/CreateDealModal";
 
 export const Route = createFileRoute("/listings/")({
   component: PropertyListings,
@@ -100,20 +101,26 @@ function PropertyListings() {
     [version],
   );
 
+  // Re-derive the board whenever the store's listings change (e.g. a gate commit).
+  useEffect(() => {
+    const unsub = useDataStore.subscribe((s, prev) => {
+      if (s.listings !== prev.listings) setVersion((v) => v + 1);
+    });
+    return unsub;
+  }, []);
+
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortBy>("default");
   const [side, setSide] = useState<DealSide | "all">("all");
-  const [newOpen, setNewOpen] = useState(false);
   const [view, setView] = useState<ViewMode>("board");
   const isListings = view === "grid" || view === "map";
 
   const onRestage = useCallback((listingId: string, stage: PropertyStatus) => {
-    const listing = getStore().listings.get(listingId);
-    if (!listing || listing.status === stage) return;
-    updateDealStage(listingId, stage);
-    // Local re-render bump: this list reads getStore() non-reactively and
-    // re-derives the filtered/sorted board from the now-updated store.
-    setVersion((v) => v + 1);
+    // Sell-side deals open the gate; buy-side deals move directly (no listing to
+    // publish). The card is never optimistically moved, so a cancelled gate
+    // leaves the board unchanged. The board re-derives when the store commits,
+    // via the useDataStore subscribe effect above bumping `version`.
+    requestStageChange(listingId, stage);
   }, []);
 
   const type = useToggleSet<string>();
@@ -131,7 +138,7 @@ function PropertyListings() {
           value: t,
           label: TYPE_LABELS[t],
         })),
-        getValue: (l: Listing) => l.propertyType,
+        getValue: (l: Listing) => getProperty(l.propertyId)?.propertyType ?? "",
         selected: type.set,
         toggle: type.toggle,
         clear: type.clear,
@@ -213,8 +220,9 @@ function PropertyListings() {
           return false;
       }
       if (q) {
+        const p = getProperty(l.propertyId);
         const haystack =
-          `${l.name} ${l.street} ${l.city} ${l.state}`.toLowerCase();
+          `${l.name} ${p?.street ?? ""} ${p?.city ?? ""} ${p?.state ?? ""}`.toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       return true;
@@ -229,11 +237,11 @@ function PropertyListings() {
       case "name-desc":
         return arr.sort((a, b) => b.name.localeCompare(a.name));
       case "price-desc":
-        return arr.sort((a, b) => b.askingPrice - a.askingPrice);
+        return arr.sort((a, b) => b.financials.askingPrice - a.financials.askingPrice);
       case "price-asc":
-        return arr.sort((a, b) => a.askingPrice - b.askingPrice);
+        return arr.sort((a, b) => a.financials.askingPrice - b.financials.askingPrice);
       case "cap-rate-desc":
-        return arr.sort((a, b) => b.capRate - a.capRate);
+        return arr.sort((a, b) => b.financials.capRate - a.financials.capRate);
       default:
         return arr;
     }
@@ -246,7 +254,7 @@ function PropertyListings() {
   const weightedForecast = useMemo(
     () =>
       filtered.reduce(
-        (sum, l) => sum + l.askingPrice * (l.closeProbability / 100),
+        (sum, l) => sum + l.financials.askingPrice * (l.transaction.closeProbability / 100),
         0,
       ),
     [filtered],
@@ -264,14 +272,15 @@ function PropertyListings() {
               {filtered.length !== total && ` of ${total}`}
             </span>
           </div>
-          <Button variant="primary" onClick={() => setNewOpen(true)}>
+          <Button
+            variant="primary"
+            onClick={() => useCreateDeal.getState().openFor()}
+          >
             <FontAwesomeIcon icon={faCirclePlus} />
             New Deal
           </Button>
         </div>
       </div>
-
-      <CreateDealModal open={newOpen} onOpenChange={setNewOpen} />
 
       {/* Toolbar card */}
       <div className="py-3 d-flex flex-column gap-3">

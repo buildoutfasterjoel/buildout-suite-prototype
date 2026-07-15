@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Listing } from "#/data/types";
+import { getProperty } from "#/data/store";
 import {
   TYPE_COLORS,
   TYPE_LABELS,
@@ -43,7 +44,11 @@ function FitBounds({ points }: { points: [number, number][] }) {
 
 export default function PropertyMapInner({ listings }: { listings: Listing[] }) {
   const points = useMemo<[number, number][]>(
-    () => listings.map((l) => [l.lat, l.lng]),
+    () =>
+      listings.map((l) => {
+        const p = getProperty(l.propertyId);
+        return [p?.lat ?? 0, p?.lng ?? 0];
+      }),
     [listings],
   );
 
@@ -63,31 +68,34 @@ export default function PropertyMapInner({ listings }: { listings: Listing[] }) 
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <FitBounds points={points} />
-      {listings.map((p) => (
-        <Marker
-          key={p.id}
-          position={[p.lat, p.lng]}
-          icon={pinIcon(TYPE_COLORS[p.propertyType])}
-        >
-          <Popup>
-            <div style={{ minWidth: 180 }}>
-              <div className="fw-semibold mb-1">{p.name}</div>
-              <div className="text-muted fs-xs mb-2">
-                {p.street}, {p.city}, {p.state}
+      {listings.map((p) => {
+        const prop = getProperty(p.propertyId);
+        return (
+          <Marker
+            key={p.id}
+            position={[prop?.lat ?? 0, prop?.lng ?? 0]}
+            icon={pinIcon(prop ? TYPE_COLORS[prop.propertyType] : "#64748b")}
+          >
+            <Popup>
+              <div style={{ minWidth: 180 }}>
+                <div className="fw-semibold mb-1">{p.name}</div>
+                <div className="text-muted fs-xs mb-2">
+                  {prop?.street}, {prop?.city}, {prop?.state}
+                </div>
+                <div className="d-flex justify-content-between gap-3">
+                  <span>{prop ? TYPE_LABELS[prop.propertyType] : ""}</span>
+                  <span className="fw-semibold">
+                    {formatPrice(p.financials.askingPrice)}
+                  </span>
+                </div>
+                <div className="text-muted fs-xs mt-1">
+                  {STATUS_LABELS[p.status]}
+                </div>
               </div>
-              <div className="d-flex justify-content-between gap-3">
-                <span>{TYPE_LABELS[p.propertyType]}</span>
-                <span className="fw-semibold">
-                  {formatPrice(p.askingPrice)}
-                </span>
-              </div>
-              <div className="text-muted fs-xs mt-1">
-                {STATUS_LABELS[p.status]}
-              </div>
-            </div>
-          </Popup>
-        </Marker>
-      ))}
+            </Popup>
+          </Marker>
+        );
+      })}
     </MapContainer>
   );
 }

@@ -1,5 +1,5 @@
 import type {
-  DataStore,
+  EntityMaps,
   Listing,
   Property,
   Contact,
@@ -19,8 +19,8 @@ export function getEmailById(id: string): Email | undefined {
   return useDataStore.getState().emails.get(id)
 }
 
-/** Live view of the four entity maps from the Zustand store. */
-export function getStore(): DataStore {
+/** Live view of the four core entity maps from the Zustand store. */
+export function getStore(): EntityMaps {
   const { properties, listings, comps, contacts } = useDataStore.getState()
   return { properties, listings, comps, contacts }
 }

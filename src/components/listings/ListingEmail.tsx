@@ -6,6 +6,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faCirclePlus } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing } from "#/data/types";
 import { useDataStore } from "#/data/dataStore";
+import { getProperty } from "#/data/store";
 import { EmailsTable } from "#/components/email/EmailsTable";
 import { ListingPageHeader } from "./ListingPageHeader";
 
@@ -14,12 +15,13 @@ export function ListingEmail({ listing }: { listing: Listing }) {
   const [search, setSearch] = useState("");
 
   const emailsMap = useDataStore((s) => s.emails);
+  const property = getProperty(listing.propertyId);
   const campaigns = useMemo(
     () =>
       [...emailsMap.values()].filter(
-        (e) => e.type === listing.propertyType && !e.archived,
+        (e) => e.type === property?.propertyType && !e.archived,
       ),
-    [emailsMap, listing.propertyType],
+    [emailsMap, property?.propertyType],
   );
 
   const filtered = useMemo(() => {

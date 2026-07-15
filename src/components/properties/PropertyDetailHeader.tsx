@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
@@ -12,6 +11,7 @@ import {
   faHandshake,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing, ListingStage } from "#/data/types";
+import { getProperty } from "#/data/store";
 import {
   STATUS_LABELS,
   STATUS_COLORS,
@@ -22,16 +22,19 @@ import {
 } from "./propertyDisplay";
 import { AvatarGroup } from "./AvatarGroup";
 import { SyndicationStatus } from "#/components/listings/SyndicationStatus";
+import { requestStageChange } from "#/components/deals/useStageGate";
 
 /**
  * Full-bleed page header for a listing (which is its deal, 1:1) — identity on the
- * left, the unified lifecycle stage selector on the right. Stage is local-only.
+ * left, the unified lifecycle stage selector on the right. Selecting a new stage
+ * opens the stage gate; the Select is bound to the live status so a cancelled
+ * gate auto-reverts.
  */
 export function PropertyDetailHeader({ listing }: { listing: Listing }) {
   const seed = hash(listing.id);
   const refId = getRefId(listing.id);
-  const address = `${listing.street}, ${listing.city}, ${listing.state} ${listing.zip}`;
-  const [stage, setStage] = useState<ListingStage>(listing.status);
+  const property = getProperty(listing.propertyId);
+  const address = `${property?.street}, ${property?.city}, ${property?.state} ${property?.zip}`;
 
   return (
     <div className="bg-card border-bottom">
@@ -80,15 +83,23 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
               <Badge variant="secondary" appearance="muted">
                 #{refId}
               </Badge>
-              <SyndicationStatus listing={listing} />
+              {/* Publishing is a sell-side listing concept — buy-side deals have
+                  no listing to syndicate. */}
+              {listing.dealSide === "seller" && (
+                <SyndicationStatus listing={listing} />
+              )}
             </div>
           </div>
 
           {/* Actions + stage */}
           <div className="d-flex align-items-cente gap-2 flex-shrink-0">
             <Select
-              value={stage}
-              onValueChange={(v) => v && setStage(v as ListingStage)}
+              value={listing.status}
+              onValueChange={(v) => {
+                if (v && v !== listing.status) {
+                  requestStageChange(listing.id, v as ListingStage);
+                }
+              }}
             >
               <Select.Trigger style={{ minWidth: 168 }}>
                 <span className="d-inline-flex align-items-center gap-2">
@@ -97,7 +108,7 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
                     style={{
                       width: 8,
                       height: 8,
-                      backgroundColor: STATUS_COLORS[stage],
+                      backgroundColor: STATUS_COLORS[listing.status],
                     }}
                   />
                   <Select.Value>
@@ -127,7 +138,17 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
             <Button variant="ghost" size="icon" aria-label="Manage access">
               <FontAwesomeIcon icon={faUserGear} />
             </Button>
-            <Button variant="primary" className="flex-shrink-0">
+            <Button
+              variant="primary"
+              className="flex-shrink-0"
+              nativeButton={false}
+              render={
+                <Link
+                  to="/listings/$listingId/edit"
+                  params={{ listingId: listing.id }}
+                />
+              }
+            >
               <FontAwesomeIcon icon={faPencil} />
               Edit Deal
             </Button>

@@ -236,7 +236,7 @@ function Planner({ listing }: { listing: Listing }) {
     );
 
   const start = stageStartDate(listing.history, listing.status, listing.createdAt);
-  const end = endMilestone(listing.status, start, listing.financials.closeDate);
+  const end = endMilestone(listing.status, start, listing.transaction.backOffice.closeDate);
 
   return (
     <div className="d-flex flex-column">

@@ -133,16 +133,78 @@ export interface Property {
   grossRentMultiplier: number
   parkingSpaces: number
 
+  // Occupancy + notes + child records (source of truth for the asset)
+  occupancyPct: number
+  notes: string
+  units: PropertyUnit[]
+  /** Dated in-place financial actuals, newest first; [0] mirrors the flat current fields above. */
+  financialRecords: PropertyFinancialRecord[]
+
   createdAt: string
   updatedAt: string
+}
+
+export type UnitType = 'residential' | 'office' | 'retail' | 'industrial' | 'other'
+
+/** A physical child shell of a Property (condo unit, pad, suite, apartment). Source of truth on the asset. */
+export interface PropertyUnit {
+  id: string
+  /** Display label, e.g. "Unit 4B" or "Suite 200". */
+  label: string
+  unitType: UnitType
+  sqft: number
+  // Residential shell
+  beds: number | null
+  baths: number | null
+  // Commercial shell
+  suite: string | null
+  floor: number | null
+  /** Overrides the building-level ceiling height when set. */
+  ceilingHeight: number | null
+  offices: number | null
+  conferenceRooms: number | null
+  furnished: boolean
+  /** Prior sale transactions on this unit, newest first — the asset's ownership history. */
+  saleHistory: UnitSaleEvent[]
+}
+
+/** One prior sale of a unit — a transaction fact on the asset (surfaced by Sale-side deals). */
+export interface UnitSaleEvent {
+  id: string
+  /** ISO date (YYYY-MM-DD) of the sale. */
+  date: string
+  price: number
+  pricePerSf: number
+  buyer: string
+  seller: string
+  capRateAtSale: number
+}
+
+export type FinancialRecordSource = 'T-12 actuals' | 'Assessor' | 'Owner-provided' | 'Broker estimate'
+
+/** A dated snapshot of the asset's in-place operating performance. Newest record = current. */
+export interface PropertyFinancialRecord {
+  id: string
+  /** ISO date (YYYY-MM-DD) the figures are as-of. */
+  asOf: string
+  source: FinancialRecordSource
+  potentialGrossIncome: number
+  vacancyRate: number
+  effectiveGrossIncome: number
+  operatingExpenses: number
+  noi: number
+  capRate: number
+  grossRentMultiplier: number
+  cashOnCashReturn: number
+  occupancyPct: number
 }
 
 /**
  * A Listing is a marketable space/offering that belongs to a Property (a building
  * can have several — e.g. retail pads or office suites). It IS its deal (1:1), so it
  * also carries the deal's transaction, brokers, contacts, planner, and back-office
- * data. Display fields (location, type) are denormalized from the parent Property so
- * listing views render without a join; building/tax/physical facts live on `Property`.
+ * data. Display/property fields (location, type, physical facts) are not denormalized
+ * here — they're resolved from the parent `Property` via `selectDealWithProperty`.
  */
 export interface Listing {
   id: string
@@ -150,40 +212,15 @@ export interface Listing {
   name: string
   slug: string
   status: PropertyStatus // unified listing + deal stage
+  /** ISO timestamp when the listing was published (went live), or null when not published. Diverges from `status` so a backward move can keep the listing live. */
+  publishedAt: string | null
   dealType: DealType
   dealSide: DealSide // whether the broker represents the seller or the buyer
-
-  // Offering-specific
-  availableSqFt: number
-  askingPrice: number
-  leaseRate: number | null
-  capRate: number
-
-  // Listing marketing copy (optional — surfaced in the New Listing flow)
-  description?: string
-  locationDescription?: string
-
-  // Denormalized from parent Property for display
-  propertyType: PropertyType
-  propertySubtype: PropertySubtype
-  street: string
-  city: string
-  state: string
-  zip: string
-  lat: number
-  lng: number
+  /** The Property unit this deal is scoped to, or null when it covers the whole property. */
+  unitId: string | null
 
   // ── Deal data (1:1) ──────────────────────────────────────────────
   dealId: string
-  location: string
-  propertyTypeLabel: string
-
-  // Transaction
-  salePrice: number
-  pricePerSqFt: number
-  commissionPct: number
-  commissionAmount: number
-  closeProbability: number
 
   internalBrokers: DealBroker[]
   outsideBrokers: DealBroker[]
@@ -196,12 +233,15 @@ export interface Listing {
   messages: DealMessage[]
   activities: DealActivity[]
   history: DealHistoryEntry[]
-  financials: DealFinancials
+  financials: DealPitchFinancials
+  transaction: DealTransaction
+  marketing: DealMarketing
 
   /** Context files attached when the deal was created (OMs, financials, notes). */
   documents?: DealDocument[]
 
-  nextCriticalDate: string | null
+  /** Broker-only notes on this engagement — never published. */
+  internalNotes: string
 
   createdAt: string
   updatedAt: string
@@ -214,6 +254,8 @@ export interface DealDocument {
   uploadedAt: string
   /** Human-readable file size for display (e.g. "2.3 MB"). */
   size?: string
+  /** True when Buildout auto-generated this document — the publish gate requires review of these. */
+  aiGenerated?: boolean
 }
 
 /** A folder or file in a deal's internal Files workspace (the "lite Dropbox" page). */
@@ -296,6 +338,167 @@ export interface DealFinancials {
   relatedContactsLabel: string
   preSplitDeductions: FinancialDeduction[]
   receivables: FinancialReceivable[]
+}
+
+/**
+ * The transaction facts of a deal — the accepted parties (via the deal's contact-id
+ * arrays), critical dates, the transacted price/commission, and the back-office
+ * settlement records. Populated across Under Contract → Close.
+ */
+export interface DealTransaction {
+  /** The transacted sale price (distinct from the pitch/asking price on `financials`). */
+  salePrice: number
+  pricePerSqFt: number
+  commissionPct: number
+  commissionAmount: number
+  closeProbability: number
+  contractExecutedDate: string | null
+  closeDate: string | null
+  listedOnDate: string | null
+  listingExpirationDate: string | null
+  deadReason: string | null
+  nextCriticalDate: string | null
+  /** Voucher / receivables / deductions — the Close-phase settlement records. */
+  backOffice: DealFinancials
+}
+
+export interface IncomeLineItem { id: string; label: string; amount: number }
+export interface ExpenseLineItem { id: string; label: string; amount: number }
+
+/** A named, reorderable underwriting scenario (e.g. Worst Case / Best Case). */
+export interface FinancialScenario {
+  id: string
+  name: string
+  noi: number
+  capRate: number
+  cashFlow: number
+}
+
+/** One row of the deal's presented rent roll — a lease on a property unit. */
+export interface RentRollRow {
+  id: string
+  /** References a `Property.units` shell, or null for an unassigned row. */
+  unitId: string | null
+  tenant: string
+  actualRent: number
+  marketRent: number
+  rentPerSf: number
+  securityDeposit: number
+  leaseStart: string | null
+  leaseEnd: string | null
+}
+
+/**
+ * The broker's pro-forma pitch financials for this deal — the underwriting shown
+ * in marketing. Snapshots the property's actuals and can move independently.
+ */
+export interface DealPitchFinancials {
+  askingPrice: number
+  askingPriceUnits: string
+  hidePrice: boolean
+  pricePerSqFt: number
+  capRate: number
+  income: IncomeLineItem[]
+  grossScheduledIncome: number
+  otherIncome: number
+  totalScheduledIncome: number
+  vacancyPct: number
+  vacancyCost: number
+  grossIncome: number
+  expenses: ExpenseLineItem[]
+  operatingExpenses: number
+  noi: number
+  loanAmount: number
+  downPayment: number
+  debtService: number
+  cashFlow: number
+  debtCoverageRatio: number
+  grossRentMultiplier: number
+  cashOnCash: number
+  scenarios: FinancialScenario[]
+  rentRoll: RentRollRow[]
+}
+
+export type PropertyUse = 'Net Leased Investment' | 'Investment' | 'Owner/User' | 'Business for Sale' | 'Development'
+export type InvestmentType = 'Core' | 'Core Plus' | 'Value Add' | 'Opportunistic' | 'Distressed'
+export type MarketingChannel = 'None' | 'Buildout Buyer Network' | 'My Brokerage Website' | 'Buildout Syndication Network'
+export type VisibilityTier = 'Fully Private' | 'Private' | 'Semi-Public' | 'Fully Public'
+export type LeaseRateUnits = 'SF/Yr' | 'SF/Mo' | 'Monthly'
+export type SpaceLeaseType = 'Gross' | 'Modified Gross' | 'NNN' | 'Modified Net' | 'Full Service' | 'Ground Lease'
+
+/**
+ * Lease terms for one marketed space, keyed to a `Property.units` shell (reset per
+ * engagement). A lease-side deal carries one record per unit it markets.
+ */
+export interface SpaceLeaseTerms {
+  /** References the `Property.units` shell these terms apply to. */
+  unitId: string
+  leaseRate: number | null
+  leaseRateUnits: LeaseRateUnits
+  hideLeaseRate: boolean
+  leaseType: SpaceLeaseType
+  leaseTermMonths: number | null
+  dateAvailable: string | null
+  minDivisibleSqFt: number | null
+  maxContiguousSqFt: number | null
+  tiAllowance: number | null
+  freeRentMonths: number | null
+  signageAvailable: boolean
+  rentEscalators: string | null
+  sublease: boolean
+  description: string | null
+  // ── Expanded catalog fields ──────────────────────────────────────
+  taxPerSf: number | null
+  taxStops: string | null
+  camPerSf: number | null
+  camStops: string | null
+  insurancePerSf: number | null
+  expenseStops: string | null
+  procurementFeePct: number | null
+  tenantsPayGas: boolean
+  tenantsPayElectric: boolean
+  tenantsPayWater: boolean
+  movingAllowance: number | null
+  buyoutAllowance: number | null
+  concession: string | null
+  netLeaseInvestment: boolean
+}
+
+/** Per-item public/private flags — Active publishes the flagged set (wired in Phase 3/4). */
+export interface PublishFlags {
+  title: boolean
+  description: boolean
+  bullets: boolean
+  financials: boolean
+  photos: boolean
+}
+
+/** The deal's marketing content — copy, terms, channel/visibility, publish flags. */
+export interface DealMarketing {
+  saleTitle: string
+  saleDescription: string
+  saleBullets: string[]
+  saleClosingInfo: string
+  leaseTitle: string
+  leaseDescription: string
+  leaseBullets: string[]
+  /** Deal-level lease commission split %, or null when unset. */
+  leaseCommissionSplitPct: number | null
+  propertyUse: PropertyUse
+  investmentType: InvestmentType
+  includesRealEstate: boolean
+  auction: boolean
+  saleTerms: string
+  reimbursement: string
+  marketingChannel: MarketingChannel
+  visibilityTier: VisibilityTier
+  publishFlags: PublishFlags
+  /** Snapshot of `Property.occupancyPct` taken at Active, or null before publish. */
+  occupancySnapshot: number | null
+  availableSqFt: number
+  locationDescription: string
+  /** Per-unit lease terms — one record per marketed `Property.units` shell. */
+  spaceLeaseTerms: SpaceLeaseTerms[]
 }
 
 /** A line item deducted from gross commission before broker splits, e.g. a marketing fee. */
@@ -409,7 +612,12 @@ export interface Contact {
   tags: string[]
 }
 
-export interface DataStore {
+/**
+ * The four core entity maps, as returned by `getStore()`. This is the subset of
+ * the live `DataSlice` (`src/data/dataStore.ts`) that read-side helpers need —
+ * `dealFiles`/`emails`/`callLists` are accessed through their own helpers.
+ */
+export interface EntityMaps {
   properties: Map<string, Property>
   listings: Map<string, Listing>
   comps: Map<string, Comp>
@@ -434,6 +642,15 @@ export interface ContactDetail {
   contact: Contact
   deals: DealSummary[]
   openTaskCount: number
+}
+
+/** Everything the property record page needs, assembled client-side from the live store. */
+export interface PropertyDetail {
+  property: Property
+  deals: Listing[]
+  owners: Contact[]
+  contacts: Contact[]
+  comps: Comp[]
 }
 
 export interface ListPropertiesInput {

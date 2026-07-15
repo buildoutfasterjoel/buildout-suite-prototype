@@ -67,20 +67,29 @@ export function SyndicationStatus({ listing }: { listing: Listing }) {
   const [networks, setNetworks] = useState(initialNetworks);
   const rep = listing.internalBrokers[0];
 
+  const published = listing.publishedAt != null;
+  // A Closed or Lost deal that was published is off-market now — show its history
+  // without implying it is still live.
+  const offMarket =
+    published && (listing.status === "closed" || listing.status === "inactive");
   const activeCount = networks.filter((n) => n.active).length;
-  const label =
-    networks.length === 0 || activeCount === 0
-      ? "Not syndicating"
-      : `Syndicating to ${activeCount}/${networks.length} networks`;
+  const label = !published
+    ? "Not published"
+    : offMarket
+      ? "Previously published"
+      : activeCount === 0
+        ? "Published"
+        : `Published · syndicating to ${activeCount}/${networks.length}`;
 
   const needsAttention =
     blockingIssues.length > 0 ||
     networks.some((n) => n.status === "needs-attention");
-  const statusColor = needsAttention
-    ? "var(--bp-warning)"
-    : activeCount > 0
-      ? "var(--stage-active)"
-      : "var(--stage-inactive)";
+  const statusColor =
+    !published || offMarket
+      ? "var(--stage-inactive)"
+      : needsAttention
+        ? "var(--bp-warning)"
+        : "var(--stage-active)";
 
   const toggle = (id: string, active: boolean) => {
     setNetworks((prev) =>
@@ -100,6 +109,10 @@ export function SyndicationStatus({ listing }: { listing: Listing }) {
 
   return (
     <div className="d-flex align-items-center gap-2">
+      <div className="d-flex align-items-center gap-0-5 fs-small">
+        <FontAwesomeIcon icon={faCircleWifi} style={{ color: statusColor }} />
+        {label}
+      </div>
       <Modal>
         <Tooltip>
           <Tooltip.Trigger
@@ -216,10 +229,6 @@ export function SyndicationStatus({ listing }: { listing: Listing }) {
           </Modal.Footer>
         </Modal.Content>
       </Modal>
-      <div className="d-flex align-items-center gap-0-5 fs-small">
-        <FontAwesomeIcon icon={faCircleWifi} style={{ color: statusColor }} />
-        {label}
-      </div>
     </div>
   );
 }

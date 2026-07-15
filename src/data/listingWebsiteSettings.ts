@@ -1,5 +1,6 @@
-import { hash } from "#/components/properties/propertyDisplay";
+import { hash, TYPE_LABELS } from "#/components/properties/propertyDisplay";
 import type { Listing } from "#/data/types";
+import { getProperty } from "#/data/store";
 
 const TEMPLATE_NAMES = [
   "Modern Listing",
@@ -35,6 +36,8 @@ export function getListingWebsiteSettings(
   listing: Listing,
 ): ListingWebsiteSettings {
   const h = hash(listing.id);
+  const property = getProperty(listing.propertyId);
+  const typeLabel = property ? TYPE_LABELS[property.propertyType] : "";
 
   // Anchor date matches the prototype "today" used by listingTraffic.ts.
   const anchor = new Date(2026, 5, 26);
@@ -47,7 +50,7 @@ export function getListingWebsiteSettings(
     lastUpdated: `${MONTHS_SHORT[updated.getMonth()]} ${updated.getDate()}, ${updated.getFullYear()}`,
     websiteUrl: `https://properties.buildout.com/${listing.slug}`,
     visibility: VISIBILITY_OPTIONS[h % VISIBILITY_OPTIONS.length],
-    metaTitle: `${listing.name} | ${listing.propertyTypeLabel} for ${listing.dealType} in ${listing.city}, ${listing.state}`,
-    metaDescription: `${listing.availableSqFt.toLocaleString()} SF ${listing.propertyTypeLabel.toLowerCase()} property located at ${listing.street}, ${listing.city}, ${listing.state}. Contact us to learn more about this ${listing.dealType.toLowerCase()} opportunity.`,
+    metaTitle: `${listing.name} | ${typeLabel} for ${listing.dealType} in ${property?.city}, ${property?.state}`,
+    metaDescription: `${listing.marketing.availableSqFt.toLocaleString()} SF ${typeLabel.toLowerCase()} property located at ${property?.street}, ${property?.city}, ${property?.state}. Contact us to learn more about this ${listing.dealType.toLowerCase()} opportunity.`,
   };
 }

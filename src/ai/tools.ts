@@ -52,15 +52,18 @@ const contactSummary = (c: Contact) => ({
   phone: c.phone,
 });
 
-const dealSummary = (l: Listing) => ({
-  id: l.id,
-  name: l.name,
-  status: l.status,
-  dealType: l.dealType,
-  city: l.city,
-  state: l.state,
-  askingPrice: l.askingPrice,
-});
+const dealSummary = (l: Listing) => {
+  const p = getProperty(l.propertyId);
+  return {
+    id: l.id,
+    name: l.name,
+    status: l.status,
+    dealType: l.dealType,
+    city: p?.city ?? "",
+    state: p?.state ?? "",
+    askingPrice: l.financials.askingPrice,
+  };
+};
 
 const propertySummary = (p: Property) => ({
   id: p.id,

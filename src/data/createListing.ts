@@ -8,7 +8,43 @@ import type {
   DealBroker,
   DealDocument,
   DealTask,
+  SpaceLeaseTerms,
 } from './types'
+
+/** A blank per-unit lease-terms record — used as a default for units without terms yet. */
+export function emptySpaceLeaseTerms(unitId: string): SpaceLeaseTerms {
+  return {
+    unitId,
+    leaseRate: null,
+    leaseRateUnits: 'SF/Yr',
+    hideLeaseRate: false,
+    leaseType: 'NNN',
+    leaseTermMonths: null,
+    dateAvailable: null,
+    minDivisibleSqFt: null,
+    maxContiguousSqFt: null,
+    tiAllowance: null,
+    freeRentMonths: null,
+    signageAvailable: false,
+    rentEscalators: null,
+    sublease: false,
+    description: null,
+    taxPerSf: null,
+    taxStops: null,
+    camPerSf: null,
+    camStops: null,
+    insurancePerSf: null,
+    expenseStops: null,
+    procurementFeePct: null,
+    tenantsPayGas: false,
+    tenantsPayElectric: false,
+    tenantsPayWater: false,
+    movingAllowance: null,
+    buyoutAllowance: null,
+    concession: null,
+    netLeaseInvestment: false,
+  }
+}
 import {
   addListing,
   addProperty,
@@ -17,7 +53,6 @@ import {
   getContact,
   contactLabel,
 } from './store'
-import { TYPE_LABELS } from '#/components/properties/propertyDisplay'
 
 /**
  * The editable subset of a listing the New Listing modal collects — just the
@@ -179,6 +214,49 @@ function buildStubProperty(draft: NewListingDraft, now: string): Property {
     grossRentMultiplier: 0,
     parkingSpaces: 0,
 
+    occupancyPct: 0,
+    notes: '',
+    units: [
+      {
+        id: crypto.randomUUID(),
+        label: 'Whole Property',
+        unitType:
+          draft.propertyType === 'multifamily'
+            ? 'residential'
+            : draft.propertyType === 'office' ||
+                draft.propertyType === 'retail' ||
+                draft.propertyType === 'industrial'
+              ? draft.propertyType
+              : 'other',
+        sqft: Math.max(1, draft.availableSqFt),
+        beds: null,
+        baths: null,
+        suite: null,
+        floor: null,
+        ceilingHeight: null,
+        offices: null,
+        conferenceRooms: null,
+        furnished: false,
+        saleHistory: [],
+      },
+    ],
+    financialRecords: [
+      {
+        id: crypto.randomUUID(),
+        asOf: now.slice(0, 10),
+        source: 'Broker estimate',
+        potentialGrossIncome: 0,
+        vacancyRate: 0,
+        effectiveGrossIncome: 0,
+        operatingExpenses: 0,
+        noi: 0,
+        capRate: 0,
+        grossRentMultiplier: 0,
+        cashOnCashReturn: 0,
+        occupancyPct: 0,
+      },
+    ],
+
     createdAt: now,
     updatedAt: now,
   }
@@ -252,12 +330,14 @@ function seedProposalDocuments(now: string): DealDocument[] {
       name: 'Offering-Memorandum.pdf',
       uploadedAt: now,
       size: '2.3 MB',
+      aiGenerated: true,
     },
     {
       id: crypto.randomUUID(),
       name: 'Rent-Roll-2026.xlsx',
       uploadedAt: now,
       size: '86 KB',
+      aiGenerated: true,
     },
   ]
 }
@@ -324,39 +404,13 @@ export function createProposalListing(draft: NewListingDraft): Listing {
     name,
     slug,
     status: 'proposal',
+    publishedAt: null,
     dealType: draft.dealType,
     dealSide: draft.dealSide,
-
-    availableSqFt: draft.availableSqFt,
-    askingPrice: draft.listingPrice,
-    leaseRate: null,
-    capRate: 0,
-    description: draft.description,
-    locationDescription: draft.locationDescription,
-
-    propertyType: property.propertyType,
-    propertySubtype: property.propertySubtype,
-    street: property.street,
-    city: property.city,
-    state: property.state,
-    zip: property.zip,
-    lat: property.lat,
-    lng: property.lng,
+    unitId: null,
 
     // Deal (1:1) — empty/zeroed for a brand-new proposal
     dealId,
-    location: linked
-      ? [property.city, property.state].filter(Boolean).join(', ')
-      : addressLabel,
-    propertyTypeLabel: TYPE_LABELS[property.propertyType],
-    salePrice: draft.listingPrice,
-    pricePerSqFt:
-      draft.availableSqFt > 0
-        ? Math.round((draft.listingPrice / draft.availableSqFt) * 100) / 100
-        : 0,
-    commissionPct: draft.commissionPct,
-    commissionAmount,
-    closeProbability: 0,
     internalBrokers: [currentUserBroker(commissionAmount)],
     outsideBrokers: [],
     sellerContactIds: seller ? [seller.id] : [],
@@ -377,15 +431,83 @@ export function createProposalListing(draft: NewListingDraft): Listing {
     ],
     documents,
     financials: {
-      name,
-      identifier: dealId,
-      status: 'Draft',
-      closeDate: null,
-      relatedContactsLabel: primaryContact ? contactLabel(primaryContact) : '—',
-      preSplitDeductions: [],
-      receivables: [],
+      askingPrice: draft.listingPrice,
+      askingPriceUnits: 'total',
+      hidePrice: false,
+      pricePerSqFt:
+        draft.availableSqFt > 0
+          ? Math.round((draft.listingPrice / draft.availableSqFt) * 100) / 100
+          : 0,
+      capRate: 0,
+      income: [],
+      grossScheduledIncome: 0,
+      otherIncome: 0,
+      totalScheduledIncome: 0,
+      vacancyPct: 0,
+      vacancyCost: 0,
+      grossIncome: 0,
+      expenses: [],
+      operatingExpenses: 0,
+      noi: 0,
+      loanAmount: 0,
+      downPayment: 0,
+      debtService: 0,
+      cashFlow: 0,
+      debtCoverageRatio: 0,
+      grossRentMultiplier: 0,
+      cashOnCash: 0,
+      scenarios: [],
+      rentRoll: [],
     },
-    nextCriticalDate,
+    transaction: {
+      salePrice: draft.listingPrice,
+      pricePerSqFt:
+        draft.availableSqFt > 0
+          ? Math.round((draft.listingPrice / draft.availableSqFt) * 100) / 100
+          : 0,
+      commissionPct: draft.commissionPct,
+      commissionAmount,
+      closeProbability: 0,
+      contractExecutedDate: null,
+      closeDate: null,
+      listedOnDate: null,
+      listingExpirationDate: null,
+      deadReason: null,
+      nextCriticalDate,
+      backOffice: {
+        name,
+        identifier: dealId,
+        status: 'Draft',
+        closeDate: null,
+        relatedContactsLabel: primaryContact ? contactLabel(primaryContact) : '—',
+        preSplitDeductions: [],
+        receivables: [],
+      },
+    },
+    marketing: {
+      saleTitle: draft.name || name,
+      saleDescription: draft.description,
+      saleBullets: [],
+      saleClosingInfo: '',
+      leaseTitle: '',
+      leaseDescription: '',
+      leaseBullets: [],
+      leaseCommissionSplitPct: null,
+      propertyUse: 'Investment',
+      investmentType: 'Core',
+      includesRealEstate: true,
+      auction: false,
+      saleTerms: '',
+      reimbursement: '',
+      marketingChannel: 'None',
+      visibilityTier: 'Fully Private',
+      publishFlags: { title: false, description: false, bullets: false, financials: false, photos: false },
+      occupancySnapshot: null,
+      availableSqFt: draft.availableSqFt,
+      locationDescription: draft.locationDescription,
+      spaceLeaseTerms: [],
+    },
+    internalNotes: '',
 
     createdAt: now,
     updatedAt: now,

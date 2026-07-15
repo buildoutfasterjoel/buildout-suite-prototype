@@ -22,6 +22,12 @@ import type {
   DealSide,
   ContactDealStage,
   PhoneStatus,
+  PropertyUnit,
+  UnitType,
+  UnitSaleEvent,
+  PropertyFinancialRecord,
+  FinancialRecordSource,
+  RentRollRow,
 } from './types'
 import type { CallList } from './contactLists'
 import type { SerializedContactFilters } from '#/components/contacts/contactFilterModel'
@@ -341,6 +347,155 @@ function generateLegalDescription(): string {
   return `LO${lot} ${sub} SUB BM${year}-${seq}`
 }
 
+// ── Property children (units + financial records) ─────────────────────────────
+
+function generateUnits(
+  propertyType: PropertyType,
+  buildingSqFt: number,
+  residentialUnits: number | null,
+  pricePerSf: number,
+): PropertyUnit[] {
+  const unitType: UnitType =
+    propertyType === 'multifamily'
+      ? 'residential'
+      : propertyType === 'office' || propertyType === 'retail' || propertyType === 'industrial'
+        ? propertyType
+        : 'other'
+
+  // Multifamily: a handful of residential shells. Everything else: 1–3 commercial suites.
+  const count =
+    propertyType === 'multifamily'
+      ? Math.min(residentialUnits ?? 4, 6)
+      : faker.helpers.weightedArrayElement([
+          { weight: 60, value: 1 },
+          { weight: 28, value: 2 },
+          { weight: 12, value: 3 },
+        ])
+  const per = Math.max(400, Math.round(buildingSqFt / count))
+
+  return Array.from({ length: count }, (_, i): PropertyUnit => {
+    const residential = unitType === 'residential'
+    return {
+      id: faker.string.uuid(),
+      label: residential ? `Unit ${i + 1}` : `Suite ${(i + 1) * 100}`,
+      unitType,
+      sqft: per,
+      beds: residential ? faker.number.int({ min: 1, max: 3 }) : null,
+      baths: residential ? faker.number.int({ min: 1, max: 2 }) : null,
+      suite: residential ? null : `${(i + 1) * 100}`,
+      floor: residential ? null : faker.number.int({ min: 1, max: 5 }),
+      ceilingHeight: residential ? null : faker.number.int({ min: 9, max: 16 }),
+      offices: residential ? null : faker.number.int({ min: 0, max: 6 }),
+      conferenceRooms: residential ? null : faker.number.int({ min: 0, max: 2 }),
+      furnished: !residential && faker.datatype.boolean({ probability: 0.25 }),
+      saleHistory: generateUnitSaleHistory(per, pricePerSf),
+    }
+  })
+}
+
+/**
+ * A unit's prior sales, newest first. Each older sale is a couple of years further
+ * back and priced a little lower, so the ownership history trends up toward today.
+ * Some units have never traded separately (empty history).
+ */
+function generateUnitSaleHistory(sqft: number, pricePerSf: number): UnitSaleEvent[] {
+  const count = faker.helpers.weightedArrayElement([
+    { weight: 25, value: 0 },
+    { weight: 35, value: 1 },
+    { weight: 25, value: 2 },
+    { weight: 15, value: 3 },
+  ])
+  let year = 2026
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return Array.from({ length: count }, (_, i): UnitSaleEvent => {
+    year -= faker.number.int({ min: 2, max: 5 })
+    const recencyFactor = 1 - i * faker.number.float({ min: 0.05, max: 0.12, fractionDigits: 3 })
+    const price = Math.max(1, Math.round(sqft * pricePerSf * recencyFactor))
+    return {
+      id: faker.string.uuid(),
+      date: `${year}-${pad(faker.number.int({ min: 1, max: 12 }))}-${pad(faker.number.int({ min: 1, max: 28 }))}`,
+      price,
+      pricePerSf: sqft > 0 ? Math.round((price / sqft) * 100) / 100 : 0,
+      buyer: faker.company.name(),
+      seller: faker.company.name(),
+      capRateAtSale: faker.number.float({ min: 0.045, max: 0.085, fractionDigits: 4 }),
+    }
+  })
+}
+
+function generateFinancialRecords(current: {
+  pgi: number
+  vacancyRate: number
+  egi: number
+  operatingExpenses: number
+  noi: number
+  capRate: number
+  grm: number
+  cashOnCashReturn: number
+  occupancyPct: number
+  /** Asset value (asking price) — held constant across years so cap rate/GRM move with the figures. */
+  value: number
+  /** Operating expense ratio (opex / EGI) — carried across years. */
+  expenseRatio: number
+}): PropertyFinancialRecord[] {
+  // Newest first. Year 0 is the flat current fields verbatim (the seed test pins
+  // record[0] to them). Prior years are VACANCY-DRIVEN and internally consistent:
+  // vacancy drifts (occupancy was a little lower back then), income was a little
+  // lower, and EGI/NOI/occupancy/cap rate/GRM are all DERIVED from that year's
+  // vacancy + income against a constant asset value — so a rendered multi-year
+  // table reads like a real T-12 series, not the same numbers copied down.
+  const currentYear = 2026
+  const sources: FinancialRecordSource[] = ['T-12 actuals', 'Owner-provided', 'Broker estimate']
+
+  return [0, 1, 2].map((back): PropertyFinancialRecord => {
+    if (back === 0) {
+      return {
+        id: faker.string.uuid(),
+        asOf: `${currentYear}-12-31`,
+        source: sources[0],
+        potentialGrossIncome: current.pgi,
+        vacancyRate: current.vacancyRate,
+        effectiveGrossIncome: current.egi,
+        operatingExpenses: current.operatingExpenses,
+        noi: current.noi,
+        capRate: current.capRate,
+        grossRentMultiplier: current.grm,
+        cashOnCashReturn: current.cashOnCashReturn,
+        occupancyPct: current.occupancyPct,
+      }
+    }
+
+    // Older years: higher vacancy, lower income. Everything else derives from these.
+    const vacancyRate = Math.min(
+      0.4,
+      Math.round((current.vacancyRate + back * faker.number.float({ min: 0.005, max: 0.02, fractionDigits: 4 })) * 10000) / 10000,
+    )
+    const pgi = Math.round(current.pgi * (1 - back * faker.number.float({ min: 0.02, max: 0.05, fractionDigits: 3 })))
+    const egi = Math.round(pgi * (1 - vacancyRate))
+    const operatingExpenses = Math.round(egi * current.expenseRatio)
+    const noi = egi - operatingExpenses
+    const capRate = current.value > 0 ? Math.round((noi / current.value) * 10000) / 10000 : current.capRate
+    const grm = pgi > 0 ? Math.round((current.value / pgi) * 10) / 10 : current.grm
+    const cashOnCashReturn = Math.round(capRate * faker.number.float({ min: 0.7, max: 1.1, fractionDigits: 4 }) * 10000) / 10000
+    const occupancyPct = Math.round((1 - vacancyRate) * 1000) / 10
+
+    return {
+      id: faker.string.uuid(),
+      asOf: `${currentYear - back}-12-31`,
+      source: sources[back],
+      potentialGrossIncome: pgi,
+      vacancyRate,
+      effectiveGrossIncome: egi,
+      operatingExpenses,
+      noi,
+      capRate,
+      grossRentMultiplier: grm,
+      cashOnCashReturn,
+      occupancyPct,
+    }
+  })
+}
+
 // ── Property generator ────────────────────────────────────────────────────────
 
 function generateProperty(): Property {
@@ -430,6 +585,14 @@ function generateProperty(): Property {
   const baseName = generatePropertyName(propertyType)
   const slug = baseName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + id.slice(0, 6)
 
+  const cashOnCashReturn = faker.number.float({ min: capRate * 0.7, max: capRate * 1.1, fractionDigits: 4 })
+  const occupancyPct = Math.round((1 - vacancyRate) * 1000) / 10
+  const units = generateUnits(propertyType, buildingSqFt, residentialUnits, pricePerSqFt)
+  const financialRecords = generateFinancialRecords({
+    pgi, vacancyRate, egi, operatingExpenses, noi, capRate, grm, cashOnCashReturn, occupancyPct,
+    value: askingPrice, expenseRatio,
+  })
+
   return {
     id,
     name: baseName,
@@ -508,9 +671,19 @@ function generateProperty(): Property {
     operatingExpenses,
     noi,
     capRate,
-    cashOnCashReturn: faker.number.float({ min: capRate * 0.7, max: capRate * 1.1, fractionDigits: 4 }),
+    cashOnCashReturn,
     grossRentMultiplier: grm,
     parkingSpaces,
+
+    occupancyPct,
+    notes: faker.helpers.arrayElement([
+      'Well-maintained asset; roof replaced within the last 5 years.',
+      'Value-add opportunity — below-market rents on renewal.',
+      'Stabilized; long-term credit tenancy in place.',
+      'Deferred maintenance noted on the last inspection.',
+    ]),
+    units,
+    financialRecords,
 
     createdAt: faker.date.past({ years: 3 }).toISOString(),
     updatedAt: faker.date.recent({ days: 90 }).toISOString(),
@@ -972,6 +1145,12 @@ function generateListings(
     const stageStartedAt =
       status === 'proposal' ? createdAt : faker.date.recent({ days: 120 }).toISOString()
 
+    // Published once the deal has gone live (Active or beyond); Pitching/Lost are not published.
+    const publishedAt =
+      status === 'active' || status === 'under-contract' || status === 'closed'
+        ? stageStartedAt
+        : null
+
     const history: DealHistoryEntry[] = [
       {
         id: faker.string.uuid(),
@@ -1013,36 +1192,49 @@ function generateListings(
           { weight: 20, value: 'Draft' as const },
         ])
 
+    const grossScheduledIncome = Math.round(salePrice * 0.09)
+    const otherIncome = Math.round(grossScheduledIncome * 0.04)
+    const totalScheduledIncome = grossScheduledIncome + otherIncome
+    const vacancyPct = faker.number.float({ min: 3, max: 9, fractionDigits: 1 })
+    const vacancyCost = Math.round(totalScheduledIncome * (vacancyPct / 100))
+    const grossIncome = totalScheduledIncome - vacancyCost
+    const pitchOpEx = Math.round(grossIncome * 0.38)
+    const pitchNoi = grossIncome - pitchOpEx
+    const loanAmount = Math.round(salePrice * 0.65)
+    const downPayment = salePrice - loanAmount
+    const debtService = Math.round(loanAmount * 0.07)
+    const pitchCapRate = Math.max(0, property.capRate + faker.number.float({ min: -0.005, max: 0.005, fractionDigits: 4 }))
+    const rentRoll: RentRollRow[] = property.units.map((u): RentRollRow => {
+      const rent = Math.round(u.sqft * faker.number.float({ min: 1.2, max: 3.5, fractionDigits: 2 }))
+      return {
+        id: faker.string.uuid(),
+        unitId: u.id,
+        tenant: faker.company.name(),
+        actualRent: rent,
+        marketRent: Math.round(rent * faker.number.float({ min: 1.0, max: 1.15, fractionDigits: 2 })),
+        rentPerSf: u.sqft > 0 ? Math.round((rent / u.sqft) * 100) / 100 : 0,
+        securityDeposit: rent,
+        leaseStart: faker.date.past({ years: 3 }).toISOString().slice(0, 10),
+        leaseEnd: faker.date.future({ years: 3 }).toISOString().slice(0, 10),
+      }
+    })
+
+    const isLease = dealType !== 'Sale'
+    const marketingUnitId = property.units.length > 0 ? property.units[i % property.units.length].id : null
+
     return {
       id,
       propertyId: property.id,
       name,
       slug: `${property.slug}-${i + 1}`,
       status,
+      publishedAt,
       dealType,
       dealSide,
-      availableSqFt,
-      askingPrice: salePrice,
-      leaseRate: dealType === 'Sale' ? null : faker.number.float({ min: 8, max: 55, fractionDigits: 2 }),
-      capRate: Math.max(0, property.capRate + faker.number.float({ min: -0.005, max: 0.005, fractionDigits: 4 })),
-      propertyType: property.propertyType,
-      propertySubtype: property.propertySubtype,
-      street: property.street,
-      city: property.city,
-      state: property.state,
-      zip: property.zip,
-      lat: property.lat,
-      lng: property.lng,
+      unitId: marketingUnitId,
 
       // Deal (1:1)
       dealId,
-      location: `${property.city}, ${property.state}`,
-      propertyTypeLabel: TYPE_LABEL[property.propertyType],
-      salePrice,
-      pricePerSqFt,
-      commissionPct,
-      commissionAmount,
-      closeProbability: faker.number.int({ min: pMin, max: pMax }),
       internalBrokers,
       outsideBrokers,
       sellerContactIds: sellerContacts.map((c) => c.id),
@@ -1053,30 +1245,133 @@ function generateListings(
       activities: [],
       history,
       financials: {
-        name,
-        identifier: dealId,
-        status: voucherStatus,
+        askingPrice: salePrice,
+        askingPriceUnits: 'total',
+        hidePrice: false,
+        pricePerSqFt,
+        capRate: pitchCapRate,
+        income: [
+          { id: faker.string.uuid(), label: 'Base Rent', amount: grossScheduledIncome },
+          { id: faker.string.uuid(), label: 'Other Income', amount: otherIncome },
+        ],
+        grossScheduledIncome,
+        otherIncome,
+        totalScheduledIncome,
+        vacancyPct,
+        vacancyCost,
+        grossIncome,
+        expenses: [
+          { id: faker.string.uuid(), label: 'Operating Expenses', amount: pitchOpEx },
+        ],
+        operatingExpenses: pitchOpEx,
+        noi: pitchNoi,
+        loanAmount,
+        downPayment,
+        debtService,
+        cashFlow: pitchNoi - debtService,
+        debtCoverageRatio: debtService > 0 ? Math.round((pitchNoi / debtService) * 100) / 100 : 0,
+        grossRentMultiplier: grossScheduledIncome > 0 ? Math.round((salePrice / grossScheduledIncome) * 10) / 10 : 0,
+        cashOnCash: downPayment > 0 ? Math.round(((pitchNoi - debtService) / downPayment) * 1000) / 10 : 0,
+        scenarios: [
+          { id: faker.string.uuid(), name: 'Worst Case', noi: Math.round(pitchNoi * 0.85), capRate: pitchCapRate + 0.005, cashFlow: Math.round((pitchNoi - debtService) * 0.7) },
+          { id: faker.string.uuid(), name: 'Best Case', noi: Math.round(pitchNoi * 1.12), capRate: Math.max(0, pitchCapRate - 0.005), cashFlow: Math.round((pitchNoi - debtService) * 1.3) },
+        ],
+        rentRoll,
+      },
+      transaction: {
+        salePrice,
+        pricePerSqFt,
+        commissionPct,
+        commissionAmount,
+        closeProbability: faker.number.int({ min: pMin, max: pMax }),
+        contractExecutedDate: status === 'under-contract' || status === 'closed'
+          ? faker.date.recent({ days: 120 }).toISOString().slice(0, 10) : null,
         closeDate: status === 'closed' ? faker.date.recent({ days: 90 }).toISOString().slice(0, 10) : null,
-        relatedContactsLabel: `${sellerName}${sellerContacts.length + buyerContacts.length > 1 ? ` & ${sellerContacts.length + buyerContacts.length - 1} more` : ''}`,
-        preSplitDeductions,
-        receivables: status === 'closed'
-          ? (() => {
-              const payer = buyerContacts[0] ?? sellerContacts[0]
-              return [
+        listedOnDate: status !== 'proposal' ? faker.date.recent({ days: 200 }).toISOString().slice(0, 10) : null,
+        listingExpirationDate: status !== 'proposal' ? faker.date.future({ years: 1 }).toISOString().slice(0, 10) : null,
+        deadReason: null,
+        nextCriticalDate: nextTask?.date ?? null,
+        backOffice: {
+          name,
+          identifier: dealId,
+          status: voucherStatus,
+          closeDate: status === 'closed' ? faker.date.recent({ days: 90 }).toISOString().slice(0, 10) : null,
+          relatedContactsLabel: `${sellerName}${sellerContacts.length + buyerContacts.length > 1 ? ` & ${sellerContacts.length + buyerContacts.length - 1} more` : ''}`,
+          preSplitDeductions,
+          receivables: status === 'closed'
+            ? [
                 {
                   id: faker.string.uuid(),
-                  payerName: `${payer.firstName} ${payer.lastName}`,
-                  payerEmail: payer.email,
+                  payerName: `${(buyerContacts[0] ?? sellerContacts[0]).firstName} ${(buyerContacts[0] ?? sellerContacts[0]).lastName}`,
+                  payerEmail: (buyerContacts[0] ?? sellerContacts[0]).email,
                   dueDate: faker.date.recent({ days: 30 }).toISOString().slice(0, 10),
                   billingDescription: 'Full Payment',
                   amount: commissionAmount,
                   credited: 0,
                 },
               ]
-            })()
+            : [],
+        },
+      },
+      marketing: {
+        saleTitle: `${property.name} — ${TYPE_LABEL[property.propertyType]} Offering`,
+        saleDescription: faker.lorem.paragraph(),
+        saleBullets: faker.helpers.arrayElements(
+          ['Prime location', 'Below-market rents', 'Recent capital improvements', 'Strong tenancy', 'Value-add upside'],
+          faker.number.int({ min: 2, max: 4 }),
+        ),
+        saleClosingInfo: 'Offers due by the date noted in the OM.',
+        leaseTitle: isLease ? `${property.name} — Space Available` : '',
+        leaseDescription: isLease ? faker.lorem.sentence() : '',
+        leaseBullets: isLease ? ['Flexible terms', 'Move-in ready'] : [],
+        leaseCommissionSplitPct: isLease ? faker.helpers.arrayElement([null, 50, 60]) : null,
+        propertyUse: faker.helpers.arrayElement(['Net Leased Investment', 'Investment', 'Owner/User', 'Business for Sale', 'Development'] as const),
+        investmentType: faker.helpers.arrayElement(['Core', 'Core Plus', 'Value Add', 'Opportunistic', 'Distressed'] as const),
+        includesRealEstate: true,
+        auction: false,
+        saleTerms: 'All cash or conventional financing.',
+        reimbursement: 'NNN',
+        marketingChannel: faker.helpers.arrayElement(['None', 'Buildout Buyer Network', 'My Brokerage Website', 'Buildout Syndication Network'] as const),
+        visibilityTier: faker.helpers.arrayElement(['Fully Private', 'Private', 'Semi-Public', 'Fully Public'] as const),
+        publishFlags: { title: true, description: true, bullets: true, financials: false, photos: true },
+        occupancySnapshot: status === 'proposal' ? null : property.occupancyPct,
+        availableSqFt,
+        locationDescription: `Located in ${property.submarket}, ${property.city}.`,
+        spaceLeaseTerms: isLease
+          ? property.units.map((u) => ({
+              unitId: u.id,
+              leaseRate: faker.number.float({ min: 8, max: 55, fractionDigits: 2 }),
+              leaseRateUnits: 'SF/Yr' as const,
+              hideLeaseRate: false,
+              leaseType: faker.helpers.arrayElement(['Gross', 'Modified Gross', 'NNN', 'Modified Net', 'Full Service', 'Ground Lease'] as const),
+              leaseTermMonths: faker.number.int({ min: 12, max: 120 }),
+              dateAvailable: faker.date.soon({ days: 90 }).toISOString().slice(0, 10),
+              minDivisibleSqFt: faker.helpers.arrayElement([null, Math.round(u.sqft / 2)]),
+              maxContiguousSqFt: u.sqft,
+              tiAllowance: faker.number.int({ min: 0, max: 60 }),
+              freeRentMonths: faker.number.int({ min: 0, max: 6 }),
+              signageAvailable: true,
+              rentEscalators: '3% annual',
+              sublease: faker.datatype.boolean(0.2),
+              description: faker.lorem.sentence(),
+              taxPerSf: faker.number.float({ min: 1, max: 6, fractionDigits: 2 }),
+              taxStops: faker.helpers.arrayElement([null, 'Base year']),
+              camPerSf: faker.number.float({ min: 2, max: 8, fractionDigits: 2 }),
+              camStops: faker.helpers.arrayElement([null, 'Base year']),
+              insurancePerSf: faker.number.float({ min: 0.5, max: 2, fractionDigits: 2 }),
+              expenseStops: faker.helpers.arrayElement([null, 'Base year']),
+              procurementFeePct: faker.helpers.arrayElement([null, 2, 3]),
+              tenantsPayGas: faker.datatype.boolean(),
+              tenantsPayElectric: true,
+              tenantsPayWater: faker.datatype.boolean(),
+              movingAllowance: faker.helpers.arrayElement([null, 5000, 10000]),
+              buyoutAllowance: null,
+              concession: faker.helpers.arrayElement([null, '1 month free per year']),
+              netLeaseInvestment: false,
+            }))
           : [],
       },
-      nextCriticalDate: nextTask?.date ?? null,
+      internalNotes: faker.helpers.arrayElement(['', '', 'Seller motivated — wants to close before year-end.', 'Waiting on estoppels.']),
 
       createdAt,
       updatedAt: faker.date.recent({ days: 60 }).toISOString(),

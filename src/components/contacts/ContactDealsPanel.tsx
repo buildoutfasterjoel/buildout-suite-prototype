@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
@@ -15,7 +14,7 @@ import {
   faHandshake,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact, DealSummary } from "#/data/types";
-import { CreateDealModal } from "#/components/deals/CreateDealModal";
+import { useCreateDeal } from "#/data/useCreateDeal";
 import { DealCardById } from "#/components/deals/DealCard";
 import { initials as nameInitials } from "#/components/deals/dealDisplay";
 
@@ -112,14 +111,8 @@ export function ContactDealsPanel({
   deals: DealSummary[];
   openTaskCount: number;
 }) {
-  const [newDealOpen, setNewDealOpen] = useState(false);
   return (
     <div className="d-flex flex-column gap-4">
-      <CreateDealModal
-        open={newDealOpen}
-        onOpenChange={setNewDealOpen}
-        contact={contact}
-      />
       {/* Deals */}
       <Card className="shadow-sm">
         <Card.Body className="d-flex flex-column gap-3">
@@ -143,7 +136,7 @@ export function ContactDealsPanel({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setNewDealOpen(true)}
+              onClick={() => useCreateDeal.getState().openFor({ contact })}
             >
               <FontAwesomeIcon icon={faPlus} />
               New deal

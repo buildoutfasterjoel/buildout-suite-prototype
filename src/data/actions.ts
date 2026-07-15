@@ -6,7 +6,9 @@ import {
   serializeContactFilters,
   type ContactFilterState,
 } from '#/components/contacts/contactFilterModel'
-import type { Listing, PropertyStatus } from './types'
+import type { Contact, ContactRole, DealHistoryEntry, DealMarketing, Listing, PropertyStatus } from './types'
+import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
+import { notify } from '#/lib/notify'
 
 let _callListSeq = 0
 
@@ -35,6 +37,84 @@ export function updateDealStage(
   status: PropertyStatus,
 ): { deal: Listing | null } {
   return { deal: patchListing(dealId, (l) => ({ ...l, status, updatedAt: new Date().toISOString() })) }
+}
+
+/**
+ * Commit a gated stage transition: apply the captured field patch, link any
+ * seller/buyer chosen in the gate, flip the status, set/clear the published
+ * marker, and append a history entry. This is the single write path the
+ * StageGate modal commits through.
+ */
+export function commitStageTransition(input: StageTransitionInput): { deal: Listing | null } {
+  const now = new Date().toISOString()
+  const deal = patchListing(input.dealId, (l) => {
+      const historyEntry: DealHistoryEntry = {
+        id: crypto.randomUUID(),
+        label: 'Moved to',
+        fromStage: l.status,
+        toStage: input.targetStage,
+        actor: input.actor,
+        timestamp: now,
+      }
+
+      const sellerContactIds =
+        input.sellerContactId && !l.sellerContactIds.includes(input.sellerContactId)
+          ? [...l.sellerContactIds, input.sellerContactId]
+          : l.sellerContactIds
+      const buyerContactIds =
+        input.buyerContactId && !l.buyerContactIds.includes(input.buyerContactId)
+          ? [...l.buyerContactIds, input.buyerContactId]
+          : l.buyerContactIds
+
+      const publishedAt = input.publish ? now : input.unpublish ? null : l.publishedAt
+
+      return {
+        ...l,
+        status: input.targetStage,
+        dealSide: input.dealSide ?? l.dealSide,
+        sellerContactIds,
+        buyerContactIds,
+        publishedAt,
+        transaction: { ...l.transaction, ...input.transaction },
+        marketing: input.marketing ? { ...l.marketing, ...input.marketing } : l.marketing,
+        financials: input.financials ? { ...l.financials, ...input.financials } : l.financials,
+        history: [...l.history, historyEntry],
+        updatedAt: now,
+      }
+    })
+
+  // Feedback on every successful stage move (both gated and direct paths).
+  if (deal) {
+    notify(
+      input.publish
+        ? { title: 'Listing published', description: `${deal.name} is now live in market.` }
+        : { title: `Moved to ${STAGE_LABEL[input.targetStage]}`, description: deal.name },
+    )
+  }
+
+  return { deal }
+}
+
+/**
+ * Merge-patch top-level deal fields (status, dealType, brokers, financials,
+ * transaction). The single-page deal editor commits its working copy through this.
+ */
+export function updateDeal(dealId: string, patch: Partial<Listing>): { deal: Listing | null } {
+  return { deal: patchListing(dealId, (l) => ({ ...l, ...patch, updatedAt: new Date().toISOString() })) }
+}
+
+/** Merge-patch the deal's marketing content (copy, terms, channel/visibility, lease terms). */
+export function updateDealMarketing(
+  dealId: string,
+  patch: Partial<DealMarketing>,
+): { deal: Listing | null } {
+  return {
+    deal: patchListing(dealId, (l) => ({
+      ...l,
+      marketing: { ...l.marketing, ...patch },
+      updatedAt: new Date().toISOString(),
+    })),
+  }
 }
 
 export function linkContactToDeal(
@@ -211,4 +291,56 @@ export function unlinkContactFromDeal(dealId: string, contactId: string): { deal
       otherContactIds: l.otherContactIds.filter((id) => id !== contactId),
     })),
   }
+}
+
+export interface NewContactInput {
+  firstName: string
+  lastName: string
+  company?: string
+  email?: string
+  phone?: string
+  role?: ContactRole
+  propertyIds?: string[]
+}
+
+/**
+ * Create a lightweight CRM contact — enough to link as a deal party from the
+ * create-deal flow when no existing contact matches. Non-essential CRM fields
+ * default to blank/neutral values; the broker can enrich later.
+ */
+export function createContact(input: NewContactInput): { contact: Contact } {
+  const now = new Date().toISOString()
+  const contact: Contact = {
+    id: crypto.randomUUID(),
+    firstName: input.firstName.trim(),
+    lastName: input.lastName.trim(),
+    email: input.email ?? '',
+    phone: input.phone ?? '',
+    company: input.company ?? '',
+    role: input.role ?? 'owner',
+    propertyIds: input.propertyIds ?? [],
+    assignedTo: 'You',
+    source: 'Referral',
+    relationship: 'active',
+    side: null,
+    dealStage: null,
+    inquiries: 0,
+    phoneStatus: 'unknown',
+    doNotCall: false,
+    title: '',
+    createdAt: now,
+    lastTouch: 'Added manually',
+    street: '',
+    city: '',
+    state: '',
+    zip: '',
+    tags: [],
+  }
+  useDataStore.setState((s) => {
+    const contacts = new Map(s.contacts)
+    contacts.set(contact.id, contact)
+    return { contacts }
+  })
+  useDataStore.getState().persist()
+  return { contact }
 }

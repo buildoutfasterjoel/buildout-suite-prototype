@@ -12,7 +12,7 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { Listing, Contact, DealSide } from "#/data/types";
-import { getContact, getListing } from "#/data/store";
+import { getContact, getListing, getProperty } from "#/data/store";
 import { DealStageBadge } from "./DealStageBadge";
 import {
   TYPE_ICONS,
@@ -89,13 +89,17 @@ export function DealCardView({
   footer?: ReactNode;
 }) {
   const contact = getPrimaryContact(listing);
+  const property = getProperty(listing.propertyId);
   const sideDisplay = SIDE_DISPLAY[listing.dealSide];
   const isLease = listing.dealType === "Lease";
+  const spaceLeaseTerms = listing.marketing.spaceLeaseTerms ?? [];
+  const leaseTermsForCard =
+    spaceLeaseTerms.find((t) => t.unitId === listing.unitId) ?? spaceLeaseTerms[0];
   const price =
-    isLease && listing.leaseRate != null
-      ? `$${listing.leaseRate}/SF`
-      : formatPrice(listing.askingPrice);
-  const critical = formatCriticalDate(listing.nextCriticalDate);
+    isLease && leaseTermsForCard?.leaseRate != null
+      ? `$${leaseTermsForCard.leaseRate}/SF`
+      : formatPrice(listing.financials.askingPrice);
+  const critical = formatCriticalDate(listing.transaction.nextCriticalDate);
   // The critical date is the next open task's due date — name that milestone.
   const criticalTask = listing.tasks.find(
     (t) => t.status !== "complete" && t.date,
@@ -112,8 +116,8 @@ export function DealCardView({
       <div className="d-flex flex-column" style={{ gap: 2 }}>
         <div className="d-flex align-items-center gap-2">
           <div className="d-flex align-items-center gap-1 text-muted fs-small">
-            <FontAwesomeIcon icon={TYPE_ICONS[listing.propertyType]} />
-            <span>{TYPE_LABELS[listing.propertyType]}</span>
+            {property && <FontAwesomeIcon icon={TYPE_ICONS[property.propertyType]} />}
+            <span>{property ? TYPE_LABELS[property.propertyType] : ""}</span>
           </div>
           <span
             className="d-inline-flex align-items-center gap-1 fw-semibold text-nowrap fs-small"
@@ -151,7 +155,7 @@ export function DealCardView({
           {listing.name}
         </div>
         <div className="text-muted text-truncate fs-small">
-          {listing.city}, {listing.state}
+          {property?.city}, {property?.state}
         </div>
       </div>
 

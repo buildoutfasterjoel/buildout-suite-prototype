@@ -24,6 +24,7 @@ import BuildoutWordmark from "#/features/assets/buildout-wordmark";
 import { useDataStore } from "#/data/dataStore";
 import { useAssistant } from "#/ai/useAssistant";
 import { useOmniSearch } from "#/components/search/useOmniSearch";
+import { useCreateDeal } from "#/data/useCreateDeal";
 
 /** Platform-aware shortcut hint, e.g. "⌘K" on macOS, "Ctrl K" elsewhere. */
 const SEARCH_HINT = formatForDisplay("Mod+K");
@@ -134,16 +135,23 @@ export function GlobalNavbar() {
               type="button"
               onClick={() => openOmniSearch(true)}
               aria-label="Search properties, people, and deals"
-              className="omni-search-trigger btn bg-buildout-blue-50 border d-inline-flex align-items-center gap-2 rounded-pill px-3 py-2 flex-shrink-0"
+              className="omni-search-trigger btn bg-buildout-blue-100 border d-inline-flex align-items-center gap-2 rounded px-3 py-2 flex-shrink-0"
               style={{ width: 260 }}
             >
-              <FontAwesomeIcon icon={faMagnifyingGlass} className="text-muted" />
+              <FontAwesomeIcon
+                icon={faMagnifyingGlass}
+                className="text-muted"
+              />
               <span className="flex-grow-1 text-start text-muted text-truncate">
                 Search…
               </span>
-              <kbd className="bg-white border text-muted rounded px-2 py-0 fs-xs flex-shrink-0">
+              <Badge
+                variant="secondary"
+                appearance="muted"
+                className="flex-shrink-0"
+              >
                 {SEARCH_HINT}
-              </kbd>
+              </Badge>
             </button>
           </Navbar.Item>
         </Navbar.Nav>
@@ -178,7 +186,7 @@ export function GlobalNavbar() {
               <Navbar.GroupMenuItem onClick={() => console.log("new contact")}>
                 New Contact
               </Navbar.GroupMenuItem>
-              <Navbar.GroupMenuItem onClick={() => console.log("new deal")}>
+              <Navbar.GroupMenuItem onClick={() => useCreateDeal.getState().openFor()}>
                 New Deal
               </Navbar.GroupMenuItem>
             </Navbar.GroupMenu>
