@@ -11,6 +11,7 @@ import {
   updateDeal,
   updateDealMarketing,
   updateDealStage,
+  updateDealTransaction,
 } from './actions'
 import { emptyDraft } from './createListing'
 import { listContactsForDeal } from './selectors'
@@ -159,5 +160,22 @@ describe('actions', () => {
     } finally {
       setNotifier(null)
     }
+  })
+
+  it('updateDealTransaction merges into transaction without dropping sibling fields', () => {
+    const deal = [...useDataStore.getState().listings.values()][0]
+    const originalPricePerSqFt = deal.transaction.pricePerSqFt
+
+    const { deal: updated } = updateDealTransaction(deal.id, {
+      salePrice: 2_000_000,
+      commissionPct: 3,
+      commissionAmount: 60_000,
+    })
+
+    expect(updated?.transaction.salePrice).toBe(2_000_000)
+    expect(updated?.transaction.commissionPct).toBe(3)
+    expect(updated?.transaction.commissionAmount).toBe(60_000)
+    // Sibling fields survive the merge.
+    expect(updated?.transaction.pricePerSqFt).toBe(originalPricePerSqFt)
   })
 })
