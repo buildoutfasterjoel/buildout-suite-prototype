@@ -7,6 +7,8 @@ import {
   createEmailDraft,
   linkContactToDeal,
   unlinkContactFromDeal,
+  updateDeal,
+  updateDealMarketing,
   updateDealStage,
 } from './actions'
 import { emptyDraft } from './createListing'
@@ -24,6 +26,24 @@ describe('actions', () => {
     const deal = [...useDataStore.getState().listings.values()][0]
     const { deal: updated } = updateDealStage(deal.id, 'closed')
     expect(updated?.status).toBe('closed')
+  })
+
+  it('updateDealMarketing merges the marketing patch and preserves other fields', () => {
+    const deal = [...useDataStore.getState().listings.values()][0]
+    const before = deal.marketing.propertyUse
+    const { deal: updated } = updateDealMarketing(deal.id, { saleTitle: 'New Headline' })
+    expect(updated?.marketing.saleTitle).toBe('New Headline')
+    // Unpatched marketing fields are preserved.
+    expect(updated?.marketing.propertyUse).toBe(before)
+    // The store reflects the change.
+    expect(useDataStore.getState().listings.get(deal.id)?.marketing.saleTitle).toBe('New Headline')
+  })
+
+  it('updateDeal merges top-level deal fields', () => {
+    const deal = [...useDataStore.getState().listings.values()][0]
+    const { deal: updated } = updateDeal(deal.id, { dealType: 'Sale / Lease' })
+    expect(updated?.dealType).toBe('Sale / Lease')
+    expect(useDataStore.getState().listings.get(deal.id)?.dealType).toBe('Sale / Lease')
   })
 
   it('createDeal inserts the new listing into the store', () => {

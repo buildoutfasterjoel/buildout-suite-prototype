@@ -38,6 +38,7 @@ import { Route as ListingsListingIdGridsRouteImport } from './routes/listings/$l
 import { Route as ListingsListingIdFinancialsRouteImport } from './routes/listings/$listingId/financials'
 import { Route as ListingsListingIdFilesRouteImport } from './routes/listings/$listingId/files'
 import { Route as ListingsListingIdEmailRouteImport } from './routes/listings/$listingId/email'
+import { Route as ListingsListingIdEditRouteImport } from './routes/listings/$listingId/edit'
 import { Route as ListingsListingIdDocumentsRouteImport } from './routes/listings/$listingId/documents'
 import { Route as ListingsListingIdDemographicsRouteImport } from './routes/listings/$listingId/demographics'
 import { Route as ListingsListingIdClientReportRouteImport } from './routes/listings/$listingId/client-report'
@@ -193,6 +194,11 @@ const ListingsListingIdEmailRoute = ListingsListingIdEmailRouteImport.update({
   path: '/email',
   getParentRoute: () => ListingsListingIdRoute,
 } as any)
+const ListingsListingIdEditRoute = ListingsListingIdEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => ListingsListingIdRoute,
+} as any)
 const ListingsListingIdDocumentsRoute =
   ListingsListingIdDocumentsRouteImport.update({
     id: '/documents',
@@ -248,6 +254,7 @@ export interface FileRoutesByFullPath {
   '/listings/$listingId/client-report': typeof ListingsListingIdClientReportRoute
   '/listings/$listingId/demographics': typeof ListingsListingIdDemographicsRoute
   '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
+  '/listings/$listingId/edit': typeof ListingsListingIdEditRoute
   '/listings/$listingId/email': typeof ListingsListingIdEmailRoute
   '/listings/$listingId/files': typeof ListingsListingIdFilesRoute
   '/listings/$listingId/financials': typeof ListingsListingIdFinancialsRoute
@@ -278,6 +285,7 @@ export interface FileRoutesByTo {
   '/listings/$listingId/client-report': typeof ListingsListingIdClientReportRoute
   '/listings/$listingId/demographics': typeof ListingsListingIdDemographicsRoute
   '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
+  '/listings/$listingId/edit': typeof ListingsListingIdEditRoute
   '/listings/$listingId/email': typeof ListingsListingIdEmailRoute
   '/listings/$listingId/files': typeof ListingsListingIdFilesRoute
   '/listings/$listingId/financials': typeof ListingsListingIdFinancialsRoute
@@ -315,6 +323,7 @@ export interface FileRoutesById {
   '/listings/$listingId/client-report': typeof ListingsListingIdClientReportRoute
   '/listings/$listingId/demographics': typeof ListingsListingIdDemographicsRoute
   '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
+  '/listings/$listingId/edit': typeof ListingsListingIdEditRoute
   '/listings/$listingId/email': typeof ListingsListingIdEmailRoute
   '/listings/$listingId/files': typeof ListingsListingIdFilesRoute
   '/listings/$listingId/financials': typeof ListingsListingIdFinancialsRoute
@@ -353,6 +362,7 @@ export interface FileRouteTypes {
     | '/listings/$listingId/client-report'
     | '/listings/$listingId/demographics'
     | '/listings/$listingId/documents'
+    | '/listings/$listingId/edit'
     | '/listings/$listingId/email'
     | '/listings/$listingId/files'
     | '/listings/$listingId/financials'
@@ -383,6 +393,7 @@ export interface FileRouteTypes {
     | '/listings/$listingId/client-report'
     | '/listings/$listingId/demographics'
     | '/listings/$listingId/documents'
+    | '/listings/$listingId/edit'
     | '/listings/$listingId/email'
     | '/listings/$listingId/files'
     | '/listings/$listingId/financials'
@@ -419,6 +430,7 @@ export interface FileRouteTypes {
     | '/listings/$listingId/client-report'
     | '/listings/$listingId/demographics'
     | '/listings/$listingId/documents'
+    | '/listings/$listingId/edit'
     | '/listings/$listingId/email'
     | '/listings/$listingId/files'
     | '/listings/$listingId/financials'
@@ -649,6 +661,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ListingsListingIdEmailRouteImport
       parentRoute: typeof ListingsListingIdRoute
     }
+    '/listings/$listingId/edit': {
+      id: '/listings/$listingId/edit'
+      path: '/edit'
+      fullPath: '/listings/$listingId/edit'
+      preLoaderRoute: typeof ListingsListingIdEditRouteImport
+      parentRoute: typeof ListingsListingIdRoute
+    }
     '/listings/$listingId/documents': {
       id: '/listings/$listingId/documents'
       path: '/documents'
@@ -739,6 +758,7 @@ interface ListingsListingIdRouteChildren {
   ListingsListingIdClientReportRoute: typeof ListingsListingIdClientReportRoute
   ListingsListingIdDemographicsRoute: typeof ListingsListingIdDemographicsRoute
   ListingsListingIdDocumentsRoute: typeof ListingsListingIdDocumentsRoute
+  ListingsListingIdEditRoute: typeof ListingsListingIdEditRoute
   ListingsListingIdEmailRoute: typeof ListingsListingIdEmailRoute
   ListingsListingIdFilesRoute: typeof ListingsListingIdFilesRoute
   ListingsListingIdFinancialsRoute: typeof ListingsListingIdFinancialsRoute
@@ -756,6 +776,7 @@ const ListingsListingIdRouteChildren: ListingsListingIdRouteChildren = {
   ListingsListingIdClientReportRoute: ListingsListingIdClientReportRoute,
   ListingsListingIdDemographicsRoute: ListingsListingIdDemographicsRoute,
   ListingsListingIdDocumentsRoute: ListingsListingIdDocumentsRoute,
+  ListingsListingIdEditRoute: ListingsListingIdEditRoute,
   ListingsListingIdEmailRoute: ListingsListingIdEmailRoute,
   ListingsListingIdFilesRoute: ListingsListingIdFilesRoute,
   ListingsListingIdFinancialsRoute: ListingsListingIdFinancialsRoute,

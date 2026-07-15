@@ -129,7 +129,17 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
             <Button variant="ghost" size="icon" aria-label="Manage access">
               <FontAwesomeIcon icon={faUserGear} />
             </Button>
-            <Button variant="primary" className="flex-shrink-0">
+            <Button
+              variant="primary"
+              className="flex-shrink-0"
+              nativeButton={false}
+              render={
+                <Link
+                  to="/listings/$listingId/edit"
+                  params={{ listingId: listing.id }}
+                />
+              }
+            >
               <FontAwesomeIcon icon={faPencil} />
               Edit Deal
             </Button>

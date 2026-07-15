@@ -6,7 +6,7 @@ import {
   serializeContactFilters,
   type ContactFilterState,
 } from '#/components/contacts/contactFilterModel'
-import type { Contact, ContactRole, Listing, PropertyStatus } from './types'
+import type { Contact, ContactRole, DealMarketing, Listing, PropertyStatus } from './types'
 
 let _callListSeq = 0
 
@@ -35,6 +35,28 @@ export function updateDealStage(
   status: PropertyStatus,
 ): { deal: Listing | null } {
   return { deal: patchListing(dealId, (l) => ({ ...l, status, updatedAt: new Date().toISOString() })) }
+}
+
+/**
+ * Merge-patch top-level deal fields (status, dealType, brokers, financials,
+ * transaction). The single-page deal editor commits its working copy through this.
+ */
+export function updateDeal(dealId: string, patch: Partial<Listing>): { deal: Listing | null } {
+  return { deal: patchListing(dealId, (l) => ({ ...l, ...patch, updatedAt: new Date().toISOString() })) }
+}
+
+/** Merge-patch the deal's marketing content (copy, terms, channel/visibility, lease terms). */
+export function updateDealMarketing(
+  dealId: string,
+  patch: Partial<DealMarketing>,
+): { deal: Listing | null } {
+  return {
+    deal: patchListing(dealId, (l) => ({
+      ...l,
+      marketing: { ...l.marketing, ...patch },
+      updatedAt: new Date().toISOString(),
+    })),
+  }
 }
 
 export function linkContactToDeal(

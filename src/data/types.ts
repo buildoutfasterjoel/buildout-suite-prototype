@@ -422,8 +422,13 @@ export type VisibilityTier = 'Fully Private' | 'Private' | 'Semi-Public' | 'Full
 export type LeaseRateUnits = 'SF/Yr' | 'SF/Mo' | 'Monthly'
 export type SpaceLeaseType = 'Gross' | 'Modified Gross' | 'NNN' | 'Modified Net' | 'Full Service' | 'Ground Lease'
 
-/** Deal-level terms for transacting a unit (reset per engagement). */
-export interface LeaseTerms {
+/**
+ * Lease terms for one marketed space, keyed to a `Property.units` shell (reset per
+ * engagement). A lease-side deal carries one record per unit it markets.
+ */
+export interface SpaceLeaseTerms {
+  /** References the `Property.units` shell these terms apply to. */
+  unitId: string
   leaseRate: number | null
   leaseRateUnits: LeaseRateUnits
   hideLeaseRate: boolean
@@ -438,6 +443,21 @@ export interface LeaseTerms {
   rentEscalators: string | null
   sublease: boolean
   description: string | null
+  // ── Expanded catalog fields ──────────────────────────────────────
+  taxPerSf: number | null
+  taxStops: string | null
+  camPerSf: number | null
+  camStops: string | null
+  insurancePerSf: number | null
+  expenseStops: string | null
+  procurementFeePct: number | null
+  tenantsPayGas: boolean
+  tenantsPayElectric: boolean
+  tenantsPayWater: boolean
+  movingAllowance: number | null
+  buyoutAllowance: number | null
+  concession: string | null
+  netLeaseInvestment: boolean
 }
 
 /** Per-item public/private flags — Active publishes the flagged set (wired in Phase 3/4). */
@@ -458,6 +478,8 @@ export interface DealMarketing {
   leaseTitle: string
   leaseDescription: string
   leaseBullets: string[]
+  /** Deal-level lease commission split %, or null when unset. */
+  leaseCommissionSplitPct: number | null
   propertyUse: PropertyUse
   investmentType: InvestmentType
   includesRealEstate: boolean
@@ -471,7 +493,8 @@ export interface DealMarketing {
   occupancySnapshot: number | null
   availableSqFt: number
   locationDescription: string
-  leaseTerms: LeaseTerms
+  /** Per-unit lease terms — one record per marketed `Property.units` shell. */
+  spaceLeaseTerms: SpaceLeaseTerms[]
 }
 
 /** A line item deducted from gross commission before broker splits, e.g. a marketing fee. */

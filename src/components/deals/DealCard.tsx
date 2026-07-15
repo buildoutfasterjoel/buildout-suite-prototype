@@ -92,9 +92,12 @@ export function DealCardView({
   const property = getProperty(listing.propertyId);
   const sideDisplay = SIDE_DISPLAY[listing.dealSide];
   const isLease = listing.dealType === "Lease";
+  const spaceLeaseTerms = listing.marketing.spaceLeaseTerms ?? [];
+  const leaseTermsForCard =
+    spaceLeaseTerms.find((t) => t.unitId === listing.unitId) ?? spaceLeaseTerms[0];
   const price =
-    isLease && listing.marketing.leaseTerms.leaseRate != null
-      ? `$${listing.marketing.leaseTerms.leaseRate}/SF`
+    isLease && leaseTermsForCard?.leaseRate != null
+      ? `$${leaseTermsForCard.leaseRate}/SF`
       : formatPrice(listing.financials.askingPrice);
   const critical = formatCriticalDate(listing.transaction.nextCriticalDate);
   // The critical date is the next open task's due date — name that milestone.
