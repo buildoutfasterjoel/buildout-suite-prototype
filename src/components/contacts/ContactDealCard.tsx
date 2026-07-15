@@ -50,15 +50,18 @@ function QuickLink({
   icon,
   label,
   count,
+  onClick,
 }: {
   icon: IconDefinition;
   label: string;
   count: number;
+  onClick: () => void;
 }) {
   return (
     <button
       type="button"
       className="contact-deal-card__link btn btn-link text-reset text-decoration-none d-flex align-items-center gap-2 w-100 p-2"
+      onClick={onClick}
     >
       <FontAwesomeIcon icon={icon} className="text-muted" />
       <span className="fw-semibold">{label}</span>
@@ -168,12 +171,15 @@ export function ContactDealCard({ listingId }: { listingId: string }) {
         <div className="flex-grow-1" style={{ minWidth: 0 }}>
           <div
             className="fw-semibold text-truncate"
-            style={{ fontSize: 17, lineHeight: "19px" }}
+            style={{ fontSize: 17, lineHeight: "26px" }}
             title={listing.name}
           >
             {listing.name}
           </div>
-          <div className="text-muted fs-small text-truncate">
+          <div
+            className="text-muted text-truncate"
+            style={{ fontSize: 14, lineHeight: "19px" }}
+          >
             {price} · {sqft} · started {medDate(listing.createdAt)}
           </div>
         </div>
@@ -206,10 +212,30 @@ export function ContactDealCard({ listingId }: { listingId: string }) {
       {(docsCount > 0 || leadsCount > 0) && (
         <div className="border-top d-flex flex-column">
           {docsCount > 0 && (
-            <QuickLink icon={faFile} label="Documents" count={docsCount} />
+            <QuickLink
+              icon={faFile}
+              label="Documents"
+              count={docsCount}
+              onClick={() =>
+                void navigate({
+                  to: "/listings/$listingId/documents",
+                  params: { listingId },
+                })
+              }
+            />
           )}
           {leadsCount > 0 && (
-            <QuickLink icon={faUserGroup} label="Leads" count={leadsCount} />
+            <QuickLink
+              icon={faUserGroup}
+              label="Leads"
+              count={leadsCount}
+              onClick={() =>
+                void navigate({
+                  to: "/listings/$listingId/leads",
+                  params: { listingId },
+                })
+              }
+            />
           )}
         </div>
       )}

@@ -282,7 +282,7 @@
     color: inherit;
     font-weight: 600;
     // Leave room on the right for the overlaid action button.
-    padding: 12px 44px 12px 12px;
+    padding: 16px 48px 16px 16px;
   }
   .accordion-button::after {
     display: none;
@@ -293,7 +293,7 @@
   // inset a single 12px (aligned with the header), not doubled.
   .accordion-body {
     background: var(--bp-card-bg, #fff);
-    padding: 0 12px 12px;
+    padding: 0 16px 16px;
   }
   .accordion-content {
     padding: 0;
@@ -321,8 +321,8 @@
 // which otherwise paints the expanded header over this button and hides it.
 .contact-accordion__action {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 16px;
+  right: 12px;
   z-index: 5;
 }
 

@@ -11,8 +11,10 @@ import {
 /**
  * Per-stage chip palette (hex of Blueprint family tokens): a soft tinted
  * background + border, a dot in the mid shade, and dark same-family text.
+ * Exported so other stage-colored elements (e.g. the property card's Deal
+ * badge) can match the chip exactly.
  */
-const STAGE_CHIP_COLORS: Record<
+export const STAGE_CHIP_COLORS: Record<
   PropertyStatus,
   { bg: string; border: string; dot: string; text: string }
 > = {
