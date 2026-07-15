@@ -78,7 +78,7 @@ export interface StageTransitionInput {
 /** Forward ladder; `inactive` (Lost) is intentionally off-ladder. */
 const LADDER: PropertyStatus[] = ['proposal', 'active', 'under-contract', 'closed']
 
-const STAGE_LABEL: Record<PropertyStatus, string> = {
+export const STAGE_LABEL: Record<PropertyStatus, string> = {
   proposal: 'Pitching',
   active: 'Active',
   'under-contract': 'Under Contract',

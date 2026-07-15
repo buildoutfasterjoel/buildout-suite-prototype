@@ -3,6 +3,7 @@ import { useHotkey } from "@tanstack/react-hotkeys";
 import { faSpinnerThird } from "@fortawesome/pro-regular-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ToasterProvider } from "@buildoutinc/blueprint-react/ui/Toast";
+import { ToastBridge } from "#/components/layout/ToastBridge";
 import { GlobalNavbar } from "#/components/layout/GlobalNavbar";
 import { AssistantSidebar } from "#/components/ai/AssistantSidebar";
 import { OmniSearch } from "#/components/search/OmniSearch";
@@ -19,6 +20,7 @@ export function AppShell() {
 
   return (
     <ToasterProvider>
+      <ToastBridge />
       <div className="app-shell vh-100 d-flex flex-column overflow-hidden">
         <GlobalNavbar />
         <div className="flex-grow-1 d-flex overflow-hidden">

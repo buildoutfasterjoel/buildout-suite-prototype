@@ -14,6 +14,7 @@ import {
 } from './actions'
 import { emptyDraft } from './createListing'
 import { listContactsForDeal } from './selectors'
+import { setNotifier } from '#/lib/notify'
 
 describe('actions', () => {
   it('linkContactToDeal attaches a contact and shows in the reverse selector', () => {
@@ -142,5 +143,21 @@ describe('actions', () => {
     })
     expect(back?.status).toBe('proposal')
     expect(back?.publishedAt).toBeNull()
+  })
+
+  it('commitStageTransition notifies on every successful move', () => {
+    const items: { title: string; description?: string }[] = []
+    setNotifier((i) => items.push(i))
+    try {
+      const { deal } = createDeal({ ...emptyDraft(), name: 'Notify Test', address: '3 Bell Rd' })
+      // A non-publishing move announces the target stage.
+      commitStageTransition({ dealId: deal.id, targetStage: 'under-contract', actor: 'Jane' })
+      expect(items.at(-1)?.title).toBe('Moved to Under Contract')
+      // A publishing move announces the publish.
+      commitStageTransition({ dealId: deal.id, targetStage: 'active', actor: 'Jane', publish: true })
+      expect(items.at(-1)?.title).toBe('Listing published')
+    } finally {
+      setNotifier(null)
+    }
   })
 })

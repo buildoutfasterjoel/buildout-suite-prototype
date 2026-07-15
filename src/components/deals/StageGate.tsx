@@ -10,7 +10,6 @@ import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Popover } from "@buildoutinc/blueprint-react/ui/Popover";
 import { Calendar } from "@buildoutinc/blueprint-react/ui/Calendar";
 import { Alert } from "@buildoutinc/blueprint-react/ui/Alert";
-import { useToast } from "@buildoutinc/blueprint-react/ui/Toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowUpRightFromSquare,
@@ -112,7 +111,9 @@ function GateDatePicker({
         type="text"
         readOnly
         placeholder={placeholder}
-        value={selected ? selected.toLocaleDateString(undefined, DATE_FORMAT) : ""}
+        value={
+          selected ? selected.toLocaleDateString(undefined, DATE_FORMAT) : ""
+        }
       />
     </InputGroup>
   );
@@ -131,7 +132,6 @@ export function StageGate({
   onOpenChange: (open: boolean) => void;
   onCommitted?: () => void;
 }) {
-  const { toast } = useToast();
   const deal = getListing(dealId);
   const config = useMemo(
     () => (deal ? resolveGate(deal.status, targetStage) : null),
@@ -187,7 +187,10 @@ export function StageGate({
 
   // Derive the effective form (checklist state folded in) at check/commit time
   // instead of syncing state during render.
-  const effectiveForm: GateFormState = { ...form, aiDocsAllReviewed: allDocsReviewed };
+  const effectiveForm: GateFormState = {
+    ...form,
+    aiDocsAllReviewed: allDocsReviewed,
+  };
 
   // Publish-gate read-only summary — Seller/Side/Property are already on the
   // deal from creation, so the gate shows them rather than re-collecting them.
@@ -211,20 +214,19 @@ export function StageGate({
       deal.id,
       deal.internalBrokers[0]?.name ?? "You",
     );
+    // commitStageTransition emits the move/publish toast centrally.
     commitStageTransition(input);
-    if (config.publishes) {
-      toast.success({
-        title: "Listing published",
-        description: `${deal.name} is now live in market.`,
-      });
-    }
     onOpenChange(false);
     onCommitted?.();
   };
 
   return (
     <Modal open={open} onOpenChange={onOpenChange}>
-      <Modal.Content size="lg" scrollable centered>
+      <Modal.Content
+        size={config.leavesActive ? undefined : "lg"}
+        scrollable
+        centered
+      >
         <Modal.Header>
           <Modal.Title>{config.title}</Modal.Title>
           <Modal.Description>{deal.name}</Modal.Description>
@@ -355,7 +357,8 @@ export function StageGate({
                           rel="noreferrer"
                           className="text-nowrap"
                         >
-                          Open <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+                          Open{" "}
+                          <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
                         </a>
                       </div>
                     ))}
@@ -395,7 +398,10 @@ export function StageGate({
                     value={form.buyerContactId ?? ""}
                     onValueChange={(v) => {
                       set("buyerContactId", v || null);
-                      set("buyerLinked", !!v || deal.buyerContactIds.length > 0);
+                      set(
+                        "buyerLinked",
+                        !!v || deal.buyerContactIds.length > 0,
+                      );
                     }}
                   >
                     <Select.Trigger>
@@ -441,7 +447,10 @@ export function StageGate({
                     type="number"
                     value={form.salePrice ?? ""}
                     onChange={(e) =>
-                      set("salePrice", e.target.value ? Number(e.target.value) : null)
+                      set(
+                        "salePrice",
+                        e.target.value ? Number(e.target.value) : null,
+                      )
                     }
                   />
                 </Field>
@@ -487,7 +496,9 @@ export function StageGate({
 
               {config.targetStage === "closed" && (
                 <Alert severity="info" withIcon>
-                  <Alert.Title>Economics carried from Under Contract</Alert.Title>
+                  <Alert.Title>
+                    Economics carried from Under Contract
+                  </Alert.Title>
                   The voucher and receivables are created in Back Office after
                   close.
                 </Alert>

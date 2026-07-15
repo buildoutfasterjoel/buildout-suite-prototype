@@ -121,10 +121,16 @@ as `saleTitle`/`saleDescription`/`askingPrice` required fields on the form), and
 > confirmed" attestation from the original requirements was dropped in favor of the website-review
 > checkpoint; seller confirmation stays an offline step.
 
-**On confirm:** commit → `active`; set `publishedAt` = now; append a `DealHistoryEntry`; fire a
-**Blueprint toast** ("Listing published"); `SyndicationStatus` flips to its Published state. Publishing
-is conceptual — `marketing.publishFlags` already mark which items are public; going Active is what makes
-them live.
+**On confirm:** commit → `active`; set `publishedAt` = now; append a `DealHistoryEntry`; the
+publish-specific **Blueprint toast** ("Listing published") fires (see the toast note below);
+`SyndicationStatus` flips to its Published state. Publishing is conceptual — `marketing.publishFlags`
+already mark which items are public; going Active is what makes them live.
+
+> **Toast on every move.** `commitStageTransition` emits a Blueprint toast on *every* successful stage
+> change — "Listing published" for a publish, otherwise "Moved to {stage label}" — so both gated
+> (sell-side) and direct (buy-side) moves give feedback. Because the action isn't a React component, it
+> calls a neutral `notify()` port (`src/lib/notify.ts`) that a `<ToastBridge>` mounted under
+> `ToasterProvider` wires to `useToast()`. `notify` no-ops when unregistered (tests stay silent).
 
 ### Active → Under Contract
 

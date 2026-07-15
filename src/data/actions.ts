@@ -7,7 +7,8 @@ import {
   type ContactFilterState,
 } from '#/components/contacts/contactFilterModel'
 import type { Contact, ContactRole, DealHistoryEntry, DealMarketing, Listing, PropertyStatus } from './types'
-import type { StageTransitionInput } from './stageGates'
+import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
+import { notify } from '#/lib/notify'
 
 let _callListSeq = 0
 
@@ -46,8 +47,7 @@ export function updateDealStage(
  */
 export function commitStageTransition(input: StageTransitionInput): { deal: Listing | null } {
   const now = new Date().toISOString()
-  return {
-    deal: patchListing(input.dealId, (l) => {
+  const deal = patchListing(input.dealId, (l) => {
       const historyEntry: DealHistoryEntry = {
         id: crypto.randomUUID(),
         label: 'Moved to',
@@ -81,8 +81,18 @@ export function commitStageTransition(input: StageTransitionInput): { deal: List
         history: [...l.history, historyEntry],
         updatedAt: now,
       }
-    }),
+    })
+
+  // Feedback on every successful stage move (both gated and direct paths).
+  if (deal) {
+    notify(
+      input.publish
+        ? { title: 'Listing published', description: `${deal.name} is now live in market.` }
+        : { title: `Moved to ${STAGE_LABEL[input.targetStage]}`, description: deal.name },
+    )
   }
+
+  return { deal }
 }
 
 /**
