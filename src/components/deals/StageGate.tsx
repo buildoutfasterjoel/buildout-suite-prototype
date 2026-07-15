@@ -6,12 +6,15 @@ import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
 import { RadioGroup } from "@buildoutinc/blueprint-react/ui/RadioGroup";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
+import { Popover } from "@buildoutinc/blueprint-react/ui/Popover";
+import { Calendar } from "@buildoutinc/blueprint-react/ui/Calendar";
 import { Alert } from "@buildoutinc/blueprint-react/ui/Alert";
 import { useToast } from "@buildoutinc/blueprint-react/ui/Toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowUpRightFromSquare,
   faRobot,
+  faCalendar,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { PropertyStatus } from "#/data/types";
 import { getListing, getSellerOptions } from "#/data/store";
@@ -42,6 +45,65 @@ const EMPTY_FORM: GateFormState = {
   buyerContactId: null,
 };
 
+const DATE_FORMAT: Intl.DateTimeFormatOptions = {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+};
+
+/** Format a stored date value (ISO string or `yyyy-mm-dd`) as a local Date. */
+function parseDate(value: string | null): Date | undefined {
+  if (!value) return undefined;
+  // Plain `yyyy-mm-dd` parses as UTC midnight; pin to local to avoid an
+  // off-by-one day. Full ISO strings already carry a time/zone.
+  return new Date(value.length <= 10 ? `${value}T00:00:00` : value);
+}
+
+/** Serialize a picked Date to a local `yyyy-mm-dd` (no timezone drift). */
+function toISODate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** A Blueprint calendar date picker wired to a stored ISO-string value. */
+function GateDatePicker({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string | null;
+  onChange: (value: string | null) => void;
+  placeholder: string;
+}) {
+  const selected = parseDate(value);
+  return (
+    <Popover>
+      <Popover.Trigger
+        render={
+          <Button variant="outline" className="w-100 justify-content-start">
+            <FontAwesomeIcon icon={faCalendar} />
+            {selected ? (
+              selected.toLocaleDateString(undefined, DATE_FORMAT)
+            ) : (
+              <span className="text-muted">{placeholder}</span>
+            )}
+          </Button>
+        }
+      />
+      <Popover.Content className="p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={selected}
+          defaultMonth={selected}
+          onSelect={(d) => onChange(d ? toISODate(d) : null)}
+        />
+      </Popover.Content>
+    </Popover>
+  );
+}
+
 export function StageGate({
   dealId,
   targetStage,
@@ -70,6 +132,10 @@ export function StageGate({
       dealSide: deal.dealSide,
       sellerLinked: deal.sellerContactIds.length > 0,
       buyerLinked: deal.buyerContactIds.length > 0,
+      // Preselect the parties already linked to the deal so the gate reflects
+      // reality instead of asking the broker to re-pick them.
+      sellerContactId: deal.sellerContactIds[0] ?? null,
+      buyerContactId: deal.buyerContactIds[0] ?? null,
       listedOnDate: deal.transaction.listedOnDate,
       listingExpirationDate: deal.transaction.listingExpirationDate,
       contractExecutedDate: deal.transaction.contractExecutedDate,
@@ -246,13 +312,20 @@ export function StageGate({
                 <Field>
                   <Field.Label>Side</Field.Label>
                   <RadioGroup
+                    className="d-flex gap-4"
                     value={form.dealSide ?? ""}
                     onValueChange={(v) =>
                       set("dealSide", v as GateFormState["dealSide"])
                     }
                   >
-                    <RadioGroup.Item value="seller">Sell-side</RadioGroup.Item>
-                    <RadioGroup.Item value="buyer">Buy-side</RadioGroup.Item>
+                    <label className="d-flex align-items-center gap-2 mb-0">
+                      <RadioGroup.Item value="seller" />
+                      Sell-side
+                    </label>
+                    <label className="d-flex align-items-center gap-2 mb-0">
+                      <RadioGroup.Item value="buyer" />
+                      Buy-side
+                    </label>
                   </RadioGroup>
                 </Field>
               )}
@@ -284,10 +357,10 @@ export function StageGate({
               {req("listedOnDate") && (
                 <Field>
                   <Field.Label>Listing Executed</Field.Label>
-                  <Input
-                    type="date"
-                    value={form.listedOnDate ?? ""}
-                    onChange={(e) => set("listedOnDate", e.target.value || null)}
+                  <GateDatePicker
+                    value={form.listedOnDate}
+                    onChange={(v) => set("listedOnDate", v)}
+                    placeholder="Pick a date"
                   />
                 </Field>
               )}
@@ -295,12 +368,10 @@ export function StageGate({
               {req("listingExpirationDate") && (
                 <Field>
                   <Field.Label>Listing Expires</Field.Label>
-                  <Input
-                    type="date"
-                    value={form.listingExpirationDate ?? ""}
-                    onChange={(e) =>
-                      set("listingExpirationDate", e.target.value || null)
-                    }
+                  <GateDatePicker
+                    value={form.listingExpirationDate}
+                    onChange={(v) => set("listingExpirationDate", v)}
+                    placeholder="Pick a date"
                   />
                 </Field>
               )}
@@ -337,10 +408,10 @@ export function StageGate({
               {req("closeDate") && (
                 <Field>
                   <Field.Label>Close Date</Field.Label>
-                  <Input
-                    type="date"
-                    value={form.closeDate ?? ""}
-                    onChange={(e) => set("closeDate", e.target.value || null)}
+                  <GateDatePicker
+                    value={form.closeDate}
+                    onChange={(v) => set("closeDate", v)}
+                    placeholder="Pick a date"
                   />
                 </Field>
               )}
