@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getStore } from "#/data/store";
+import { useDataStore } from "#/data/dataStore";
 import { DealTransaction } from "#/components/deals/DealOverview";
 
 export const Route = createFileRoute("/listings/$listingId/transaction")({
@@ -8,7 +8,10 @@ export const Route = createFileRoute("/listings/$listingId/transaction")({
 
 function TransactionRoute() {
   const { listingId } = Route.useParams();
-  const listing = getStore().listings.get(listingId);
+  // Reactive selector (not getStore()) so an Edit Transaction save —
+  // updateDealTransaction replaces the listings map and listing object —
+  // re-renders the transaction card immediately with the saved values.
+  const listing = useDataStore((s) => s.listings.get(listingId));
   if (!listing) return null;
   return <DealTransaction listing={listing} />;
 }
