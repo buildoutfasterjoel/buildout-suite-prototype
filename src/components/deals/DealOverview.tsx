@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -6,6 +7,7 @@ import type { DealBroker, Listing, Property } from "#/data/types";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
 import { formatCurrency, initials } from "./dealDisplay";
 import { TYPE_LABELS } from "../properties/propertyDisplay";
+import { EditTransactionDialog } from "./EditTransactionDialog";
 
 function SectionCard({
   title,
@@ -88,25 +90,34 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 function TransactionCard({ listing }: { listing: Listing }) {
+  const [editOpen, setEditOpen] = useState(false);
   return (
-    <SectionCard
-      title="Transaction"
-      action={
-        <Button variant="ghost" size="icon-sm" aria-label="Edit transaction">
-          <FontAwesomeIcon icon={faPencil} />
-        </Button>
-      }
-    >
-      <Field label="Deal ID" value={listing.dealId} />
-      <Field label="Sale Price" value={formatCurrency(listing.transaction.salePrice)} />
-      <Field
-        label="Price / SF"
-        value={`$${listing.financials.pricePerSqFt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-      />
-      <Field label="Commission %" value={`${listing.transaction.commissionPct}%`} />
-      <Field label="Commission $" value={formatCurrency(listing.transaction.commissionAmount)} />
-      <Field label="Close Probability" value={`${listing.transaction.closeProbability}%`} />
-    </SectionCard>
+    <>
+      <SectionCard
+        title="Transaction"
+        action={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Edit transaction"
+            onClick={() => setEditOpen(true)}
+          >
+            <FontAwesomeIcon icon={faPencil} />
+          </Button>
+        }
+      >
+        <Field label="Deal ID" value={listing.dealId} />
+        <Field label="Sale Price" value={formatCurrency(listing.transaction.salePrice)} />
+        <Field
+          label="Price / SF"
+          value={`$${listing.financials.pricePerSqFt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+        />
+        <Field label="Commission %" value={`${listing.transaction.commissionPct}%`} />
+        <Field label="Commission $" value={formatCurrency(listing.transaction.commissionAmount)} />
+        <Field label="Close Probability" value={`${listing.transaction.closeProbability}%`} />
+      </SectionCard>
+      <EditTransactionDialog listing={listing} open={editOpen} onOpenChange={setEditOpen} />
+    </>
   );
 }
 
