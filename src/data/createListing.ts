@@ -330,12 +330,14 @@ function seedProposalDocuments(now: string): DealDocument[] {
       name: 'Offering-Memorandum.pdf',
       uploadedAt: now,
       size: '2.3 MB',
+      aiGenerated: true,
     },
     {
       id: crypto.randomUUID(),
       name: 'Rent-Roll-2026.xlsx',
       uploadedAt: now,
       size: '86 KB',
+      aiGenerated: true,
     },
   ]
 }
@@ -402,6 +404,7 @@ export function createProposalListing(draft: NewListingDraft): Listing {
     name,
     slug,
     status: 'proposal',
+    publishedAt: null,
     dealType: draft.dealType,
     dealSide: draft.dealSide,
     unitId: null,

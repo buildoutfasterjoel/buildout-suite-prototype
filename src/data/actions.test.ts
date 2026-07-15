@@ -91,4 +91,14 @@ describe('actions', () => {
     expect(stored?.role).toBe('owner') // default role
     expect(stored?.propertyIds).toEqual([])
   })
+
+  it('createDeal starts unpublished with AI-generated starter documents', () => {
+    const draft = { ...emptyDraft(), name: 'Gate Test', address: '9 Gate St' }
+    const { deal } = createDeal(draft)
+    // A brand-new proposal is not published.
+    expect(deal.publishedAt).toBeNull()
+    // The auto-generated starter docs are flagged so the publish gate can require review.
+    expect(deal.documents?.length ?? 0).toBeGreaterThan(0)
+    expect(deal.documents?.every((d) => d.aiGenerated === true)).toBe(true)
+  })
 })

@@ -212,6 +212,8 @@ export interface Listing {
   name: string
   slug: string
   status: PropertyStatus // unified listing + deal stage
+  /** ISO timestamp when the listing was published (went live), or null when not published. Diverges from `status` so a backward move can keep the listing live. */
+  publishedAt: string | null
   dealType: DealType
   dealSide: DealSide // whether the broker represents the seller or the buyer
   /** The Property unit this deal is scoped to, or null when it covers the whole property. */
@@ -252,6 +254,8 @@ export interface DealDocument {
   uploadedAt: string
   /** Human-readable file size for display (e.g. "2.3 MB"). */
   size?: string
+  /** True when Buildout auto-generated this document — the publish gate requires review of these. */
+  aiGenerated?: boolean
 }
 
 /** A folder or file in a deal's internal Files workspace (the "lite Dropbox" page). */

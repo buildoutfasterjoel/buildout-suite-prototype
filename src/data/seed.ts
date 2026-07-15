@@ -1145,6 +1145,12 @@ function generateListings(
     const stageStartedAt =
       status === 'proposal' ? createdAt : faker.date.recent({ days: 120 }).toISOString()
 
+    // Published once the deal has gone live (Active or beyond); Pitching/Lost are not published.
+    const publishedAt =
+      status === 'active' || status === 'under-contract' || status === 'closed'
+        ? stageStartedAt
+        : null
+
     const history: DealHistoryEntry[] = [
       {
         id: faker.string.uuid(),
@@ -1222,6 +1228,7 @@ function generateListings(
       name,
       slug: `${property.slug}-${i + 1}`,
       status,
+      publishedAt,
       dealType,
       dealSide,
       unitId: marketingUnitId,
