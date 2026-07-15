@@ -257,6 +257,63 @@
   }
 }
 
+// Contact detail — left overview column. The collapsible sections use a left
+// chevron (rendered in JSX; the default Bootstrap chevron is hidden), a white
+// body with no header/body divider, and a divider only between sections (plus
+// one above the first section, separating it from the contact hero).
+.contact-overview-accordion {
+  border-top: 1px solid var(--color-storm-grey-100, #eceef2);
+
+  .accordion-item {
+    border: 0;
+    border-radius: 0;
+  }
+  .accordion-item + .accordion-item {
+    border-top: 1px solid var(--color-storm-grey-100, #eceef2);
+  }
+
+  // Header: white in both states, no shadow, no border (so there's no line
+  // between the header and its body), no default (right) chevron.
+  .accordion-button,
+  .accordion-button:not(.collapsed) {
+    background: var(--bp-card-bg, #fff);
+    box-shadow: none;
+    border: 0;
+    color: inherit;
+    font-weight: 600;
+    // Leave room on the right for the overlaid action button.
+    padding: 12px 44px 12px 12px;
+  }
+  .accordion-button::after {
+    display: none;
+  }
+
+  // Body: white, flush with the header (no dividing line).
+  .accordion-body {
+    background: var(--bp-card-bg, #fff);
+    padding: 0 12px 12px;
+  }
+}
+
+// The per-section action button (e.g. "Add"), overlaid at the header's right.
+// z-index must beat Bootstrap's `.accordion-button:not(.collapsed)` (z-index: 3),
+// which otherwise paints the expanded header over this button and hides it.
+.contact-accordion__action {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 5;
+}
+
+// Owner avatar in the contact hero's shared-access cluster: an offset outline.
+.contact-hero__owner-avatar {
+  position: relative;
+  z-index: 1;
+  box-shadow:
+    0 0 0 2px var(--bp-card-bg, #fff),
+    0 0 0 3.5px var(--color-buildout-blue-500, #3f86f2);
+}
+
 // Bulk-selection actions bar (People table): a tinted blue band that appears
 // when contacts are selected.
 .contact-selection-bar {
