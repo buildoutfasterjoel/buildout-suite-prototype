@@ -114,7 +114,10 @@ export function ContactEngagementPanel({
       <Card className="shadow-sm">
         <Card.Body className="d-flex flex-column gap-3">
           <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
-            <Card.Title className="fs-6 d-inline-flex align-items-center gap-2">
+            <Card.Title
+              className="fw-semibold d-inline-flex align-items-center gap-2"
+              style={{ fontSize: 20, lineHeight: "26px" }}
+            >
               Activity
               <Badge variant="secondary" appearance="muted" className="fs-xs">
                 {activity.length}
