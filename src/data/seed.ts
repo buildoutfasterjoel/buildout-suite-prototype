@@ -613,35 +613,26 @@ const LAST_TOUCH_BY_SOURCE: Record<ContactSource, string> = {
 const DEAL_PROBABILITY: Record<RelationshipStage, number> = {
   cold: 0.15,
   nurturing: 0.25,
-  active: 0.95,
   pitching: 1,
   client: 1,
   past_client: 1,
 }
 
-/** Picks a deal stage consistent with the relationship + side. */
-function pickDealStage(
-  relationship: RelationshipStage,
-  side: DealSide,
-): ContactDealStage {
+/** Picks a deal stage consistent with the relationship. */
+function pickDealStage(relationship: RelationshipStage): ContactDealStage {
   switch (relationship) {
-    case 'active':
-      return side === 'buyer' ? 'active_search' : 'active_listing'
     case 'pitching':
       return 'pitching'
     case 'client':
       return faker.helpers.weightedArrayElement([
-        { weight: 50, value: 'under_contract' as const },
-        { weight: 30, value: side === 'buyer' ? 'active_search' : 'active_listing' },
-        { weight: 20, value: 'closed' as const },
+        { weight: 35, value: 'active' as const },
+        { weight: 40, value: 'under_contract' as const },
+        { weight: 25, value: 'closed' as const },
       ])
     case 'past_client':
-      return faker.helpers.weightedArrayElement([
-        { weight: 70, value: 'closed' as const },
-        { weight: 30, value: 'lost' as const },
-      ])
-    default: // cold / nurturing that still have a (usually dead) deal
-      return 'lost'
+      return 'closed'
+    default: // cold / nurturing with an occasional early-stage deal
+      return 'active'
   }
 }
 
@@ -655,12 +646,11 @@ function generateContact(allPropertyIds: string[]): Contact {
   ])
 
   const relationship: RelationshipStage = faker.helpers.weightedArrayElement([
-    { weight: 45, value: 'cold' as const },
-    { weight: 18, value: 'nurturing' as const },
-    { weight: 12, value: 'active' as const },
-    { weight: 10, value: 'client' as const },
-    { weight: 8, value: 'past_client' as const },
-    { weight: 7, value: 'pitching' as const },
+    { weight: 42, value: 'cold' as const },
+    { weight: 20, value: 'nurturing' as const },
+    { weight: 12, value: 'pitching' as const },
+    { weight: 16, value: 'client' as const },
+    { weight: 10, value: 'past_client' as const },
   ])
 
   const source: ContactSource = faker.helpers.weightedArrayElement([
@@ -710,7 +700,7 @@ function generateContact(allPropertyIds: string[]): Contact {
     ? faker.helpers.arrayElement(['buyer', 'seller'] as const)
     : null
   const dealStage: ContactDealStage | null =
-    side !== null ? pickDealStage(relationship, side) : null
+    side !== null ? pickDealStage(relationship) : null
 
   // Inquiries come from the buy side actively searching.
   const inquiries =

@@ -2,7 +2,7 @@ import { del, get, set } from 'idb-keyval'
 import type { DataSlice } from './dataStore'
 
 /** Bump when seed logic changes so stale snapshots are auto-discarded on load. */
-export const SEED_VERSION = 8
+export const SEED_VERSION = 9
 
 const SNAPSHOT_KEY = 'bo-proto:datastore'
 

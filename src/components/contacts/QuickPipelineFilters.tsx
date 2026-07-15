@@ -47,10 +47,7 @@ const STAGES: QuickStage[] = [
     key: "active",
     label: "Active",
     color: "#3f86f2", // buildout-blue-500
-    apply: (f) => ({
-      ...f,
-      dealStage: new Set(["active_search", "active_listing"]),
-    }),
+    apply: (f) => ({ ...f, dealStage: new Set(["active"]) }),
   },
   {
     key: "under_contract",
