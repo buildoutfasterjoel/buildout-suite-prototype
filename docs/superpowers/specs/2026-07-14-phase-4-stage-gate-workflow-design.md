@@ -94,9 +94,10 @@ A broker-owned approval that publishes the listing — not a plain field save.
 - **Listing Executed** date (`transaction.listedOnDate`).
 - **Listing Expires** date (`transaction.listingExpirationDate`).
 
-**On confirm:** commit → `active`; append a `DealHistoryEntry`; fire a **Blueprint toast**
-("Listing published"); `SyndicationStatus` flips to its Published state. Publishing is conceptual —
-`marketing.publishFlags` already mark which items are public; going Active is what makes them live.
+**On confirm:** commit → `active`; set `publishedAt` = now; append a `DealHistoryEntry`; fire a
+**Blueprint toast** ("Listing published"); `SyndicationStatus` flips to its Published state. Publishing
+is conceptual — `marketing.publishFlags` already mark which items are public; going Active is what makes
+them live.
 
 ### Active → Under Contract
 
@@ -124,8 +125,9 @@ by this transition.
 Any move to a lower ladder index. The gate states the consequence and requires an explicit confirm; no
 field capture.
 - **Backward out of Active** (e.g. Active → Pitching) additionally shows ☐ **"Also unpublish this
-  listing"**, default **on**. On confirm with the box checked, `SyndicationStatus` returns to its
-  not-published state.
+  listing"**, default **on**. On confirm with the box checked, `publishedAt` is cleared and
+  `SyndicationStatus` returns to its not-published state; unchecked, the listing stays published even
+  though the stage regressed (published-state deliberately diverges from stage).
 - **Backward not out of Active** (e.g. Under Contract → Active) is a plain confirm.
 
 ---
@@ -152,12 +154,14 @@ field capture.
 
 - Add `aiGenerated?: boolean` to `DealDocument` (`src/data/types.ts`). Seed the Phase 1 auto-generated
   starter docs (underwrite / proposal / BOV) with `aiGenerated: true` so the review checklist has rows.
+- **Add `publishedAt: string | null` to `Listing`** (`src/data/types.ts`) — the persisted published
+  marker (null = not published). It can diverge from `status` so the backward "keep published" choice is
+  honored. Seed sets it for listings at Active/Under Contract/Closed; new proposals start `null`. Bump
+  `SEED_VERSION`.
 - **Repurpose `SyndicationStatus`** (`src/components/listings/SyndicationStatus.tsx`) to be
-  **stage-aware**: shows "Not published" until `status === 'active'`, then
-  "Published · syndicating to N/M." (The per-network `getListingSyndication` health data stays; it's
-  layered under the published/not-published headline.)
-- **No new persisted publish flag.** Active **is** published; unpublish is the backward move flipping
-  status off Active (honoring the gate's unpublish checkbox).
+  **publish-aware**: shows "Not published" when `publishedAt` is null, else "Published · syndicating to
+  N/M." (The per-network `getListingSyndication` health data stays; it's layered under the
+  published/not-published headline.)
 - Stage-transition commits append a `DealHistoryEntry` (`fromStage`/`toStage`/`actor`/`timestamp`).
 
 ## What does NOT change
@@ -183,8 +187,8 @@ field capture.
 - **`canConfirm` (unit):** a field gate blocks until all required fields + attestations are satisfied;
   the AI-doc checklist blocks until every `aiGenerated` doc is checked; empty checklist does not block.
 - **Commit (unit/action):** a committed transition sets the captured fields, flips `status`, and
-  appends a history entry; a backward-out-of-Active with unpublish checked returns the listing to
-  not-published.
+  appends a history entry; Pitching → Active sets `publishedAt`; a backward-out-of-Active with unpublish
+  checked clears `publishedAt` (unchecked leaves it set).
 - **Manual (in-app):** dragging on the board and using the header Select both open the correct gate;
   cancel leaves the card/Select unchanged; Pitching → Active publishes (toast + SyndicationStatus flip);
   Under Contract → Closed captures the Closed date; Lost works from any stage.
