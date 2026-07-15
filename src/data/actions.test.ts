@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { useDataStore } from './dataStore'
 import {
   createCallList,
+  commitStageTransition,
   createContact,
   createDeal,
   createEmailDraft,
@@ -100,5 +101,46 @@ describe('actions', () => {
     // The auto-generated starter docs are flagged so the publish gate can require review.
     expect(deal.documents?.length ?? 0).toBeGreaterThan(0)
     expect(deal.documents?.every((d) => d.aiGenerated === true)).toBe(true)
+  })
+
+  it('commitStageTransition publishes on Pitching → Active and logs history', () => {
+    const draft = { ...emptyDraft(), name: 'Commit Test', address: '11 Commit Ave' }
+    const { deal } = createDeal(draft)
+    const seller = [...useDataStore.getState().contacts.values()][0]
+    const before = deal.history.length
+
+    const { deal: updated } = commitStageTransition({
+      dealId: deal.id,
+      targetStage: 'active',
+      actor: 'Jane Broker',
+      dealSide: 'seller',
+      sellerContactId: seller.id,
+      transaction: { listedOnDate: '2026-07-01', listingExpirationDate: '2026-12-31' },
+      publish: true,
+    })
+
+    expect(updated?.status).toBe('active')
+    expect(updated?.publishedAt).not.toBeNull()
+    expect(updated?.dealSide).toBe('seller')
+    expect(updated?.sellerContactIds).toContain(seller.id)
+    expect(updated?.transaction.listedOnDate).toBe('2026-07-01')
+    expect(updated?.history.length).toBe(before + 1)
+    expect(updated?.history.at(-1)).toMatchObject({ fromStage: 'proposal', toStage: 'active' })
+  })
+
+  it('commitStageTransition clears publishedAt when unpublishing on a backward move', () => {
+    const draft = { ...emptyDraft(), name: 'Unpublish Test', address: '12 Back St' }
+    const { deal } = createDeal(draft)
+    // Get it live first.
+    commitStageTransition({ dealId: deal.id, targetStage: 'active', actor: 'Jane', publish: true })
+    // Move back to Pitching and unpublish.
+    const { deal: back } = commitStageTransition({
+      dealId: deal.id,
+      targetStage: 'proposal',
+      actor: 'Jane',
+      unpublish: true,
+    })
+    expect(back?.status).toBe('proposal')
+    expect(back?.publishedAt).toBeNull()
   })
 })

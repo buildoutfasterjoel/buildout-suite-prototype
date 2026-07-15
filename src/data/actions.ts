@@ -6,7 +6,8 @@ import {
   serializeContactFilters,
   type ContactFilterState,
 } from '#/components/contacts/contactFilterModel'
-import type { Contact, ContactRole, DealMarketing, Listing, PropertyStatus } from './types'
+import type { Contact, ContactRole, DealHistoryEntry, DealMarketing, Listing, PropertyStatus } from './types'
+import type { StageTransitionInput } from './stageGates'
 
 let _callListSeq = 0
 
@@ -35,6 +36,51 @@ export function updateDealStage(
   status: PropertyStatus,
 ): { deal: Listing | null } {
   return { deal: patchListing(dealId, (l) => ({ ...l, status, updatedAt: new Date().toISOString() })) }
+}
+
+/**
+ * Commit a gated stage transition: apply the captured field patch, link any
+ * seller/buyer chosen in the gate, flip the status, set/clear the published
+ * marker, and append a history entry. This is the single write path the
+ * StageGate modal commits through.
+ */
+export function commitStageTransition(input: StageTransitionInput): { deal: Listing | null } {
+  const now = new Date().toISOString()
+  return {
+    deal: patchListing(input.dealId, (l) => {
+      const historyEntry: DealHistoryEntry = {
+        id: crypto.randomUUID(),
+        label: 'Moved to',
+        fromStage: l.status,
+        toStage: input.targetStage,
+        actor: input.actor,
+        timestamp: now,
+      }
+
+      const sellerContactIds =
+        input.sellerContactId && !l.sellerContactIds.includes(input.sellerContactId)
+          ? [...l.sellerContactIds, input.sellerContactId]
+          : l.sellerContactIds
+      const buyerContactIds =
+        input.buyerContactId && !l.buyerContactIds.includes(input.buyerContactId)
+          ? [...l.buyerContactIds, input.buyerContactId]
+          : l.buyerContactIds
+
+      const publishedAt = input.publish ? now : input.unpublish ? null : l.publishedAt
+
+      return {
+        ...l,
+        status: input.targetStage,
+        dealSide: input.dealSide ?? l.dealSide,
+        sellerContactIds,
+        buyerContactIds,
+        publishedAt,
+        transaction: { ...l.transaction, ...input.transaction },
+        history: [...l.history, historyEntry],
+        updatedAt: now,
+      }
+    }),
+  }
 }
 
 /**
