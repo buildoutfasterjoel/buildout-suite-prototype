@@ -101,14 +101,17 @@ and property address — a "You're publishing this listing" panel so the broker 
 - ☐ **Listing website reviewed** — broker attestation, with an **Open website** link to
   `/listings/$id/website` so the broker reviews the public page before it goes live.
 
-**Listing readiness (all required — you cannot publish an empty listing):** a checklist derived from the
-deal's marketing content via `listingReadiness(deal)`, with a link to the marketing editor
-(`/listings/$id/edit`) to fill gaps. Core fields, always required regardless of publish flags:
-- **Listing title** — `marketing.saleTitle` non-empty.
-- **Listing description** — `marketing.saleDescription` non-empty.
-- **Asking price** — `financials.askingPrice > 0`.
-(Photos are auto-generated, so they are not part of the check.) The confirm button stays disabled until
-every readiness item is met.
+**Core listing content (all required, editable inline — you cannot publish an empty listing):** the
+gate surfaces the core marketing fields as editable inputs, prefilled from the deal, so the broker fills
+them in place rather than being sent to another page. A link to the full marketing editor
+(`/listings/$id/edit`) stays as an optional escape hatch. Required, always, regardless of publish flags:
+- **Listing title** → `marketing.saleTitle` (Input).
+- **Listing description** → `marketing.saleDescription` (Textarea).
+- **Asking price** → `financials.askingPrice` (`> 0`, `$` InputGroup).
+(Photos are auto-generated, so they are not part of the check.) These are gated via `canConfirm` (added
+as `saleTitle`/`saleDescription`/`askingPrice` required fields on the form), and on commit
+`buildTransitionInput` folds them into `input.marketing`/`input.financials`, which
+`commitStageTransition` merges into the deal. The confirm button stays disabled until all are filled.
 
 **Fields (all required):**
 - **Listing Executed** date (`transaction.listedOnDate`) — Blueprint calendar; not captured elsewhere.

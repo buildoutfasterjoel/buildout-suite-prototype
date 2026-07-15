@@ -1,4 +1,10 @@
-import type { DealSide, DealTransaction, Listing, PropertyStatus } from './types'
+import type {
+  DealMarketing,
+  DealPitchFinancials,
+  DealSide,
+  DealTransaction,
+  PropertyStatus,
+} from './types'
 
 export type GateKind = 'field' | 'confirm' | 'dead'
 
@@ -12,6 +18,9 @@ export type RequiredField =
   | 'deadReason'
   | 'aiDocsReviewed'
   | 'websiteReviewed'
+  | 'saleTitle'
+  | 'saleDescription'
+  | 'askingPrice'
 
 /** The editable state the StageGate modal collects. Fields not relevant to a gate are ignored. */
 export interface GateFormState {
@@ -31,6 +40,10 @@ export interface GateFormState {
   unpublishOnExit: boolean
   /** Contact chosen to link as buyer in this gate (Under Contract), if any. */
   buyerContactId: string | null
+  /** Core listing content, editable inline in the publish gate. */
+  saleTitle: string
+  saleDescription: string
+  askingPrice: number | null
 }
 
 export interface GateConfig {
@@ -51,6 +64,8 @@ export interface StageTransitionInput {
   targetStage: PropertyStatus
   actor: string
   transaction?: Partial<DealTransaction>
+  marketing?: Partial<DealMarketing>
+  financials?: Partial<DealPitchFinancials>
   dealSide?: DealSide
   sellerContactId?: string
   buyerContactId?: string
@@ -96,9 +111,18 @@ export function resolveGate(from: PropertyStatus, target: PropertyStatus): GateC
         kind: 'field',
         title: 'Approve & Publish',
         // Seller and Side are already captured at deal creation — the publish
-        // gate shows them read-only and gates only on the review attestations
-        // plus the listing-agreement dates (which aren't captured elsewhere).
-        required: ['aiDocsReviewed', 'websiteReviewed', 'listedOnDate', 'listingExpirationDate'],
+        // gate shows them read-only. It gates on the core listing content
+        // (editable inline so the broker never has to leave the modal), the
+        // review attestations, and the listing-agreement dates.
+        required: [
+          'saleTitle',
+          'saleDescription',
+          'askingPrice',
+          'aiDocsReviewed',
+          'websiteReviewed',
+          'listedOnDate',
+          'listingExpirationDate',
+        ],
         publishes: true,
       }
     case 'under-contract':
@@ -132,42 +156,18 @@ function fieldSatisfied(field: RequiredField, form: GateFormState): boolean {
       return form.aiDocsAllReviewed
     case 'websiteReviewed':
       return form.websiteReviewed
+    case 'saleTitle':
+      return form.saleTitle.trim().length > 0
+    case 'saleDescription':
+      return form.saleDescription.trim().length > 0
+    case 'askingPrice':
+      return form.askingPrice != null && form.askingPrice > 0
   }
 }
 
 export function canConfirm(config: GateConfig, form: GateFormState): boolean {
   if (config.kind === 'confirm') return true
   return config.required.every((f) => fieldSatisfied(f, form))
-}
-
-/** One core listing field the deal must have populated before it can publish. */
-export interface ReadinessCheck {
-  key: 'title' | 'description' | 'price'
-  label: string
-  ok: boolean
-}
-
-/**
- * Listing readiness for publishing: the core marketing fields that must be
- * filled before a deal can go Active. Publishing an empty listing is meaningless,
- * so the Approve & Publish gate blocks until these are present. (Photos are
- * auto-generated, so they are not part of the check.)
- */
-export function listingReadiness(deal: Listing): ReadinessCheck[] {
-  return [
-    { key: 'title', label: 'Listing title', ok: deal.marketing.saleTitle.trim().length > 0 },
-    {
-      key: 'description',
-      label: 'Listing description',
-      ok: deal.marketing.saleDescription.trim().length > 0,
-    },
-    { key: 'price', label: 'Asking price', ok: deal.financials.askingPrice > 0 },
-  ]
-}
-
-/** True when every core listing field is populated (deal is ready to publish). */
-export function isListingReady(deal: Listing): boolean {
-  return listingReadiness(deal).every((c) => c.ok)
 }
 
 export function buildTransitionInput(
@@ -192,7 +192,15 @@ export function buildTransitionInput(
   }
   if (Object.keys(transaction).length > 0) input.transaction = transaction
   if (form.buyerContactId) input.buyerContactId = form.buyerContactId
-  if (config.publishes) input.publish = true
+  if (config.publishes) {
+    input.publish = true
+    // Persist any inline edits to the core listing content.
+    const marketing: Partial<DealMarketing> = {}
+    if (form.saleTitle) marketing.saleTitle = form.saleTitle
+    if (form.saleDescription) marketing.saleDescription = form.saleDescription
+    if (Object.keys(marketing).length > 0) input.marketing = marketing
+    if (form.askingPrice != null) input.financials = { askingPrice: form.askingPrice }
+  }
   if (config.leavesActive && form.unpublishOnExit) input.unpublish = true
   return input
 }

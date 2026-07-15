@@ -76,6 +76,8 @@ export function commitStageTransition(input: StageTransitionInput): { deal: List
         buyerContactIds,
         publishedAt,
         transaction: { ...l.transaction, ...input.transaction },
+        marketing: input.marketing ? { ...l.marketing, ...input.marketing } : l.marketing,
+        financials: input.financials ? { ...l.financials, ...input.financials } : l.financials,
         history: [...l.history, historyEntry],
         updatedAt: now,
       }

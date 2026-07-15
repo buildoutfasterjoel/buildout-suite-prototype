@@ -4,6 +4,7 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Field } from "@buildoutinc/blueprint-react/ui/Field";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
+import { Textarea } from "@buildoutinc/blueprint-react/ui/Textarea";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Popover } from "@buildoutinc/blueprint-react/ui/Popover";
@@ -15,8 +16,6 @@ import {
   faArrowUpRightFromSquare,
   faRobot,
   faCalendar,
-  faCircleCheck,
-  faCircleXmark,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { PropertyStatus } from "#/data/types";
 import {
@@ -30,7 +29,6 @@ import {
   resolveGate,
   canConfirm,
   buildTransitionInput,
-  listingReadiness,
   type GateFormState,
 } from "#/data/stageGates";
 import { commitStageTransition } from "#/data/actions";
@@ -49,6 +47,9 @@ const EMPTY_FORM: GateFormState = {
   websiteReviewed: false,
   unpublishOnExit: true,
   buyerContactId: null,
+  saleTitle: "",
+  saleDescription: "",
+  askingPrice: null,
 };
 
 const DATE_FORMAT: Intl.DateTimeFormatOptions = {
@@ -152,6 +153,10 @@ export function StageGate({
       salePrice: deal.transaction.salePrice || null,
       commissionAmount: deal.transaction.commissionAmount || null,
       deadReason: deal.transaction.deadReason,
+      // Core listing content, prefilled so the broker edits in place.
+      saleTitle: deal.marketing.saleTitle,
+      saleDescription: deal.marketing.saleDescription,
+      askingPrice: deal.financials.askingPrice || null,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dealId, open]);
@@ -197,10 +202,7 @@ export function StageGate({
         .join(", ")
     : deal.name;
 
-  // A listing can only publish once its core marketing fields are filled.
-  const readiness = config.publishes ? listingReadiness(deal) : [];
-  const listingReady = readiness.every((c) => c.ok);
-  const confirmable = canConfirm(config, effectiveForm) && listingReady;
+  const confirmable = canConfirm(config, effectiveForm);
 
   const commit = () => {
     const input = buildTransitionInput(
@@ -270,36 +272,55 @@ export function StageGate({
               )}
 
               {config.publishes && (
-                <Field>
-                  <Field.Label>Listing readiness</Field.Label>
-                  <div className="d-flex flex-column gap-1 border rounded p-2">
-                    {readiness.map((c) => (
-                      <div
-                        key={c.key}
-                        className="d-flex align-items-center gap-2"
-                      >
-                        <FontAwesomeIcon
-                          icon={c.ok ? faCircleCheck : faCircleXmark}
-                          className={c.ok ? "text-success" : "text-danger"}
-                        />
-                        {c.label}
-                      </div>
-                    ))}
-                  </div>
-                  {!listingReady && (
+                <>
+                  <Field>
+                    <Field.Label>Listing title</Field.Label>
+                    <Input
+                      value={form.saleTitle}
+                      onChange={(e) => set("saleTitle", e.target.value)}
+                      placeholder="e.g. Prime Retail Pad — Downtown"
+                    />
+                  </Field>
+
+                  <Field>
+                    <Field.Label>Listing description</Field.Label>
+                    <Textarea
+                      rows={3}
+                      value={form.saleDescription}
+                      onChange={(e) => set("saleDescription", e.target.value)}
+                      placeholder="Describe the offering for the public listing…"
+                    />
+                  </Field>
+
+                  <Field>
+                    <Field.Label>Asking price</Field.Label>
+                    <InputGroup>
+                      <InputGroup.Addon>$</InputGroup.Addon>
+                      <Input
+                        type="number"
+                        value={form.askingPrice ?? ""}
+                        onChange={(e) =>
+                          set(
+                            "askingPrice",
+                            e.target.value ? Number(e.target.value) : null,
+                          )
+                        }
+                        placeholder="0"
+                      />
+                    </InputGroup>
                     <Field.Description>
+                      Editing here updates the listing.{" "}
                       <a
                         href={`/listings/${deal.id}/edit`}
                         target="_blank"
                         rel="noreferrer"
                       >
-                        Complete the listing details{" "}
+                        Open full marketing editor{" "}
                         <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
-                      </a>{" "}
-                      before publishing.
+                      </a>
                     </Field.Description>
-                  )}
-                </Field>
+                  </Field>
+                </>
               )}
 
               {config.publishes && aiDocs.length > 0 && (

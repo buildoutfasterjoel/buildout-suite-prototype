@@ -3,19 +3,8 @@ import {
   resolveGate,
   canConfirm,
   buildTransitionInput,
-  listingReadiness,
-  isListingReady,
   type GateFormState,
 } from './stageGates'
-import type { Listing } from './types'
-
-/** Minimal Listing shape for the readiness checks (only marketing + financials read). */
-function dealWith(saleTitle: string, saleDescription: string, askingPrice: number): Listing {
-  return {
-    marketing: { saleTitle, saleDescription },
-    financials: { askingPrice },
-  } as unknown as Listing
-}
 
 const emptyForm: GateFormState = {
   buyerLinked: false,
@@ -30,11 +19,17 @@ const emptyForm: GateFormState = {
   websiteReviewed: false,
   unpublishOnExit: true,
   buyerContactId: null,
+  saleTitle: '',
+  saleDescription: '',
+  askingPrice: null,
 }
 
 /** A publish gate satisfied on every requirement. */
 const readyToPublish: GateFormState = {
   ...emptyForm,
+  saleTitle: 'Prime Retail Pad',
+  saleDescription: 'Corner lot with drive-thru',
+  askingPrice: 1_950_000,
   aiDocsAllReviewed: true,
   websiteReviewed: true,
   listedOnDate: '2026-07-01',
@@ -42,12 +37,15 @@ const readyToPublish: GateFormState = {
 }
 
 describe('resolveGate', () => {
-  it('Pitching → Active is a publishing field gate — attestations + listing dates only', () => {
+  it('Pitching → Active is a publishing field gate — listing content + attestations + dates', () => {
     const g = resolveGate('proposal', 'active')
     expect(g.kind).toBe('field')
     expect(g.publishes).toBe(true)
     expect(g.required).toEqual(
       expect.arrayContaining([
+        'saleTitle',
+        'saleDescription',
+        'askingPrice',
         'aiDocsReviewed',
         'websiteReviewed',
         'listedOnDate',
@@ -105,10 +103,18 @@ describe('canConfirm', () => {
     expect(canConfirm(resolveGate('under-contract', 'active'), emptyForm)).toBe(true)
   })
 
-  it('the publish gate blocks until docs + website reviewed and dates set', () => {
+  it('the publish gate blocks until content, reviews, and dates are all set', () => {
     const g = resolveGate('proposal', 'active')
     expect(canConfirm(g, emptyForm)).toBe(false)
     expect(canConfirm(g, readyToPublish)).toBe(true)
+  })
+
+  it('the publish gate blocks on missing listing content', () => {
+    const g = resolveGate('proposal', 'active')
+    expect(canConfirm(g, { ...readyToPublish, saleTitle: '   ' })).toBe(false)
+    expect(canConfirm(g, { ...readyToPublish, saleDescription: '' })).toBe(false)
+    expect(canConfirm(g, { ...readyToPublish, askingPrice: 0 })).toBe(false)
+    expect(canConfirm(g, { ...readyToPublish, askingPrice: null })).toBe(false)
   })
 
   it('the AI-doc checklist blocks the publish gate when not all reviewed', () => {
@@ -141,7 +147,7 @@ describe('canConfirm', () => {
 })
 
 describe('buildTransitionInput', () => {
-  it('maps a publish gate form to the action input (dates + publish, no seller/side)', () => {
+  it('maps a publish gate form to the action input (content + dates + publish, no seller/side)', () => {
     const g = resolveGate('proposal', 'active')
     const input = buildTransitionInput(g, readyToPublish, 'deal-1', 'Jane Broker')
     expect(input.targetStage).toBe('active')
@@ -150,6 +156,12 @@ describe('buildTransitionInput', () => {
       listedOnDate: '2026-07-01',
       listingExpirationDate: '2026-12-31',
     })
+    // Inline listing edits are persisted to marketing + financials.
+    expect(input.marketing).toMatchObject({
+      saleTitle: 'Prime Retail Pad',
+      saleDescription: 'Corner lot with drive-thru',
+    })
+    expect(input.financials).toMatchObject({ askingPrice: 1_950_000 })
     // Seller/Side are not re-captured by the publish gate.
     expect(input.dealSide).toBeUndefined()
     expect(input.sellerContactId).toBeUndefined()
@@ -160,31 +172,6 @@ describe('buildTransitionInput', () => {
     const input = buildTransitionInput(g, { ...emptyForm, unpublishOnExit: true }, 'deal-1', 'Jane Broker')
     expect(input.unpublish).toBe(true)
     expect(input.publish).toBeUndefined()
-  })
-})
-
-describe('listingReadiness', () => {
-  it('is ready when title, description, and asking price are all present', () => {
-    const deal = dealWith('Prime Retail Pad', 'Corner lot with drive-thru', 1_950_000)
-    expect(isListingReady(deal)).toBe(true)
-    expect(listingReadiness(deal).every((c) => c.ok)).toBe(true)
-  })
-
-  it('is not ready when the title is blank', () => {
-    const deal = dealWith('   ', 'Corner lot', 1_950_000)
-    expect(isListingReady(deal)).toBe(false)
-    expect(listingReadiness(deal).find((c) => c.key === 'title')?.ok).toBe(false)
-  })
-
-  it('is not ready when the description is blank', () => {
-    const deal = dealWith('Prime Retail Pad', '', 1_950_000)
-    expect(isListingReady(deal)).toBe(false)
-    expect(listingReadiness(deal).find((c) => c.key === 'description')?.ok).toBe(false)
-  })
-
-  it('is not ready when the asking price is zero', () => {
-    const deal = dealWith('Prime Retail Pad', 'Corner lot', 0)
-    expect(isListingReady(deal)).toBe(false)
-    expect(listingReadiness(deal).find((c) => c.key === 'price')?.ok).toBe(false)
+    expect(input.marketing).toBeUndefined()
   })
 })
