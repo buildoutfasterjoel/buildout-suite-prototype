@@ -68,21 +68,28 @@ export function SyndicationStatus({ listing }: { listing: Listing }) {
   const rep = listing.internalBrokers[0];
 
   const published = listing.publishedAt != null;
+  // A Closed or Lost deal that was published is off-market now — show its history
+  // without implying it is still live.
+  const offMarket =
+    published && (listing.status === "closed" || listing.status === "inactive");
   const activeCount = networks.filter((n) => n.active).length;
   const label = !published
     ? "Not published"
-    : activeCount === 0
-      ? "Published"
-      : `Published · syndicating to ${activeCount}/${networks.length}`;
+    : offMarket
+      ? "Previously published"
+      : activeCount === 0
+        ? "Published"
+        : `Published · syndicating to ${activeCount}/${networks.length}`;
 
   const needsAttention =
     blockingIssues.length > 0 ||
     networks.some((n) => n.status === "needs-attention");
-  const statusColor = !published
-    ? "var(--stage-inactive)"
-    : needsAttention
-      ? "var(--bp-warning)"
-      : "var(--stage-active)";
+  const statusColor =
+    !published || offMarket
+      ? "var(--stage-inactive)"
+      : needsAttention
+        ? "var(--bp-warning)"
+        : "var(--stage-active)";
 
   const toggle = (id: string, active: boolean) => {
     setNetworks((prev) =>
