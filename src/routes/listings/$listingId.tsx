@@ -5,6 +5,7 @@ import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBuildingCircleExclamation } from "@fortawesome/pro-regular-svg-icons";
 import { getStore } from "#/data/store";
+import { useDataStore } from "#/data/dataStore";
 import { PropertyDetailHeader } from "#/components/properties/PropertyDetailHeader";
 import { PropertyDetailSidebar } from "#/components/properties/PropertyDetailSidebar";
 
@@ -49,7 +50,10 @@ function ListingNotFound() {
 
 function PropertyDetail() {
   const { listingId } = Route.useParams();
-  const listing = getStore().listings.get(listingId);
+  // Reactive selector (not getStore()) so a commitStageTransition — which
+  // replaces the listings map and the listing object — re-renders this
+  // component immediately (header stage Select, SyndicationStatus, etc.).
+  const listing = useDataStore((s) => s.listings.get(listingId));
 
   if (!listing) return <ListingNotFound />;
 

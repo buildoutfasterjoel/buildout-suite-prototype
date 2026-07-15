@@ -22,6 +22,7 @@ import {
   type GateFormState,
 } from "#/data/stageGates";
 import { commitStageTransition } from "#/data/actions";
+import { STATUS_LABELS } from "#/components/properties/propertyDisplay";
 
 const EMPTY_FORM: GateFormState = {
   sellerLinked: false,
@@ -141,7 +142,8 @@ export function StageGate({
           {config.kind === "confirm" && (
             <>
               <p className="mb-0">
-                Move this deal back to <strong>{config.targetStage}</strong>?
+                Move this deal back to{" "}
+                <strong>{STATUS_LABELS[config.targetStage]}</strong>?
               </p>
               {config.leavesActive && (
                 <Field orientation="horizontal">
