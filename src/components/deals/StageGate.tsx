@@ -15,6 +15,8 @@ import {
   faArrowUpRightFromSquare,
   faRobot,
   faCalendar,
+  faCircleCheck,
+  faCircleXmark,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { PropertyStatus } from "#/data/types";
 import {
@@ -28,6 +30,7 @@ import {
   resolveGate,
   canConfirm,
   buildTransitionInput,
+  listingReadiness,
   type GateFormState,
 } from "#/data/stageGates";
 import { commitStageTransition } from "#/data/actions";
@@ -194,7 +197,10 @@ export function StageGate({
         .join(", ")
     : deal.name;
 
-  const confirmable = canConfirm(config, effectiveForm);
+  // A listing can only publish once its core marketing fields are filled.
+  const readiness = config.publishes ? listingReadiness(deal) : [];
+  const listingReady = readiness.every((c) => c.ok);
+  const confirmable = canConfirm(config, effectiveForm) && listingReady;
 
   const commit = () => {
     const input = buildTransitionInput(
@@ -261,6 +267,39 @@ export function StageGate({
                     <dd className="col-8 mb-0">{propertyAddress}</dd>
                   </dl>
                 </div>
+              )}
+
+              {config.publishes && (
+                <Field>
+                  <Field.Label>Listing readiness</Field.Label>
+                  <div className="d-flex flex-column gap-1 border rounded p-2">
+                    {readiness.map((c) => (
+                      <div
+                        key={c.key}
+                        className="d-flex align-items-center gap-2"
+                      >
+                        <FontAwesomeIcon
+                          icon={c.ok ? faCircleCheck : faCircleXmark}
+                          className={c.ok ? "text-success" : "text-danger"}
+                        />
+                        {c.label}
+                      </div>
+                    ))}
+                  </div>
+                  {!listingReady && (
+                    <Field.Description>
+                      <a
+                        href={`/listings/${deal.id}/edit`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Complete the listing details{" "}
+                        <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+                      </a>{" "}
+                      before publishing.
+                    </Field.Description>
+                  )}
+                </Field>
               )}
 
               {config.publishes && aiDocs.length > 0 && (

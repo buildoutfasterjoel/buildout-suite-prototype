@@ -1,4 +1,4 @@
-import type { DealSide, DealTransaction, PropertyStatus } from './types'
+import type { DealSide, DealTransaction, Listing, PropertyStatus } from './types'
 
 export type GateKind = 'field' | 'confirm' | 'dead'
 
@@ -138,6 +138,36 @@ function fieldSatisfied(field: RequiredField, form: GateFormState): boolean {
 export function canConfirm(config: GateConfig, form: GateFormState): boolean {
   if (config.kind === 'confirm') return true
   return config.required.every((f) => fieldSatisfied(f, form))
+}
+
+/** One core listing field the deal must have populated before it can publish. */
+export interface ReadinessCheck {
+  key: 'title' | 'description' | 'price'
+  label: string
+  ok: boolean
+}
+
+/**
+ * Listing readiness for publishing: the core marketing fields that must be
+ * filled before a deal can go Active. Publishing an empty listing is meaningless,
+ * so the Approve & Publish gate blocks until these are present. (Photos are
+ * auto-generated, so they are not part of the check.)
+ */
+export function listingReadiness(deal: Listing): ReadinessCheck[] {
+  return [
+    { key: 'title', label: 'Listing title', ok: deal.marketing.saleTitle.trim().length > 0 },
+    {
+      key: 'description',
+      label: 'Listing description',
+      ok: deal.marketing.saleDescription.trim().length > 0,
+    },
+    { key: 'price', label: 'Asking price', ok: deal.financials.askingPrice > 0 },
+  ]
+}
+
+/** True when every core listing field is populated (deal is ready to publish). */
+export function isListingReady(deal: Listing): boolean {
+  return listingReadiness(deal).every((c) => c.ok)
 }
 
 export function buildTransitionInput(

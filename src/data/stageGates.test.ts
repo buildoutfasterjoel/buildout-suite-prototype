@@ -3,8 +3,19 @@ import {
   resolveGate,
   canConfirm,
   buildTransitionInput,
+  listingReadiness,
+  isListingReady,
   type GateFormState,
 } from './stageGates'
+import type { Listing } from './types'
+
+/** Minimal Listing shape for the readiness checks (only marketing + financials read). */
+function dealWith(saleTitle: string, saleDescription: string, askingPrice: number): Listing {
+  return {
+    marketing: { saleTitle, saleDescription },
+    financials: { askingPrice },
+  } as unknown as Listing
+}
 
 const emptyForm: GateFormState = {
   buyerLinked: false,
@@ -149,5 +160,31 @@ describe('buildTransitionInput', () => {
     const input = buildTransitionInput(g, { ...emptyForm, unpublishOnExit: true }, 'deal-1', 'Jane Broker')
     expect(input.unpublish).toBe(true)
     expect(input.publish).toBeUndefined()
+  })
+})
+
+describe('listingReadiness', () => {
+  it('is ready when title, description, and asking price are all present', () => {
+    const deal = dealWith('Prime Retail Pad', 'Corner lot with drive-thru', 1_950_000)
+    expect(isListingReady(deal)).toBe(true)
+    expect(listingReadiness(deal).every((c) => c.ok)).toBe(true)
+  })
+
+  it('is not ready when the title is blank', () => {
+    const deal = dealWith('   ', 'Corner lot', 1_950_000)
+    expect(isListingReady(deal)).toBe(false)
+    expect(listingReadiness(deal).find((c) => c.key === 'title')?.ok).toBe(false)
+  })
+
+  it('is not ready when the description is blank', () => {
+    const deal = dealWith('Prime Retail Pad', '', 1_950_000)
+    expect(isListingReady(deal)).toBe(false)
+    expect(listingReadiness(deal).find((c) => c.key === 'description')?.ok).toBe(false)
+  })
+
+  it('is not ready when the asking price is zero', () => {
+    const deal = dealWith('Prime Retail Pad', 'Corner lot', 0)
+    expect(isListingReady(deal)).toBe(false)
+    expect(listingReadiness(deal).find((c) => c.key === 'price')?.ok).toBe(false)
   })
 })

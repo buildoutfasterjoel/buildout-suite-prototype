@@ -101,6 +101,15 @@ and property address — a "You're publishing this listing" panel so the broker 
 - ☐ **Listing website reviewed** — broker attestation, with an **Open website** link to
   `/listings/$id/website` so the broker reviews the public page before it goes live.
 
+**Listing readiness (all required — you cannot publish an empty listing):** a checklist derived from the
+deal's marketing content via `listingReadiness(deal)`, with a link to the marketing editor
+(`/listings/$id/edit`) to fill gaps. Core fields, always required regardless of publish flags:
+- **Listing title** — `marketing.saleTitle` non-empty.
+- **Listing description** — `marketing.saleDescription` non-empty.
+- **Asking price** — `financials.askingPrice > 0`.
+(Photos are auto-generated, so they are not part of the check.) The confirm button stays disabled until
+every readiness item is met.
+
 **Fields (all required):**
 - **Listing Executed** date (`transaction.listedOnDate`) — Blueprint calendar; not captured elsewhere.
 - **Listing Expires** date (`transaction.listingExpirationDate`) — Blueprint calendar.
