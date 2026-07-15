@@ -43,7 +43,7 @@ import { EditDynamicListModal } from "#/components/contacts/EditDynamicListModal
 import { EditStaticListModal } from "#/components/contacts/EditStaticListModal";
 import { ContactListsSidebar } from "#/components/contacts/ContactListsSidebar";
 import { ContactListsOverview } from "#/components/contacts/ContactListsOverview";
-import { QuickPipelineFilters } from "#/components/contacts/QuickPipelineFilters";
+import { getPipelineStage } from "#/components/contacts/pipelineStages";
 import {
   CONTACT_LISTS,
   ALL_CONTACTS_ID,
@@ -108,29 +108,47 @@ function PeoplePage() {
     [contacts],
   );
 
+  // A "My Pipeline" preset page, if that's what's active.
+  const activePipeline = getPipelineStage(activeListId);
+
   const activeList =
     CONTACT_LISTS.find((l) => l.id === activeListId) ??
     userLists.find((l) => l.id === activeListId);
-  const heading = activeList ? activeList.label : "All Contacts";
+  const heading = activePipeline
+    ? activePipeline.label
+    : activeList
+      ? activeList.label
+      : "All Contacts";
 
   // The active user list (if any) + whether it's a dynamic, filter-driven list.
   const activeCallList = callListsMap.get(activeListId);
   const isDynamicList = activeCallList?.type === "dynamic";
+  // The "saved" set a Revert restores: a dynamic list's stored filters, or a
+  // pipeline page's fixed preset.
   const savedFilters = useMemo(
-    () =>
-      isDynamicList && activeCallList?.filters
+    () => {
+      if (activePipeline) return activePipeline.preset();
+      return isDynamicList && activeCallList?.filters
         ? deserializeContactFilters(activeCallList.filters)
-        : null,
-    [isDynamicList, activeCallList],
+        : null;
+    },
+    [activePipeline, isDynamicList, activeCallList],
   );
   const filterContext: FilterBarContext =
-    activeListId === ALL_CONTACTS_ID ? "all" : isDynamicList ? "dynamic" : "other";
+    activeListId === ALL_CONTACTS_ID
+      ? "all"
+      : activePipeline
+        ? "pipeline"
+        : isDynamicList
+          ? "dynamic"
+          : "other";
   const dirty = savedFilters ? !filtersEqual(filters, savedFilters) : false;
 
   // A user-created static list (not a built-in, not dynamic).
   const isStaticList = !!activeCallList && !isDynamicList;
-  // Filters are only a tool for All Contacts and Dynamic lists.
-  const filtersEnabled = activeListId === ALL_CONTACTS_ID || isDynamicList;
+  // Filters are a tool for All Contacts, Dynamic lists, and Pipeline pages.
+  const filtersEnabled =
+    activeListId === ALL_CONTACTS_ID || isDynamicList || !!activePipeline;
 
   // The primary tab value: "all" / "mylists", or "" when a specific list filters.
   const topValue =
@@ -140,9 +158,14 @@ function PeoplePage() {
         ? ALL_CONTACTS_ID
         : "";
 
-  // Selecting a dynamic list loads its saved filters as the working set; any
-  // other list (or All Contacts) starts from a clean filter slate.
+  // Selecting a dynamic list (or pipeline page) loads its saved/preset filters
+  // as the working set; any other list (or All Contacts) starts clean.
   const loadFiltersForList = (id: string) => {
+    const stage = getPipelineStage(id);
+    if (stage) {
+      setFilters(stage.preset());
+      return;
+    }
     const cl = callListsMap.get(id);
     if (cl?.type === "dynamic" && cl.filters) {
       setFilters(deserializeContactFilters(cl.filters));
@@ -367,6 +390,13 @@ function PeoplePage() {
               <div className="d-flex align-items-start gap-3">
                 <div className="flex-grow-1">
                   <div className="d-flex align-items-center gap-2">
+                    {activePipeline && (
+                      <FontAwesomeIcon
+                        icon={activePipeline.icon}
+                        className="fs-4"
+                        style={{ color: activePipeline.color }}
+                      />
+                    )}
                     {activeCallList && (isDynamicList || isStaticList) && (
                       <FontAwesomeIcon
                         icon={isDynamicList ? faFilter : faListUl}
@@ -375,6 +405,11 @@ function PeoplePage() {
                       />
                     )}
                     <h1 className="fs-4 fw-semibold mb-0">{heading}</h1>
+                    {activePipeline && (
+                      <Badge variant="secondary" appearance="muted">
+                        Pipeline
+                      </Badge>
+                    )}
                     {isDynamicList && (
                       <Badge variant="primary" appearance="muted">
                         Dynamic
@@ -386,6 +421,11 @@ function PeoplePage() {
                       </Badge>
                     )}
                   </div>
+                  {activePipeline && (
+                    <p className="text-muted mb-0 mt-1">
+                      {activePipeline.description}
+                    </p>
+                  )}
                   {(isDynamicList || isStaticList) &&
                     activeCallList?.description && (
                       <p className="text-muted mb-0 mt-1">
@@ -431,17 +471,6 @@ function PeoplePage() {
                   </DropdownMenu>
                 )}
               </div>
-
-              {/* Quick pipeline filters — an entry point on All Contacts,
-                  shown only until any filter is set (then hidden until
-                  filters are cleared again). */}
-              {activeListId === ALL_CONTACTS_ID &&
-                countActiveContactFilters(filters) === 0 && (
-                  <QuickPipelineFilters
-                    contacts={contacts}
-                    onSelect={setFilters}
-                  />
-                )}
 
               {/* Toolbar */}
               <div className="d-flex flex-column gap-3">

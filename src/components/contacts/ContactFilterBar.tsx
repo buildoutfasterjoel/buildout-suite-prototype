@@ -14,7 +14,7 @@ import {
 } from "#/components/contacts/contactFilterModel";
 
 /** Which list is active, which drives the available save actions. */
-export type FilterBarContext = "all" | "dynamic" | "other";
+export type FilterBarContext = "all" | "dynamic" | "pipeline" | "other";
 
 interface ContactFilterBarProps {
   filters: ContactFilterState;
@@ -44,8 +44,12 @@ export function ContactFilterBar({
 }: ContactFilterBarProps) {
   const chips = contactFilterChips(filters);
 
-  // Nothing to show: no active filters, and not an edited dynamic list.
-  if (chips.length === 0 && !(context === "dynamic" && dirty)) return null;
+  // Nothing to show: no active filters, and not an edited dynamic/pipeline set.
+  if (
+    chips.length === 0 &&
+    !((context === "dynamic" || context === "pipeline") && dirty)
+  )
+    return null;
 
   return (
     <div className="contact-filter-bar d-flex align-items-center gap-2 flex-wrap">
@@ -122,6 +126,30 @@ export function ContactFilterBar({
               }
             />
             <Tooltip.Content>Reverts to list's saved filters</Tooltip.Content>
+          </Tooltip>
+        </div>
+      )}
+
+      {/* Pipeline page with altered preset → save as a new list, or revert.
+          The preset itself is not editable, so no "Save Filters" here. */}
+      {context === "pipeline" && dirty && (
+        <div className="d-flex align-items-center gap-2 ms-1">
+          <Button variant="primary" size="sm" onClick={onSaveAsNew}>
+            <FontAwesomeIcon icon={faFloppyDisk} />
+            Save as New List
+          </Button>
+          <Tooltip>
+            <Tooltip.Trigger
+              render={
+                <Button variant="ghost" size="sm" onClick={onRevert}>
+                  <FontAwesomeIcon icon={faArrowRotateLeft} />
+                  Revert
+                </Button>
+              }
+            />
+            <Tooltip.Content>
+              Reverts to the pipeline stage's preset filters
+            </Tooltip.Content>
           </Tooltip>
         </div>
       )}
