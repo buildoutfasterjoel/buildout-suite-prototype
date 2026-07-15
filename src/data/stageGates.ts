@@ -3,9 +3,7 @@ import type { DealSide, DealTransaction, PropertyStatus } from './types'
 export type GateKind = 'field' | 'confirm' | 'dead'
 
 export type RequiredField =
-  | 'sellerLinked'
   | 'buyerLinked'
-  | 'dealSide'
   | 'listedOnDate'
   | 'listingExpirationDate'
   | 'closeDate'
@@ -13,13 +11,11 @@ export type RequiredField =
   | 'commissionAmount'
   | 'deadReason'
   | 'aiDocsReviewed'
-  | 'sellerConfirmed'
+  | 'websiteReviewed'
 
 /** The editable state the StageGate modal collects. Fields not relevant to a gate are ignored. */
 export interface GateFormState {
-  sellerLinked: boolean
   buyerLinked: boolean
-  dealSide: DealSide | null
   listedOnDate: string | null
   listingExpirationDate: string | null
   contractExecutedDate: string | null
@@ -29,11 +25,11 @@ export interface GateFormState {
   deadReason: string | null
   /** True when every AI-generated doc is checked (or there are none). */
   aiDocsAllReviewed: boolean
-  sellerConfirmed: boolean
+  /** Broker attestation that the public listing website has been reviewed. */
+  websiteReviewed: boolean
   /** Backward-out-of-Active only: also pull the listing off-market. Default true. */
   unpublishOnExit: boolean
-  /** Contact chosen to link as seller/buyer in this gate, if any. */
-  sellerContactId: string | null
+  /** Contact chosen to link as buyer in this gate (Under Contract), if any. */
   buyerContactId: string | null
 }
 
@@ -99,7 +95,10 @@ export function resolveGate(from: PropertyStatus, target: PropertyStatus): GateC
         ...base,
         kind: 'field',
         title: 'Approve & Publish',
-        required: ['sellerConfirmed', 'aiDocsReviewed', 'sellerLinked', 'dealSide', 'listedOnDate', 'listingExpirationDate'],
+        // Seller and Side are already captured at deal creation — the publish
+        // gate shows them read-only and gates only on the review attestations
+        // plus the listing-agreement dates (which aren't captured elsewhere).
+        required: ['aiDocsReviewed', 'websiteReviewed', 'listedOnDate', 'listingExpirationDate'],
         publishes: true,
       }
     case 'under-contract':
@@ -115,12 +114,8 @@ export function resolveGate(from: PropertyStatus, target: PropertyStatus): GateC
 
 function fieldSatisfied(field: RequiredField, form: GateFormState): boolean {
   switch (field) {
-    case 'sellerLinked':
-      return form.sellerLinked
     case 'buyerLinked':
       return form.buyerLinked
-    case 'dealSide':
-      return form.dealSide != null
     case 'listedOnDate':
       return !!form.listedOnDate
     case 'listingExpirationDate':
@@ -135,8 +130,8 @@ function fieldSatisfied(field: RequiredField, form: GateFormState): boolean {
       return !!form.deadReason && form.deadReason.trim().length > 0
     case 'aiDocsReviewed':
       return form.aiDocsAllReviewed
-    case 'sellerConfirmed':
-      return form.sellerConfirmed
+    case 'websiteReviewed':
+      return form.websiteReviewed
   }
 }
 
@@ -166,8 +161,6 @@ export function buildTransitionInput(
     actor,
   }
   if (Object.keys(transaction).length > 0) input.transaction = transaction
-  if (form.dealSide) input.dealSide = form.dealSide
-  if (form.sellerContactId) input.sellerContactId = form.sellerContactId
   if (form.buyerContactId) input.buyerContactId = form.buyerContactId
   if (config.publishes) input.publish = true
   if (config.leavesActive && form.unpublishOnExit) input.unpublish = true

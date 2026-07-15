@@ -7,9 +7,7 @@ import {
 } from './stageGates'
 
 const emptyForm: GateFormState = {
-  sellerLinked: false,
   buyerLinked: false,
-  dealSide: null,
   listedOnDate: null,
   listingExpirationDate: null,
   contractExecutedDate: null,
@@ -18,27 +16,36 @@ const emptyForm: GateFormState = {
   commissionAmount: null,
   deadReason: null,
   aiDocsAllReviewed: true,
-  sellerConfirmed: false,
+  websiteReviewed: false,
   unpublishOnExit: true,
-  sellerContactId: null,
   buyerContactId: null,
 }
 
+/** A publish gate satisfied on every requirement. */
+const readyToPublish: GateFormState = {
+  ...emptyForm,
+  aiDocsAllReviewed: true,
+  websiteReviewed: true,
+  listedOnDate: '2026-07-01',
+  listingExpirationDate: '2026-12-31',
+}
+
 describe('resolveGate', () => {
-  it('Pitching → Active is a publishing field gate', () => {
+  it('Pitching → Active is a publishing field gate — attestations + listing dates only', () => {
     const g = resolveGate('proposal', 'active')
     expect(g.kind).toBe('field')
     expect(g.publishes).toBe(true)
     expect(g.required).toEqual(
       expect.arrayContaining([
-        'sellerConfirmed',
         'aiDocsReviewed',
-        'sellerLinked',
-        'dealSide',
+        'websiteReviewed',
         'listedOnDate',
         'listingExpirationDate',
       ]),
     )
+    // Seller/Side are captured at creation — the gate must NOT re-require them.
+    expect(g.required).not.toContain('sellerLinked')
+    expect(g.required).not.toContain('dealSide')
   })
 
   it('Active → Under Contract requires buyer + economics', () => {
@@ -87,57 +94,54 @@ describe('canConfirm', () => {
     expect(canConfirm(resolveGate('under-contract', 'active'), emptyForm)).toBe(true)
   })
 
-  it('a field gate blocks until all required fields are satisfied', () => {
+  it('the publish gate blocks until docs + website reviewed and dates set', () => {
     const g = resolveGate('proposal', 'active')
     expect(canConfirm(g, emptyForm)).toBe(false)
-    const filled: GateFormState = {
-      ...emptyForm,
-      sellerConfirmed: true,
-      aiDocsAllReviewed: true,
-      sellerLinked: true,
-      dealSide: 'seller',
-      listedOnDate: '2026-07-01',
-      listingExpirationDate: '2026-12-31',
-    }
-    expect(canConfirm(g, filled)).toBe(true)
+    expect(canConfirm(g, readyToPublish)).toBe(true)
   })
 
   it('the AI-doc checklist blocks the publish gate when not all reviewed', () => {
     const g = resolveGate('proposal', 'active')
-    const filled: GateFormState = {
-      ...emptyForm,
-      sellerConfirmed: true,
-      sellerLinked: true,
-      dealSide: 'seller',
-      listedOnDate: '2026-07-01',
-      listingExpirationDate: '2026-12-31',
-      aiDocsAllReviewed: false,
-    }
-    expect(canConfirm(g, filled)).toBe(false)
+    expect(canConfirm(g, { ...readyToPublish, aiDocsAllReviewed: false })).toBe(false)
+  })
+
+  it('the website attestation blocks the publish gate when unchecked', () => {
+    const g = resolveGate('proposal', 'active')
+    expect(canConfirm(g, { ...readyToPublish, websiteReviewed: false })).toBe(false)
+  })
+
+  it('a missing listing date blocks the publish gate', () => {
+    const g = resolveGate('proposal', 'active')
+    expect(canConfirm(g, { ...readyToPublish, listingExpirationDate: null })).toBe(false)
+  })
+
+  it('Under Contract blocks until buyer + economics are provided', () => {
+    const g = resolveGate('active', 'under-contract')
+    expect(canConfirm(g, emptyForm)).toBe(false)
+    expect(
+      canConfirm(g, {
+        ...emptyForm,
+        buyerLinked: true,
+        salePrice: 100,
+        commissionAmount: 3,
+      }),
+    ).toBe(true)
   })
 })
 
 describe('buildTransitionInput', () => {
-  it('maps a publish gate form to the action input', () => {
+  it('maps a publish gate form to the action input (dates + publish, no seller/side)', () => {
     const g = resolveGate('proposal', 'active')
-    const form: GateFormState = {
-      ...emptyForm,
-      sellerConfirmed: true,
-      sellerLinked: true,
-      sellerContactId: 'contact-1',
-      dealSide: 'seller',
-      listedOnDate: '2026-07-01',
-      listingExpirationDate: '2026-12-31',
-    }
-    const input = buildTransitionInput(g, form, 'deal-1', 'Jane Broker')
+    const input = buildTransitionInput(g, readyToPublish, 'deal-1', 'Jane Broker')
     expect(input.targetStage).toBe('active')
     expect(input.publish).toBe(true)
-    expect(input.dealSide).toBe('seller')
-    expect(input.sellerContactId).toBe('contact-1')
     expect(input.transaction).toMatchObject({
       listedOnDate: '2026-07-01',
       listingExpirationDate: '2026-12-31',
     })
+    // Seller/Side are not re-captured by the publish gate.
+    expect(input.dealSide).toBeUndefined()
+    expect(input.sellerContactId).toBeUndefined()
   })
 
   it('maps a backward-out-of-Active gate with unpublish selected', () => {

@@ -78,21 +78,29 @@ Three gate **kinds**:
 
 ### Pitching → Active — Approve & Publish (the novel gate)
 
-A broker-owned approval that publishes the listing — not a plain field save.
+A broker-owned approval that publishes the listing — not a plain field save. Seller and Side are
+**already captured at deal creation** (`createProposalListing` sets `dealSide` and links
+`sellerContactIds`), so the gate does **not** re-collect them — it is a lean publish/compliance
+checkpoint.
+
+**Read-only summary (context, not editable):** Seller (from `sellerContactIds[0]`), Side (`dealSide`),
+and property address — a "You're publishing this listing" panel so the broker sees what's going live.
 
 **Attestations (all required):**
-- ☐ **Seller has confirmed** — broker attestation (confirmation happens offline; the broker asserts it
-  in-app; no seller-facing step).
 - **AI-generated document review checklist** — one row per document flagged `aiGenerated`, each with an
   **open** link (navigates to the deal's Documents view) and a ☐ **Reviewed** checkbox. **All** rows
   must be checked. If the deal has no AI-generated documents, the checklist section renders nothing and
   imposes no block.
+- ☐ **Listing website reviewed** — broker attestation, with an **Open website** link to
+  `/listings/$id/website` so the broker reviews the public page before it goes live.
 
 **Fields (all required):**
-- **Seller** — at least one seller contact linked (`sellerContactIds`).
-- **Side** — Buy / Sell (`dealSide`; `'buyer' | 'seller'`). No "Dual" option — kept as-is.
-- **Listing Executed** date (`transaction.listedOnDate`).
-- **Listing Expires** date (`transaction.listingExpirationDate`).
+- **Listing Executed** date (`transaction.listedOnDate`) — Blueprint calendar; not captured elsewhere.
+- **Listing Expires** date (`transaction.listingExpirationDate`) — Blueprint calendar.
+
+> Seller/Side are intentionally **not** gated fields here — they came from create-deal. The "Seller has
+> confirmed" attestation from the original requirements was dropped in favor of the website-review
+> checkpoint; seller confirmation stays an offline step.
 
 **On confirm:** commit → `active`; set `publishedAt` = now; append a `DealHistoryEntry`; fire a
 **Blueprint toast** ("Listing published"); `SyndicationStatus` flips to its Published state. Publishing

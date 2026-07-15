@@ -4,7 +4,6 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Field } from "@buildoutinc/blueprint-react/ui/Field";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
-import { RadioGroup } from "@buildoutinc/blueprint-react/ui/RadioGroup";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Popover } from "@buildoutinc/blueprint-react/ui/Popover";
@@ -18,7 +17,13 @@ import {
   faCalendar,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { PropertyStatus } from "#/data/types";
-import { getListing, getSellerOptions } from "#/data/store";
+import {
+  getListing,
+  getSellerOptions,
+  getContact,
+  getProperty,
+  contactLabel,
+} from "#/data/store";
 import {
   resolveGate,
   canConfirm,
@@ -29,9 +34,7 @@ import { commitStageTransition } from "#/data/actions";
 import { STATUS_LABELS } from "#/components/properties/propertyDisplay";
 
 const EMPTY_FORM: GateFormState = {
-  sellerLinked: false,
   buyerLinked: false,
-  dealSide: null,
   listedOnDate: null,
   listingExpirationDate: null,
   contractExecutedDate: null,
@@ -40,9 +43,8 @@ const EMPTY_FORM: GateFormState = {
   commissionAmount: null,
   deadReason: null,
   aiDocsAllReviewed: true,
-  sellerConfirmed: false,
+  websiteReviewed: false,
   unpublishOnExit: true,
-  sellerContactId: null,
   buyerContactId: null,
 };
 
@@ -137,12 +139,8 @@ export function StageGate({
     if (!deal) return EMPTY_FORM;
     return {
       ...EMPTY_FORM,
-      dealSide: deal.dealSide,
-      sellerLinked: deal.sellerContactIds.length > 0,
       buyerLinked: deal.buyerContactIds.length > 0,
-      // Preselect the parties already linked to the deal so the gate reflects
-      // reality instead of asking the broker to re-pick them.
-      sellerContactId: deal.sellerContactIds[0] ?? null,
+      // Preselect a buyer already linked to the deal (Under Contract gate).
       buyerContactId: deal.buyerContactIds[0] ?? null,
       listedOnDate: deal.transaction.listedOnDate,
       listingExpirationDate: deal.transaction.listingExpirationDate,
@@ -183,7 +181,19 @@ export function StageGate({
   // instead of syncing state during render.
   const effectiveForm: GateFormState = { ...form, aiDocsAllReviewed: allDocsReviewed };
 
-  const sellerOptions = getSellerOptions(deal.propertyId);
+  // Publish-gate read-only summary — Seller/Side/Property are already on the
+  // deal from creation, so the gate shows them rather than re-collecting them.
+  const seller = deal.sellerContactIds[0]
+    ? getContact(deal.sellerContactIds[0])
+    : undefined;
+  const sellerName = seller ? contactLabel(seller) : null;
+  const summaryProperty = getProperty(deal.propertyId);
+  const propertyAddress = summaryProperty
+    ? [summaryProperty.street, summaryProperty.city, summaryProperty.state]
+        .filter(Boolean)
+        .join(", ")
+    : deal.name;
+
   const confirmable = canConfirm(config, effectiveForm);
 
   const commit = () => {
@@ -236,15 +246,21 @@ export function StageGate({
           {(config.kind === "field" || config.kind === "dead") && (
             <>
               {config.publishes && (
-                <Field orientation="horizontal">
-                  <Checkbox
-                    checked={form.sellerConfirmed}
-                    onCheckedChange={(c) => set("sellerConfirmed", c === true)}
-                  />
-                  <Field.Label>
-                    Seller has confirmed (confirmed offline)
-                  </Field.Label>
-                </Field>
+                <div className="border rounded p-3 bg-body-tertiary">
+                  <div className="fw-semibold mb-2">
+                    You're publishing this listing
+                  </div>
+                  <dl className="row g-0 mb-0 fs-small">
+                    <dt className="col-4 fw-normal text-muted">Seller</dt>
+                    <dd className="col-8 mb-1">{sellerName ?? "—"}</dd>
+                    <dt className="col-4 fw-normal text-muted">Side</dt>
+                    <dd className="col-8 mb-1">
+                      {deal.dealSide === "seller" ? "Sell-side" : "Buy-side"}
+                    </dd>
+                    <dt className="col-4 fw-normal text-muted">Property</dt>
+                    <dd className="col-8 mb-0">{propertyAddress}</dd>
+                  </dl>
+                </div>
               )}
 
               {config.publishes && aiDocs.length > 0 && (
@@ -287,54 +303,28 @@ export function StageGate({
                 </Field>
               )}
 
-              {req("sellerLinked") && (
+              {config.publishes && (
                 <Field>
-                  <Field.Label>Seller</Field.Label>
-                  <Select
-                    value={form.sellerContactId ?? ""}
-                    onValueChange={(v) => {
-                      set("sellerContactId", v || null);
-                      set("sellerLinked", !!v || deal.sellerContactIds.length > 0);
-                    }}
-                  >
-                    <Select.Trigger>
-                      <Select.Value placeholder="Select a seller…" />
-                    </Select.Trigger>
-                    <Select.Content>
-                      {sellerOptions.map((o) => (
-                        <Select.Item key={o.value} value={o.value}>
-                          {o.label}
-                        </Select.Item>
-                      ))}
-                    </Select.Content>
-                  </Select>
-                  {deal.sellerContactIds.length > 0 && (
-                    <Field.Description>
-                      A seller is already linked to this deal.
-                    </Field.Description>
-                  )}
-                </Field>
-              )}
-
-              {req("dealSide") && (
-                <Field>
-                  <Field.Label>Side</Field.Label>
-                  <RadioGroup
-                    className="d-flex gap-4"
-                    value={form.dealSide ?? ""}
-                    onValueChange={(v) =>
-                      set("dealSide", v as GateFormState["dealSide"])
-                    }
-                  >
+                  <div className="d-flex align-items-center justify-content-between gap-2">
                     <label className="d-flex align-items-center gap-2 mb-0">
-                      <RadioGroup.Item value="seller" />
-                      Sell-side
+                      <Checkbox
+                        checked={form.websiteReviewed}
+                        onCheckedChange={(c) =>
+                          set("websiteReviewed", c === true)
+                        }
+                      />
+                      Listing website reviewed
                     </label>
-                    <label className="d-flex align-items-center gap-2 mb-0">
-                      <RadioGroup.Item value="buyer" />
-                      Buy-side
-                    </label>
-                  </RadioGroup>
+                    <a
+                      href={`/listings/${deal.id}/website`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-nowrap"
+                    >
+                      Open website{" "}
+                      <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+                    </a>
+                  </div>
                 </Field>
               )}
 
