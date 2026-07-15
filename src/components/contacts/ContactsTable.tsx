@@ -1,3 +1,4 @@
+import { useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Table } from "@buildoutinc/blueprint-react/ui/Table";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
@@ -5,6 +6,7 @@ import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
+import { Popover } from "@buildoutinc/blueprint-react/ui/Popover";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -13,6 +15,7 @@ import {
   faFolderOpen,
   faArrowUp,
   faArrowDown,
+  faTableColumns,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact } from "#/data/types";
 import {
@@ -68,6 +71,186 @@ function Dot({ className, size = 8 }: { className: string; size?: number }) {
   );
 }
 
+/** "MMM D, YYYY, h:mm AM" — the compact timestamp used in date columns. */
+function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+/** Tags cell: the first tag as a pill, then a "+N" overflow count. */
+function TagCell({ tags }: { tags: string[] }) {
+  if (tags.length === 0) return <Dash />;
+  const [first, ...rest] = tags;
+  return (
+    <span className="d-inline-flex align-items-center gap-1 text-nowrap">
+      <Badge variant="outline" className="fw-normal">
+        {first}
+      </Badge>
+      {rest.length > 0 && (
+        <span className="fs-small text-muted">+{rest.length}</span>
+      )}
+    </span>
+  );
+}
+
+/**
+ * The optional (manage-able) columns between the frozen Contact column and the
+ * frozen actions column. Order here is the render order; `defaultVisible`
+ * seeds the initial visibility (the five newest columns start hidden and can be
+ * switched on via the header's "Manage columns" button).
+ */
+interface ContactColumn {
+  id: string;
+  label: string;
+  defaultVisible: boolean;
+  render: (c: Contact) => ReactNode;
+}
+
+const CONTACT_COLUMNS: ContactColumn[] = [
+  {
+    id: "phone",
+    label: "Phone",
+    defaultVisible: true,
+    render: (c) => (
+      <span className="d-inline-flex align-items-center gap-2 text-nowrap">
+        <Dot className={PHONE_STATUS_DOT[c.phoneStatus]} />
+        <span
+          className={
+            c.phoneStatus === "invalid"
+              ? "text-decoration-line-through text-destructive"
+              : undefined
+          }
+        >
+          {c.phone}
+        </span>
+      </span>
+    ),
+  },
+  {
+    id: "assignedTo",
+    label: "Assigned To",
+    defaultVisible: true,
+    render: (c) => <span className="text-nowrap">{c.assignedTo}</span>,
+  },
+  {
+    id: "contactStage",
+    label: "Contact Stage",
+    defaultVisible: true,
+    render: (c) => (
+      <Pill className={`contact-stage-badge contact-stage-badge--${c.relationship}`}>
+        {RELATIONSHIP_DISPLAY[c.relationship].label}
+      </Pill>
+    ),
+  },
+  {
+    id: "dealStage",
+    label: "Deal Stage",
+    defaultVisible: true,
+    render: (c) => {
+      const stage = c.dealStage ? DEAL_STAGE_DISPLAY[c.dealStage] : NO_DEAL_STAGE;
+      return (
+        <span className="d-inline-flex align-items-center gap-2 text-nowrap">
+          {c.dealStage && (
+            <Dot className={`deal-stage-dot deal-stage-dot--${c.dealStage}`} />
+          )}
+          <span className={c.dealStage ? undefined : "text-muted"}>
+            {stage.label}
+          </span>
+        </span>
+      );
+    },
+  },
+  {
+    id: "company",
+    label: "Company",
+    defaultVisible: true,
+    render: (c) => (
+      <span
+        className="d-inline-block text-truncate"
+        style={{ maxWidth: 180 }}
+        title={c.company}
+      >
+        {c.company}
+      </span>
+    ),
+  },
+  {
+    id: "locatedIn",
+    label: "Located In",
+    defaultVisible: true,
+    render: (c) => (
+      <span className="text-nowrap">
+        {c.city}, {c.state}
+      </span>
+    ),
+  },
+  {
+    id: "inquiries",
+    label: "Inquiries",
+    defaultVisible: true,
+    render: (c) =>
+      c.inquiries > 0 ? (
+        <Link
+          to="/backoffice/contacts/$contactId"
+          params={{ contactId: c.id }}
+          className="d-inline-flex align-items-center gap-1 text-nowrap fw-semibold"
+        >
+          <FontAwesomeIcon icon={faFolderOpen} />
+          {c.inquiries}
+        </Link>
+      ) : (
+        <Dash />
+      ),
+  },
+  {
+    id: "tasks",
+    label: "Tasks",
+    defaultVisible: false,
+    render: (c) =>
+      c.openTaskCount > 0 ? <span>{c.openTaskCount}</span> : <Dash />,
+  },
+  {
+    id: "tags",
+    label: "Tags",
+    defaultVisible: false,
+    render: (c) => <TagCell tags={c.tags} />,
+  },
+  {
+    id: "source",
+    label: "Source",
+    defaultVisible: false,
+    render: (c) => <span className="text-nowrap">{c.source}</span>,
+  },
+  {
+    id: "lastActive",
+    label: "Last Active",
+    defaultVisible: false,
+    render: (c) =>
+      c.lastContactedAt ? (
+        <span className="text-nowrap">{formatDateTime(c.lastContactedAt)}</span>
+      ) : (
+        <span className="text-muted">Never</span>
+      ),
+  },
+  {
+    id: "createdOn",
+    label: "Created On",
+    defaultVisible: false,
+    render: (c) => (
+      <span className="text-nowrap">{formatDateTime(c.createdAt)}</span>
+    ),
+  },
+];
+
+const DEFAULT_VISIBLE_COLUMNS = new Set(
+  CONTACT_COLUMNS.filter((col) => col.defaultVisible).map((col) => col.id),
+);
+
 export function ContactsTable({
   contacts,
   filtersActive,
@@ -86,6 +269,19 @@ export function ContactsTable({
   onToggleAll: (checked: boolean) => void;
 }) {
   const navigate = useNavigate();
+  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
+    () => new Set(DEFAULT_VISIBLE_COLUMNS),
+  );
+  const shownColumns = CONTACT_COLUMNS.filter((col) =>
+    visibleColumns.has(col.id),
+  );
+  const setColumnVisible = (id: string, on: boolean) =>
+    setVisibleColumns((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
 
   const allSelected =
     contacts.length > 0 && contacts.every((c) => selected.has(c.id));
@@ -137,22 +333,58 @@ export function ContactsTable({
               />
             </button>
           </Table.Head>
-          <Table.Head>Phone</Table.Head>
-          <Table.Head>Assigned To</Table.Head>
-          <Table.Head>Contact Stage</Table.Head>
-          <Table.Head>Deal Stage</Table.Head>
-          <Table.Head>Company</Table.Head>
-          <Table.Head>Located In</Table.Head>
-          <Table.Head>Inquiries</Table.Head>
-          <Table.Head sticky="end" aria-label="Actions" />
+          {shownColumns.map((col) => (
+            <Table.Head key={col.id}>{col.label}</Table.Head>
+          ))}
+          <Table.Head sticky="end" aria-label="Columns">
+            <Popover>
+              <Popover.Trigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Manage columns"
+                  >
+                    <FontAwesomeIcon icon={faTableColumns} />
+                  </Button>
+                }
+              />
+              <Popover.Content align="end" style={{ minWidth: 220 }}>
+                <Popover.Header className="fw-semibold">
+                  Manage columns
+                </Popover.Header>
+                <Popover.Body className="d-flex flex-column gap-1">
+                  {CONTACT_COLUMNS.map((col) => (
+                    <div
+                      key={col.id}
+                      className="d-flex align-items-center gap-2 py-1"
+                    >
+                      <Checkbox
+                        checked={visibleColumns.has(col.id)}
+                        onCheckedChange={(v) =>
+                          setColumnVisible(col.id, v === true)
+                        }
+                        aria-label={col.label}
+                      />
+                      <span
+                        role="button"
+                        className="flex-grow-1 text-nowrap"
+                        onClick={() =>
+                          setColumnVisible(col.id, !visibleColumns.has(col.id))
+                        }
+                      >
+                        {col.label}
+                      </span>
+                    </div>
+                  ))}
+                </Popover.Body>
+              </Popover.Content>
+            </Popover>
+          </Table.Head>
         </Table.Row>
       </Table.Header>
       <Table.Body>
         {contacts.map((contact) => {
-          const rel = RELATIONSHIP_DISPLAY[contact.relationship];
-          const stage = contact.dealStage
-            ? DEAL_STAGE_DISPLAY[contact.dealStage]
-            : NO_DEAL_STAGE;
           const fullName = contactFullName(contact);
           return (
             <Table.Row
@@ -215,82 +447,9 @@ export function ContactsTable({
                 </div>
               </Table.Cell>
 
-              {/* Phone */}
-              <Table.Cell>
-                <span className="d-inline-flex align-items-center gap-2 text-nowrap">
-                  <Dot className={PHONE_STATUS_DOT[contact.phoneStatus]} />
-                  <span
-                    className={
-                      contact.phoneStatus === "invalid"
-                        ? "text-decoration-line-through text-destructive"
-                        : undefined
-                    }
-                  >
-                    {contact.phone}
-                  </span>
-                </span>
-              </Table.Cell>
-
-              <Table.Cell className="text-nowrap">
-                {contact.assignedTo}
-              </Table.Cell>
-
-              {/* Contact Stage (relationship) — filled soft pill, no dot */}
-              <Table.Cell>
-                <Pill
-                  className={`contact-stage-badge contact-stage-badge--${contact.relationship}`}
-                >
-                  {rel.label}
-                </Pill>
-              </Table.Cell>
-
-              {/* Deal Stage — dot + label, "None Active" when no deal */}
-              <Table.Cell>
-                <span className="d-inline-flex align-items-center gap-2 text-nowrap">
-                  {contact.dealStage && (
-                    <Dot
-                      className={`deal-stage-dot deal-stage-dot--${contact.dealStage}`}
-                    />
-                  )}
-                  <span
-                    className={contact.dealStage ? undefined : "text-muted"}
-                  >
-                    {stage.label}
-                  </span>
-                </span>
-              </Table.Cell>
-
-              {/* Company */}
-              <Table.Cell>
-                <span
-                  className="d-inline-block text-truncate"
-                  style={{ maxWidth: 180 }}
-                  title={contact.company}
-                >
-                  {contact.company}
-                </span>
-              </Table.Cell>
-
-              {/* Located In */}
-              <Table.Cell className="text-nowrap">
-                {contact.city}, {contact.state}
-              </Table.Cell>
-
-              {/* Inquiries */}
-              <Table.Cell>
-                {contact.inquiries > 0 ? (
-                  <Link
-                    to="/backoffice/contacts/$contactId"
-                    params={{ contactId: contact.id }}
-                    className="d-inline-flex align-items-center gap-1 text-nowrap fw-semibold"
-                  >
-                    <FontAwesomeIcon icon={faFolderOpen} />
-                    {contact.inquiries}
-                  </Link>
-                ) : (
-                  <Dash />
-                )}
-              </Table.Cell>
+              {shownColumns.map((col) => (
+                <Table.Cell key={col.id}>{col.render(contact)}</Table.Cell>
+              ))}
 
               {/* Actions */}
               <Table.Cell sticky="end">
