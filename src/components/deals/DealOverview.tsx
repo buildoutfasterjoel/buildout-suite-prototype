@@ -116,7 +116,9 @@ function TransactionCard({ listing }: { listing: Listing }) {
         <Field label="Commission $" value={formatCurrency(listing.transaction.commissionAmount)} />
         <Field label="Close Probability" value={`${listing.transaction.closeProbability}%`} />
       </SectionCard>
-      <EditTransactionDialog listing={listing} open={editOpen} onOpenChange={setEditOpen} />
+      {editOpen && (
+        <EditTransactionDialog listing={listing} open={editOpen} onOpenChange={setEditOpen} />
+      )}
     </>
   );
 }

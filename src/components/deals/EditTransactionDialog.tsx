@@ -32,19 +32,6 @@ export function EditTransactionDialog({
     closeProbability: transaction.closeProbability ?? null,
   });
 
-  // Re-seed the working copy each time the dialog (re)opens for a deal.
-  const [seededFor, setSeededFor] = useState("");
-  const seedKey = `${listing.id}:${open}`;
-  if (open && seedKey !== seededFor) {
-    setForm({
-      salePrice: transaction.salePrice || null,
-      commissionPct: transaction.commissionPct || null,
-      commissionAmount: transaction.commissionAmount || null,
-      closeProbability: transaction.closeProbability ?? null,
-    });
-    setSeededFor(seedKey);
-  }
-
   const setSalePrice = (v: number | null) =>
     setForm((f) => ({
       ...f,
