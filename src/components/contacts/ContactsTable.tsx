@@ -235,20 +235,23 @@ export function ContactsTable({
                 {contact.assignedTo}
               </Table.Cell>
 
-              {/* Contact Stage (relationship) */}
+              {/* Contact Stage (relationship) — filled soft pill, no dot */}
               <Table.Cell>
-                <Pill className={rel.pillClass}>
-                  <span className="d-inline-flex align-items-center gap-1">
-                    <Dot className={rel.dotClass} size={6} />
-                    {rel.label}
-                  </span>
+                <Pill
+                  className={`contact-stage-badge contact-stage-badge--${contact.relationship}`}
+                >
+                  {rel.label}
                 </Pill>
               </Table.Cell>
 
               {/* Deal Stage — dot + label, "None Active" when no deal */}
               <Table.Cell>
                 <span className="d-inline-flex align-items-center gap-2 text-nowrap">
-                  {contact.dealStage && <Dot className={stage.dotClass} />}
+                  {contact.dealStage && (
+                    <Dot
+                      className={`deal-stage-dot deal-stage-dot--${contact.dealStage}`}
+                    />
+                  )}
                   <span
                     className={contact.dealStage ? undefined : "text-muted"}
                   >
