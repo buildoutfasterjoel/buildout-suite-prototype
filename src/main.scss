@@ -265,6 +265,56 @@
   }
 }
 
+// Contact-stage badges (People table): filled soft pills per Figma — a tinted
+// background paired with a dark same-family text color, 12px semibold, 6px
+// radius, no dot. Layered over the Blueprint Badge; colors are the hex of the
+// Blueprint 200/300 (bg) and 950 (text) tokens.
+.contact-stage-badge {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 13px;
+
+  &--cold {
+    background: var(--color-seagull-200, #a2f4ff);
+    color: var(--color-seagull-950, #063346);
+  }
+  &--nurturing {
+    background: var(--color-solid-pink-200, #ffc1c4);
+    color: var(--color-solid-pink-950, #500004);
+  }
+  &--pitching {
+    background: var(--color-harvest-gold-300, #ffd346);
+    color: var(--color-harvest-gold-950, #481800);
+  }
+  &--client {
+    background: var(--color-buildout-blue-200, #c0dcfd);
+    color: var(--color-buildout-blue-950, #182753);
+  }
+  &--past_client {
+    background: var(--color-mountain-meadow-200, #a0fad1);
+    color: var(--color-mountain-meadow-950, #003024);
+  }
+}
+
+// Deal-stage dots (People table): recolored to the Figma pipeline palette (500
+// shades), so the dot matches the quick-pipeline-filter colors.
+.deal-stage-dot {
+  &--pitching {
+    background: var(--color-harvest-gold-500, #fd9a00);
+  }
+  &--active {
+    background: var(--color-buildout-blue-500, #3f86f2);
+  }
+  &--under_contract {
+    background: var(--color-purple-heart-500, #9f55f7);
+  }
+  &--closed {
+    background: var(--color-mountain-meadow-500, #00bc7d);
+  }
+}
+
 // Bulk-selection actions bar (People table): a tinted blue band that appears
 // when contacts are selected.
 .contact-selection-bar {
