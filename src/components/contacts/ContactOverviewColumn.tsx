@@ -1,12 +1,9 @@
 import { useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { Accordion } from "@buildoutinc/blueprint-react/ui/Accordion";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
-import { Progress } from "@buildoutinc/blueprint-react/ui/Progress";
-import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPhone,
@@ -14,12 +11,11 @@ import {
   faLocationDot,
   faPlus,
   faXmark,
-  faEllipsisVertical,
   faChevronDown,
   faChevronRight,
   faPencil,
 } from "@fortawesome/pro-regular-svg-icons";
-import type { Contact, DealSummary } from "#/data/types";
+import type { Contact, DealSummary, PropertyStatus } from "#/data/types";
 import {
   contactAddressLines,
   contactFullName,
@@ -27,16 +23,11 @@ import {
 } from "#/components/contacts/contactDisplay";
 import { RelationshipPill, SidePill } from "#/components/contacts/pills";
 import { initials as nameInitials } from "#/components/deals/dealDisplay";
-import { DealCardById } from "#/components/deals/DealCard";
+import { ContactDealCard } from "#/components/contacts/ContactDealCard";
 import { CreateDealModal } from "#/components/deals/CreateDealModal";
 
-function medDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
+/** Deal statuses considered "past" (shown behind a toggle). */
+const PAST_STATUSES = new Set<PropertyStatus>(["closed", "inactive"]);
 
 /** A labelled icon row in the contact info block. */
 function InfoRow({
@@ -90,72 +81,6 @@ function SharedAccess({ owner }: { owner: string }) {
 }
 
 /**
- * A contact's linked deal, rendered with the universal {@link DealCardById} core
- * plus contact-specific extras (started date, plan progress, lead, actions menu).
- */
-function DealCard({ deal, startedAt }: { deal: DealSummary; startedAt: string }) {
-  const navigate = useNavigate();
-  const pct = deal.planTotal
-    ? Math.round((deal.planDone / deal.planTotal) * 100)
-    : 0;
-
-  const action = (
-    <DropdownMenu>
-      <DropdownMenu.Trigger
-        render={
-          <Button variant="ghost" size="icon-sm" aria-label="Deal actions">
-            <FontAwesomeIcon icon={faEllipsisVertical} />
-          </Button>
-        }
-      />
-      <DropdownMenu.Content align="end">
-        <DropdownMenu.Item
-          onClick={() =>
-            void navigate({
-              to: "/listings/$listingId",
-              params: { listingId: deal.id },
-            })
-          }
-        >
-          Open deal
-        </DropdownMenu.Item>
-        <DropdownMenu.Item>Edit</DropdownMenu.Item>
-        <DropdownMenu.Item>Remove link</DropdownMenu.Item>
-      </DropdownMenu.Content>
-    </DropdownMenu>
-  );
-
-  const footer = (
-    <div className="d-flex flex-column gap-2">
-      <div className="text-muted fs-small">Started {medDate(startedAt)}</div>
-      <div className="d-flex flex-column gap-1">
-        <div className="d-flex align-items-center justify-content-between fs-small">
-          <span className="text-muted">Plan</span>
-          <span className="text-muted">
-            {deal.planDone} of {deal.planTotal} tasks · {pct}%
-          </span>
-        </div>
-        <Progress value={pct} />
-      </div>
-      <div className="d-flex align-items-center gap-2">
-        <Avatar size="sm">
-          <Avatar.Fallback className="fw-semibold">
-            {nameInitials(deal.leadName)}
-          </Avatar.Fallback>
-        </Avatar>
-        <span>
-          {deal.leadName} <span className="text-muted">Lead</span>
-        </span>
-      </div>
-    </div>
-  );
-
-  return (
-    <DealCardById listingId={deal.id} showStatus action={action} footer={footer} />
-  );
-}
-
-/**
  * One collapsible section: chevron on the LEFT of the label + count, with the
  * right side reserved for an optional action (e.g. an "Add" button). The action
  * button is overlaid on the header (a sibling of the trigger) so it toggles its
@@ -185,7 +110,9 @@ function Section({
             className="text-muted"
             style={{ width: 12 }}
           />
-          {label}
+          <span className="fw-bold" style={{ fontSize: 17 }}>
+            {label}
+          </span>
           {count !== undefined && (
             <Badge variant="secondary" appearance="muted">
               {count}
@@ -216,9 +143,13 @@ export function ContactOverviewColumn({
   const [open, setOpen] = useState<string[]>(["deals", "properties"]);
   const [tags, setTags] = useState(contact.tags);
   const [showDetails, setShowDetails] = useState(false);
+  const [showPastDeals, setShowPastDeals] = useState(false);
   const [newDealOpen, setNewDealOpen] = useState(false);
   const [addressLine1, addressLine2] = contactAddressLines(contact);
   const phoneInvalid = contact.phoneStatus === "invalid";
+
+  const activeDeals = deals.filter((d) => !PAST_STATUSES.has(d.status));
+  const pastDeals = deals.filter((d) => PAST_STATUSES.has(d.status));
 
   return (
     <Card className="shadow-sm overflow-hidden">
@@ -346,7 +277,7 @@ export function ContactOverviewColumn({
         <Section
           value="deals"
           label="Deals"
-          count={deals.length}
+          count={activeDeals.length}
           open={open.includes("deals")}
           action={
             <Button
@@ -365,9 +296,29 @@ export function ContactOverviewColumn({
                 Deals you link to this contact will show up here.
               </span>
             ) : (
-              deals.map((d) => (
-                <DealCard key={d.id} deal={d} startedAt={contact.createdAt} />
-              ))
+              <>
+                {activeDeals.map((d) => (
+                  <ContactDealCard key={d.id} listingId={d.id} />
+                ))}
+                {showPastDeals &&
+                  pastDeals.map((d) => (
+                    <ContactDealCard key={d.id} listingId={d.id} />
+                  ))}
+                {pastDeals.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="align-self-center"
+                    onClick={() => setShowPastDeals((v) => !v)}
+                  >
+                    {showPastDeals
+                      ? "Hide Past Deals"
+                      : `Show ${pastDeals.length} Past Deal${
+                          pastDeals.length > 1 ? "s" : ""
+                        }`}
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </Section>
