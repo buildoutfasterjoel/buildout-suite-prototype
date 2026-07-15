@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
@@ -18,10 +18,11 @@ import {
   faLocationDot,
 } from "@fortawesome/pro-regular-svg-icons";
 import { getProperty, getStore } from "#/data/store";
-import { updateDealStage } from "#/data/actions";
+import { useDataStore } from "#/data/dataStore";
 import { useCreateDeal } from "#/data/useCreateDeal";
 import type { Listing, PropertyStatus, DealSide } from "#/data/types";
 import { DealBoard } from "#/components/deals/DealBoard";
+import { useStageGate } from "#/components/deals/useStageGate";
 import type { Facet } from "#/components/properties/PropertyFilters";
 import { PropertyFilters } from "#/components/properties/PropertyFilters";
 import { FacetDropdown } from "#/components/properties/FacetDropdown";
@@ -100,6 +101,14 @@ function PropertyListings() {
     [version],
   );
 
+  // Re-derive the board whenever the store's listings change (e.g. a gate commit).
+  useEffect(() => {
+    const unsub = useDataStore.subscribe((s, prev) => {
+      if (s.listings !== prev.listings) setVersion((v) => v + 1);
+    });
+    return unsub;
+  }, []);
+
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortBy>("default");
   const [side, setSide] = useState<DealSide | "all">("all");
@@ -109,10 +118,11 @@ function PropertyListings() {
   const onRestage = useCallback((listingId: string, stage: PropertyStatus) => {
     const listing = getStore().listings.get(listingId);
     if (!listing || listing.status === stage) return;
-    updateDealStage(listingId, stage);
-    // Local re-render bump: this list reads getStore() non-reactively and
-    // re-derives the filtered/sorted board from the now-updated store.
-    setVersion((v) => v + 1);
+    // Open the gate instead of committing. The card is never optimistically
+    // moved, so a cancelled gate leaves the board unchanged. The board
+    // re-derives when the gate commits, via the useDataStore subscribe effect
+    // above bumping `version`.
+    useStageGate.getState().openGate(listingId, stage);
   }, []);
 
   const type = useToggleSet<string>();
