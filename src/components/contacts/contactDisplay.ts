@@ -19,7 +19,6 @@ import { STATUS_LABELS } from "#/components/properties/propertyDisplay";
 export const RELATIONSHIP_STAGES: RelationshipStage[] = [
   "cold",
   "nurturing",
-  "active",
   "pitching",
   "client",
   "past_client",
@@ -37,12 +36,10 @@ export const CONTACT_SOURCES: ContactSource[] = [
 export const DEAL_SIDES: DealSide[] = ["buyer", "seller"];
 
 export const CONTACT_DEAL_STAGES: ContactDealStage[] = [
-  "active_search",
-  "active_listing",
   "pitching",
+  "active",
   "under_contract",
   "closed",
-  "lost",
 ];
 
 /** Relationship pill: label, dot color, and soft-pill classes. */
@@ -59,11 +56,6 @@ export const RELATIONSHIP_DISPLAY: Record<
     label: "Nurturing",
     dotClass: "bg-harvest-gold-500",
     pillClass: "bg-harvest-gold-100 text-harvest-gold-700",
-  },
-  active: {
-    label: "Active",
-    dotClass: "bg-solid-pink-500",
-    pillClass: "bg-solid-pink-100 text-solid-pink-700",
   },
   pitching: {
     label: "Pitching",
@@ -96,20 +88,15 @@ export const DEAL_STAGE_DISPLAY: Record<
   ContactDealStage,
   { label: string; pillClass: string; dotClass: string }
 > = {
-  active_search: {
-    label: "Active Search",
-    pillClass: "bg-buildout-blue-100 text-buildout-blue-700",
-    dotClass: "bg-buildout-blue-500",
-  },
-  active_listing: {
-    label: "Active Listing",
-    pillClass: "bg-buildout-blue-100 text-buildout-blue-700",
-    dotClass: "bg-buildout-blue-500",
-  },
   pitching: {
     label: "Pitching",
     pillClass: "bg-solid-pink-100 text-solid-pink-700",
     dotClass: "bg-solid-pink-500",
+  },
+  active: {
+    label: "Active",
+    pillClass: "bg-buildout-blue-100 text-buildout-blue-700",
+    dotClass: "bg-buildout-blue-500",
   },
   under_contract: {
     label: "Under Contract",
@@ -120,11 +107,6 @@ export const DEAL_STAGE_DISPLAY: Record<
     label: "Closed",
     pillClass: "bg-mountain-meadow-100 text-mountain-meadow-700",
     dotClass: "bg-mountain-meadow-500",
-  },
-  lost: {
-    label: "Lost",
-    pillClass: "text-destructive",
-    dotClass: "bg-destructive",
   },
 };
 

@@ -353,7 +353,6 @@ export type ContactSource =
 export type RelationshipStage =
   | 'cold'
   | 'nurturing'
-  | 'active'
   | 'pitching'
   | 'client'
   | 'past_client'
@@ -363,12 +362,10 @@ export type DealSide = 'buyer' | 'seller'
 
 /** Stage of the deal a contact is currently engaged in. */
 export type ContactDealStage =
-  | 'active_search'
-  | 'active_listing'
   | 'pitching'
+  | 'active'
   | 'under_contract'
   | 'closed'
-  | 'lost'
 
 /** Quality of the contact's phone number. */
 export type PhoneStatus = 'valid' | 'invalid' | 'unknown'
