@@ -6,6 +6,7 @@ import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
 import { RadioGroup } from "@buildoutinc/blueprint-react/ui/RadioGroup";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
+import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Popover } from "@buildoutinc/blueprint-react/ui/Popover";
 import { Calendar } from "@buildoutinc/blueprint-react/ui/Calendar";
 import { Alert } from "@buildoutinc/blueprint-react/ui/Alert";
@@ -67,7 +68,11 @@ function toISODate(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-/** A Blueprint calendar date picker wired to a stored ISO-string value. */
+/**
+ * Blueprint date input: a read-only field with a calendar-icon addon that opens
+ * a single-date Calendar popover. Wired to a stored ISO-string value.
+ * (Documented InputGroup + Popover + Calendar pattern.)
+ */
 function GateDatePicker({
   value,
   onChange,
@@ -79,28 +84,31 @@ function GateDatePicker({
 }) {
   const selected = parseDate(value);
   return (
-    <Popover>
-      <Popover.Trigger
-        render={
-          <Button variant="outline" className="w-100 justify-content-start">
-            <FontAwesomeIcon icon={faCalendar} />
-            {selected ? (
-              selected.toLocaleDateString(undefined, DATE_FORMAT)
-            ) : (
-              <span className="text-muted">{placeholder}</span>
-            )}
-          </Button>
-        }
+    <InputGroup>
+      <InputGroup.Addon>
+        <Popover>
+          <Popover.Trigger
+            nativeButton={false}
+            aria-label="Open date picker"
+            render={<FontAwesomeIcon icon={faCalendar} />}
+          />
+          <Popover.Content className="p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={selected}
+              defaultMonth={selected}
+              onSelect={(d) => onChange(d ? toISODate(d) : null)}
+            />
+          </Popover.Content>
+        </Popover>
+      </InputGroup.Addon>
+      <Input
+        type="text"
+        readOnly
+        placeholder={placeholder}
+        value={selected ? selected.toLocaleDateString(undefined, DATE_FORMAT) : ""}
       />
-      <Popover.Content className="p-0" align="start">
-        <Calendar
-          mode="single"
-          selected={selected}
-          defaultMonth={selected}
-          onSelect={(d) => onChange(d ? toISODate(d) : null)}
-        />
-      </Popover.Content>
-    </Popover>
+    </InputGroup>
   );
 }
 
