@@ -109,6 +109,10 @@ export function SyndicationStatus({ listing }: { listing: Listing }) {
 
   return (
     <div className="d-flex align-items-center gap-2">
+      <div className="d-flex align-items-center gap-0-5 fs-small">
+        <FontAwesomeIcon icon={faCircleWifi} style={{ color: statusColor }} />
+        {label}
+      </div>
       <Modal>
         <Tooltip>
           <Tooltip.Trigger
@@ -225,10 +229,6 @@ export function SyndicationStatus({ listing }: { listing: Listing }) {
           </Modal.Footer>
         </Modal.Content>
       </Modal>
-      <div className="d-flex align-items-center gap-0-5 fs-small">
-        <FontAwesomeIcon icon={faCircleWifi} style={{ color: statusColor }} />
-        {label}
-      </div>
     </div>
   );
 }
