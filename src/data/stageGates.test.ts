@@ -14,6 +14,7 @@ const emptyForm: GateFormState = {
   closeDate: null,
   salePrice: null,
   commissionAmount: null,
+  commissionPct: null,
   deadReason: null,
   aiDocsAllReviewed: true,
   websiteReviewed: false,

@@ -32,6 +32,7 @@ import {
 } from "#/data/stageGates";
 import { commitStageTransition } from "#/data/actions";
 import { STATUS_LABELS } from "#/components/properties/propertyDisplay";
+import { commissionAmountFromPct, commissionPctFromAmount } from "#/data/commission";
 
 const EMPTY_FORM: GateFormState = {
   buyerLinked: false,
@@ -41,6 +42,7 @@ const EMPTY_FORM: GateFormState = {
   closeDate: null,
   salePrice: null,
   commissionAmount: null,
+  commissionPct: null,
   deadReason: null,
   aiDocsAllReviewed: true,
   websiteReviewed: false,
@@ -152,6 +154,7 @@ export function StageGate({
       closeDate: deal.transaction.closeDate,
       salePrice: deal.transaction.salePrice || null,
       commissionAmount: deal.transaction.commissionAmount || null,
+      commissionPct: deal.transaction.commissionPct || null,
       deadReason: deal.transaction.deadReason,
       // Core listing content, prefilled so the broker edits in place.
       saleTitle: deal.marketing.saleTitle,
@@ -178,6 +181,34 @@ export function StageGate({
 
   const set = <K extends keyof GateFormState>(k: K, v: GateFormState[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
+
+  const setSalePrice = (v: number | null) =>
+    setForm((f) => ({
+      ...f,
+      salePrice: v,
+      commissionAmount:
+        v != null && f.commissionPct != null
+          ? commissionAmountFromPct(v, f.commissionPct)
+          : f.commissionAmount,
+    }));
+  const setCommissionPct = (v: number | null) =>
+    setForm((f) => ({
+      ...f,
+      commissionPct: v,
+      commissionAmount:
+        v != null && f.salePrice != null
+          ? commissionAmountFromPct(f.salePrice, v)
+          : f.commissionAmount,
+    }));
+  const setCommissionAmount = (v: number | null) =>
+    setForm((f) => ({
+      ...f,
+      commissionAmount: v,
+      commissionPct:
+        v != null && f.salePrice != null && f.salePrice > 0
+          ? commissionPctFromAmount(f.salePrice, v)
+          : f.commissionPct,
+    }));
 
   const req = (f: string) => config.required.includes(f as never);
 
@@ -447,10 +478,20 @@ export function StageGate({
                     type="number"
                     value={form.salePrice ?? ""}
                     onChange={(e) =>
-                      set(
-                        "salePrice",
-                        e.target.value ? Number(e.target.value) : null,
-                      )
+                      setSalePrice(e.target.value ? Number(e.target.value) : null)
+                    }
+                  />
+                </Field>
+              )}
+
+              {req("commissionAmount") && (
+                <Field>
+                  <Field.Label>Gross Commission %</Field.Label>
+                  <Input
+                    type="number"
+                    value={form.commissionPct ?? ""}
+                    onChange={(e) =>
+                      setCommissionPct(e.target.value ? Number(e.target.value) : null)
                     }
                   />
                 </Field>
@@ -463,10 +504,7 @@ export function StageGate({
                     type="number"
                     value={form.commissionAmount ?? ""}
                     onChange={(e) =>
-                      set(
-                        "commissionAmount",
-                        e.target.value ? Number(e.target.value) : null,
-                      )
+                      setCommissionAmount(e.target.value ? Number(e.target.value) : null)
                     }
                   />
                 </Field>

@@ -31,6 +31,7 @@ export interface GateFormState {
   closeDate: string | null
   salePrice: number | null
   commissionAmount: number | null
+  commissionPct: number | null
   deadReason: string | null
   /** True when every AI-generated doc is checked (or there are none). */
   aiDocsAllReviewed: boolean
@@ -183,6 +184,7 @@ export function buildTransitionInput(
   if (form.closeDate) transaction.closeDate = form.closeDate
   if (form.salePrice != null) transaction.salePrice = form.salePrice
   if (form.commissionAmount != null) transaction.commissionAmount = form.commissionAmount
+  if (form.commissionPct != null) transaction.commissionPct = form.commissionPct
   if (form.deadReason) transaction.deadReason = form.deadReason
 
   const input: StageTransitionInput = {
