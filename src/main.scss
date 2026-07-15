@@ -207,64 +207,6 @@
   }
 }
 
-// Quick pipeline filters (All Contacts): a row of entry-point buttons, each a
-// small white card with a fixed pipeline-color bar pinned to the top, a bold
-// count, and the stage label. No Blueprint component matches, so these are
-// styled here from Blueprint tokens + the Figma spec.
-.quick-pipeline-filters {
-  .quick-filter-btn {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
-    min-width: 128px;
-    padding: 14px 12px 10px;
-    background: var(--bp-tab-pill-bg, #fff);
-    border: 1px solid var(--color-storm-grey-100, #eceef2);
-    border-radius: var(--bp-border-radius, 6px);
-    box-shadow:
-      0 1px 2px -1px rgba(0, 0, 0, 0.1),
-      0 1px 3px 0 rgba(0, 0, 0, 0.1);
-    cursor: pointer;
-    text-align: left;
-    overflow: hidden;
-    transition:
-      box-shadow 0.15s ease,
-      border-color 0.15s ease;
-  }
-
-  // Full-width stage color bar; overflow:hidden on the card rounds its corners.
-  .quick-filter-btn__bar {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-  }
-
-  .quick-filter-btn__count {
-    font-size: 17px;
-    font-weight: 700;
-    line-height: 1.2;
-    color: var(--color-storm-grey-950, #22262f);
-  }
-
-  .quick-filter-btn__label {
-    font-size: 14px;
-    font-weight: 600;
-    line-height: 1.2;
-    color: var(--color-storm-grey-950, #22262f);
-  }
-
-  .quick-filter-btn:hover {
-    border-color: var(--color-storm-grey-300, #cad1db);
-    box-shadow:
-      0 2px 4px -1px rgba(0, 0, 0, 0.12),
-      0 2px 6px 0 rgba(0, 0, 0, 0.12);
-  }
-}
-
 // Contact-stage badges (People table): filled soft pills per Figma — a tinted
 // background paired with a dark same-family text color, 12px semibold, 6px
 // radius, no dot. Layered over the Blueprint Badge; colors are the hex of the
@@ -299,7 +241,7 @@
 }
 
 // Deal-stage dots (People table): recolored to the Figma pipeline palette (500
-// shades), so the dot matches the quick-pipeline-filter colors.
+// shades), matching the My Pipeline nav stage colors.
 .deal-stage-dot {
   &--pitching {
     background: var(--color-harvest-gold-500, #fd9a00);

@@ -15,6 +15,8 @@ import {
   faArrowUpArrowDown,
   faMagnifyingGlass,
   faSidebar,
+  faChevronDown,
+  faChevronRight,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact } from "#/data/types";
 import {
@@ -23,6 +25,8 @@ import {
   callListToContactList,
   type CallList,
 } from "#/data/contactLists";
+import { PIPELINE_STAGES } from "#/components/contacts/pipelineStages";
+import { matchesContactFilters } from "#/components/contacts/contactFilterModel";
 
 /** Label + count laid out across the full width of a pill tab. */
 function TabLabel({ label, count }: { label: string; count: number }) {
@@ -58,6 +62,19 @@ export function ContactListsSidebar({
 }) {
   const [search, setSearch] = useState("");
   const [collapsed, setCollapsed] = useState(false);
+  const [pipelineOpen, setPipelineOpen] = useState(true);
+
+  // Live count of contacts matching each pipeline stage's preset filters.
+  const pipelineCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const stage of PIPELINE_STAGES) {
+      const preset = stage.preset();
+      map[stage.id] = contacts.filter((c) =>
+        matchesContactFilters(c, preset),
+      ).length;
+    }
+    return map;
+  }, [contacts]);
 
   // Built-in lists plus user/AI call lists, unified into one display shape.
   const allLists = useMemo(
@@ -160,6 +177,46 @@ export function ContactListsSidebar({
             </Tabs.Tab>
           </Tabs.List>
         </Tabs>
+
+        {/* My Pipeline: fixed preset filter pages, collapsible when expanded. */}
+        {!collapsed && (
+          <button
+            type="button"
+            className="contact-lists-sidebar__section-toggle d-flex align-items-center gap-2 px-2 pt-2 border-0 bg-transparent w-100 text-start"
+            aria-expanded={pipelineOpen}
+            onClick={() => setPipelineOpen((v) => !v)}
+          >
+            <FontAwesomeIcon
+              icon={pipelineOpen ? faChevronDown : faChevronRight}
+              className="text-muted"
+            />
+            <span className="fw-semibold flex-grow-1">My Pipeline</span>
+          </button>
+        )}
+        {(collapsed || pipelineOpen) && (
+          <Tabs
+            value={activeListId}
+            onValueChange={(v) => onSelectList(v ?? ALL_CONTACTS_ID)}
+            orientation="vertical"
+          >
+            <Tabs.List variant="pills" orientation="vertical">
+              {PIPELINE_STAGES.map((stage) => (
+                <Tabs.Tab
+                  key={stage.id}
+                  value={stage.id}
+                  icon={tabIcon(stage.icon, stage.label, undefined, stage.color)}
+                >
+                  {!collapsed && (
+                    <TabLabel
+                      label={stage.label}
+                      count={pipelineCounts[stage.id]}
+                    />
+                  )}
+                </Tabs.Tab>
+              ))}
+            </Tabs.List>
+          </Tabs>
+        )}
 
         {/* Lists filter section */}
         {!collapsed && (
