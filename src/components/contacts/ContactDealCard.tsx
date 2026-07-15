@@ -13,7 +13,7 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { PropertyStatus } from "#/data/types";
-import { getListing } from "#/data/store";
+import { getListing, getProperty } from "#/data/store";
 import {
   TYPE_ICONS,
   TYPE_LABELS,
@@ -91,11 +91,16 @@ export function ContactDealCard({ listingId }: { listingId: string }) {
   );
   if (!listing) return null;
 
+  const property = getProperty(listing.propertyId);
+  const leaseTerms =
+    listing.marketing.spaceLeaseTerms?.find(
+      (t) => t.unitId === listing.unitId,
+    ) ?? listing.marketing.spaceLeaseTerms?.[0];
   const price =
-    listing.dealType === "Lease" && listing.leaseRate != null
-      ? `$${listing.leaseRate}/SF`
-      : formatPrice(listing.askingPrice);
-  const sqft = `${listing.availableSqFt.toLocaleString()} SF`;
+    listing.dealType === "Lease" && leaseTerms?.leaseRate != null
+      ? `$${leaseTerms.leaseRate}/SF`
+      : formatPrice(listing.financials.askingPrice);
+  const sqft = `${listing.marketing.availableSqFt.toLocaleString()} SF`;
   const side = SIDE_DISPLAY[listing.dealSide];
 
   const docsCount = listing.documents?.length ?? 0;
@@ -184,15 +189,17 @@ export function ContactDealCard({ listingId }: { listingId: string }) {
         >
           {side.label}
         </Badge>
-        <Badge
-          variant="secondary"
-          appearance="muted"
-          className="d-inline-flex align-items-center gap-1 fw-semibold"
-          style={{ height: 28, fontSize: 14 }}
-        >
-          <FontAwesomeIcon icon={TYPE_ICONS[listing.propertyType]} />
-          {TYPE_LABELS[listing.propertyType]}
-        </Badge>
+        {property && (
+          <Badge
+            variant="secondary"
+            appearance="muted"
+            className="d-inline-flex align-items-center gap-1 fw-semibold"
+            style={{ height: 28, fontSize: 14 }}
+          >
+            <FontAwesomeIcon icon={TYPE_ICONS[property.propertyType]} />
+            {TYPE_LABELS[property.propertyType]}
+          </Badge>
+        )}
       </div>
 
       {/* Conditionally-visible quick links */}
