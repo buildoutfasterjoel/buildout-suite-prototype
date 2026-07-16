@@ -214,6 +214,14 @@ export const COMPOSE_TIMELINE_TITLE: Record<ComposeKind, string> = {
   tour: "You logged a tour",
 };
 
+/** Local `yyyy-mm-dd` for today (no timezone drift). */
+export function todayISO(): string {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
 /**
  * Format a date value as e.g. "Jul 16, 2026". Accepts both full ISO timestamps
  * and plain `yyyy-mm-dd` (pinned to local midnight to avoid a UTC day-shift).

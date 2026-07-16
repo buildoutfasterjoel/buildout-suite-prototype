@@ -185,10 +185,13 @@ export function ContactComposeModule({
   contact,
   deals,
   onSubmit,
+  onStartCall,
 }: {
   contact: Contact;
   deals: DealSummary[];
   onSubmit: (draft: ComposedDraft) => void;
+  /** Kicks off the simulated live call (Call tab's "Call Now"). */
+  onStartCall: () => void;
 }) {
   const [tab, setTab] = useState<ComposeKind>("note");
   const [body, setBody] = useState<Record<ComposeKind, string>>({ ...EMPTY });
@@ -329,7 +332,10 @@ export function ContactComposeModule({
               </InputGroup.Addon>
             </InputGroup>
           </div>
-          <Button variant={hasValue ? "secondary" : "primary"}>
+          <Button
+            variant={hasValue ? "secondary" : "primary"}
+            onClick={onStartCall}
+          >
             <FontAwesomeIcon icon={faPhone} />
             Call Now
           </Button>

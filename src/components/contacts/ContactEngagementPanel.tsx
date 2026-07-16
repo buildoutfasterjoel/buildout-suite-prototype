@@ -67,24 +67,24 @@ function TimelineIcon({
 export function ContactEngagementPanel({
   contact,
   deals,
+  logged,
+  onLog,
+  onStartCall,
 }: {
   contact: Contact;
   deals: DealSummary[];
+  /** Activities logged this session (owned by the page), newest first. */
+  logged: ComposedActivity[];
+  onLog: (draft: ComposedDraft) => void;
+  onStartCall: () => void;
 }) {
   const [filter, setFilter] = useState<ActivityFilter>("all");
-  // Activities logged this session, newest first (seq desc).
-  const [logged, setLogged] = useState<ComposedActivity[]>([]);
-  const [seq, setSeq] = useState(0);
 
   const activity = useMemo(() => buildActivity(contact, deals), [contact, deals]);
   const briefing = useMemo(() => buildBriefing(contact, deals), [contact, deals]);
   const lastTouch = useMemo(() => buildLastTouch(contact), [contact]);
 
-  function handleLog(draft: ComposedDraft) {
-    setLogged((prev) => [{ ...draft, id: `logged-${seq}`, seq }, ...prev]);
-    setSeq((s) => s + 1);
-  }
-
+  // Counts drive the filter chips; logged is always supplied by the page.
   const counts: Record<ActivityFilter, number> = {
     all: logged.length + activity.length,
     calls: logged.filter((l) => l.kind === "call").length,
@@ -109,7 +109,12 @@ export function ContactEngagementPanel({
   return (
     <div className="d-flex flex-column gap-4">
       {/* Engagement composer */}
-      <ContactComposeModule contact={contact} deals={deals} onSubmit={handleLog} />
+      <ContactComposeModule
+        contact={contact}
+        deals={deals}
+        onSubmit={onLog}
+        onStartCall={onStartCall}
+      />
 
       {/* Activity */}
       <Card className="shadow-sm">

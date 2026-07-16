@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
@@ -10,8 +10,14 @@ import { ContactOverviewColumn } from "#/components/contacts/ContactOverviewColu
 import { ContactEngagementPanel } from "#/components/contacts/ContactEngagementPanel";
 import { ContactTasksPanel } from "#/components/contacts/ContactTasksPanel";
 import { ShareContactModal } from "#/components/contacts/ShareContactModal";
+import { LiveCallBar } from "#/components/contacts/LiveCallBar";
 import { useContactShares } from "#/components/contacts/useContactShares";
-import { contactFullName } from "#/components/contacts/contactDisplay";
+import { useLiveCall } from "#/components/contacts/useLiveCall";
+import type { ComposedDraft } from "#/components/contacts/ContactComposeModule";
+import {
+  contactFullName,
+  type ComposedActivity,
+} from "#/components/contacts/contactDisplay";
 
 export const Route = createFileRoute("/_shell/backoffice/contacts/$contactId")({
   component: ContactDetailPage,
@@ -55,6 +61,19 @@ function ContactDetailPage() {
   const access = useContactShares(contactId);
   const [shareOpen, setShareOpen] = useState(false);
 
+  // Activity logged this session (compose module + live calls). Owned here so
+  // the full-width call bar and the middle column write to one list.
+  const [logged, setLogged] = useState<ComposedActivity[]>([]);
+  const seqRef = useRef(0);
+  const addLog = (draft: ComposedDraft) => {
+    const seq = seqRef.current++;
+    setLogged((prev) => [{ ...draft, id: `logged-${seq}`, seq }, ...prev]);
+  };
+  const liveCall = useLiveCall({
+    contact: detail?.contact ?? null,
+    onLog: addLog,
+  });
+
   if (!detail) return <ContactNotFound />;
 
   const { contact, deals, tasks, completedTasks } = detail;
@@ -71,6 +90,16 @@ function ContactDetailPage() {
         onOpenShare={() => setShareOpen(true)}
       />
 
+      {/* Live call bar — docks full-width above the columns while a call runs. */}
+      {liveCall.call && (
+        <LiveCallBar
+          call={liveCall.call}
+          onHangUp={liveCall.hangUp}
+          onEndAndLog={liveCall.endAndLog}
+          onToggleMute={liveCall.toggleMute}
+        />
+      )}
+
       {/* Full-height 3-column row; each column scrolls independently and the
           page itself never scrolls. */}
       <div className="d-flex gap-4 flex-grow-1 overflow-hidden">
@@ -86,7 +115,13 @@ function ContactDetailPage() {
           />
         </div>
         <div className="flex-grow-1 h-100 overflow-auto">
-          <ContactEngagementPanel contact={contact} deals={deals} />
+          <ContactEngagementPanel
+            contact={contact}
+            deals={deals}
+            logged={logged}
+            onLog={addLog}
+            onStartCall={liveCall.startCall}
+          />
         </div>
         <div
           className="flex-shrink-0 h-100 overflow-hidden"
