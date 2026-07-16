@@ -2,7 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLink } from "@fortawesome/pro-regular-svg-icons";
-import type { PropertyStatus } from "#/data/types";
+import type { Listing, PropertyStatus } from "#/data/types";
 import { getListing, getProperty } from "#/data/store";
 import { TYPE_LABELS, formatPrice } from "#/components/properties/propertyDisplay";
 import {
@@ -22,17 +22,31 @@ const ACTIVE_DEAL_STATUSES = new Set<PropertyStatus>([
 
 /**
  * A property the contact owns, rendered as a card (reusing the deal card's
- * chrome). When there's an active deal on the property, a stage-colored "Deal"
- * badge links to that deal; clicking the card navigates to the property.
+ * chrome). One card per *property* — a property with several of the contact's
+ * deals still shows a single card. Clicking the card navigates to the property.
  *
- * Property data is deal-derived (one card per linked deal), so `listingId`
- * identifies both the deal and — via its property — the owned property.
+ * The deal chip adapts to the deal count:
+ * - one deal → a stage-colored "Deal" badge linking to that deal, plus the
+ *   deal's Buyer/Seller badge;
+ * - multiple deals → a grey "Multiple Deals" badge (Buyer/Seller hidden, since
+ *   sides can differ) that opens the Deals page filtered to this address.
  */
-export function ContactPropertyCard({ listingId }: { listingId: string }) {
+export function ContactPropertyCard({
+  propertyId,
+  listingIds,
+}: {
+  propertyId: string;
+  listingIds: string[];
+}) {
   const navigate = useNavigate();
-  const listing = getListing(listingId);
-  const property = listing ? getProperty(listing.propertyId) : undefined;
-  if (!listing || !property) return null;
+  const property = getProperty(propertyId);
+  if (!property) return null;
+
+  const listings = listingIds
+    .map((id) => getListing(id))
+    .filter((l): l is Listing => !!l);
+  const multiple = listings.length > 1;
+  const single = listings[0];
 
   const meta = [
     formatPrice(property.askingPrice),
@@ -45,9 +59,8 @@ export function ContactPropertyCard({ listingId }: { listingId: string }) {
     .filter(Boolean)
     .join(" · ");
 
-  const side = SIDE_DISPLAY[listing.dealSide];
-  const hasActiveDeal = ACTIVE_DEAL_STATUSES.has(listing.status);
-  const sc = STAGE_CHIP_COLORS[listing.status];
+  const hasActiveDeal = !!single && ACTIVE_DEAL_STATUSES.has(single.status);
+  const grey = STAGE_CHIP_COLORS.inactive;
 
   return (
     <div
@@ -79,37 +92,61 @@ export function ContactPropertyCard({ listingId }: { listingId: string }) {
         >
           Owner
         </Badge>
-        {hasActiveDeal && (
+        {multiple ? (
           <button
             type="button"
             className="badge border d-inline-flex align-items-center gap-1"
             style={{
-              backgroundColor: sc.bg,
-              borderColor: sc.border,
-              color: sc.text,
+              backgroundColor: grey.bg,
+              borderColor: grey.border,
+              color: grey.text,
             }}
-            aria-label={`Open the ${STATUS_LABELS[listing.status]} deal`}
+            aria-label={`See all ${listings.length} deals on ${property.name}`}
             onClick={(e) => {
               e.stopPropagation();
-              void navigate({
-                to: "/listings/$listingId",
-                params: { listingId },
-              });
+              void navigate({ to: "/listings", search: { q: property.street } });
             }}
           >
             <FontAwesomeIcon icon={faLink} />
-            Deal
+            Multiple Deals
           </button>
+        ) : (
+          single && (
+            <>
+              {hasActiveDeal && (
+                <button
+                  type="button"
+                  className="badge border d-inline-flex align-items-center gap-1"
+                  style={{
+                    backgroundColor: STAGE_CHIP_COLORS[single.status].bg,
+                    borderColor: STAGE_CHIP_COLORS[single.status].border,
+                    color: STAGE_CHIP_COLORS[single.status].text,
+                  }}
+                  aria-label={`Open the ${STATUS_LABELS[single.status]} deal`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void navigate({
+                      to: "/listings/$listingId",
+                      params: { listingId: single.id },
+                    });
+                  }}
+                >
+                  <FontAwesomeIcon icon={faLink} />
+                  Deal
+                </button>
+              )}
+              <Badge
+                variant="secondary"
+                style={{
+                  backgroundColor: SIDE_BADGE_COLORS[single.dealSide].bg,
+                  color: SIDE_BADGE_COLORS[single.dealSide].text,
+                }}
+              >
+                {SIDE_DISPLAY[single.dealSide].label}
+              </Badge>
+            </>
+          )
         )}
-        <Badge
-          variant="secondary"
-          style={{
-            backgroundColor: SIDE_BADGE_COLORS[listing.dealSide].bg,
-            color: SIDE_BADGE_COLORS[listing.dealSide].text,
-          }}
-        >
-          {side.label}
-        </Badge>
       </div>
     </div>
   );

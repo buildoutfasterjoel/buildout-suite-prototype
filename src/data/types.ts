@@ -627,6 +627,8 @@ export interface EntityMaps {
 /** A linked deal, summarized for the contact detail page's Deals panel. */
 export interface DealSummary {
   id: string
+  /** The property this deal sits on — used to group deals by property. */
+  propertyId: string
   name: string
   city: string
   state: string

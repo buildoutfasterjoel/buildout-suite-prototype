@@ -45,6 +45,11 @@ import { dealHeadlineValue } from "#/components/deals/dealDisplay";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 
 export const Route = createFileRoute("/_shell/listings/")({
+  // `?q=` pre-fills the address/name search — e.g. deep-linking from a contact's
+  // property card to all deals on that property.
+  validateSearch: (search: Record<string, unknown>): { q?: string } => ({
+    q: typeof search.q === "string" ? search.q : undefined,
+  }),
   component: PropertyListings,
   head: () => ({
     meta: [{ title: "Deals | Buildout Suite" }],
@@ -110,7 +115,9 @@ function PropertyListings() {
     return unsub;
   }, []);
 
-  const [search, setSearch] = useState("");
+  // Seed the search from the `?q=` param (e.g. a property address deep-link).
+  const { q } = Route.useSearch();
+  const [search, setSearch] = useState(q ?? "");
   const [sortBy, setSortBy] = useState<SortBy>("default");
   const [side, setSide] = useState<DealSide | "all">("all");
   const [view, setView] = useState<ViewMode>("board");
