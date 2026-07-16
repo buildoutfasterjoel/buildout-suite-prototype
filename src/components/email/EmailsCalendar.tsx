@@ -117,7 +117,6 @@ export function EmailsCalendar({ emails, month }: Props) {
     return { weeks: weeksArr, emailsByDate: byDate, firstDay, lastDay };
   }, [emails, month]);
 
-  const year = month.getFullYear();
   const mon = month.getMonth();
 
   const today = isoDate(new Date());
