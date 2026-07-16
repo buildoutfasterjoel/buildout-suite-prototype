@@ -8,6 +8,12 @@ import type {
 } from './types'
 import type { Email } from './emails'
 import { useDataStore } from './dataStore'
+import {
+  DEFAULT_CONTACT_SHARES,
+  TEAMMATES,
+  type AccessTier,
+  type ContactShare,
+} from './teammates'
 
 /** All email campaigns from the live store (seeded mocks + any AI/user drafts). */
 export function getEmailsList(): Email[] {
@@ -147,6 +153,63 @@ export function getContactOptions(): ContactOption[] {
       relationship: c.relationship,
     }))
     .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+// ── Contact sharing ─────────────────────────────────────────────────────────
+
+/**
+ * Who has access to a contact. Returns the stored list, or the default seed for
+ * a contact that's never been shared explicitly. The default is a single stable
+ * reference, so untouched contacts read the same value across renders.
+ */
+export function getContactShares(contactId: string): ContactShare[] {
+  return useDataStore.getState().contactShares.get(contactId) ?? DEFAULT_CONTACT_SHARES
+}
+
+function setContactShares(contactId: string, shares: ContactShare[]): void {
+  useDataStore.setState((s) => {
+    const contactShares = new Map(s.contactShares)
+    contactShares.set(contactId, shares)
+    return { contactShares }
+  })
+  useDataStore.getState().persist()
+}
+
+/** Grant access to the given members at a tier (skips duplicates). */
+export function grantContactShares(
+  contactId: string,
+  memberIds: string[],
+  tier: AccessTier,
+): void {
+  const next = [...getContactShares(contactId)]
+  for (const id of memberIds) {
+    const member = TEAMMATES.find((m) => m.id === id)
+    if (!member || next.some((s) => s.member.id === id)) continue
+    next.push({ member, tier })
+  }
+  setContactShares(contactId, next)
+}
+
+/** Change an existing member's tier. */
+export function changeContactShareTier(
+  contactId: string,
+  memberId: string,
+  tier: AccessTier,
+): void {
+  setContactShares(
+    contactId,
+    getContactShares(contactId).map((s) =>
+      s.member.id === memberId ? { ...s, tier } : s,
+    ),
+  )
+}
+
+/** Revoke a member's access. */
+export function revokeContactShare(contactId: string, memberId: string): void {
+  setContactShares(
+    contactId,
+    getContactShares(contactId).filter((s) => s.member.id !== memberId),
+  )
 }
 
 /**

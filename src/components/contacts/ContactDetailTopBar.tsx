@@ -1,19 +1,25 @@
 import { Link } from "@tanstack/react-router";
 import { Breadcrumb } from "@buildoutinc/blueprint-react/ui/Breadcrumb";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
-import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faShareNodes, faCaretDown } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact } from "#/data/types";
 import { contactFullName } from "#/components/contacts/contactDisplay";
-import { AvatarGroup } from "#/components/properties/AvatarGroup";
+import { ContactAccessAvatars } from "#/components/contacts/ContactAccessAvatars";
+import type { ContactSharesApi } from "#/components/contacts/useContactShares";
 
 /**
  * Fixed top bar for the contact detail page: breadcrumbs on the left, a share
- * control (collaborator avatars + a Share menu) on the right. The share menu is
- * scaffolded (non-functional) for this structural pass.
+ * control (collaborator avatars + a Share button) on the right. The Share button
+ * opens the sharing modal (owned by the route so the hero can open it too).
  */
-export function ContactDetailTopBar({ contact }: { contact: Contact }) {
+export function ContactDetailTopBar({
+  contact,
+  access,
+  onOpenShare,
+}: {
+  contact: Contact;
+  access: ContactSharesApi;
+  onOpenShare: () => void;
+}) {
   return (
     <div className="d-flex align-items-center justify-content-between gap-3">
       <Breadcrumb>
@@ -31,24 +37,13 @@ export function ContactDetailTopBar({ contact }: { contact: Contact }) {
       </Breadcrumb>
 
       <div className="d-flex align-items-center gap-2 flex-shrink-0">
-        <AvatarGroup seed={contactFullName(contact).length} />
-        <DropdownMenu>
-          <DropdownMenu.Trigger
-            render={
-              <Button variant="outline" size="sm">
-                <FontAwesomeIcon icon={faShareNodes} />
-                Share
-                <FontAwesomeIcon icon={faCaretDown} />
-              </Button>
-            }
+        <Button variant="outline" size="sm" onClick={onOpenShare}>
+          <ContactAccessAvatars
+            shares={access.shares}
+            className="contact-share-avatars"
           />
-          <DropdownMenu.Content align="end">
-            <DropdownMenu.Item>Share with a teammate</DropdownMenu.Item>
-            <DropdownMenu.Item>Copy link</DropdownMenu.Item>
-            <DropdownMenu.Separator />
-            <DropdownMenu.Item>Make private</DropdownMenu.Item>
-          </DropdownMenu.Content>
-        </DropdownMenu>
+          Share
+        </Button>
       </div>
     </div>
   );

@@ -22,7 +22,8 @@ import {
 } from "#/components/contacts/contactDisplay";
 import { ContactStageBadge } from "#/components/contacts/ContactStageBadge";
 import { ContactChip } from "#/components/contacts/ContactChip";
-import { initials as nameInitials } from "#/components/deals/dealDisplay";
+import { ContactHeroAccessAvatars } from "#/components/contacts/ContactHeroAccessAvatars";
+import type { ContactShare } from "#/data/teammates";
 import { ContactDealCard } from "#/components/contacts/ContactDealCard";
 import { ContactPropertyCard } from "#/components/contacts/ContactPropertyCard";
 import { CreateDealModal } from "#/components/deals/CreateDealModal";
@@ -63,29 +64,6 @@ function FieldRow({ label, value }: { label: string; value: string }) {
       <span className="fw-semibold me-2">{label}</span>
       <span>{value}</span>
     </div>
-  );
-}
-
-/**
- * Stacked avatars of who has access to this contact. The first (owner) carries
- * an offset outline; the rest are stubbed collaborators for this structural pass.
- */
-function SharedAccess({ owner }: { owner: string }) {
-  return (
-    <Avatar.Group size="sm" className="ms-auto">
-      <Avatar className="contact-hero__owner-avatar">
-        <Avatar.Fallback className="fw-semibold">
-          {nameInitials(owner)}
-        </Avatar.Fallback>
-      </Avatar>
-      <Avatar>
-        <Avatar.Fallback>MK</Avatar.Fallback>
-      </Avatar>
-      <Avatar>
-        <Avatar.Fallback>JL</Avatar.Fallback>
-      </Avatar>
-      <Avatar.More count={2} />
-    </Avatar.Group>
   );
 }
 
@@ -145,9 +123,13 @@ function Section({
 export function ContactOverviewColumn({
   contact,
   deals,
+  shares,
+  onOpenShare,
 }: {
   contact: Contact;
   deals: DealSummary[];
+  shares: ContactShare[];
+  onOpenShare: () => void;
 }) {
   const [open, setOpen] = useState<string[]>(["deals", "properties"]);
   const [tags, setTags] = useState(contact.tags);
@@ -224,7 +206,7 @@ export function ContactOverviewColumn({
             className="d-inline-flex align-items-center"
             style={{ height: 28, fontSize: 14 }}
           />
-          <SharedAccess owner={contact.assignedTo} />
+          <ContactHeroAccessAvatars shares={shares} onOpenShare={onOpenShare} />
         </div>
 
         {!showDetails ? (
