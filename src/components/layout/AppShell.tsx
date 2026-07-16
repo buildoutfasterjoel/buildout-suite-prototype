@@ -1,7 +1,6 @@
 import { Outlet } from "@tanstack/react-router";
 import { useHotkey } from "@tanstack/react-hotkeys";
-import { faSpinnerThird } from "@fortawesome/pro-regular-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { CircularProgress } from "@buildoutinc/blueprint-react/ui/Progress";
 import { ToasterProvider } from "@buildoutinc/blueprint-react/ui/Toast";
 import { ToastBridge } from "#/components/layout/ToastBridge";
 import { GlobalNavbar } from "#/components/layout/GlobalNavbar";
@@ -29,7 +28,7 @@ export function AppShell() {
               <Outlet />
             ) : (
               <div className="d-flex justify-content-center align-items-center py-8 w-100 h-100">
-                <FontAwesomeIcon icon={faSpinnerThird} spin size="2x" className="text-muted" />
+                <CircularProgress size="lg" />
               </div>
             )}
           </main>

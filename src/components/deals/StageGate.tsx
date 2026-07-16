@@ -89,11 +89,12 @@ function GateDatePicker({
   onChange: (value: string | null) => void;
   placeholder: string;
 }) {
+  const [open, setOpen] = useState(false);
   const selected = parseDate(value);
   return (
     <InputGroup>
       <InputGroup.Addon>
-        <Popover>
+        <Popover open={open} onOpenChange={setOpen}>
           <Popover.Trigger
             nativeButton={false}
             aria-label="Open date picker"
@@ -104,7 +105,10 @@ function GateDatePicker({
               mode="single"
               selected={selected}
               defaultMonth={selected}
-              onSelect={(d) => onChange(d ? toISODate(d) : null)}
+              onSelect={(d) => {
+                onChange(d ? toISODate(d) : null);
+                setOpen(false);
+              }}
             />
           </Popover.Content>
         </Popover>
