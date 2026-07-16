@@ -48,7 +48,7 @@ function ContactDetailPage() {
 
   if (!detail) return <ContactNotFound />;
 
-  const { contact, deals, openTaskCount } = detail;
+  const { contact, deals, tasks, completedTasks } = detail;
 
   return (
     <div
@@ -74,7 +74,11 @@ function ContactDetailPage() {
           className="flex-shrink-0 h-100 overflow-hidden"
           style={{ width: 380 }}
         >
-          <ContactTasksPanel contact={contact} openTaskCount={openTaskCount} />
+          <ContactTasksPanel
+            contact={contact}
+            tasks={tasks}
+            completedTasks={completedTasks}
+          />
         </div>
       </div>
     </div>
