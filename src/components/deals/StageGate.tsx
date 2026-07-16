@@ -140,7 +140,7 @@ export function StageGate({
 }) {
   const deal = getListing(dealId);
   const config = useMemo(
-    () => (deal ? resolveGate(deal.status, targetStage) : null),
+    () => (deal ? resolveGate(deal.status, targetStage, deal.dealType) : null),
     [deal, targetStage],
   );
 

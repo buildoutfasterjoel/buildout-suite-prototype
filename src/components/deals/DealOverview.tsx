@@ -91,6 +91,10 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
 
 function TransactionCard({ listing }: { listing: Listing }) {
   const [editOpen, setEditOpen] = useState(false);
+  const isLease = listing.dealType === "Lease";
+  const leaseTerms = listing.marketing.spaceLeaseTerms ?? [];
+  const terms =
+    leaseTerms.find((t) => t.unitId === listing.unitId) ?? leaseTerms[0];
   return (
     <>
       <SectionCard
@@ -107,11 +111,34 @@ function TransactionCard({ listing }: { listing: Listing }) {
         }
       >
         <Field label="Deal ID" value={listing.dealId} />
-        <Field label="Sale Price" value={formatCurrency(listing.transaction.salePrice)} />
-        <Field
-          label="Price / SF"
-          value={`$${listing.financials.pricePerSqFt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-        />
+        {isLease ? (
+          <>
+            <Field
+              label="Lease Rate"
+              value={
+                terms?.leaseRate != null
+                  ? `$${terms.leaseRate} ${terms.leaseRateUnits}`
+                  : "—"
+              }
+            />
+            <Field
+              label="Lease Term"
+              value={terms?.leaseTermMonths != null ? `${terms.leaseTermMonths} mo` : "—"}
+            />
+            <Field
+              label="Available (SF)"
+              value={listing.marketing.availableSqFt.toLocaleString()}
+            />
+          </>
+        ) : (
+          <>
+            <Field label="Sale Price" value={formatCurrency(listing.transaction.salePrice)} />
+            <Field
+              label="Price / SF"
+              value={`$${listing.financials.pricePerSqFt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            />
+          </>
+        )}
         <Field label="Commission %" value={`${listing.transaction.commissionPct}%`} />
         <Field label="Commission $" value={formatCurrency(listing.transaction.commissionAmount)} />
         <Field label="Close Probability" value={`${listing.transaction.closeProbability}%`} />

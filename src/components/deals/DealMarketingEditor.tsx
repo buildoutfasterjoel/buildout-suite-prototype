@@ -59,7 +59,7 @@ import {
 import { Section } from "#/components/listings/listingWidgets";
 
 // ── Option lists (string unions from the data model) ────────────────────────
-const DEAL_TYPES: DealType[] = ["Sale", "Lease", "Sale / Lease"];
+const DEAL_TYPES: DealType[] = ["Sale", "Lease"];
 const PROPERTY_USES: PropertyUse[] = [
   "Net Leased Investment",
   "Investment",

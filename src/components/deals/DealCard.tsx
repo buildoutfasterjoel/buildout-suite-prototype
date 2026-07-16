@@ -14,10 +14,10 @@ import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { Listing, Contact, DealSide } from "#/data/types";
 import { getContact, getListing, getProperty } from "#/data/store";
 import { DealStageBadge } from "./DealStageBadge";
+import { dealHeadlineLabel } from "./dealDisplay";
 import {
   TYPE_ICONS,
   TYPE_LABELS,
-  formatPrice,
 } from "../properties/propertyDisplay";
 
 /** Label, icon, and accent color per deal side. */
@@ -91,14 +91,7 @@ export function DealCardView({
   const contact = getPrimaryContact(listing);
   const property = getProperty(listing.propertyId);
   const sideDisplay = SIDE_DISPLAY[listing.dealSide];
-  const isLease = listing.dealType === "Lease";
-  const spaceLeaseTerms = listing.marketing.spaceLeaseTerms ?? [];
-  const leaseTermsForCard =
-    spaceLeaseTerms.find((t) => t.unitId === listing.unitId) ?? spaceLeaseTerms[0];
-  const price =
-    isLease && leaseTermsForCard?.leaseRate != null
-      ? `$${leaseTermsForCard.leaseRate}/SF`
-      : formatPrice(listing.financials.askingPrice);
+  const price = dealHeadlineLabel(listing);
   const critical = formatCriticalDate(listing.transaction.nextCriticalDate);
   // The critical date is the next open task's due date — name that milestone.
   const criticalTask = listing.tasks.find(

@@ -8,8 +8,8 @@ import {
   TYPE_COLORS,
   TYPE_LABELS,
   STATUS_LABELS,
-  formatPrice,
 } from "./propertyDisplay";
+import { dealHeadlineLabel } from "#/components/deals/dealDisplay";
 
 const US_CENTER: [number, number] = [39.5, -98.5];
 
@@ -85,7 +85,7 @@ export default function PropertyMapInner({ listings }: { listings: Listing[] }) 
                 <div className="d-flex justify-content-between gap-3">
                   <span>{prop ? TYPE_LABELS[prop.propertyType] : ""}</span>
                   <span className="fw-semibold">
-                    {formatPrice(p.financials.askingPrice)}
+                    {dealHeadlineLabel(p)}
                   </span>
                 </div>
                 <div className="text-muted fs-xs mt-1">

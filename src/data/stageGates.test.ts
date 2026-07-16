@@ -39,7 +39,7 @@ const readyToPublish: GateFormState = {
 
 describe('resolveGate', () => {
   it('Pitching → Active is a publishing field gate — listing content + attestations + dates', () => {
-    const g = resolveGate('proposal', 'active')
+    const g = resolveGate('proposal', 'active', 'Sale')
     expect(g.kind).toBe('field')
     expect(g.publishes).toBe(true)
     expect(g.required).toEqual(
@@ -59,7 +59,7 @@ describe('resolveGate', () => {
   })
 
   it('Active → Under Contract requires buyer + economics', () => {
-    const g = resolveGate('active', 'under-contract')
+    const g = resolveGate('active', 'under-contract', 'Sale')
     expect(g.kind).toBe('field')
     expect(g.publishes).toBe(false)
     expect(g.required).toEqual(
@@ -67,33 +67,47 @@ describe('resolveGate', () => {
     )
   })
 
+  it('Lease deals publish without an asking price (no sale headline data)', () => {
+    const g = resolveGate('proposal', 'active', 'Lease')
+    expect(g.required).not.toContain('askingPrice')
+    expect(g.required).toEqual(
+      expect.arrayContaining(['saleTitle', 'saleDescription', 'listedOnDate']),
+    )
+  })
+
+  it('Lease deals go Under Contract without a sale price', () => {
+    const g = resolveGate('active', 'under-contract', 'Lease')
+    expect(g.required).not.toContain('salePrice')
+    expect(g.required).toEqual(expect.arrayContaining(['buyerLinked', 'commissionAmount']))
+  })
+
   it('Under Contract → Closed requires only the close date', () => {
-    const g = resolveGate('under-contract', 'closed')
+    const g = resolveGate('under-contract', 'closed', 'Sale')
     expect(g.kind).toBe('field')
     expect(g.required).toEqual(['closeDate'])
   })
 
   it('any stage → Lost is a dead gate requiring reason + close date', () => {
-    const g = resolveGate('active', 'inactive')
+    const g = resolveGate('active', 'inactive', 'Sale')
     expect(g.kind).toBe('dead')
     expect(g.required).toEqual(expect.arrayContaining(['deadReason', 'closeDate']))
   })
 
   it('a backward move is a confirm gate with no required fields', () => {
-    const g = resolveGate('under-contract', 'active')
+    const g = resolveGate('under-contract', 'active', 'Sale')
     expect(g.kind).toBe('confirm')
     expect(g.required).toEqual([])
     expect(g.leavesActive).toBe(false)
   })
 
   it('a backward move OUT of Active flags leavesActive', () => {
-    const g = resolveGate('active', 'proposal')
+    const g = resolveGate('active', 'proposal', 'Sale')
     expect(g.kind).toBe('confirm')
     expect(g.leavesActive).toBe(true)
   })
 
   it('reopening from Lost into Active runs the publishing field gate', () => {
-    const g = resolveGate('inactive', 'active')
+    const g = resolveGate('inactive', 'active', 'Sale')
     expect(g.kind).toBe('field')
     expect(g.publishes).toBe(true)
   })
@@ -101,17 +115,17 @@ describe('resolveGate', () => {
 
 describe('canConfirm', () => {
   it('confirm gates are always confirmable', () => {
-    expect(canConfirm(resolveGate('under-contract', 'active'), emptyForm)).toBe(true)
+    expect(canConfirm(resolveGate('under-contract', 'active', 'Sale'), emptyForm)).toBe(true)
   })
 
   it('the publish gate blocks until content, reviews, and dates are all set', () => {
-    const g = resolveGate('proposal', 'active')
+    const g = resolveGate('proposal', 'active', 'Sale')
     expect(canConfirm(g, emptyForm)).toBe(false)
     expect(canConfirm(g, readyToPublish)).toBe(true)
   })
 
   it('the publish gate blocks on missing listing content', () => {
-    const g = resolveGate('proposal', 'active')
+    const g = resolveGate('proposal', 'active', 'Sale')
     expect(canConfirm(g, { ...readyToPublish, saleTitle: '   ' })).toBe(false)
     expect(canConfirm(g, { ...readyToPublish, saleDescription: '' })).toBe(false)
     expect(canConfirm(g, { ...readyToPublish, askingPrice: 0 })).toBe(false)
@@ -119,22 +133,22 @@ describe('canConfirm', () => {
   })
 
   it('the AI-doc checklist blocks the publish gate when not all reviewed', () => {
-    const g = resolveGate('proposal', 'active')
+    const g = resolveGate('proposal', 'active', 'Sale')
     expect(canConfirm(g, { ...readyToPublish, aiDocsAllReviewed: false })).toBe(false)
   })
 
   it('the website attestation blocks the publish gate when unchecked', () => {
-    const g = resolveGate('proposal', 'active')
+    const g = resolveGate('proposal', 'active', 'Sale')
     expect(canConfirm(g, { ...readyToPublish, websiteReviewed: false })).toBe(false)
   })
 
   it('a missing listing date blocks the publish gate', () => {
-    const g = resolveGate('proposal', 'active')
+    const g = resolveGate('proposal', 'active', 'Sale')
     expect(canConfirm(g, { ...readyToPublish, listingExpirationDate: null })).toBe(false)
   })
 
   it('Under Contract blocks until buyer + economics are provided', () => {
-    const g = resolveGate('active', 'under-contract')
+    const g = resolveGate('active', 'under-contract', 'Sale')
     expect(canConfirm(g, emptyForm)).toBe(false)
     expect(
       canConfirm(g, {
@@ -149,7 +163,7 @@ describe('canConfirm', () => {
 
 describe('buildTransitionInput', () => {
   it('maps a publish gate form to the action input (content + dates + publish, no seller/side)', () => {
-    const g = resolveGate('proposal', 'active')
+    const g = resolveGate('proposal', 'active', 'Sale')
     const input = buildTransitionInput(g, readyToPublish, 'deal-1', 'Jane Broker')
     expect(input.targetStage).toBe('active')
     expect(input.publish).toBe(true)
@@ -169,7 +183,7 @@ describe('buildTransitionInput', () => {
   })
 
   it('maps a backward-out-of-Active gate with unpublish selected', () => {
-    const g = resolveGate('active', 'proposal')
+    const g = resolveGate('active', 'proposal', 'Sale')
     const input = buildTransitionInput(g, { ...emptyForm, unpublishOnExit: true }, 'deal-1', 'Jane Broker')
     expect(input.unpublish).toBe(true)
     expect(input.publish).toBeUndefined()

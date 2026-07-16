@@ -17,9 +17,9 @@ import { getListing, getProperty } from "#/data/store";
 import {
   TYPE_ICONS,
   TYPE_LABELS,
-  formatPrice,
   getPhotoUrl,
 } from "#/components/properties/propertyDisplay";
+import { dealHeadlineLabel } from "#/components/deals/dealDisplay";
 import {
   SIDE_DISPLAY,
   SIDE_BADGE_COLORS,
@@ -98,15 +98,8 @@ export function ContactDealCard({ listingId }: { listingId: string }) {
   if (!listing) return null;
 
   const property = getProperty(listing.propertyId);
-  const leaseTerms =
-    listing.marketing.spaceLeaseTerms?.find(
-      (t) => t.unitId === listing.unitId,
-    ) ?? listing.marketing.spaceLeaseTerms?.[0];
-  const price =
-    listing.dealType === "Lease" && leaseTerms?.leaseRate != null
-      ? `$${leaseTerms.leaseRate}/SF`
-      : formatPrice(listing.financials.askingPrice);
-  const sqft = `${listing.marketing.availableSqFt.toLocaleString()} SF`;
+  const price = dealHeadlineLabel(listing);
+  const sqft = `${(listing.marketing.availableSqFt ?? 0).toLocaleString()} SF`;
   const side = SIDE_DISPLAY[listing.dealSide];
 
   const docsCount = listing.documents?.length ?? 0;

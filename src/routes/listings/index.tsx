@@ -41,6 +41,7 @@ import {
   getSaleLease,
   getExpiration,
 } from "#/components/properties/propertyFacets";
+import { dealHeadlineValue } from "#/components/deals/dealDisplay";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 
 export const Route = createFileRoute("/listings/")({
@@ -237,9 +238,9 @@ function PropertyListings() {
       case "name-desc":
         return arr.sort((a, b) => b.name.localeCompare(a.name));
       case "price-desc":
-        return arr.sort((a, b) => b.financials.askingPrice - a.financials.askingPrice);
+        return arr.sort((a, b) => dealHeadlineValue(b) - dealHeadlineValue(a));
       case "price-asc":
-        return arr.sort((a, b) => a.financials.askingPrice - b.financials.askingPrice);
+        return arr.sort((a, b) => dealHeadlineValue(a) - dealHeadlineValue(b));
       case "cap-rate-desc":
         return arr.sort((a, b) => b.financials.capRate - a.financials.capRate);
       default:
@@ -254,7 +255,7 @@ function PropertyListings() {
   const weightedForecast = useMemo(
     () =>
       filtered.reduce(
-        (sum, l) => sum + l.financials.askingPrice * (l.transaction.closeProbability / 100),
+        (sum, l) => sum + dealHeadlineValue(l) * (l.transaction.closeProbability / 100),
         0,
       ),
     [filtered],

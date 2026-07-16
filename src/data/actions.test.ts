@@ -44,9 +44,9 @@ describe('actions', () => {
 
   it('updateDeal merges top-level deal fields', () => {
     const deal = [...useDataStore.getState().listings.values()][0]
-    const { deal: updated } = updateDeal(deal.id, { dealType: 'Sale / Lease' })
-    expect(updated?.dealType).toBe('Sale / Lease')
-    expect(useDataStore.getState().listings.get(deal.id)?.dealType).toBe('Sale / Lease')
+    const { deal: updated } = updateDeal(deal.id, { dealType: 'Lease' })
+    expect(updated?.dealType).toBe('Lease')
+    expect(useDataStore.getState().listings.get(deal.id)?.dealType).toBe('Lease')
   })
 
   it('createDeal inserts the new listing into the store', () => {

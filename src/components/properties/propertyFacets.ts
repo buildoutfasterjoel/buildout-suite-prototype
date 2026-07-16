@@ -7,7 +7,7 @@ export function hash(s: string): number {
   return h;
 }
 
-export const SALE_LEASE_OPTIONS = ["Sale", "Lease", "Sale / Lease"] as const;
+export const SALE_LEASE_OPTIONS = ["Sale", "Lease"] as const;
 export type SaleLease = (typeof SALE_LEASE_OPTIONS)[number];
 
 /** A listing carries its own Sale / Lease type. */
