@@ -439,11 +439,26 @@
     line-height: 1;
   }
 
-  // Completed state: mute the whole card and strike the label.
+  // Completed state: tint the card storm-grey-50, drop the shadow, mute + strike
+  // the label, and give the checkbox a soft buildout-blue-100 fill (no border).
   &--done {
+    background: var(--color-storm-grey-50, #f6f7f9);
+    box-shadow: none;
+
+    &:hover {
+      box-shadow: none;
+    }
+
     .contact-task-card__label {
       color: var(--color-storm-grey-500, #62748e);
       text-decoration: line-through;
+    }
+
+    .contact-task-card__check,
+    .contact-task-card__check[aria-checked="true"] {
+      background-color: var(--color-buildout-blue-100, #dcebfd);
+      border-color: transparent;
+      color: var(--color-buildout-blue-800, #203d88);
     }
   }
 }
