@@ -4,6 +4,7 @@ import type {
   DealSide,
   DealTransaction,
   DealType,
+  Listing,
   PropertyStatus,
 } from './types'
 
@@ -86,6 +87,86 @@ export const STAGE_LABEL: Record<PropertyStatus, string> = {
   'under-contract': 'Under Contract',
   closed: 'Closed',
   inactive: 'Lost',
+}
+
+/** Short human labels for each required field — used by the setup-incomplete indicator. */
+export const REQUIRED_FIELD_LABEL: Record<RequiredField, string> = {
+  buyerLinked: 'Buyer',
+  listedOnDate: 'Listing start date',
+  listingExpirationDate: 'Listing expiration date',
+  closeDate: 'Close date',
+  salePrice: 'Sale price',
+  commissionAmount: 'Commission',
+  deadReason: 'Lost reason',
+  aiDocsReviewed: 'Document review',
+  websiteReviewed: 'Website review',
+  saleTitle: 'Listing title',
+  saleDescription: 'Listing description',
+  askingPrice: 'Asking price',
+}
+
+/** A blank working form — fields not relevant to a given gate are ignored. */
+export const EMPTY_GATE_FORM: GateFormState = {
+  buyerLinked: false,
+  listedOnDate: null,
+  listingExpirationDate: null,
+  contractExecutedDate: null,
+  closeDate: null,
+  salePrice: null,
+  commissionAmount: null,
+  commissionPct: null,
+  deadReason: null,
+  aiDocsAllReviewed: true,
+  websiteReviewed: false,
+  unpublishOnExit: true,
+  buyerContactId: null,
+  saleTitle: '',
+  saleDescription: '',
+  askingPrice: null,
+}
+
+/**
+ * Seed a working gate form from a deal — the shared starting point for both the
+ * StageGate modal and the publish-readiness check. Review attestations start
+ * unsatisfied when there are AI docs to review / a website to check.
+ */
+export function seedGateForm(deal: Listing): GateFormState {
+  const aiDocs = (deal.documents ?? []).filter((d) => d.aiGenerated)
+  return {
+    ...EMPTY_GATE_FORM,
+    buyerLinked: deal.buyerContactIds.length > 0,
+    // Preselect a buyer already linked to the deal (Under Contract gate).
+    buyerContactId: deal.buyerContactIds[0] ?? null,
+    listedOnDate: deal.transaction.listedOnDate,
+    listingExpirationDate: deal.transaction.listingExpirationDate,
+    contractExecutedDate: deal.transaction.contractExecutedDate,
+    closeDate: deal.transaction.closeDate,
+    salePrice: deal.transaction.salePrice || null,
+    commissionAmount: deal.transaction.commissionAmount || null,
+    commissionPct: deal.transaction.commissionPct || null,
+    deadReason: deal.transaction.deadReason,
+    // Core listing content, prefilled so the broker edits in place.
+    saleTitle: deal.marketing.saleTitle,
+    saleDescription: deal.marketing.saleDescription,
+    askingPrice: deal.financials.askingPrice || null,
+    // Nothing has been reviewed yet outside the gate.
+    aiDocsAllReviewed: aiDocs.length === 0,
+    websiteReviewed: false,
+  }
+}
+
+/**
+ * Which Approve & Publish requirements a deal has not yet satisfied. Used to warn
+ * on deals created directly in a live stage (Active/Under Contract) without
+ * having gone through the publish gate.
+ */
+export function publishReadiness(
+  deal: Listing,
+): { ready: boolean; missing: RequiredField[] } {
+  const config = resolveGate('proposal', 'active', deal.dealType)
+  const form = seedGateForm(deal)
+  const missing = config.required.filter((f) => !fieldSatisfied(f, form))
+  return { ready: missing.length === 0, missing }
 }
 
 export function resolveGate(

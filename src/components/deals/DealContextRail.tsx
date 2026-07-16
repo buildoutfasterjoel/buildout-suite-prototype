@@ -26,6 +26,7 @@ import {
   getRefId,
 } from "#/components/properties/propertyDisplay";
 import { initials } from "./dealDisplay";
+import { UNDERWRITING_TOTAL } from "./UnderwritingDepth";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 
 function iconForFile(name: string): IconDefinition {
@@ -186,6 +187,24 @@ export function DealContextRail({ listing }: { listing: Listing }) {
   return (
     <div>
       <FilesSection documents={documents} />
+
+      {listing.underwriting && (
+        <>
+          <Separator />
+          <Card.Body>
+            <div className="d-flex align-items-center justify-content-between">
+              <h6 className="mb-0">Underwriting</h6>
+              <Badge variant="secondary" appearance="accent">
+                {listing.underwriting.tier}
+              </Badge>
+            </div>
+            <div className="text-muted fs-small mt-1">
+              {listing.underwriting.selectedChecks.length} of {UNDERWRITING_TOTAL}{" "}
+              checks
+            </div>
+          </Card.Body>
+        </>
+      )}
 
       <Separator />
 
