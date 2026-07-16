@@ -1,35 +1,81 @@
+import { useMemo, useRef, useState } from "react";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
-import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faCalendar } from "@fortawesome/pro-regular-svg-icons";
-import type { Contact } from "#/data/types";
-import { contactFullName } from "#/components/contacts/contactDisplay";
+import { faPlus } from "@fortawesome/pro-regular-svg-icons";
+import type { Contact, ContactTask } from "#/data/types";
+import { ContactTaskCard } from "#/components/contacts/ContactTaskCard";
+
+/** A task plus its resolved completion state and completion order for sorting. */
+interface TaskRow {
+  task: ContactTask;
+  done: boolean;
+  /** Sequence in which the user completed it this session; -1 if not this session. */
+  seq: number;
+}
 
 /**
- * Right column of the contact detail page: the contact's open tasks.
+ * Right column of the contact detail page: the contact's open tasks, aggregated
+ * across their deals, each rendered as a {@link ContactTaskCard}.
  *
- * Structural placeholder for now — per-contact task records don't exist yet
- * (tasks are deal-level), so this shows a stub open-task list sized to the
- * aggregate `openTaskCount` plus a completed-tasks toggle. Real task data and
- * styling come in a later pass.
+ * Completing an active task moves it out of the active list into the completed
+ * set (most-recently-completed first). Completed tasks live behind a toggle in a
+ * bar pinned to the bottom of the card; the bar hides entirely when there are no
+ * completed tasks.
  */
 export function ContactTasksPanel({
-  contact,
-  openTaskCount,
+  contact: _contact,
+  tasks,
+  completedTasks,
 }: {
   contact: Contact;
-  openTaskCount: number;
+  tasks: ContactTask[];
+  completedTasks: ContactTask[];
 }) {
-  // Stub rows so the structure is visible; capped at the real open count.
-  const stubCount = Math.min(openTaskCount, 3);
-  const stubs = Array.from({ length: stubCount }, (_, i) => i);
-  const name = contactFullName(contact);
+  const [showCompleted, setShowCompleted] = useState(false);
+  // Per-session completion overrides, keyed by task id → { done, seq }. Seq
+  // orders the completed list so the most recently checked task sorts first.
+  const [overrides, setOverrides] = useState<
+    Record<string, { done: boolean; seq: number }>
+  >({});
+  const seqRef = useRef(0);
+
+  const toggle = (task: ContactTask, baseDone: boolean) => {
+    const seq = seqRef.current++;
+    setOverrides((prev) => {
+      const currentlyDone = prev[task.id]?.done ?? baseDone;
+      return { ...prev, [task.id]: { done: !currentlyDone, seq } };
+    });
+  };
+
+  // Resolve every task's current done state from its base status + overrides.
+  const rows: TaskRow[] = useMemo(() => {
+    const base = [
+      ...tasks.map((task) => ({ task, baseDone: false })),
+      ...completedTasks.map((task) => ({ task, baseDone: true })),
+    ];
+    return base.map(({ task, baseDone }) => {
+      const o = overrides[task.id];
+      return { task, done: o ? o.done : baseDone, seq: o ? o.seq : -1 };
+    });
+  }, [tasks, completedTasks, overrides]);
+
+  // Active tasks keep source order; completed tasks sort most-recently-completed
+  // first (session completions by seq desc, then pre-existing by due date desc).
+  const active = rows.filter((r) => !r.done);
+  const completed = rows
+    .filter((r) => r.done)
+    .sort((a, b) => {
+      if (a.seq !== b.seq) return b.seq - a.seq;
+      return (b.task.date ?? "").localeCompare(a.task.date ?? "");
+    });
+
+  const hasCompleted = completed.length > 0;
 
   return (
     <Card className="shadow-sm d-flex flex-column h-100 overflow-hidden">
-      <Card.Body className="d-flex flex-column gap-3 overflow-hidden">
+      <Card.Body className="d-flex flex-column gap-3 overflow-hidden flex-grow-1">
         <div className="d-flex align-items-center justify-content-between gap-2">
           <Card.Title
             className="fw-semibold d-inline-flex align-items-center gap-2 mb-0"
@@ -37,7 +83,7 @@ export function ContactTasksPanel({
           >
             Tasks
             <Badge variant="secondary" appearance="muted">
-              {openTaskCount}
+              {active.length}
             </Badge>
           </Card.Title>
           <Button variant="ghost" size="icon-sm" aria-label="Add task">
@@ -45,37 +91,49 @@ export function ContactTasksPanel({
           </Button>
         </div>
 
-        <div className="d-flex flex-column gap-2 overflow-auto">
-          {stubs.length === 0 ? (
+        <div className="d-flex flex-column gap-2 overflow-auto flex-grow-1">
+          {active.length === 0 && !showCompleted ? (
             <span className="text-muted fs-small">
               No open tasks — AI queues them after your next call or email.
             </span>
           ) : (
-            stubs.map((i) => (
-              <div
-                key={i}
-                className="d-flex align-items-start gap-2 border rounded p-2"
-              >
-                <Checkbox aria-label="Complete task" />
-                <div className="flex-grow-1" style={{ minWidth: 0 }}>
-                  <div className="fw-semibold lh-sm">
-                    Confirm {name}&apos;s valuation cap before the listing window
-                    closes
-                  </div>
-                  <div className="text-muted fs-small mt-1 d-inline-flex align-items-center gap-1">
-                    <FontAwesomeIcon icon={faCalendar} />
-                    Due soon
-                  </div>
-                </div>
-              </div>
+            active.map((r) => (
+              <ContactTaskCard
+                key={r.task.id}
+                task={r.task}
+                done={false}
+                onToggle={() => toggle(r.task, false)}
+              />
             ))
           )}
 
-          <Button variant="ghost" className="w-100 mt-1">
-            Show Completed Tasks
-          </Button>
+          {showCompleted &&
+            completed.map((r) => (
+              <ContactTaskCard
+                key={r.task.id}
+                task={r.task}
+                done
+                onToggle={() => toggle(r.task, true)}
+              />
+            ))}
         </div>
       </Card.Body>
+
+      {hasCompleted && (
+        <div className="contact-tasks__completed-bar">
+          <Button
+            variant="ghost"
+            className="contact-tasks__completed-toggle w-100"
+            onClick={() => setShowCompleted((v) => !v)}
+          >
+            {showCompleted
+              ? "Hide Completed Tasks"
+              : `Show ${completed.length} Completed Task${
+                  completed.length === 1 ? "" : "s"
+                }`}
+          </Button>
+        </div>
+      )}
     </Card>
   );
 }

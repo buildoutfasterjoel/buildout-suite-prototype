@@ -316,6 +316,173 @@
     0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
+// Contact task card: mirrors the Figma "Task" component. A white, bordered,
+// 8px-radius card with the base shadow; a circular completion checkbox; the
+// task label; a due-date + source meta row; and right-aligned author/type
+// badges. Self-contained until Blueprint ships a Task component.
+.contact-task-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bp-card-bg, #fff);
+  border: 1px solid var(--color-storm-grey-100, #eceef2);
+  border-radius: 8px;
+  box-shadow:
+    0 1px 2px -1px rgba(0, 0, 0, 0.1),
+    0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.15s ease;
+
+  &:hover {
+    box-shadow:
+      0 2px 4px -2px rgba(0, 0, 0, 0.1),
+      0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  // Circular completion checkbox.
+  &__check {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bp-input-bg, #fff);
+    border: 1.5px solid var(--color-storm-grey-200, #d5dae2);
+    border-radius: 999px;
+    color: #fff;
+    font-size: 10px;
+    line-height: 1;
+    cursor: pointer;
+    transition:
+      background-color 0.12s ease,
+      border-color 0.12s ease;
+
+    &:hover {
+      background-color: var(--color-buildout-blue-50, #eff6ff);
+      border-color: var(--color-storm-grey-300, #afb9ca);
+    }
+
+    &[aria-checked="true"] {
+      background-color: var(--color-buildout-blue-500, #3f86f2);
+      border-color: var(--color-buildout-blue-500, #3f86f2);
+    }
+  }
+
+  // Task label.
+  &__label {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 19px;
+    color: var(--color-storm-grey-900, #22262f);
+    word-break: break-word;
+  }
+
+  // Due-date and source meta chips.
+  &__meta,
+  &__source {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    line-height: 16px;
+    white-space: nowrap;
+
+    svg {
+      font-size: 12px;
+    }
+  }
+
+  &__meta {
+    flex-shrink: 0;
+    color: var(--color-storm-grey-600, #506079);
+
+    svg {
+      color: var(--color-storm-grey-500, #62748e);
+    }
+
+    &--overdue {
+      color: var(--bp-destructive, #d92d20);
+
+      svg {
+        color: var(--bp-destructive, #d92d20);
+      }
+    }
+  }
+
+  &__source {
+    min-width: 0;
+    font-weight: 600;
+    color: var(--bp-link-color, #2042a7);
+    text-decoration: none;
+
+    svg {
+      flex-shrink: 0;
+      color: var(--color-storm-grey-500, #62748e);
+    }
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  // Small icon-only badge (AI-suggested sparkle, task type).
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border-radius: 6px;
+    font-size: 10px;
+    line-height: 1;
+  }
+
+  // Completed state: tint the card storm-grey-50, drop the shadow, mute + strike
+  // the label, and give the checkbox a soft buildout-blue-100 fill (no border).
+  &--done {
+    background: var(--color-storm-grey-50, #f6f7f9);
+    box-shadow: none;
+
+    &:hover {
+      box-shadow: none;
+    }
+
+    .contact-task-card__label {
+      color: var(--color-storm-grey-500, #62748e);
+      text-decoration: line-through;
+    }
+
+    .contact-task-card__check,
+    .contact-task-card__check[aria-checked="true"] {
+      background-color: var(--color-buildout-blue-100, #dcebfd);
+      border-color: transparent;
+      color: var(--color-buildout-blue-800, #203d88);
+    }
+  }
+}
+
+// Tasks card footer: the "Show N Completed Tasks" toggle, pinned below the
+// scrolling task list with a top divider (per Figma). Hidden by the panel when
+// there are no completed tasks.
+.contact-tasks__completed-bar {
+  flex-shrink: 0;
+  padding: 8px;
+  border-top: 1px solid var(--color-storm-grey-100, #eceef2);
+}
+.contact-tasks__completed-toggle {
+  height: 36px;
+  font-weight: 600;
+  // Ghost/purple, matching the design token (button/default/ghost/color).
+  color: var(--color-purple-heart-950, #360764);
+
+  &:hover {
+    color: var(--color-purple-heart-950, #360764);
+    background-color: var(--color-purple-heart-50, #f9f5ff);
+  }
+}
+
 // The expanded "Contact Details" panel in the hero: a tinted, bordered, rounded
 // container that sets the details apart from the white card behind it.
 .contact-details-panel {
