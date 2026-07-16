@@ -2,42 +2,66 @@ import { useMemo, useState } from "react";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
-import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
-import { Textarea } from "@buildoutinc/blueprint-react/ui/Textarea";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faPenToSquare,
   faPhone,
   faEnvelope,
-  faSquareCheck,
+  faNoteSticky,
+  faCalendar,
+  faBinoculars,
   faHandshake,
   faFlag,
 } from "@fortawesome/pro-regular-svg-icons";
 import { faSparkles } from "@fortawesome/pro-solid-svg-icons";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { Contact, DealSummary } from "#/data/types";
+import {
+  ContactComposeModule,
+  type ComposedDraft,
+} from "#/components/contacts/ContactComposeModule";
 import {
   buildActivity,
   buildBriefing,
   buildLastTouch,
+  medDate,
+  COMPOSE_TIMELINE_TITLE,
+  type ComposeKind,
+  type ComposedActivity,
 } from "#/components/contacts/contactDisplay";
-
-type EngageTab = "note" | "call" | "email" | "task";
-
-const COMPOSER: Record<EngageTab, { placeholder: (n: string) => string; cta: string }> = {
-  note: { placeholder: (n) => `Log a note about ${n}...`, cta: "Log note" },
-  call: { placeholder: (n) => `Log a call with ${n}...`, cta: "Log call" },
-  email: { placeholder: (n) => `Draft an email to ${n}...`, cta: "Send email" },
-  task: { placeholder: (n) => `Add a task for ${n}...`, cta: "Add task" },
-};
 
 type ActivityFilter = "all" | "calls" | "emails" | "notes";
 
-function medDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+/** Timeline avatar: icon + circle color (CSS-var hex) per logged kind. */
+const KIND_VISUAL: Record<ComposeKind, { icon: IconDefinition; color: string }> = {
+  note: { icon: faNoteSticky, color: "var(--color-purple-heart-500, #9f55f7)" },
+  call: { icon: faPhone, color: "var(--color-mountain-meadow-500, #00bc7d)" },
+  email: { icon: faEnvelope, color: "var(--color-buildout-blue-500, #3f86f2)" },
+  meeting: { icon: faCalendar, color: "var(--color-harvest-gold-500, #fd9a00)" },
+  tour: { icon: faBinoculars, color: "var(--color-seagull-500, #17a2b8)" },
+};
+
+const FILTER_KIND: Record<Exclude<ActivityFilter, "all">, ComposeKind> = {
+  calls: "call",
+  emails: "email",
+  notes: "note",
+};
+
+/** A circular icon badge used for every timeline row. */
+function TimelineIcon({
+  icon,
+  color,
+}: {
+  icon: IconDefinition;
+  color?: string;
+}) {
+  return (
+    <span
+      className="d-inline-flex align-items-center justify-content-center text-white flex-shrink-0 rounded-circle"
+      style={{ width: 32, height: 32, background: color ?? "#8495ac" }}
+    >
+      <FontAwesomeIcon icon={icon} />
+    </span>
+  );
 }
 
 export function ContactEngagementPanel({
@@ -47,62 +71,45 @@ export function ContactEngagementPanel({
   contact: Contact;
   deals: DealSummary[];
 }) {
-  const [tab, setTab] = useState<EngageTab>("note");
-  const [draft, setDraft] = useState("");
   const [filter, setFilter] = useState<ActivityFilter>("all");
+  // Activities logged this session, newest first (seq desc).
+  const [logged, setLogged] = useState<ComposedActivity[]>([]);
+  const [seq, setSeq] = useState(0);
 
   const activity = useMemo(() => buildActivity(contact, deals), [contact, deals]);
   const briefing = useMemo(() => buildBriefing(contact, deals), [contact, deals]);
   const lastTouch = useMemo(() => buildLastTouch(contact), [contact]);
 
-  // Synthesized activity is only "created"/"deal" — calls/emails/notes are empty.
-  const visibleActivity = filter === "all" ? activity : [];
-  const filters: { key: ActivityFilter; label: string; count: number }[] = [
-    { key: "all", label: "All", count: activity.length },
-    { key: "calls", label: "Calls", count: 0 },
-    { key: "emails", label: "Emails", count: 0 },
-    { key: "notes", label: "Notes", count: 0 },
+  function handleLog(draft: ComposedDraft) {
+    setLogged((prev) => [{ ...draft, id: `logged-${seq}`, seq }, ...prev]);
+    setSeq((s) => s + 1);
+  }
+
+  const counts: Record<ActivityFilter, number> = {
+    all: logged.length + activity.length,
+    calls: logged.filter((l) => l.kind === "call").length,
+    emails: logged.filter((l) => l.kind === "email").length,
+    notes: logged.filter((l) => l.kind === "note").length,
+  };
+  const filters: { key: ActivityFilter; label: string }[] = [
+    { key: "all", label: "All" },
+    { key: "calls", label: "Calls" },
+    { key: "emails", label: "Emails" },
+    { key: "notes", label: "Notes" },
   ];
+
+  // Logged items shown for the active filter (synthesized rows only under "All").
+  const visibleLogged =
+    filter === "all"
+      ? logged
+      : logged.filter((l) => l.kind === FILTER_KIND[filter]);
+  const showSynthesized = filter === "all";
+  const isEmpty = visibleLogged.length === 0 && !showSynthesized;
 
   return (
     <div className="d-flex flex-column gap-4">
       {/* Engagement composer */}
-      <Card className="shadow-sm">
-        <Card.Body className="d-flex flex-column gap-3">
-          <Tabs value={tab} onValueChange={(v) => setTab((v ?? "note") as EngageTab)}>
-            <Tabs.List>
-              <Tabs.Tab value="note" icon={<FontAwesomeIcon icon={faPenToSquare} />}>
-                Note
-              </Tabs.Tab>
-              <Tabs.Tab value="call" icon={<FontAwesomeIcon icon={faPhone} />}>
-                Call
-              </Tabs.Tab>
-              <Tabs.Tab value="email" icon={<FontAwesomeIcon icon={faEnvelope} />}>
-                Email
-              </Tabs.Tab>
-              <Tabs.Tab value="task" icon={<FontAwesomeIcon icon={faSquareCheck} />}>
-                Task
-              </Tabs.Tab>
-            </Tabs.List>
-          </Tabs>
-
-          <Textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder={COMPOSER[tab].placeholder(contact.firstName)}
-            rows={3}
-          />
-
-          <div className="d-flex align-items-center justify-content-between">
-            <span className="text-muted fs-small">
-              Private to you and anyone you're sharing with
-            </span>
-            <Button variant="primary" onClick={() => setDraft("")}>
-              {COMPOSER[tab].cta}
-            </Button>
-          </div>
-        </Card.Body>
-      </Card>
+      <ContactComposeModule contact={contact} deals={deals} onSubmit={handleLog} />
 
       {/* Activity */}
       <Card className="shadow-sm">
@@ -114,7 +121,7 @@ export function ContactEngagementPanel({
             >
               Activity
               <Badge variant="secondary" appearance="muted" className="fs-xs">
-                {activity.length}
+                {counts.all}
               </Badge>
             </Card.Title>
             <div className="d-flex align-items-center gap-1">
@@ -126,7 +133,7 @@ export function ContactEngagementPanel({
                   className={filter === f.key ? "active" : undefined}
                   onClick={() => setFilter(f.key)}
                 >
-                  {f.label} <span className="text-muted ms-1">{f.count}</span>
+                  {f.label} <span className="text-muted ms-1">{counts[f.key]}</span>
                 </Button>
               ))}
             </div>
@@ -159,31 +166,64 @@ export function ContactEngagementPanel({
             <p className="mb-0">{briefing}</p>
           </div>
 
-          {visibleActivity.length === 0 ? (
+          {isEmpty ? (
             <span className="text-muted fs-small">No activity to show.</span>
           ) : (
-            <>
-              <span className="text-muted fs-small">This week</span>
-              {visibleActivity.map((a, i) => (
-                <div key={i} className="d-flex align-items-center gap-3">
-                  <span
-                    className={`rounded-circle d-inline-flex align-items-center justify-content-center text-white flex-shrink-0 ${
-                      a.kind === "deal" ? "bg-buildout-blue-500" : "bg-storm-grey-400"
-                    }`}
-                    style={{ width: 32, height: 32 }}
-                  >
-                    <FontAwesomeIcon icon={a.kind === "deal" ? faHandshake : faFlag} />
-                  </span>
-                  <span className="flex-grow-1">{a.label}</span>
-                  <span className="text-muted fs-small text-nowrap">
-                    {medDate(a.date)}
-                  </span>
-                </div>
+            <div className="d-flex flex-column gap-3">
+              {visibleLogged.map((l) => (
+                <LoggedRow key={l.id} entry={l} />
               ))}
-            </>
+              {showSynthesized &&
+                activity.map((a, i) => (
+                  <div key={`synth-${i}`} className="d-flex align-items-center gap-3">
+                    <TimelineIcon
+                      icon={a.kind === "deal" ? faHandshake : faFlag}
+                      color={
+                        a.kind === "deal"
+                          ? "var(--color-buildout-blue-500, #3f86f2)"
+                          : "#8495ac"
+                      }
+                    />
+                    <span className="flex-grow-1">{a.label}</span>
+                    <span className="text-muted fs-small text-nowrap">
+                      {medDate(a.date)}
+                    </span>
+                  </div>
+                ))}
+            </div>
           )}
         </Card.Body>
       </Card>
+    </div>
+  );
+}
+
+/** One logged-activity row in the timeline. */
+function LoggedRow({ entry }: { entry: ComposedActivity }) {
+  const visual = KIND_VISUAL[entry.kind];
+  const secondary =
+    entry.kind === "email" && entry.subject ? entry.subject : entry.body;
+  return (
+    <div className="d-flex align-items-start gap-3">
+      <TimelineIcon icon={visual.icon} color={visual.color} />
+      <div className="flex-grow-1 min-w-0">
+        <div className="d-flex align-items-center gap-2 flex-wrap">
+          <span className="fw-semibold">{COMPOSE_TIMELINE_TITLE[entry.kind]}</span>
+          {entry.outcome && (
+            <Badge variant="secondary" appearance="muted" className="fs-xs">
+              {entry.outcome}
+            </Badge>
+          )}
+          {entry.relatedDeal && (
+            <span className="text-muted fs-small d-inline-flex align-items-center gap-1">
+              <FontAwesomeIcon icon={faHandshake} />
+              {entry.relatedDeal}
+            </span>
+          )}
+        </div>
+        {secondary && <p className="mb-0 text-body-secondary">{secondary}</p>}
+      </div>
+      <span className="text-muted fs-small text-nowrap">{medDate(entry.date)}</span>
     </div>
   );
 }
