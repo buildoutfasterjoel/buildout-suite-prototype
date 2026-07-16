@@ -68,7 +68,18 @@ then customizes it per space — so the broker designs once and gets pre-styled 
 
 ### Starting a lease deal (extend `CreateDealModal`)
 
-1. Broker picks **Landlord (Listing)** side + **Lease** type + a **Property** (source of truth).
+Today `CreateDealModal` only picks a **side** (Listing/Buyer) — it never sets `dealType` at all. So the
+deal-type choice is introduced here:
+
+- **Pill tabs at the very top of the modal** — **Sale** vs **Lease** — above everything else, framing
+  the whole form. Selecting the tab sets `dealType` and drives which downstream fields the modal shows
+  (e.g. Lease surfaces lease-standard terms; Sale keeps the existing sale fields). Default follows the
+  existing behavior (Sale) unless we decide otherwise at build.
+
+Flow:
+
+1. Broker picks the **Sale/Lease** pill (→ Lease), then **Landlord (Listing)** side + a **Property**
+   (source of truth).
 2. Deal is created **flat** at Pitching: `parentDealId: null`, `unitId: null` (whole property). Not yet
    an umbrella.
 3. Broker fills whole-property representation fields and builds marketing in the editor — this is the
