@@ -197,16 +197,77 @@ export function buildActivity(
   return entries;
 }
 
-/** A one-to-two sentence AI-style briefing for the contact. */
+/** Coarse "Nd ago" relative label from an ISO timestamp. */
+function relativeAge(iso: string): string {
+  const days = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 86_400_000));
+  if (days === 0) return "today";
+  if (days === 1) return "1d ago";
+  if (days < 30) return `${days}d ago`;
+  const weeks = Math.round(days / 7);
+  if (days < 60) return `${weeks}w ago`;
+  return `${Math.round(days / 30)}mo ago`;
+}
+
+/** Short "Last touch" label for the briefing header, e.g. "Task created 1d ago". */
+export function buildLastTouch(c: Contact): string {
+  return `${c.lastTouch} ${relativeAge(c.lastContactedAt ?? c.createdAt)}`;
+}
+
+/**
+ * Situation line — how we know them and where the relationship stands. Keyed off
+ * the relationship stage; `{source}` is filled with the (lowercased) contact source.
+ */
+const SITUATION_BY_RELATIONSHIP: Record<RelationshipStage, string> = {
+  cold: "Sourced via {source} and still cold — no real relationship yet, so the first job is simply earning a genuine conversation.",
+  nurturing:
+    "Sourced via {source}; in active nurture with rapport building, but not yet ready to transact.",
+  pitching:
+    "Mid-pitch and weighing our positioning against other brokers — trust-building is what moves this forward.",
+  client:
+    "An engaged client with an established working relationship and a track record of transacting with us.",
+  past_client:
+    "A past client whose closed history makes them a strong candidate for repeat business.",
+};
+
+/** "Why now" line — the live reason to reach out, derived from deal posture. */
+function buildWhyNow(c: Contact, deals: DealSummary[]): string {
+  const deal = deals[0];
+  if (deal) {
+    switch (deal.status) {
+      case "under-contract":
+        return `Why now: ${deal.name} is under contract — the close window is short and momentum matters.`;
+      case "active":
+        return c.side === "buyer"
+          ? `Why now: actively hunting for the right asset and ready to move the moment one surfaces.`
+          : `Why now: ${deal.name} is on the market and they want to transact before conditions shift.`;
+      case "proposal":
+        return `Why now: the decision to bring ${deal.name} to market this cycle is live and still up for grabs.`;
+      case "closed":
+        return `Why now: ${deal.name} just closed — timing is right to tee up the next move.`;
+    }
+  }
+  return c.inquiries > 0
+    ? `Why now: ${c.inquiries} open inquir${c.inquiries === 1 ? "y" : "ies"} signal fresh interest worth a fast follow-up.`
+    : `Why now: no live deal yet — the opening is to surface a need before a competitor does.`;
+}
+
+/** "Where we left off" line — recaps the last touch, or flags a cold start. */
+function buildLeftOff(c: Contact): string {
+  const touch = c.lastTouch.toLowerCase();
+  return c.lastContactedAt
+    ? `Where we left off ${relativeAge(c.lastContactedAt)}: ${touch}.`
+    : `Not yet directly contacted — ${touch} is the only footprint so far.`;
+}
+
+/**
+ * A short, narrative AI-style briefing for the contact, built in four beats:
+ * identity · situation · why-now · where-we-left-off.
+ */
 export function buildBriefing(c: Contact, deals: DealSummary[]): string {
-  const rel = RELATIONSHIP_DISPLAY[c.relationship].label;
-  const sidePart = c.side
-    ? ` on the ${SIDE_DISPLAY[c.side].label.toLowerCase()} side`
-    : "";
-  const dealPart = deals.length
-    ? ` Tracking ${deals.length} deal${deals.length > 1 ? "s" : ""}: ${deals
-        .map((d) => d.name)
-        .join(", ")}.`
-    : "";
-  return `${contactFullName(c)}, ${c.title} at ${c.company}. ${rel} relationship${sidePart}, sourced via ${c.source.toLowerCase()}.${dealPart}`;
+  const identity = `${contactFullName(c)}, ${c.title} at ${c.company}.`;
+  const situation = SITUATION_BY_RELATIONSHIP[c.relationship].replace(
+    "{source}",
+    c.source.toLowerCase(),
+  );
+  return [identity, situation, buildWhyNow(c, deals), buildLeftOff(c)].join(" ");
 }
