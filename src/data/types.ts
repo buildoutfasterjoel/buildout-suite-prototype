@@ -240,6 +240,9 @@ export interface Listing {
   /** Context files attached when the deal was created (OMs, financials, notes). */
   documents?: DealDocument[]
 
+  /** The underwriting scope chosen at deal creation — a heads-up of what's coming. */
+  underwriting?: DealUnderwriting
+
   /** Broker-only notes on this engagement — never published. */
   internalNotes: string
 
@@ -256,6 +259,14 @@ export interface DealDocument {
   size?: string
   /** True when Buildout auto-generated this document — the publish gate requires review of these. */
   aiGenerated?: boolean
+}
+
+/** The underwriting scope chosen for a deal at creation (depth tier + which checks). */
+export interface DealUnderwriting {
+  /** Depth tier label — "Rapid Screen" | "Standard" | "Deep Dive" | "Institutional" | "None". */
+  tier: string
+  /** Indices (into the underwriting-checks list) selected for this deal. */
+  selectedChecks: number[]
 }
 
 /** A folder or file in a deal's internal Files workspace (the "lite Dropbox" page). */

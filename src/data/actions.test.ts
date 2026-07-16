@@ -14,6 +14,7 @@ import {
   updateDealTransaction,
 } from './actions'
 import { emptyDraft } from './createListing'
+import { publishReadiness } from './stageGates'
 import { listContactsForDeal } from './selectors'
 import { setNotifier } from '#/lib/notify'
 
@@ -95,14 +96,42 @@ describe('actions', () => {
     expect(stored?.propertyIds).toEqual([])
   })
 
-  it('createDeal starts unpublished with AI-generated starter documents', () => {
+  it('createDeal starts in Pitching, unpublished, with the default suggested documents', () => {
     const draft = { ...emptyDraft(), name: 'Gate Test', address: '9 Gate St' }
     const { deal } = createDeal(draft)
-    // A brand-new proposal is not published.
+    // A brand-new proposal starts in Pitching and is not published.
+    expect(deal.status).toBe('proposal')
     expect(deal.publishedAt).toBeNull()
-    // The auto-generated starter docs are flagged so the publish gate can require review.
+    // With no explicit selection, the default suggested docs are generated (all AI-flagged).
     expect(deal.documents?.length ?? 0).toBeGreaterThan(0)
     expect(deal.documents?.every((d) => d.aiGenerated === true)).toBe(true)
+  })
+
+  it('createDeal honors an explicit suggested-documents selection', () => {
+    const draft = { ...emptyDraft(), name: 'No Docs', address: '1 Empty Way', suggestedDocuments: [] }
+    const { deal } = createDeal(draft)
+    // An explicit empty selection generates no documents (no fallback).
+    expect(deal.documents?.length ?? 0).toBe(0)
+  })
+
+  it('createDeal can start a deal directly in a live stage, still unpublished and not publish-ready', () => {
+    const draft = { ...emptyDraft(), name: 'In Flight', address: '5 Active Blvd', initialStage: 'active' as const }
+    const { deal } = createDeal(draft)
+    expect(deal.status).toBe('active')
+    // Direct creation never publishes — that only happens through the gate.
+    expect(deal.publishedAt).toBeNull()
+    // Missing the publish-gate info, so it flags as not ready.
+    expect(publishReadiness(deal).ready).toBe(false)
+    expect(publishReadiness(deal).missing.length).toBeGreaterThan(0)
+    // History records the stage it was created under.
+    expect(deal.history.at(-1)).toMatchObject({ toStage: 'active' })
+  })
+
+  it('createDeal in Pitching leaves publishReadiness unqualified (no live-stage warning implied)', () => {
+    const draft = { ...emptyDraft(), name: 'Pitch Ready', address: '7 Pitch Rd' }
+    const { deal } = createDeal(draft)
+    // A freshly-created proposal has no listing content yet, so it is not publish-ready.
+    expect(publishReadiness(deal).ready).toBe(false)
   })
 
   it('commitStageTransition publishes on Pitching → Active and logs history', () => {

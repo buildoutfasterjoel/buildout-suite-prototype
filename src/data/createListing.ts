@@ -3,11 +3,13 @@ import type {
   Property,
   PropertyType,
   PropertySubtype,
+  PropertyStatus,
   DealType,
   DealSide,
   DealBroker,
   DealDocument,
   DealTask,
+  DealUnderwriting,
   SpaceLeaseTerms,
 } from './types'
 
@@ -86,9 +88,42 @@ export interface NewListingDraft {
   sellerContactId: string
   /** The CRM contact the broker represents on a buy-side deal — empty until chosen. */
   buyerContactId: string
-  /** Context files attached in the create-deal flow. */
+  /** Lifecycle stage to create the deal in. Defaults to `proposal` (Pitching). */
+  initialStage: PropertyStatus
+  /** Context files the broker uploaded in the create-deal flow. */
   documents: DealDocument[]
+  /**
+   * The documents chosen from the suggested catalog (each `aiGenerated`). When
+   * omitted (non-modal callers/tests), the default suggested set is generated.
+   */
+  suggestedDocuments?: DealDocument[]
+  /** The underwriting scope chosen at creation. */
+  underwriting?: DealUnderwriting
 }
+
+/** A candidate document Buildout suggests when a deal is created. */
+export interface SuggestedDocument {
+  key: string
+  name: string
+  /** Pre-checked by default in the create-deal flow. */
+  defaultOn: boolean
+  /** Auto-checked once the chosen underwriting depth reaches this many checks. */
+  minChecks?: number
+}
+
+/**
+ * The imagined "firm playbook" of documents Buildout suggests for a new deal —
+ * some always recommended, some that turn on as the underwriting depth deepens.
+ * In production this would be driven by company defaults and similar past deals.
+ */
+export const SUGGESTED_DOCUMENTS: SuggestedDocument[] = [
+  { key: 'om', name: 'Offering Memorandum', defaultOn: true },
+  { key: 'rent-roll', name: 'Rent Roll 2026', defaultOn: true },
+  { key: 'bov', name: "Broker's Opinion of Value", defaultOn: true },
+  { key: 't12', name: 'T-12 Operating Statement', defaultOn: false, minChecks: 6 },
+  { key: 'phase-1', name: 'Environmental Phase I', defaultOn: false, minChecks: 9 },
+  { key: 'sensitivity', name: 'Sensitivity Analysis', defaultOn: false, minChecks: 12 },
+]
 
 /** A sensible blank draft to seed the manual-entry form. */
 export function emptyDraft(): NewListingDraft {
@@ -108,6 +143,7 @@ export function emptyDraft(): NewListingDraft {
     dealSide: 'seller',
     sellerContactId: '',
     buyerContactId: '',
+    initialStage: 'proposal',
     documents: [],
   }
 }
@@ -150,7 +186,7 @@ function buildStubProperty(draft: NewListingDraft, now: string): Property {
     id,
     name: draft.name || draft.address,
     slug,
-    status: 'proposal',
+    status: draft.initialStage,
 
     propertyType: draft.propertyType,
     propertySubtype: DEFAULT_SUBTYPE[draft.propertyType],
@@ -284,7 +320,10 @@ function shiftDate(now: string, days: number): string {
  * the operational tasks that move the listing to market are queued up with dates.
  * This is what gives a brand-new proposal an immediate sense of momentum.
  */
-function seedProposalPlan(now: string): DealTask[] {
+function seedProposalPlan(
+  now: string,
+  opts: { underwritingTier?: string; includeBov: boolean },
+): DealTask[] {
   const auto = (label: string, detail: string): DealTask => ({
     id: crypto.randomUUID(),
     label,
@@ -311,10 +350,18 @@ function seedProposalPlan(now: string): DealTask[] {
     hasAttachment: false,
   })
 
+  const underwriteDetail =
+    opts.underwritingTier && opts.underwritingTier !== 'None'
+      ? `${opts.underwritingTier} underwrite complete`
+      : 'First-pass underwrite complete'
+
   return [
-    auto('Underwriting', 'First-pass underwrite complete'),
+    auto('Underwriting', underwriteDetail),
     auto('Listing proposal', 'Generated automatically'),
-    auto("Broker's Opinion of Value", 'Generated automatically'),
+    // The BOV auto-task only appears when the broker kept the BOV document.
+    ...(opts.includeBov
+      ? [auto("Broker's Opinion of Value", 'Generated automatically')]
+      : []),
     todo('Upload executed listing agreement', 2, 'RP'),
     todo('Order professional photography', 3, 'MB'),
     todo('Order property signage', 5, 'RP'),
@@ -322,24 +369,14 @@ function seedProposalPlan(now: string): DealTask[] {
   ]
 }
 
-/** Draft documents Buildout generates alongside the starter plan. */
+/** The default suggested documents — the catalog's `defaultOn` entries. */
 function seedProposalDocuments(now: string): DealDocument[] {
-  return [
-    {
-      id: crypto.randomUUID(),
-      name: 'Offering-Memorandum.pdf',
-      uploadedAt: now,
-      size: '2.3 MB',
-      aiGenerated: true,
-    },
-    {
-      id: crypto.randomUUID(),
-      name: 'Rent-Roll-2026.xlsx',
-      uploadedAt: now,
-      size: '86 KB',
-      aiGenerated: true,
-    },
-  ]
+  return SUGGESTED_DOCUMENTS.filter((d) => d.defaultOn).map((d) => ({
+    id: crypto.randomUUID(),
+    name: d.name,
+    uploadedAt: now,
+    aiGenerated: true,
+  }))
 }
 
 /**
@@ -391,10 +428,16 @@ export function createProposalListing(draft: NewListingDraft): Listing {
       : undefined
   const primaryContact = seller ?? buyer
 
-  // Buildout auto-generates a starter plan + draft docs so the broker has
+  // Buildout generates the docs the broker chose (falling back to the default
+  // suggested set for non-modal callers) plus a starter plan, so there's
   // something to act on the instant the deal is created.
-  const tasks = seedProposalPlan(now)
-  const documents = [...seedProposalDocuments(now), ...draft.documents]
+  const suggested = draft.suggestedDocuments ?? seedProposalDocuments(now)
+  const documents = [...suggested, ...draft.documents]
+  const includeBov = suggested.some((d) => /opinion.of.value/i.test(d.name))
+  const tasks = seedProposalPlan(now, {
+    underwritingTier: draft.underwriting?.tier,
+    includeBov,
+  })
   const nextCriticalDate =
     tasks.find((t) => t.status !== 'complete' && t.date)?.date ?? null
 
@@ -403,7 +446,9 @@ export function createProposalListing(draft: NewListingDraft): Listing {
     propertyId: property.id,
     name,
     slug,
-    status: 'proposal',
+    status: draft.initialStage,
+    // A directly-created deal is never published — even when started past
+    // Pitching, publishing happens only through the Approve & Publish gate.
     publishedAt: null,
     dealType: draft.dealType,
     dealSide: draft.dealSide,
@@ -424,12 +469,13 @@ export function createProposalListing(draft: NewListingDraft): Listing {
         id: crypto.randomUUID(),
         label: 'Created under',
         fromStage: null,
-        toStage: 'proposal',
+        toStage: draft.initialStage,
         actor: 'You (Listing Broker)',
         timestamp: now,
       },
     ],
     documents,
+    underwriting: draft.underwriting,
     financials: {
       askingPrice: draft.listingPrice,
       askingPriceUnits: 'total',

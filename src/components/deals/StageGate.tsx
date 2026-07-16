@@ -28,6 +28,8 @@ import {
   resolveGate,
   canConfirm,
   buildTransitionInput,
+  seedGateForm,
+  EMPTY_GATE_FORM,
   type GateFormState,
 } from "#/data/stageGates";
 import { commitStageTransition } from "#/data/actions";
@@ -37,26 +39,6 @@ import {
   commissionAmountFromPct,
   commissionPctFromAmount,
 } from "#/data/commission";
-import { UnderwritingDepth } from "./UnderwritingDepth";
-
-const EMPTY_FORM: GateFormState = {
-  buyerLinked: false,
-  listedOnDate: null,
-  listingExpirationDate: null,
-  contractExecutedDate: null,
-  closeDate: null,
-  salePrice: null,
-  commissionAmount: null,
-  commissionPct: null,
-  deadReason: null,
-  aiDocsAllReviewed: true,
-  websiteReviewed: false,
-  unpublishOnExit: true,
-  buyerContactId: null,
-  saleTitle: "",
-  saleDescription: "",
-  askingPrice: null,
-};
 
 const DATE_FORMAT: Intl.DateTimeFormatOptions = {
   year: "numeric",
@@ -136,42 +118,42 @@ export function StageGate({
   open,
   onOpenChange,
   onCommitted,
+  completeSetup = false,
 }: {
   dealId: string;
   targetStage: PropertyStatus;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCommitted?: () => void;
+  /**
+   * "Complete setup" mode for a deal created directly in a live stage: show the
+   * Approve & Publish gate and publish in place, without changing the stage.
+   */
+  completeSetup?: boolean;
 }) {
   const deal = getListing(dealId);
-  const config = useMemo(
-    () => (deal ? resolveGate(deal.status, targetStage, deal.dealType) : null),
-    [deal, targetStage],
-  );
+  const config = useMemo(() => {
+    if (!deal) return null;
+    if (completeSetup) {
+      // Reuse the publish gate's fields, but keep the current stage — this only
+      // captures the required info and sets publishedAt.
+      const publishGate = resolveGate("proposal", "active", deal.dealType);
+      return {
+        ...publishGate,
+        fromStage: deal.status,
+        targetStage: deal.status,
+        leavesActive: false,
+      };
+    }
+    return resolveGate(deal.status, targetStage, deal.dealType);
+  }, [deal, targetStage, completeSetup]);
 
   // Seed the working form from the deal each time the gate opens.
-  const initialForm = useMemo<GateFormState>(() => {
-    if (!deal) return EMPTY_FORM;
-    return {
-      ...EMPTY_FORM,
-      buyerLinked: deal.buyerContactIds.length > 0,
-      // Preselect a buyer already linked to the deal (Under Contract gate).
-      buyerContactId: deal.buyerContactIds[0] ?? null,
-      listedOnDate: deal.transaction.listedOnDate,
-      listingExpirationDate: deal.transaction.listingExpirationDate,
-      contractExecutedDate: deal.transaction.contractExecutedDate,
-      closeDate: deal.transaction.closeDate,
-      salePrice: deal.transaction.salePrice || null,
-      commissionAmount: deal.transaction.commissionAmount || null,
-      commissionPct: deal.transaction.commissionPct || null,
-      deadReason: deal.transaction.deadReason,
-      // Core listing content, prefilled so the broker edits in place.
-      saleTitle: deal.marketing.saleTitle,
-      saleDescription: deal.marketing.saleDescription,
-      askingPrice: deal.financials.askingPrice || null,
-    };
+  const initialForm = useMemo<GateFormState>(
+    () => (deal ? seedGateForm(deal) : EMPTY_GATE_FORM),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dealId, open]);
+    [dealId, open, completeSetup],
+  );
 
   const [form, setForm] = useState<GateFormState>(initialForm);
   const [reviewedDocIds, setReviewedDocIds] = useState<Set<string>>(new Set());
@@ -179,7 +161,7 @@ export function StageGate({
   // React "reset state during render when a key changes" pattern. All hooks are
   // declared above this point, so this stays before the early return.
   const [seededKey, setSeededKey] = useState("");
-  const key = `${dealId}:${targetStage}:${open}`;
+  const key = `${dealId}:${targetStage}:${completeSetup}:${open}`;
   if (open && key !== seededKey) {
     setForm(initialForm);
     setReviewedDocIds(new Set());
@@ -357,8 +339,6 @@ export function StageGate({
                       </a>
                     </Field.Description>
                   </Field>
-
-                  <UnderwritingDepth />
                 </>
               )}
 

@@ -9,11 +9,23 @@ import { commitStageTransition } from "#/data/actions";
  * which opens this gate for sell-side deals; the single GlobalStageGateModal
  * renders it. Mirrors `useOmniSearch` / `useCreateDeal`.
  */
+/**
+ * `transition` moves the deal to a new stage (normal gate); `complete` captures
+ * the Approve & Publish info for a deal created directly in a live stage,
+ * publishing it in place without changing the stage.
+ */
+type GateMode = "transition" | "complete";
+
 interface StageGateState {
   open: boolean;
   dealId: string | null;
   targetStage: PropertyStatus | null;
-  openGate: (dealId: string, targetStage: PropertyStatus) => void;
+  mode: GateMode;
+  openGate: (
+    dealId: string,
+    targetStage: PropertyStatus,
+    mode?: GateMode,
+  ) => void;
   close: () => void;
 }
 
@@ -21,8 +33,11 @@ export const useStageGate = create<StageGateState>((set) => ({
   open: false,
   dealId: null,
   targetStage: null,
-  openGate: (dealId, targetStage) => set({ open: true, dealId, targetStage }),
-  close: () => set({ open: false, dealId: null, targetStage: null }),
+  mode: "transition",
+  openGate: (dealId, targetStage, mode = "transition") =>
+    set({ open: true, dealId, targetStage, mode }),
+  close: () =>
+    set({ open: false, dealId: null, targetStage: null, mode: "transition" }),
 }));
 
 /**
@@ -46,4 +61,15 @@ export function requestStageChange(
     return;
   }
   useStageGate.getState().openGate(dealId, targetStage);
+}
+
+/**
+ * Open the Approve & Publish gate to finish setup on a deal that was created
+ * directly in a live stage (Active/Under Contract) and never published. Commits
+ * the required info and sets publishedAt without changing the stage.
+ */
+export function requestSetupCompletion(dealId: string): void {
+  const deal = getListing(dealId);
+  if (!deal) return;
+  useStageGate.getState().openGate(dealId, deal.status, "complete");
 }
