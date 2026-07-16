@@ -60,7 +60,7 @@ const NAV_GROUPS: NavGroup[] = [
 
 export function PropertyDetailSidebar() {
   const { pathname } = useLocation();
-  const { listingId } = useParams({ from: "/listings/$listingId" });
+  const { listingId } = useParams({ from: "/_shell/listings/$listingId" });
   const navigate = useNavigate();
 
   function handleTabChange(value: string) {
