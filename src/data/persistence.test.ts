@@ -11,6 +11,7 @@ const slice = (): DataSlice => ({
   dealFiles: new Map(),
   emails: new Map(),
   callLists: new Map(),
+  contactShares: new Map(),
 })
 
 describe('persistence', () => {

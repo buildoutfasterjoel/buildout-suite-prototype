@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
@@ -8,6 +9,9 @@ import { ContactDetailTopBar } from "#/components/contacts/ContactDetailTopBar";
 import { ContactOverviewColumn } from "#/components/contacts/ContactOverviewColumn";
 import { ContactEngagementPanel } from "#/components/contacts/ContactEngagementPanel";
 import { ContactTasksPanel } from "#/components/contacts/ContactTasksPanel";
+import { ShareContactModal } from "#/components/contacts/ShareContactModal";
+import { useContactShares } from "#/components/contacts/useContactShares";
+import { contactFullName } from "#/components/contacts/contactDisplay";
 
 export const Route = createFileRoute("/_shell/backoffice/contacts/$contactId")({
   component: ContactDetailPage,
@@ -45,6 +49,11 @@ function ContactNotFound() {
 function ContactDetailPage() {
   const { contactId } = Route.useParams();
   const detail = getContactDetailClient(contactId);
+  // Called before the early return to satisfy the rules of hooks. The sharing
+  // modal is owned here so both the top-bar Share button and the hero avatars
+  // can open it.
+  const access = useContactShares(contactId);
+  const [shareOpen, setShareOpen] = useState(false);
 
   if (!detail) return <ContactNotFound />;
 
@@ -56,7 +65,11 @@ function ContactDetailPage() {
       style={{ maxWidth: "96rem" }}
     >
       {/* Fixed top bar */}
-      <ContactDetailTopBar contact={contact} />
+      <ContactDetailTopBar
+        contact={contact}
+        access={access}
+        onOpenShare={() => setShareOpen(true)}
+      />
 
       {/* Full-height 3-column row; each column scrolls independently and the
           page itself never scrolls. */}
@@ -65,7 +78,12 @@ function ContactDetailPage() {
           className="flex-shrink-0 h-100 overflow-auto"
           style={{ width: 380 }}
         >
-          <ContactOverviewColumn contact={contact} deals={deals} />
+          <ContactOverviewColumn
+            contact={contact}
+            deals={deals}
+            shares={access.shares}
+            onOpenShare={() => setShareOpen(true)}
+          />
         </div>
         <div className="flex-grow-1 h-100 overflow-auto">
           <ContactEngagementPanel contact={contact} deals={deals} />
@@ -81,6 +99,16 @@ function ContactDetailPage() {
           />
         </div>
       </div>
+
+      <ShareContactModal
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        contactName={contactFullName(contact)}
+        shares={access.shares}
+        onShare={access.grant}
+        onChangeTier={access.changeTier}
+        onRemove={access.revoke}
+      />
     </div>
   );
 }

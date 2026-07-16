@@ -502,13 +502,46 @@
   z-index: 5;
 }
 
-// Owner avatar in the contact hero's shared-access cluster: an offset outline.
+// Owner avatar in the shared-access clusters: an offset outline. Uses the
+// darkest storm-grey (not blue — a blue ring reads as a browser focus state).
 .contact-hero__owner-avatar {
   position: relative;
   z-index: 1;
   box-shadow:
     0 0 0 2px var(--bp-card-bg, #fff),
-    0 0 0 3.5px var(--color-buildout-blue-500, #3f86f2);
+    0 0 0 3.5px #{colors.$storm-grey-950};
+}
+
+// Collaborator avatars in the contact hero's access row (individual, not
+// stacked): a subtle storm-grey ring to separate them from the card.
+.contact-access-avatar {
+  box-shadow: 0 0 0 1px var(--color-storm-grey-500, #62748e);
+}
+
+// Hero access avatars double as a way into the sharing modal — signal that
+// they're clickable and lift slightly on hover/focus.
+.contact-hero__access {
+  cursor: pointer;
+  transition:
+    transform 0.12s ease-in-out,
+    filter 0.12s ease-in-out;
+  outline: none;
+
+  &:hover,
+  &:focus-visible {
+    transform: translateY(-1px);
+    filter: brightness(0.97);
+  }
+}
+
+// Access avatars nested inside the Share button: strip the group's pill
+// styling (drop shadow, padding, and white fill/border) so the stacked
+// avatars sit cleanly in place of the button's leading icon.
+.contact-share-avatars {
+  padding: 0;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
 }
 
 // Bulk-selection actions bar (People table): a tinted blue band that appears
@@ -593,5 +626,82 @@
   svg {
     font-size: 12px !important;
     height: 12px !important;
+  }
+}
+
+// ── Share-contact modal ──────────────────────────────────────────────────────
+
+// Typeahead results, floated below the add-people input.
+.share-modal__picker {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 10;
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--bp-card-bg, #fff);
+  border: 1px solid var(--color-storm-grey-100, #eceef2);
+  border-radius: var(--bp-border-radius-lg, 8px);
+  padding: 4px 0;
+}
+
+.share-modal__picker-row {
+  cursor: pointer;
+  transition: background-color 0.12s ease-in-out;
+
+  &:hover {
+    background: var(--color-storm-grey-50, #f6f7f9);
+  }
+}
+
+// The chip well in the "configure" step — mimics the focused add-people input,
+// wrapping selected-people chips plus a flush-typing input.
+.share-modal__chips {
+  min-height: 44px;
+  height: auto;
+  padding: 6px 8px;
+  cursor: text;
+
+  &:focus-within {
+    border-color: var(--color-buildout-blue-500, #3f86f2);
+    box-shadow: 0 0 0 0.2rem var(--color-buildout-blue-50, #eff6ff);
+  }
+}
+
+.share-modal__chip {
+  padding: 2px 4px 2px 4px;
+  background: var(--color-buildout-blue-50, #eff6ff);
+  border: 1px solid var(--color-buildout-blue-100, #d8e7fd);
+  border-radius: 999px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.share-modal__chip-remove {
+  color: var(--color-storm-grey-500, #6b7688);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--color-storm-grey-700, #3a4150);
+  }
+}
+
+.share-modal__chip-input {
+  min-width: 120px;
+  outline: none;
+
+  &::placeholder {
+    color: var(--color-storm-grey-400, #8b95a7);
+  }
+}
+
+// Access-tier radio rows — hover affordance across the whole label.
+.share-modal__tier {
+  cursor: pointer;
+  transition: background-color 0.12s ease-in-out;
+
+  &:hover {
+    background: var(--color-storm-grey-50, #f6f7f9);
   }
 }
