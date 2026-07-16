@@ -49,7 +49,7 @@ export function UnderwritingDepth() {
   const [selectedSet, setSelectedSet] = useState<Set<number>>(
     () => new Set([0, 1, 2, 3, 4, 5]),
   );
-  const [checksOpen, setChecksOpen] = useState(true);
+  const [checksOpen, setChecksOpen] = useState(false);
 
   const count = selectedSet.size;
   const tier = count === 0 ? "None" : tierForCount(count);
