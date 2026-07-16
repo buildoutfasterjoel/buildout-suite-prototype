@@ -4,11 +4,14 @@
 
 // Deal stage colors — sourced from Blueprint palette tokens, exposed as CSS
 // variables so components reference the tokens rather than hard-coded hex.
+// One canonical stage palette, matching the People module's pipeline colors:
+// Pitching = harvest-gold, Active = buildout-blue, Under Contract = purple-heart,
+// Closed = mountain-meadow, Lost = storm-grey.
 :root {
-  --stage-proposal: #{colors.$purple-heart-500};
-  --stage-active: #{colors.$mountain-meadow-500};
-  --stage-under-contract: #{colors.$harvest-gold-600};
-  --stage-closed: #{colors.$buildout-blue-600};
+  --stage-proposal: #{colors.$harvest-gold-500};
+  --stage-active: #{colors.$buildout-blue-500};
+  --stage-under-contract: #{colors.$purple-heart-500};
+  --stage-closed: #{colors.$mountain-meadow-500};
   --stage-inactive: #{colors.$storm-grey-500};
 
   // Deal side accents — distinct from the stage palette above.

@@ -32,8 +32,8 @@ export const STAGE_CHIP_COLORS: Record<
 
 /**
  * The deal-stage chip: a soft, family-colored pill with a leading dot and a
- * trailing caret that opens a stage picker. Selecting a stage is local/visual
- * for this prototype (no persistence).
+ * trailing caret that opens a stage picker. Controlled — the caller owns what a
+ * selection does (e.g. route it through `requestStageChange` to open the gate).
  */
 export function DealStageChip({
   value,

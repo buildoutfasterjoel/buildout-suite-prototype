@@ -1,6 +1,7 @@
 import { useDataStore } from './dataStore'
 import type { Comp, Contact, ContactDetail, ContactTask, DealSummary, Listing, Property, PropertyDetail, PropertyFinancialRecord, PropertyUnit } from './types'
 import { getContactsForProperty, getOwnersForProperty } from './store'
+import { dealStageFromStatus } from './contactStage'
 
 /** All contacts attached to a deal (seller + buyer + other), deduped. */
 export function listContactsForDeal(dealId: string): Contact[] {
@@ -24,6 +25,26 @@ export function listDealsForContact(contactId: string): Listing[] {
       l.buyerContactIds.includes(contactId) ||
       l.otherContactIds.includes(contactId),
   )
+}
+
+/**
+ * Count of active (non-lost) deals each contact is a party to, keyed by contact
+ * id. Powers the People table's "furthest stage + N more" deal-stage cell, so it
+ * counts the same deals that set the contact's `dealStage`.
+ */
+export function activeDealCountsByContact(): Map<string, number> {
+  const { listings } = useDataStore.getState()
+  const counts = new Map<string, number>()
+  for (const l of listings.values()) {
+    if (dealStageFromStatus(l.status) === null) continue // Lost deals are off-ladder
+    const ids = new Set([
+      ...l.sellerContactIds,
+      ...l.buyerContactIds,
+      ...l.otherContactIds,
+    ])
+    for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1)
+  }
+  return counts
 }
 
 /** All deals (listings) for a property. */
