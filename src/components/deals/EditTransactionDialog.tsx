@@ -3,6 +3,7 @@ import { Dialog } from "@buildoutinc/blueprint-react/ui/Dialog";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Field } from "@buildoutinc/blueprint-react/ui/Field";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
+import { CurrencyInput } from "#/components/common/CurrencyInput";
 import type { Listing } from "#/data/types";
 import { updateDealTransaction } from "#/data/actions";
 import { commissionAmountFromPct, commissionPctFromAmount } from "#/data/commission";
@@ -85,11 +86,7 @@ export function EditTransactionDialog({
             <div className="d-flex flex-column gap-3">
               <Field>
                 <Field.Label>Sale Price</Field.Label>
-                <Input
-                  type="number"
-                  value={form.salePrice ?? ""}
-                  onChange={(e) => setSalePrice(num(e))}
-                />
+                <CurrencyInput value={form.salePrice} onChange={setSalePrice} />
               </Field>
               <Field>
                 <Field.Label>Gross Commission %</Field.Label>
@@ -101,10 +98,9 @@ export function EditTransactionDialog({
               </Field>
               <Field>
                 <Field.Label>Gross Commission ($)</Field.Label>
-                <Input
-                  type="number"
-                  value={form.commissionAmount ?? ""}
-                  onChange={(e) => setCommissionAmount(num(e))}
+                <CurrencyInput
+                  value={form.commissionAmount}
+                  onChange={setCommissionAmount}
                 />
               </Field>
               <Field>

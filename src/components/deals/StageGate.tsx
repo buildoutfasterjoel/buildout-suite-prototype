@@ -32,6 +32,7 @@ import {
 } from "#/data/stageGates";
 import { commitStageTransition } from "#/data/actions";
 import { STATUS_LABELS } from "#/components/properties/propertyDisplay";
+import { CurrencyInput } from "#/components/common/CurrencyInput";
 import {
   commissionAmountFromPct,
   commissionPctFromAmount,
@@ -244,6 +245,11 @@ export function StageGate({
         .join(", ")
     : deal.name;
 
+  // Buyer options for the Under Contract gate. Also passed to the Select via
+  // `items` so the trigger renders the contact's name (label) rather than the
+  // raw id (value).
+  const buyerOptions = getSellerOptions(deal.propertyId);
+
   const confirmable = canConfirm(config, effectiveForm);
 
   const commit = () => {
@@ -335,20 +341,10 @@ export function StageGate({
 
                   <Field>
                     <Field.Label>Asking price</Field.Label>
-                    <InputGroup>
-                      <InputGroup.Addon>$</InputGroup.Addon>
-                      <Input
-                        type="number"
-                        value={form.askingPrice ?? ""}
-                        onChange={(e) =>
-                          set(
-                            "askingPrice",
-                            e.target.value ? Number(e.target.value) : null,
-                          )
-                        }
-                        placeholder="0"
-                      />
-                    </InputGroup>
+                    <CurrencyInput
+                      value={form.askingPrice}
+                      onChange={(v) => set("askingPrice", v)}
+                    />
                     <Field.Description>
                       Editing here updates the listing.{" "}
                       <a
@@ -436,6 +432,7 @@ export function StageGate({
                 <Field>
                   <Field.Label>Buyer</Field.Label>
                   <Select
+                    items={buyerOptions}
                     value={form.buyerContactId ?? ""}
                     onValueChange={(v) => {
                       set("buyerContactId", v || null);
@@ -449,7 +446,7 @@ export function StageGate({
                       <Select.Value placeholder="Select a buyer…" />
                     </Select.Trigger>
                     <Select.Content>
-                      {getSellerOptions(deal.propertyId).map((o) => (
+                      {buyerOptions.map((o) => (
                         <Select.Item key={o.value} value={o.value}>
                           {o.label}
                         </Select.Item>
@@ -484,15 +481,7 @@ export function StageGate({
               {req("salePrice") && (
                 <Field>
                   <Field.Label>Sale Price</Field.Label>
-                  <Input
-                    type="number"
-                    value={form.salePrice ?? ""}
-                    onChange={(e) =>
-                      setSalePrice(
-                        e.target.value ? Number(e.target.value) : null,
-                      )
-                    }
-                  />
+                  <CurrencyInput value={form.salePrice} onChange={setSalePrice} />
                 </Field>
               )}
 
@@ -514,14 +503,9 @@ export function StageGate({
               {req("commissionAmount") && (
                 <Field>
                   <Field.Label>Gross Commission ($)</Field.Label>
-                  <Input
-                    type="number"
-                    value={form.commissionAmount ?? ""}
-                    onChange={(e) =>
-                      setCommissionAmount(
-                        e.target.value ? Number(e.target.value) : null,
-                      )
-                    }
+                  <CurrencyInput
+                    value={form.commissionAmount}
+                    onChange={setCommissionAmount}
                   />
                 </Field>
               )}

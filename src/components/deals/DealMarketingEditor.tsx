@@ -606,17 +606,15 @@ function UnitLeaseCard({
 }) {
   return (
     <Accordion.Item value={unit.id}>
-      <Accordion.Trigger
-        render={
-          <span className="fw-semibold d-flex align-items-center gap-2">
-            <FontAwesomeIcon icon={faVectorSquare} className="text-muted" />
-            {unit.label}
-            <span className="text-muted fw-normal ms-1">
-              {unit.sqft.toLocaleString()} SF
-            </span>
+      <Accordion.Trigger>
+        <span className="fw-semibold d-flex align-items-center gap-2">
+          <FontAwesomeIcon icon={faVectorSquare} className="text-muted" />
+          {unit.label}
+          <span className="text-muted fw-normal ms-1">
+            {unit.sqft.toLocaleString()} SF
           </span>
-        }
-      />
+        </span>
+      </Accordion.Trigger>
       <Accordion.Content>
         <FieldGrid>
           <Col>
