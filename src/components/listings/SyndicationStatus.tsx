@@ -120,7 +120,7 @@ export function SyndicationStatus({ listing }: { listing: Listing }) {
               <Modal.Trigger
                 render={
                   <Button
-                    variant="secondary"
+                    variant="ghost"
                     size="icon-sm"
                     aria-label="Manage syndication"
                   >

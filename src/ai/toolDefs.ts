@@ -71,7 +71,7 @@ export const listDealsDef = toolDefinition({
     type: "object",
     properties: {
       status: { type: "string", enum: PROPERTY_STATUSES as unknown as string[] },
-      dealType: { type: "string", enum: ["Sale", "Lease", "Sale / Lease"] },
+      dealType: { type: "string", enum: ["Sale", "Lease"] },
       limit: { type: "number", description: "Max deals to return (default 50)." },
     },
     additionalProperties: false,

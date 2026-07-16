@@ -6,7 +6,7 @@ import {
   serializeContactFilters,
   type ContactFilterState,
 } from '#/components/contacts/contactFilterModel'
-import type { Contact, ContactRole, DealHistoryEntry, DealMarketing, Listing, PropertyStatus } from './types'
+import type { Contact, ContactRole, DealHistoryEntry, DealMarketing, DealTransaction, Listing, PropertyStatus } from './types'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
 import { notify } from '#/lib/notify'
 
@@ -112,6 +112,20 @@ export function updateDealMarketing(
     deal: patchListing(dealId, (l) => ({
       ...l,
       marketing: { ...l.marketing, ...patch },
+      updatedAt: new Date().toISOString(),
+    })),
+  }
+}
+
+/** Merge-patch the deal's transaction terms (price, commission %/$, close probability). */
+export function updateDealTransaction(
+  dealId: string,
+  patch: Partial<DealTransaction>,
+): { deal: Listing | null } {
+  return {
+    deal: patchListing(dealId, (l) => ({
+      ...l,
+      transaction: { ...l.transaction, ...patch },
       updatedAt: new Date().toISOString(),
     })),
   }

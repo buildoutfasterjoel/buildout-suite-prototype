@@ -11,6 +11,7 @@ import {
   updateDeal,
   updateDealMarketing,
   updateDealStage,
+  updateDealTransaction,
 } from './actions'
 import { emptyDraft } from './createListing'
 import { listContactsForDeal } from './selectors'
@@ -43,9 +44,9 @@ describe('actions', () => {
 
   it('updateDeal merges top-level deal fields', () => {
     const deal = [...useDataStore.getState().listings.values()][0]
-    const { deal: updated } = updateDeal(deal.id, { dealType: 'Sale / Lease' })
-    expect(updated?.dealType).toBe('Sale / Lease')
-    expect(useDataStore.getState().listings.get(deal.id)?.dealType).toBe('Sale / Lease')
+    const { deal: updated } = updateDeal(deal.id, { dealType: 'Lease' })
+    expect(updated?.dealType).toBe('Lease')
+    expect(useDataStore.getState().listings.get(deal.id)?.dealType).toBe('Lease')
   })
 
   it('createDeal inserts the new listing into the store', () => {
@@ -159,5 +160,22 @@ describe('actions', () => {
     } finally {
       setNotifier(null)
     }
+  })
+
+  it('updateDealTransaction merges into transaction without dropping sibling fields', () => {
+    const deal = [...useDataStore.getState().listings.values()][0]
+    const originalPricePerSqFt = deal.transaction.pricePerSqFt
+
+    const { deal: updated } = updateDealTransaction(deal.id, {
+      salePrice: 2_000_000,
+      commissionPct: 3,
+      commissionAmount: 60_000,
+    })
+
+    expect(updated?.transaction.salePrice).toBe(2_000_000)
+    expect(updated?.transaction.commissionPct).toBe(3)
+    expect(updated?.transaction.commissionAmount).toBe(60_000)
+    // Sibling fields survive the merge.
+    expect(updated?.transaction.pricePerSqFt).toBe(originalPricePerSqFt)
   })
 })

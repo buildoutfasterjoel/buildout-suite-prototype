@@ -56,8 +56,8 @@ export type LeaseType = 'NNN' | 'Gross' | 'MG'
 export type CompSource = 'CoStar' | 'LoopNet' | 'Public Records' | 'MLS' | 'Internal'
 export type ContactRole = 'owner' | 'broker' | 'buyer' | 'tenant' | 'lender'
 
-/** A marketed offering — sale, lease, or both. */
-export type DealType = 'Sale' | 'Lease' | 'Sale / Lease'
+/** A marketed offering — a deal is either a sale or a lease, never both. */
+export type DealType = 'Sale' | 'Lease'
 
 export interface Property {
   id: string
