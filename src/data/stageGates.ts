@@ -23,6 +23,11 @@ export type RequiredField =
   | 'saleTitle'
   | 'saleDescription'
   | 'askingPrice'
+  | 'tenantLinked'
+  | 'leaseRate'
+  | 'availableSqFt'
+  | 'leaseTermMonths'
+  | 'leaseCommencementDate'
 
 /** The editable state the StageGate modal collects. Fields not relevant to a gate are ignored. */
 export interface GateFormState {
@@ -103,6 +108,11 @@ export const REQUIRED_FIELD_LABEL: Record<RequiredField, string> = {
   saleTitle: 'Listing title',
   saleDescription: 'Listing description',
   askingPrice: 'Asking price',
+  tenantLinked: 'Tenant',
+  leaseRate: 'Lease rate',
+  availableSqFt: 'Available SF',
+  leaseTermMonths: 'Lease term',
+  leaseCommencementDate: 'Commencement date',
 }
 
 /** A blank working form — fields not relevant to a given gate are ignored. */
@@ -205,8 +215,10 @@ export function resolveGate(
         required: [
           'saleTitle',
           'saleDescription',
-          // Lease deals have no sale price — they gate on lease terms instead.
-          ...(isLease ? [] : (['askingPrice'] as const)),
+          // Sale gates on asking price; lease gates on rate + available SF.
+          ...(isLease
+            ? (['leaseRate', 'availableSqFt'] as const)
+            : (['askingPrice'] as const)),
           'aiDocsReviewed',
           'websiteReviewed',
           'listedOnDate',
@@ -220,12 +232,18 @@ export function resolveGate(
         kind: 'field',
         title: 'Move to Under Contract',
         required: isLease
-          ? ['buyerLinked', 'commissionAmount']
+          ? ['tenantLinked', 'leaseTermMonths', 'commissionAmount']
           : ['buyerLinked', 'salePrice', 'commissionAmount'],
         publishes: false,
       }
     case 'closed':
-      return { ...base, kind: 'field', title: 'Move to Closed', required: ['closeDate'], publishes: false }
+      return {
+        ...base,
+        kind: 'field',
+        title: 'Move to Closed',
+        required: isLease ? ['leaseCommencementDate'] : ['closeDate'],
+        publishes: false,
+      }
     case 'proposal':
     default:
       // Reopen from Lost into Pitching — no field requirements (behaves as a plain confirm).
@@ -259,6 +277,16 @@ function fieldSatisfied(field: RequiredField, form: GateFormState): boolean {
       return form.saleDescription.trim().length > 0
     case 'askingPrice':
       return form.askingPrice != null && form.askingPrice > 0
+    case 'tenantLinked':
+      return form.tenantLinked
+    case 'leaseRate':
+      return form.leaseRate != null && form.leaseRate > 0
+    case 'availableSqFt':
+      return form.availableSqFt != null && form.availableSqFt > 0
+    case 'leaseTermMonths':
+      return form.leaseTermMonths != null && form.leaseTermMonths > 0
+    case 'leaseCommencementDate':
+      return !!form.leaseCommencementDate
   }
 }
 

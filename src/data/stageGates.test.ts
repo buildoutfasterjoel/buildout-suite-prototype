@@ -75,10 +75,13 @@ describe('resolveGate', () => {
     )
   })
 
-  it('Lease deals go Under Contract without a sale price', () => {
+  it('Lease deals go Under Contract on tenant + lease term, not a sale price', () => {
     const g = resolveGate('active', 'under-contract', 'Lease')
     expect(g.required).not.toContain('salePrice')
-    expect(g.required).toEqual(expect.arrayContaining(['buyerLinked', 'commissionAmount']))
+    expect(g.required).not.toContain('buyerLinked')
+    expect(g.required).toEqual(
+      expect.arrayContaining(['tenantLinked', 'leaseTermMonths', 'commissionAmount']),
+    )
   })
 
   it('Under Contract → Closed requires only the close date', () => {
