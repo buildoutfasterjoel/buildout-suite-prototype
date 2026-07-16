@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
@@ -13,7 +12,9 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { PropertyStatus } from "#/data/types";
-import { getListing, getProperty } from "#/data/store";
+import { getProperty } from "#/data/store";
+import { useDataStore } from "#/data/dataStore";
+import { requestStageChange } from "#/components/deals/useStageGate";
 import {
   TYPE_ICONS,
   TYPE_LABELS,
@@ -91,10 +92,9 @@ function QuickLink({
  */
 export function ContactDealCard({ listingId }: { listingId: string }) {
   const navigate = useNavigate();
-  const listing = getListing(listingId);
-  const [stage, setStage] = useState<PropertyStatus>(
-    listing?.status ?? "active",
-  );
+  // Reactive so a committed stage transition (via the shared gate) re-renders
+  // the card with the new status immediately.
+  const listing = useDataStore((s) => s.listings.get(listingId));
   if (!listing) return null;
 
   const property = getProperty(listing.propertyId);
@@ -108,7 +108,7 @@ export function ContactDealCard({ listingId }: { listingId: string }) {
     listing.dealSide === "seller"
       ? listing.buyerContactIds.length + listing.otherContactIds.length
       : listing.sellerContactIds.length + listing.otherContactIds.length;
-  const nextAction = dealNextAction(stage);
+  const nextAction = dealNextAction(listing.status);
 
   return (
     <div
@@ -183,7 +183,10 @@ export function ContactDealCard({ listingId }: { listingId: string }) {
 
       {/* Meta chips */}
       <div className="d-flex flex-wrap align-items-center gap-2">
-        <DealStageChip value={stage} onChange={setStage} />
+        <DealStageChip
+          value={listing.status}
+          onChange={(next) => requestStageChange(listing.id, next)}
+        />
         <Badge
           className="d-inline-flex align-items-center fw-semibold"
           style={{

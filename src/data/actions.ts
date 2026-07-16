@@ -8,9 +8,30 @@ import {
 } from '#/components/contacts/contactFilterModel'
 import type { Contact, ContactRole, DealHistoryEntry, DealMarketing, DealTransaction, Listing, PropertyStatus } from './types'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
+import { reconcileContactDealFields } from './contactStage'
 import { notify } from '#/lib/notify'
 
 let _callListSeq = 0
+
+/**
+ * Re-derive every contact's deal-derived fields (stage, relationship, side) from
+ * the current listings and patch the ones that moved. Called after any deal
+ * mutation that changes a deal's status or its linked parties, so the People
+ * module stays in lockstep with the pipeline through a full deal lifecycle.
+ */
+export function reconcileContactStages(): void {
+  useDataStore.setState((s) => {
+    const changed = reconcileContactDealFields(
+      s.contacts.values(),
+      s.listings.values(),
+    )
+    if (changed.length === 0) return {}
+    const contacts = new Map(s.contacts)
+    for (const c of changed) contacts.set(c.id, c)
+    return { contacts }
+  })
+  useDataStore.getState().persist()
+}
 
 function patchListing(dealId: string, patch: (l: Listing) => Listing): Listing | null {
   const existing = useDataStore.getState().listings.get(dealId)
@@ -21,6 +42,10 @@ function patchListing(dealId: string, patch: (l: Listing) => Listing): Listing |
     listings.set(dealId, updated)
     return { listings }
   })
+  // Keep contacts' deal-derived fields in lockstep with the deal graph. This
+  // single write path covers every stage move and contact (un)link; the scan is
+  // cheap at prototype scale and a no-op when nothing moved.
+  reconcileContactStages()
   useDataStore.getState().persist()
   return updated
 }
@@ -29,6 +54,9 @@ function patchListing(dealId: string, patch: (l: Listing) => Listing): Listing |
 export function createDeal(draft: NewListingDraft): { deal: Listing } {
   // createProposalListing already inserts the listing (and its property) into the store.
   const deal = createProposalListing(draft)
+  // A new proposal deal puts its linked parties into Pitching — reconcile so the
+  // People module reflects it immediately.
+  reconcileContactStages()
   return { deal }
 }
 

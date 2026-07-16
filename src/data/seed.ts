@@ -31,6 +31,7 @@ import type {
 } from './types'
 import type { CallList } from './contactLists'
 import type { SerializedContactFilters } from '#/components/contacts/contactFilterModel'
+import { reconcileContactDealFields } from './contactStage'
 
 const SEED = 20240101
 const PROPERTY_COUNT = 50
@@ -1564,10 +1565,22 @@ export function generateDataset() {
     generateListings(p, contactsByProperty.get(p.id) ?? contacts, dealIdRef),
   )
 
+  // Reconcile each contact's deal-derived fields with the deals they're actually
+  // a party to. The listings are the source of truth for the contact↔deal graph,
+  // so `dealStage` (the furthest-along stage), `relationship` (per the lifecycle
+  // rules), and `side` must follow them rather than the random values picked at
+  // contact generation — otherwise the People table shows a stage the contact's
+  // deals don't support. The live store re-runs this same pass on every deal
+  // mutation (see `reconcileContactStages`).
+  const reconciled = new Map(
+    reconcileContactDealFields(contacts, listings).map((c) => [c.id, c]),
+  )
+  const finalContacts = contacts.map((c) => reconciled.get(c.id) ?? c)
+
   const comps = properties.flatMap((p) => {
     const count = faker.number.int({ min: 1, max: 5 })
     return Array.from({ length: count }, () => generateComp(p.id, p.buildingSqFt, p.propertyType))
   })
 
-  return { properties, listings, comps, contacts }
+  return { properties, listings, comps, contacts: finalContacts }
 }

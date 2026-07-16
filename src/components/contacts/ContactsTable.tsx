@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Table } from "@buildoutinc/blueprint-react/ui/Table";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
@@ -27,6 +27,8 @@ import {
   contactInitials,
 } from "#/components/contacts/contactDisplay";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
+import { activeDealCountsByContact } from "#/data/selectors";
+import { useDataStore } from "#/data/dataStore";
 
 /**
  * Blueprint's `.sticky-cell` hardcodes `left: 0`, so freezing the checkbox +
@@ -104,11 +106,17 @@ function TagCell({ tags }: { tags: string[] }) {
  * seeds the initial visibility (the five newest columns start hidden and can be
  * switched on via the header's "Manage columns" button).
  */
+/** Per-row context passed to column renderers alongside the contact. */
+interface ColumnContext {
+  /** Count of active (non-lost) deals the contact is a party to. */
+  dealCount: number;
+}
+
 interface ContactColumn {
   id: string;
   label: string;
   defaultVisible: boolean;
-  render: (c: Contact) => ReactNode;
+  render: (c: Contact, ctx: ColumnContext) => ReactNode;
 }
 
 const CONTACT_COLUMNS: ContactColumn[] = [
@@ -151,8 +159,11 @@ const CONTACT_COLUMNS: ContactColumn[] = [
     id: "dealStage",
     label: "Deal Stage",
     defaultVisible: true,
-    render: (c) => {
+    // Shows the contact's furthest-along deal stage. When they have more than one
+    // deal, a "+N" trails it (as in the Tags cell) for the remaining deals.
+    render: (c, { dealCount }) => {
       const stage = c.dealStage ? DEAL_STAGE_DISPLAY[c.dealStage] : NO_DEAL_STAGE;
+      const extra = c.dealStage ? Math.max(0, dealCount - 1) : 0;
       return (
         <span className="d-inline-flex align-items-center gap-2 text-nowrap">
           {c.dealStage && (
@@ -161,6 +172,7 @@ const CONTACT_COLUMNS: ContactColumn[] = [
           <span className={c.dealStage ? undefined : "text-muted"}>
             {stage.label}
           </span>
+          {extra > 0 && <span className="fs-small text-muted">+{extra}</span>}
         </span>
       );
     },
@@ -269,6 +281,10 @@ export function ContactsTable({
   onToggleAll: (checked: boolean) => void;
 }) {
   const navigate = useNavigate();
+  // Active-deal counts drive the Deal Stage cell's "+N". Recomputed when the
+  // listings change so the count tracks live deal mutations.
+  const listings = useDataStore((s) => s.listings);
+  const dealCounts = useMemo(() => activeDealCountsByContact(), [listings]);
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
     () => new Set(DEFAULT_VISIBLE_COLUMNS),
   );
@@ -448,7 +464,11 @@ export function ContactsTable({
               </Table.Cell>
 
               {shownColumns.map((col) => (
-                <Table.Cell key={col.id}>{col.render(contact)}</Table.Cell>
+                <Table.Cell key={col.id}>
+                  {col.render(contact, {
+                    dealCount: dealCounts.get(contact.id) ?? 0,
+                  })}
+                </Table.Cell>
               ))}
 
               {/* Actions */}

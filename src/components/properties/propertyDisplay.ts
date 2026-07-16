@@ -61,10 +61,10 @@ export const STATUS_LABELS: Record<PropertyStatus, string> = {
  * For translucent fills, wrap in `color-mix()` rather than hex-alpha.
  */
 export const STATUS_COLORS: Record<PropertyStatus, string> = {
-  proposal: "var(--stage-proposal)", // purple-heart-500
-  active: "var(--stage-active)", // mountain-meadow-500
-  "under-contract": "var(--stage-under-contract)", // harvest-gold-600
-  closed: "var(--stage-closed)", // buildout-blue-600
+  proposal: "var(--stage-proposal)", // harvest-gold-500
+  active: "var(--stage-active)", // buildout-blue-500
+  "under-contract": "var(--stage-under-contract)", // purple-heart-500
+  closed: "var(--stage-closed)", // mountain-meadow-500
   inactive: "var(--stage-inactive)", // storm-grey-500
 };
 
