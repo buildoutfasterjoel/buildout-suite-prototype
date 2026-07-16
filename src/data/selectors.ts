@@ -71,6 +71,7 @@ export function getContactDetailClient(id: string): ContactDetail | null {
     const property = useDataStore.getState().properties.get(l.propertyId)
     return {
       id: l.id,
+      propertyId: l.propertyId,
       name: l.name,
       city: property?.city ?? '',
       state: property?.state ?? '',

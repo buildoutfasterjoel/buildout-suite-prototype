@@ -142,6 +142,16 @@ export function ContactOverviewColumn({
   const activeDeals = deals.filter((d) => !PAST_STATUSES.has(d.status));
   const pastDeals = deals.filter((d) => PAST_STATUSES.has(d.status));
 
+  // One card per property in "Properties Owned" — group the contact's deals by
+  // property so a property with several deals shows a single card, not one per
+  // deal. Order follows first appearance in `deals`.
+  const propertyGroups = Array.from(
+    deals.reduce((map, d) => {
+      map.set(d.propertyId, [...(map.get(d.propertyId) ?? []), d.id]);
+      return map;
+    }, new Map<string, string[]>()),
+  );
+
   return (
     <Card className="shadow-sm overflow-hidden">
       <CreateDealModal
@@ -339,15 +349,19 @@ export function ContactOverviewColumn({
         <Section
           value="properties"
           label="Properties Owned"
-          count={deals.length}
+          count={propertyGroups.length}
           open={open.includes("properties")}
         >
           <div className="d-flex flex-column gap-3">
-            {deals.length === 0 ? (
+            {propertyGroups.length === 0 ? (
               <span className="text-muted fs-small">None on file.</span>
             ) : (
-              deals.map((d) => (
-                <ContactPropertyCard key={d.id} listingId={d.id} />
+              propertyGroups.map(([propertyId, listingIds]) => (
+                <ContactPropertyCard
+                  key={propertyId}
+                  propertyId={propertyId}
+                  listingIds={listingIds}
+                />
               ))
             )}
           </div>
