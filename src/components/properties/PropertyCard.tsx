@@ -12,11 +12,11 @@ import {
   TYPE_LABELS,
   STATUS_LABELS,
   STATUS_COLORS,
-  formatPrice,
   hash,
   getRefId,
   getPhotoUrl,
 } from "./propertyDisplay";
+import { dealHeadlineLabel } from "#/components/deals/dealDisplay";
 import { AvatarGroup } from "./AvatarGroup";
 
 export function PropertyCard({ listing }: { listing: Listing }) {
@@ -121,7 +121,7 @@ export function PropertyCard({ listing }: { listing: Listing }) {
         style={{ gap: 10, padding: 8 }}
       >
         <span className="text-muted flex-grow-1" style={{ fontSize: 10 }}>
-          {formatPrice(listing.financials.askingPrice)}
+          {dealHeadlineLabel(listing)}
         </span>
         <FontAwesomeIcon
           icon={faCalendarCircleExclamation}

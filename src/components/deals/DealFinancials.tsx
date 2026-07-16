@@ -8,7 +8,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus } from "@fortawesome/pro-regular-svg-icons";
 import type { DealBroker, Listing } from "#/data/types";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
-import { formatCurrency, formatDate } from "./dealDisplay";
+import { formatCurrency, formatDate, dealHeadlineValue } from "./dealDisplay";
 
 /** Chart colors — same brand hues already used for the app's other recharts series. */
 const DEDUCTIONS_COLOR = "#8833ea";
@@ -439,7 +439,7 @@ export function DealFinancials({ listing }: { listing: Listing }) {
       <Section title="Gross Commission">
         <div className="row g-3">
           <div className="col-md-4">
-            <StatTile label="Transaction Value (TV)" value={formatCurrency(listing.transaction.salePrice)} />
+            <StatTile label="Transaction Value (TV)" value={formatCurrency(dealHeadlineValue(listing))} />
           </div>
           <div className="col-md-4">
             <StatTile label="Gross Commission Percent *" value={`${listing.transaction.commissionPct}%`} />

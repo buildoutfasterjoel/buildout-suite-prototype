@@ -938,9 +938,8 @@ function generateContact(allPropertyIds: string[]): Contact {
 
 function pickDealType(): DealType {
   return faker.helpers.weightedArrayElement([
-    { weight: 55, value: 'Sale' as const },
-    { weight: 30, value: 'Lease' as const },
-    { weight: 15, value: 'Sale / Lease' as const },
+    { weight: 65, value: 'Sale' as const },
+    { weight: 35, value: 'Lease' as const },
   ])
 }
 
@@ -1091,8 +1090,8 @@ function generateListings(
       ? property.status
       : faker.helpers.weightedArrayElement(STAGE_WEIGHTS)
 
-    // Transaction
-    const salePrice = round(availableSqFt * basePricePerSqFt)
+    // Transaction — Lease deals carry no sale headline data (see marketing.spaceLeaseTerms).
+    const salePrice = dealType === 'Sale' ? round(availableSqFt * basePricePerSqFt) : 0
     const pricePerSqFt = availableSqFt > 0 ? Math.round((salePrice / availableSqFt) * 100) / 100 : 0
     const commissionPct = faker.number.float({ min: 2, max: 4, fractionDigits: 1 })
     const commissionAmount = Math.round(salePrice * (commissionPct / 100))

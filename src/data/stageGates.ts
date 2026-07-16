@@ -3,6 +3,7 @@ import type {
   DealPitchFinancials,
   DealSide,
   DealTransaction,
+  DealType,
   PropertyStatus,
 } from './types'
 
@@ -31,6 +32,7 @@ export interface GateFormState {
   closeDate: string | null
   salePrice: number | null
   commissionAmount: number | null
+  commissionPct: number | null
   deadReason: string | null
   /** True when every AI-generated doc is checked (or there are none). */
   aiDocsAllReviewed: boolean
@@ -86,8 +88,13 @@ export const STAGE_LABEL: Record<PropertyStatus, string> = {
   inactive: 'Lost',
 }
 
-export function resolveGate(from: PropertyStatus, target: PropertyStatus): GateConfig {
+export function resolveGate(
+  from: PropertyStatus,
+  target: PropertyStatus,
+  dealType: DealType,
+): GateConfig {
   const base = { fromStage: from, targetStage: target, leavesActive: from === 'active' }
+  const isLease = dealType === 'Lease'
 
   // Terminal: any stage → Lost.
   if (target === 'inactive') {
@@ -117,7 +124,8 @@ export function resolveGate(from: PropertyStatus, target: PropertyStatus): GateC
         required: [
           'saleTitle',
           'saleDescription',
-          'askingPrice',
+          // Lease deals have no sale price — they gate on lease terms instead.
+          ...(isLease ? [] : (['askingPrice'] as const)),
           'aiDocsReviewed',
           'websiteReviewed',
           'listedOnDate',
@@ -126,7 +134,15 @@ export function resolveGate(from: PropertyStatus, target: PropertyStatus): GateC
         publishes: true,
       }
     case 'under-contract':
-      return { ...base, kind: 'field', title: 'Move to Under Contract', required: ['buyerLinked', 'salePrice', 'commissionAmount'], publishes: false }
+      return {
+        ...base,
+        kind: 'field',
+        title: 'Move to Under Contract',
+        required: isLease
+          ? ['buyerLinked', 'commissionAmount']
+          : ['buyerLinked', 'salePrice', 'commissionAmount'],
+        publishes: false,
+      }
     case 'closed':
       return { ...base, kind: 'field', title: 'Move to Closed', required: ['closeDate'], publishes: false }
     case 'proposal':
@@ -183,6 +199,7 @@ export function buildTransitionInput(
   if (form.closeDate) transaction.closeDate = form.closeDate
   if (form.salePrice != null) transaction.salePrice = form.salePrice
   if (form.commissionAmount != null) transaction.commissionAmount = form.commissionAmount
+  if (form.commissionPct != null) transaction.commissionPct = form.commissionPct
   if (form.deadReason) transaction.deadReason = form.deadReason
 
   const input: StageTransitionInput = {

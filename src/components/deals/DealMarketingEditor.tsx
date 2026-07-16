@@ -6,12 +6,25 @@ import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { Textarea } from "@buildoutinc/blueprint-react/ui/Textarea";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { Switch } from "@buildoutinc/blueprint-react/ui/Switch";
+import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
+import { Popover } from "@buildoutinc/blueprint-react/ui/Popover";
+import { Calendar } from "@buildoutinc/blueprint-react/ui/Calendar";
+import { Accordion } from "@buildoutinc/blueprint-react/ui/Accordion";
+import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowUp,
   faArrowDown,
   faPlus,
   faTrashCan,
+  faCalendar,
+  faGear,
+  faFileContract,
+  faBullhorn,
+  faChartLine,
+  faKey,
+  faBuilding,
+  faVectorSquare,
 } from "@fortawesome/pro-regular-svg-icons";
 import type {
   DealBroker,
@@ -34,6 +47,10 @@ import type {
   VisibilityTier,
 } from "#/data/types";
 import { updateDeal } from "#/data/actions";
+import {
+  commissionAmountFromPct,
+  commissionPctFromAmount,
+} from "#/data/commission";
 import { emptySpaceLeaseTerms } from "#/data/createListing";
 import {
   STATUS_LABELS,
@@ -42,7 +59,7 @@ import {
 import { Section } from "#/components/listings/listingWidgets";
 
 // ── Option lists (string unions from the data model) ────────────────────────
-const DEAL_TYPES: DealType[] = ["Sale", "Lease", "Sale / Lease"];
+const DEAL_TYPES: DealType[] = ["Sale", "Lease"];
 const PROPERTY_USES: PropertyUse[] = [
   "Net Leased Investment",
   "Investment",
@@ -139,6 +156,33 @@ function NumberField({
   );
 }
 
+const DATE_FORMAT: Intl.DateTimeFormatOptions = {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+};
+
+/** Format a stored date value (ISO string or `yyyy-mm-dd`) as a local Date. */
+function parseDate(value: string | null): Date | undefined {
+  if (!value) return undefined;
+  // Plain `yyyy-mm-dd` parses as UTC midnight; pin to local to avoid an
+  // off-by-one day. Full ISO strings already carry a time/zone.
+  return new Date(value.length <= 10 ? `${value}T00:00:00` : value);
+}
+
+/** Serialize a picked Date to a local `yyyy-mm-dd` (no timezone drift). */
+function toISODate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * Blueprint date input: a read-only field with a calendar-icon addon that opens
+ * a single-date Calendar popover, closing once a date is picked.
+ * (Documented InputGroup + Popover + Calendar pattern.)
+ */
 function DateField({
   label,
   value,
@@ -148,14 +192,41 @@ function DateField({
   value: string | null;
   onChange: (v: string | null) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const selected = parseDate(value);
   return (
     <Field>
       <Field.Label>{label}</Field.Label>
-      <Input
-        type="date"
-        value={value ?? ""}
-        onChange={(e) => onChange(e.target.value || null)}
-      />
+      <InputGroup>
+        <InputGroup.Addon>
+          <Popover open={open} onOpenChange={setOpen}>
+            <Popover.Trigger
+              nativeButton={false}
+              aria-label="Open date picker"
+              render={<FontAwesomeIcon icon={faCalendar} />}
+            />
+            <Popover.Content className="p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={selected}
+                defaultMonth={selected}
+                onSelect={(d) => {
+                  onChange(d ? toISODate(d) : null);
+                  setOpen(false);
+                }}
+              />
+            </Popover.Content>
+          </Popover>
+        </InputGroup.Addon>
+        <Input
+          type="text"
+          readOnly
+          placeholder="Pick a date"
+          value={
+            selected ? selected.toLocaleDateString(undefined, DATE_FORMAT) : ""
+          }
+        />
+      </InputGroup>
     </Field>
   );
 }
@@ -252,7 +323,11 @@ function BulletsField({
           </div>
         ))}
         <div>
-          <Button variant="ghost" size="sm" onClick={() => onChange([...bullets, ""])}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onChange([...bullets, ""])}
+          >
             <FontAwesomeIcon icon={faPlus} />
             Add bullet
           </Button>
@@ -371,7 +446,9 @@ function LineItemEditor<T extends IncomeLineItem | ExpenseLineItem>({
             onChange={(e) =>
               onChange(
                 items.map((x) =>
-                  x.id === item.id ? { ...x, amount: Number(e.target.value) } : x,
+                  x.id === item.id
+                    ? { ...x, amount: Number(e.target.value) }
+                    : x,
                 ),
               )
             }
@@ -447,7 +524,11 @@ function ScenarioEditor({
         </Button>
       </div>
       {scenarios.map((s, i) => (
-        <div key={s.id} className="border rounded p-3" style={{ borderRadius: 6 }}>
+        <div
+          key={s.id}
+          className="border rounded p-3"
+          style={{ borderRadius: 6 }}
+        >
           <div className="d-flex align-items-center gap-2 mb-2">
             <div className="d-flex flex-column">
               <Button
@@ -524,203 +605,211 @@ function UnitLeaseCard({
   onChange: (patch: Partial<SpaceLeaseTerms>) => void;
 }) {
   return (
-    <div className="border rounded p-3" style={{ borderRadius: 6 }}>
-      <div className="fw-semibold mb-3">
-        {unit.label}
-        <span className="text-muted fw-normal ms-2">
-          {unit.sqft.toLocaleString()} SF
+    <Accordion.Item value={unit.id}>
+      <Accordion.Trigger>
+        <span className="fw-semibold d-flex align-items-center gap-2">
+          <FontAwesomeIcon icon={faVectorSquare} className="text-muted" />
+          {unit.label}
+          <span className="text-muted fw-normal ms-1">
+            {unit.sqft.toLocaleString()} SF
+          </span>
         </span>
-      </div>
-      <FieldGrid>
-        <Col>
-          <NumberField
-            label="Lease Rate"
-            value={terms.leaseRate}
-            onChange={(v) => onChange({ leaseRate: v })}
-          />
-        </Col>
-        <Col>
-          <SelectField
-            label="Rate Units"
-            value={terms.leaseRateUnits}
-            options={LEASE_RATE_UNITS}
-            onChange={(v) => onChange({ leaseRateUnits: v })}
-          />
-        </Col>
-        <Col>
-          <SelectField
-            label="Lease Type"
-            value={terms.leaseType}
-            options={LEASE_TYPES}
-            onChange={(v) => onChange({ leaseType: v })}
-          />
-        </Col>
-        <Col>
-          <NumberField
-            label="Term (months)"
-            value={terms.leaseTermMonths}
-            onChange={(v) => onChange({ leaseTermMonths: v })}
-          />
-        </Col>
-        <Col>
-          <DateField
-            label="Date Available"
-            value={terms.dateAvailable}
-            onChange={(v) => onChange({ dateAvailable: v })}
-          />
-        </Col>
-        <Col>
-          <NumberField
-            label="Min Divisible (SF)"
-            value={terms.minDivisibleSqFt}
-            onChange={(v) => onChange({ minDivisibleSqFt: v })}
-          />
-        </Col>
-        <Col>
-          <NumberField
-            label="Max Contiguous (SF)"
-            value={terms.maxContiguousSqFt}
-            onChange={(v) => onChange({ maxContiguousSqFt: v })}
-          />
-        </Col>
-        <Col>
-          <NumberField
-            label="TI Allowance ($/SF)"
-            value={terms.tiAllowance}
-            onChange={(v) => onChange({ tiAllowance: v })}
-          />
-        </Col>
-        <Col>
-          <NumberField
-            label="Free Rent (months)"
-            value={terms.freeRentMonths}
-            onChange={(v) => onChange({ freeRentMonths: v })}
-          />
-        </Col>
-        <Col>
+      </Accordion.Trigger>
+      <Accordion.Content>
+        <FieldGrid>
+          <Col>
+            <NumberField
+              label="Lease Rate"
+              value={terms.leaseRate}
+              onChange={(v) => onChange({ leaseRate: v })}
+            />
+          </Col>
+          <Col>
+            <SelectField
+              label="Rate Units"
+              value={terms.leaseRateUnits}
+              options={LEASE_RATE_UNITS}
+              onChange={(v) => onChange({ leaseRateUnits: v })}
+            />
+          </Col>
+          <Col>
+            <SelectField
+              label="Lease Type"
+              value={terms.leaseType}
+              options={LEASE_TYPES}
+              onChange={(v) => onChange({ leaseType: v })}
+            />
+          </Col>
+          <Col>
+            <NumberField
+              label="Term (months)"
+              value={terms.leaseTermMonths}
+              onChange={(v) => onChange({ leaseTermMonths: v })}
+            />
+          </Col>
+          <Col>
+            <DateField
+              label="Date Available"
+              value={terms.dateAvailable}
+              onChange={(v) => onChange({ dateAvailable: v })}
+            />
+          </Col>
+          <Col>
+            <NumberField
+              label="Min Divisible (SF)"
+              value={terms.minDivisibleSqFt}
+              onChange={(v) => onChange({ minDivisibleSqFt: v })}
+            />
+          </Col>
+          <Col>
+            <NumberField
+              label="Max Contiguous (SF)"
+              value={terms.maxContiguousSqFt}
+              onChange={(v) => onChange({ maxContiguousSqFt: v })}
+            />
+          </Col>
+          <Col>
+            <NumberField
+              label="TI Allowance ($/SF)"
+              value={terms.tiAllowance}
+              onChange={(v) => onChange({ tiAllowance: v })}
+            />
+          </Col>
+          <Col>
+            <NumberField
+              label="Free Rent (months)"
+              value={terms.freeRentMonths}
+              onChange={(v) => onChange({ freeRentMonths: v })}
+            />
+          </Col>
+          <Col>
+            <TextField
+              label="Rent Escalators"
+              value={terms.rentEscalators ?? ""}
+              onChange={(v) => onChange({ rentEscalators: v || null })}
+            />
+          </Col>
+          <Col>
+            <NumberField
+              label="Tax ($/SF)"
+              value={terms.taxPerSf}
+              onChange={(v) => onChange({ taxPerSf: v })}
+            />
+          </Col>
+          <Col>
+            <TextField
+              label="Tax Stops"
+              value={terms.taxStops ?? ""}
+              onChange={(v) => onChange({ taxStops: v || null })}
+            />
+          </Col>
+          <Col>
+            <NumberField
+              label="CAM ($/SF)"
+              value={terms.camPerSf}
+              onChange={(v) => onChange({ camPerSf: v })}
+            />
+          </Col>
+          <Col>
+            <TextField
+              label="CAM Stops"
+              value={terms.camStops ?? ""}
+              onChange={(v) => onChange({ camStops: v || null })}
+            />
+          </Col>
+          <Col>
+            <NumberField
+              label="Insurance ($/SF)"
+              value={terms.insurancePerSf}
+              onChange={(v) => onChange({ insurancePerSf: v })}
+            />
+          </Col>
+          <Col>
+            <TextField
+              label="Expense Stops"
+              value={terms.expenseStops ?? ""}
+              onChange={(v) => onChange({ expenseStops: v || null })}
+            />
+          </Col>
+          <Col>
+            <NumberField
+              label="Procurement Fee %"
+              value={terms.procurementFeePct}
+              onChange={(v) => onChange({ procurementFeePct: v })}
+            />
+          </Col>
+          <Col>
+            <NumberField
+              label="Moving Allowance ($)"
+              value={terms.movingAllowance}
+              onChange={(v) => onChange({ movingAllowance: v })}
+            />
+          </Col>
+          <Col>
+            <NumberField
+              label="Buyout Allowance ($)"
+              value={terms.buyoutAllowance}
+              onChange={(v) => onChange({ buyoutAllowance: v })}
+            />
+          </Col>
+          <Col>
+            <TextField
+              label="Concession"
+              value={terms.concession ?? ""}
+              onChange={(v) => onChange({ concession: v || null })}
+            />
+          </Col>
+        </FieldGrid>
+        <div className="mt-3">
           <TextField
-            label="Rent Escalators"
-            value={terms.rentEscalators ?? ""}
-            onChange={(v) => onChange({ rentEscalators: v || null })}
+            label="Description"
+            textarea
+            value={terms.description ?? ""}
+            onChange={(v) => onChange({ description: v || null })}
           />
-        </Col>
-        <Col>
-          <NumberField
-            label="Tax ($/SF)"
-            value={terms.taxPerSf}
-            onChange={(v) => onChange({ taxPerSf: v })}
+        </div>
+        <div
+          className="mt-3 d-flex flex-column gap-1"
+          style={{ maxWidth: 360 }}
+        >
+          <SwitchRow
+            label="Hide rate"
+            checked={terms.hideLeaseRate}
+            onChange={(v) => onChange({ hideLeaseRate: v })}
           />
-        </Col>
-        <Col>
-          <TextField
-            label="Tax Stops"
-            value={terms.taxStops ?? ""}
-            onChange={(v) => onChange({ taxStops: v || null })}
+          <SwitchRow
+            label="Signage available"
+            checked={terms.signageAvailable}
+            onChange={(v) => onChange({ signageAvailable: v })}
           />
-        </Col>
-        <Col>
-          <NumberField
-            label="CAM ($/SF)"
-            value={terms.camPerSf}
-            onChange={(v) => onChange({ camPerSf: v })}
+          <SwitchRow
+            label="Sublease"
+            checked={terms.sublease}
+            onChange={(v) => onChange({ sublease: v })}
           />
-        </Col>
-        <Col>
-          <TextField
-            label="CAM Stops"
-            value={terms.camStops ?? ""}
-            onChange={(v) => onChange({ camStops: v || null })}
+          <SwitchRow
+            label="Net lease investment"
+            checked={terms.netLeaseInvestment}
+            onChange={(v) => onChange({ netLeaseInvestment: v })}
           />
-        </Col>
-        <Col>
-          <NumberField
-            label="Insurance ($/SF)"
-            value={terms.insurancePerSf}
-            onChange={(v) => onChange({ insurancePerSf: v })}
+          <SwitchRow
+            label="Tenants pay gas"
+            checked={terms.tenantsPayGas}
+            onChange={(v) => onChange({ tenantsPayGas: v })}
           />
-        </Col>
-        <Col>
-          <TextField
-            label="Expense Stops"
-            value={terms.expenseStops ?? ""}
-            onChange={(v) => onChange({ expenseStops: v || null })}
+          <SwitchRow
+            label="Tenants pay electric"
+            checked={terms.tenantsPayElectric}
+            onChange={(v) => onChange({ tenantsPayElectric: v })}
           />
-        </Col>
-        <Col>
-          <NumberField
-            label="Procurement Fee %"
-            value={terms.procurementFeePct}
-            onChange={(v) => onChange({ procurementFeePct: v })}
+          <SwitchRow
+            label="Tenants pay water"
+            checked={terms.tenantsPayWater}
+            onChange={(v) => onChange({ tenantsPayWater: v })}
           />
-        </Col>
-        <Col>
-          <NumberField
-            label="Moving Allowance ($)"
-            value={terms.movingAllowance}
-            onChange={(v) => onChange({ movingAllowance: v })}
-          />
-        </Col>
-        <Col>
-          <NumberField
-            label="Buyout Allowance ($)"
-            value={terms.buyoutAllowance}
-            onChange={(v) => onChange({ buyoutAllowance: v })}
-          />
-        </Col>
-        <Col>
-          <TextField
-            label="Concession"
-            value={terms.concession ?? ""}
-            onChange={(v) => onChange({ concession: v || null })}
-          />
-        </Col>
-      </FieldGrid>
-      <div className="mt-3">
-        <TextField
-          label="Description"
-          textarea
-          value={terms.description ?? ""}
-          onChange={(v) => onChange({ description: v || null })}
-        />
-      </div>
-      <div className="mt-3 d-flex flex-column gap-1" style={{ maxWidth: 360 }}>
-        <SwitchRow
-          label="Hide rate"
-          checked={terms.hideLeaseRate}
-          onChange={(v) => onChange({ hideLeaseRate: v })}
-        />
-        <SwitchRow
-          label="Signage available"
-          checked={terms.signageAvailable}
-          onChange={(v) => onChange({ signageAvailable: v })}
-        />
-        <SwitchRow
-          label="Sublease"
-          checked={terms.sublease}
-          onChange={(v) => onChange({ sublease: v })}
-        />
-        <SwitchRow
-          label="Net lease investment"
-          checked={terms.netLeaseInvestment}
-          onChange={(v) => onChange({ netLeaseInvestment: v })}
-        />
-        <SwitchRow
-          label="Tenants pay gas"
-          checked={terms.tenantsPayGas}
-          onChange={(v) => onChange({ tenantsPayGas: v })}
-        />
-        <SwitchRow
-          label="Tenants pay electric"
-          checked={terms.tenantsPayElectric}
-          onChange={(v) => onChange({ tenantsPayElectric: v })}
-        />
-        <SwitchRow
-          label="Tenants pay water"
-          checked={terms.tenantsPayWater}
-          onChange={(v) => onChange({ tenantsPayWater: v })}
-        />
-      </div>
-    </div>
+        </div>
+      </Accordion.Content>
+    </Accordion.Item>
   );
 }
 
@@ -738,7 +827,10 @@ export function DealMarketingEditor({
 }) {
   const navigate = useNavigate();
   const back = () =>
-    navigate({ to: "/listings/$listingId/overview", params: { listingId: listing.id } });
+    navigate({
+      to: "/listings/$listingId/overview",
+      params: { listingId: listing.id },
+    });
 
   const [status, setStatus] = useState<PropertyStatus>(listing.status);
   const [dealType, setDealType] = useState<DealType>(listing.dealType);
@@ -748,8 +840,12 @@ export function DealMarketingEditor({
   const [outsideBrokers, setOutsideBrokers] = useState<DealBroker[]>(
     listing.outsideBrokers,
   );
-  const [transaction, setTransaction] = useState<DealTransaction>(listing.transaction);
-  const [financials, setFinancials] = useState<DealPitchFinancials>(listing.financials);
+  const [transaction, setTransaction] = useState<DealTransaction>(
+    listing.transaction,
+  );
+  const [financials, setFinancials] = useState<DealPitchFinancials>(
+    listing.financials,
+  );
   const [marketing, setMarketing] = useState(listing.marketing);
 
   const isSale = dealType !== "Lease";
@@ -762,17 +858,50 @@ export function DealMarketingEditor({
   const patchTransaction = (patch: Partial<DealTransaction>) =>
     setTransaction((t) => ({ ...t, ...patch }));
 
+  // Sale Price / Gross Commission % / Gross Commission $ — bi-directional, sale
+  // price anchors (same math as the stage gate and Edit Transaction dialog).
+  const setSalePrice = (v: number | null) =>
+    setTransaction((t) => ({
+      ...t,
+      salePrice: v ?? 0,
+      commissionAmount:
+        v != null && t.commissionPct != null
+          ? commissionAmountFromPct(v, t.commissionPct)
+          : t.commissionAmount,
+    }));
+  const setCommissionPct = (v: number | null) =>
+    setTransaction((t) => ({
+      ...t,
+      commissionPct: v ?? 0,
+      commissionAmount:
+        v != null && t.salePrice != null
+          ? commissionAmountFromPct(t.salePrice, v)
+          : t.commissionAmount,
+    }));
+  const setCommissionAmount = (v: number | null) =>
+    setTransaction((t) => ({
+      ...t,
+      commissionAmount: v ?? 0,
+      commissionPct:
+        v != null && t.salePrice > 0
+          ? commissionPctFromAmount(t.salePrice, v)
+          : t.commissionPct,
+    }));
+
   // Tolerate a stale snapshot that predates the per-unit array.
   const spaceLeaseTerms = marketing.spaceLeaseTerms ?? [];
 
   /** Look up a unit's terms in the working copy, defaulting a blank record. */
   const termsForUnit = (unitId: string): SpaceLeaseTerms =>
-    spaceLeaseTerms.find((t) => t.unitId === unitId) ?? emptySpaceLeaseTerms(unitId);
+    spaceLeaseTerms.find((t) => t.unitId === unitId) ??
+    emptySpaceLeaseTerms(unitId);
 
   const patchUnitTerms = (unitId: string, patch: Partial<SpaceLeaseTerms>) => {
     const existing = spaceLeaseTerms.find((t) => t.unitId === unitId);
     const next = existing
-      ? spaceLeaseTerms.map((t) => (t.unitId === unitId ? { ...t, ...patch } : t))
+      ? spaceLeaseTerms.map((t) =>
+          t.unitId === unitId ? { ...t, ...patch } : t,
+        )
       : [...spaceLeaseTerms, { ...emptySpaceLeaseTerms(unitId), ...patch }];
     patchMarketing({ spaceLeaseTerms: next });
   };
@@ -792,7 +921,7 @@ export function DealMarketingEditor({
 
   const actions = (
     <>
-      <Button variant="outline" onClick={back}>
+      <Button variant="ghost" onClick={back}>
         Cancel
       </Button>
       <Button variant="primary" onClick={save}>
@@ -802,14 +931,14 @@ export function DealMarketingEditor({
   );
 
   return (
-    <div className="d-flex flex-column gap-5 p-4">
+    <div className="d-flex flex-column gap-6 p-4">
       <div className="d-flex align-items-center justify-content-between gap-3">
         <h2 className="fs-6 mb-0 fw-semibold">Edit Deal</h2>
         <div className="d-flex align-items-center gap-2">{actions}</div>
       </div>
 
       {/* ── Setup / status ── */}
-      <Section title="Setup & Status">
+      <Section title="Setup & Status" icon={faGear}>
         <FieldGrid>
           <Col>
             <SelectField
@@ -873,9 +1002,61 @@ export function DealMarketingEditor({
         />
       </Section>
 
+      <Separator />
+
+      {/* ── Transaction terms (parity with the stage gate + Edit Transaction dialog) ── */}
+      <Section title="Transaction Terms" icon={faFileContract}>
+        <FieldGrid>
+          <Col>
+            <NumberField
+              label="Sale Price"
+              value={transaction.salePrice || null}
+              onChange={setSalePrice}
+            />
+          </Col>
+          <Col>
+            <NumberField
+              label="Gross Commission %"
+              value={transaction.commissionPct || null}
+              onChange={setCommissionPct}
+            />
+          </Col>
+          <Col>
+            <NumberField
+              label="Gross Commission $"
+              value={transaction.commissionAmount || null}
+              onChange={setCommissionAmount}
+            />
+          </Col>
+          <Col>
+            <NumberField
+              label="Close Probability (%)"
+              value={transaction.closeProbability || null}
+              onChange={(v) => patchTransaction({ closeProbability: v ?? 0 })}
+            />
+          </Col>
+          <Col>
+            <DateField
+              label="Contract Executed"
+              value={transaction.contractExecutedDate}
+              onChange={(v) => patchTransaction({ contractExecutedDate: v })}
+            />
+          </Col>
+          <Col>
+            <DateField
+              label="Close Date"
+              value={transaction.closeDate}
+              onChange={(v) => patchTransaction({ closeDate: v })}
+            />
+          </Col>
+        </FieldGrid>
+      </Section>
+
+      {isSale && <Separator />}
+
       {/* ── Sale-side marketing + terms ── */}
       {isSale && (
-        <Section title="Sale Marketing & Terms">
+        <Section title="Sale Marketing & Terms" icon={faBullhorn}>
           <TextField
             label="Sale Title"
             value={marketing.saleTitle}
@@ -948,9 +1129,11 @@ export function DealMarketingEditor({
         </Section>
       )}
 
+      {isSale && <Separator />}
+
       {/* ── Sale-side financials ── */}
       {isSale && (
-        <Section title="Sale Financials">
+        <Section title="Sale Financials" icon={faChartLine}>
           <FieldGrid>
             <Col>
               <NumberField
@@ -1005,9 +1188,11 @@ export function DealMarketingEditor({
         </Section>
       )}
 
+      {isLease && <Separator />}
+
       {/* ── Lease-side terms ── */}
       {isLease && (
-        <Section title="Lease Marketing & Terms">
+        <Section title="Lease Marketing & Terms" icon={faKey}>
           <TextField
             label="Lease Title"
             value={marketing.leaseTitle}
@@ -1031,23 +1216,30 @@ export function DealMarketingEditor({
               onChange={(v) => patchMarketing({ leaseCommissionSplitPct: v })}
             />
           </div>
-          <div className="d-flex flex-column gap-3">
-            <span className="fw-semibold">Per-Space Terms</span>
-            {property.units.length === 0 ? (
-              <p className="text-muted mb-0">
-                This property has no units to set lease terms on.
-              </p>
-            ) : (
-              property.units.map((unit) => (
+        </Section>
+      )}
+
+      {isLease && <Separator />}
+
+      {/* ── Per-space lease terms ── */}
+      {isLease && (
+        <Section title="Per-Space Terms" icon={faBuilding}>
+          {property.units.length === 0 ? (
+            <p className="text-muted mb-0">
+              This property has no units to set lease terms on.
+            </p>
+          ) : (
+            <Accordion variant="inline" multiple>
+              {property.units.map((unit) => (
                 <UnitLeaseCard
                   key={unit.id}
                   unit={unit}
                   terms={termsForUnit(unit.id)}
                   onChange={(patch) => patchUnitTerms(unit.id, patch)}
                 />
-              ))
-            )}
-          </div>
+              ))}
+            </Accordion>
+          )}
         </Section>
       )}
 

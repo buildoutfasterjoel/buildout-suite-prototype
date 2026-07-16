@@ -71,7 +71,8 @@ export const STATUS_COLORS: Record<PropertyStatus, string> = {
 export const PROPERTY_TYPES = Object.keys(TYPE_LABELS) as PropertyType[];
 export const PROPERTY_STATUSES = Object.keys(STATUS_LABELS) as PropertyStatus[];
 
-export function formatPrice(value: number): string {
+export function formatPrice(value: number | null | undefined): string {
+  if (value == null) return "—";
   if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 1_000) return `$${(value / 1_000).toFixed(0)}K`;
   return `$${value.toLocaleString()}`;

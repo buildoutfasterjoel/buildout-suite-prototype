@@ -32,6 +32,12 @@ import {
 } from "#/data/stageGates";
 import { commitStageTransition } from "#/data/actions";
 import { STATUS_LABELS } from "#/components/properties/propertyDisplay";
+import { CurrencyInput } from "#/components/common/CurrencyInput";
+import {
+  commissionAmountFromPct,
+  commissionPctFromAmount,
+} from "#/data/commission";
+import { UnderwritingDepth } from "./UnderwritingDepth";
 
 const EMPTY_FORM: GateFormState = {
   buyerLinked: false,
@@ -41,6 +47,7 @@ const EMPTY_FORM: GateFormState = {
   closeDate: null,
   salePrice: null,
   commissionAmount: null,
+  commissionPct: null,
   deadReason: null,
   aiDocsAllReviewed: true,
   websiteReviewed: false,
@@ -87,11 +94,12 @@ function GateDatePicker({
   onChange: (value: string | null) => void;
   placeholder: string;
 }) {
+  const [open, setOpen] = useState(false);
   const selected = parseDate(value);
   return (
     <InputGroup>
       <InputGroup.Addon>
-        <Popover>
+        <Popover open={open} onOpenChange={setOpen}>
           <Popover.Trigger
             nativeButton={false}
             aria-label="Open date picker"
@@ -102,7 +110,10 @@ function GateDatePicker({
               mode="single"
               selected={selected}
               defaultMonth={selected}
-              onSelect={(d) => onChange(d ? toISODate(d) : null)}
+              onSelect={(d) => {
+                onChange(d ? toISODate(d) : null);
+                setOpen(false);
+              }}
             />
           </Popover.Content>
         </Popover>
@@ -134,7 +145,7 @@ export function StageGate({
 }) {
   const deal = getListing(dealId);
   const config = useMemo(
-    () => (deal ? resolveGate(deal.status, targetStage) : null),
+    () => (deal ? resolveGate(deal.status, targetStage, deal.dealType) : null),
     [deal, targetStage],
   );
 
@@ -152,6 +163,7 @@ export function StageGate({
       closeDate: deal.transaction.closeDate,
       salePrice: deal.transaction.salePrice || null,
       commissionAmount: deal.transaction.commissionAmount || null,
+      commissionPct: deal.transaction.commissionPct || null,
       deadReason: deal.transaction.deadReason,
       // Core listing content, prefilled so the broker edits in place.
       saleTitle: deal.marketing.saleTitle,
@@ -179,6 +191,34 @@ export function StageGate({
   const set = <K extends keyof GateFormState>(k: K, v: GateFormState[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
+  const setSalePrice = (v: number | null) =>
+    setForm((f) => ({
+      ...f,
+      salePrice: v,
+      commissionAmount:
+        v != null && f.commissionPct != null
+          ? commissionAmountFromPct(v, f.commissionPct)
+          : f.commissionAmount,
+    }));
+  const setCommissionPct = (v: number | null) =>
+    setForm((f) => ({
+      ...f,
+      commissionPct: v,
+      commissionAmount:
+        v != null && f.salePrice != null
+          ? commissionAmountFromPct(f.salePrice, v)
+          : f.commissionAmount,
+    }));
+  const setCommissionAmount = (v: number | null) =>
+    setForm((f) => ({
+      ...f,
+      commissionAmount: v,
+      commissionPct:
+        v != null && f.salePrice != null && f.salePrice > 0
+          ? commissionPctFromAmount(f.salePrice, v)
+          : f.commissionPct,
+    }));
+
   const req = (f: string) => config.required.includes(f as never);
 
   const aiDocs = (deal.documents ?? []).filter((d) => d.aiGenerated);
@@ -204,6 +244,11 @@ export function StageGate({
         .filter(Boolean)
         .join(", ")
     : deal.name;
+
+  // Buyer options for the Under Contract gate. Also passed to the Select via
+  // `items` so the trigger renders the contact's name (label) rather than the
+  // raw id (value).
+  const buyerOptions = getSellerOptions(deal.propertyId);
 
   const confirmable = canConfirm(config, effectiveForm);
 
@@ -260,7 +305,7 @@ export function StageGate({
                   <div className="fw-semibold mb-2">
                     You're publishing this listing
                   </div>
-                  <dl className="row g-0 mb-0 fs-small">
+                  <dl className="row g-0 mb-0">
                     <dt className="col-4 fw-normal text-muted">Seller</dt>
                     <dd className="col-8 mb-1">{sellerName ?? "—"}</dd>
                     <dt className="col-4 fw-normal text-muted">Side</dt>
@@ -296,20 +341,10 @@ export function StageGate({
 
                   <Field>
                     <Field.Label>Asking price</Field.Label>
-                    <InputGroup>
-                      <InputGroup.Addon>$</InputGroup.Addon>
-                      <Input
-                        type="number"
-                        value={form.askingPrice ?? ""}
-                        onChange={(e) =>
-                          set(
-                            "askingPrice",
-                            e.target.value ? Number(e.target.value) : null,
-                          )
-                        }
-                        placeholder="0"
-                      />
-                    </InputGroup>
+                    <CurrencyInput
+                      value={form.askingPrice}
+                      onChange={(v) => set("askingPrice", v)}
+                    />
                     <Field.Description>
                       Editing here updates the listing.{" "}
                       <a
@@ -322,6 +357,8 @@ export function StageGate({
                       </a>
                     </Field.Description>
                   </Field>
+
+                  <UnderwritingDepth />
                 </>
               )}
 
@@ -395,6 +432,7 @@ export function StageGate({
                 <Field>
                   <Field.Label>Buyer</Field.Label>
                   <Select
+                    items={buyerOptions}
                     value={form.buyerContactId ?? ""}
                     onValueChange={(v) => {
                       set("buyerContactId", v || null);
@@ -408,7 +446,7 @@ export function StageGate({
                       <Select.Value placeholder="Select a buyer…" />
                     </Select.Trigger>
                     <Select.Content>
-                      {getSellerOptions(deal.propertyId).map((o) => (
+                      {buyerOptions.map((o) => (
                         <Select.Item key={o.value} value={o.value}>
                           {o.label}
                         </Select.Item>
@@ -443,12 +481,18 @@ export function StageGate({
               {req("salePrice") && (
                 <Field>
                   <Field.Label>Sale Price</Field.Label>
+                  <CurrencyInput value={form.salePrice} onChange={setSalePrice} />
+                </Field>
+              )}
+
+              {req("commissionAmount") && (
+                <Field>
+                  <Field.Label>Gross Commission %</Field.Label>
                   <Input
                     type="number"
-                    value={form.salePrice ?? ""}
+                    value={form.commissionPct ?? ""}
                     onChange={(e) =>
-                      set(
-                        "salePrice",
+                      setCommissionPct(
                         e.target.value ? Number(e.target.value) : null,
                       )
                     }
@@ -459,15 +503,9 @@ export function StageGate({
               {req("commissionAmount") && (
                 <Field>
                   <Field.Label>Gross Commission ($)</Field.Label>
-                  <Input
-                    type="number"
-                    value={form.commissionAmount ?? ""}
-                    onChange={(e) =>
-                      set(
-                        "commissionAmount",
-                        e.target.value ? Number(e.target.value) : null,
-                      )
-                    }
+                  <CurrencyInput
+                    value={form.commissionAmount}
+                    onChange={setCommissionAmount}
                   />
                 </Field>
               )}
