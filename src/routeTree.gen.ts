@@ -17,12 +17,13 @@ import { Route as EmailRouteImport } from './routes/email'
 import { Route as EditorRouteImport } from './routes/editor'
 import { Route as BackofficeRouteImport } from './routes/backoffice'
 import { Route as AppRouteImport } from './routes/app'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as ShellRouteImport } from './routes/_shell'
 import { Route as SuiteIndexRouteImport } from './routes/suite/index'
 import { Route as PropertiesIndexRouteImport } from './routes/properties/index'
 import { Route as ListingsIndexRouteImport } from './routes/listings/index'
 import { Route as EmailIndexRouteImport } from './routes/email/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
+import { Route as ShellIndexRouteImport } from './routes/_shell/index'
 import { Route as PropertiesPropertyIdRouteImport } from './routes/properties/$propertyId'
 import { Route as ListingsListingIdRouteImport } from './routes/listings/$listingId'
 import { Route as EmailEmailIdRouteImport } from './routes/email/$emailId'
@@ -85,9 +86,8 @@ const AppRoute = AppRouteImport.update({
   path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const ShellRoute = ShellRouteImport.update({
+  id: '/_shell',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SuiteIndexRoute = SuiteIndexRouteImport.update({
@@ -114,6 +114,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRoute,
+} as any)
+const ShellIndexRoute = ShellIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShellRoute,
 } as any)
 const PropertiesPropertyIdRoute = PropertiesPropertyIdRouteImport.update({
   id: '/$propertyId',
@@ -231,7 +236,7 @@ const BackofficeContactsContactIdRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof ShellIndexRoute
   '/app': typeof AppRouteWithChildren
   '/backoffice': typeof BackofficeRouteWithChildren
   '/editor': typeof EditorRouteWithChildren
@@ -268,13 +273,13 @@ export interface FileRoutesByFullPath {
   '/listings/$listingId/': typeof ListingsListingIdIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
   '/backoffice': typeof BackofficeRouteWithChildren
   '/editor': typeof EditorRouteWithChildren
   '/login': typeof LoginRoute
   '/editor/$listingId': typeof EditorListingIdRoute
   '/email/$emailId': typeof EmailEmailIdRoute
   '/properties/$propertyId': typeof PropertiesPropertyIdRoute
+  '/': typeof ShellIndexRoute
   '/app': typeof AppIndexRoute
   '/email': typeof EmailIndexRoute
   '/listings': typeof ListingsIndexRoute
@@ -300,7 +305,7 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_shell': typeof ShellRouteWithChildren
   '/app': typeof AppRouteWithChildren
   '/backoffice': typeof BackofficeRouteWithChildren
   '/editor': typeof EditorRouteWithChildren
@@ -313,6 +318,7 @@ export interface FileRoutesById {
   '/email/$emailId': typeof EmailEmailIdRoute
   '/listings/$listingId': typeof ListingsListingIdRouteWithChildren
   '/properties/$propertyId': typeof PropertiesPropertyIdRoute
+  '/_shell/': typeof ShellIndexRoute
   '/app/': typeof AppIndexRoute
   '/email/': typeof EmailIndexRoute
   '/listings/': typeof ListingsIndexRoute
@@ -376,13 +382,13 @@ export interface FileRouteTypes {
     | '/listings/$listingId/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
     | '/backoffice'
     | '/editor'
     | '/login'
     | '/editor/$listingId'
     | '/email/$emailId'
     | '/properties/$propertyId'
+    | '/'
     | '/app'
     | '/email'
     | '/listings'
@@ -407,7 +413,7 @@ export interface FileRouteTypes {
     | '/listings/$listingId'
   id:
     | '__root__'
-    | '/'
+    | '/_shell'
     | '/app'
     | '/backoffice'
     | '/editor'
@@ -420,6 +426,7 @@ export interface FileRouteTypes {
     | '/email/$emailId'
     | '/listings/$listingId'
     | '/properties/$propertyId'
+    | '/_shell/'
     | '/app/'
     | '/email/'
     | '/listings/'
@@ -445,7 +452,7 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  ShellRoute: typeof ShellRouteWithChildren
   AppRoute: typeof AppRouteWithChildren
   BackofficeRoute: typeof BackofficeRouteWithChildren
   EditorRoute: typeof EditorRouteWithChildren
@@ -514,11 +521,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
+    '/_shell': {
+      id: '/_shell'
+      path: ''
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof ShellRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/suite/': {
@@ -555,6 +562,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/'
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/_shell/': {
+      id: '/_shell/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof ShellIndexRouteImport
+      parentRoute: typeof ShellRoute
     }
     '/properties/$propertyId': {
       id: '/properties/$propertyId'
@@ -706,6 +720,16 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ShellRouteChildren {
+  ShellIndexRoute: typeof ShellIndexRoute
+}
+
+const ShellRouteChildren: ShellRouteChildren = {
+  ShellIndexRoute: ShellIndexRoute,
+}
+
+const ShellRouteWithChildren = ShellRoute._addFileChildren(ShellRouteChildren)
+
 interface AppRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
 }
@@ -831,7 +855,7 @@ const SuiteRouteChildren: SuiteRouteChildren = {
 const SuiteRouteWithChildren = SuiteRoute._addFileChildren(SuiteRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  ShellRoute: ShellRouteWithChildren,
   AppRoute: AppRouteWithChildren,
   BackofficeRoute: BackofficeRouteWithChildren,
   EditorRoute: EditorRouteWithChildren,

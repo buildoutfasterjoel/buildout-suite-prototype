@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSparkles } from "@fortawesome/pro-regular-svg-icons";
 import { getStore } from "#/data/store";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_shell/")({
   component: Home,
   head: () => ({
     meta: [
