@@ -10,12 +10,16 @@ import {
   faPhone,
   faEnvelope,
   faSquareCheck,
-  faWandMagicSparkles,
   faHandshake,
   faFlag,
 } from "@fortawesome/pro-regular-svg-icons";
+import { faSparkles } from "@fortawesome/pro-solid-svg-icons";
 import type { Contact, DealSummary } from "#/data/types";
-import { buildActivity, buildBriefing } from "#/components/contacts/contactDisplay";
+import {
+  buildActivity,
+  buildBriefing,
+  buildLastTouch,
+} from "#/components/contacts/contactDisplay";
 
 type EngageTab = "note" | "call" | "email" | "task";
 
@@ -49,6 +53,7 @@ export function ContactEngagementPanel({
 
   const activity = useMemo(() => buildActivity(contact, deals), [contact, deals]);
   const briefing = useMemo(() => buildBriefing(contact, deals), [contact, deals]);
+  const lastTouch = useMemo(() => buildLastTouch(contact), [contact]);
 
   // Synthesized activity is only "created"/"deal" — calls/emails/notes are empty.
   const visibleActivity = filter === "all" ? activity : [];
@@ -99,17 +104,6 @@ export function ContactEngagementPanel({
         </Card.Body>
       </Card>
 
-      {/* AI briefing */}
-      <Card className="shadow-sm bg-purple-heart-50 border border-primary">
-        <Card.Body className="d-flex flex-column gap-2">
-          <Card.Title className="fs-6 d-inline-flex align-items-center gap-2 text-purple-heart-700">
-            <FontAwesomeIcon icon={faWandMagicSparkles} />
-            AI Briefing
-          </Card.Title>
-          <p className="mb-0">{briefing}</p>
-        </Card.Body>
-      </Card>
-
       {/* Activity */}
       <Card className="shadow-sm">
         <Card.Body className="d-flex flex-column gap-3">
@@ -137,6 +131,34 @@ export function ContactEngagementPanel({
               ))}
             </div>
           </div>
+
+          {/* AI briefing — soft gradient summary pinned above the timeline */}
+          <div
+            className="rounded-2 p-3 d-flex flex-column gap-2"
+            style={{
+              border: "1px solid #e7d5ff",
+              backgroundImage:
+                "linear-gradient(90deg, rgba(255,255,255,0.85), rgba(255,255,255,0.85)), linear-gradient(90deg, #b88cf2 0%, #8ca6f7 50%, #61c2ff 100%)",
+            }}
+          >
+            <div className="d-flex align-items-center justify-content-between gap-2">
+              <span
+                className="d-inline-flex align-items-center gap-2 fw-semibold text-body-emphasis lh-sm"
+                style={{ fontSize: 17 }}
+              >
+                <FontAwesomeIcon
+                  icon={faSparkles}
+                  style={{ color: "#9f55f7", fontSize: 14 }}
+                />
+                Briefing
+              </span>
+              <span className="text-muted fs-small text-nowrap">
+                Last touch: <span className="fw-bold">{lastTouch}</span>
+              </span>
+            </div>
+            <p className="mb-0">{briefing}</p>
+          </div>
+
           {visibleActivity.length === 0 ? (
             <span className="text-muted fs-small">No activity to show.</span>
           ) : (
