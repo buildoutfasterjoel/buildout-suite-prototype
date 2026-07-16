@@ -179,6 +179,62 @@ export interface ContactActivityEntry {
   date: string;
 }
 
+/** The kinds of activity the compose module can log. */
+export type ComposeKind = "note" | "call" | "email" | "meeting" | "tour";
+
+/**
+ * An activity logged from the compose module, prepended to the timeline. Held in
+ * component state (prototype — not persisted).
+ */
+export interface ComposedActivity {
+  id: string;
+  kind: ComposeKind;
+  /** Free-text body (note/call/meeting/tour) or email message. */
+  body: string;
+  /** `yyyy-mm-dd` when the activity took place — editable via the date picker. */
+  date: string;
+  /** Monotonic creation order so the newest logged item sorts to the top. */
+  seq: number;
+  /** Call outcome chip (call only), e.g. "Connected". */
+  outcome?: string;
+  /** Email subject (email only). */
+  subject?: string;
+  /** Email recipient address (email only). */
+  to?: string;
+  /** Related deal name, when one was selected. */
+  relatedDeal?: string;
+}
+
+/** Timeline headline per logged activity kind. */
+export const COMPOSE_TIMELINE_TITLE: Record<ComposeKind, string> = {
+  note: "You logged a note",
+  call: "You logged a call",
+  email: "You sent an email",
+  meeting: "You logged a meeting",
+  tour: "You logged a tour",
+};
+
+/** Local `yyyy-mm-dd` for today (no timezone drift). */
+export function todayISO(): string {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+/**
+ * Format a date value as e.g. "Jul 16, 2026". Accepts both full ISO timestamps
+ * and plain `yyyy-mm-dd` (pinned to local midnight to avoid a UTC day-shift).
+ */
+export function medDate(value: string): string {
+  const d = new Date(value.length <= 10 ? `${value}T00:00:00` : value);
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 /** Synthesizes a short activity timeline from the contact + its linked deals. */
 export function buildActivity(
   c: Contact,

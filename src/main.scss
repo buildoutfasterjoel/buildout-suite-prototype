@@ -705,3 +705,481 @@
     background: var(--color-storm-grey-50, #f6f7f9);
   }
 }
+
+// ── Contact engagement compose module ────────────────────────────────────────
+// The tabbed composer (Note / Call / Email / Meeting / Tour) above the activity
+// timeline. The tab styling below is layered ON TOP of the Blueprint Tabs
+// component per the current design — scoped to `.compose-tabs` so it can be
+// dropped once the DS Tabs component picks up these tokens.
+
+.compose-tabs {
+  .nav-tabs {
+    // Drive the DS active-underline + active-label colors via the theme vars.
+    --bp-nav-tabs-link-active-border-color: var(--color-purple-heart-700, #7422ce);
+    --bp-nav-tabs-link-active-color: var(--color-storm-grey-900, #22262f);
+    align-items: stretch;
+    border-bottom: 1px solid var(--color-storm-grey-100, #eceef2);
+  }
+
+  // Equal-width tabs with centered icon + label.
+  .nav-link {
+    flex: 1 1 0;
+    justify-content: center;
+    align-items: center;
+    min-height: 36px;
+    padding: 12px;
+    color: var(--color-storm-grey-600, #506079);
+    font-weight: 600;
+
+    .nav-link-icon {
+      align-self: center;
+      color: var(--color-storm-grey-400, #8495ac);
+    }
+    .nav-link-text {
+      flex-direction: row;
+    }
+
+    // Base UI marks the active tab with `aria-selected` / `data-active`
+    // (not Bootstrap's `.active` class), so target those.
+    &[aria-selected="true"],
+    &[data-active] {
+      color: var(--color-storm-grey-900, #22262f);
+      font-weight: 700;
+
+      .nav-link-icon {
+        color: var(--color-purple-heart-600, #8833ea);
+      }
+    }
+  }
+}
+
+// Textarea with the AI "sparkle" affordance pinned to its top-right corner.
+.compose-textarea {
+  position: relative;
+  width: 100%;
+
+  textarea {
+    padding-right: 2.5rem;
+  }
+}
+.compose-sparkle {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--bp-border-radius, 6px);
+  background: transparent;
+  color: var(--color-purple-heart-400, #b984fc);
+  cursor: pointer;
+  transition: background-color 0.12s ease-in-out;
+
+  &:hover {
+    background: var(--color-purple-heart-50, #f9f5ff);
+  }
+}
+
+// The editable activity date, revealed once a draft has content.
+.compose-date-btn {
+  font-weight: 600;
+  color: var(--color-storm-grey-600, #506079);
+
+  &__icon {
+    margin-right: 6px;
+    color: var(--color-storm-grey-500, #62748e);
+  }
+  &:hover {
+    color: var(--color-storm-grey-900, #22262f);
+    background: var(--color-storm-grey-50, #f6f7f9);
+  }
+}
+
+// "Select a related Deal" trigger — leading handshake icon + value + caret.
+// Hugs its label rather than spanning the footer width.
+.compose-deal-select {
+  width: auto;
+  min-width: 0;
+  gap: 8px;
+}
+
+// Call-tab outcome chips (Connected / No Answer / …). Selected = soft purple.
+.compose-outcome-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 4px 8px;
+  border-radius: var(--bp-border-radius, 6px);
+  border: 1px solid var(--color-storm-grey-200, #d5dae2);
+  background: transparent;
+  color: var(--color-storm-grey-600, #506079);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 0.12s ease-in-out,
+    background-color 0.12s ease-in-out;
+
+  &:hover {
+    border-color: var(--color-storm-grey-300, #afb9ca);
+  }
+
+  &.is-active {
+    background: var(--color-purple-heart-50, #f9f5ff);
+    border-color: var(--color-purple-heart-400, #b984fc);
+    color: var(--color-purple-heart-950, #360764);
+  }
+}
+
+// Call tab header: the "Calling" phone field, Call Now button, and divider.
+.compose-call-header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  border-bottom: 1px solid var(--color-storm-grey-100, #eceef2);
+}
+.compose-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  &__line {
+    flex: 1 1 0;
+    height: 1px;
+    background: var(--color-storm-grey-100, #eceef2);
+  }
+  &__label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-storm-grey-900, #22262f);
+    white-space: nowrap;
+  }
+}
+
+// Email tab: full-bleed To / From / Subject rows above the padded editor.
+.compose-email-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--color-storm-grey-100, #eceef2);
+  font-size: 14px;
+}
+.compose-email-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 28px;
+  padding: 4px 8px 4px 4px;
+  border-radius: 999px;
+  border: 1px solid var(--color-storm-grey-200, #d5dae2);
+  background: var(--color-storm-grey-50, #f6f7f9);
+  color: var(--color-storm-grey-900, #22262f);
+
+  &__avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    background: linear-gradient(
+      225deg,
+      var(--color-storm-grey-100, #eceef2) 0%,
+      var(--color-storm-grey-200, #d5dae2) 72%,
+      var(--color-storm-grey-300, #afb9ca) 100%
+    );
+    color: var(--color-storm-grey-600, #506079);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+  }
+}
+.compose-email-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--bp-link-color, #2042a7);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.compose-subject-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+  color: var(--color-storm-grey-900, #22262f);
+
+  &::placeholder {
+    color: var(--color-input-placeholder, #62748e);
+  }
+}
+
+// Email rich-text formatting toolbar (visual only in this prototype).
+.compose-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 8px;
+  border-radius: var(--bp-border-radius, 6px);
+  background: var(--color-storm-grey-50, #f6f7f9);
+}
+.compose-toolbar__btn,
+.compose-attach-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--color-storm-grey-700, #424e62);
+  border-radius: var(--bp-border-radius, 6px);
+  cursor: pointer;
+  transition: background-color 0.12s ease-in-out;
+
+  &:hover {
+    background: var(--color-storm-grey-100, #eceef2);
+  }
+}
+.compose-toolbar__btn {
+  width: 36px;
+  height: 36px;
+  justify-content: center;
+}
+.compose-attach-btn {
+  height: 36px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+// ── Live call bar ────────────────────────────────────────────────────────────
+// Docks full-width above the contact record's columns while a simulated call
+// runs. "Calling" is a light slim bar (countdown); "ringing"/"connected" share
+// a dark blue status bar. Modeled on the reference prototype's call panel.
+.contact-call-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+  padding: 10px 18px;
+  border-radius: var(--bp-border-radius-lg, 12px);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+  animation: contact-call-in 0.22s ease-out;
+
+  &__avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+
+    &--calling {
+      background: linear-gradient(
+        135deg,
+        var(--color-purple-heart-500, #9f55f7) 0%,
+        var(--color-buildout-blue-600, #2350c9) 100%
+      );
+    }
+  }
+
+  &__info {
+    min-width: 0;
+  }
+  &__name {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  &__meta {
+    font-size: 12px;
+    margin-top: 1px;
+  }
+}
+
+@keyframes contact-call-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// ── Calling (light slim bar) ──
+.contact-call-bar--calling {
+  background: var(--bp-card-bg, #fff);
+  border: 1px solid var(--color-storm-grey-100, #eceef2);
+  color: var(--color-storm-grey-900, #22262f);
+
+  .contact-call-bar__info {
+    flex: 1 1 auto;
+  }
+  .contact-call-bar__meta {
+    color: var(--color-storm-grey-600, #506079);
+  }
+  .contact-call-bar__count {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--color-buildout-blue-600, #2350c9);
+    min-width: 22px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .contact-call-bar__cancel {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: var(--bp-border-radius, 6px);
+    border: 1px solid var(--color-storm-grey-200, #d5dae2);
+    background: var(--color-storm-grey-50, #f6f7f9);
+    color: var(--color-storm-grey-700, #424e62);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.12s ease-in-out;
+
+    &:hover {
+      background: var(--color-storm-grey-100, #eceef2);
+    }
+  }
+}
+
+// ── Ringing / Connected (dark blue bar) ──
+.contact-call-bar--live {
+  background: linear-gradient(
+    135deg,
+    var(--color-buildout-blue-950, #182753) 0%,
+    var(--color-buildout-blue-600, #2350c9) 100%
+  );
+  color: #fff;
+
+  .contact-call-bar__status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+  .contact-call-bar__pulse {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--color-mountain-meadow-500, #00bc7d);
+    box-shadow: 0 0 0 0 rgba(0, 188, 125, 0.6);
+    animation: contact-call-pulse 1.4s infinite;
+  }
+  .contact-call-bar__conn {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(0, 188, 125, 0.25);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .contact-call-bar__timer {
+    font-family: ui-monospace, SFMono-Regular, "Menlo", monospace;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.12);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .contact-call-bar__target {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .contact-call-bar__meta {
+    color: rgba(255, 255, 255, 0.78);
+  }
+
+  .contact-call-bar__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .contact-call-bar__mute {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.22);
+    }
+    &.is-active {
+      background: var(--color-harvest-gold-500, #fd9a00);
+      border-color: var(--color-harvest-gold-500, #fd9a00);
+    }
+  }
+  .contact-call-bar__end {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 8px;
+    border: 0;
+    background: var(--bp-destructive, #d92d20);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: filter 0.15s;
+
+    &:hover {
+      filter: brightness(1.07);
+    }
+  }
+}
+
+@keyframes contact-call-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 188, 125, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(0, 188, 125, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 188, 125, 0);
+  }
+}
