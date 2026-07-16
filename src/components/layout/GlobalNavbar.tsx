@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useLocation } from "@tanstack/react-router";
+import { useState, type MouseEvent } from "react";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { Navbar } from "@buildoutinc/blueprint-react/ui/Navbar";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
@@ -67,10 +67,33 @@ export function GlobalNavbar() {
         : null) ?? "principal",
   );
 
+  const navigate = useNavigate();
   const resetDemo = useDataStore((s) => s.reset);
   const assistantOpen = useAssistant((s) => s.open);
   const toggleAssistant = useAssistant((s) => s.toggle);
   const openOmniSearch = useOmniSearch((s) => s.setOpen);
+
+  // Navigate client-side so the persistent shell — and the open AI assistant
+  // session — survives section changes. A plain <a> would full-reload the
+  // document and remount everything. We keep the <a href> (for accessibility
+  // and cmd/ctrl/middle-click "open in new tab") but intercept the plain
+  // left-click. navigate() is used instead of <Link> because some nav targets
+  // are placeholder routes that don't exist yet; navigate degrades to
+  // not-found rather than throwing at render time.
+  function handleNavClick(e: MouseEvent<HTMLAnchorElement>, href: string) {
+    if (
+      e.defaultPrevented ||
+      e.button !== 0 ||
+      e.metaKey ||
+      e.ctrlKey ||
+      e.shiftKey ||
+      e.altKey
+    ) {
+      return;
+    }
+    e.preventDefault();
+    navigate({ to: href as never });
+  }
 
   function handleRoleChange(newRole: Role) {
     if (typeof window !== "undefined") {
@@ -93,6 +116,7 @@ export function GlobalNavbar() {
     <Navbar expand="lg">
       <Navbar.Brand
         href="/suite"
+        onClick={(e) => handleNavClick(e, "/suite")}
         aria-label="Buildout"
         className="d-inline-flex align-items-center gap-2"
       >
@@ -108,7 +132,12 @@ export function GlobalNavbar() {
             <Navbar.Item key={ctx.label}>
               <Navbar.ItemLink
                 isActive={isPathActive(ctx.href, pathname)}
-                render={<a href={ctx.href} />}
+                render={
+                  <a
+                    href={ctx.href}
+                    onClick={(e) => handleNavClick(e, ctx.href)}
+                  />
+                }
               >
                 <Navbar.ItemLinkIcon>
                   {ctx.isLive ? (
