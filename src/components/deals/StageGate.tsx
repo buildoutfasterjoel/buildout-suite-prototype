@@ -32,7 +32,11 @@ import {
 } from "#/data/stageGates";
 import { commitStageTransition } from "#/data/actions";
 import { STATUS_LABELS } from "#/components/properties/propertyDisplay";
-import { commissionAmountFromPct, commissionPctFromAmount } from "#/data/commission";
+import {
+  commissionAmountFromPct,
+  commissionPctFromAmount,
+} from "#/data/commission";
+import { UnderwritingDepth } from "./UnderwritingDepth";
 
 const EMPTY_FORM: GateFormState = {
   buyerLinked: false,
@@ -295,7 +299,7 @@ export function StageGate({
                   <div className="fw-semibold mb-2">
                     You're publishing this listing
                   </div>
-                  <dl className="row g-0 mb-0 fs-small">
+                  <dl className="row g-0 mb-0">
                     <dt className="col-4 fw-normal text-muted">Seller</dt>
                     <dd className="col-8 mb-1">{sellerName ?? "—"}</dd>
                     <dt className="col-4 fw-normal text-muted">Side</dt>
@@ -357,6 +361,8 @@ export function StageGate({
                       </a>
                     </Field.Description>
                   </Field>
+
+                  <UnderwritingDepth />
                 </>
               )}
 
@@ -482,7 +488,9 @@ export function StageGate({
                     type="number"
                     value={form.salePrice ?? ""}
                     onChange={(e) =>
-                      setSalePrice(e.target.value ? Number(e.target.value) : null)
+                      setSalePrice(
+                        e.target.value ? Number(e.target.value) : null,
+                      )
                     }
                   />
                 </Field>
@@ -495,7 +503,9 @@ export function StageGate({
                     type="number"
                     value={form.commissionPct ?? ""}
                     onChange={(e) =>
-                      setCommissionPct(e.target.value ? Number(e.target.value) : null)
+                      setCommissionPct(
+                        e.target.value ? Number(e.target.value) : null,
+                      )
                     }
                   />
                 </Field>
@@ -508,7 +518,9 @@ export function StageGate({
                     type="number"
                     value={form.commissionAmount ?? ""}
                     onChange={(e) =>
-                      setCommissionAmount(e.target.value ? Number(e.target.value) : null)
+                      setCommissionAmount(
+                        e.target.value ? Number(e.target.value) : null,
+                      )
                     }
                   />
                 </Field>

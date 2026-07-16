@@ -1,0 +1,195 @@
+// Underwriting depth control (Approve & Publish gate). Colors reference the
+// Blueprint palette CSS variables, matching the convention in main.scss.
+
+.underwriting-depth {
+  // Slider with a clean solid track: purple up to the thumb (via the --fill
+  // custom property set inline from the selected count), grey after.
+  &__slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 20px;
+    margin: 0;
+    background: transparent;
+    cursor: pointer;
+
+    @mixin track {
+      height: 6px;
+      border-radius: 3px;
+      background: linear-gradient(
+        to right,
+        var(--color-purple-heart-500, #9f55f7) 0,
+        var(--color-purple-heart-500, #9f55f7) var(--fill, 50%),
+        var(--color-storm-grey-200, #d5dae2) var(--fill, 50%),
+        var(--color-storm-grey-200, #d5dae2) 100%
+      );
+    }
+
+    &::-webkit-slider-runnable-track {
+      @include track;
+    }
+    &::-moz-range-track {
+      @include track;
+    }
+
+    @mixin thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      border: 2px solid var(--color-purple-heart-500, #9f55f7);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+      cursor: pointer;
+    }
+
+    &::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      margin-top: -6px; // center the 18px thumb on the 6px track
+      @include thumb;
+    }
+    &::-moz-range-thumb {
+      @include thumb;
+    }
+
+    &:focus-visible {
+      outline: none;
+    }
+    &:focus-visible::-webkit-slider-thumb {
+      box-shadow: 0 0 0 3px var(--color-purple-heart-200, #e0cafd);
+    }
+    &:focus-visible::-moz-range-thumb {
+      box-shadow: 0 0 0 3px var(--color-purple-heart-200, #e0cafd);
+    }
+  }
+
+  // "Hide checks" / "Show checks" text toggle — a borderless purple link.
+  &__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-purple-heart-600, #8833ea);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--color-purple-heart-700, #7112d1);
+    }
+  }
+
+  &__checks {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  // Each check is a bordered cell. Off = muted text, empty grey circle, lighter
+  // border. On = normal text, filled purple check. The border/text color
+  // transitions, and the two icons cross-fade with a slight scale pop so a
+  // check turning on/off animates smoothly as the slider moves.
+  &__check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--color-storm-grey-100, #eceef2);
+    border-radius: var(--bp-border-radius-lg, 8px);
+    background: transparent;
+    font-family: inherit;
+    font-size: 0.875rem;
+    text-align: left;
+    color: var(--color-storm-grey-400, #8b98af);
+    cursor: pointer;
+    transition:
+      border-color 0.25s ease,
+      color 0.25s ease,
+      background-color 0.15s ease;
+
+    &:hover {
+      border-color: var(--color-purple-heart-300, #d4b4fe);
+      background: var(--color-purple-heart-50, #f9f5ff);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--color-purple-heart-300, #d4b4fe);
+      outline-offset: 1px;
+    }
+
+    // Stack the two icons in the same 18px box so they can cross-fade.
+    .underwriting-depth__check-icon {
+      position: relative;
+      display: inline-flex;
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+
+      .uw-icon {
+        position: absolute;
+        top: 0;
+        left: 0;
+        font-size: 18px;
+        transition:
+          opacity 0.25s ease,
+          transform 0.25s ease;
+      }
+      .uw-icon--off {
+        opacity: 1;
+        transform: scale(1);
+        color: var(--color-storm-grey-300, #afb9ca);
+      }
+      .uw-icon--on {
+        opacity: 0;
+        transform: scale(0.6);
+        color: var(--color-purple-heart-500, #9f55f7);
+      }
+    }
+
+    &.is-on {
+      border-color: var(--color-storm-grey-200, #d5dae2);
+      color: var(--bp-body-color, #182029);
+
+      .uw-icon--off {
+        opacity: 0;
+        transform: scale(0.6);
+      }
+      .uw-icon--on {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+  }
+
+  // Tier badge pops when the tier changes (the element is keyed by tier in the
+  // component, so it remounts and re-runs the animation).
+  &__badge {
+    animation: uw-badge-pop 0.28s ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .underwriting-depth__check,
+    .uw-icon {
+      transition: none;
+    }
+    .underwriting-depth__badge {
+      animation: none;
+    }
+  }
+}
+
+@keyframes uw-badge-pop {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.5;
+  }
+  60% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
