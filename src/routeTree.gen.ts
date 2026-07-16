@@ -9,349 +9,358 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SuiteRouteImport } from './routes/suite'
-import { Route as PropertiesRouteImport } from './routes/properties'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as ListingsRouteImport } from './routes/listings'
-import { Route as EmailRouteImport } from './routes/email'
-import { Route as EditorRouteImport } from './routes/editor'
-import { Route as BackofficeRouteImport } from './routes/backoffice'
-import { Route as AppRouteImport } from './routes/app'
 import { Route as ShellRouteImport } from './routes/_shell'
-import { Route as SuiteIndexRouteImport } from './routes/suite/index'
-import { Route as PropertiesIndexRouteImport } from './routes/properties/index'
-import { Route as ListingsIndexRouteImport } from './routes/listings/index'
-import { Route as EmailIndexRouteImport } from './routes/email/index'
-import { Route as AppIndexRouteImport } from './routes/app/index'
-import { Route as ShellIndexRouteImport } from './routes/_shell/index'
-import { Route as PropertiesPropertyIdRouteImport } from './routes/properties/$propertyId'
-import { Route as ListingsListingIdRouteImport } from './routes/listings/$listingId'
-import { Route as EmailEmailIdRouteImport } from './routes/email/$emailId'
-import { Route as EditorListingIdRouteImport } from './routes/editor/$listingId'
-import { Route as ListingsListingIdIndexRouteImport } from './routes/listings/$listingId/index'
-import { Route as BackofficeContactsIndexRouteImport } from './routes/backoffice/contacts/index'
-import { Route as ListingsListingIdWebsiteRouteImport } from './routes/listings/$listingId/website'
-import { Route as ListingsListingIdTransactionRouteImport } from './routes/listings/$listingId/transaction'
-import { Route as ListingsListingIdOverviewRouteImport } from './routes/listings/$listingId/overview'
-import { Route as ListingsListingIdMediaRouteImport } from './routes/listings/$listingId/media'
-import { Route as ListingsListingIdLeadsRouteImport } from './routes/listings/$listingId/leads'
-import { Route as ListingsListingIdGridsRouteImport } from './routes/listings/$listingId/grids'
-import { Route as ListingsListingIdFinancialsRouteImport } from './routes/listings/$listingId/financials'
-import { Route as ListingsListingIdFilesRouteImport } from './routes/listings/$listingId/files'
-import { Route as ListingsListingIdEmailRouteImport } from './routes/listings/$listingId/email'
-import { Route as ListingsListingIdEditRouteImport } from './routes/listings/$listingId/edit'
-import { Route as ListingsListingIdDocumentsRouteImport } from './routes/listings/$listingId/documents'
-import { Route as ListingsListingIdDemographicsRouteImport } from './routes/listings/$listingId/demographics'
-import { Route as ListingsListingIdClientReportRouteImport } from './routes/listings/$listingId/client-report'
-import { Route as ListingsListingIdActivitiesRouteImport } from './routes/listings/$listingId/activities'
-import { Route as BackofficeContactsContactIdRouteImport } from './routes/backoffice/contacts/$contactId'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as ShellSuiteRouteImport } from './routes/_shell/suite'
+import { Route as ShellPropertiesRouteImport } from './routes/_shell/properties'
+import { Route as ShellListingsRouteImport } from './routes/_shell/listings'
+import { Route as ShellEmailRouteImport } from './routes/_shell/email'
+import { Route as ShellEditorRouteImport } from './routes/_shell/editor'
+import { Route as ShellBackofficeRouteImport } from './routes/_shell/backoffice'
+import { Route as ShellAppRouteImport } from './routes/_shell/app'
+import { Route as ShellSuiteIndexRouteImport } from './routes/_shell/suite/index'
+import { Route as ShellPropertiesIndexRouteImport } from './routes/_shell/properties/index'
+import { Route as ShellListingsIndexRouteImport } from './routes/_shell/listings/index'
+import { Route as ShellEmailIndexRouteImport } from './routes/_shell/email/index'
+import { Route as ShellAppIndexRouteImport } from './routes/_shell/app/index'
+import { Route as ShellPropertiesPropertyIdRouteImport } from './routes/_shell/properties/$propertyId'
+import { Route as ShellListingsListingIdRouteImport } from './routes/_shell/listings/$listingId'
+import { Route as ShellEmailEmailIdRouteImport } from './routes/_shell/email/$emailId'
+import { Route as ShellEditorListingIdRouteImport } from './routes/_shell/editor/$listingId'
+import { Route as ShellListingsListingIdIndexRouteImport } from './routes/_shell/listings/$listingId/index'
+import { Route as ShellBackofficeContactsIndexRouteImport } from './routes/_shell/backoffice/contacts/index'
+import { Route as ShellListingsListingIdWebsiteRouteImport } from './routes/_shell/listings/$listingId/website'
+import { Route as ShellListingsListingIdTransactionRouteImport } from './routes/_shell/listings/$listingId/transaction'
+import { Route as ShellListingsListingIdOverviewRouteImport } from './routes/_shell/listings/$listingId/overview'
+import { Route as ShellListingsListingIdMediaRouteImport } from './routes/_shell/listings/$listingId/media'
+import { Route as ShellListingsListingIdLeadsRouteImport } from './routes/_shell/listings/$listingId/leads'
+import { Route as ShellListingsListingIdGridsRouteImport } from './routes/_shell/listings/$listingId/grids'
+import { Route as ShellListingsListingIdFinancialsRouteImport } from './routes/_shell/listings/$listingId/financials'
+import { Route as ShellListingsListingIdFilesRouteImport } from './routes/_shell/listings/$listingId/files'
+import { Route as ShellListingsListingIdEmailRouteImport } from './routes/_shell/listings/$listingId/email'
+import { Route as ShellListingsListingIdEditRouteImport } from './routes/_shell/listings/$listingId/edit'
+import { Route as ShellListingsListingIdDocumentsRouteImport } from './routes/_shell/listings/$listingId/documents'
+import { Route as ShellListingsListingIdDemographicsRouteImport } from './routes/_shell/listings/$listingId/demographics'
+import { Route as ShellListingsListingIdClientReportRouteImport } from './routes/_shell/listings/$listingId/client-report'
+import { Route as ShellListingsListingIdActivitiesRouteImport } from './routes/_shell/listings/$listingId/activities'
+import { Route as ShellBackofficeContactsContactIdRouteImport } from './routes/_shell/backoffice/contacts/$contactId'
 
-const SuiteRoute = SuiteRouteImport.update({
-  id: '/suite',
-  path: '/suite',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PropertiesRoute = PropertiesRouteImport.update({
-  id: '/properties',
-  path: '/properties',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ListingsRoute = ListingsRouteImport.update({
-  id: '/listings',
-  path: '/listings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EmailRoute = EmailRouteImport.update({
-  id: '/email',
-  path: '/email',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EditorRoute = EditorRouteImport.update({
-  id: '/editor',
-  path: '/editor',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BackofficeRoute = BackofficeRouteImport.update({
-  id: '/backoffice',
-  path: '/backoffice',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppRoute = AppRouteImport.update({
-  id: '/app',
-  path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ShellRoute = ShellRouteImport.update({
   id: '/_shell',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SuiteIndexRoute = SuiteIndexRouteImport.update({
+const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => SuiteRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-const PropertiesIndexRoute = PropertiesIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => PropertiesRoute,
-} as any)
-const ListingsIndexRoute = ListingsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => ListingsRoute,
-} as any)
-const EmailIndexRoute = EmailIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => EmailRoute,
-} as any)
-const AppIndexRoute = AppIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AppRoute,
-} as any)
-const ShellIndexRoute = ShellIndexRouteImport.update({
-  id: '/',
-  path: '/',
+const ShellSuiteRoute = ShellSuiteRouteImport.update({
+  id: '/suite',
+  path: '/suite',
   getParentRoute: () => ShellRoute,
 } as any)
-const PropertiesPropertyIdRoute = PropertiesPropertyIdRouteImport.update({
-  id: '/$propertyId',
-  path: '/$propertyId',
-  getParentRoute: () => PropertiesRoute,
+const ShellPropertiesRoute = ShellPropertiesRouteImport.update({
+  id: '/properties',
+  path: '/properties',
+  getParentRoute: () => ShellRoute,
 } as any)
-const ListingsListingIdRoute = ListingsListingIdRouteImport.update({
-  id: '/$listingId',
-  path: '/$listingId',
-  getParentRoute: () => ListingsRoute,
+const ShellListingsRoute = ShellListingsRouteImport.update({
+  id: '/listings',
+  path: '/listings',
+  getParentRoute: () => ShellRoute,
 } as any)
-const EmailEmailIdRoute = EmailEmailIdRouteImport.update({
-  id: '/$emailId',
-  path: '/$emailId',
-  getParentRoute: () => EmailRoute,
-} as any)
-const EditorListingIdRoute = EditorListingIdRouteImport.update({
-  id: '/$listingId',
-  path: '/$listingId',
-  getParentRoute: () => EditorRoute,
-} as any)
-const ListingsListingIdIndexRoute = ListingsListingIdIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => ListingsListingIdRoute,
-} as any)
-const BackofficeContactsIndexRoute = BackofficeContactsIndexRouteImport.update({
-  id: '/contacts/',
-  path: '/contacts/',
-  getParentRoute: () => BackofficeRoute,
-} as any)
-const ListingsListingIdWebsiteRoute =
-  ListingsListingIdWebsiteRouteImport.update({
-    id: '/website',
-    path: '/website',
-    getParentRoute: () => ListingsListingIdRoute,
-  } as any)
-const ListingsListingIdTransactionRoute =
-  ListingsListingIdTransactionRouteImport.update({
-    id: '/transaction',
-    path: '/transaction',
-    getParentRoute: () => ListingsListingIdRoute,
-  } as any)
-const ListingsListingIdOverviewRoute =
-  ListingsListingIdOverviewRouteImport.update({
-    id: '/overview',
-    path: '/overview',
-    getParentRoute: () => ListingsListingIdRoute,
-  } as any)
-const ListingsListingIdMediaRoute = ListingsListingIdMediaRouteImport.update({
-  id: '/media',
-  path: '/media',
-  getParentRoute: () => ListingsListingIdRoute,
-} as any)
-const ListingsListingIdLeadsRoute = ListingsListingIdLeadsRouteImport.update({
-  id: '/leads',
-  path: '/leads',
-  getParentRoute: () => ListingsListingIdRoute,
-} as any)
-const ListingsListingIdGridsRoute = ListingsListingIdGridsRouteImport.update({
-  id: '/grids',
-  path: '/grids',
-  getParentRoute: () => ListingsListingIdRoute,
-} as any)
-const ListingsListingIdFinancialsRoute =
-  ListingsListingIdFinancialsRouteImport.update({
-    id: '/financials',
-    path: '/financials',
-    getParentRoute: () => ListingsListingIdRoute,
-  } as any)
-const ListingsListingIdFilesRoute = ListingsListingIdFilesRouteImport.update({
-  id: '/files',
-  path: '/files',
-  getParentRoute: () => ListingsListingIdRoute,
-} as any)
-const ListingsListingIdEmailRoute = ListingsListingIdEmailRouteImport.update({
+const ShellEmailRoute = ShellEmailRouteImport.update({
   id: '/email',
   path: '/email',
-  getParentRoute: () => ListingsListingIdRoute,
+  getParentRoute: () => ShellRoute,
 } as any)
-const ListingsListingIdEditRoute = ListingsListingIdEditRouteImport.update({
-  id: '/edit',
-  path: '/edit',
-  getParentRoute: () => ListingsListingIdRoute,
+const ShellEditorRoute = ShellEditorRouteImport.update({
+  id: '/editor',
+  path: '/editor',
+  getParentRoute: () => ShellRoute,
 } as any)
-const ListingsListingIdDocumentsRoute =
-  ListingsListingIdDocumentsRouteImport.update({
+const ShellBackofficeRoute = ShellBackofficeRouteImport.update({
+  id: '/backoffice',
+  path: '/backoffice',
+  getParentRoute: () => ShellRoute,
+} as any)
+const ShellAppRoute = ShellAppRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => ShellRoute,
+} as any)
+const ShellSuiteIndexRoute = ShellSuiteIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShellSuiteRoute,
+} as any)
+const ShellPropertiesIndexRoute = ShellPropertiesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShellPropertiesRoute,
+} as any)
+const ShellListingsIndexRoute = ShellListingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShellListingsRoute,
+} as any)
+const ShellEmailIndexRoute = ShellEmailIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShellEmailRoute,
+} as any)
+const ShellAppIndexRoute = ShellAppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShellAppRoute,
+} as any)
+const ShellPropertiesPropertyIdRoute =
+  ShellPropertiesPropertyIdRouteImport.update({
+    id: '/$propertyId',
+    path: '/$propertyId',
+    getParentRoute: () => ShellPropertiesRoute,
+  } as any)
+const ShellListingsListingIdRoute = ShellListingsListingIdRouteImport.update({
+  id: '/$listingId',
+  path: '/$listingId',
+  getParentRoute: () => ShellListingsRoute,
+} as any)
+const ShellEmailEmailIdRoute = ShellEmailEmailIdRouteImport.update({
+  id: '/$emailId',
+  path: '/$emailId',
+  getParentRoute: () => ShellEmailRoute,
+} as any)
+const ShellEditorListingIdRoute = ShellEditorListingIdRouteImport.update({
+  id: '/$listingId',
+  path: '/$listingId',
+  getParentRoute: () => ShellEditorRoute,
+} as any)
+const ShellListingsListingIdIndexRoute =
+  ShellListingsListingIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellBackofficeContactsIndexRoute =
+  ShellBackofficeContactsIndexRouteImport.update({
+    id: '/contacts/',
+    path: '/contacts/',
+    getParentRoute: () => ShellBackofficeRoute,
+  } as any)
+const ShellListingsListingIdWebsiteRoute =
+  ShellListingsListingIdWebsiteRouteImport.update({
+    id: '/website',
+    path: '/website',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdTransactionRoute =
+  ShellListingsListingIdTransactionRouteImport.update({
+    id: '/transaction',
+    path: '/transaction',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdOverviewRoute =
+  ShellListingsListingIdOverviewRouteImport.update({
+    id: '/overview',
+    path: '/overview',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdMediaRoute =
+  ShellListingsListingIdMediaRouteImport.update({
+    id: '/media',
+    path: '/media',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdLeadsRoute =
+  ShellListingsListingIdLeadsRouteImport.update({
+    id: '/leads',
+    path: '/leads',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdGridsRoute =
+  ShellListingsListingIdGridsRouteImport.update({
+    id: '/grids',
+    path: '/grids',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdFinancialsRoute =
+  ShellListingsListingIdFinancialsRouteImport.update({
+    id: '/financials',
+    path: '/financials',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdFilesRoute =
+  ShellListingsListingIdFilesRouteImport.update({
+    id: '/files',
+    path: '/files',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdEmailRoute =
+  ShellListingsListingIdEmailRouteImport.update({
+    id: '/email',
+    path: '/email',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdEditRoute =
+  ShellListingsListingIdEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdDocumentsRoute =
+  ShellListingsListingIdDocumentsRouteImport.update({
     id: '/documents',
     path: '/documents',
-    getParentRoute: () => ListingsListingIdRoute,
+    getParentRoute: () => ShellListingsListingIdRoute,
   } as any)
-const ListingsListingIdDemographicsRoute =
-  ListingsListingIdDemographicsRouteImport.update({
+const ShellListingsListingIdDemographicsRoute =
+  ShellListingsListingIdDemographicsRouteImport.update({
     id: '/demographics',
     path: '/demographics',
-    getParentRoute: () => ListingsListingIdRoute,
+    getParentRoute: () => ShellListingsListingIdRoute,
   } as any)
-const ListingsListingIdClientReportRoute =
-  ListingsListingIdClientReportRouteImport.update({
+const ShellListingsListingIdClientReportRoute =
+  ShellListingsListingIdClientReportRouteImport.update({
     id: '/client-report',
     path: '/client-report',
-    getParentRoute: () => ListingsListingIdRoute,
+    getParentRoute: () => ShellListingsListingIdRoute,
   } as any)
-const ListingsListingIdActivitiesRoute =
-  ListingsListingIdActivitiesRouteImport.update({
+const ShellListingsListingIdActivitiesRoute =
+  ShellListingsListingIdActivitiesRouteImport.update({
     id: '/activities',
     path: '/activities',
-    getParentRoute: () => ListingsListingIdRoute,
+    getParentRoute: () => ShellListingsListingIdRoute,
   } as any)
-const BackofficeContactsContactIdRoute =
-  BackofficeContactsContactIdRouteImport.update({
+const ShellBackofficeContactsContactIdRoute =
+  ShellBackofficeContactsContactIdRouteImport.update({
     id: '/contacts/$contactId',
     path: '/contacts/$contactId',
-    getParentRoute: () => BackofficeRoute,
+    getParentRoute: () => ShellBackofficeRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof ShellIndexRoute
-  '/app': typeof AppRouteWithChildren
-  '/backoffice': typeof BackofficeRouteWithChildren
-  '/editor': typeof EditorRouteWithChildren
-  '/email': typeof EmailRouteWithChildren
-  '/listings': typeof ListingsRouteWithChildren
+  '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/properties': typeof PropertiesRouteWithChildren
-  '/suite': typeof SuiteRouteWithChildren
-  '/editor/$listingId': typeof EditorListingIdRoute
-  '/email/$emailId': typeof EmailEmailIdRoute
-  '/listings/$listingId': typeof ListingsListingIdRouteWithChildren
-  '/properties/$propertyId': typeof PropertiesPropertyIdRoute
-  '/app/': typeof AppIndexRoute
-  '/email/': typeof EmailIndexRoute
-  '/listings/': typeof ListingsIndexRoute
-  '/properties/': typeof PropertiesIndexRoute
-  '/suite/': typeof SuiteIndexRoute
-  '/backoffice/contacts/$contactId': typeof BackofficeContactsContactIdRoute
-  '/listings/$listingId/activities': typeof ListingsListingIdActivitiesRoute
-  '/listings/$listingId/client-report': typeof ListingsListingIdClientReportRoute
-  '/listings/$listingId/demographics': typeof ListingsListingIdDemographicsRoute
-  '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
-  '/listings/$listingId/edit': typeof ListingsListingIdEditRoute
-  '/listings/$listingId/email': typeof ListingsListingIdEmailRoute
-  '/listings/$listingId/files': typeof ListingsListingIdFilesRoute
-  '/listings/$listingId/financials': typeof ListingsListingIdFinancialsRoute
-  '/listings/$listingId/grids': typeof ListingsListingIdGridsRoute
-  '/listings/$listingId/leads': typeof ListingsListingIdLeadsRoute
-  '/listings/$listingId/media': typeof ListingsListingIdMediaRoute
-  '/listings/$listingId/overview': typeof ListingsListingIdOverviewRoute
-  '/listings/$listingId/transaction': typeof ListingsListingIdTransactionRoute
-  '/listings/$listingId/website': typeof ListingsListingIdWebsiteRoute
-  '/backoffice/contacts/': typeof BackofficeContactsIndexRoute
-  '/listings/$listingId/': typeof ListingsListingIdIndexRoute
+  '/app': typeof ShellAppRouteWithChildren
+  '/backoffice': typeof ShellBackofficeRouteWithChildren
+  '/editor': typeof ShellEditorRouteWithChildren
+  '/email': typeof ShellEmailRouteWithChildren
+  '/listings': typeof ShellListingsRouteWithChildren
+  '/properties': typeof ShellPropertiesRouteWithChildren
+  '/suite': typeof ShellSuiteRouteWithChildren
+  '/editor/$listingId': typeof ShellEditorListingIdRoute
+  '/email/$emailId': typeof ShellEmailEmailIdRoute
+  '/listings/$listingId': typeof ShellListingsListingIdRouteWithChildren
+  '/properties/$propertyId': typeof ShellPropertiesPropertyIdRoute
+  '/app/': typeof ShellAppIndexRoute
+  '/email/': typeof ShellEmailIndexRoute
+  '/listings/': typeof ShellListingsIndexRoute
+  '/properties/': typeof ShellPropertiesIndexRoute
+  '/suite/': typeof ShellSuiteIndexRoute
+  '/backoffice/contacts/$contactId': typeof ShellBackofficeContactsContactIdRoute
+  '/listings/$listingId/activities': typeof ShellListingsListingIdActivitiesRoute
+  '/listings/$listingId/client-report': typeof ShellListingsListingIdClientReportRoute
+  '/listings/$listingId/demographics': typeof ShellListingsListingIdDemographicsRoute
+  '/listings/$listingId/documents': typeof ShellListingsListingIdDocumentsRoute
+  '/listings/$listingId/edit': typeof ShellListingsListingIdEditRoute
+  '/listings/$listingId/email': typeof ShellListingsListingIdEmailRoute
+  '/listings/$listingId/files': typeof ShellListingsListingIdFilesRoute
+  '/listings/$listingId/financials': typeof ShellListingsListingIdFinancialsRoute
+  '/listings/$listingId/grids': typeof ShellListingsListingIdGridsRoute
+  '/listings/$listingId/leads': typeof ShellListingsListingIdLeadsRoute
+  '/listings/$listingId/media': typeof ShellListingsListingIdMediaRoute
+  '/listings/$listingId/overview': typeof ShellListingsListingIdOverviewRoute
+  '/listings/$listingId/transaction': typeof ShellListingsListingIdTransactionRoute
+  '/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
+  '/backoffice/contacts/': typeof ShellBackofficeContactsIndexRoute
+  '/listings/$listingId/': typeof ShellListingsListingIdIndexRoute
 }
 export interface FileRoutesByTo {
-  '/backoffice': typeof BackofficeRouteWithChildren
-  '/editor': typeof EditorRouteWithChildren
+  '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/editor/$listingId': typeof EditorListingIdRoute
-  '/email/$emailId': typeof EmailEmailIdRoute
-  '/properties/$propertyId': typeof PropertiesPropertyIdRoute
-  '/': typeof ShellIndexRoute
-  '/app': typeof AppIndexRoute
-  '/email': typeof EmailIndexRoute
-  '/listings': typeof ListingsIndexRoute
-  '/properties': typeof PropertiesIndexRoute
-  '/suite': typeof SuiteIndexRoute
-  '/backoffice/contacts/$contactId': typeof BackofficeContactsContactIdRoute
-  '/listings/$listingId/activities': typeof ListingsListingIdActivitiesRoute
-  '/listings/$listingId/client-report': typeof ListingsListingIdClientReportRoute
-  '/listings/$listingId/demographics': typeof ListingsListingIdDemographicsRoute
-  '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
-  '/listings/$listingId/edit': typeof ListingsListingIdEditRoute
-  '/listings/$listingId/email': typeof ListingsListingIdEmailRoute
-  '/listings/$listingId/files': typeof ListingsListingIdFilesRoute
-  '/listings/$listingId/financials': typeof ListingsListingIdFinancialsRoute
-  '/listings/$listingId/grids': typeof ListingsListingIdGridsRoute
-  '/listings/$listingId/leads': typeof ListingsListingIdLeadsRoute
-  '/listings/$listingId/media': typeof ListingsListingIdMediaRoute
-  '/listings/$listingId/overview': typeof ListingsListingIdOverviewRoute
-  '/listings/$listingId/transaction': typeof ListingsListingIdTransactionRoute
-  '/listings/$listingId/website': typeof ListingsListingIdWebsiteRoute
-  '/backoffice/contacts': typeof BackofficeContactsIndexRoute
-  '/listings/$listingId': typeof ListingsListingIdIndexRoute
+  '/backoffice': typeof ShellBackofficeRouteWithChildren
+  '/editor': typeof ShellEditorRouteWithChildren
+  '/editor/$listingId': typeof ShellEditorListingIdRoute
+  '/email/$emailId': typeof ShellEmailEmailIdRoute
+  '/properties/$propertyId': typeof ShellPropertiesPropertyIdRoute
+  '/app': typeof ShellAppIndexRoute
+  '/email': typeof ShellEmailIndexRoute
+  '/listings': typeof ShellListingsIndexRoute
+  '/properties': typeof ShellPropertiesIndexRoute
+  '/suite': typeof ShellSuiteIndexRoute
+  '/backoffice/contacts/$contactId': typeof ShellBackofficeContactsContactIdRoute
+  '/listings/$listingId/activities': typeof ShellListingsListingIdActivitiesRoute
+  '/listings/$listingId/client-report': typeof ShellListingsListingIdClientReportRoute
+  '/listings/$listingId/demographics': typeof ShellListingsListingIdDemographicsRoute
+  '/listings/$listingId/documents': typeof ShellListingsListingIdDocumentsRoute
+  '/listings/$listingId/edit': typeof ShellListingsListingIdEditRoute
+  '/listings/$listingId/email': typeof ShellListingsListingIdEmailRoute
+  '/listings/$listingId/files': typeof ShellListingsListingIdFilesRoute
+  '/listings/$listingId/financials': typeof ShellListingsListingIdFinancialsRoute
+  '/listings/$listingId/grids': typeof ShellListingsListingIdGridsRoute
+  '/listings/$listingId/leads': typeof ShellListingsListingIdLeadsRoute
+  '/listings/$listingId/media': typeof ShellListingsListingIdMediaRoute
+  '/listings/$listingId/overview': typeof ShellListingsListingIdOverviewRoute
+  '/listings/$listingId/transaction': typeof ShellListingsListingIdTransactionRoute
+  '/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
+  '/backoffice/contacts': typeof ShellBackofficeContactsIndexRoute
+  '/listings/$listingId': typeof ShellListingsListingIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/_shell': typeof ShellRouteWithChildren
-  '/app': typeof AppRouteWithChildren
-  '/backoffice': typeof BackofficeRouteWithChildren
-  '/editor': typeof EditorRouteWithChildren
-  '/email': typeof EmailRouteWithChildren
-  '/listings': typeof ListingsRouteWithChildren
   '/login': typeof LoginRoute
-  '/properties': typeof PropertiesRouteWithChildren
-  '/suite': typeof SuiteRouteWithChildren
-  '/editor/$listingId': typeof EditorListingIdRoute
-  '/email/$emailId': typeof EmailEmailIdRoute
-  '/listings/$listingId': typeof ListingsListingIdRouteWithChildren
-  '/properties/$propertyId': typeof PropertiesPropertyIdRoute
-  '/_shell/': typeof ShellIndexRoute
-  '/app/': typeof AppIndexRoute
-  '/email/': typeof EmailIndexRoute
-  '/listings/': typeof ListingsIndexRoute
-  '/properties/': typeof PropertiesIndexRoute
-  '/suite/': typeof SuiteIndexRoute
-  '/backoffice/contacts/$contactId': typeof BackofficeContactsContactIdRoute
-  '/listings/$listingId/activities': typeof ListingsListingIdActivitiesRoute
-  '/listings/$listingId/client-report': typeof ListingsListingIdClientReportRoute
-  '/listings/$listingId/demographics': typeof ListingsListingIdDemographicsRoute
-  '/listings/$listingId/documents': typeof ListingsListingIdDocumentsRoute
-  '/listings/$listingId/edit': typeof ListingsListingIdEditRoute
-  '/listings/$listingId/email': typeof ListingsListingIdEmailRoute
-  '/listings/$listingId/files': typeof ListingsListingIdFilesRoute
-  '/listings/$listingId/financials': typeof ListingsListingIdFinancialsRoute
-  '/listings/$listingId/grids': typeof ListingsListingIdGridsRoute
-  '/listings/$listingId/leads': typeof ListingsListingIdLeadsRoute
-  '/listings/$listingId/media': typeof ListingsListingIdMediaRoute
-  '/listings/$listingId/overview': typeof ListingsListingIdOverviewRoute
-  '/listings/$listingId/transaction': typeof ListingsListingIdTransactionRoute
-  '/listings/$listingId/website': typeof ListingsListingIdWebsiteRoute
-  '/backoffice/contacts/': typeof BackofficeContactsIndexRoute
-  '/listings/$listingId/': typeof ListingsListingIdIndexRoute
+  '/_shell/app': typeof ShellAppRouteWithChildren
+  '/_shell/backoffice': typeof ShellBackofficeRouteWithChildren
+  '/_shell/editor': typeof ShellEditorRouteWithChildren
+  '/_shell/email': typeof ShellEmailRouteWithChildren
+  '/_shell/listings': typeof ShellListingsRouteWithChildren
+  '/_shell/properties': typeof ShellPropertiesRouteWithChildren
+  '/_shell/suite': typeof ShellSuiteRouteWithChildren
+  '/_shell/editor/$listingId': typeof ShellEditorListingIdRoute
+  '/_shell/email/$emailId': typeof ShellEmailEmailIdRoute
+  '/_shell/listings/$listingId': typeof ShellListingsListingIdRouteWithChildren
+  '/_shell/properties/$propertyId': typeof ShellPropertiesPropertyIdRoute
+  '/_shell/app/': typeof ShellAppIndexRoute
+  '/_shell/email/': typeof ShellEmailIndexRoute
+  '/_shell/listings/': typeof ShellListingsIndexRoute
+  '/_shell/properties/': typeof ShellPropertiesIndexRoute
+  '/_shell/suite/': typeof ShellSuiteIndexRoute
+  '/_shell/backoffice/contacts/$contactId': typeof ShellBackofficeContactsContactIdRoute
+  '/_shell/listings/$listingId/activities': typeof ShellListingsListingIdActivitiesRoute
+  '/_shell/listings/$listingId/client-report': typeof ShellListingsListingIdClientReportRoute
+  '/_shell/listings/$listingId/demographics': typeof ShellListingsListingIdDemographicsRoute
+  '/_shell/listings/$listingId/documents': typeof ShellListingsListingIdDocumentsRoute
+  '/_shell/listings/$listingId/edit': typeof ShellListingsListingIdEditRoute
+  '/_shell/listings/$listingId/email': typeof ShellListingsListingIdEmailRoute
+  '/_shell/listings/$listingId/files': typeof ShellListingsListingIdFilesRoute
+  '/_shell/listings/$listingId/financials': typeof ShellListingsListingIdFinancialsRoute
+  '/_shell/listings/$listingId/grids': typeof ShellListingsListingIdGridsRoute
+  '/_shell/listings/$listingId/leads': typeof ShellListingsListingIdLeadsRoute
+  '/_shell/listings/$listingId/media': typeof ShellListingsListingIdMediaRoute
+  '/_shell/listings/$listingId/overview': typeof ShellListingsListingIdOverviewRoute
+  '/_shell/listings/$listingId/transaction': typeof ShellListingsListingIdTransactionRoute
+  '/_shell/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
+  '/_shell/backoffice/contacts/': typeof ShellBackofficeContactsIndexRoute
+  '/_shell/listings/$listingId/': typeof ShellListingsListingIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/login'
     | '/app'
     | '/backoffice'
     | '/editor'
     | '/email'
     | '/listings'
-    | '/login'
     | '/properties'
     | '/suite'
     | '/editor/$listingId'
@@ -382,13 +391,13 @@ export interface FileRouteTypes {
     | '/listings/$listingId/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
+    | '/login'
     | '/backoffice'
     | '/editor'
-    | '/login'
     | '/editor/$listingId'
     | '/email/$emailId'
     | '/properties/$propertyId'
-    | '/'
     | '/app'
     | '/email'
     | '/listings'
@@ -413,112 +422,57 @@ export interface FileRouteTypes {
     | '/listings/$listingId'
   id:
     | '__root__'
+    | '/'
     | '/_shell'
-    | '/app'
-    | '/backoffice'
-    | '/editor'
-    | '/email'
-    | '/listings'
     | '/login'
-    | '/properties'
-    | '/suite'
-    | '/editor/$listingId'
-    | '/email/$emailId'
-    | '/listings/$listingId'
-    | '/properties/$propertyId'
-    | '/_shell/'
-    | '/app/'
-    | '/email/'
-    | '/listings/'
-    | '/properties/'
-    | '/suite/'
-    | '/backoffice/contacts/$contactId'
-    | '/listings/$listingId/activities'
-    | '/listings/$listingId/client-report'
-    | '/listings/$listingId/demographics'
-    | '/listings/$listingId/documents'
-    | '/listings/$listingId/edit'
-    | '/listings/$listingId/email'
-    | '/listings/$listingId/files'
-    | '/listings/$listingId/financials'
-    | '/listings/$listingId/grids'
-    | '/listings/$listingId/leads'
-    | '/listings/$listingId/media'
-    | '/listings/$listingId/overview'
-    | '/listings/$listingId/transaction'
-    | '/listings/$listingId/website'
-    | '/backoffice/contacts/'
-    | '/listings/$listingId/'
+    | '/_shell/app'
+    | '/_shell/backoffice'
+    | '/_shell/editor'
+    | '/_shell/email'
+    | '/_shell/listings'
+    | '/_shell/properties'
+    | '/_shell/suite'
+    | '/_shell/editor/$listingId'
+    | '/_shell/email/$emailId'
+    | '/_shell/listings/$listingId'
+    | '/_shell/properties/$propertyId'
+    | '/_shell/app/'
+    | '/_shell/email/'
+    | '/_shell/listings/'
+    | '/_shell/properties/'
+    | '/_shell/suite/'
+    | '/_shell/backoffice/contacts/$contactId'
+    | '/_shell/listings/$listingId/activities'
+    | '/_shell/listings/$listingId/client-report'
+    | '/_shell/listings/$listingId/demographics'
+    | '/_shell/listings/$listingId/documents'
+    | '/_shell/listings/$listingId/edit'
+    | '/_shell/listings/$listingId/email'
+    | '/_shell/listings/$listingId/files'
+    | '/_shell/listings/$listingId/financials'
+    | '/_shell/listings/$listingId/grids'
+    | '/_shell/listings/$listingId/leads'
+    | '/_shell/listings/$listingId/media'
+    | '/_shell/listings/$listingId/overview'
+    | '/_shell/listings/$listingId/transaction'
+    | '/_shell/listings/$listingId/website'
+    | '/_shell/backoffice/contacts/'
+    | '/_shell/listings/$listingId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   ShellRoute: typeof ShellRouteWithChildren
-  AppRoute: typeof AppRouteWithChildren
-  BackofficeRoute: typeof BackofficeRouteWithChildren
-  EditorRoute: typeof EditorRouteWithChildren
-  EmailRoute: typeof EmailRouteWithChildren
-  ListingsRoute: typeof ListingsRouteWithChildren
   LoginRoute: typeof LoginRoute
-  PropertiesRoute: typeof PropertiesRouteWithChildren
-  SuiteRoute: typeof SuiteRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/suite': {
-      id: '/suite'
-      path: '/suite'
-      fullPath: '/suite'
-      preLoaderRoute: typeof SuiteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/properties': {
-      id: '/properties'
-      path: '/properties'
-      fullPath: '/properties'
-      preLoaderRoute: typeof PropertiesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/listings': {
-      id: '/listings'
-      path: '/listings'
-      fullPath: '/listings'
-      preLoaderRoute: typeof ListingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/email': {
-      id: '/email'
-      path: '/email'
-      fullPath: '/email'
-      preLoaderRoute: typeof EmailRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/editor': {
-      id: '/editor'
-      path: '/editor'
-      fullPath: '/editor'
-      preLoaderRoute: typeof EditorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/backoffice': {
-      id: '/backoffice'
-      path: '/backoffice'
-      fullPath: '/backoffice'
-      preLoaderRoute: typeof BackofficeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app': {
-      id: '/app'
-      path: '/app'
-      fullPath: '/app'
-      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_shell': {
@@ -528,342 +482,412 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/suite/': {
-      id: '/suite/'
-      path: '/'
-      fullPath: '/suite/'
-      preLoaderRoute: typeof SuiteIndexRouteImport
-      parentRoute: typeof SuiteRoute
-    }
-    '/properties/': {
-      id: '/properties/'
-      path: '/'
-      fullPath: '/properties/'
-      preLoaderRoute: typeof PropertiesIndexRouteImport
-      parentRoute: typeof PropertiesRoute
-    }
-    '/listings/': {
-      id: '/listings/'
-      path: '/'
-      fullPath: '/listings/'
-      preLoaderRoute: typeof ListingsIndexRouteImport
-      parentRoute: typeof ListingsRoute
-    }
-    '/email/': {
-      id: '/email/'
-      path: '/'
-      fullPath: '/email/'
-      preLoaderRoute: typeof EmailIndexRouteImport
-      parentRoute: typeof EmailRoute
-    }
-    '/app/': {
-      id: '/app/'
-      path: '/'
-      fullPath: '/app/'
-      preLoaderRoute: typeof AppIndexRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_shell/': {
-      id: '/_shell/'
+    '/': {
+      id: '/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof ShellIndexRouteImport
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_shell/suite': {
+      id: '/_shell/suite'
+      path: '/suite'
+      fullPath: '/suite'
+      preLoaderRoute: typeof ShellSuiteRouteImport
       parentRoute: typeof ShellRoute
     }
-    '/properties/$propertyId': {
-      id: '/properties/$propertyId'
+    '/_shell/properties': {
+      id: '/_shell/properties'
+      path: '/properties'
+      fullPath: '/properties'
+      preLoaderRoute: typeof ShellPropertiesRouteImport
+      parentRoute: typeof ShellRoute
+    }
+    '/_shell/listings': {
+      id: '/_shell/listings'
+      path: '/listings'
+      fullPath: '/listings'
+      preLoaderRoute: typeof ShellListingsRouteImport
+      parentRoute: typeof ShellRoute
+    }
+    '/_shell/email': {
+      id: '/_shell/email'
+      path: '/email'
+      fullPath: '/email'
+      preLoaderRoute: typeof ShellEmailRouteImport
+      parentRoute: typeof ShellRoute
+    }
+    '/_shell/editor': {
+      id: '/_shell/editor'
+      path: '/editor'
+      fullPath: '/editor'
+      preLoaderRoute: typeof ShellEditorRouteImport
+      parentRoute: typeof ShellRoute
+    }
+    '/_shell/backoffice': {
+      id: '/_shell/backoffice'
+      path: '/backoffice'
+      fullPath: '/backoffice'
+      preLoaderRoute: typeof ShellBackofficeRouteImport
+      parentRoute: typeof ShellRoute
+    }
+    '/_shell/app': {
+      id: '/_shell/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof ShellAppRouteImport
+      parentRoute: typeof ShellRoute
+    }
+    '/_shell/suite/': {
+      id: '/_shell/suite/'
+      path: '/'
+      fullPath: '/suite/'
+      preLoaderRoute: typeof ShellSuiteIndexRouteImport
+      parentRoute: typeof ShellSuiteRoute
+    }
+    '/_shell/properties/': {
+      id: '/_shell/properties/'
+      path: '/'
+      fullPath: '/properties/'
+      preLoaderRoute: typeof ShellPropertiesIndexRouteImport
+      parentRoute: typeof ShellPropertiesRoute
+    }
+    '/_shell/listings/': {
+      id: '/_shell/listings/'
+      path: '/'
+      fullPath: '/listings/'
+      preLoaderRoute: typeof ShellListingsIndexRouteImport
+      parentRoute: typeof ShellListingsRoute
+    }
+    '/_shell/email/': {
+      id: '/_shell/email/'
+      path: '/'
+      fullPath: '/email/'
+      preLoaderRoute: typeof ShellEmailIndexRouteImport
+      parentRoute: typeof ShellEmailRoute
+    }
+    '/_shell/app/': {
+      id: '/_shell/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof ShellAppIndexRouteImport
+      parentRoute: typeof ShellAppRoute
+    }
+    '/_shell/properties/$propertyId': {
+      id: '/_shell/properties/$propertyId'
       path: '/$propertyId'
       fullPath: '/properties/$propertyId'
-      preLoaderRoute: typeof PropertiesPropertyIdRouteImport
-      parentRoute: typeof PropertiesRoute
+      preLoaderRoute: typeof ShellPropertiesPropertyIdRouteImport
+      parentRoute: typeof ShellPropertiesRoute
     }
-    '/listings/$listingId': {
-      id: '/listings/$listingId'
+    '/_shell/listings/$listingId': {
+      id: '/_shell/listings/$listingId'
       path: '/$listingId'
       fullPath: '/listings/$listingId'
-      preLoaderRoute: typeof ListingsListingIdRouteImport
-      parentRoute: typeof ListingsRoute
+      preLoaderRoute: typeof ShellListingsListingIdRouteImport
+      parentRoute: typeof ShellListingsRoute
     }
-    '/email/$emailId': {
-      id: '/email/$emailId'
+    '/_shell/email/$emailId': {
+      id: '/_shell/email/$emailId'
       path: '/$emailId'
       fullPath: '/email/$emailId'
-      preLoaderRoute: typeof EmailEmailIdRouteImport
-      parentRoute: typeof EmailRoute
+      preLoaderRoute: typeof ShellEmailEmailIdRouteImport
+      parentRoute: typeof ShellEmailRoute
     }
-    '/editor/$listingId': {
-      id: '/editor/$listingId'
+    '/_shell/editor/$listingId': {
+      id: '/_shell/editor/$listingId'
       path: '/$listingId'
       fullPath: '/editor/$listingId'
-      preLoaderRoute: typeof EditorListingIdRouteImport
-      parentRoute: typeof EditorRoute
+      preLoaderRoute: typeof ShellEditorListingIdRouteImport
+      parentRoute: typeof ShellEditorRoute
     }
-    '/listings/$listingId/': {
-      id: '/listings/$listingId/'
+    '/_shell/listings/$listingId/': {
+      id: '/_shell/listings/$listingId/'
       path: '/'
       fullPath: '/listings/$listingId/'
-      preLoaderRoute: typeof ListingsListingIdIndexRouteImport
-      parentRoute: typeof ListingsListingIdRoute
+      preLoaderRoute: typeof ShellListingsListingIdIndexRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
     }
-    '/backoffice/contacts/': {
-      id: '/backoffice/contacts/'
+    '/_shell/backoffice/contacts/': {
+      id: '/_shell/backoffice/contacts/'
       path: '/contacts'
       fullPath: '/backoffice/contacts/'
-      preLoaderRoute: typeof BackofficeContactsIndexRouteImport
-      parentRoute: typeof BackofficeRoute
+      preLoaderRoute: typeof ShellBackofficeContactsIndexRouteImport
+      parentRoute: typeof ShellBackofficeRoute
     }
-    '/listings/$listingId/website': {
-      id: '/listings/$listingId/website'
+    '/_shell/listings/$listingId/website': {
+      id: '/_shell/listings/$listingId/website'
       path: '/website'
       fullPath: '/listings/$listingId/website'
-      preLoaderRoute: typeof ListingsListingIdWebsiteRouteImport
-      parentRoute: typeof ListingsListingIdRoute
+      preLoaderRoute: typeof ShellListingsListingIdWebsiteRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
     }
-    '/listings/$listingId/transaction': {
-      id: '/listings/$listingId/transaction'
+    '/_shell/listings/$listingId/transaction': {
+      id: '/_shell/listings/$listingId/transaction'
       path: '/transaction'
       fullPath: '/listings/$listingId/transaction'
-      preLoaderRoute: typeof ListingsListingIdTransactionRouteImport
-      parentRoute: typeof ListingsListingIdRoute
+      preLoaderRoute: typeof ShellListingsListingIdTransactionRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
     }
-    '/listings/$listingId/overview': {
-      id: '/listings/$listingId/overview'
+    '/_shell/listings/$listingId/overview': {
+      id: '/_shell/listings/$listingId/overview'
       path: '/overview'
       fullPath: '/listings/$listingId/overview'
-      preLoaderRoute: typeof ListingsListingIdOverviewRouteImport
-      parentRoute: typeof ListingsListingIdRoute
+      preLoaderRoute: typeof ShellListingsListingIdOverviewRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
     }
-    '/listings/$listingId/media': {
-      id: '/listings/$listingId/media'
+    '/_shell/listings/$listingId/media': {
+      id: '/_shell/listings/$listingId/media'
       path: '/media'
       fullPath: '/listings/$listingId/media'
-      preLoaderRoute: typeof ListingsListingIdMediaRouteImport
-      parentRoute: typeof ListingsListingIdRoute
+      preLoaderRoute: typeof ShellListingsListingIdMediaRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
     }
-    '/listings/$listingId/leads': {
-      id: '/listings/$listingId/leads'
+    '/_shell/listings/$listingId/leads': {
+      id: '/_shell/listings/$listingId/leads'
       path: '/leads'
       fullPath: '/listings/$listingId/leads'
-      preLoaderRoute: typeof ListingsListingIdLeadsRouteImport
-      parentRoute: typeof ListingsListingIdRoute
+      preLoaderRoute: typeof ShellListingsListingIdLeadsRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
     }
-    '/listings/$listingId/grids': {
-      id: '/listings/$listingId/grids'
+    '/_shell/listings/$listingId/grids': {
+      id: '/_shell/listings/$listingId/grids'
       path: '/grids'
       fullPath: '/listings/$listingId/grids'
-      preLoaderRoute: typeof ListingsListingIdGridsRouteImport
-      parentRoute: typeof ListingsListingIdRoute
+      preLoaderRoute: typeof ShellListingsListingIdGridsRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
     }
-    '/listings/$listingId/financials': {
-      id: '/listings/$listingId/financials'
+    '/_shell/listings/$listingId/financials': {
+      id: '/_shell/listings/$listingId/financials'
       path: '/financials'
       fullPath: '/listings/$listingId/financials'
-      preLoaderRoute: typeof ListingsListingIdFinancialsRouteImport
-      parentRoute: typeof ListingsListingIdRoute
+      preLoaderRoute: typeof ShellListingsListingIdFinancialsRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
     }
-    '/listings/$listingId/files': {
-      id: '/listings/$listingId/files'
+    '/_shell/listings/$listingId/files': {
+      id: '/_shell/listings/$listingId/files'
       path: '/files'
       fullPath: '/listings/$listingId/files'
-      preLoaderRoute: typeof ListingsListingIdFilesRouteImport
-      parentRoute: typeof ListingsListingIdRoute
+      preLoaderRoute: typeof ShellListingsListingIdFilesRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
     }
-    '/listings/$listingId/email': {
-      id: '/listings/$listingId/email'
+    '/_shell/listings/$listingId/email': {
+      id: '/_shell/listings/$listingId/email'
       path: '/email'
       fullPath: '/listings/$listingId/email'
-      preLoaderRoute: typeof ListingsListingIdEmailRouteImport
-      parentRoute: typeof ListingsListingIdRoute
+      preLoaderRoute: typeof ShellListingsListingIdEmailRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
     }
-    '/listings/$listingId/edit': {
-      id: '/listings/$listingId/edit'
+    '/_shell/listings/$listingId/edit': {
+      id: '/_shell/listings/$listingId/edit'
       path: '/edit'
       fullPath: '/listings/$listingId/edit'
-      preLoaderRoute: typeof ListingsListingIdEditRouteImport
-      parentRoute: typeof ListingsListingIdRoute
+      preLoaderRoute: typeof ShellListingsListingIdEditRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
     }
-    '/listings/$listingId/documents': {
-      id: '/listings/$listingId/documents'
+    '/_shell/listings/$listingId/documents': {
+      id: '/_shell/listings/$listingId/documents'
       path: '/documents'
       fullPath: '/listings/$listingId/documents'
-      preLoaderRoute: typeof ListingsListingIdDocumentsRouteImport
-      parentRoute: typeof ListingsListingIdRoute
+      preLoaderRoute: typeof ShellListingsListingIdDocumentsRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
     }
-    '/listings/$listingId/demographics': {
-      id: '/listings/$listingId/demographics'
+    '/_shell/listings/$listingId/demographics': {
+      id: '/_shell/listings/$listingId/demographics'
       path: '/demographics'
       fullPath: '/listings/$listingId/demographics'
-      preLoaderRoute: typeof ListingsListingIdDemographicsRouteImport
-      parentRoute: typeof ListingsListingIdRoute
+      preLoaderRoute: typeof ShellListingsListingIdDemographicsRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
     }
-    '/listings/$listingId/client-report': {
-      id: '/listings/$listingId/client-report'
+    '/_shell/listings/$listingId/client-report': {
+      id: '/_shell/listings/$listingId/client-report'
       path: '/client-report'
       fullPath: '/listings/$listingId/client-report'
-      preLoaderRoute: typeof ListingsListingIdClientReportRouteImport
-      parentRoute: typeof ListingsListingIdRoute
+      preLoaderRoute: typeof ShellListingsListingIdClientReportRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
     }
-    '/listings/$listingId/activities': {
-      id: '/listings/$listingId/activities'
+    '/_shell/listings/$listingId/activities': {
+      id: '/_shell/listings/$listingId/activities'
       path: '/activities'
       fullPath: '/listings/$listingId/activities'
-      preLoaderRoute: typeof ListingsListingIdActivitiesRouteImport
-      parentRoute: typeof ListingsListingIdRoute
+      preLoaderRoute: typeof ShellListingsListingIdActivitiesRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
     }
-    '/backoffice/contacts/$contactId': {
-      id: '/backoffice/contacts/$contactId'
+    '/_shell/backoffice/contacts/$contactId': {
+      id: '/_shell/backoffice/contacts/$contactId'
       path: '/contacts/$contactId'
       fullPath: '/backoffice/contacts/$contactId'
-      preLoaderRoute: typeof BackofficeContactsContactIdRouteImport
-      parentRoute: typeof BackofficeRoute
+      preLoaderRoute: typeof ShellBackofficeContactsContactIdRouteImport
+      parentRoute: typeof ShellBackofficeRoute
     }
   }
 }
 
+interface ShellAppRouteChildren {
+  ShellAppIndexRoute: typeof ShellAppIndexRoute
+}
+
+const ShellAppRouteChildren: ShellAppRouteChildren = {
+  ShellAppIndexRoute: ShellAppIndexRoute,
+}
+
+const ShellAppRouteWithChildren = ShellAppRoute._addFileChildren(
+  ShellAppRouteChildren,
+)
+
+interface ShellBackofficeRouteChildren {
+  ShellBackofficeContactsContactIdRoute: typeof ShellBackofficeContactsContactIdRoute
+  ShellBackofficeContactsIndexRoute: typeof ShellBackofficeContactsIndexRoute
+}
+
+const ShellBackofficeRouteChildren: ShellBackofficeRouteChildren = {
+  ShellBackofficeContactsContactIdRoute: ShellBackofficeContactsContactIdRoute,
+  ShellBackofficeContactsIndexRoute: ShellBackofficeContactsIndexRoute,
+}
+
+const ShellBackofficeRouteWithChildren = ShellBackofficeRoute._addFileChildren(
+  ShellBackofficeRouteChildren,
+)
+
+interface ShellEditorRouteChildren {
+  ShellEditorListingIdRoute: typeof ShellEditorListingIdRoute
+}
+
+const ShellEditorRouteChildren: ShellEditorRouteChildren = {
+  ShellEditorListingIdRoute: ShellEditorListingIdRoute,
+}
+
+const ShellEditorRouteWithChildren = ShellEditorRoute._addFileChildren(
+  ShellEditorRouteChildren,
+)
+
+interface ShellEmailRouteChildren {
+  ShellEmailEmailIdRoute: typeof ShellEmailEmailIdRoute
+  ShellEmailIndexRoute: typeof ShellEmailIndexRoute
+}
+
+const ShellEmailRouteChildren: ShellEmailRouteChildren = {
+  ShellEmailEmailIdRoute: ShellEmailEmailIdRoute,
+  ShellEmailIndexRoute: ShellEmailIndexRoute,
+}
+
+const ShellEmailRouteWithChildren = ShellEmailRoute._addFileChildren(
+  ShellEmailRouteChildren,
+)
+
+interface ShellListingsListingIdRouteChildren {
+  ShellListingsListingIdActivitiesRoute: typeof ShellListingsListingIdActivitiesRoute
+  ShellListingsListingIdClientReportRoute: typeof ShellListingsListingIdClientReportRoute
+  ShellListingsListingIdDemographicsRoute: typeof ShellListingsListingIdDemographicsRoute
+  ShellListingsListingIdDocumentsRoute: typeof ShellListingsListingIdDocumentsRoute
+  ShellListingsListingIdEditRoute: typeof ShellListingsListingIdEditRoute
+  ShellListingsListingIdEmailRoute: typeof ShellListingsListingIdEmailRoute
+  ShellListingsListingIdFilesRoute: typeof ShellListingsListingIdFilesRoute
+  ShellListingsListingIdFinancialsRoute: typeof ShellListingsListingIdFinancialsRoute
+  ShellListingsListingIdGridsRoute: typeof ShellListingsListingIdGridsRoute
+  ShellListingsListingIdLeadsRoute: typeof ShellListingsListingIdLeadsRoute
+  ShellListingsListingIdMediaRoute: typeof ShellListingsListingIdMediaRoute
+  ShellListingsListingIdOverviewRoute: typeof ShellListingsListingIdOverviewRoute
+  ShellListingsListingIdTransactionRoute: typeof ShellListingsListingIdTransactionRoute
+  ShellListingsListingIdWebsiteRoute: typeof ShellListingsListingIdWebsiteRoute
+  ShellListingsListingIdIndexRoute: typeof ShellListingsListingIdIndexRoute
+}
+
+const ShellListingsListingIdRouteChildren: ShellListingsListingIdRouteChildren =
+  {
+    ShellListingsListingIdActivitiesRoute:
+      ShellListingsListingIdActivitiesRoute,
+    ShellListingsListingIdClientReportRoute:
+      ShellListingsListingIdClientReportRoute,
+    ShellListingsListingIdDemographicsRoute:
+      ShellListingsListingIdDemographicsRoute,
+    ShellListingsListingIdDocumentsRoute: ShellListingsListingIdDocumentsRoute,
+    ShellListingsListingIdEditRoute: ShellListingsListingIdEditRoute,
+    ShellListingsListingIdEmailRoute: ShellListingsListingIdEmailRoute,
+    ShellListingsListingIdFilesRoute: ShellListingsListingIdFilesRoute,
+    ShellListingsListingIdFinancialsRoute:
+      ShellListingsListingIdFinancialsRoute,
+    ShellListingsListingIdGridsRoute: ShellListingsListingIdGridsRoute,
+    ShellListingsListingIdLeadsRoute: ShellListingsListingIdLeadsRoute,
+    ShellListingsListingIdMediaRoute: ShellListingsListingIdMediaRoute,
+    ShellListingsListingIdOverviewRoute: ShellListingsListingIdOverviewRoute,
+    ShellListingsListingIdTransactionRoute:
+      ShellListingsListingIdTransactionRoute,
+    ShellListingsListingIdWebsiteRoute: ShellListingsListingIdWebsiteRoute,
+    ShellListingsListingIdIndexRoute: ShellListingsListingIdIndexRoute,
+  }
+
+const ShellListingsListingIdRouteWithChildren =
+  ShellListingsListingIdRoute._addFileChildren(
+    ShellListingsListingIdRouteChildren,
+  )
+
+interface ShellListingsRouteChildren {
+  ShellListingsListingIdRoute: typeof ShellListingsListingIdRouteWithChildren
+  ShellListingsIndexRoute: typeof ShellListingsIndexRoute
+}
+
+const ShellListingsRouteChildren: ShellListingsRouteChildren = {
+  ShellListingsListingIdRoute: ShellListingsListingIdRouteWithChildren,
+  ShellListingsIndexRoute: ShellListingsIndexRoute,
+}
+
+const ShellListingsRouteWithChildren = ShellListingsRoute._addFileChildren(
+  ShellListingsRouteChildren,
+)
+
+interface ShellPropertiesRouteChildren {
+  ShellPropertiesPropertyIdRoute: typeof ShellPropertiesPropertyIdRoute
+  ShellPropertiesIndexRoute: typeof ShellPropertiesIndexRoute
+}
+
+const ShellPropertiesRouteChildren: ShellPropertiesRouteChildren = {
+  ShellPropertiesPropertyIdRoute: ShellPropertiesPropertyIdRoute,
+  ShellPropertiesIndexRoute: ShellPropertiesIndexRoute,
+}
+
+const ShellPropertiesRouteWithChildren = ShellPropertiesRoute._addFileChildren(
+  ShellPropertiesRouteChildren,
+)
+
+interface ShellSuiteRouteChildren {
+  ShellSuiteIndexRoute: typeof ShellSuiteIndexRoute
+}
+
+const ShellSuiteRouteChildren: ShellSuiteRouteChildren = {
+  ShellSuiteIndexRoute: ShellSuiteIndexRoute,
+}
+
+const ShellSuiteRouteWithChildren = ShellSuiteRoute._addFileChildren(
+  ShellSuiteRouteChildren,
+)
+
 interface ShellRouteChildren {
-  ShellIndexRoute: typeof ShellIndexRoute
+  ShellAppRoute: typeof ShellAppRouteWithChildren
+  ShellBackofficeRoute: typeof ShellBackofficeRouteWithChildren
+  ShellEditorRoute: typeof ShellEditorRouteWithChildren
+  ShellEmailRoute: typeof ShellEmailRouteWithChildren
+  ShellListingsRoute: typeof ShellListingsRouteWithChildren
+  ShellPropertiesRoute: typeof ShellPropertiesRouteWithChildren
+  ShellSuiteRoute: typeof ShellSuiteRouteWithChildren
 }
 
 const ShellRouteChildren: ShellRouteChildren = {
-  ShellIndexRoute: ShellIndexRoute,
+  ShellAppRoute: ShellAppRouteWithChildren,
+  ShellBackofficeRoute: ShellBackofficeRouteWithChildren,
+  ShellEditorRoute: ShellEditorRouteWithChildren,
+  ShellEmailRoute: ShellEmailRouteWithChildren,
+  ShellListingsRoute: ShellListingsRouteWithChildren,
+  ShellPropertiesRoute: ShellPropertiesRouteWithChildren,
+  ShellSuiteRoute: ShellSuiteRouteWithChildren,
 }
 
 const ShellRouteWithChildren = ShellRoute._addFileChildren(ShellRouteChildren)
 
-interface AppRouteChildren {
-  AppIndexRoute: typeof AppIndexRoute
-}
-
-const AppRouteChildren: AppRouteChildren = {
-  AppIndexRoute: AppIndexRoute,
-}
-
-const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
-
-interface BackofficeRouteChildren {
-  BackofficeContactsContactIdRoute: typeof BackofficeContactsContactIdRoute
-  BackofficeContactsIndexRoute: typeof BackofficeContactsIndexRoute
-}
-
-const BackofficeRouteChildren: BackofficeRouteChildren = {
-  BackofficeContactsContactIdRoute: BackofficeContactsContactIdRoute,
-  BackofficeContactsIndexRoute: BackofficeContactsIndexRoute,
-}
-
-const BackofficeRouteWithChildren = BackofficeRoute._addFileChildren(
-  BackofficeRouteChildren,
-)
-
-interface EditorRouteChildren {
-  EditorListingIdRoute: typeof EditorListingIdRoute
-}
-
-const EditorRouteChildren: EditorRouteChildren = {
-  EditorListingIdRoute: EditorListingIdRoute,
-}
-
-const EditorRouteWithChildren =
-  EditorRoute._addFileChildren(EditorRouteChildren)
-
-interface EmailRouteChildren {
-  EmailEmailIdRoute: typeof EmailEmailIdRoute
-  EmailIndexRoute: typeof EmailIndexRoute
-}
-
-const EmailRouteChildren: EmailRouteChildren = {
-  EmailEmailIdRoute: EmailEmailIdRoute,
-  EmailIndexRoute: EmailIndexRoute,
-}
-
-const EmailRouteWithChildren = EmailRoute._addFileChildren(EmailRouteChildren)
-
-interface ListingsListingIdRouteChildren {
-  ListingsListingIdActivitiesRoute: typeof ListingsListingIdActivitiesRoute
-  ListingsListingIdClientReportRoute: typeof ListingsListingIdClientReportRoute
-  ListingsListingIdDemographicsRoute: typeof ListingsListingIdDemographicsRoute
-  ListingsListingIdDocumentsRoute: typeof ListingsListingIdDocumentsRoute
-  ListingsListingIdEditRoute: typeof ListingsListingIdEditRoute
-  ListingsListingIdEmailRoute: typeof ListingsListingIdEmailRoute
-  ListingsListingIdFilesRoute: typeof ListingsListingIdFilesRoute
-  ListingsListingIdFinancialsRoute: typeof ListingsListingIdFinancialsRoute
-  ListingsListingIdGridsRoute: typeof ListingsListingIdGridsRoute
-  ListingsListingIdLeadsRoute: typeof ListingsListingIdLeadsRoute
-  ListingsListingIdMediaRoute: typeof ListingsListingIdMediaRoute
-  ListingsListingIdOverviewRoute: typeof ListingsListingIdOverviewRoute
-  ListingsListingIdTransactionRoute: typeof ListingsListingIdTransactionRoute
-  ListingsListingIdWebsiteRoute: typeof ListingsListingIdWebsiteRoute
-  ListingsListingIdIndexRoute: typeof ListingsListingIdIndexRoute
-}
-
-const ListingsListingIdRouteChildren: ListingsListingIdRouteChildren = {
-  ListingsListingIdActivitiesRoute: ListingsListingIdActivitiesRoute,
-  ListingsListingIdClientReportRoute: ListingsListingIdClientReportRoute,
-  ListingsListingIdDemographicsRoute: ListingsListingIdDemographicsRoute,
-  ListingsListingIdDocumentsRoute: ListingsListingIdDocumentsRoute,
-  ListingsListingIdEditRoute: ListingsListingIdEditRoute,
-  ListingsListingIdEmailRoute: ListingsListingIdEmailRoute,
-  ListingsListingIdFilesRoute: ListingsListingIdFilesRoute,
-  ListingsListingIdFinancialsRoute: ListingsListingIdFinancialsRoute,
-  ListingsListingIdGridsRoute: ListingsListingIdGridsRoute,
-  ListingsListingIdLeadsRoute: ListingsListingIdLeadsRoute,
-  ListingsListingIdMediaRoute: ListingsListingIdMediaRoute,
-  ListingsListingIdOverviewRoute: ListingsListingIdOverviewRoute,
-  ListingsListingIdTransactionRoute: ListingsListingIdTransactionRoute,
-  ListingsListingIdWebsiteRoute: ListingsListingIdWebsiteRoute,
-  ListingsListingIdIndexRoute: ListingsListingIdIndexRoute,
-}
-
-const ListingsListingIdRouteWithChildren =
-  ListingsListingIdRoute._addFileChildren(ListingsListingIdRouteChildren)
-
-interface ListingsRouteChildren {
-  ListingsListingIdRoute: typeof ListingsListingIdRouteWithChildren
-  ListingsIndexRoute: typeof ListingsIndexRoute
-}
-
-const ListingsRouteChildren: ListingsRouteChildren = {
-  ListingsListingIdRoute: ListingsListingIdRouteWithChildren,
-  ListingsIndexRoute: ListingsIndexRoute,
-}
-
-const ListingsRouteWithChildren = ListingsRoute._addFileChildren(
-  ListingsRouteChildren,
-)
-
-interface PropertiesRouteChildren {
-  PropertiesPropertyIdRoute: typeof PropertiesPropertyIdRoute
-  PropertiesIndexRoute: typeof PropertiesIndexRoute
-}
-
-const PropertiesRouteChildren: PropertiesRouteChildren = {
-  PropertiesPropertyIdRoute: PropertiesPropertyIdRoute,
-  PropertiesIndexRoute: PropertiesIndexRoute,
-}
-
-const PropertiesRouteWithChildren = PropertiesRoute._addFileChildren(
-  PropertiesRouteChildren,
-)
-
-interface SuiteRouteChildren {
-  SuiteIndexRoute: typeof SuiteIndexRoute
-}
-
-const SuiteRouteChildren: SuiteRouteChildren = {
-  SuiteIndexRoute: SuiteIndexRoute,
-}
-
-const SuiteRouteWithChildren = SuiteRoute._addFileChildren(SuiteRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   ShellRoute: ShellRouteWithChildren,
-  AppRoute: AppRouteWithChildren,
-  BackofficeRoute: BackofficeRouteWithChildren,
-  EditorRoute: EditorRouteWithChildren,
-  EmailRoute: EmailRouteWithChildren,
-  ListingsRoute: ListingsRouteWithChildren,
   LoginRoute: LoginRoute,
-  PropertiesRoute: PropertiesRouteWithChildren,
-  SuiteRoute: SuiteRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
