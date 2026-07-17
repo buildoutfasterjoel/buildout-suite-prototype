@@ -14,6 +14,7 @@ import {
   faHandshake,
   faArrowsRotate,
   faSquareDashedCirclePlus,
+  faTrashAlt,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing, ListingStage } from "#/data/types";
 import { getProperty, getListing } from "#/data/store";
@@ -60,18 +61,29 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
     <div className="bg-card border-bottom">
       <div className="container p-4">
         <div className="d-flex align-items-center gap-3">
-          {/* Thumbnail */}
-          <img
-            src={getPhotoUrl(listing.id, 328, 200)}
-            alt={listing.name}
-            className="flex-shrink-0 d-none d-sm-block align-self-stretch"
-            style={{
-              width: 164,
-              height: "auto",
-              objectFit: "cover",
-              borderRadius: 4,
-            }}
-          />
+          {/* Thumbnail with the access avatars overlaid in the corner */}
+          <div
+            className="flex-shrink-0 d-none d-sm-block align-self-stretch position-relative"
+            style={{ width: 164 }}
+          >
+            <img
+              src={getPhotoUrl(listing.id, 328, 200)}
+              alt={listing.name}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                borderRadius: 4,
+                display: "block",
+              }}
+            />
+            <div
+              className="position-absolute"
+              style={{ right: 6, bottom: 6 }}
+            >
+              <AvatarGroup seed={seed} size="default" />
+            </div>
+          </div>
 
           {/* Identity */}
           <div className="flex-grow-1" style={{ minWidth: 0 }}>
@@ -137,60 +149,8 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
             </div>
           </div>
 
-          {/* Actions on top, stage + access beneath */}
-          <div className="d-flex flex-column align-items-end gap-2 flex-shrink-0">
-            <div className="d-flex align-items-center gap-2">
-              {listing.dealType === "Lease" && listing.parentDealId == null && (
-                <Button
-                  variant="secondary"
-                  aria-label="Add space"
-                  className="flex-shrink-0"
-                  onClick={() => setAddSpaceOpen(true)}
-                >
-                  <FontAwesomeIcon icon={faSquareDashedCirclePlus} />
-                  Add Space
-                </Button>
-              )}
-              <Tooltip>
-                <Tooltip.Trigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      nativeButton={false}
-                      render={
-                        <Link
-                          to="/listings/$listingId/edit"
-                          params={{ listingId: listing.id }}
-                        />
-                      }
-                    >
-                      <FontAwesomeIcon icon={faPencil} />
-                    </Button>
-                  }
-                />
-                <Tooltip.Content>Edit Deal</Tooltip.Content>
-              </Tooltip>
-              <DropdownMenu>
-                <DropdownMenu.Trigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="More options"
-                    >
-                      <FontAwesomeIcon icon={faEllipsisVertical} />
-                    </Button>
-                  }
-                />
-                <DropdownMenu.Content align="end">
-                  <DropdownMenu.Item>
-                    <FontAwesomeIcon icon={faUserGear} className="me-2" />
-                    Manage access
-                  </DropdownMenu.Item>
-                </DropdownMenu.Content>
-              </DropdownMenu>
-            </div>
+          {/* Stage + access block · actions · options on its own */}
+          <div className="d-flex align-items-center gap-3 flex-shrink-0">
             <div className="d-flex align-items-center gap-2">
               <Select
                 value={listing.status}
@@ -233,8 +193,59 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
                   ))}
                 </Select.Content>
               </Select>
-              <AvatarGroup seed={seed} size="default" />
             </div>
+            <div className="d-flex align-items-center gap-2">
+              {listing.dealType === "Lease" && listing.parentDealId == null && (
+                <Button
+                  variant="secondary"
+                  aria-label="Add space"
+                  className="flex-shrink-0"
+                  onClick={() => setAddSpaceOpen(true)}
+                >
+                  <FontAwesomeIcon icon={faSquareDashedCirclePlus} />
+                  Add Space
+                </Button>
+              )}
+              <Tooltip>
+                <Tooltip.Trigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      nativeButton={false}
+                      render={
+                        <Link
+                          to="/listings/$listingId/edit"
+                          params={{ listingId: listing.id }}
+                        />
+                      }
+                    >
+                      <FontAwesomeIcon icon={faPencil} />
+                    </Button>
+                  }
+                />
+                <Tooltip.Content>Edit Deal</Tooltip.Content>
+              </Tooltip>
+            </div>
+            <DropdownMenu>
+              <DropdownMenu.Trigger
+                render={
+                  <Button variant="ghost" size="icon" aria-label="More options">
+                    <FontAwesomeIcon icon={faEllipsisVertical} />
+                  </Button>
+                }
+              />
+              <DropdownMenu.Content align="end">
+                <DropdownMenu.Item>
+                  <FontAwesomeIcon icon={faUserGear} />
+                  Manage Access
+                </DropdownMenu.Item>
+                <DropdownMenu.Item>
+                  <FontAwesomeIcon icon={faTrashAlt} />
+                  Delete Deal
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu>
           </div>
         </div>
       </div>
