@@ -1,5 +1,4 @@
 import { useState, type ReactNode } from "react";
-import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
 import { Textarea } from "@buildoutinc/blueprint-react/ui/Textarea";
@@ -136,12 +135,15 @@ export function ContactComposeModule({
   deals,
   onSubmit,
   onStartCall,
+  headerStart,
 }: {
   contact: Contact;
   deals: DealSummary[];
   onSubmit: (draft: ComposedDraft) => void;
   /** Kicks off the simulated live call to the chosen number (Call tab's "Call Now"). */
   onStartCall: (phone: string) => void;
+  /** Rendered at the start of the tab row — e.g. the "Activity" section title. */
+  headerStart?: ReactNode;
 }) {
   const [tab, setTab] = useState<ComposeKind>("note");
   const [body, setBody] = useState<Record<ComposeKind, string>>({ ...EMPTY });
@@ -218,8 +220,14 @@ export function ContactComposeModule({
               onChange={(v) => setDates((d) => ({ ...d, [tab]: v }))}
             />
           )}
+          {/* Note/Meeting/Tour log buttons are always primary so they read as
+              the compose action and don't compete with the active tab pill.
+              Call keeps its conditional treatment (Call is the primary until a
+              log draft is started, then Log Call takes over). */}
           <Button
-            variant={hasValue ? "primary" : "secondary"}
+            variant={
+              tab === "call" ? (hasValue ? "primary" : "secondary") : "primary"
+            }
             onClick={handleSubmit}
           >
             {CTA_LABEL[tab]}
@@ -383,10 +391,7 @@ export function ContactComposeModule({
               <FontAwesomeIcon icon={faPaperclip} />
               Attachments
             </button>
-            <Button
-              variant={hasValue ? "primary" : "secondary"}
-              onClick={handleSubmit}
-            >
+            <Button variant="primary" onClick={handleSubmit}>
               {CTA_LABEL.email}
               <FontAwesomeIcon icon={faPaperPlane} />
             </Button>
@@ -397,24 +402,27 @@ export function ContactComposeModule({
   }
 
   return (
-    <Card className="shadow-sm overflow-hidden compose-module">
-      <div className="compose-tabs">
-        <Tabs value={tab} onValueChange={(v) => v && setTab(v as ComposeKind)}>
-          <Tabs.List>
-            {TABS.map((t) => (
-              <Tabs.Tab
-                key={t.key}
-                value={t.key}
-                icon={<FontAwesomeIcon icon={t.icon} />}
-              >
-                {t.label}
-              </Tabs.Tab>
-            ))}
-          </Tabs.List>
-        </Tabs>
+    <div className="compose-module">
+      <div className="compose-header">
+        {headerStart}
+        <div className="compose-tabs">
+          <Tabs value={tab} onValueChange={(v) => v && setTab(v as ComposeKind)}>
+            <Tabs.List>
+              {TABS.map((t) => (
+                <Tabs.Tab
+                  key={t.key}
+                  value={t.key}
+                  icon={<FontAwesomeIcon icon={t.icon} />}
+                >
+                  {t.label}
+                </Tabs.Tab>
+              ))}
+            </Tabs.List>
+          </Tabs>
+        </div>
       </div>
 
       {renderBody()}
-    </Card>
+    </div>
   );
 }

@@ -731,24 +731,52 @@
 // component per the current design — scoped to `.compose-tabs` so it can be
 // dropped once the DS Tabs component picks up these tokens.
 
+// Composer header: the "Activity" section title on the left, the compose tabs
+// (as pills) on the right, sharing one row.
+.compose-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 16px 16px 0;
+}
+
 .compose-tabs {
+  min-width: 0;
+
   .nav-tabs {
-    // Drive the DS active-underline + active-label colors via the theme vars.
-    --bp-nav-tabs-link-active-border-color: var(--color-purple-heart-700, #7422ce);
-    --bp-nav-tabs-link-active-color: var(--color-storm-grey-900, #22262f);
-    align-items: stretch;
-    border-bottom: 1px solid var(--color-storm-grey-100, #eceef2);
+    // Drive the DS label colors through its own vars (base-ui sets the color on
+    // the label via these), then reinforce on the text node below.
+    --bp-nav-link-color: var(--color-storm-grey-600, #506079);
+    --bp-nav-link-hover-color: var(--color-storm-grey-600, #506079);
+    --bp-nav-tabs-link-active-color: var(--color-purple-heart-950, #360764);
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 4px;
+    border-bottom: 0;
   }
 
-  // Equal-width tabs with centered icon + label.
+  // Base UI renders a moving underline indicator; the pill style doesn't use it.
+  .tabs-indicator {
+    display: none;
+  }
+
+  // Pill tabs that hug their icon + label. Default = transparent with a dark
+  // label + muted icon; active = soft purple pill (purple-heart-100).
   .nav-link {
-    flex: 1 1 0;
+    flex: 0 0 auto;
     justify-content: center;
     align-items: center;
-    min-height: 36px;
-    padding: 12px;
+    gap: 5px;
+    min-height: 28px;
+    padding: 4px 8px;
+    border: 0;
+    border-radius: var(--bp-border-radius, 6px);
     color: var(--color-storm-grey-600, #506079);
     font-weight: 600;
+    white-space: nowrap;
+    text-decoration: none;
+    background: transparent;
 
     .nav-link-icon {
       align-self: center;
@@ -756,20 +784,48 @@
     }
     .nav-link-text {
       flex-direction: row;
+      color: var(--color-storm-grey-600, #506079);
     }
 
-    // Base UI marks the active tab with `aria-selected` / `data-active`
-    // (not Bootstrap's `.active` class), so target those.
+    // Background tint is the only hover cue — no underline.
+    &:hover {
+      background: var(--color-storm-grey-50, #f6f7f9);
+      text-decoration: none;
+    }
+
+    // Base UI marks the active tab with `aria-selected` / `data-active`.
     &[aria-selected="true"],
     &[data-active] {
-      color: var(--color-storm-grey-900, #22262f);
+      color: var(--color-purple-heart-950, #360764);
       font-weight: 700;
+      background: var(--color-purple-heart-100, #f2e8ff);
 
+      .nav-link-text {
+        color: var(--color-purple-heart-950, #360764);
+      }
       .nav-link-icon {
-        color: var(--color-purple-heart-600, #8833ea);
+        color: var(--color-purple-heart-950, #360764);
+      }
+      &:hover {
+        background: var(--color-purple-heart-100, #f2e8ff);
       }
     }
   }
+
+  // The DS draws a 1px hover underline on inactive tabs via a `::after` bar; the
+  // pill style uses only the background tint, so suppress it. Selector mirrors
+  // the DS rule (…:not(.active):not([data-active]):hover::after) with the extra
+  // `.compose-tabs` scope so it wins on specificity.
+  .nav-tabs .nav-link:not(.active):not([data-active]):hover::after {
+    display: none;
+  }
+}
+
+// Combined activity card: the composer flows straight into the filter pills +
+// feed, split by a hairline divider.
+.activity-card__feed {
+  padding: 16px;
+  border-top: 1px solid var(--color-storm-grey-100, #eceef2);
 }
 
 // Textarea with the AI "sparkle" affordance pinned to its top-right corner.
