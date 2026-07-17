@@ -6,6 +6,7 @@ import { Field } from "@buildoutinc/blueprint-react/ui/Field";
 import { Combobox } from "@buildoutinc/blueprint-react/ui/Combobox";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
+import { RadioGroup } from "@buildoutinc/blueprint-react/ui/RadioGroup";
 import { Switch } from "@buildoutinc/blueprint-react/ui/Switch";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
@@ -39,6 +40,7 @@ import {
   getPropertyOptions,
   getContactOptions,
   getOwnersForProperty,
+  getProperty,
   type PropertyOption,
   type ContactOption,
 } from "#/data/store";
@@ -139,8 +141,15 @@ export function CreateDealModal({
     null,
   );
   const [propertyInput, setPropertyInput] = useState("");
+  // When the chosen property already has units, the broker can scope the deal to
+  // the whole building (default) or a single existing unit.
+  const [wholeBuilding, setWholeBuilding] = useState(false);
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [files, setFiles] = useState<DealDocument[]>([]);
   const [dragging, setDragging] = useState(false);
+  // Document generation is opt-in — off by default so a deal starts lean unless
+  // the broker explicitly wants Buildout to draft collateral.
+  const [generateDocsOn, setGenerateDocsOn] = useState(false);
   // Underwriting is optional at creation; when off, the depth control collapses
   // and the deal starts with no underwriting.
   const [underwritingOn, setUnderwritingOn] = useState(false);
@@ -186,6 +195,22 @@ export function CreateDealModal({
     });
   }, [contact]);
   const contactOptions = useMemo<ContactOption[]>(getContactOptions, []);
+
+  // Resolve the full property record (for its units) from the locked prop or the
+  // selected combobox option. Typed-but-unmatched addresses have no record/units.
+  const selectedProperty = useMemo<Property | undefined>(
+    () => property ?? (propertyOption ? getProperty(propertyOption.value) : undefined),
+    [property, propertyOption],
+  );
+  const units = selectedProperty?.units ?? [];
+  const hasUnits = units.length > 0;
+
+  // Reset the scope whenever the property changes — a fresh property defaults to
+  // a whole-building deal with no unit chosen.
+  useEffect(() => {
+    setWholeBuilding(false);
+    setSelectedUnitId(null);
+  }, [selectedProperty?.id]);
 
   // Seed from the initiating contact/property each time the modal opens.
   useEffect(() => {
@@ -245,6 +270,7 @@ export function CreateDealModal({
 
     setDealType("Sale");
     setStage("proposal");
+    setGenerateDocsOn(false);
     setUnderwritingOn(false);
     setUnderwritingSel(new Set(DEFAULT_UNDERWRITING_SELECTION));
     // Underwriting starts off, so the doc suggestions start at the always-on
@@ -283,7 +309,11 @@ export function CreateDealModal({
   }
 
   const hasProperty = propertyOption !== null || propertyInput.trim() !== "";
-  const canCreate = side !== null && contactOption !== null && hasProperty;
+  // A unit-scoped deal needs a unit picked; whole-building (or a property with no
+  // units) is always fine.
+  const unitOk = !hasUnits || wholeBuilding || selectedUnitId !== null;
+  const canCreate =
+    side !== null && contactOption !== null && hasProperty && unitOk;
 
   function handleCreate() {
     if (!canCreate || !side) return;
@@ -292,7 +322,8 @@ export function CreateDealModal({
     // Suggested docs + underwriting are pitching-phase setup — a deal started
     // already in-flight skips them (Buildout isn't generating fresh collateral).
     const isPitching = stage === "proposal";
-    const suggestedDocuments: DealDocument[] = isPitching
+    const suggestedDocuments: DealDocument[] =
+      isPitching && generateDocsOn
       ? SUGGESTED_DOCUMENTS.filter((d) => checkedDocKeys.has(d.key)).map(
           (d) => ({
             id: crypto.randomUUID(),
@@ -302,6 +333,12 @@ export function CreateDealModal({
           }),
         )
       : [];
+    // Scope to a single unit when one is chosen; otherwise the deal is for the
+    // whole building.
+    const unit =
+      hasUnits && !wholeBuilding && selectedUnitId
+        ? units.find((u) => u.id === selectedUnitId)
+        : undefined;
     const draft: NewListingDraft = {
       ...emptyDraft(),
       dealType,
@@ -309,6 +346,9 @@ export function CreateDealModal({
       initialStage: stage,
       propertyId: propertyOption?.value ?? "",
       address: propertyOption ? "" : propertyInput.trim(),
+      attachAs: unit ? "space" : "building",
+      spaceLabel: unit?.label ?? "",
+      unitId: unit?.id ?? null,
       sellerContactId: side === "seller" ? contactId : "",
       buyerContactId: side === "buyer" ? contactId : "",
       documents: files,
@@ -594,6 +634,70 @@ export function CreateDealModal({
             </div>
           </div>
 
+          {/* Deal scope — only when the chosen property already has units on
+              record. Whole-building by default; unchecking reveals a single-select
+              list of the property's units. */}
+          {hasUnits && (
+            <Field>
+              <Field.Label>Deal scope</Field.Label>
+              <label
+                className="d-flex align-items-center gap-2 mb-0"
+                style={{ cursor: "pointer" }}
+              >
+                <Checkbox
+                  checked={wholeBuilding}
+                  onCheckedChange={(c) => {
+                    const on = c === true;
+                    setWholeBuilding(on);
+                    if (on) setSelectedUnitId(null);
+                  }}
+                />
+                <span>Represent the whole building</span>
+              </label>
+
+              {!wholeBuilding && (
+                <>
+                  <Field.Description className="mt-2 mb-1">
+                    Select the unit this deal is for.
+                  </Field.Description>
+                  <RadioGroup
+                    value={selectedUnitId ?? ""}
+                    onValueChange={(v) => setSelectedUnitId(v as string)}
+                  >
+                    <div
+                      className="d-flex flex-column border rounded p-1 overflow-auto"
+                      style={{ maxHeight: 168 }}
+                    >
+                      {units.map((u) => (
+                        <label
+                          key={u.id}
+                          className="d-flex align-items-center gap-2 mb-0 px-2 py-2 rounded"
+                          style={{ cursor: "pointer" }}
+                        >
+                          <RadioGroup.Item value={u.id} />
+                          <span
+                            className="d-flex flex-column flex-grow-1"
+                            style={{ minWidth: 0 }}
+                          >
+                            <span className="fw-semibold text-truncate">
+                              {u.label}
+                            </span>
+                            <span className="text-muted fs-small text-truncate text-capitalize">
+                              {u.unitType}
+                              {u.sqft > 0
+                                ? ` · ${u.sqft.toLocaleString()} SF`
+                                : ""}
+                            </span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </RadioGroup>
+                </>
+              )}
+            </Field>
+          )}
+
           {/* Add your own files */}
           <Field>
             <Field.Label className="d-flex align-items-center gap-2">
@@ -713,31 +817,41 @@ export function CreateDealModal({
               )}
 
               <Field>
-                <Field.Label>Documents to generate</Field.Label>
-                <Field.Description>
-                  We’ll generate these when the deal is created. Deeper
-                  underwriting suggests more.
-                </Field.Description>
-                <div
-                  className="d-flex flex-column gap-2 border rounded p-2 overflow-auto"
-                  style={{ maxHeight: 168 }}
-                >
-                  {SUGGESTED_DOCUMENTS.map((d) => (
-                    <label
-                      key={d.key}
-                      className="d-flex align-items-center gap-2 mb-0"
-                      style={{ cursor: "pointer" }}
-                    >
-                      <Checkbox
-                        checked={checkedDocKeys.has(d.key)}
-                        onCheckedChange={(c) => toggleDoc(d.key, c === true)}
-                      />
-                      <span className="flex-grow-1 text-truncate fs-small">
-                        {d.name}
-                      </span>
-                    </label>
-                  ))}
+                <div className="d-flex align-items-center gap-2">
+                  <Switch
+                    checked={generateDocsOn}
+                    onCheckedChange={(c) => setGenerateDocsOn(c === true)}
+                  />
+                  <Field.Label className="mb-0">
+                    Documents to generate
+                  </Field.Label>
                 </div>
+                <Field.Description>
+                  Turn on to have Buildout draft collateral when the deal is
+                  created. Deeper underwriting suggests more.
+                </Field.Description>
+                {generateDocsOn && (
+                  <div
+                    className="d-flex flex-column gap-2 border rounded p-2 overflow-auto"
+                    style={{ maxHeight: 168 }}
+                  >
+                    {SUGGESTED_DOCUMENTS.map((d) => (
+                      <label
+                        key={d.key}
+                        className="d-flex align-items-center gap-2 mb-0"
+                        style={{ cursor: "pointer" }}
+                      >
+                        <Checkbox
+                          checked={checkedDocKeys.has(d.key)}
+                          onCheckedChange={(c) => toggleDoc(d.key, c === true)}
+                        />
+                        <span className="flex-grow-1 text-truncate fs-small">
+                          {d.name}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
               </Field>
             </div>
           )}

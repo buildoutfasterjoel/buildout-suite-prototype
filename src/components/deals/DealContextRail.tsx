@@ -15,10 +15,11 @@ import {
   faFileLines,
   faFilePdf,
   faFileExcel,
+  faSitemap,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { Contact, Listing, DealDocument } from "#/data/types";
-import { getProperty, getStore } from "#/data/store";
+import { getListing, getProperty, getStore } from "#/data/store";
 import {
   TYPE_ICONS,
   TYPE_LABELS,
@@ -78,7 +79,6 @@ function FilesSection({ documents }: { documents: DealDocument[] }) {
   );
 }
 
-
 function LinkedProperty({ listing }: { listing: Listing }) {
   const property = getProperty(listing.propertyId);
   if (!property) return null;
@@ -109,6 +109,44 @@ function LinkedProperty({ listing }: { listing: Listing }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/** The umbrella deal a child space deal belongs to — a click takes you back up. */
+function LinkedParentDeal({ parent }: { parent: Listing }) {
+  const property = getProperty(parent.propertyId);
+  const address = property
+    ? `${property.street}, ${property.city}, ${property.state} ${property.zip}`
+    : "";
+  return (
+    <Link
+      to="/listings/$listingId"
+      params={{ listingId: parent.id }}
+      className="bg-card border rounded overflow-hidden d-flex text-reset text-decoration-none"
+    >
+      <img
+        src={getPhotoUrl(parent.id, 200, 200)}
+        alt={parent.name}
+        className="flex-shrink-0"
+        style={{ width: 88, objectFit: "cover" }}
+      />
+      <div className="p-3 d-flex flex-column gap-1" style={{ minWidth: 0 }}>
+        <div className="d-flex align-items-center gap-2 text-muted fs-small">
+          <FontAwesomeIcon icon={faSitemap} />
+          <span>Umbrella deal</span>
+          <span>·</span>
+          <span>#{getRefId(parent.id)}</span>
+        </div>
+        <div className="fw-semibold text-truncate" title={parent.name}>
+          {parent.name}
+        </div>
+        {address && (
+          <div className="text-muted fs-small text-truncate" title={address}>
+            {address}
+          </div>
+        )}
+      </div>
+    </Link>
   );
 }
 
@@ -174,6 +212,10 @@ export function DealContextRail({ listing }: { listing: Listing }) {
   const resolve = (ids: string[]) =>
     ids.map((id) => contacts.get(id)).filter((c): c is Contact => c != null);
 
+  const parent = listing.parentDealId
+    ? getListing(listing.parentDealId)
+    : undefined;
+
   const documents = listing.documents ?? [];
   const sellers = resolve(listing.sellerContactIds);
   const buyers = resolve(listing.buyerContactIds);
@@ -185,6 +227,16 @@ export function DealContextRail({ listing }: { listing: Listing }) {
 
   return (
     <div>
+      {parent && (
+        <>
+          <Card.Body>
+            <h6 className="pb-2">Parent</h6>
+            <LinkedParentDeal parent={parent} />
+          </Card.Body>
+          <Separator />
+        </>
+      )}
+
       <FilesSection documents={documents} />
 
       <Separator />
