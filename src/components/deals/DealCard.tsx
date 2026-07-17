@@ -9,10 +9,12 @@ import {
   faCalendarCircleExclamation,
   faSignHanging,
   faMagnifyingGlassDollar,
+  faVectorSquare,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { Listing, Contact, DealSide } from "#/data/types";
 import { getContact, getListing, getProperty } from "#/data/store";
+import { isUmbrella, spacesStageBreakdown } from "#/data/leaseSpaces";
 import { DealStageBadge } from "./DealStageBadge";
 import { dealHeadlineLabel } from "./dealDisplay";
 import {
@@ -99,6 +101,10 @@ export function DealCardView({
   );
   // Lost deals get a muted background to set them apart from the active pipeline.
   const isLost = listing.status === "inactive";
+  // Umbrella parents roll up their child space deals' stages; children get a flair instead.
+  const rollup = isUmbrella(listing.id)
+    ? spacesStageBreakdown(listing.id)
+    : null;
 
   return (
     <div
@@ -145,11 +151,25 @@ export function DealCardView({
           style={{ color: "#22262f" }}
           title={listing.name}
         >
+          {listing.parentDealId != null && (
+            <span className="badge text-bg-light d-inline-flex align-items-center gap-1 me-1">
+              <FontAwesomeIcon icon={faVectorSquare} /> Space
+            </span>
+          )}
           {listing.name}
         </div>
         <div className="text-muted text-truncate fs-small">
           {property?.city}, {property?.state}
         </div>
+        {rollup && (
+          <div className="small text-muted mt-1">
+            {rollup.total} {rollup.total === 1 ? "space" : "spaces"}
+            {rollup.byStage.active > 0 && ` · ${rollup.byStage.active} Active`}
+            {rollup.byStage["under-contract"] > 0 &&
+              ` · ${rollup.byStage["under-contract"]} UC`}
+            {rollup.byStage.closed > 0 && ` · ${rollup.byStage.closed} Closed`}
+          </div>
+        )}
       </div>
 
       {/* Attached person */}
