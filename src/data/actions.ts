@@ -189,10 +189,13 @@ export function updateDealTransaction(
 export function linkContactToDeal(
   dealId: string,
   contactId: string,
-  role: 'seller' | 'buyer' | 'other',
+  role: 'seller' | 'buyer' | 'tenant' | 'other',
 ): { deal: Listing | null } {
   const key =
-    role === 'seller' ? 'sellerContactIds' : role === 'buyer' ? 'buyerContactIds' : 'otherContactIds'
+    role === 'seller' ? 'sellerContactIds'
+    : role === 'buyer' ? 'buyerContactIds'
+    : role === 'tenant' ? 'tenantContactIds'
+    : 'otherContactIds'
   return {
     deal: patchListing(dealId, (l) =>
       l[key].includes(contactId) ? l : { ...l, [key]: [...l[key], contactId] },
