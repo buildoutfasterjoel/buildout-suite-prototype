@@ -1,8 +1,6 @@
 import { useMemo, useState } from "react";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSparkles } from "@fortawesome/pro-solid-svg-icons";
 import type { Contact, DealSummary } from "#/data/types";
 import {
   ContactComposeModule,
@@ -24,6 +22,8 @@ import {
 } from "#/components/contacts/timeline";
 import { TimelineEvent } from "#/components/contacts/TimelineEvent";
 import { TimelineFilterBar } from "#/components/contacts/TimelineFilterBar";
+import { ContactBriefingSection } from "#/components/contacts/ContactBriefingSection";
+import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
 
 export function ContactEngagementPanel({
   contact,
@@ -50,6 +50,10 @@ export function ContactEngagementPanel({
 
   const briefing = useMemo(() => buildBriefing(contact, deals), [contact, deals]);
   const lastTouch = useMemo(() => buildLastTouch(contact), [contact]);
+
+  // Briefing collapse persists across contacts (a viewing preference).
+  const briefingOpen = useContactUiPrefs((s) => s.briefingOpen);
+  const setBriefingOpen = useContactUiPrefs((s) => s.setBriefingOpen);
 
   // The feed = session-logged compose/call events + the synthesized history,
   // with per-event star/pin overrides applied and deleted rows removed.
@@ -116,6 +120,14 @@ export function ContactEngagementPanel({
 
   return (
     <div className="d-flex flex-column gap-4">
+      {/* AI briefing — collapsible section at the top of the column */}
+      <ContactBriefingSection
+        briefing={briefing}
+        lastTouch={lastTouch}
+        open={briefingOpen}
+        onToggle={() => setBriefingOpen(!briefingOpen)}
+      />
+
       {/* Engagement composer */}
       <ContactComposeModule
         contact={contact}
@@ -133,33 +145,6 @@ export function ContactEngagementPanel({
           >
             Activity
           </Card.Title>
-
-          {/* AI briefing — soft gradient summary pinned above the timeline */}
-          <div
-            className="rounded-2 p-3 d-flex flex-column gap-2"
-            style={{
-              border: "1px solid #e7d5ff",
-              backgroundImage:
-                "linear-gradient(90deg, rgba(255,255,255,0.85), rgba(255,255,255,0.85)), linear-gradient(90deg, #b88cf2 0%, #8ca6f7 50%, #61c2ff 100%)",
-            }}
-          >
-            <div className="d-flex align-items-center justify-content-between gap-2">
-              <span
-                className="d-inline-flex align-items-center gap-2 fw-semibold text-body-emphasis lh-sm"
-                style={{ fontSize: 17 }}
-              >
-                <FontAwesomeIcon
-                  icon={faSparkles}
-                  style={{ color: "#9f55f7", fontSize: 14 }}
-                />
-                Briefing
-              </span>
-              <span className="text-muted fs-small text-nowrap">
-                Last touch: <span className="fw-bold">{lastTouch}</span>
-              </span>
-            </div>
-            <p className="mb-0">{briefing}</p>
-          </div>
 
           <TimelineFilterBar events={events} value={filter} onChange={setFilter} />
 

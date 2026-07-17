@@ -1749,3 +1749,37 @@
     transform: rotate(90deg);
   }
 }
+
+// ── AI Briefing section (top of the middle column) ──
+// A collapsible section whose header matches the overview-column accordion
+// headers (left chevron + 20/26 semibold). The AI gradient washes the whole
+// section (not an inner card) so it calls attention and saves vertical space.
+.contact-briefing {
+  border: 1px solid #e7d5ff;
+  background-image:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.85)),
+    linear-gradient(90deg, #b88cf2 0%, #8ca6f7 50%, #61c2ff 100%);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    padding: 16px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  &__body {
+    padding: 0 16px 16px;
+
+    p {
+      margin: 0;
+      line-height: 1.5;
+    }
+  }
+}
