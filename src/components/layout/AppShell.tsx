@@ -9,6 +9,7 @@ import { OmniSearch } from "#/components/search/OmniSearch";
 import { useOmniSearch } from "#/components/search/useOmniSearch";
 import { GlobalCreateDealModal } from "#/components/deals/GlobalCreateDealModal";
 import { GlobalStageGateModal } from "#/components/deals/GlobalStageGateModal";
+import { GlobalNewContactModal } from "#/components/contacts/GlobalNewContactModal";
 import { useDataStore } from "#/data/dataStore";
 
 export function AppShell() {
@@ -37,6 +38,7 @@ export function AppShell() {
         {hydrated && <OmniSearch />}
         {hydrated && <GlobalCreateDealModal />}
         {hydrated && <GlobalStageGateModal />}
+        {hydrated && <GlobalNewContactModal />}
       </div>
     </ToasterProvider>
   );

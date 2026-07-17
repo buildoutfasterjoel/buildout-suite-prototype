@@ -621,6 +621,8 @@ export interface Contact {
   zip: string
   /** Firm-shared tags used to segment People. */
   tags: string[]
+  /** Freeform notes captured when the contact was created (optional). */
+  notes?: string
 }
 
 /**

@@ -25,6 +25,7 @@ import { useDataStore } from "#/data/dataStore";
 import { useAssistant } from "#/ai/useAssistant";
 import { useOmniSearch } from "#/components/search/useOmniSearch";
 import { useCreateDeal } from "#/data/useCreateDeal";
+import { useNewContact } from "#/data/useNewContact";
 
 /** Platform-aware shortcut hint, e.g. "⌘K" on macOS, "Ctrl K" elsewhere. */
 const SEARCH_HINT = formatForDisplay("Mod+K");
@@ -212,7 +213,9 @@ export function GlobalNavbar() {
               <Navbar.GroupMenuItem onClick={() => console.log("new note")}>
                 New Note
               </Navbar.GroupMenuItem>
-              <Navbar.GroupMenuItem onClick={() => console.log("new contact")}>
+              <Navbar.GroupMenuItem
+                onClick={() => useNewContact.getState().openNew()}
+              >
                 New Contact
               </Navbar.GroupMenuItem>
               <Navbar.GroupMenuItem onClick={() => useCreateDeal.getState().openFor()}>
