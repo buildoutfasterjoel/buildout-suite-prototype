@@ -4,6 +4,7 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Breadcrumb } from "@buildoutinc/blueprint-react/ui/Breadcrumb";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
+import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPencil,
@@ -136,7 +137,7 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
           </div>
 
           {/* Actions + stage */}
-          <div className="d-flex align-items-cente gap-2 flex-shrink-0">
+          <div className="d-flex align-items-center gap-2 flex-shrink-0">
             <Select
               value={listing.status}
               onValueChange={(v) => {
@@ -179,19 +180,8 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
               </Select.Content>
             </Select>
             <AvatarGroup seed={seed} size="default" />
-            <Button variant="ghost" size="icon" aria-label="Manage access">
-              <FontAwesomeIcon icon={faUserGear} />
-            </Button>
-            {listing.dealType === "Lease" && listing.parentDealId == null && (
-              <Button
-                variant="secondary"
-                onClick={() => setAddSpaceOpen(true)}
-              >
-                <FontAwesomeIcon icon={faVectorSquare} /> Add space
-              </Button>
-            )}
             <Button
-              variant="primary"
+              variant="ghost"
               className="flex-shrink-0"
               nativeButton={false}
               render={
@@ -204,9 +194,28 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
               <FontAwesomeIcon icon={faPencil} />
               Edit Deal
             </Button>
-            <Button variant="ghost" size="icon" aria-label="More options">
-              <FontAwesomeIcon icon={faEllipsisVertical} />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenu.Trigger
+                render={
+                  <Button variant="ghost" size="icon" aria-label="More options">
+                    <FontAwesomeIcon icon={faEllipsisVertical} />
+                  </Button>
+                }
+              />
+              <DropdownMenu.Content align="end">
+                {listing.dealType === "Lease" &&
+                  listing.parentDealId == null && (
+                    <DropdownMenu.Item onClick={() => setAddSpaceOpen(true)}>
+                      <FontAwesomeIcon icon={faVectorSquare} className="me-2" />
+                      Add space
+                    </DropdownMenu.Item>
+                  )}
+                <DropdownMenu.Item>
+                  <FontAwesomeIcon icon={faUserGear} className="me-2" />
+                  Manage access
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu>
           </div>
         </div>
       </div>
