@@ -75,6 +75,11 @@ export interface NewListingDraft {
   attachAs: 'building' | 'space'
   /** Suite/unit/floor label for a space (e.g. "Suite 300", "Pad B"). */
   spaceLabel: string
+  /**
+   * When the deal is scoped to a single existing `Property.units` shell, its id.
+   * Null/omitted for a whole-building deal. Only meaningful alongside `attachAs: 'space'`.
+   */
+  unitId?: string | null
   propertyType: PropertyType
   dealType: DealType
   listingPrice: number
@@ -452,7 +457,7 @@ export function createProposalListing(draft: NewListingDraft): Listing {
     publishedAt: null,
     dealType: draft.dealType,
     dealSide: draft.dealSide,
-    unitId: null,
+    unitId: isSpace ? (draft.unitId ?? null) : null,
     parentDealId: null,
 
     // Deal (1:1) — empty/zeroed for a brand-new proposal

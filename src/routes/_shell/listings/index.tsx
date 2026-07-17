@@ -42,6 +42,7 @@ import {
   getExpiration,
 } from "#/components/properties/propertyFacets";
 import { dealHeadlineValue } from "#/components/deals/dealDisplay";
+import { isUmbrella } from "#/data/leaseSpaces";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 
 export const Route = createFileRoute("/_shell/listings/")({
@@ -78,11 +79,22 @@ const SORT_LABELS = Object.fromEntries(
 
 type ViewMode = "board" | "grid" | "map";
 
-const SIDE_OPTIONS: { value: DealSide | "all"; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "seller", label: "Seller" },
-  { value: "buyer", label: "Buyer" },
-];
+// Persist the chosen view so returning to Deals reopens the last one used.
+const VIEW_STORAGE_KEY = "deals:view";
+const VIEW_MODES: ViewMode[] = ["board", "grid", "map"];
+
+// Deal-side labels speak the lease vocabulary (Landlord/Tenant) when the
+// Sale/Lease filter is narrowed to Lease, and the sale vocabulary
+// (Seller/Buyer) otherwise.
+function sideOptions(
+  leaseOnly: boolean,
+): { value: DealSide | "all"; label: string }[] {
+  return [
+    { value: "all", label: "All" },
+    { value: "seller", label: leaseOnly ? "Landlord" : "Seller" },
+    { value: "buyer", label: leaseOnly ? "Tenant" : "Buyer" },
+  ];
+}
 
 /** Toggle a value in a Set held in state. */
 function useToggleSet<T extends string>() {
@@ -120,8 +132,23 @@ function PropertyListings() {
   const [search, setSearch] = useState(q ?? "");
   const [sortBy, setSortBy] = useState<SortBy>("default");
   const [side, setSide] = useState<DealSide | "all">("all");
-  const [view, setView] = useState<ViewMode>("board");
+  const [view, setView] = useState<ViewMode>("grid");
   const isListings = view === "grid" || view === "map";
+
+  // Restore the last-used view on mount (defaults to the listings view). Reading
+  // in an effect keeps SSR rendering the default, avoiding a hydration mismatch.
+  useEffect(() => {
+    const stored = window.localStorage.getItem(VIEW_STORAGE_KEY);
+    if (stored && VIEW_MODES.includes(stored as ViewMode)) {
+      setView(stored as ViewMode);
+    }
+  }, []);
+
+  // User-driven view switch — updates state and persists the choice.
+  const selectView = useCallback((v: ViewMode) => {
+    setView(v);
+    window.localStorage.setItem(VIEW_STORAGE_KEY, v);
+  }, []);
 
   const onRestage = useCallback((listingId: string, stage: PropertyStatus) => {
     // Sell-side deals open the gate; buy-side deals move directly (no listing to
@@ -255,6 +282,15 @@ function PropertyListings() {
     }
   }, [filtered, sortBy]);
 
+  // Umbrella (parent) deals are shells that hold child space deals and don't run
+  // the standard pipeline workflow yet, so keep them off the board for now.
+  // `version` is a dep because `isUmbrella` reads child relationships live.
+  const boardListings = useMemo(
+    () => sorted.filter((l) => !isUmbrella(l.id)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sorted, version],
+  );
+
   const total = listings.length;
 
   // Weighted pipeline forecast: each deal's value discounted by its close
@@ -384,7 +420,7 @@ function PropertyListings() {
                               variant="outline"
                               size="icon"
                               className={view === "board" ? "active" : ""}
-                              onClick={() => setView("board")}
+                              onClick={() => selectView("board")}
                               aria-pressed={view === "board"}
                               aria-label="Pipeline view"
                             >
@@ -401,7 +437,7 @@ function PropertyListings() {
                               variant="outline"
                               size="icon"
                               className={isListings ? "active" : ""}
-                              onClick={() => setView("grid")}
+                              onClick={() => selectView("grid")}
                               aria-pressed={isListings}
                               aria-label="Listings view"
                             >
@@ -426,7 +462,9 @@ function PropertyListings() {
             <Card.Body className="flex-grow-1 overflow-hidden d-flex flex-column gap-3">
               <div className="d-flex align-items-baseline justify-content-between gap-3">
                 <ButtonGroup aria-label="Deal side">
-                  {SIDE_OPTIONS.map((opt) => (
+                  {sideOptions(
+                    saleLease.set.size === 1 && saleLease.set.has("Lease"),
+                  ).map((opt) => (
                     <Button
                       key={opt.value}
                       variant="outline"
@@ -452,7 +490,7 @@ function PropertyListings() {
                 </div>
               </div>
               <div className="flex-grow-1 overflow-hidden">
-                <DealBoard listings={sorted} onRestage={onRestage} />
+                <DealBoard listings={boardListings} onRestage={onRestage} />
               </div>
             </Card.Body>
           </Card>
@@ -475,7 +513,7 @@ function PropertyListings() {
                           variant="outline"
                           size="icon"
                           className={view === "grid" ? "active" : ""}
-                          onClick={() => setView("grid")}
+                          onClick={() => selectView("grid")}
                           aria-pressed={view === "grid"}
                           aria-label="Grid view"
                         >
@@ -492,7 +530,7 @@ function PropertyListings() {
                           variant="outline"
                           size="icon"
                           className={view === "map" ? "active" : ""}
-                          onClick={() => setView("map")}
+                          onClick={() => selectView("map")}
                           aria-pressed={view === "map"}
                           aria-label="Map view"
                         >
