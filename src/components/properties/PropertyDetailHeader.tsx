@@ -12,8 +12,8 @@ import {
   faUserGear,
   faEllipsisVertical,
   faHandshake,
-  faVectorSquare,
   faArrowsRotate,
+  faSquareDashedCirclePlus,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing, ListingStage } from "#/data/types";
 import { getProperty, getListing } from "#/data/store";
@@ -137,96 +137,104 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
             </div>
           </div>
 
-          {/* Actions + stage */}
-          <div className="d-flex align-items-center gap-2 flex-shrink-0">
-            <Select
-              value={listing.status}
-              onValueChange={(v) => {
-                if (v && v !== listing.status) {
-                  requestStageChange(listing.id, v as ListingStage);
-                }
-              }}
-            >
-              <Select.Trigger style={{ minWidth: 168 }}>
-                <span className="d-inline-flex align-items-center gap-2">
-                  <span
-                    className="rounded-circle"
-                    style={{
-                      width: 8,
-                      height: 8,
-                      backgroundColor: STATUS_COLORS[listing.status],
-                    }}
-                  />
-                  <Select.Value>
-                    {(v) => STATUS_LABELS[v as ListingStage]}
-                  </Select.Value>
-                </span>
-              </Select.Trigger>
-              <Select.Content>
-                {PROPERTY_STATUSES.map((s) => (
-                  <Select.Item key={s} value={s}>
-                    <span className="d-inline-flex align-items-center gap-2">
-                      <span
-                        className="rounded-circle"
-                        style={{
-                          width: 8,
-                          height: 8,
-                          backgroundColor: STATUS_COLORS[s],
-                        }}
-                      />
-                      {STATUS_LABELS[s]}
-                    </span>
-                  </Select.Item>
-                ))}
-              </Select.Content>
-            </Select>
-            <AvatarGroup seed={seed} size="default" />
-            {listing.dealType === "Lease" && listing.parentDealId == null && (
+          {/* Actions on top, stage + access beneath */}
+          <div className="d-flex flex-column align-items-end gap-2 flex-shrink-0">
+            <div className="d-flex align-items-center gap-2">
+              {listing.dealType === "Lease" && listing.parentDealId == null && (
+                <Button
+                  variant="secondary"
+                  aria-label="Add space"
+                  className="flex-shrink-0"
+                  onClick={() => setAddSpaceOpen(true)}
+                >
+                  <FontAwesomeIcon icon={faSquareDashedCirclePlus} />
+                  Add Space
+                </Button>
+              )}
               <Tooltip>
                 <Tooltip.Trigger
                   render={
                     <Button
-                      variant="secondary"
+                      variant="ghost"
                       size="icon"
-                      aria-label="Add space"
-                      onClick={() => setAddSpaceOpen(true)}
+                      nativeButton={false}
+                      render={
+                        <Link
+                          to="/listings/$listingId/edit"
+                          params={{ listingId: listing.id }}
+                        />
+                      }
                     >
-                      <FontAwesomeIcon icon={faVectorSquare} />
+                      <FontAwesomeIcon icon={faPencil} />
                     </Button>
                   }
                 />
-                <Tooltip.Content>Add space</Tooltip.Content>
+                <Tooltip.Content>Edit Deal</Tooltip.Content>
               </Tooltip>
-            )}
-            <Button
-              variant="ghost"
-              className="flex-shrink-0"
-              nativeButton={false}
-              render={
-                <Link
-                  to="/listings/$listingId/edit"
-                  params={{ listingId: listing.id }}
+              <DropdownMenu>
+                <DropdownMenu.Trigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="More options"
+                    >
+                      <FontAwesomeIcon icon={faEllipsisVertical} />
+                    </Button>
+                  }
                 />
-              }
-            >
-              <FontAwesomeIcon icon={faPencil} />
-              Edit Deal
-            </Button>
-            <DropdownMenu>
-              <DropdownMenu.Trigger
-                render={
-                  <Button variant="ghost" size="icon" aria-label="More options">
-                    <FontAwesomeIcon icon={faEllipsisVertical} />
-                  </Button>
-                }
-              />
-              <DropdownMenu.Content align="end">
-                <DropdownMenu.Item>
-                  <FontAwesomeIcon icon={faUserGear} className="me-2" />
-                  Manage access
-                </DropdownMenu.Item>
-              </DropdownMenu.Content>
-            </DropdownMenu>
+                <DropdownMenu.Content align="end">
+                  <DropdownMenu.Item>
+                    <FontAwesomeIcon icon={faUserGear} className="me-2" />
+                    Manage access
+                  </DropdownMenu.Item>
+                </DropdownMenu.Content>
+              </DropdownMenu>
+            </div>
+            <div className="d-flex align-items-center gap-2">
+              <Select
+                value={listing.status}
+                onValueChange={(v) => {
+                  if (v && v !== listing.status) {
+                    requestStageChange(listing.id, v as ListingStage);
+                  }
+                }}
+              >
+                <Select.Trigger style={{ minWidth: 168 }}>
+                  <span className="d-inline-flex align-items-center gap-2">
+                    <span
+                      className="rounded-circle"
+                      style={{
+                        width: 8,
+                        height: 8,
+                        backgroundColor: STATUS_COLORS[listing.status],
+                      }}
+                    />
+                    <Select.Value>
+                      {(v) => STATUS_LABELS[v as ListingStage]}
+                    </Select.Value>
+                  </span>
+                </Select.Trigger>
+                <Select.Content>
+                  {PROPERTY_STATUSES.map((s) => (
+                    <Select.Item key={s} value={s}>
+                      <span className="d-inline-flex align-items-center gap-2">
+                        <span
+                          className="rounded-circle"
+                          style={{
+                            width: 8,
+                            height: 8,
+                            backgroundColor: STATUS_COLORS[s],
+                          }}
+                        />
+                        {STATUS_LABELS[s]}
+                      </span>
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select>
+              <AvatarGroup seed={seed} size="default" />
+            </div>
           </div>
         </div>
       </div>
