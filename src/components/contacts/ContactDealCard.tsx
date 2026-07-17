@@ -21,10 +21,7 @@ import {
   getPhotoUrl,
 } from "#/components/properties/propertyDisplay";
 import { dealHeadlineLabel } from "#/components/deals/dealDisplay";
-import {
-  SIDE_DISPLAY,
-  SIDE_BADGE_COLORS,
-} from "#/components/contacts/contactDisplay";
+import { SIDE_DISPLAY } from "#/components/contacts/contactDisplay";
 import { DealStageChip } from "#/components/deals/DealStageChip";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
 
@@ -190,13 +187,14 @@ export function ContactDealCard({ listingId }: { listingId: string }) {
           size="sm"
         />
         <Badge
+          variant="secondary"
+          appearance="muted"
           className="d-inline-flex align-items-center fw-semibold"
           style={{
             height: 20,
             padding: "0 4px",
             fontSize: 14,
-            backgroundColor: SIDE_BADGE_COLORS[listing.dealSide].bg,
-            color: SIDE_BADGE_COLORS[listing.dealSide].text,
+            backgroundColor: "#eceef2",
           }}
         >
           {side.label}

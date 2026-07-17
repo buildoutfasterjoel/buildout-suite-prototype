@@ -21,7 +21,7 @@ export function ContactBriefingSection({
   onToggle: () => void;
 }) {
   return (
-    <Card className="shadow-sm overflow-hidden contact-briefing">
+    <Card className="contact-panel-card overflow-hidden contact-briefing">
       <button
         type="button"
         className="contact-briefing__header"

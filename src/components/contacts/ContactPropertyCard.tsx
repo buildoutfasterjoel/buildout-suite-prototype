@@ -5,10 +5,7 @@ import { faLink } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing, PropertyStatus } from "#/data/types";
 import { getListing, getProperty } from "#/data/store";
 import { TYPE_LABELS, formatPrice } from "#/components/properties/propertyDisplay";
-import {
-  SIDE_DISPLAY,
-  SIDE_BADGE_COLORS,
-} from "#/components/contacts/contactDisplay";
+import { SIDE_DISPLAY } from "#/components/contacts/contactDisplay";
 import { STAGE_CHIP_COLORS } from "#/components/deals/DealStageChip";
 import { STATUS_LABELS } from "#/components/properties/propertyDisplay";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
@@ -137,10 +134,8 @@ export function ContactPropertyCard({
               )}
               <Badge
                 variant="secondary"
-                style={{
-                  backgroundColor: SIDE_BADGE_COLORS[single.dealSide].bg,
-                  color: SIDE_BADGE_COLORS[single.dealSide].text,
-                }}
+                appearance="muted"
+                style={{ backgroundColor: "#eceef2" }}
               >
                 {SIDE_DISPLAY[single.dealSide].label}
               </Badge>

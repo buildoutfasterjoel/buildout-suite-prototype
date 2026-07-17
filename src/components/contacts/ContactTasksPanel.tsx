@@ -79,7 +79,7 @@ export function ContactTasksPanel({
     });
 
   return (
-    <Card className="shadow-sm overflow-hidden">
+    <Card className="contact-panel-card overflow-hidden">
       <Accordion
         className="contact-overview-accordion"
         multiple
