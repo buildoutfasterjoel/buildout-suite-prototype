@@ -356,6 +356,11 @@
   padding: 12px 0;
   border-bottom: 1px solid var(--color-storm-grey-100, #eceef2);
 
+  // No trailing divider when a task row is the last item in the list.
+  &:last-child {
+    border-bottom: 0;
+  }
+
   // Circular completion checkbox.
   &__check {
     flex-shrink: 0;
@@ -472,26 +477,6 @@
       border-color: transparent;
       color: var(--color-buildout-blue-800, #203d88);
     }
-  }
-}
-
-// Tasks card footer: the "Show N Completed Tasks" toggle, pinned below the
-// scrolling task list with a top divider (per Figma). Hidden by the panel when
-// there are no completed tasks.
-.contact-tasks__completed-bar {
-  flex-shrink: 0;
-  padding: 8px;
-  border-top: 1px solid var(--color-storm-grey-100, #eceef2);
-}
-.contact-tasks__completed-toggle {
-  height: 36px;
-  font-weight: 600;
-  // Ghost/purple, matching the design token (button/default/ghost/color).
-  color: var(--color-purple-heart-950, #360764);
-
-  &:hover {
-    color: var(--color-purple-heart-950, #360764);
-    background-color: var(--color-purple-heart-50, #f9f5ff);
   }
 }
 

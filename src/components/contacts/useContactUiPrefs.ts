@@ -16,6 +16,8 @@ interface ContactUiPrefs {
   showPastDeals: boolean;
   /** Whether completed tasks are revealed in the Tasks column. */
   showCompletedTasks: boolean;
+  /** Whether the Tasks section (right column) is expanded. */
+  tasksOpen: boolean;
   /** Whether the AI Briefing section (top of the middle column) is expanded. */
   briefingOpen: boolean;
 
@@ -23,6 +25,7 @@ interface ContactUiPrefs {
   setShowDetails: (open: boolean) => void;
   setShowPastDeals: (open: boolean) => void;
   setShowCompletedTasks: (open: boolean) => void;
+  setTasksOpen: (open: boolean) => void;
   setBriefingOpen: (open: boolean) => void;
 }
 
@@ -31,11 +34,13 @@ export const useContactUiPrefs = create<ContactUiPrefs>((set) => ({
   showDetails: false,
   showPastDeals: false,
   showCompletedTasks: false,
+  tasksOpen: true,
   briefingOpen: true,
 
   setOverviewSections: (overviewSections) => set({ overviewSections }),
   setShowDetails: (showDetails) => set({ showDetails }),
   setShowPastDeals: (showPastDeals) => set({ showPastDeals }),
   setShowCompletedTasks: (showCompletedTasks) => set({ showCompletedTasks }),
+  setTasksOpen: (tasksOpen) => set({ tasksOpen }),
   setBriefingOpen: (briefingOpen) => set({ briefingOpen }),
 }));

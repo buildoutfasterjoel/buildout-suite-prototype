@@ -1,10 +1,11 @@
 import { useMemo, useRef, useState } from "react";
-import { Card } from "@buildoutinc/blueprint-react/ui/Card";
-import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
+import { Accordion } from "@buildoutinc/blueprint-react/ui/Accordion";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact, ContactTask } from "#/data/types";
+import { ContactSection } from "#/components/contacts/ContactSection";
 import { ContactTaskCard } from "#/components/contacts/ContactTaskCard";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
 
@@ -18,12 +19,13 @@ interface TaskRow {
 
 /**
  * Right column of the contact detail page: the contact's open tasks, aggregated
- * across their deals, each rendered as a {@link ContactTaskCard}.
+ * across their deals, in a collapsible section that matches the left overview
+ * column's accordions (chevron header + count, an "Add" action).
  *
  * Completing an active task moves it out of the active list into the completed
- * set (most-recently-completed first). Completed tasks live behind a toggle in a
- * bar pinned to the bottom of the card; the bar hides entirely when there are no
- * completed tasks.
+ * set (most-recently-completed first). Completed tasks are revealed inline below
+ * the open tasks via a "Show N Completed Tasks" toggle — the same pattern the
+ * Deals section uses for past deals.
  */
 export function ContactTasksPanel({
   contact: _contact,
@@ -34,7 +36,9 @@ export function ContactTasksPanel({
   tasks: ContactTask[];
   completedTasks: ContactTask[];
 }) {
-  // Persists across contacts (see useContactUiPrefs).
+  // Section collapse + completed-reveal persist across contacts (useContactUiPrefs).
+  const tasksOpen = useContactUiPrefs((s) => s.tasksOpen);
+  const setTasksOpen = useContactUiPrefs((s) => s.setTasksOpen);
   const showCompleted = useContactUiPrefs((s) => s.showCompletedTasks);
   const setShowCompleted = useContactUiPrefs((s) => s.setShowCompletedTasks);
   // Per-session completion overrides, keyed by task id → { done, seq }. Seq
@@ -74,69 +78,67 @@ export function ContactTasksPanel({
       return (b.task.date ?? "").localeCompare(a.task.date ?? "");
     });
 
-  const hasCompleted = completed.length > 0;
-
   return (
-    <Card className="shadow-sm d-flex flex-column h-100 overflow-hidden">
-      <Card.Body className="d-flex flex-column gap-3 overflow-hidden flex-grow-1">
-        <div className="d-flex align-items-center justify-content-between gap-2">
-          <Card.Title
-            className="fw-semibold d-inline-flex align-items-center gap-2 mb-0"
-            style={{ fontSize: 20, lineHeight: "26px" }}
-          >
-            Tasks
-            <Badge variant="secondary" appearance="muted">
-              {active.length}
-            </Badge>
-          </Card.Title>
-          <Button variant="ghost" size="icon-sm" aria-label="Add task">
-            <FontAwesomeIcon icon={faPlus} />
-          </Button>
-        </div>
+    <Card className="shadow-sm overflow-hidden">
+      <Accordion
+        className="contact-overview-accordion"
+        multiple
+        value={tasksOpen ? ["tasks"] : []}
+        onValueChange={(v) => setTasksOpen(v.includes("tasks"))}
+      >
+        <ContactSection
+          value="tasks"
+          label="Tasks"
+          count={active.length}
+          open={tasksOpen}
+          action={
+            <Button variant="ghost" size="icon-sm" aria-label="Add task">
+              <FontAwesomeIcon icon={faPlus} />
+            </Button>
+          }
+        >
+          <div className="d-flex flex-column">
+            {active.length === 0 ? (
+              <span className="text-muted fs-small">
+                No open tasks — AI queues them after your next call or email.
+              </span>
+            ) : (
+              active.map((r) => (
+                <ContactTaskCard
+                  key={r.task.id}
+                  task={r.task}
+                  done={false}
+                  onToggle={() => toggle(r.task, false)}
+                />
+              ))
+            )}
 
-        <div className="d-flex flex-column overflow-auto flex-grow-1">
-          {active.length === 0 && !showCompleted ? (
-            <span className="text-muted fs-small">
-              No open tasks — AI queues them after your next call or email.
-            </span>
-          ) : (
-            active.map((r) => (
-              <ContactTaskCard
-                key={r.task.id}
-                task={r.task}
-                done={false}
-                onToggle={() => toggle(r.task, false)}
-              />
-            ))
-          )}
+            {completed.length > 0 && (
+              <Button
+                variant="ghost"
+                className="w-100"
+                onClick={() => setShowCompleted(!showCompleted)}
+              >
+                {showCompleted
+                  ? "Hide Completed Tasks"
+                  : `Show ${completed.length} Completed Task${
+                      completed.length === 1 ? "" : "s"
+                    }`}
+              </Button>
+            )}
 
-          {showCompleted &&
-            completed.map((r) => (
-              <ContactTaskCard
-                key={r.task.id}
-                task={r.task}
-                done
-                onToggle={() => toggle(r.task, true)}
-              />
-            ))}
-        </div>
-      </Card.Body>
-
-      {hasCompleted && (
-        <div className="contact-tasks__completed-bar">
-          <Button
-            variant="ghost"
-            className="contact-tasks__completed-toggle w-100"
-            onClick={() => setShowCompleted(!showCompleted)}
-          >
-            {showCompleted
-              ? "Hide Completed Tasks"
-              : `Show ${completed.length} Completed Task${
-                  completed.length === 1 ? "" : "s"
-                }`}
-          </Button>
-        </div>
-      )}
+            {showCompleted &&
+              completed.map((r) => (
+                <ContactTaskCard
+                  key={r.task.id}
+                  task={r.task}
+                  done
+                  onToggle={() => toggle(r.task, true)}
+                />
+              ))}
+          </div>
+        </ContactSection>
+      </Accordion>
     </Card>
   );
 }

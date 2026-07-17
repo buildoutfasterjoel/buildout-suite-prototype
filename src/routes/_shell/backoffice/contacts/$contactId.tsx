@@ -126,7 +126,7 @@ function ContactDetailPage() {
           />
         </div>
         <div
-          className="flex-shrink-0 h-100 overflow-hidden"
+          className="flex-shrink-0 h-100 overflow-auto"
           style={{ width: 380 }}
         >
           <ContactTasksPanel
