@@ -830,13 +830,6 @@
   }
 }
 
-// Combined activity card: the composer flows straight into the filter pills +
-// feed, split by a hairline divider.
-.activity-card__feed {
-  padding: 16px;
-  border-top: 1px solid var(--color-storm-grey-100, #eceef2);
-}
-
 // Textarea with the AI "sparkle" affordance pinned to its top-right corner.
 .compose-textarea {
   position: relative;
