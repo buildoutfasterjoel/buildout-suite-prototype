@@ -108,54 +108,59 @@ export function ContactEngagementPanel({
   }
 
   return (
-    // One card: the composer (tabs share the header row with the "Activity"
-    // title) sits above the filter pills and the timeline feed.
-    <Card className="contact-panel-card overflow-hidden activity-card">
-      <ContactComposeModule
-        contact={contact}
-        deals={deals}
-        onSubmit={onLog}
-        onStartCall={onStartCall}
-        headerStart={
-          <span
-            className="fw-semibold"
-            style={{ fontSize: 20, lineHeight: "26px" }}
-          >
-            Activity
-          </span>
-        }
-      />
+    <div className="d-flex flex-column gap-4">
+      {/* Composer card — the "Activity" title shares the header row with the
+          compose tabs. */}
+      <Card className="contact-panel-card overflow-hidden">
+        <ContactComposeModule
+          contact={contact}
+          deals={deals}
+          onSubmit={onLog}
+          onStartCall={onStartCall}
+          headerStart={
+            <span
+              className="fw-semibold"
+              style={{ fontSize: 20, lineHeight: "26px" }}
+            >
+              Activity
+            </span>
+          }
+        />
+      </Card>
 
-      <div className="activity-card__feed d-flex flex-column gap-3">
-        <TimelineFilterBar events={events} value={filter} onChange={setFilter} />
+      {/* Timeline card — filter pills + the grouped feed. */}
+      <Card className="contact-panel-card overflow-hidden">
+        <Card.Body className="d-flex flex-column gap-3">
+          <TimelineFilterBar events={events} value={filter} onChange={setFilter} />
 
-        {groups.length === 0 ? (
-          <span className="text-muted fs-small">No activity to show.</span>
-        ) : (
-          <Tooltip.Provider delay={200}>
-            <div className="tl-feed">
-              {groups.map((group) => (
-                <section key={group.bucket} className="tl-group">
-                  <div className="tl-group__header">{group.bucket}</div>
-                  {group.events.map((event) => (
-                    <TimelineEvent
-                      key={event.id}
-                      event={event}
-                      starred={!!event.starred}
-                      pinned={!!event.pinned}
-                      replyOpen={replyOpenId === event.id}
-                      threadOpen={threadOpenId === event.id}
-                      onAction={(id) => handleAction(event, id)}
-                      onReplySend={(text) => handleReplySend(event, text)}
-                      onReplyCancel={() => setReplyOpenId(null)}
-                    />
-                  ))}
-                </section>
-              ))}
-            </div>
-          </Tooltip.Provider>
-        )}
-      </div>
-    </Card>
+          {groups.length === 0 ? (
+            <span className="text-muted fs-small">No activity to show.</span>
+          ) : (
+            <Tooltip.Provider delay={200}>
+              <div className="tl-feed">
+                {groups.map((group) => (
+                  <section key={group.bucket} className="tl-group">
+                    <div className="tl-group__header">{group.bucket}</div>
+                    {group.events.map((event) => (
+                      <TimelineEvent
+                        key={event.id}
+                        event={event}
+                        starred={!!event.starred}
+                        pinned={!!event.pinned}
+                        replyOpen={replyOpenId === event.id}
+                        threadOpen={threadOpenId === event.id}
+                        onAction={(id) => handleAction(event, id)}
+                        onReplySend={(text) => handleReplySend(event, text)}
+                        onReplyCancel={() => setReplyOpenId(null)}
+                      />
+                    ))}
+                  </section>
+                ))}
+              </div>
+            </Tooltip.Provider>
+          )}
+        </Card.Body>
+      </Card>
+    </div>
   );
 }
