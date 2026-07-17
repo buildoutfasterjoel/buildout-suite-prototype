@@ -176,15 +176,6 @@ export function DealCardView({
           {cardTitle}
         </div>
         <div className="text-muted text-truncate fs-small">{cardSubtitle}</div>
-        {rollup && (
-          <div className="small text-muted mt-1">
-            {rollup.total} {rollup.total === 1 ? "space" : "spaces"}
-            {rollup.byStage.active > 0 && ` · ${rollup.byStage.active} Active`}
-            {rollup.byStage["under-contract"] > 0 &&
-              ` · ${rollup.byStage["under-contract"]} UC`}
-            {rollup.byStage.closed > 0 && ` · ${rollup.byStage.closed} Closed`}
-          </div>
-        )}
       </div>
 
       {/* Attached person */}
