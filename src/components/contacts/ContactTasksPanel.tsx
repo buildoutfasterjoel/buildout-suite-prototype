@@ -94,7 +94,7 @@ export function ContactTasksPanel({
           </Button>
         </div>
 
-        <div className="d-flex flex-column gap-2 overflow-auto flex-grow-1">
+        <div className="d-flex flex-column overflow-auto flex-grow-1">
           {active.length === 0 && !showCompleted ? (
             <span className="text-muted fs-small">
               No open tasks — AI queues them after your next call or email.
