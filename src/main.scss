@@ -1216,3 +1216,307 @@
     box-shadow: 0 0 0 0 rgba(0, 188, 125, 0);
   }
 }
+
+// ── Activity timeline ────────────────────────────────────────────────────────
+// Unified TimelineEvent feed. Tones/fills are scoped here so the whole set can
+// migrate into the Blueprint DS later without touching component code.
+
+.tl-filterbar {
+  .nav-tabs,
+  .nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+  .nav-link {
+    white-space: nowrap;
+  }
+  &__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    margin-left: 6px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--color-storm-grey-100, #eceef2);
+    color: var(--color-storm-grey-700, #424e62);
+  }
+}
+
+.tl-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.tl-group {
+  display: flex;
+  flex-direction: column;
+
+  &__header {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-storm-grey-600, #506079);
+    padding-bottom: 10px;
+  }
+}
+
+// ── Row ──
+.tl-row {
+  display: flex;
+  gap: 12px;
+
+  &__rail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    width: 32px;
+  }
+  &__connector {
+    flex: 1 1 auto;
+    width: 2px;
+    min-height: 10px;
+    margin: 4px 0;
+    background: var(--color-storm-grey-100, #eceef2);
+  }
+  // The last row in a group hides its trailing connector.
+  &:last-child &__connector {
+    display: none;
+  }
+
+  &__body {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  &__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  &__actors {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-storm-grey-900, #22262f);
+    min-width: 0;
+  }
+  &__duration {
+    color: var(--color-storm-grey-600, #506079);
+    font-weight: 500;
+  }
+  &__head-right {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  &__flag {
+    font-size: 12px;
+    color: var(--color-storm-grey-400, #8495ac);
+    &.is-star {
+      color: var(--color-harvest-gold-500, #fd9a00);
+    }
+  }
+  &__time {
+    font-size: 12px;
+    color: var(--color-storm-grey-600, #506079);
+    white-space: nowrap;
+    cursor: default;
+  }
+
+  &__subject {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-storm-grey-900, #22262f);
+  }
+  &__text {
+    margin: 0;
+    font-size: 14px;
+    color: var(--color-storm-grey-700, #424e62);
+    line-height: 1.5;
+  }
+
+  &__badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  &__assoc {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  &__visibility {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--color-storm-grey-600, #506079);
+  }
+}
+
+// ── Labeled bullet blocks (Call summary / Next steps / Notes) ──
+.tl-block {
+  &__kicker {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-storm-grey-600, #506079);
+    margin-bottom: 2px;
+  }
+  &__list {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 14px;
+    color: var(--color-storm-grey-700, #424e62);
+    line-height: 1.5;
+  }
+}
+
+// ── Association chip ──
+.tl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-buildout-blue-700, #1f47ad);
+  background: var(--color-buildout-blue-50, #eef3fe);
+  border: 1px solid var(--color-buildout-blue-100, #d6e2fc);
+}
+
+// ── Collapsed conversation preview ──
+.tl-convo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-storm-grey-100, #eceef2);
+  border-radius: 8px;
+  background: var(--color-storm-grey-50, #f6f7f9);
+
+  &__latest {
+    margin: 0;
+    font-size: 14px;
+    color: var(--color-storm-grey-700, #424e62);
+    line-height: 1.5;
+  }
+  &__latest-label {
+    display: block;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--color-storm-grey-600, #506079);
+    margin-bottom: 2px;
+  }
+  &__more {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-buildout-blue-600, #2350c9);
+  }
+}
+
+// ── Icon badge — 6 tones × filled / outline ──
+@mixin tl-tone($solid, $tint, $ink) {
+  &.is-filled {
+    background: $solid;
+    color: #fff;
+  }
+  &.is-outline {
+    background: $tint;
+    color: $ink;
+    border: 1px solid rgba(0, 0, 0, 0.04);
+  }
+}
+
+.tl-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 13px;
+  flex-shrink: 0;
+
+  &--green {
+    @include tl-tone(var(--color-mountain-meadow-500, #00bc7d), #e3f7ef, var(--color-mountain-meadow-600, #009966));
+  }
+  &--amber {
+    @include tl-tone(var(--color-harvest-gold-500, #fd9a00), #fdf0d9, var(--color-harvest-gold-600, #c77e00));
+  }
+  &--blue {
+    @include tl-tone(var(--color-buildout-blue-500, #3f86f2), #e7f0fe, var(--color-buildout-blue-600, #2350c9));
+  }
+  &--rose {
+    @include tl-tone(var(--bp-destructive, #d92d20), #fce4e2, #b42318);
+  }
+  &--accent {
+    @include tl-tone(var(--color-purple-heart-500, #9f55f7), #f2e8fe, var(--color-purple-heart-600, #8833ea));
+  }
+  &--slate {
+    @include tl-tone(var(--color-storm-grey-500, #64748b), #eef0f3, var(--color-storm-grey-700, #424e62));
+  }
+}
+
+// ── Status / engagement pills — 7 tones layered on the Blueprint Badge ──
+.tl-badge {
+  font-weight: 600;
+  border: 1px solid transparent;
+
+  &__meta {
+    margin-left: 4px;
+    font-weight: 400;
+    opacity: 0.8;
+  }
+
+  &--sent {
+    background: var(--color-storm-grey-100, #eceef2);
+    color: var(--color-storm-grey-700, #424e62);
+  }
+  &--open {
+    background: #e7f0fe;
+    color: var(--color-buildout-blue-700, #1f47ad);
+  }
+  &--click {
+    background: #f2e8fe;
+    color: var(--color-purple-heart-700, #6b21c8);
+  }
+  &--reply {
+    background: #e3f7ef;
+    color: var(--color-mountain-meadow-700, #007a52);
+  }
+  &--activity {
+    background: #eaf2ff;
+    color: var(--color-buildout-blue-700, #1f47ad);
+  }
+  &--system {
+    background: var(--color-storm-grey-100, #eceef2);
+    color: var(--color-storm-grey-600, #506079);
+  }
+  &--error {
+    background: #fce4e2;
+    color: #b42318;
+  }
+}
