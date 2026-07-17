@@ -16,6 +16,7 @@ import {
   faMapLocationDot,
   faFileChartColumn,
   faFolder,
+  faVectorSquare,
 } from "@fortawesome/pro-regular-svg-icons";
 
 type NavItem = { label: string; href: string; icon: IconDefinition };
@@ -26,6 +27,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Deal",
     items: [
       { label: "Overview", href: "overview", icon: faGaugeHigh },
+      { label: "Spaces", href: "spaces", icon: faVectorSquare },
       {
         label: "Client Report",
         href: "client-report",
