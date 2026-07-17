@@ -6,6 +6,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact, ContactTask } from "#/data/types";
 import { ContactTaskCard } from "#/components/contacts/ContactTaskCard";
+import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
 
 /** A task plus its resolved completion state and completion order for sorting. */
 interface TaskRow {
@@ -33,7 +34,9 @@ export function ContactTasksPanel({
   tasks: ContactTask[];
   completedTasks: ContactTask[];
 }) {
-  const [showCompleted, setShowCompleted] = useState(false);
+  // Persists across contacts (see useContactUiPrefs).
+  const showCompleted = useContactUiPrefs((s) => s.showCompletedTasks);
+  const setShowCompleted = useContactUiPrefs((s) => s.setShowCompletedTasks);
   // Per-session completion overrides, keyed by task id → { done, seq }. Seq
   // orders the completed list so the most recently checked task sorts first.
   const [overrides, setOverrides] = useState<
@@ -124,7 +127,7 @@ export function ContactTasksPanel({
           <Button
             variant="ghost"
             className="contact-tasks__completed-toggle w-100"
-            onClick={() => setShowCompleted((v) => !v)}
+            onClick={() => setShowCompleted(!showCompleted)}
           >
             {showCompleted
               ? "Hide Completed Tasks"
