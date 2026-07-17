@@ -245,11 +245,11 @@ export function CreateDealModal({
 
     setDealType("Sale");
     setStage("proposal");
-    setUnderwritingOn(true);
+    setUnderwritingOn(false);
     setUnderwritingSel(new Set(DEFAULT_UNDERWRITING_SELECTION));
-    setCheckedDocKeys(
-      suggestedKeysForDepth(DEFAULT_UNDERWRITING_SELECTION.size),
-    );
+    // Underwriting starts off, so the doc suggestions start at the always-on
+    // baseline; turning the switch on re-applies the depth-driven set.
+    setCheckedDocKeys(suggestedKeysForDepth(0));
     setFiles([]);
     setDragging(false);
   }, [open, contact, property, initialAddress]);
