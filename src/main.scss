@@ -1222,31 +1222,62 @@
 // migrate into the Blueprint DS later without touching component code.
 
 .tl-filterbar {
-  .nav-tabs,
   .nav {
     flex-wrap: nowrap;
     overflow-x: auto;
+    gap: 4px;
     scrollbar-width: none;
     &::-webkit-scrollbar {
       display: none;
     }
   }
+
+  // Icon + count sit on one row; the label slot never forces the count to
+  // stretch to the pill's full width.
   .nav-link {
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
+  .nav-link-text {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+  }
+  .nav-link-icon {
+    display: inline-flex;
+  }
+
+  &__label {
+    font-weight: 600;
+  }
+
+  // A compact, non-stretching count chip.
   &__count {
+    flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 18px;
+    min-width: 20px;
     height: 18px;
-    padding: 0 5px;
-    margin-left: 6px;
+    padding: 0 6px;
     border-radius: 999px;
     font-size: 11px;
     font-weight: 600;
+    line-height: 1;
     background: var(--color-storm-grey-100, #eceef2);
     color: var(--color-storm-grey-700, #424e62);
+  }
+
+  // On the active pill, tint the count chip with the brand accent — the active
+  // pill is a light/elevated surface, so keep dark-on-tint (not white-on-white).
+  .nav-link[aria-selected="true"] &__count,
+  .nav-link[data-active] &__count,
+  .nav-link.active &__count {
+    background: var(--color-purple-heart-100, #ede0fe);
+    color: var(--color-purple-heart-700, #6b21c8);
   }
 }
 
