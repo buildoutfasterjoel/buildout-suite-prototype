@@ -6,7 +6,7 @@ import {
   serializeContactFilters,
   type ContactFilterState,
 } from '#/components/contacts/contactFilterModel'
-import type { Contact, ContactRole, DealHistoryEntry, DealMarketing, DealTransaction, Listing, PropertyStatus } from './types'
+import type { Contact, ContactRole, ContactSource, DealHistoryEntry, DealMarketing, DealTransaction, Listing, PropertyStatus } from './types'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
 import { reconcileContactDealFields } from './contactStage'
 import { notify } from '#/lib/notify'
@@ -343,6 +343,12 @@ export interface NewContactInput {
   phone?: string
   role?: ContactRole
   propertyIds?: string[]
+  /** Job title (free text), e.g. "Managing Partner". */
+  title?: string
+  /** Lead source; defaults to 'Referral' for the deal-flow caller. */
+  source?: ContactSource
+  doNotCall?: boolean
+  notes?: string
 }
 
 /**
@@ -362,14 +368,14 @@ export function createContact(input: NewContactInput): { contact: Contact } {
     role: input.role ?? 'owner',
     propertyIds: input.propertyIds ?? [],
     assignedTo: 'You',
-    source: 'Referral',
+    source: input.source ?? 'Referral',
     relationship: 'cold',
     side: null,
     dealStage: null,
     inquiries: 0,
     phoneStatus: 'unknown',
-    doNotCall: false,
-    title: '',
+    doNotCall: input.doNotCall ?? false,
+    title: input.title ?? '',
     createdAt: now,
     lastTouch: 'Added manually',
     lastContactedAt: null,
@@ -379,6 +385,7 @@ export function createContact(input: NewContactInput): { contact: Contact } {
     state: '',
     zip: '',
     tags: [],
+    notes: input.notes?.trim() || undefined,
   }
   useDataStore.setState((s) => {
     const contacts = new Map(s.contacts)

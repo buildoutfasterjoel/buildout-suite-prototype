@@ -34,6 +34,7 @@ import {
   updateCallList,
   updateCallListFilters,
 } from "#/data/actions";
+import { useNewContact } from "#/data/useNewContact";
 import { ContactsTable } from "#/components/contacts/ContactsTable";
 import { ContactSelectionBar } from "#/components/contacts/ContactSelectionBar";
 import { CreateStaticListModal } from "#/components/contacts/CreateStaticListModal";
@@ -464,7 +465,11 @@ function PeoplePage() {
                       }
                     />
                     <DropdownMenu.Content align="end">
-                      <DropdownMenu.Item>New Contact</DropdownMenu.Item>
+                      <DropdownMenu.Item
+                        onClick={() => useNewContact.getState().openNew()}
+                      >
+                        New Contact
+                      </DropdownMenu.Item>
                       <DropdownMenu.Item>Import Contacts</DropdownMenu.Item>
                       <DropdownMenu.Item>Export Contacts</DropdownMenu.Item>
                     </DropdownMenu.Content>
