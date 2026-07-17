@@ -5,6 +5,7 @@ import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faVectorSquare, faPlus } from "@fortawesome/pro-regular-svg-icons";
 import { useDataStore } from "#/data/dataStore";
+import { getListing } from "#/data/store";
 import { getChildDeals } from "#/data/leaseSpaces";
 import { AddSpaceModal } from "#/components/deals/AddSpaceModal";
 import { DealStageBadge } from "#/components/deals/DealStageBadge";
@@ -18,8 +19,29 @@ function SpacesTab() {
   // Reactive: re-render when a child is added (store map is replaced).
   const version = useDataStore((s) => s.listings);
   void version;
+  const listing = getListing(listingId);
+  const canAddSpace =
+    listing?.dealType === "Lease" && listing?.parentDealId == null;
   const children = getChildDeals(listingId);
   const [addOpen, setAddOpen] = useState(false);
+
+  if (!canAddSpace) {
+    return (
+      <div className="p-4">
+        <Empty>
+          <Empty.Media>
+            <FontAwesomeIcon icon={faVectorSquare} aria-label="Not eligible" />
+          </Empty.Media>
+          <Empty.Content>
+            <Empty.Title>
+              Spaces are only for lease representation deals
+            </Empty.Title>
+            Only top-level landlord-rep lease deals can be split into spaces.
+          </Empty.Content>
+        </Empty>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4">

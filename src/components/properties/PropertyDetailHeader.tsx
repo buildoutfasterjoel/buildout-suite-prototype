@@ -172,7 +172,7 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
             <Button variant="ghost" size="icon" aria-label="Manage access">
               <FontAwesomeIcon icon={faUserGear} />
             </Button>
-            {listing.dealType === "Lease" && (
+            {listing.dealType === "Lease" && listing.parentDealId == null && (
               <Button
                 variant="secondary"
                 onClick={() => setAddSpaceOpen(true)}
