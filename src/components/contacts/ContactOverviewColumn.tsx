@@ -28,6 +28,7 @@ import { ContactDealCard } from "#/components/contacts/ContactDealCard";
 import { ContactPropertyCard } from "#/components/contacts/ContactPropertyCard";
 import { EditContactModal } from "#/components/contacts/EditContactModal";
 import { CreateDealModal } from "#/components/deals/CreateDealModal";
+import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
 import { updateContact } from "#/data/actions";
 
 /** Deal statuses considered "past" (shown behind a toggle). */
@@ -133,10 +134,14 @@ export function ContactOverviewColumn({
   shares: ContactShare[];
   onOpenShare: () => void;
 }) {
-  const [open, setOpen] = useState<string[]>(["deals", "properties"]);
+  // Collapse state persists across contacts (see useContactUiPrefs).
+  const open = useContactUiPrefs((s) => s.overviewSections);
+  const setOpen = useContactUiPrefs((s) => s.setOverviewSections);
+  const showDetails = useContactUiPrefs((s) => s.showDetails);
+  const setShowDetails = useContactUiPrefs((s) => s.setShowDetails);
+  const showPastDeals = useContactUiPrefs((s) => s.showPastDeals);
+  const setShowPastDeals = useContactUiPrefs((s) => s.setShowPastDeals);
   const [tags, setTags] = useState(contact.tags);
-  const [showDetails, setShowDetails] = useState(false);
-  const [showPastDeals, setShowPastDeals] = useState(false);
   const [newDealOpen, setNewDealOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [addressLine1, addressLine2] = contactAddressLines(contact);
@@ -362,7 +367,7 @@ export function ContactOverviewColumn({
                   <Button
                     variant="ghost"
                     className="w-100"
-                    onClick={() => setShowPastDeals((v) => !v)}
+                    onClick={() => setShowPastDeals(!showPastDeals)}
                   >
                     {showPastDeals
                       ? "Hide Past Deals"
