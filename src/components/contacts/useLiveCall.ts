@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Contact } from "#/data/types";
-import type { ComposedDraft } from "#/components/contacts/ContactComposeModule";
 import {
   contactFullName,
   contactInitials,
-  todayISO,
 } from "#/components/contacts/contactDisplay";
 
 export type CallPhase = "calling" | "ringing" | "connected";
@@ -85,16 +83,13 @@ function playAnsweredCue() {
 /**
  * Drives the simulated outbound call: calling (countdown) → ringing → connected,
  * with a live timer, mute, and a synthesized ring tone. Hanging up before
- * connecting logs nothing; ending a connected call logs a call timeline event.
+ * connecting logs nothing; ending a connected call raises `pendingLog` so the
+ * caller can pop the (mandatory) log-call modal.
  */
-export function useLiveCall({
-  contact,
-  onLog,
-}: {
-  contact: Contact | null;
-  onLog: (draft: ComposedDraft) => void;
-}) {
+export function useLiveCall({ contact }: { contact: Contact | null }) {
   const [call, setCall] = useState<LiveCall | null>(null);
+  // True from the moment a connected call ends until the log modal is submitted.
+  const [pendingLog, setPendingLog] = useState(false);
 
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const ticker = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -183,18 +178,15 @@ export function useLiveCall({
     setCall(null);
   }, [clearAll]);
 
-  /** End a connected call and drop a timeline event. */
-  const endAndLog = useCallback(() => {
-    const secs = Math.floor((Date.now() - connectedAt.current) / 1000);
+  /** End a connected call — clears the bar and opens the mandatory log modal. */
+  const endCall = useCallback(() => {
     clearAll();
-    onLog({
-      kind: "call",
-      body: `Live call · ${formatDuration(secs)}`,
-      date: todayISO(),
-      outcome: "Connected",
-    });
     setCall(null);
-  }, [clearAll, onLog]);
+    setPendingLog(true);
+  }, [clearAll]);
+
+  /** Dismiss the log modal (called once the user has logged the call). */
+  const clearPendingLog = useCallback(() => setPendingLog(false), []);
 
   const toggleMute = useCallback(() => {
     setCall((c) => {
@@ -208,5 +200,5 @@ export function useLiveCall({
   // Tear everything down if the contact page unmounts mid-call.
   useEffect(() => clearAll, [clearAll]);
 
-  return { call, startCall, hangUp, endAndLog, toggleMute };
+  return { call, startCall, hangUp, endCall, toggleMute, pendingLog, clearPendingLog };
 }

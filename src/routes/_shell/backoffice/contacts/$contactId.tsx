@@ -11,6 +11,7 @@ import { ContactEngagementPanel } from "#/components/contacts/ContactEngagementP
 import { ContactTasksPanel } from "#/components/contacts/ContactTasksPanel";
 import { ShareContactModal } from "#/components/contacts/ShareContactModal";
 import { LiveCallBar } from "#/components/contacts/LiveCallBar";
+import { LogCallModal } from "#/components/contacts/LogCallModal";
 import { useContactShares } from "#/components/contacts/useContactShares";
 import { useLiveCall } from "#/components/contacts/useLiveCall";
 import type { ComposedDraft } from "#/components/contacts/ContactComposeModule";
@@ -69,10 +70,7 @@ function ContactDetailPage() {
     const seq = seqRef.current++;
     setLogged((prev) => [{ ...draft, id: `logged-${seq}`, seq }, ...prev]);
   };
-  const liveCall = useLiveCall({
-    contact: detail?.contact ?? null,
-    onLog: addLog,
-  });
+  const liveCall = useLiveCall({ contact: detail?.contact ?? null });
 
   if (!detail) return <ContactNotFound />;
 
@@ -95,7 +93,7 @@ function ContactDetailPage() {
         <LiveCallBar
           call={liveCall.call}
           onHangUp={liveCall.hangUp}
-          onEndAndLog={liveCall.endAndLog}
+          onEndCall={liveCall.endCall}
           onToggleMute={liveCall.toggleMute}
         />
       )}
@@ -143,6 +141,17 @@ function ContactDetailPage() {
         onShare={access.grant}
         onChangeTier={access.changeTier}
         onRemove={access.revoke}
+      />
+
+      {/* Mandatory post-call logging — appears when a live call ends. */}
+      <LogCallModal
+        open={liveCall.pendingLog}
+        contact={contact}
+        deals={deals}
+        onLog={(draft) => {
+          addLog(draft);
+          liveCall.clearPendingLog();
+        }}
       />
     </div>
   );

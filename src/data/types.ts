@@ -590,6 +590,8 @@ export interface Contact {
   lastName: string
   email: string
   phone: string
+  /** Additional phone numbers beyond the primary `phone`, if any. */
+  phones?: string[]
   company: string
   role: ContactRole
   propertyIds: string[]
