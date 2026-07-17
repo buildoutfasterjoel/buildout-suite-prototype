@@ -105,6 +105,17 @@ export function DealCardView({
   const rollup = isUmbrella(listing.id)
     ? spacesStageBreakdown(listing.id)
     : null;
+  // A child space card leads with its suite label + the building address (so the
+  // suite is visible rather than truncated off the end of the full deal name);
+  // a top-level deal keeps its own name + town.
+  const isChild = listing.parentDealId != null;
+  const unitLabel = property?.units.find((u) => u.id === listing.unitId)?.label;
+  const cardTitle = isChild ? (unitLabel ?? listing.name) : listing.name;
+  const cardSubtitle = property
+    ? isChild
+      ? [property.street, property.city, property.state].filter(Boolean).join(", ")
+      : [property.city, property.state].filter(Boolean).join(", ")
+    : "";
 
   return (
     <div
@@ -115,8 +126,19 @@ export function DealCardView({
       <div className="d-flex flex-column" style={{ gap: 2 }}>
         <div className="d-flex align-items-center gap-2">
           <div className="d-flex align-items-center gap-1 text-muted fs-small">
-            {property && <FontAwesomeIcon icon={TYPE_ICONS[property.propertyType]} />}
-            <span>{property ? TYPE_LABELS[property.propertyType] : ""}</span>
+            {isChild ? (
+              <>
+                <FontAwesomeIcon icon={faVectorSquare} />
+                <span>Space</span>
+              </>
+            ) : (
+              <>
+                {property && (
+                  <FontAwesomeIcon icon={TYPE_ICONS[property.propertyType]} />
+                )}
+                <span>{property ? TYPE_LABELS[property.propertyType] : ""}</span>
+              </>
+            )}
           </div>
           <span
             className="d-inline-flex align-items-center gap-1 fw-semibold text-nowrap fs-small"
@@ -149,18 +171,11 @@ export function DealCardView({
         <div
           className="fw-semibold text-truncate"
           style={{ color: "#22262f" }}
-          title={listing.name}
+          title={cardTitle}
         >
-          {listing.parentDealId != null && (
-            <span className="badge text-bg-light d-inline-flex align-items-center gap-1 me-1">
-              <FontAwesomeIcon icon={faVectorSquare} /> Space
-            </span>
-          )}
-          {listing.name}
+          {cardTitle}
         </div>
-        <div className="text-muted text-truncate fs-small">
-          {property?.city}, {property?.state}
-        </div>
+        <div className="text-muted text-truncate fs-small">{cardSubtitle}</div>
         {rollup && (
           <div className="small text-muted mt-1">
             {rollup.total} {rollup.total === 1 ? "space" : "spaces"}
@@ -192,23 +207,40 @@ export function DealCardView({
         <span className="fw-semibold" style={{ color: "#22262f" }}>
           {price}
         </span>
-        {critical && (
-          <Tooltip>
-            <Tooltip.Trigger
-              render={
-                <span className="d-inline-flex align-items-center gap-1 text-muted fs-small">
-                  <FontAwesomeIcon icon={faCalendarCircleExclamation} />
-                  {critical}
-                </span>
-              }
-            />
-            <Tooltip.Content>
-              {criticalTask
-                ? `Next critical date · ${criticalTask.label}`
-                : "Next critical date"}
-            </Tooltip.Content>
-          </Tooltip>
-        )}
+        <div className="d-flex align-items-center gap-3">
+          {rollup && (
+            <Tooltip>
+              <Tooltip.Trigger
+                render={
+                  <span className="d-inline-flex align-items-center gap-1 text-muted fs-small">
+                    <FontAwesomeIcon icon={faVectorSquare} />
+                    {rollup.total}
+                  </span>
+                }
+              />
+              <Tooltip.Content>
+                {rollup.total} {rollup.total === 1 ? "space" : "spaces"} in this deal
+              </Tooltip.Content>
+            </Tooltip>
+          )}
+          {critical && (
+            <Tooltip>
+              <Tooltip.Trigger
+                render={
+                  <span className="d-inline-flex align-items-center gap-1 text-muted fs-small">
+                    <FontAwesomeIcon icon={faCalendarCircleExclamation} />
+                    {critical}
+                  </span>
+                }
+              />
+              <Tooltip.Content>
+                {criticalTask
+                  ? `Next critical date · ${criticalTask.label}`
+                  : "Next critical date"}
+              </Tooltip.Content>
+            </Tooltip>
+          )}
+        </div>
       </div>
 
       {footer && (
