@@ -11,9 +11,10 @@ import {
   faEllipsisVertical,
   faHandshake,
   faVectorSquare,
+  faArrowsRotate,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing, ListingStage } from "#/data/types";
-import { getProperty } from "#/data/store";
+import { getProperty, getListing } from "#/data/store";
 import {
   STATUS_LABELS,
   STATUS_COLORS,
@@ -26,6 +27,8 @@ import { AvatarGroup } from "./AvatarGroup";
 import { SyndicationStatus } from "#/components/listings/SyndicationStatus";
 import { requestStageChange } from "#/components/deals/useStageGate";
 import { AddSpaceModal } from "#/components/deals/AddSpaceModal";
+import { resyncChildFromParent } from "#/data/leaseSpaces";
+import { notify } from "#/lib/notify";
 
 /**
  * Full-bleed page header for a listing (which is its deal, 1:1) — identity on the
@@ -39,6 +42,9 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
   const property = getProperty(listing.propertyId);
   const address = `${property?.street}, ${property?.city}, ${property?.state} ${property?.zip}`;
   const [addSpaceOpen, setAddSpaceOpen] = useState(false);
+  const parentDeal = listing.parentDealId
+    ? getListing(listing.parentDealId)
+    : undefined;
 
   return (
     <div className="bg-card border-bottom">
@@ -73,6 +79,30 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
                 </Breadcrumb.Item>
               </Breadcrumb.List>
             </Breadcrumb>
+            {parentDeal && (
+              <div className="d-flex align-items-center gap-3 mb-1 small">
+                <Link
+                  to="/listings/$listingId/spaces"
+                  params={{ listingId: parentDeal.id }}
+                  className="text-muted text-decoration-none"
+                >
+                  Part of: {parentDeal.name}
+                </Link>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    resyncChildFromParent(listing.id);
+                    notify({
+                      title: "Re-synced from parent",
+                      description: listing.name,
+                    });
+                  }}
+                >
+                  <FontAwesomeIcon icon={faArrowsRotate} /> Re-sync from parent
+                </Button>
+              </div>
+            )}
             <h1
               className="fs-5 fw-semibold mb-0 text-truncate"
               title={listing.name}
