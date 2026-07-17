@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
@@ -9,6 +10,7 @@ import {
   faUserGear,
   faEllipsisVertical,
   faHandshake,
+  faVectorSquare,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing, ListingStage } from "#/data/types";
 import { getProperty } from "#/data/store";
@@ -23,6 +25,7 @@ import {
 import { AvatarGroup } from "./AvatarGroup";
 import { SyndicationStatus } from "#/components/listings/SyndicationStatus";
 import { requestStageChange } from "#/components/deals/useStageGate";
+import { AddSpaceModal } from "#/components/deals/AddSpaceModal";
 
 /**
  * Full-bleed page header for a listing (which is its deal, 1:1) — identity on the
@@ -35,6 +38,7 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
   const refId = getRefId(listing.id);
   const property = getProperty(listing.propertyId);
   const address = `${property?.street}, ${property?.city}, ${property?.state} ${property?.zip}`;
+  const [addSpaceOpen, setAddSpaceOpen] = useState(false);
 
   return (
     <div className="bg-card border-bottom">
@@ -138,6 +142,14 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
             <Button variant="ghost" size="icon" aria-label="Manage access">
               <FontAwesomeIcon icon={faUserGear} />
             </Button>
+            {listing.dealType === "Lease" && (
+              <Button
+                variant="secondary"
+                onClick={() => setAddSpaceOpen(true)}
+              >
+                <FontAwesomeIcon icon={faVectorSquare} /> Add space
+              </Button>
+            )}
             <Button
               variant="primary"
               className="flex-shrink-0"
@@ -158,6 +170,12 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
           </div>
         </div>
       </div>
+
+      <AddSpaceModal
+        parentDealId={listing.id}
+        open={addSpaceOpen}
+        onOpenChange={setAddSpaceOpen}
+      />
     </div>
   );
 }
