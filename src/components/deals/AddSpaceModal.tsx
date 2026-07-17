@@ -157,9 +157,9 @@ export function AddSpaceModal({
                 </Select>
               </Field>
             </div>
-            <Field.Description>
+            <div className="form-text text-muted mt-1">
               A new space is added to the property record, then spun into a deal.
-            </Field.Description>
+            </div>
           </div>
         </Modal.Body>
 
