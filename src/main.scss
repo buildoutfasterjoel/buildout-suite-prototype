@@ -842,13 +842,6 @@
 }
 
 // Call tab header: the "Calling" phone field, Call Now button, and divider.
-.compose-call-header {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 16px;
-  border-bottom: 1px solid var(--color-storm-grey-100, #eceef2);
-}
 .compose-divider {
   display: flex;
   align-items: center;

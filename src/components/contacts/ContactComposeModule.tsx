@@ -3,8 +3,6 @@ import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
 import { Textarea } from "@buildoutinc/blueprint-react/ui/Textarea";
-import { Input } from "@buildoutinc/blueprint-react/ui/Input";
-import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { Popover } from "@buildoutinc/blueprint-react/ui/Popover";
 import { Calendar } from "@buildoutinc/blueprint-react/ui/Calendar";
@@ -17,8 +15,6 @@ import {
   faBinoculars,
   faHashtag,
   faCaretDown,
-  faHandshake,
-  faCheck,
   faPaperclip,
   faPaperPlane,
   faBold,
@@ -27,7 +23,6 @@ import {
   faListUl,
   faListOl,
   faAlignLeft,
-  faSparkle,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact, DealSummary } from "#/data/types";
 import type { ComposeKind, ComposedActivity } from "#/components/contacts/contactDisplay";
@@ -35,6 +30,11 @@ import {
   contactFullName,
   contactInitials,
 } from "#/components/contacts/contactDisplay";
+import {
+  OutcomeChips,
+  RelatedDealSelect,
+  SparkleButton,
+} from "#/components/contacts/callLogFields";
 
 /** The payload emitted on submit — the panel stamps `id`/`seq`. */
 export type ComposedDraft = Omit<ComposedActivity, "id" | "seq">;
@@ -68,8 +68,6 @@ const DATED: ComposeKind[] = ["note", "call", "meeting", "tour"];
 // Kinds that offer a "related deal" select in the footer.
 const WITH_DEAL: ComposeKind[] = ["call", "meeting", "tour"];
 
-const CALL_OUTCOMES = ["Connected", "No Answer", "Left Voicemail", "Bad Number"];
-
 const EMPTY: Record<ComposeKind, string> = {
   note: "",
   call: "",
@@ -94,20 +92,6 @@ function toISODate(d: Date): string {
 /** Parse `yyyy-mm-dd` as local midnight so the picker shows the right day. */
 function parseLocalDate(value: string): Date {
   return new Date(`${value}T00:00:00`);
-}
-
-/** An AI ghost button (sparkle) pinned to the top-right of a textarea. */
-function SparkleButton() {
-  return (
-    <button
-      type="button"
-      className="compose-sparkle"
-      aria-label="Draft with AI"
-      onClick={(e) => e.preventDefault()}
-    >
-      <FontAwesomeIcon icon={faSparkle} />
-    </button>
-  );
 }
 
 /**
@@ -148,39 +132,6 @@ function DateButton({
   );
 }
 
-/** The "Select a related Deal" footer control. */
-function RelatedDealSelect({
-  deals,
-  value,
-  onChange,
-}: {
-  deals: DealSummary[];
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <Select value={value} onValueChange={(v) => onChange(v ?? "")}>
-      <Select.Trigger className="compose-deal-select" aria-label="Related deal">
-        <FontAwesomeIcon icon={faHandshake} className="text-muted" />
-        <Select.Value placeholder="Select a related Deal" />
-      </Select.Trigger>
-      <Select.Content>
-        {deals.length === 0 ? (
-          <Select.Item value="" disabled>
-            No related deals
-          </Select.Item>
-        ) : (
-          deals.map((d) => (
-            <Select.Item key={d.id} value={d.name}>
-              {d.name}
-            </Select.Item>
-          ))
-        )}
-      </Select.Content>
-    </Select>
-  );
-}
-
 export function ContactComposeModule({
   contact,
   deals,
@@ -206,6 +157,13 @@ export function ContactComposeModule({
   const [outcome, setOutcome] = useState("Connected");
   // Reset the outcome only lazily; keep it simple with a stable default.
   const composeName = contact.firstName;
+
+  // A contact can carry more than one number; the dropdown only appears when
+  // there's a choice to make. With a single number we fold it into the button.
+  const phones =
+    contact.phones && contact.phones.length > 0 ? contact.phones : [contact.phone];
+  const [selectedPhone, setSelectedPhone] = useState(phones[0]);
+  const multiplePhones = phones.length > 1;
 
   // A draft "has value" (flip secondary → primary) when its body has content —
   // or, for email, when either the subject or the message body is filled.
@@ -271,6 +229,8 @@ export function ContactComposeModule({
     const withDeal = WITH_DEAL.includes(tab);
     return (
       <div className="d-flex flex-column gap-4 p-4">
+        {tab === "call" && renderCallControls()}
+
         <div className="compose-textarea">
           <Textarea
             value={body[tab]}
@@ -282,21 +242,7 @@ export function ContactComposeModule({
         </div>
 
         {tab === "call" && (
-          <div className="d-flex flex-wrap gap-2">
-            {CALL_OUTCOMES.map((o) => (
-              <button
-                key={o}
-                type="button"
-                className={`compose-outcome-chip ${
-                  outcome === o ? "is-active" : ""
-                }`}
-                onClick={() => setOutcome(o)}
-              >
-                {outcome === o && <FontAwesomeIcon icon={faCheck} />}
-                {o}
-              </button>
-            ))}
-          </div>
+          <OutcomeChips value={outcome} onChange={setOutcome} />
         )}
 
         {ctaRow(
@@ -316,30 +262,42 @@ export function ContactComposeModule({
     );
   }
 
-  function renderCallHeader() {
-    // "Calling" phone field + Call Now (primary until a log draft is started).
+  function renderCallControls() {
+    // Full-width, stacked: the phone picker (only when there's a choice) and the
+    // call button, followed by the "Already Called?" divider that leads into the
+    // log fields below. Call button is primary until a log draft is started.
     return (
-      <div className="compose-call-header">
-        <div className="d-flex align-items-center gap-3">
-          <div className="flex-grow-1">
-            <InputGroup>
-              <InputGroup.Addon>
-                <FontAwesomeIcon icon={faHashtag} />
-              </InputGroup.Addon>
-              <Input readOnly value={contact.phone} aria-label="Phone number" />
-              <InputGroup.Addon>
-                <FontAwesomeIcon icon={faCaretDown} />
-              </InputGroup.Addon>
-            </InputGroup>
-          </div>
-          <Button
-            variant={hasValue ? "secondary" : "primary"}
-            onClick={onStartCall}
+      <div className="d-flex flex-column gap-3 align-items-stretch">
+        {multiplePhones && (
+          <Select
+            value={selectedPhone}
+            onValueChange={(v) => v && setSelectedPhone(v)}
           >
-            <FontAwesomeIcon icon={faPhone} />
-            Call Now
-          </Button>
-        </div>
+            <Select.Trigger className="w-100" aria-label="Phone number">
+              <FontAwesomeIcon icon={faHashtag} className="text-muted" />
+              <Select.Value />
+              <FontAwesomeIcon
+                icon={faCaretDown}
+                className="text-muted ms-auto"
+              />
+            </Select.Trigger>
+            <Select.Content>
+              {phones.map((p) => (
+                <Select.Item key={p} value={p}>
+                  {p}
+                </Select.Item>
+              ))}
+            </Select.Content>
+          </Select>
+        )}
+        <Button
+          variant={hasValue ? "secondary" : "primary"}
+          onClick={onStartCall}
+          className="w-100 justify-content-center"
+        >
+          <FontAwesomeIcon icon={faPhone} />
+          Call {selectedPhone}
+        </Button>
         <div className="compose-divider">
           <span className="compose-divider__line" />
           <span className="compose-divider__label">Already Called?</span>
@@ -455,7 +413,6 @@ export function ContactComposeModule({
         </Tabs>
       </div>
 
-      {tab === "call" && renderCallHeader()}
       {renderBody()}
     </Card>
   );

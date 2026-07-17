@@ -16,12 +16,12 @@ import { formatDuration } from "#/components/contacts/useLiveCall";
 export function LiveCallBar({
   call,
   onHangUp,
-  onEndAndLog,
+  onEndCall,
   onToggleMute,
 }: {
   call: LiveCall;
   onHangUp: () => void;
-  onEndAndLog: () => void;
+  onEndCall: () => void;
   onToggleMute: () => void;
 }) {
   if (call.phase === "calling") {
@@ -84,7 +84,7 @@ export function LiveCallBar({
         <button
           type="button"
           className="contact-call-bar__end"
-          onClick={connected ? onEndAndLog : onHangUp}
+          onClick={connected ? onEndCall : onHangUp}
         >
           <FontAwesomeIcon icon={faPhoneSlash} />
           {connected ? "End call & log" : "Hang up"}
