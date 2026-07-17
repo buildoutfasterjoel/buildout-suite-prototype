@@ -182,7 +182,8 @@ export interface TypeConfig {
   overflow?: string[];
 }
 
-const UNIVERSAL_OVERFLOW = [
+/** Overflow-menu items appended to every type's own items (Tier-3). */
+export const UNIVERSAL_OVERFLOW = [
   "Star",
   "Pin to top",
   "Comment",
@@ -371,10 +372,38 @@ export function matchesFilter(event: TimelineEvent, key: FilterKey): boolean {
   return TYPE_CONFIG[event.type].filter === key;
 }
 
+/**
+ * The hybrid email-thread model. `All` collapses a thread into its one
+ * Conversation card (member messages hidden); `Emails` expands the thread into
+ * its individual message cards (Conversation card hidden). Other filters show
+ * whatever matches — a starred or attachment-bearing member still surfaces.
+ */
+export function visibleEvents(
+  events: TimelineEvent[],
+  filter: FilterKey,
+): TimelineEvent[] {
+  const convoThreads = new Set(
+    events
+      .filter((e) => e.type === "conversation" && e.threadId)
+      .map((e) => e.threadId as string),
+  );
+  return events.filter((e) => {
+    if (!matchesFilter(e, filter)) return false;
+    if (filter === "emails") return e.type !== "conversation";
+    if (filter === "all") {
+      const isThreadMember =
+        !!e.threadId && convoThreads.has(e.threadId) && e.type !== "conversation";
+      return !isThreadMember;
+    }
+    return true;
+  });
+}
+
+/** Counts match the rows each tab actually renders (post thread-grouping). */
 export function filterCounts(events: TimelineEvent[]): Record<FilterKey, number> {
   const out = {} as Record<FilterKey, number>;
   for (const { key } of FILTER_TABS) {
-    out[key] = events.filter((e) => matchesFilter(e, key)).length;
+    out[key] = visibleEvents(events, key).length;
   }
   return out;
 }
@@ -527,13 +556,6 @@ export function buildTimeline(c: Contact, deals: DealSummary[]): TimelineEvent[]
       seq: next(),
       subject: "Re: Updated financials",
       body: `Thanks for sending those over — can we hop on a call Thursday to walk through the assumptions?`,
-      reply: {
-        replier: contactRef.name,
-        delay: "2h after send",
-        sentiment: "Positive · wants to meet",
-        sentimentTone: "positive",
-        body: "Can we hop on a call Thursday to walk through the assumptions?",
-      },
       badges: [{ label: "New", tone: "reply" }],
       threadId,
       messageId: `${threadId}-m3`,
@@ -611,6 +633,13 @@ export function buildTimeline(c: Contact, deals: DealSummary[]): TimelineEvent[]
         { label: "Opened", tone: "open", meta: "2h after send" },
         { label: "Clicked", tone: "click" },
       ],
+      reply: {
+        replier: contactRef.name,
+        delay: "2h after send",
+        sentiment: "Positive · wants to meet",
+        sentimentTone: "positive",
+        body: "Can we hop on a call Thursday to walk through the assumptions?",
+      },
       threadId,
       messageId: `${threadId}-m1`,
       hasAttachment: true,
@@ -625,7 +654,6 @@ export function buildTimeline(c: Contact, deals: DealSummary[]): TimelineEvent[]
       timestamp: daysAgo(10, 11, 20),
       seq: next(),
       subject: "Re: Updated financials",
-      body: "Got them, thank you. Reviewing with my team this week.",
       reply: {
         replier: contactRef.name,
         delay: "1d after send",
