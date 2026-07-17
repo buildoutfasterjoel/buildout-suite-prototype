@@ -495,6 +495,17 @@
   padding: 12px;
 }
 
+// Match the contact detail breadcrumb to the pager's base 14px (overriding
+// Blueprint's default breadcrumb sizing) so the top bar reads as one row.
+.contact-detail-breadcrumb,
+.contact-detail-breadcrumb .breadcrumb,
+.contact-detail-breadcrumb .breadcrumb-item {
+  font-size: 14px;
+  // Widen the gap around each separator (Blueprint defaults to 0.25rem, which
+  // reads too tight at 14px). TODO(blueprint): bump the default upstream.
+  --bp-breadcrumb-item-padding-x: 0.5rem;
+}
+
 // The per-section action button (e.g. "Add"), overlaid at the header's right.
 // z-index must beat Bootstrap's `.accordion-button:not(.collapsed)` (z-index: 3),
 // which otherwise paints the expanded header over this button and hides it.

@@ -51,6 +51,10 @@ import {
   listPredicate,
 } from "#/data/contactLists";
 import { contactFullName } from "#/components/contacts/contactDisplay";
+import {
+  useContactListNav,
+  type ContactListSource,
+} from "#/components/contacts/useContactListNav";
 import { ContactFilters } from "#/components/contacts/ContactFilters";
 import {
   ContactFilterBar,
@@ -84,8 +88,17 @@ function PeoplePage() {
   const callListsMap = useDataStore((s) => s.callLists);
   const userLists = useMemo(() => [...callListsMap.values()], [callListsMap]);
 
+  // When a contact-detail breadcrumb sends the user back here, restore the exact
+  // list/filter/search view they came from (see useContactListNav). Read once at
+  // mount; a plain nav to People (no flag) falls through to the defaults.
+  const restoreSource = useContactListNav.getState().restorePending
+    ? useContactListNav.getState().source
+    : null;
+
   const [view, setView] = useState<"contacts" | "lists">("contacts");
-  const [activeListId, setActiveListId] = useState(ALL_CONTACTS_ID);
+  const [activeListId, setActiveListId] = useState(
+    restoreSource?.listId ?? ALL_CONTACTS_ID,
+  );
   const [showFilters, setShowFilters] = useState(false);
   const [showCreateList, setShowCreateList] = useState(false);
   const [showCreateStaticList, setShowCreateStaticList] = useState(false);
@@ -93,8 +106,17 @@ function PeoplePage() {
   const [showAddContacts, setShowAddContacts] = useState(false);
   const [showEditList, setShowEditList] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState(emptyContactFilters());
+  const [search, setSearch] = useState(restoreSource?.search ?? "");
+  const [filters, setFilters] = useState(
+    restoreSource?.filters ?? emptyContactFilters(),
+  );
+
+  // Consume the restore flag so a later plain visit to People starts fresh.
+  useEffect(() => {
+    if (useContactListNav.getState().restorePending) {
+      useContactListNav.getState().clearRestore();
+    }
+  }, []);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -335,6 +357,35 @@ function PeoplePage() {
   useEffect(() => {
     setSelected(new Set());
   }, [activeListId, filters, search]);
+
+  // Mirror the currently-viewed list into the nav store so the contact detail
+  // page's pager + breadcrumb know which set to step through and how to label
+  // it. Kept in sync as the list/filters/search change.
+  const setContactListNav = useContactListNav((s) => s.setList);
+  useEffect(() => {
+    const ids = filtered.map((c) => c.id);
+    let source: ContactListSource;
+    if (activeListId === ALL_CONTACTS_ID) {
+      const isFiltered =
+        search.trim() !== "" || countActiveContactFilters(filters) > 0;
+      source = {
+        variant: isFiltered ? "filtered" : "all",
+        label: isFiltered ? "Contacts (Filtered)" : "Contacts",
+        listId: activeListId,
+        filters,
+        search,
+      };
+    } else {
+      source = {
+        variant: "list",
+        label: heading,
+        listId: activeListId,
+        filters,
+        search,
+      };
+    }
+    setContactListNav(ids, source);
+  }, [filtered, activeListId, filters, search, heading, setContactListNav]);
 
   const allFilteredSelected =
     filtered.length > 0 && filtered.every((c) => selected.has(c.id));
