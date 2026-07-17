@@ -46,6 +46,12 @@ const DATE_FORMAT: Intl.DateTimeFormatOptions = {
   day: "numeric",
 };
 
+const LEASE_RATE_UNIT_OPTIONS = [
+  { value: "SF/Yr", label: "SF/Yr" },
+  { value: "SF/Mo", label: "SF/Mo" },
+  { value: "Monthly", label: "Monthly" },
+] as const;
+
 /** Format a stored date value (ISO string or `yyyy-mm-dd`) as a local Date. */
 function parseDate(value: string | null): Date | undefined {
   if (!value) return undefined;
@@ -322,24 +328,76 @@ export function StageGate({
                     />
                   </Field>
 
-                  <Field>
-                    <Field.Label>Asking price</Field.Label>
-                    <CurrencyInput
-                      value={form.askingPrice}
-                      onChange={(v) => set("askingPrice", v)}
-                    />
-                    <Field.Description>
-                      Editing here updates the listing.{" "}
-                      <a
-                        href={`/listings/${deal.id}/edit`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Open full marketing editor{" "}
-                        <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
-                      </a>
-                    </Field.Description>
-                  </Field>
+                  {deal.dealType === "Sale" ? (
+                    <Field>
+                      <Field.Label>Asking price</Field.Label>
+                      <CurrencyInput
+                        value={form.askingPrice}
+                        onChange={(v) => set("askingPrice", v)}
+                      />
+                      <Field.Description>
+                        Editing here updates the listing.{" "}
+                        <a
+                          href={`/listings/${deal.id}/edit`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Open full marketing editor{" "}
+                          <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+                        </a>
+                      </Field.Description>
+                    </Field>
+                  ) : (
+                    <>
+                      <div className="d-flex gap-2">
+                        <Field className="flex-grow-1">
+                          <Field.Label>Lease rate</Field.Label>
+                          <CurrencyInput
+                            value={form.leaseRate}
+                            onChange={(v) => set("leaseRate", v)}
+                          />
+                        </Field>
+                        <Field style={{ width: 140 }}>
+                          <Field.Label>Units</Field.Label>
+                          <Select
+                            items={LEASE_RATE_UNIT_OPTIONS}
+                            value={form.leaseRateUnits}
+                            onValueChange={(v) =>
+                              set(
+                                "leaseRateUnits",
+                                v as typeof form.leaseRateUnits,
+                              )
+                            }
+                          >
+                            <Select.Trigger>
+                              <Select.Value />
+                            </Select.Trigger>
+                            <Select.Content>
+                              {LEASE_RATE_UNIT_OPTIONS.map((o) => (
+                                <Select.Item key={o.value} value={o.value}>
+                                  {o.label}
+                                </Select.Item>
+                              ))}
+                            </Select.Content>
+                          </Select>
+                        </Field>
+                      </div>
+                      <Field>
+                        <Field.Label>Available SF</Field.Label>
+                        <Input
+                          type="number"
+                          value={form.availableSqFt ?? ""}
+                          onChange={(e) =>
+                            set(
+                              "availableSqFt",
+                              e.target.value ? Number(e.target.value) : null,
+                            )
+                          }
+                          placeholder="e.g. 2400"
+                        />
+                      </Field>
+                    </>
+                  )}
                 </>
               )}
 
@@ -437,6 +495,34 @@ export function StageGate({
                 </Field>
               )}
 
+              {req("tenantLinked") && (
+                <Field>
+                  <Field.Label>Tenant</Field.Label>
+                  <Select
+                    items={buyerOptions}
+                    value={form.tenantContactId ?? ""}
+                    onValueChange={(v) => {
+                      set("tenantContactId", v || null);
+                      set(
+                        "tenantLinked",
+                        !!v || deal.tenantContactIds.length > 0,
+                      );
+                    }}
+                  >
+                    <Select.Trigger>
+                      <Select.Value placeholder="Select a tenant…" />
+                    </Select.Trigger>
+                    <Select.Content>
+                      {buyerOptions.map((o) => (
+                        <Select.Item key={o.value} value={o.value}>
+                          {o.label}
+                        </Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select>
+                </Field>
+              )}
+
               {req("listedOnDate") && (
                 <Field>
                   <Field.Label>Listing Executed</Field.Label>
@@ -487,6 +573,34 @@ export function StageGate({
                   <CurrencyInput
                     value={form.commissionAmount}
                     onChange={setCommissionAmount}
+                  />
+                </Field>
+              )}
+
+              {req("leaseTermMonths") && (
+                <Field>
+                  <Field.Label>Lease term (months)</Field.Label>
+                  <Input
+                    type="number"
+                    value={form.leaseTermMonths ?? ""}
+                    onChange={(e) =>
+                      set(
+                        "leaseTermMonths",
+                        e.target.value ? Number(e.target.value) : null,
+                      )
+                    }
+                    placeholder="e.g. 60"
+                  />
+                </Field>
+              )}
+
+              {req("leaseCommencementDate") && (
+                <Field>
+                  <Field.Label>Lease Commencement</Field.Label>
+                  <GateDatePicker
+                    value={form.leaseCommencementDate}
+                    onChange={(v) => set("leaseCommencementDate", v)}
+                    placeholder="Tenancy start date"
                   />
                 </Field>
               )}
