@@ -9,6 +9,7 @@ import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
 import { Switch } from "@buildoutinc/blueprint-react/ui/Switch";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
+import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
@@ -116,6 +117,7 @@ export function CreateDealModal({
 	const navigate = useNavigate();
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
+	const [dealType, setDealType] = useState<NewListingDraft["dealType"]>("Sale");
 	const [side, setSide] = useState<DealSide | null>(null);
 	const [stage, setStage] = useState<PropertyStatus>("proposal");
 	const [contactOption, setContactOption] = useState<ContactOption | null>(
@@ -229,6 +231,7 @@ export function CreateDealModal({
 			setPropertyInput(initialAddress ?? "");
 		}
 
+		setDealType("Sale");
 		setStage("proposal");
 		setUnderwritingOn(true);
 		setUnderwritingSel(new Set(DEFAULT_UNDERWRITING_SELECTION));
@@ -289,6 +292,7 @@ export function CreateDealModal({
 			: [];
 		const draft: NewListingDraft = {
 			...emptyDraft(),
+			dealType,
 			dealSide: side,
 			initialStage: stage,
 			propertyId: propertyOption?.value ?? "",
@@ -328,6 +332,19 @@ export function CreateDealModal({
 				</Modal.Header>
 
 				<Modal.Body className="d-flex flex-column gap-4">
+					<Tabs
+						value={dealType}
+						onValueChange={(v) =>
+							setDealType(v as NewListingDraft["dealType"])
+						}
+						className="mb-3"
+					>
+						<Tabs.List variant="pills">
+							<Tabs.Tab value="Sale">Sale</Tabs.Tab>
+							<Tabs.Tab value="Lease">Lease</Tabs.Tab>
+						</Tabs.List>
+					</Tabs>
+
 					{/* Side */}
 					<Field>
 						<Field.Label>Side</Field.Label>
