@@ -1291,7 +1291,8 @@
     font-weight: 600;
   }
 
-  // A compact, non-stretching count chip.
+  // A compact, non-stretching count chip. Inactive tabs use a ghost chip (no
+  // fill); only the active pill fills it in (below).
   &__count {
     flex: 0 0 auto;
     display: inline-flex;
@@ -1304,7 +1305,7 @@
     font-size: 11px;
     font-weight: 600;
     line-height: 1;
-    background: var(--color-storm-grey-100, #eceef2);
+    background: transparent;
     color: var(--color-storm-grey-700, #424e62);
   }
 
