@@ -85,7 +85,7 @@ const SIDE_DISPLAY: Record<
     color: "var(--side-buyer)",
     Sale: {
       title: "Buyer",
-      blurb: "Buy-side · they want a property you represent",
+      blurb: "Buy-side · find them a property to buy",
     },
     Lease: { title: "Tenant", blurb: "Tenant rep · find space for them to lease" },
   },
