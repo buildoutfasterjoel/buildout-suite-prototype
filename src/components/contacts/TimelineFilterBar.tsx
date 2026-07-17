@@ -6,12 +6,8 @@ import {
   faNoteSticky,
   faPhone,
   faEnvelope,
-  faCalendarUsers,
-  faBuilding,
-  faPaperclip,
-  faBolt,
-  faBullhorn,
-  faStar,
+  faCalendar,
+  faBinoculars,
 } from "@fortawesome/pro-regular-svg-icons";
 import {
   FILTER_TABS,
@@ -22,19 +18,15 @@ import {
 
 /**
  * Icon per filter tab. "All" keeps its text label (no icon); every other tab is
- * icon-only with the label surfaced via tooltip. Icons for the channels the
- * Figma covers plus judgment calls for the rest (Activity, Attachments…).
+ * icon-only with the label surfaced via tooltip. Meetings/Tours reuse the
+ * compose-tab icons (calendar / binoculars).
  */
 const FILTER_ICON: Partial<Record<FilterKey, IconDefinition>> = {
   notes: faNoteSticky,
   calls: faPhone,
   emails: faEnvelope,
-  meetings: faCalendarUsers,
-  tours: faBuilding,
-  attachments: faPaperclip,
-  activity: faBolt,
-  marketing: faBullhorn,
-  starred: faStar,
+  meetings: faCalendar,
+  tours: faBinoculars,
 };
 
 /**

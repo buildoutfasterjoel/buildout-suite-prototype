@@ -359,10 +359,6 @@ export const FILTER_TABS: { key: FilterKey; label: string }[] = [
   { key: "emails", label: "Emails" },
   { key: "meetings", label: "Meetings" },
   { key: "tours", label: "Tours" },
-  { key: "attachments", label: "Attachments" },
-  { key: "activity", label: "Activity" },
-  { key: "marketing", label: "Marketing" },
-  { key: "starred", label: "Starred" },
 ];
 
 export function matchesFilter(event: TimelineEvent, key: FilterKey): boolean {
