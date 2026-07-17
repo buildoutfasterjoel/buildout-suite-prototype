@@ -1232,6 +1232,7 @@ function generateListings(
       dealType,
       dealSide,
       unitId: marketingUnitId,
+      parentDealId: null,
 
       // Deal (1:1)
       dealId,
@@ -1239,6 +1240,7 @@ function generateListings(
       outsideBrokers,
       sellerContactIds: sellerContacts.map((c) => c.id),
       buyerContactIds: buyerContacts.map((c) => c.id),
+      tenantContactIds: [],
       otherContactIds: [],
       tasks,
       messages,
@@ -1289,6 +1291,7 @@ function generateListings(
         closeDate: status === 'closed' ? faker.date.recent({ days: 90 }).toISOString().slice(0, 10) : null,
         listedOnDate: status !== 'proposal' ? faker.date.recent({ days: 200 }).toISOString().slice(0, 10) : null,
         listingExpirationDate: status !== 'proposal' ? faker.date.future({ years: 1 }).toISOString().slice(0, 10) : null,
+        leaseCommencementDate: null,
         deadReason: null,
         nextCriticalDate: nextTask?.date ?? null,
         backOffice: {

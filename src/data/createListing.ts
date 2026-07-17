@@ -453,6 +453,7 @@ export function createProposalListing(draft: NewListingDraft): Listing {
     dealType: draft.dealType,
     dealSide: draft.dealSide,
     unitId: null,
+    parentDealId: null,
 
     // Deal (1:1) — empty/zeroed for a brand-new proposal
     dealId,
@@ -460,6 +461,7 @@ export function createProposalListing(draft: NewListingDraft): Listing {
     outsideBrokers: [],
     sellerContactIds: seller ? [seller.id] : [],
     buyerContactIds: buyer ? [buyer.id] : [],
+    tenantContactIds: [],
     otherContactIds: [],
     tasks,
     messages: [],
@@ -518,6 +520,7 @@ export function createProposalListing(draft: NewListingDraft): Listing {
       closeDate: null,
       listedOnDate: null,
       listingExpirationDate: null,
+      leaseCommencementDate: null,
       deadReason: null,
       nextCriticalDate,
       backOffice: {

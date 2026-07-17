@@ -16,7 +16,10 @@ import {
   faMapLocationDot,
   faFileChartColumn,
   faFolder,
+  faVectorSquare,
 } from "@fortawesome/pro-regular-svg-icons";
+import { useDataStore } from "#/data/dataStore";
+import { getListing } from "#/data/store";
 
 type NavItem = { label: string; href: string; icon: IconDefinition };
 type NavGroup = { label?: string; items: NavItem[] };
@@ -26,6 +29,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Deal",
     items: [
       { label: "Overview", href: "overview", icon: faGaugeHigh },
+      { label: "Spaces", href: "spaces", icon: faVectorSquare },
       {
         label: "Client Report",
         href: "client-report",
@@ -62,9 +66,22 @@ export function PropertyDetailSidebar() {
   const { pathname } = useLocation();
   const { listingId } = useParams({ from: "/_shell/listings/$listingId" });
   const navigate = useNavigate();
+  // Reactive: re-render when the listing changes (e.g. promoted to an umbrella).
+  const version = useDataStore((s) => s.listings);
+  void version;
+  const listing = getListing(listingId);
+  const canAddSpace =
+    listing?.dealType === "Lease" && listing?.parentDealId == null;
+
+  const navGroups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter(
+      (item) => item.href !== "spaces" || canAddSpace,
+    ),
+  }));
 
   function handleTabChange(value: string) {
-    const item = NAV_GROUPS.flatMap((g) => g.items).find(
+    const item = navGroups.flatMap((g) => g.items).find(
       (i) => i.label === value,
     );
     if (!item) return;
@@ -74,7 +91,7 @@ export function PropertyDetailSidebar() {
 
   return (
     <nav className="px-3 py-1" aria-label="Property sections">
-      {NAV_GROUPS.map((group, i) => {
+      {navGroups.map((group, i) => {
         const activeInGroup =
           group.items.find((item) => pathname.endsWith(`/${item.href}`))
             ?.label ?? "";

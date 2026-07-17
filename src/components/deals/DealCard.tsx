@@ -9,10 +9,12 @@ import {
   faCalendarCircleExclamation,
   faSignHanging,
   faMagnifyingGlassDollar,
+  faVectorSquare,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { Listing, Contact, DealSide } from "#/data/types";
 import { getContact, getListing, getProperty } from "#/data/store";
+import { isUmbrella, spacesStageBreakdown } from "#/data/leaseSpaces";
 import { DealStageBadge } from "./DealStageBadge";
 import { dealHeadlineLabel } from "./dealDisplay";
 import {
@@ -20,16 +22,25 @@ import {
   TYPE_LABELS,
 } from "../properties/propertyDisplay";
 
-/** Label, icon, and accent color per deal side. */
+/**
+ * Icon + accent color per deal side, plus the label per deal type — a Sale reads
+ * Seller/Buyer, a Lease reads Landlord/Tenant.
+ */
 const SIDE_DISPLAY: Record<
   DealSide,
-  { label: string; icon: IconDefinition; color: string }
+  { icon: IconDefinition; color: string; Sale: string; Lease: string }
 > = {
-  seller: { label: "Seller", icon: faSignHanging, color: "var(--side-seller)" },
+  seller: {
+    icon: faSignHanging,
+    color: "var(--side-seller)",
+    Sale: "Seller",
+    Lease: "Landlord",
+  },
   buyer: {
-    label: "Buyer",
     icon: faMagnifyingGlassDollar,
     color: "var(--side-buyer)",
+    Sale: "Buyer",
+    Lease: "Tenant",
   },
 };
 
@@ -99,6 +110,33 @@ export function DealCardView({
   );
   // Lost deals get a muted background to set them apart from the active pipeline.
   const isLost = listing.status === "inactive";
+  // Umbrella parents roll up their child space deals' stages; children get a flair instead.
+  const rollup = isUmbrella(listing.id)
+    ? spacesStageBreakdown(listing.id)
+    : null;
+  // A child space card leads with its suite label + the building address (so the
+  // suite is visible rather than truncated off the end of the full deal name);
+  // a top-level deal keeps its own name + town.
+  const isChild = listing.parentDealId != null;
+  const unitLabel = property?.units.find((u) => u.id === listing.unitId)?.label;
+  const cardTitle = isChild ? (unitLabel ?? listing.name) : listing.name;
+  const cardSubtitle = property
+    ? isChild
+      ? [property.street, property.city, property.state].filter(Boolean).join(", ")
+      : [property.city, property.state].filter(Boolean).join(", ")
+    : "";
+  // The leading type chip is icon-only (label in a tooltip) to leave room for
+  // the rep badge: a child reads "Space", a top-level deal its property type.
+  const typeIcon = isChild
+    ? faVectorSquare
+    : property
+      ? TYPE_ICONS[property.propertyType]
+      : null;
+  const typeLabel = isChild
+    ? "Space"
+    : property
+      ? TYPE_LABELS[property.propertyType]
+      : "";
 
   return (
     <div
@@ -108,10 +146,18 @@ export function DealCardView({
       {/* Property type + deal side */}
       <div className="d-flex flex-column" style={{ gap: 2 }}>
         <div className="d-flex align-items-center gap-2">
-          <div className="d-flex align-items-center gap-1 text-muted fs-small">
-            {property && <FontAwesomeIcon icon={TYPE_ICONS[property.propertyType]} />}
-            <span>{property ? TYPE_LABELS[property.propertyType] : ""}</span>
-          </div>
+          {typeIcon && (
+            <Tooltip>
+              <Tooltip.Trigger
+                render={
+                  <span className="d-inline-flex align-items-center text-muted fs-small">
+                    <FontAwesomeIcon icon={typeIcon} />
+                  </span>
+                }
+              />
+              <Tooltip.Content>{typeLabel}</Tooltip.Content>
+            </Tooltip>
+          )}
           <span
             className="d-inline-flex align-items-center gap-1 fw-semibold text-nowrap fs-small"
             style={{
@@ -122,7 +168,7 @@ export function DealCardView({
             }}
           >
             <FontAwesomeIcon icon={sideDisplay.icon} />
-            {sideDisplay.label}
+            {sideDisplay[listing.dealType]}
           </span>
           {(showStatus || action) && (
             <div className="ms-auto d-flex align-items-center gap-2">
@@ -143,13 +189,11 @@ export function DealCardView({
         <div
           className="fw-semibold text-truncate"
           style={{ color: "#22262f" }}
-          title={listing.name}
+          title={cardTitle}
         >
-          {listing.name}
+          {cardTitle}
         </div>
-        <div className="text-muted text-truncate fs-small">
-          {property?.city}, {property?.state}
-        </div>
+        <div className="text-muted text-truncate fs-small">{cardSubtitle}</div>
       </div>
 
       {/* Attached person */}
@@ -172,23 +216,40 @@ export function DealCardView({
         <span className="fw-semibold" style={{ color: "#22262f" }}>
           {price}
         </span>
-        {critical && (
-          <Tooltip>
-            <Tooltip.Trigger
-              render={
-                <span className="d-inline-flex align-items-center gap-1 text-muted fs-small">
-                  <FontAwesomeIcon icon={faCalendarCircleExclamation} />
-                  {critical}
-                </span>
-              }
-            />
-            <Tooltip.Content>
-              {criticalTask
-                ? `Next critical date · ${criticalTask.label}`
-                : "Next critical date"}
-            </Tooltip.Content>
-          </Tooltip>
-        )}
+        <div className="d-flex align-items-center gap-3">
+          {rollup && (
+            <Tooltip>
+              <Tooltip.Trigger
+                render={
+                  <span className="d-inline-flex align-items-center gap-1 text-muted fs-small">
+                    <FontAwesomeIcon icon={faVectorSquare} />
+                    {rollup.total}
+                  </span>
+                }
+              />
+              <Tooltip.Content>
+                {rollup.total} {rollup.total === 1 ? "space" : "spaces"} in this deal
+              </Tooltip.Content>
+            </Tooltip>
+          )}
+          {critical && (
+            <Tooltip>
+              <Tooltip.Trigger
+                render={
+                  <span className="d-inline-flex align-items-center gap-1 text-muted fs-small">
+                    <FontAwesomeIcon icon={faCalendarCircleExclamation} />
+                    {critical}
+                  </span>
+                }
+              />
+              <Tooltip.Content>
+                {criticalTask
+                  ? `Next critical date · ${criticalTask.label}`
+                  : "Next critical date"}
+              </Tooltip.Content>
+            </Tooltip>
+          )}
+        </div>
       </div>
 
       {footer && (

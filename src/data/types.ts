@@ -219,6 +219,9 @@ export interface Listing {
   /** The Property unit this deal is scoped to, or null when it covers the whole property. */
   unitId: string | null
 
+  /** Parent umbrella deal id when this is a child space deal; null for top-level deals. */
+  parentDealId: string | null
+
   // ── Deal data (1:1) ──────────────────────────────────────────────
   dealId: string
 
@@ -227,6 +230,8 @@ export interface Listing {
 
   sellerContactIds: string[]
   buyerContactIds: string[]
+  /** Tenant(s) entering the lease — dedicated dataset, distinct from buyerContactIds. */
+  tenantContactIds: string[]
   otherContactIds: string[]
 
   tasks: DealTask[]
@@ -367,6 +372,8 @@ export interface DealTransaction {
   closeDate: string | null
   listedOnDate: string | null
   listingExpirationDate: string | null
+  /** Tenancy start date, captured entering Closed on a lease deal. */
+  leaseCommencementDate: string | null
   deadReason: string | null
   nextCriticalDate: string | null
   /** Voucher / receivables / deductions — the Close-phase settlement records. */

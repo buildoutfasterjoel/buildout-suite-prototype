@@ -2,6 +2,8 @@ import type {
   EntityMaps,
   Listing,
   Property,
+  PropertyUnit,
+  UnitType,
   Contact,
   PropertyType,
   RelationshipStage,
@@ -69,6 +71,32 @@ export function updateProperty(
   })
   useDataStore.getState().persist()
   return updated
+}
+
+/** Append a new unit shell to a Property (source of truth) and return the created unit. */
+export function addPropertyUnit(
+  propertyId: string,
+  unit: { label: string; sqft: number; unitType: UnitType },
+): PropertyUnit | undefined {
+  const existing = getStore().properties.get(propertyId)
+  if (!existing) return undefined
+  const created: PropertyUnit = {
+    id: crypto.randomUUID(),
+    label: unit.label,
+    unitType: unit.unitType,
+    sqft: unit.sqft,
+    beds: null,
+    baths: null,
+    suite: null,
+    floor: null,
+    ceilingHeight: null,
+    offices: null,
+    conferenceRooms: null,
+    furnished: false,
+    saleHistory: [],
+  }
+  updateProperty(propertyId, { units: [...existing.units, created] })
+  return created
 }
 
 /** A property picker option — carries `label` (address) plus display metadata. */

@@ -32,6 +32,7 @@ import { Route as ShellListingsListingIdIndexRouteImport } from './routes/_shell
 import { Route as ShellBackofficeContactsIndexRouteImport } from './routes/_shell/backoffice/contacts/index'
 import { Route as ShellListingsListingIdWebsiteRouteImport } from './routes/_shell/listings/$listingId/website'
 import { Route as ShellListingsListingIdTransactionRouteImport } from './routes/_shell/listings/$listingId/transaction'
+import { Route as ShellListingsListingIdSpacesRouteImport } from './routes/_shell/listings/$listingId/spaces'
 import { Route as ShellListingsListingIdOverviewRouteImport } from './routes/_shell/listings/$listingId/overview'
 import { Route as ShellListingsListingIdMediaRouteImport } from './routes/_shell/listings/$listingId/media'
 import { Route as ShellListingsListingIdLeadsRouteImport } from './routes/_shell/listings/$listingId/leads'
@@ -165,6 +166,12 @@ const ShellListingsListingIdTransactionRoute =
     path: '/transaction',
     getParentRoute: () => ShellListingsListingIdRoute,
   } as any)
+const ShellListingsListingIdSpacesRoute =
+  ShellListingsListingIdSpacesRouteImport.update({
+    id: '/spaces',
+    path: '/spaces',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
 const ShellListingsListingIdOverviewRoute =
   ShellListingsListingIdOverviewRouteImport.update({
     id: '/overview',
@@ -276,6 +283,7 @@ export interface FileRoutesByFullPath {
   '/listings/$listingId/leads': typeof ShellListingsListingIdLeadsRoute
   '/listings/$listingId/media': typeof ShellListingsListingIdMediaRoute
   '/listings/$listingId/overview': typeof ShellListingsListingIdOverviewRoute
+  '/listings/$listingId/spaces': typeof ShellListingsListingIdSpacesRoute
   '/listings/$listingId/transaction': typeof ShellListingsListingIdTransactionRoute
   '/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
   '/backoffice/contacts/': typeof ShellBackofficeContactsIndexRoute
@@ -307,6 +315,7 @@ export interface FileRoutesByTo {
   '/listings/$listingId/leads': typeof ShellListingsListingIdLeadsRoute
   '/listings/$listingId/media': typeof ShellListingsListingIdMediaRoute
   '/listings/$listingId/overview': typeof ShellListingsListingIdOverviewRoute
+  '/listings/$listingId/spaces': typeof ShellListingsListingIdSpacesRoute
   '/listings/$listingId/transaction': typeof ShellListingsListingIdTransactionRoute
   '/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
   '/backoffice/contacts': typeof ShellBackofficeContactsIndexRoute
@@ -346,6 +355,7 @@ export interface FileRoutesById {
   '/_shell/listings/$listingId/leads': typeof ShellListingsListingIdLeadsRoute
   '/_shell/listings/$listingId/media': typeof ShellListingsListingIdMediaRoute
   '/_shell/listings/$listingId/overview': typeof ShellListingsListingIdOverviewRoute
+  '/_shell/listings/$listingId/spaces': typeof ShellListingsListingIdSpacesRoute
   '/_shell/listings/$listingId/transaction': typeof ShellListingsListingIdTransactionRoute
   '/_shell/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
   '/_shell/backoffice/contacts/': typeof ShellBackofficeContactsIndexRoute
@@ -385,6 +395,7 @@ export interface FileRouteTypes {
     | '/listings/$listingId/leads'
     | '/listings/$listingId/media'
     | '/listings/$listingId/overview'
+    | '/listings/$listingId/spaces'
     | '/listings/$listingId/transaction'
     | '/listings/$listingId/website'
     | '/backoffice/contacts/'
@@ -416,6 +427,7 @@ export interface FileRouteTypes {
     | '/listings/$listingId/leads'
     | '/listings/$listingId/media'
     | '/listings/$listingId/overview'
+    | '/listings/$listingId/spaces'
     | '/listings/$listingId/transaction'
     | '/listings/$listingId/website'
     | '/backoffice/contacts'
@@ -454,6 +466,7 @@ export interface FileRouteTypes {
     | '/_shell/listings/$listingId/leads'
     | '/_shell/listings/$listingId/media'
     | '/_shell/listings/$listingId/overview'
+    | '/_shell/listings/$listingId/spaces'
     | '/_shell/listings/$listingId/transaction'
     | '/_shell/listings/$listingId/website'
     | '/_shell/backoffice/contacts/'
@@ -629,6 +642,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellListingsListingIdTransactionRouteImport
       parentRoute: typeof ShellListingsListingIdRoute
     }
+    '/_shell/listings/$listingId/spaces': {
+      id: '/_shell/listings/$listingId/spaces'
+      path: '/spaces'
+      fullPath: '/listings/$listingId/spaces'
+      preLoaderRoute: typeof ShellListingsListingIdSpacesRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
     '/_shell/listings/$listingId/overview': {
       id: '/_shell/listings/$listingId/overview'
       path: '/overview'
@@ -788,6 +808,7 @@ interface ShellListingsListingIdRouteChildren {
   ShellListingsListingIdLeadsRoute: typeof ShellListingsListingIdLeadsRoute
   ShellListingsListingIdMediaRoute: typeof ShellListingsListingIdMediaRoute
   ShellListingsListingIdOverviewRoute: typeof ShellListingsListingIdOverviewRoute
+  ShellListingsListingIdSpacesRoute: typeof ShellListingsListingIdSpacesRoute
   ShellListingsListingIdTransactionRoute: typeof ShellListingsListingIdTransactionRoute
   ShellListingsListingIdWebsiteRoute: typeof ShellListingsListingIdWebsiteRoute
   ShellListingsListingIdIndexRoute: typeof ShellListingsListingIdIndexRoute
@@ -811,6 +832,7 @@ const ShellListingsListingIdRouteChildren: ShellListingsListingIdRouteChildren =
     ShellListingsListingIdLeadsRoute: ShellListingsListingIdLeadsRoute,
     ShellListingsListingIdMediaRoute: ShellListingsListingIdMediaRoute,
     ShellListingsListingIdOverviewRoute: ShellListingsListingIdOverviewRoute,
+    ShellListingsListingIdSpacesRoute: ShellListingsListingIdSpacesRoute,
     ShellListingsListingIdTransactionRoute:
       ShellListingsListingIdTransactionRoute,
     ShellListingsListingIdWebsiteRoute: ShellListingsListingIdWebsiteRoute,

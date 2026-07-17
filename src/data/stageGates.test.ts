@@ -23,6 +23,13 @@ const emptyForm: GateFormState = {
   saleTitle: '',
   saleDescription: '',
   askingPrice: null,
+  tenantLinked: false,
+  tenantContactId: null,
+  leaseRate: null,
+  leaseRateUnits: 'SF/Yr',
+  availableSqFt: null,
+  leaseTermMonths: null,
+  leaseCommencementDate: null,
 }
 
 /** A publish gate satisfied on every requirement. */
@@ -75,10 +82,13 @@ describe('resolveGate', () => {
     )
   })
 
-  it('Lease deals go Under Contract without a sale price', () => {
+  it('Lease deals go Under Contract on tenant + lease term, not a sale price', () => {
     const g = resolveGate('active', 'under-contract', 'Lease')
     expect(g.required).not.toContain('salePrice')
-    expect(g.required).toEqual(expect.arrayContaining(['buyerLinked', 'commissionAmount']))
+    expect(g.required).not.toContain('buyerLinked')
+    expect(g.required).toEqual(
+      expect.arrayContaining(['tenantLinked', 'leaseTermMonths', 'commissionAmount']),
+    )
   })
 
   it('Under Contract → Closed requires only the close date', () => {
@@ -164,7 +174,7 @@ describe('canConfirm', () => {
 describe('buildTransitionInput', () => {
   it('maps a publish gate form to the action input (content + dates + publish, no seller/side)', () => {
     const g = resolveGate('proposal', 'active', 'Sale')
-    const input = buildTransitionInput(g, readyToPublish, 'deal-1', 'Jane Broker')
+    const input = buildTransitionInput(g, readyToPublish, 'deal-1', 'Jane Broker', 'Sale')
     expect(input.targetStage).toBe('active')
     expect(input.publish).toBe(true)
     expect(input.transaction).toMatchObject({
@@ -184,7 +194,7 @@ describe('buildTransitionInput', () => {
 
   it('maps a backward-out-of-Active gate with unpublish selected', () => {
     const g = resolveGate('active', 'proposal', 'Sale')
-    const input = buildTransitionInput(g, { ...emptyForm, unpublishOnExit: true }, 'deal-1', 'Jane Broker')
+    const input = buildTransitionInput(g, { ...emptyForm, unpublishOnExit: true }, 'deal-1', 'Jane Broker', 'Sale')
     expect(input.unpublish).toBe(true)
     expect(input.publish).toBeUndefined()
     expect(input.marketing).toBeUndefined()
