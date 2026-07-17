@@ -1520,3 +1520,201 @@
     color: #b42318;
   }
 }
+
+// ── Timeline interactions (PR2): tiers, reply, thread ──
+
+// Row becomes the positioning context for the hover toolbar overlay.
+.tl-row {
+  position: relative;
+}
+
+// Tier-2 hover toolbar — overlays the top-right of the row on hover/focus.
+.tl-toolbar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 8px;
+  background: var(--bp-card-bg, #fff);
+  border: 1px solid var(--color-storm-grey-100, #eceef2);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease-in-out;
+
+  .tl-row:hover &,
+  .tl-row:focus-within & {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--color-storm-grey-600, #506079);
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.12s, color 0.12s;
+
+    &:hover {
+      background: var(--color-storm-grey-100, #eceef2);
+      color: var(--color-storm-grey-900, #22262f);
+    }
+    &.is-active {
+      color: var(--color-purple-heart-600, #8833ea);
+    }
+  }
+}
+
+// Tier-1 action bar — always visible on actionable rows.
+.tl-actionbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+// Tier-3 overflow menu — destructive item.
+.tl-menu {
+  min-width: 190px;
+
+  &__danger {
+    color: var(--bp-destructive, #d92d20);
+  }
+}
+
+// Inline reply composer.
+.tl-reply {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--color-storm-grey-200, #d5dae2);
+
+  &__quote {
+    font-size: 12px;
+    color: var(--color-storm-grey-600, #506079);
+  }
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+}
+
+// Reply card — inbound reply nested under a sent message.
+.tl-replycard {
+  margin-top: 4px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--color-storm-grey-50, #f6f7f9);
+  border-left: 3px solid var(--color-mountain-meadow-500, #00bc7d);
+
+  &__head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--color-storm-grey-900, #22262f);
+  }
+  &__icon {
+    color: var(--color-storm-grey-400, #8495ac);
+    font-size: 11px;
+  }
+  &__delay {
+    color: var(--color-storm-grey-600, #506079);
+    font-weight: 400;
+  }
+  &__body {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: var(--color-storm-grey-700, #424e62);
+    line-height: 1.5;
+  }
+}
+
+// Sentiment tag inside the reply card.
+.tl-sentiment {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+
+  &--positive {
+    background: #e3f7ef;
+    color: var(--color-mountain-meadow-700, #007a52);
+  }
+  &--neutral {
+    background: var(--color-storm-grey-100, #eceef2);
+    color: var(--color-storm-grey-700, #424e62);
+  }
+  &--negative {
+    background: #fce4e2;
+    color: #b42318;
+  }
+}
+
+// Expanded conversation thread (accordion).
+.tl-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  padding-left: 12px;
+  border-left: 2px solid var(--color-storm-grey-100, #eceef2);
+
+  &__msg {
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--color-storm-grey-50, #f6f7f9);
+
+    &--out {
+      background: #eef3fe;
+    }
+  }
+  &__msg-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--color-storm-grey-900, #22262f);
+  }
+  &__msg-time {
+    color: var(--color-storm-grey-600, #506079);
+    font-weight: 400;
+  }
+  &__msg-body {
+    margin: 2px 0 0;
+    font-size: 13px;
+    color: var(--color-storm-grey-700, #424e62);
+    line-height: 1.5;
+  }
+}
+
+// "View full thread" toggle — chevron points down when open.
+.tl-convo__more {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+
+  svg {
+    transition: transform 0.15s ease-in-out;
+  }
+  &.is-open svg {
+    transform: rotate(90deg);
+  }
+}

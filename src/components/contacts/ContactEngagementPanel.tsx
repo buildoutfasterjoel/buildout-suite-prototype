@@ -11,14 +11,16 @@ import {
 import {
   buildBriefing,
   buildLastTouch,
+  todayISO,
   type ComposedActivity,
 } from "#/components/contacts/contactDisplay";
 import {
   buildTimeline,
   composedToEvent,
   groupByBucket,
-  matchesFilter,
+  visibleEvents,
   type FilterKey,
+  type TimelineEvent as TimelineEventData,
 } from "#/components/contacts/timeline";
 import { TimelineEvent } from "#/components/contacts/TimelineEvent";
 import { TimelineFilterBar } from "#/components/contacts/TimelineFilterBar";
@@ -38,23 +40,79 @@ export function ContactEngagementPanel({
   onStartCall: (phone: string) => void;
 }) {
   const [filter, setFilter] = useState<FilterKey>("all");
+  // Ephemeral per-event UI state (prototype — resets on reload).
+  const [overrides, setOverrides] = useState<
+    Record<string, { starred?: boolean; pinned?: boolean }>
+  >({});
+  const [deleted, setDeleted] = useState<Set<string>>(new Set());
+  const [replyOpenId, setReplyOpenId] = useState<string | null>(null);
+  const [threadOpenId, setThreadOpenId] = useState<string | null>(null);
 
   const briefing = useMemo(() => buildBriefing(contact, deals), [contact, deals]);
   const lastTouch = useMemo(() => buildLastTouch(contact), [contact]);
 
-  // The feed = session-logged compose/call events + the synthesized history.
-  const events = useMemo(
-    () => [
+  // The feed = session-logged compose/call events + the synthesized history,
+  // with per-event star/pin overrides applied and deleted rows removed.
+  const events = useMemo(() => {
+    const base = [
       ...logged.map((l) => composedToEvent(l, contact)),
       ...buildTimeline(contact, deals),
-    ],
-    [logged, contact, deals],
-  );
+    ];
+    return base
+      .filter((e) => !deleted.has(e.id))
+      .map((e) => ({
+        ...e,
+        starred: overrides[e.id]?.starred ?? e.starred,
+        pinned: overrides[e.id]?.pinned ?? e.pinned,
+      }));
+  }, [logged, contact, deals, overrides, deleted]);
 
   const groups = useMemo(
-    () => groupByBucket(events.filter((e) => matchesFilter(e, filter))),
+    () => groupByBucket(visibleEvents(events, filter)),
     [events, filter],
   );
+
+  // Single action dispatch for every row — the row itself has no side-effects.
+  function handleAction(event: TimelineEventData, id: string) {
+    if (id === "Star") {
+      setOverrides((o) => ({
+        ...o,
+        [event.id]: { ...o[event.id], starred: !(o[event.id]?.starred ?? event.starred) },
+      }));
+    } else if (id === "Pin to top") {
+      setOverrides((o) => ({
+        ...o,
+        [event.id]: { ...o[event.id], pinned: !(o[event.id]?.pinned ?? event.pinned) },
+      }));
+    } else if (/^(Reply|Reply all|Forward|Respond)$/.test(id)) {
+      setReplyOpenId((cur) => (cur === event.id ? null : event.id));
+    } else if (id === "View full thread") {
+      setThreadOpenId((cur) => (cur === event.id ? null : event.id));
+    } else if (id === "Delete") {
+      // eslint-disable-next-line no-alert
+      if (window.confirm("Delete this event from the timeline?")) {
+        setDeleted((d) => new Set(d).add(event.id));
+      }
+    }
+    // Other actions (Call back, Create task, Associate, …) are prototype no-ops
+    // — they still dispatch through here so wiring stays centralized.
+  }
+
+  function handleReplySend(event: TimelineEventData, text: string) {
+    const subj = event.subject
+      ? event.subject.startsWith("Re:")
+        ? event.subject
+        : `Re: ${event.subject}`
+      : `Re: ${contact.firstName}`;
+    onLog({
+      kind: "email",
+      body: text,
+      subject: subj,
+      to: contact.email,
+      date: todayISO(),
+    });
+    setReplyOpenId(null);
+  }
 
   return (
     <div className="d-flex flex-column gap-4">
@@ -114,7 +172,17 @@ export function ContactEngagementPanel({
                   <section key={group.bucket} className="tl-group">
                     <div className="tl-group__header">{group.bucket}</div>
                     {group.events.map((event) => (
-                      <TimelineEvent key={event.id} event={event} />
+                      <TimelineEvent
+                        key={event.id}
+                        event={event}
+                        starred={!!event.starred}
+                        pinned={!!event.pinned}
+                        replyOpen={replyOpenId === event.id}
+                        threadOpen={threadOpenId === event.id}
+                        onAction={(id) => handleAction(event, id)}
+                        onReplySend={(text) => handleReplySend(event, text)}
+                        onReplyCancel={() => setReplyOpenId(null)}
+                      />
                     ))}
                   </section>
                 ))}

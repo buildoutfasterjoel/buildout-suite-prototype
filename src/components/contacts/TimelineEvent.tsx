@@ -3,13 +3,21 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faLock,
   faUsers,
-  faStar,
   faThumbtack,
   faPaperclip,
   faChevronRight,
 } from "@fortawesome/pro-regular-svg-icons";
+import { faStar as faStarSolid } from "@fortawesome/pro-solid-svg-icons";
 import { IconBadge } from "#/components/contacts/IconBadge";
 import { TimelineBadge } from "#/components/contacts/TimelineBadge";
+import { ReplyCard } from "#/components/contacts/ReplyCard";
+import { ReplyComposer } from "#/components/contacts/ReplyComposer";
+import { ConversationThread } from "#/components/contacts/ConversationThread";
+import {
+  TimelineActionBar,
+  TimelineHoverToolbar,
+  type ActionDispatch,
+} from "#/components/contacts/TimelineActions";
 import {
   TYPE_CONFIG,
   relativeTime,
@@ -19,13 +27,30 @@ import {
 } from "#/components/contacts/timeline";
 
 /**
- * The single row that renders every timeline event type via composition. The
- * `type` drives the icon/tone; the rest of the surface (title, blocks, body,
- * badges, associations, thread, visibility) renders only when present. State
- * overlays (action bar, reply composer, hover toolbar, overflow, thread expand)
- * arrive in PR2 — this pass establishes the structure and all 16 type paths.
+ * The single row that renders every timeline event type via composition. State
+ * overlays are boolean props (starred / pinned / replyOpen / threadOpen); every
+ * action flows out through one `onAction` dispatch, so the row itself has no
+ * side-effects.
  */
-export function TimelineEvent({ event }: { event: TimelineEventData }) {
+export function TimelineEvent({
+  event,
+  starred,
+  pinned,
+  replyOpen,
+  threadOpen,
+  onAction,
+  onReplySend,
+  onReplyCancel,
+}: {
+  event: TimelineEventData;
+  starred: boolean;
+  pinned: boolean;
+  replyOpen: boolean;
+  threadOpen: boolean;
+  onAction: ActionDispatch;
+  onReplySend: (text: string) => void;
+  onReplyCancel: () => void;
+}) {
   const config = TYPE_CONFIG[event.type];
   const filled = event.attempted ? false : config.filled;
 
@@ -35,12 +60,19 @@ export function TimelineEvent({ event }: { event: TimelineEventData }) {
 
   const headline = event.subject ?? event.title ?? config.defaultTitle;
 
+  // Tier-1 action bar shows on actionable inbound rows (and the conversation
+  // card, whose latest message is inbound). Read-only system rows never get it.
+  const isActionable =
+    !config.readOnly &&
+    !!config.actionBar?.primary &&
+    (event.direction === "in" || event.type === "conversation");
+
   return (
     <article
       className="tl-row"
       data-type={event.type}
-      data-starred={event.starred || undefined}
-      data-pinned={event.pinned || undefined}
+      data-starred={starred || undefined}
+      data-pinned={pinned || undefined}
     >
       <div className="tl-row__rail">
         <IconBadge icon={config.icon} tone={config.tone} filled={filled} />
@@ -52,19 +84,16 @@ export function TimelineEvent({ event }: { event: TimelineEventData }) {
           <span className="tl-row__actors">
             {names}
             {event.durationSecs != null && (
-              <span className="tl-row__duration">
-                {" "}
-                ({durationLabel(event.durationSecs)})
-              </span>
+              <span className="tl-row__duration"> ({durationLabel(event.durationSecs)})</span>
             )}
           </span>
 
           <span className="tl-row__head-right">
-            {event.pinned && (
+            {pinned && (
               <FontAwesomeIcon icon={faThumbtack} className="tl-row__flag" title="Pinned" />
             )}
-            {event.starred && (
-              <FontAwesomeIcon icon={faStar} className="tl-row__flag is-star" title="Starred" />
+            {starred && (
+              <FontAwesomeIcon icon={faStarSolid} className="tl-row__flag is-star" title="Starred" />
             )}
             {event.hasAttachment && (
               <FontAwesomeIcon icon={faPaperclip} className="tl-row__flag" title="Has attachment" />
@@ -81,7 +110,25 @@ export function TimelineEvent({ event }: { event: TimelineEventData }) {
         {headline && <div className="tl-row__subject">{headline}</div>}
 
         {event.type === "conversation" && event.thread ? (
-          <ConversationPreview event={event} />
+          <>
+            <div className="tl-convo">
+              <p className="tl-convo__latest">
+                <span className="tl-convo__latest-label">
+                  LATEST · {event.thread.latestSender}
+                </span>
+                {event.thread.latestBody}
+              </p>
+              <button
+                type="button"
+                className={`tl-convo__more ${threadOpen ? "is-open" : ""}`}
+                onClick={() => onAction("View full thread")}
+              >
+                {threadOpen ? "Hide thread" : `View full thread (${event.thread.count})`}
+                <FontAwesomeIcon icon={faChevronRight} />
+              </button>
+            </div>
+            {threadOpen && <ConversationThread thread={event.thread} />}
+          </>
         ) : (
           <>
             {event.blocks?.map((block, i) => (
@@ -95,6 +142,7 @@ export function TimelineEvent({ event }: { event: TimelineEventData }) {
               </div>
             ))}
             {event.body && <p className="tl-row__text">{event.body}</p>}
+            {event.reply && <ReplyCard reply={event.reply} />}
           </>
         )}
 
@@ -126,24 +174,26 @@ export function TimelineEvent({ event }: { event: TimelineEventData }) {
                 : "Private to you and anyone you're sharing with"}
           </div>
         )}
-      </div>
-    </article>
-  );
-}
 
-/** Collapsed conversation card: subject + count + latest-message preview only. */
-function ConversationPreview({ event }: { event: TimelineEventData }) {
-  const thread = event.thread!;
-  return (
-    <div className="tl-convo">
-      <p className="tl-convo__latest">
-        <span className="tl-convo__latest-label">LATEST · {thread.latestSender}</span>
-        {thread.latestBody}
-      </p>
-      <span className="tl-convo__more">
-        View full thread ({thread.count})
-        <FontAwesomeIcon icon={faChevronRight} />
-      </span>
-    </div>
+        {isActionable && config.actionBar && (
+          <TimelineActionBar actionBar={config.actionBar} onAction={onAction} />
+        )}
+
+        {replyOpen && (
+          <ReplyComposer
+            subject={event.subject ?? event.title}
+            onSend={onReplySend}
+            onCancel={onReplyCancel}
+          />
+        )}
+      </div>
+
+      <TimelineHoverToolbar
+        type={event.type}
+        starred={starred}
+        pinned={pinned}
+        onAction={onAction}
+      />
+    </article>
   );
 }
