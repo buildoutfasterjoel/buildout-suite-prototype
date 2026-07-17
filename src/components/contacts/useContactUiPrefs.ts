@@ -30,11 +30,14 @@ interface ContactUiPrefs {
 }
 
 export const useContactUiPrefs = create<ContactUiPrefs>((set) => ({
-  overviewSections: ["deals", "properties"],
+  // Everything collapsed by default — only the AI Briefing starts open. State
+  // persists across contact navigation (in-memory store) but resets to these
+  // defaults on a fresh page load.
+  overviewSections: [],
   showDetails: false,
   showPastDeals: false,
   showCompletedTasks: false,
-  tasksOpen: true,
+  tasksOpen: false,
   briefingOpen: true,
 
   setOverviewSections: (overviewSections) => set({ overviewSections }),
