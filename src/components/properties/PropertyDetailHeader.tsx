@@ -45,6 +45,14 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
   const parentDeal = listing.parentDealId
     ? getListing(listing.parentDealId)
     : undefined;
+  // For a child space deal, the last breadcrumb crumb is the unit/suite label.
+  const spaceLabel =
+    property?.units.find((u) => u.id === listing.unitId)?.label ?? listing.name;
+
+  const resync = () => {
+    resyncChildFromParent(listing.id);
+    notify({ title: "Re-synced from parent", description: listing.name });
+  };
 
   return (
     <div className="bg-card border-bottom">
@@ -74,35 +82,32 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
                   </Breadcrumb.Link>
                 </Breadcrumb.Item>
                 <Breadcrumb.Separator />
-                <Breadcrumb.Item>
-                  <Breadcrumb.Page>{listing.name}</Breadcrumb.Page>
-                </Breadcrumb.Item>
+                {parentDeal ? (
+                  <>
+                    <Breadcrumb.Item>
+                      <Breadcrumb.Link
+                        render={
+                          <Link
+                            to="/listings/$listingId"
+                            params={{ listingId: parentDeal.id }}
+                          />
+                        }
+                      >
+                        {parentDeal.name}
+                      </Breadcrumb.Link>
+                    </Breadcrumb.Item>
+                    <Breadcrumb.Separator />
+                    <Breadcrumb.Item>
+                      <Breadcrumb.Page>{spaceLabel}</Breadcrumb.Page>
+                    </Breadcrumb.Item>
+                  </>
+                ) : (
+                  <Breadcrumb.Item>
+                    <Breadcrumb.Page>{listing.name}</Breadcrumb.Page>
+                  </Breadcrumb.Item>
+                )}
               </Breadcrumb.List>
             </Breadcrumb>
-            {parentDeal && (
-              <div className="d-flex align-items-center gap-3 mb-1 small">
-                <Link
-                  to="/listings/$listingId/spaces"
-                  params={{ listingId: parentDeal.id }}
-                  className="text-muted text-decoration-none"
-                >
-                  Part of: {parentDeal.name}
-                </Link>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    resyncChildFromParent(listing.id);
-                    notify({
-                      title: "Re-synced from parent",
-                      description: listing.name,
-                    });
-                  }}
-                >
-                  <FontAwesomeIcon icon={faArrowsRotate} /> Re-sync from parent
-                </Button>
-              </div>
-            )}
             <h1
               className="fs-5 fw-semibold mb-0 text-truncate"
               title={listing.name}
@@ -121,6 +126,11 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
                   no listing to syndicate. */}
               {listing.dealSide === "seller" && (
                 <SyndicationStatus listing={listing} />
+              )}
+              {parentDeal && (
+                <Button variant="ghost" size="sm" onClick={resync}>
+                  <FontAwesomeIcon icon={faArrowsRotate} /> Re-sync from parent
+                </Button>
               )}
             </div>
           </div>
