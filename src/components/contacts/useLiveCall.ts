@@ -145,7 +145,7 @@ export function useLiveCall({ contact }: { contact: Contact | null }) {
     later(toConnected, 3400);
   }, [startRing, later, toConnected]);
 
-  const startCall = useCallback(() => {
+  const startCall = useCallback((phone?: string) => {
     if (!contact) return;
     clearAll();
     mutedRef.current = false;
@@ -153,7 +153,7 @@ export function useLiveCall({ contact }: { contact: Contact | null }) {
       phase: "calling",
       name: contactFullName(contact),
       entity: contact.company,
-      phone: contact.phone,
+      phone: phone ?? contact.phone,
       initials: contactInitials(contact),
       countdown: 3,
       elapsedSecs: 0,

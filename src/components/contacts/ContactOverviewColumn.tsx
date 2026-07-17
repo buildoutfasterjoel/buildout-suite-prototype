@@ -26,7 +26,9 @@ import { ContactHeroAccessAvatars } from "#/components/contacts/ContactHeroAcces
 import type { ContactShare } from "#/data/teammates";
 import { ContactDealCard } from "#/components/contacts/ContactDealCard";
 import { ContactPropertyCard } from "#/components/contacts/ContactPropertyCard";
+import { EditContactModal } from "#/components/contacts/EditContactModal";
 import { CreateDealModal } from "#/components/deals/CreateDealModal";
+import { updateContact } from "#/data/actions";
 
 /** Deal statuses considered "past" (shown behind a toggle). */
 const PAST_STATUSES = new Set<PropertyStatus>(["closed", "inactive"]);
@@ -136,8 +138,18 @@ export function ContactOverviewColumn({
   const [showDetails, setShowDetails] = useState(false);
   const [showPastDeals, setShowPastDeals] = useState(false);
   const [newDealOpen, setNewDealOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [addressLine1, addressLine2] = contactAddressLines(contact);
   const phoneInvalid = contact.phoneStatus === "invalid";
+
+  // Primary phone/email first, then any extras (de-duplicated) — the details
+  // panel lists them all.
+  const allPhones = [
+    ...new Set([contact.phone, ...(contact.phones ?? [])].filter(Boolean)),
+  ];
+  const allEmails = [
+    ...new Set([contact.email, ...(contact.emails ?? [])].filter(Boolean)),
+  ];
 
   const activeDeals = deals.filter((d) => !PAST_STATUSES.has(d.status));
   const pastDeals = deals.filter((d) => PAST_STATUSES.has(d.status));
@@ -168,9 +180,17 @@ export function ContactOverviewColumn({
           aria-label="Edit contact"
           className="position-absolute"
           style={{ top: 8, right: 8 }}
+          onClick={() => setEditOpen(true)}
         >
           <FontAwesomeIcon icon={faPencil} />
         </Button>
+
+        <EditContactModal
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          contact={contact}
+          onSave={(id, input) => updateContact(id, input)}
+        />
 
         <div className="d-flex align-items-center gap-3">
           {/* TODO(blueprint): drop the inline 56px size + gradient overrides once
@@ -243,21 +263,35 @@ export function ContactOverviewColumn({
             {/* Contact info */}
             <div className="d-flex flex-column gap-2 border-bottom pb-3">
               <InfoRow icon={faPhone}>
-                <span
-                  className={
-                    phoneInvalid
-                      ? "text-decoration-line-through text-destructive"
-                      : undefined
-                  }
-                >
-                  {contact.phone}
-                </span>{" "}
-                <span className="text-muted fs-small">(mobile)</span>
+                <div className="d-flex flex-column gap-1">
+                  {allPhones.map((phone, i) => (
+                    <span
+                      key={`${phone}-${i}`}
+                      className={
+                        i === 0 && phoneInvalid
+                          ? "text-decoration-line-through text-destructive"
+                          : undefined
+                      }
+                    >
+                      {phone}{" "}
+                      {i === 0 && (
+                        <span className="text-muted fs-small">(mobile)</span>
+                      )}
+                    </span>
+                  ))}
+                </div>
               </InfoRow>
               <InfoRow icon={faEnvelope}>
-                <span className="text-truncate d-inline-block w-100">
-                  {contact.email}
-                </span>
+                <div className="d-flex flex-column gap-1" style={{ minWidth: 0 }}>
+                  {allEmails.map((email, i) => (
+                    <span
+                      key={`${email}-${i}`}
+                      className="text-truncate d-inline-block w-100"
+                    >
+                      {email}
+                    </span>
+                  ))}
+                </div>
               </InfoRow>
               <InfoRow icon={faLocationDot}>
                 <div>{addressLine1}</div>

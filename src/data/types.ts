@@ -592,6 +592,8 @@ export interface Contact {
   phone: string
   /** Additional phone numbers beyond the primary `phone`, if any. */
   phones?: string[]
+  /** Additional email addresses beyond the primary `email`, if any. */
+  emails?: string[]
   company: string
   role: ContactRole
   propertyIds: string[]

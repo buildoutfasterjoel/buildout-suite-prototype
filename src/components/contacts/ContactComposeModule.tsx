@@ -13,7 +13,6 @@ import {
   faEnvelope,
   faCalendar,
   faBinoculars,
-  faHashtag,
   faCaretDown,
   faPaperclip,
   faPaperPlane,
@@ -141,8 +140,8 @@ export function ContactComposeModule({
   contact: Contact;
   deals: DealSummary[];
   onSubmit: (draft: ComposedDraft) => void;
-  /** Kicks off the simulated live call (Call tab's "Call Now"). */
-  onStartCall: () => void;
+  /** Kicks off the simulated live call to the chosen number (Call tab's "Call Now"). */
+  onStartCall: (phone: string) => void;
 }) {
   const [tab, setTab] = useState<ComposeKind>("note");
   const [body, setBody] = useState<Record<ComposeKind, string>>({ ...EMPTY });
@@ -160,10 +159,17 @@ export function ContactComposeModule({
 
   // A contact can carry more than one number; the dropdown only appears when
   // there's a choice to make. With a single number we fold it into the button.
-  const phones =
-    contact.phones && contact.phones.length > 0 ? contact.phones : [contact.phone];
+  // `contact.phone` is the primary and leads the list, followed by any extras.
+  // De-duplicate: the same number must never appear twice (it would render two
+  // "selected" rows in the Select and collide on the value key).
+  const phones = [
+    ...new Set([contact.phone, ...(contact.phones ?? [])].filter(Boolean)),
+  ];
   const [selectedPhone, setSelectedPhone] = useState(phones[0]);
   const multiplePhones = phones.length > 1;
+  // Self-heal if the selected number was edited away (e.g. the primary changed):
+  // fall back to the current primary so we never call a number that's gone.
+  const activePhone = phones.includes(selectedPhone) ? selectedPhone : phones[0];
 
   // A draft "has value" (flip secondary → primary) when its body has content —
   // or, for email, when either the subject or the message body is filled.
@@ -270,16 +276,11 @@ export function ContactComposeModule({
       <div className="d-flex flex-column gap-3 align-items-stretch">
         {multiplePhones && (
           <Select
-            value={selectedPhone}
+            value={activePhone}
             onValueChange={(v) => v && setSelectedPhone(v)}
           >
             <Select.Trigger className="w-100" aria-label="Phone number">
-              <FontAwesomeIcon icon={faHashtag} className="text-muted" />
               <Select.Value />
-              <FontAwesomeIcon
-                icon={faCaretDown}
-                className="text-muted ms-auto"
-              />
             </Select.Trigger>
             <Select.Content>
               {phones.map((p) => (
@@ -292,11 +293,11 @@ export function ContactComposeModule({
         )}
         <Button
           variant={hasValue ? "secondary" : "primary"}
-          onClick={onStartCall}
+          onClick={() => onStartCall(activePhone)}
           className="w-100 justify-content-center"
         >
           <FontAwesomeIcon icon={faPhone} />
-          Call {selectedPhone}
+          Call {activePhone}
         </Button>
         <div className="compose-divider">
           <span className="compose-divider__line" />
