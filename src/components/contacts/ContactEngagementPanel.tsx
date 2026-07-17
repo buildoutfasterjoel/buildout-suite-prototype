@@ -7,8 +7,6 @@ import {
   type ComposedDraft,
 } from "#/components/contacts/ContactComposeModule";
 import {
-  buildBriefing,
-  buildLastTouch,
   todayISO,
   type ComposedActivity,
 } from "#/components/contacts/contactDisplay";
@@ -22,8 +20,6 @@ import {
 } from "#/components/contacts/timeline";
 import { TimelineEvent } from "#/components/contacts/TimelineEvent";
 import { TimelineFilterBar } from "#/components/contacts/TimelineFilterBar";
-import { ContactBriefingSection } from "#/components/contacts/ContactBriefingSection";
-import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
 
 export function ContactEngagementPanel({
   contact,
@@ -47,13 +43,6 @@ export function ContactEngagementPanel({
   const [deleted, setDeleted] = useState<Set<string>>(new Set());
   const [replyOpenId, setReplyOpenId] = useState<string | null>(null);
   const [threadOpenId, setThreadOpenId] = useState<string | null>(null);
-
-  const briefing = useMemo(() => buildBriefing(contact, deals), [contact, deals]);
-  const lastTouch = useMemo(() => buildLastTouch(contact), [contact]);
-
-  // Briefing collapse persists across contacts (a viewing preference).
-  const briefingOpen = useContactUiPrefs((s) => s.briefingOpen);
-  const setBriefingOpen = useContactUiPrefs((s) => s.setBriefingOpen);
 
   // The feed = session-logged compose/call events + the synthesized history,
   // with per-event star/pin overrides applied and deleted rows removed.
@@ -120,14 +109,6 @@ export function ContactEngagementPanel({
 
   return (
     <div className="d-flex flex-column gap-4">
-      {/* AI briefing — collapsible section at the top of the column */}
-      <ContactBriefingSection
-        briefing={briefing}
-        lastTouch={lastTouch}
-        open={briefingOpen}
-        onToggle={() => setBriefingOpen(!briefingOpen)}
-      />
-
       {/* Engagement composer */}
       <ContactComposeModule
         contact={contact}

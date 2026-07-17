@@ -4,8 +4,8 @@ import { faChevronDown, faChevronRight } from "@fortawesome/pro-regular-svg-icon
 import { faSparkles } from "@fortawesome/pro-solid-svg-icons";
 
 /**
- * The AI briefing, promoted to its own collapsible section at the top of the
- * middle column. The header mirrors the overview-column accordion sections
+ * The AI briefing, a collapsible section that floats above the Tasks section in
+ * the right column. The header mirrors the overview-column accordion sections
  * (left chevron + 20/26 semibold heading) with the AI sparkle marking it, and a
  * "Last touch" summary on the right. Collapsed shows just the header.
  */
