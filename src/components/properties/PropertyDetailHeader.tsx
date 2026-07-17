@@ -5,6 +5,7 @@ import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Breadcrumb } from "@buildoutinc/blueprint-react/ui/Breadcrumb";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPencil,
@@ -180,6 +181,23 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
               </Select.Content>
             </Select>
             <AvatarGroup seed={seed} size="default" />
+            {listing.dealType === "Lease" && listing.parentDealId == null && (
+              <Tooltip>
+                <Tooltip.Trigger
+                  render={
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      aria-label="Add space"
+                      onClick={() => setAddSpaceOpen(true)}
+                    >
+                      <FontAwesomeIcon icon={faVectorSquare} />
+                    </Button>
+                  }
+                />
+                <Tooltip.Content>Add space</Tooltip.Content>
+              </Tooltip>
+            )}
             <Button
               variant="ghost"
               className="flex-shrink-0"
@@ -203,13 +221,6 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
                 }
               />
               <DropdownMenu.Content align="end">
-                {listing.dealType === "Lease" &&
-                  listing.parentDealId == null && (
-                    <DropdownMenu.Item onClick={() => setAddSpaceOpen(true)}>
-                      <FontAwesomeIcon icon={faVectorSquare} className="me-2" />
-                      Add space
-                    </DropdownMenu.Item>
-                  )}
                 <DropdownMenu.Item>
                   <FontAwesomeIcon icon={faUserGear} className="me-2" />
                   Manage access
