@@ -22,16 +22,25 @@ import {
   TYPE_LABELS,
 } from "../properties/propertyDisplay";
 
-/** Label, icon, and accent color per deal side. */
+/**
+ * Icon + accent color per deal side, plus the label per deal type — a Sale reads
+ * Seller/Buyer, a Lease reads Landlord/Tenant.
+ */
 const SIDE_DISPLAY: Record<
   DealSide,
-  { label: string; icon: IconDefinition; color: string }
+  { icon: IconDefinition; color: string; Sale: string; Lease: string }
 > = {
-  seller: { label: "Seller", icon: faSignHanging, color: "var(--side-seller)" },
+  seller: {
+    icon: faSignHanging,
+    color: "var(--side-seller)",
+    Sale: "Seller",
+    Lease: "Landlord",
+  },
   buyer: {
-    label: "Buyer",
     icon: faMagnifyingGlassDollar,
     color: "var(--side-buyer)",
+    Sale: "Buyer",
+    Lease: "Tenant",
   },
 };
 
@@ -116,6 +125,18 @@ export function DealCardView({
       ? [property.street, property.city, property.state].filter(Boolean).join(", ")
       : [property.city, property.state].filter(Boolean).join(", ")
     : "";
+  // The leading type chip is icon-only (label in a tooltip) to leave room for
+  // the rep badge: a child reads "Space", a top-level deal its property type.
+  const typeIcon = isChild
+    ? faVectorSquare
+    : property
+      ? TYPE_ICONS[property.propertyType]
+      : null;
+  const typeLabel = isChild
+    ? "Space"
+    : property
+      ? TYPE_LABELS[property.propertyType]
+      : "";
 
   return (
     <div
@@ -125,21 +146,18 @@ export function DealCardView({
       {/* Property type + deal side */}
       <div className="d-flex flex-column" style={{ gap: 2 }}>
         <div className="d-flex align-items-center gap-2">
-          <div className="d-flex align-items-center gap-1 text-muted fs-small">
-            {isChild ? (
-              <>
-                <FontAwesomeIcon icon={faVectorSquare} />
-                <span>Space</span>
-              </>
-            ) : (
-              <>
-                {property && (
-                  <FontAwesomeIcon icon={TYPE_ICONS[property.propertyType]} />
-                )}
-                <span>{property ? TYPE_LABELS[property.propertyType] : ""}</span>
-              </>
-            )}
-          </div>
+          {typeIcon && (
+            <Tooltip>
+              <Tooltip.Trigger
+                render={
+                  <span className="d-inline-flex align-items-center text-muted fs-small">
+                    <FontAwesomeIcon icon={typeIcon} />
+                  </span>
+                }
+              />
+              <Tooltip.Content>{typeLabel}</Tooltip.Content>
+            </Tooltip>
+          )}
           <span
             className="d-inline-flex align-items-center gap-1 fw-semibold text-nowrap fs-small"
             style={{
@@ -150,7 +168,7 @@ export function DealCardView({
             }}
           >
             <FontAwesomeIcon icon={sideDisplay.icon} />
-            {sideDisplay.label}
+            {sideDisplay[listing.dealType]}
           </span>
           {(showStatus || action) && (
             <div className="ms-auto d-flex align-items-center gap-2">
