@@ -64,7 +64,8 @@ function QuickLink({
   return (
     <button
       type="button"
-      className="contact-deal-card__link btn btn-link text-reset text-decoration-none d-flex align-items-center gap-2 w-100 p-2"
+      className="contact-deal-card__link btn btn-link text-reset text-decoration-none d-flex align-items-center gap-2 w-100 px-2 py-0"
+      style={{ height: 36 }}
       onClick={onClick}
     >
       <FontAwesomeIcon icon={icon} className="text-muted" />
@@ -74,7 +75,7 @@ function QuickLink({
       </Badge>
       <FontAwesomeIcon
         icon={faUpRightFromSquare}
-        className="text-muted ms-auto"
+        className="contact-deal-card__link-open text-muted ms-auto"
       />
     </button>
   );
@@ -186,11 +187,13 @@ export function ContactDealCard({ listingId }: { listingId: string }) {
         <DealStageChip
           value={listing.status}
           onChange={(next) => requestStageChange(listing.id, next)}
+          size="sm"
         />
         <Badge
           className="d-inline-flex align-items-center fw-semibold"
           style={{
-            height: 28,
+            height: 20,
+            padding: "0 4px",
             fontSize: 14,
             backgroundColor: SIDE_BADGE_COLORS[listing.dealSide].bg,
             color: SIDE_BADGE_COLORS[listing.dealSide].text,
@@ -203,7 +206,12 @@ export function ContactDealCard({ listingId }: { listingId: string }) {
             variant="secondary"
             appearance="muted"
             className="d-inline-flex align-items-center gap-1 fw-semibold"
-            style={{ height: 28, fontSize: 14, backgroundColor: "#eceef2" }}
+            style={{
+              height: 20,
+              padding: "0 4px",
+              fontSize: 14,
+              backgroundColor: "#eceef2",
+            }}
           >
             <FontAwesomeIcon icon={TYPE_ICONS[property.propertyType]} />
             {TYPE_LABELS[property.propertyType]}
@@ -245,7 +253,10 @@ export function ContactDealCard({ listingId }: { listingId: string }) {
 
       {/* Conditionally-visible AI next action */}
       {nextAction && (
-        <Button variant="secondary" size="sm" className="w-100">
+        <Button
+          variant="outline"
+          className="contact-deal-card__underwriting-btn w-100"
+        >
           <FontAwesomeIcon icon={nextAction.icon} />
           {nextAction.label}
         </Button>

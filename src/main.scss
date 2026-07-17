@@ -319,6 +319,32 @@
     0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
+// Quick-link open icon (Documents/Leads): hidden by default, revealed when
+// hovering the link so the affordance stays quiet until it's actionable.
+.contact-deal-card__link-open {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.contact-deal-card__link:hover .contact-deal-card__link-open,
+.contact-deal-card__link:focus-visible .contact-deal-card__link-open {
+  opacity: 1;
+}
+
+// Build Underwriting button (deal card AI next-action, shown on pitching deals).
+// Uses Blueprint's primary `outline` variant, then layers on the Figma-spec look
+// by overriding the button's Bootstrap-style custom properties: a neutral grey
+// border at rest (Blueprint's outline is purple-heart at rest) that darkens to
+// purple-heart on hover with no tinted fill (Blueprint fills purple-100 on hover).
+// TODO(blueprint): promote this "neutral outline" treatment into Blueprint so
+// this override can be dropped. Figma: node 1667-32373 (default) / 1667-32380 (hover).
+.contact-deal-card__underwriting-btn {
+  --bp-btn-border-color: var(--color-storm-grey-200, #d5dae2);
+  --bp-btn-hover-bg: transparent;
+  --bp-btn-hover-border-color: var(--color-purple-heart-950, #360764);
+  --bp-btn-active-bg: transparent;
+  --bp-btn-active-border-color: var(--color-purple-heart-950, #360764);
+}
+
 // Contact task card: mirrors the Figma "Task" component. A white, bordered,
 // 8px-radius card with the base shadow; a circular completion checkbox; the
 // task label; a due-date + source meta row; and right-aligned author/type

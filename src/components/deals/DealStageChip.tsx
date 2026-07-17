@@ -38,25 +38,29 @@ export const STAGE_CHIP_COLORS: Record<
 export function DealStageChip({
   value,
   onChange,
+  size = "md",
 }: {
   value: PropertyStatus;
   onChange: (next: PropertyStatus) => void;
+  /** "sm" renders a compact 20px-tall pill (4px side padding, 4px gap). */
+  size?: "md" | "sm";
 }) {
   const c = STAGE_CHIP_COLORS[value];
+  const compact = size === "sm";
   return (
     <DropdownMenu>
       <DropdownMenu.Trigger
         render={
           <button
             type="button"
-            className="d-inline-flex align-items-center gap-2 fw-semibold text-nowrap border"
+            className={`d-inline-flex align-items-center fw-semibold text-nowrap border ${compact ? "gap-1" : "gap-2"}`}
             style={{
               backgroundColor: c.bg,
               borderColor: c.border,
               color: c.text,
               borderRadius: 6,
-              height: 28,
-              padding: "0 8px",
+              height: compact ? 20 : 28,
+              padding: compact ? "0 4px" : "0 8px",
               fontSize: 14,
             }}
           >
