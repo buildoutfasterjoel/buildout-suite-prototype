@@ -512,13 +512,24 @@
   }
 }
 
-// The expanded "Contact Details" panel in the hero: a tinted, bordered, rounded
-// container that sets the details apart from the white card behind it.
+// The expanded "Contact Details" panel in the hero: a bordered, rounded
+// container (no fill) that sets the details apart from the white card behind it.
 .contact-details-panel {
-  background: var(--color-storm-grey-50, #f6f7f9);
   border: 1px solid var(--color-storm-grey-100, #eceef2);
   border-radius: var(--bp-border-radius-lg, 8px);
   padding: 12px;
+}
+
+// The hero's "Details" expander: a compact 28px outline pill that floats to the
+// right of the stage badge + access avatars. Matches the Figma spec (purple
+// ghost label, storm-grey border) and sits between Blueprint's sm/default sizes.
+.contact-details-toggle.contact-details-toggle {
+  height: 28px;
+  padding: 8px 8px 8px 12px;
+  gap: 4px;
+  font-size: 14px;
+  color: var(--color-purple-heart-950, #360764);
+  border-color: var(--color-storm-grey-200, #d5dae2);
 }
 
 // Match the contact detail breadcrumb to the pager's base 14px (overriding

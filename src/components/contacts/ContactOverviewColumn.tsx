@@ -11,6 +11,7 @@ import {
   faLocationDot,
   faPlus,
   faChevronDown,
+  faChevronUp,
   faChevronRight,
   faPencil,
 } from "@fortawesome/pro-regular-svg-icons";
@@ -235,36 +236,29 @@ export function ContactOverviewColumn({
           </div>
         </div>
 
-        <div className="d-flex align-items-center flex-wrap gap-2">
-          <ContactStageBadge
-            relationship={contact.relationship}
-            className="d-inline-flex align-items-center"
-            style={{ height: 28, fontSize: 14 }}
-          />
-          <ContactHeroAccessAvatars shares={shares} onOpenShare={onOpenShare} />
+        <div className="d-flex align-items-center justify-content-between gap-2">
+          <div className="d-flex align-items-center flex-wrap gap-2">
+            <ContactStageBadge
+              relationship={contact.relationship}
+              className="d-inline-flex align-items-center"
+              style={{ height: 28, fontSize: 14 }}
+            />
+            <ContactHeroAccessAvatars shares={shares} onOpenShare={onOpenShare} />
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="contact-details-toggle flex-shrink-0"
+            aria-expanded={showDetails}
+            onClick={() => setShowDetails(!showDetails)}
+          >
+            Details
+            <FontAwesomeIcon icon={showDetails ? faChevronUp : faChevronDown} />
+          </Button>
         </div>
 
-        {!showDetails ? (
-          <Button
-            variant="ghost"
-            className="w-100"
-            onClick={() => setShowDetails(true)}
-          >
-            Show Contact Details
-          </Button>
-        ) : (
+        {showDetails && (
           <div className="contact-details-panel d-flex flex-column gap-3">
-            {/* Hide toggle */}
-            <div className="border-bottom pb-2">
-              <Button
-                variant="ghost"
-                className="w-100"
-                onClick={() => setShowDetails(false)}
-              >
-                Hide Contact Details
-              </Button>
-            </div>
-
             {/* Contact info */}
             <div className="d-flex flex-column gap-2 border-bottom pb-3">
               <InfoRow icon={faPhone}>
