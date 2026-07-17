@@ -240,6 +240,7 @@ export function StageGate({
       effectiveForm,
       deal.id,
       deal.internalBrokers[0]?.name ?? "You",
+      deal.dealType,
     );
     // commitStageTransition emits the move/publish toast centrally.
     commitStageTransition(input);

@@ -4,6 +4,7 @@ import type {
   DealSide,
   DealTransaction,
   DealType,
+  LeaseRateUnits,
   Listing,
   PropertyStatus,
 } from './types'
@@ -52,6 +53,17 @@ export interface GateFormState {
   saleTitle: string
   saleDescription: string
   askingPrice: number | null
+  /** Under Contract (lease): tenant linked. */
+  tenantLinked: boolean
+  tenantContactId: string | null
+  /** Approve & Publish (lease): rate + units + available SF, seeded from spaceLeaseTerms[0]. */
+  leaseRate: number | null
+  leaseRateUnits: LeaseRateUnits
+  availableSqFt: number | null
+  /** Under Contract (lease): lease term in months. */
+  leaseTermMonths: number | null
+  /** Closed (lease): tenancy start. */
+  leaseCommencementDate: string | null
 }
 
 export interface GateConfig {
@@ -81,6 +93,11 @@ export interface StageTransitionInput {
   publish?: boolean
   /** Clear publishedAt (backward out of Active with unpublish selected). */
   unpublish?: boolean
+  tenantContactId?: string
+  leaseRate?: number | null
+  leaseRateUnits?: LeaseRateUnits
+  availableSqFt?: number | null
+  leaseTermMonths?: number | null
 }
 
 /** Forward ladder; `inactive` (Lost) is intentionally off-ladder. */
@@ -133,6 +150,13 @@ export const EMPTY_GATE_FORM: GateFormState = {
   saleTitle: '',
   saleDescription: '',
   askingPrice: null,
+  tenantLinked: false,
+  tenantContactId: null,
+  leaseRate: null,
+  leaseRateUnits: 'SF/Yr',
+  availableSqFt: null,
+  leaseTermMonths: null,
+  leaseCommencementDate: null,
 }
 
 /**
@@ -142,11 +166,15 @@ export const EMPTY_GATE_FORM: GateFormState = {
  */
 export function seedGateForm(deal: Listing): GateFormState {
   const aiDocs = (deal.documents ?? []).filter((d) => d.aiGenerated)
+  const isLease = deal.dealType === 'Lease'
+  const space = deal.marketing.spaceLeaseTerms[0]
   return {
     ...EMPTY_GATE_FORM,
     buyerLinked: deal.buyerContactIds.length > 0,
     // Preselect a buyer already linked to the deal (Under Contract gate).
     buyerContactId: deal.buyerContactIds[0] ?? null,
+    tenantLinked: deal.tenantContactIds.length > 0,
+    tenantContactId: deal.tenantContactIds[0] ?? null,
     listedOnDate: deal.transaction.listedOnDate,
     listingExpirationDate: deal.transaction.listingExpirationDate,
     contractExecutedDate: deal.transaction.contractExecutedDate,
@@ -155,11 +183,15 @@ export function seedGateForm(deal: Listing): GateFormState {
     commissionAmount: deal.transaction.commissionAmount || null,
     commissionPct: deal.transaction.commissionPct || null,
     deadReason: deal.transaction.deadReason,
-    // Core listing content, prefilled so the broker edits in place.
-    saleTitle: deal.marketing.saleTitle,
-    saleDescription: deal.marketing.saleDescription,
+    // Title/description: lease deals read the lease copy, sale deals the sale copy.
+    saleTitle: isLease ? deal.marketing.leaseTitle : deal.marketing.saleTitle,
+    saleDescription: isLease ? deal.marketing.leaseDescription : deal.marketing.saleDescription,
     askingPrice: deal.financials.askingPrice || null,
-    // Nothing has been reviewed yet outside the gate.
+    leaseRate: space?.leaseRate ?? null,
+    leaseRateUnits: space?.leaseRateUnits ?? 'SF/Yr',
+    availableSqFt: deal.marketing.availableSqFt || null,
+    leaseTermMonths: space?.leaseTermMonths ?? null,
+    leaseCommencementDate: deal.transaction.leaseCommencementDate,
     aiDocsAllReviewed: aiDocs.length === 0,
     websiteReviewed: false,
   }
@@ -300,7 +332,9 @@ export function buildTransitionInput(
   form: GateFormState,
   dealId: string,
   actor: string,
+  dealType: DealType,
 ): StageTransitionInput {
+  const isLease = dealType === 'Lease'
   const transaction: Partial<DealTransaction> = {}
   if (form.listedOnDate) transaction.listedOnDate = form.listedOnDate
   if (form.listingExpirationDate) transaction.listingExpirationDate = form.listingExpirationDate
@@ -310,22 +344,35 @@ export function buildTransitionInput(
   if (form.commissionAmount != null) transaction.commissionAmount = form.commissionAmount
   if (form.commissionPct != null) transaction.commissionPct = form.commissionPct
   if (form.deadReason) transaction.deadReason = form.deadReason
+  if (form.leaseCommencementDate) transaction.leaseCommencementDate = form.leaseCommencementDate
 
-  const input: StageTransitionInput = {
-    dealId,
-    targetStage: config.targetStage,
-    actor,
-  }
+  const input: StageTransitionInput = { dealId, targetStage: config.targetStage, actor }
   if (Object.keys(transaction).length > 0) input.transaction = transaction
   if (form.buyerContactId) input.buyerContactId = form.buyerContactId
+  if (form.tenantContactId) input.tenantContactId = form.tenantContactId
+  if (form.leaseTermMonths != null) input.leaseTermMonths = form.leaseTermMonths
+
   if (config.publishes) {
     input.publish = true
     // Persist any inline edits to the core listing content.
     const marketing: Partial<DealMarketing> = {}
-    if (form.saleTitle) marketing.saleTitle = form.saleTitle
-    if (form.saleDescription) marketing.saleDescription = form.saleDescription
+    // Route title/description to the right marketing copy for the deal type.
+    if (form.saleTitle) {
+      if (isLease) marketing.leaseTitle = form.saleTitle
+      else marketing.saleTitle = form.saleTitle
+    }
+    if (form.saleDescription) {
+      if (isLease) marketing.leaseDescription = form.saleDescription
+      else marketing.saleDescription = form.saleDescription
+    }
     if (Object.keys(marketing).length > 0) input.marketing = marketing
-    if (form.askingPrice != null) input.financials = { askingPrice: form.askingPrice }
+    if (isLease) {
+      if (form.leaseRate != null) input.leaseRate = form.leaseRate
+      input.leaseRateUnits = form.leaseRateUnits
+      if (form.availableSqFt != null) input.availableSqFt = form.availableSqFt
+    } else if (form.askingPrice != null) {
+      input.financials = { askingPrice: form.askingPrice }
+    }
   }
   if (config.leavesActive && form.unpublishOnExit) input.unpublish = true
   return input

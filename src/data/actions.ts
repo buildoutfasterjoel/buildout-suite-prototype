@@ -1,5 +1,5 @@
 import { useDataStore } from './dataStore'
-import { createProposalListing, type NewListingDraft } from './createListing'
+import { createProposalListing, emptySpaceLeaseTerms, type NewListingDraft } from './createListing'
 import { makeEmailDraft, type Email, type NewEmailDraft } from './emails'
 import type { CallList } from './contactLists'
 import {
@@ -96,15 +96,42 @@ export function commitStageTransition(input: StageTransitionInput): { deal: List
 
       const publishedAt = input.publish ? now : input.unpublish ? null : l.publishedAt
 
+      // Fold lease-gate scalars into the marketed space's terms + marketing.
+      const hasLeaseTerms =
+        input.leaseRate != null || input.leaseRateUnits != null ||
+        input.leaseTermMonths != null
+      let marketing = input.marketing ? { ...l.marketing, ...input.marketing } : l.marketing
+      if (hasLeaseTerms || input.availableSqFt != null) {
+        const terms = [...marketing.spaceLeaseTerms]
+        const unitId = l.unitId ?? terms[0]?.unitId ?? 'whole-property'
+        const base = terms[0] ?? emptySpaceLeaseTerms(unitId)
+        terms[0] = {
+          ...base,
+          leaseRate: input.leaseRate ?? base.leaseRate,
+          leaseRateUnits: input.leaseRateUnits ?? base.leaseRateUnits,
+          leaseTermMonths: input.leaseTermMonths ?? base.leaseTermMonths,
+        }
+        marketing = {
+          ...marketing,
+          spaceLeaseTerms: terms,
+          availableSqFt: input.availableSqFt ?? marketing.availableSqFt,
+        }
+      }
+      const tenantContactIds =
+        input.tenantContactId && !l.tenantContactIds.includes(input.tenantContactId)
+          ? [...l.tenantContactIds, input.tenantContactId]
+          : l.tenantContactIds
+
       return {
         ...l,
         status: input.targetStage,
         dealSide: input.dealSide ?? l.dealSide,
         sellerContactIds,
         buyerContactIds,
+        tenantContactIds,
         publishedAt,
         transaction: { ...l.transaction, ...input.transaction },
-        marketing: input.marketing ? { ...l.marketing, ...input.marketing } : l.marketing,
+        marketing,
         financials: input.financials ? { ...l.financials, ...input.financials } : l.financials,
         history: [...l.history, historyEntry],
         updatedAt: now,
