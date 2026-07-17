@@ -124,7 +124,7 @@ export function ContactOverviewColumn({
   );
 
   return (
-    <Card className="shadow-sm overflow-hidden">
+    <Card className="contact-panel-card overflow-hidden">
       <CreateDealModal
         open={newDealOpen}
         onOpenChange={setNewDealOpen}
@@ -174,7 +174,10 @@ export function ContactOverviewColumn({
             className="flex-grow-1 d-flex flex-column"
             style={{ minWidth: 0, gap: 4 }}
           >
-            <span className="fw-bold" style={{ fontSize: 24, lineHeight: 1.1 }}>
+            <span
+              className="fw-semibold"
+              style={{ fontSize: 24, lineHeight: 1.1 }}
+            >
               {contactFullName(contact)}
             </span>
             <div className="text-muted d-flex flex-column">

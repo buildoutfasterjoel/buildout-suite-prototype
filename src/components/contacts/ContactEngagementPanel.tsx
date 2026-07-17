@@ -110,7 +110,7 @@ export function ContactEngagementPanel({
   return (
     // One card: the composer (tabs share the header row with the "Activity"
     // title) sits above the filter pills and the timeline feed.
-    <Card className="shadow-sm overflow-hidden activity-card">
+    <Card className="contact-panel-card overflow-hidden activity-card">
       <ContactComposeModule
         contact={contact}
         deals={deals}

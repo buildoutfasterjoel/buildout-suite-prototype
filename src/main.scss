@@ -260,6 +260,15 @@
   }
 }
 
+// Contact detail — the four main containers (overview, activity, briefing,
+// tasks) share one elevation + corner treatment.
+.contact-panel-card {
+  border-radius: 12px;
+  box-shadow:
+    0 1px 3px 0 oklch(0% 0 0deg / 0.06),
+    0 1px 2px -1px oklch(0% 0 0deg / 0.06);
+}
+
 // Contact detail — left overview column. The collapsible sections use a left
 // chevron (rendered in JSX; the default Bootstrap chevron is hidden), a white
 // body with no header/body divider, and a divider only between sections (plus
