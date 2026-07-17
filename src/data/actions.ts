@@ -351,6 +351,72 @@ export interface NewContactInput {
   notes?: string
 }
 
+/** Fields the Edit Contact form can change. Phones/emails carry a primary plus optional extras. */
+export interface EditContactInput {
+  firstName: string
+  lastName: string
+  company?: string
+  title?: string
+  /** Primary email (may be blank when only phones are on file). */
+  email: string
+  /** Additional emails beyond the primary. */
+  emails?: string[]
+  /** Primary phone (may be blank when only emails are on file). */
+  phone: string
+  /** Additional phones beyond the primary. */
+  phones?: string[]
+  source: ContactSource
+  doNotCall: boolean
+  notes?: string
+}
+
+/**
+ * Merge-patch an existing contact from the Edit Contact form. Only the
+ * form-editable fields change; deal-derived and system fields are preserved.
+ * Empty extra-phone/email arrays are stored as `undefined` to keep the shape tidy.
+ */
+export function updateContact(
+  id: string,
+  input: EditContactInput,
+): { contact: Contact | null } {
+  const existing = useDataStore.getState().contacts.get(id)
+  if (!existing) return { contact: null }
+
+  const primaryPhone = input.phone.trim()
+  const primaryEmail = input.email.trim()
+  // Drop blanks and any value that repeats the primary or an earlier extra — the
+  // same number/address must never be stored twice.
+  const extraPhones = [...new Set((input.phones ?? []).map((p) => p.trim()))].filter(
+    (p) => p && p !== primaryPhone,
+  )
+  const extraEmails = [...new Set((input.emails ?? []).map((e) => e.trim()))].filter(
+    (e) => e && e !== primaryEmail,
+  )
+
+  const contact: Contact = {
+    ...existing,
+    firstName: input.firstName.trim(),
+    lastName: input.lastName.trim(),
+    company: input.company?.trim() ?? '',
+    title: input.title?.trim() ?? '',
+    email: primaryEmail,
+    emails: extraEmails.length ? extraEmails : undefined,
+    phone: primaryPhone,
+    phones: extraPhones.length ? extraPhones : undefined,
+    source: input.source,
+    doNotCall: input.doNotCall,
+    notes: input.notes?.trim() || undefined,
+  }
+
+  useDataStore.setState((s) => {
+    const contacts = new Map(s.contacts)
+    contacts.set(id, contact)
+    return { contacts }
+  })
+  useDataStore.getState().persist()
+  return { contact }
+}
+
 /**
  * Create a lightweight CRM contact — enough to link as a deal party from the
  * create-deal flow when no existing contact matches. Non-essential CRM fields

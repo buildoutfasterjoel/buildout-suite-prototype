@@ -76,7 +76,7 @@ export function ContactEngagementPanel({
   /** Activities logged this session (owned by the page), newest first. */
   logged: ComposedActivity[];
   onLog: (draft: ComposedDraft) => void;
-  onStartCall: () => void;
+  onStartCall: (phone: string) => void;
 }) {
   const [filter, setFilter] = useState<ActivityFilter>("all");
 

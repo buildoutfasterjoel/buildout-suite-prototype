@@ -5,6 +5,7 @@ import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUserSlash } from "@fortawesome/pro-regular-svg-icons";
 import { getContactDetailClient } from "#/data/selectors";
+import { useDataStore } from "#/data/dataStore";
 import { ContactDetailTopBar } from "#/components/contacts/ContactDetailTopBar";
 import { ContactOverviewColumn } from "#/components/contacts/ContactOverviewColumn";
 import { ContactEngagementPanel } from "#/components/contacts/ContactEngagementPanel";
@@ -55,6 +56,9 @@ function ContactNotFound() {
 
 function ContactDetailPage() {
   const { contactId } = Route.useParams();
+  // Subscribe to the contacts map so edits (e.g. the hero's Edit Contact form)
+  // re-render the page; getContactDetailClient itself reads a fresh snapshot.
+  useDataStore((s) => s.contacts);
   const detail = getContactDetailClient(contactId);
   // Called before the early return to satisfy the rules of hooks. The sharing
   // modal is owned here so both the top-bar Share button and the hero avatars
