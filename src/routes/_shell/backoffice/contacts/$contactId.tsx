@@ -10,13 +10,17 @@ import { ContactDetailTopBar } from "#/components/contacts/ContactDetailTopBar";
 import { ContactOverviewColumn } from "#/components/contacts/ContactOverviewColumn";
 import { ContactEngagementPanel } from "#/components/contacts/ContactEngagementPanel";
 import { ContactTasksPanel } from "#/components/contacts/ContactTasksPanel";
+import { ContactBriefingSection } from "#/components/contacts/ContactBriefingSection";
 import { ShareContactModal } from "#/components/contacts/ShareContactModal";
 import { LiveCallBar } from "#/components/contacts/LiveCallBar";
 import { LogCallModal } from "#/components/contacts/LogCallModal";
 import { useContactShares } from "#/components/contacts/useContactShares";
+import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
 import { useLiveCall } from "#/components/contacts/useLiveCall";
 import type { ComposedDraft } from "#/components/contacts/ContactComposeModule";
 import {
+  buildBriefing,
+  buildLastTouch,
   contactFullName,
   type ComposedActivity,
 } from "#/components/contacts/contactDisplay";
@@ -65,6 +69,9 @@ function ContactDetailPage() {
   // can open it.
   const access = useContactShares(contactId);
   const [shareOpen, setShareOpen] = useState(false);
+  // Briefing collapse persists across contacts (a viewing preference).
+  const briefingOpen = useContactUiPrefs((s) => s.briefingOpen);
+  const setBriefingOpen = useContactUiPrefs((s) => s.setBriefingOpen);
 
   // Activity logged this session (compose module + live calls). Owned here so
   // the full-width call bar and the middle column write to one list.
@@ -126,14 +133,23 @@ function ContactDetailPage() {
           />
         </div>
         <div
-          className="flex-shrink-0 h-100 overflow-hidden"
+          className="flex-shrink-0 h-100 overflow-auto"
           style={{ width: 380 }}
         >
-          <ContactTasksPanel
-            contact={contact}
-            tasks={tasks}
-            completedTasks={completedTasks}
-          />
+          <div className="d-flex flex-column gap-4">
+            {/* AI briefing — floats above the Tasks section */}
+            <ContactBriefingSection
+              briefing={buildBriefing(contact, deals)}
+              lastTouch={buildLastTouch(contact)}
+              open={briefingOpen}
+              onToggle={() => setBriefingOpen(!briefingOpen)}
+            />
+            <ContactTasksPanel
+              contact={contact}
+              tasks={tasks}
+              completedTasks={completedTasks}
+            />
+          </div>
         </div>
       </div>
 
