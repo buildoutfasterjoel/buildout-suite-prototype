@@ -169,9 +169,14 @@ function PeoplePage() {
 
   // A user-created static list (not a built-in, not dynamic).
   const isStaticList = !!activeCallList && !isDynamicList;
-  // Filters are a tool for All Contacts, Dynamic lists, and Pipeline pages.
+  // Filters are a tool for All Contacts, Dynamic lists, and Pipeline pages, plus
+  // static lists — where they only narrow that list's members (context "other"),
+  // so the filter bar offers a lone Clear Filters action (no save / revert).
   const filtersEnabled =
-    activeListId === ALL_CONTACTS_ID || isDynamicList || !!activePipeline;
+    activeListId === ALL_CONTACTS_ID ||
+    isDynamicList ||
+    !!activePipeline ||
+    isStaticList;
 
   // The primary tab value: "all" / "mylists", or "" when a specific list filters.
   const topValue =
@@ -397,7 +402,10 @@ function PeoplePage() {
   const paged = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
 
   return (
-    <div className="d-flex gap-4 h-100 p-4 overflow-hidden">
+    <div
+      className="d-flex gap-4 h-100 p-4 overflow-hidden mx-auto w-100"
+      style={{ maxWidth: "96rem" }}
+    >
       <ContactListsSidebar
         contacts={contacts}
         userLists={userLists}
@@ -544,18 +552,39 @@ function PeoplePage() {
                       />
                     </InputGroup>
                   </div>
-                  {filtersEnabled && (
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowFilters((v) => !v)}
-                      aria-pressed={showFilters}
-                    >
-                      <FontAwesomeIcon icon={faFilter} />
-                      Filters
-                      {countActiveContactFilters(filters) > 0 &&
-                        ` (${countActiveContactFilters(filters)})`}
-                    </Button>
-                  )}
+                  {filtersEnabled &&
+                    (isStaticList ? (
+                      <Tooltip>
+                        <Tooltip.Trigger
+                          render={
+                            <Button
+                              variant="outline"
+                              onClick={() => setShowFilters((v) => !v)}
+                              aria-pressed={showFilters}
+                            >
+                              <FontAwesomeIcon icon={faFilter} />
+                              Filters
+                              {countActiveContactFilters(filters) > 0 &&
+                                ` (${countActiveContactFilters(filters)})`}
+                            </Button>
+                          }
+                        />
+                        <Tooltip.Content>
+                          Filters only narrow the contacts in this list
+                        </Tooltip.Content>
+                      </Tooltip>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowFilters((v) => !v)}
+                        aria-pressed={showFilters}
+                      >
+                        <FontAwesomeIcon icon={faFilter} />
+                        Filters
+                        {countActiveContactFilters(filters) > 0 &&
+                          ` (${countActiveContactFilters(filters)})`}
+                      </Button>
+                    ))}
                   <span className="text-muted">{filtered.length} contacts</span>
 
                   <div className="ms-auto d-flex align-items-center gap-2">
