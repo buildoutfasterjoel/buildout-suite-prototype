@@ -398,8 +398,10 @@ export function CreateDealModal({
   );
   const selectedCount = selectedDocs.length + (underwritingOn ? 1 : 0);
 
-  // `withDocuments` is false for the step-1 skip ("Create deal" → bare shell) and
-  // true for the step-2 finish (uploads + selected suggested docs + underwriting).
+  // `withDocuments` is false for the step-1 skip ("Create deal") and true for the
+  // step-2 finish. It gates the AI deliverables (suggested docs + underwriting)
+  // only — the broker's own uploaded files are collected in step 1 and always
+  // attach, whether they skip step 2 or finish it.
   function handleCreate(withDocuments: boolean) {
     if (!canCreate || !side) return;
     const contactId = contactOption?.value ?? "";
@@ -432,7 +434,7 @@ export function CreateDealModal({
       unitId: unit?.id ?? null,
       sellerContactId: side === "seller" ? contactId : "",
       buyerContactId: side === "buyer" ? contactId : "",
-      documents: withDocuments ? files : [],
+      documents: files,
       suggestedDocuments,
       underwriting:
         withDocuments && underwritingOn
@@ -786,14 +788,6 @@ export function CreateDealModal({
                 </Field>
               )}
 
-              {missingHint && (
-                <p className="text-muted fs-small mb-0">{missingHint}</p>
-              )}
-            </>
-          )}
-
-          {step === 2 && (
-            <>
               {/* Add your own files */}
               <Field>
                 <Field.Label className="d-flex align-items-center gap-2">
@@ -886,6 +880,14 @@ export function CreateDealModal({
                 )}
               </Field>
 
+              {missingHint && (
+                <p className="text-muted fs-small mb-0">{missingHint}</p>
+              )}
+            </>
+          )}
+
+          {step === 2 && (
+            <>
               {/* Suggested documents — the firm's preset catalog. Defaults are
               pre-selected; search narrows the Available list. Underwriting lives
               here as a deliverable that reveals its depth control once chosen. */}

@@ -16,8 +16,11 @@ import type {
   ListingStage,
 } from "#/data/types";
 import { STATUS_COLORS } from "#/components/properties/propertyDisplay";
-import { ListingPageHeader } from "../listings/ListingPageHeader";
 import { cn } from "@buildoutinc/blueprint-react/lib/utils";
+import {
+  UnderwritingPlannerRow,
+  showsUnderwritingRow,
+} from "./underwriting/UnderwritingPlannerRow";
 
 const SPINE = "#e2e8f0";
 
@@ -86,10 +89,10 @@ export function endMilestone(
   }
 }
 
-type SpinePosition = "start" | "middle" | "end";
+export type SpinePosition = "start" | "middle" | "end";
 
 /** A row on the planner timeline: a marker in the gutter, connected by the spine. */
-function PlannerRow({
+export function PlannerRow({
   marker,
   spine,
   right,
@@ -139,7 +142,7 @@ function MilestoneMarker({ accent }: { accent: string }) {
   );
 }
 
-function TaskMarker({
+export function TaskMarker({
   complete,
   onToggle,
 }: {
@@ -270,6 +273,9 @@ function Planner({ listing }: { listing: Listing }) {
           spine="start"
           accent={accent}
         />
+        {showsUnderwritingRow(listing) && (
+          <UnderwritingPlannerRow listing={listing} />
+        )}
         {tasks.map((t) => (
           <TaskRow key={t.id} task={t} onToggle={() => toggle(t.id)} />
         ))}

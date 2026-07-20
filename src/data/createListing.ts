@@ -363,7 +363,7 @@ function shiftDate(now: string, days: number): string {
  */
 function seedProposalPlan(
   now: string,
-  opts: { underwritingTier?: string; includeBov: boolean },
+  opts: { includeBov: boolean },
 ): DealTask[] {
   const auto = (label: string, detail: string): DealTask => ({
     id: crypto.randomUUID(),
@@ -391,13 +391,10 @@ function seedProposalPlan(
     hasAttachment: false,
   })
 
-  const underwriteDetail =
-    opts.underwritingTier && opts.underwritingTier !== 'None'
-      ? `${opts.underwritingTier} underwrite complete`
-      : 'First-pass underwrite complete'
-
+  // Underwriting is no longer seeded as a completed task — the deal-overview
+  // planner renders a dedicated AI-underwriting row (idle → generate → review)
+  // driven by `listing.underwriting`.
   return [
-    auto('Underwriting', underwriteDetail),
     auto('Listing proposal', 'Generated automatically'),
     // The BOV auto-task only appears when the broker kept the BOV document.
     ...(opts.includeBov
@@ -475,10 +472,7 @@ export function createProposalListing(draft: NewListingDraft): Listing {
   const suggested = draft.suggestedDocuments ?? seedProposalDocuments(now)
   const documents = [...suggested, ...draft.documents]
   const includeBov = suggested.some((d) => /opinion.of.value/i.test(d.name))
-  const tasks = seedProposalPlan(now, {
-    underwritingTier: draft.underwriting?.tier,
-    includeBov,
-  })
+  const tasks = seedProposalPlan(now, { includeBov })
   const nextCriticalDate =
     tasks.find((t) => t.status !== 'complete' && t.date)?.date ?? null
 
@@ -518,7 +512,11 @@ export function createProposalListing(draft: NewListingDraft): Listing {
       },
     ],
     documents,
-    underwriting: draft.underwriting,
+    // A deal created with underwriting selected lands on its overview already
+    // 'generating', so the planner kicks off the Cactus flow automatically.
+    underwriting: draft.underwriting
+      ? { ...draft.underwriting, status: draft.underwriting.status ?? 'generating' }
+      : undefined,
     financials: {
       askingPrice: draft.listingPrice,
       askingPriceUnits: 'total',
