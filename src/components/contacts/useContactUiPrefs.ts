@@ -34,6 +34,11 @@ interface ContactUiPrefs {
    * treatment. Flipped via a floating toggle on the contact detail page.
    */
   tabTrack: "system" | "ghost";
+  /**
+   * Design-comparison toggle for the timeline filter control: "dropdown" uses a
+   * type Select + a "Needs Reply" checkbox; "tabs" uses the original pill track.
+   */
+  timelineFilter: "dropdown" | "tabs";
 
   setOverviewSections: (sections: string[]) => void;
   setShowDetails: (open: boolean) => void;
@@ -43,6 +48,7 @@ interface ContactUiPrefs {
   setBriefingOpen: (open: boolean) => void;
   setLegacyAccordions: (legacy: boolean) => void;
   setTabTrack: (track: "system" | "ghost") => void;
+  setTimelineFilter: (style: "dropdown" | "tabs") => void;
 }
 
 export const useContactUiPrefs = create<ContactUiPrefs>((set) => ({
@@ -57,6 +63,7 @@ export const useContactUiPrefs = create<ContactUiPrefs>((set) => ({
   briefingOpen: true,
   legacyAccordions: false,
   tabTrack: "system",
+  timelineFilter: "dropdown",
 
   setOverviewSections: (overviewSections) => set({ overviewSections }),
   setShowDetails: (showDetails) => set({ showDetails }),
@@ -66,4 +73,5 @@ export const useContactUiPrefs = create<ContactUiPrefs>((set) => ({
   setBriefingOpen: (briefingOpen) => set({ briefingOpen }),
   setLegacyAccordions: (legacyAccordions) => set({ legacyAccordions }),
   setTabTrack: (tabTrack) => set({ tabTrack }),
+  setTimelineFilter: (timelineFilter) => set({ timelineFilter }),
 }));
