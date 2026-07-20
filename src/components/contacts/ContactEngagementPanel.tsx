@@ -21,6 +21,7 @@ import {
 } from "#/components/contacts/timeline";
 import { TimelineEvent } from "#/components/contacts/TimelineEvent";
 import { TimelineFilterBar } from "#/components/contacts/TimelineFilterBar";
+import { TimelineFilterDropdown } from "#/components/contacts/TimelineFilterDropdown";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
 
 export function ContactEngagementPanel({
@@ -38,7 +39,10 @@ export function ContactEngagementPanel({
   onStartCall: (phone: string) => void;
 }) {
   const tabTrack = useContactUiPrefs((s) => s.tabTrack);
+  const timelineFilter = useContactUiPrefs((s) => s.timelineFilter);
   const [filter, setFilter] = useState<FilterKey>("all");
+  // "Needs Reply" quick filter (dropdown mode only) — attention rows only.
+  const [needsReply, setNeedsReply] = useState(false);
   // Ephemeral per-event UI state (prototype — resets on reload).
   const [overrides, setOverrides] = useState<
     Record<string, { starred?: boolean; pinned?: boolean }>
@@ -68,9 +72,23 @@ export function ContactEngagementPanel({
       }));
   }, [logged, contact, deals, overrides, deleted]);
 
+  const isUnhandled = (e: TimelineEventData) =>
+    needsAttention(e) && !resolved.has(e.id);
+
+  // Count of rows still needing a reply (shown against the "Needs Reply" filter).
+  const attentionCount = useMemo(
+    () => visibleEvents(events, "all").filter(isUnhandled).length,
+    [events, resolved],
+  );
+
+  // "Needs Reply" only applies in the dropdown filter mode.
+  const attentionOnly = timelineFilter === "dropdown" && needsReply;
   const groups = useMemo(
-    () => groupByBucket(visibleEvents(events, filter)),
-    [events, filter],
+    () =>
+      groupByBucket(
+        visibleEvents(events, filter).filter((e) => !attentionOnly || isUnhandled(e)),
+      ),
+    [events, filter, attentionOnly, resolved],
   );
 
   // Single action dispatch for every row — the row itself has no side-effects.
@@ -153,7 +171,18 @@ export function ContactEngagementPanel({
           >
             Timeline
           </span>
-          <TimelineFilterBar events={events} value={filter} onChange={setFilter} />
+          {timelineFilter === "dropdown" ? (
+            <TimelineFilterDropdown
+              events={events}
+              value={filter}
+              onChange={setFilter}
+              needsReply={needsReply}
+              onNeedsReplyChange={setNeedsReply}
+              attentionCount={attentionCount}
+            />
+          ) : (
+            <TimelineFilterBar events={events} value={filter} onChange={setFilter} />
+          )}
         </div>
 
         <div className="d-flex flex-column gap-3 p-4">
