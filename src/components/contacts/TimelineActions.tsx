@@ -36,7 +36,13 @@ export function TimelineActionBar({
         {actionBar.primary}
       </Button>
       {(actionBar.ghosts ?? []).map((g) => (
-        <Button key={g} variant="outline" size="sm" onClick={() => onAction(g)}>
+        <Button
+          key={g}
+          variant="outline"
+          size="sm"
+          className="tl-actionbar__secondary"
+          onClick={() => onAction(g)}
+        >
           {g}
         </Button>
       ))}

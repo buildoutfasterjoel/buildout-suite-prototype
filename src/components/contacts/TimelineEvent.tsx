@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -10,6 +11,7 @@ import {
 import { faStar as faStarSolid } from "@fortawesome/pro-solid-svg-icons";
 import { IconBadge } from "#/components/contacts/IconBadge";
 import { TimelineBadge } from "#/components/contacts/TimelineBadge";
+import { ClampText } from "#/components/contacts/ClampText";
 import { ReplyCard } from "#/components/contacts/ReplyCard";
 import { ReplyComposer } from "#/components/contacts/ReplyComposer";
 import { ConversationThread } from "#/components/contacts/ConversationThread";
@@ -56,10 +58,6 @@ export function TimelineEvent({
 }) {
   const config = TYPE_CONFIG[event.type];
 
-  const names = event.contact
-    ? `${event.actor.name} › ${event.contact.name}`
-    : event.actor.name;
-
   const headline = event.subject ?? event.title ?? config.defaultTitle;
 
   // Tier-1 action bar shows only while the row still needs attention (unreplied
@@ -82,7 +80,13 @@ export function TimelineEvent({
       <div className="tl-row__body">
         <div className="tl-row__head">
           <span className="tl-row__actors">
-            {names}
+            {event.actor.name}
+            {event.contact && (
+              <>
+                {" › "}
+                <span className="tl-row__contact-name">{event.contact.name}</span>
+              </>
+            )}
             {event.durationSecs != null && (
               <span className="tl-row__duration"> ({durationLabel(event.durationSecs)})</span>
             )}
@@ -116,6 +120,29 @@ export function TimelineEvent({
           </div>
         )}
 
+        {/* Deal / property links — plain hyperlinked text on their own line
+            directly under the subject. */}
+        {event.associations && event.associations.length > 0 && (
+          <div className="tl-row__deals">
+            {event.associations.map((a, i) =>
+              a.id ? (
+                <Link
+                  key={i}
+                  to="/listings/$listingId"
+                  params={{ listingId: a.id }}
+                  className="tl-row__deal-link"
+                >
+                  {a.label}
+                </Link>
+              ) : (
+                <span key={i} className="tl-row__deal-link">
+                  {a.label}
+                </span>
+              ),
+            )}
+          </div>
+        )}
+
         {event.type === "conversation" && event.thread ? (
           <>
             <div className="tl-convo">
@@ -140,12 +167,18 @@ export function TimelineEvent({
           <>
             {event.blocks?.map((block, i) => (
               <div key={i} className="tl-block">
-                <div className="tl-block__kicker">{block.kicker}</div>
-                <ul className="tl-block__list">
-                  {block.items.map((item, j) => (
-                    <li key={j}>{item}</li>
-                  ))}
-                </ul>
+                {block.kicker && (
+                  <div className="tl-block__kicker">{block.kicker}</div>
+                )}
+                {block.clamp ? (
+                  block.items.map((item, j) => <ClampText key={j} text={item} />)
+                ) : (
+                  <ul className="tl-block__list">
+                    {block.items.map((item, j) => (
+                      <li key={j}>{item}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
             ))}
             {event.body && <p className="tl-row__text">{event.body}</p>}
@@ -157,16 +190,6 @@ export function TimelineEvent({
           <div className="tl-row__badges">
             {event.badges.map((b, i) => (
               <TimelineBadge key={i} badge={b} />
-            ))}
-          </div>
-        )}
-
-        {event.associations && event.associations.length > 0 && (
-          <div className="tl-row__assoc">
-            {event.associations.map((a, i) => (
-              <span key={i} className="tl-chip">
-                {a.label}
-              </span>
             ))}
           </div>
         )}
