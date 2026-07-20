@@ -279,36 +279,82 @@
   .accordion-item {
     border: 0;
     border-radius: 0;
+    // Cancel the theme's -1px overlap between items. The overlap let a
+    // focused/positioned header paint over the next item's border-top divider
+    // (it vanished on interaction until blur). With no overlap the single
+    // border-top divider always renders cleanly.
+    margin-top: 0;
   }
   .accordion-item + .accordion-item {
     border-top: 1px solid var(--color-storm-grey-100, #eceef2);
   }
 
-  // Header: white in both states, no shadow, no border (so there's no line
-  // between the header and its body), no default (right) chevron.
+  // Header: white (card bg), no shadow. Keeps Blueprint's default chevron on the
+  // RIGHT (like the deal detail rail). An open header gets a bottom border so it
+  // reads as separated from its content, matching the deal detail accordions.
   .accordion-button,
   .accordion-button:not(.collapsed) {
     background: var(--bp-card-bg, #fff);
     box-shadow: none;
-    border: 0;
+    // Width 0 but keep the grey border color in both states. Using `border: 0`
+    // would reset the color to `currentColor` (near-black), which the button's
+    // `all` transition then animates through — flashing a black strip as the
+    // bottom border widens on expand.
+    border: 0 solid var(--color-storm-grey-100, #eceef2);
     color: inherit;
     font-weight: 600;
-    // Leave room on the right for the overlaid action button.
-    padding: 16px 48px 16px 16px;
+    padding: 16px;
   }
+  .accordion-button:not(.collapsed) {
+    border-bottom-width: 1px;
+  }
+  // Chevron pinned to the right edge (padding-right controls its inset, so keep
+  // that padding small); the overlaid action sits just to its left. Dimmed so
+  // it reads as a quiet affordance.
   .accordion-button::after {
-    display: none;
+    margin-left: auto;
+    opacity: 0.55;
   }
 
-  // Body: white, flush with the header (no dividing line). Blueprint nests an
-  // inner `.accordion-content` with its own padding — zero it so content is
-  // inset a single 12px (aligned with the header), not doubled.
+  // Panel content: a subtle grey background (matches the deal detail rail's
+  // Seller/Buyer/Other accordions). Blueprint nests an inner `.accordion-content`
+  // with its own padding — zero it so the inset isn't doubled.
   .accordion-body {
-    background: var(--bp-card-bg, #fff);
-    padding: 0 16px 16px;
+    background-color: var(--bp-accordion-bg);
+    padding: 16px;
   }
   .accordion-content {
     padding: 0;
+  }
+
+  // The Tasks panel keeps a white content background, unlike the overview
+  // sections (Deals, Properties, …), with a tighter top inset.
+  &.contact-overview-accordion--white .accordion-body {
+    background: var(--bp-card-bg, #fff);
+    padding-top: 8px;
+  }
+
+  // Legacy style (design-comparison toggle): chevrons on the LEFT and flush
+  // white content backgrounds — the look before the deal-rail-style refresh.
+  &.contact-overview-accordion--legacy {
+    .accordion-body {
+      background-color: var(--bp-card-bg, #fff);
+    }
+    // Move the chevron ahead of the label (the button is a flex row) and undo
+    // its right-edge alignment.
+    .accordion-button::after {
+      order: -1;
+      margin-left: 0;
+      margin-right: 8px;
+    }
+    // Old style was flush white — no header/content divider.
+    .accordion-button:not(.collapsed) {
+      border-bottom-width: 0;
+    }
+    // The chevron vacates the right edge, so the action returns to the far right.
+    .contact-accordion__action {
+      right: 16px;
+    }
   }
 }
 
@@ -524,10 +570,15 @@
 // The per-section action button (e.g. "Add"), overlaid at the header's right.
 // z-index must beat Bootstrap's `.accordion-button:not(.collapsed)` (z-index: 3),
 // which otherwise paints the expanded header over this button and hides it.
+// The optional section action (e.g. an "Add" button) sits just to the LEFT of
+// the accordion's right-side chevron (~16px padding + ~14px glyph). Overlaid
+// (not nested in the trigger) so its click doesn't toggle the section.
 .contact-accordion__action {
   position: absolute;
-  top: 16px;
-  right: 12px;
+  // Vertically centered within the 59px header (matches the chevron), with a
+  // comfortable gap to the left of the right-side chevron.
+  top: 11px;
+  right: 44px;
   z-index: 5;
 }
 
@@ -1801,9 +1852,8 @@
 
   &__header {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    flex-direction: column;
+    gap: 4px;
     width: 100%;
     padding: 16px;
     border: 0;
@@ -1811,6 +1861,25 @@
     color: inherit;
     text-align: left;
     cursor: pointer;
+
+    // Legacy style (design-comparison toggle): chevron on the left (rendered
+    // inline in the heading) with "Last touch" on the same row, to the right.
+    &--legacy {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+  }
+
+  // Heading row: sparkle + "Briefing" on the left, the chevron pinned right
+  // (matching the overview-column accordion headers). The "Last touch" line
+  // sits below this row.
+  &__heading-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
   }
 
   &__body {

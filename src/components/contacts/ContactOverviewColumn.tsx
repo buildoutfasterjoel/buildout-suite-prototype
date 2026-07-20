@@ -132,6 +132,7 @@ export function ContactOverviewColumn({
   const setShowDetails = useContactUiPrefs((s) => s.setShowDetails);
   const showPastDeals = useContactUiPrefs((s) => s.showPastDeals);
   const setShowPastDeals = useContactUiPrefs((s) => s.setShowPastDeals);
+  const legacyAccordions = useContactUiPrefs((s) => s.legacyAccordions);
   const [tags, setTags] = useState(contact.tags);
   const [newDealOpen, setNewDealOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -319,7 +320,9 @@ export function ContactOverviewColumn({
 
       {/* Collapsible sections */}
       <Accordion
-        className="contact-overview-accordion"
+        className={`contact-overview-accordion${
+          legacyAccordions ? " contact-overview-accordion--legacy" : ""
+        }`}
         multiple
         value={open}
         onValueChange={setOpen}
@@ -328,11 +331,11 @@ export function ContactOverviewColumn({
           value="deals"
           label="Deals"
           count={activeDeals.length}
-          open={open.includes("deals")}
           action={
             <Button
               variant="ghost"
-              size="icon-sm"
+              appearance="muted"
+              size="icon"
               aria-label="New deal"
               onClick={() => setNewDealOpen(true)}
             >
@@ -376,7 +379,16 @@ export function ContactOverviewColumn({
           value="properties"
           label="Properties Owned"
           count={propertyGroups.length}
-          open={open.includes("properties")}
+          action={
+            <Button
+              variant="ghost"
+              appearance="muted"
+              size="icon"
+              aria-label="Add property"
+            >
+              <FontAwesomeIcon icon={faPlus} />
+            </Button>
+          }
         >
           <div className="d-flex flex-column gap-3">
             {propertyGroups.length === 0 ? (
@@ -397,7 +409,6 @@ export function ContactOverviewColumn({
           value="lists"
           label="Lists"
           count={memberLists.length}
-          open={open.includes("lists")}
         >
           {memberLists.length === 0 ? (
             <span className="text-muted fs-small">
@@ -422,7 +433,6 @@ export function ContactOverviewColumn({
         <ContactSection
           value="customFields"
           label="Custom Fields"
-          open={open.includes("customFields")}
         >
           <div className="text-muted fs-small">
             Org-level custom fields will appear here.

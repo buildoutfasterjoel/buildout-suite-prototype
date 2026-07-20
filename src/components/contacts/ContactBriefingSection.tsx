@@ -1,13 +1,19 @@
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faChevronRight } from "@fortawesome/pro-regular-svg-icons";
+import {
+  faChevronDown,
+  faChevronUp,
+  faChevronRight,
+} from "@fortawesome/pro-regular-svg-icons";
 import { faSparkles } from "@fortawesome/pro-solid-svg-icons";
+import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
 
 /**
  * The AI briefing, a collapsible section that floats above the Tasks section in
- * the right column. The header mirrors the overview-column accordion sections
- * (left chevron + 20/26 semibold heading) with the AI sparkle marking it, and a
- * "Last touch" summary on the right. Collapsed shows just the header.
+ * the right column. It mirrors the overview-column accordion headers: the
+ * current style puts the chevron on the right with a "Last touch" line beneath
+ * the heading; the legacy style (design-comparison toggle) puts the chevron on
+ * the left with "Last touch" on the same row. Collapsed shows just the header.
  */
 export function ContactBriefingSection({
   briefing,
@@ -20,31 +26,61 @@ export function ContactBriefingSection({
   open: boolean;
   onToggle: () => void;
 }) {
+  const legacy = useContactUiPrefs((s) => s.legacyAccordions);
+
+  const heading = (
+    <span className="d-flex align-items-center gap-2 min-w-0">
+      {legacy && (
+        <FontAwesomeIcon
+          icon={open ? faChevronDown : faChevronRight}
+          className="text-muted"
+          style={{ width: 12, opacity: 0.55 }}
+        />
+      )}
+      <FontAwesomeIcon
+        icon={faSparkles}
+        style={{ color: "#9f55f7", fontSize: 16 }}
+      />
+      <span className="fw-semibold" style={{ fontSize: 20, lineHeight: "26px" }}>
+        Briefing
+      </span>
+    </span>
+  );
+
+  const lastTouchLine = (
+    <span className="text-muted fs-small">
+      Last touch: <span className="fw-bold">{lastTouch}</span>
+    </span>
+  );
+
   return (
     <Card className="contact-panel-card overflow-hidden contact-briefing">
       <button
         type="button"
-        className="contact-briefing__header"
+        className={`contact-briefing__header${
+          legacy ? " contact-briefing__header--legacy" : ""
+        }`}
         aria-expanded={open}
         onClick={onToggle}
       >
-        <span className="d-flex align-items-center gap-2 min-w-0">
-          <FontAwesomeIcon
-            icon={open ? faChevronDown : faChevronRight}
-            className="text-muted"
-            style={{ width: 12 }}
-          />
-          <FontAwesomeIcon
-            icon={faSparkles}
-            style={{ color: "#9f55f7", fontSize: 16 }}
-          />
-          <span className="fw-semibold" style={{ fontSize: 20, lineHeight: "26px" }}>
-            Briefing
-          </span>
-        </span>
-        <span className="text-muted fs-small text-nowrap">
-          Last touch: <span className="fw-bold">{lastTouch}</span>
-        </span>
+        {legacy ? (
+          <>
+            {heading}
+            {lastTouchLine}
+          </>
+        ) : (
+          <>
+            <span className="contact-briefing__heading-row">
+              {heading}
+              <FontAwesomeIcon
+                icon={open ? faChevronUp : faChevronDown}
+                className="text-muted"
+                style={{ fontSize: 14, opacity: 0.55 }}
+              />
+            </span>
+            {lastTouchLine}
+          </>
+        )}
       </button>
 
       {open && (

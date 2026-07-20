@@ -41,6 +41,7 @@ export function ContactTasksPanel({
   const setTasksOpen = useContactUiPrefs((s) => s.setTasksOpen);
   const showCompleted = useContactUiPrefs((s) => s.showCompletedTasks);
   const setShowCompleted = useContactUiPrefs((s) => s.setShowCompletedTasks);
+  const legacyAccordions = useContactUiPrefs((s) => s.legacyAccordions);
   // Per-session completion overrides, keyed by task id → { done, seq }. Seq
   // orders the completed list so the most recently checked task sorts first.
   const [overrides, setOverrides] = useState<
@@ -81,7 +82,9 @@ export function ContactTasksPanel({
   return (
     <Card className="contact-panel-card overflow-hidden">
       <Accordion
-        className="contact-overview-accordion"
+        className={`contact-overview-accordion contact-overview-accordion--white${
+          legacyAccordions ? " contact-overview-accordion--legacy" : ""
+        }`}
         multiple
         value={tasksOpen ? ["tasks"] : []}
         onValueChange={(v) => setTasksOpen(v.includes("tasks"))}
@@ -90,9 +93,13 @@ export function ContactTasksPanel({
           value="tasks"
           label="Tasks"
           count={active.length}
-          open={tasksOpen}
           action={
-            <Button variant="ghost" size="icon-sm" aria-label="Add task">
+            <Button
+              variant="ghost"
+              appearance="muted"
+              size="icon"
+              aria-label="Add task"
+            >
               <FontAwesomeIcon icon={faPlus} />
             </Button>
           }

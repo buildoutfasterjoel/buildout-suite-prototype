@@ -11,6 +11,7 @@ import { ContactOverviewColumn } from "#/components/contacts/ContactOverviewColu
 import { ContactEngagementPanel } from "#/components/contacts/ContactEngagementPanel";
 import { ContactTasksPanel } from "#/components/contacts/ContactTasksPanel";
 import { ContactBriefingSection } from "#/components/contacts/ContactBriefingSection";
+import { ContactAccordionStyleToggle } from "#/components/contacts/ContactAccordionStyleToggle";
 import { ShareContactModal } from "#/components/contacts/ShareContactModal";
 import { LiveCallBar } from "#/components/contacts/LiveCallBar";
 import { LogCallModal } from "#/components/contacts/LogCallModal";
@@ -173,6 +174,9 @@ function ContactDetailPage() {
           liveCall.clearPendingLog();
         }}
       />
+
+      {/* Floating design-comparison toggle (prototype-only). */}
+      <ContactAccordionStyleToggle />
     </div>
   );
 }
