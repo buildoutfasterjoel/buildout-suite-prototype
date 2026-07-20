@@ -46,7 +46,7 @@ function SpacesTab() {
   return (
     <div className="p-4">
       <div className="d-flex align-items-center justify-content-between mb-3">
-        <h2 className="h5 mb-0">Spaces</h2>
+        <h2 className="fs-6 fw-semibold mb-0">Spaces</h2>
         <Button variant="primary" onClick={() => setAddOpen(true)}>
           <FontAwesomeIcon icon={faPlus} /> Add space
         </Button>
@@ -59,8 +59,8 @@ function SpacesTab() {
           </Empty.Media>
           <Empty.Content>
             <Empty.Title>No spaces yet</Empty.Title>
-            Add a space to spin an individual unit into its own deal — it inherits this deal&apos;s
-            marketing template.
+            Add a space to spin an individual unit into its own deal — it
+            inherits this deal&apos;s marketing template.
           </Empty.Content>
           <Empty.Actions>
             <Button variant="primary" onClick={() => setAddOpen(true)}>

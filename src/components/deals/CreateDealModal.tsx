@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
@@ -7,9 +7,9 @@ import { Combobox } from "@buildoutinc/blueprint-react/ui/Combobox";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
 import { RadioGroup } from "@buildoutinc/blueprint-react/ui/RadioGroup";
-import { Switch } from "@buildoutinc/blueprint-react/ui/Switch";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
+import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
@@ -22,6 +22,8 @@ import {
   faXmark,
   faUser,
   faCheck,
+  faArrowRight,
+  faArrowLeft,
 } from "@fortawesome/pro-regular-svg-icons";
 import type {
   Contact,
@@ -76,7 +78,10 @@ const SIDE_DISPLAY: Record<
   seller: {
     icon: faSignHanging,
     color: "var(--side-seller)",
-    Sale: { title: "Seller", blurb: "Sell-side · take their property to market" },
+    Sale: {
+      title: "Seller",
+      blurb: "Sell-side · take their property to market",
+    },
     Lease: {
       title: "Landlord",
       blurb: "Landlord rep · lease their space to tenants",
@@ -89,7 +94,10 @@ const SIDE_DISPLAY: Record<
       title: "Buyer",
       blurb: "Buy-side · find them a property to buy",
     },
-    Lease: { title: "Tenant", blurb: "Tenant rep · find space for them to lease" },
+    Lease: {
+      title: "Tenant",
+      blurb: "Tenant rep · find space for them to lease",
+    },
   },
 };
 
@@ -100,15 +108,74 @@ function contactName(c: Contact): string {
   return `${c.firstName} ${c.lastName}`.trim();
 }
 
+/** Join a short list into prose: ["a","b","c"] → "a, b, and c". */
+function joinList(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? "";
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
+}
+
+/** The wizard's steps, in order. */
+const WIZARD_STEPS = [
+  { n: 1 as const, label: "Deal" },
+  { n: 2 as const, label: "Documents" },
+];
+
 /**
- * Which suggested documents to pre-check for a given underwriting depth: the
- * always-on catalog entries plus any that the chosen depth has unlocked.
+ * Two-step progress indicator for the create-deal wizard. Blueprint ships no
+ * stepper, so this is hand-built — but strictly from design tokens: the
+ * active/done accent uses the `text-bg-primary` utility (theme primary + its
+ * contrast text) and `text-primary`; inactive steps use `border`/`text-muted`.
  */
-function suggestedKeysForDepth(count: number): Set<string> {
+function StepIndicator({ step }: { step: 1 | 2 }) {
+  return (
+    <div
+      className="d-flex align-items-center gap-2"
+      role="group"
+      aria-label={`Step ${step} of ${WIZARD_STEPS.length}`}
+    >
+      {WIZARD_STEPS.map((s, i) => {
+        const active = step === s.n;
+        const done = step > s.n;
+        const lit = active || done;
+        return (
+          <Fragment key={s.n}>
+            <span className="d-inline-flex align-items-center gap-2">
+              <span
+                className={`d-inline-flex align-items-center justify-content-center rounded-circle fw-semibold fs-small ${
+                  lit ? "text-bg-primary" : "border text-muted"
+                }`}
+                style={{ width: "1.5rem", height: "1.5rem" }}
+                aria-hidden
+              >
+                {done ? <FontAwesomeIcon icon={faCheck} /> : s.n}
+              </span>
+              <span
+                className={`fs-small fw-semibold ${
+                  lit ? "text-primary" : "text-muted"
+                }`}
+              >
+                {s.label}
+              </span>
+            </span>
+            {i < WIZARD_STEPS.length - 1 && (
+              <span
+                className="flex-grow-1 border-top"
+                style={{ minWidth: "1rem" }}
+                aria-hidden
+              />
+            )}
+          </Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
+/** The documents pre-checked by default in the Suggested Documents list. */
+function defaultDocKeys(): Set<string> {
   return new Set(
-    SUGGESTED_DOCUMENTS.filter(
-      (d) => d.defaultOn || (d.minChecks != null && count >= d.minChecks),
-    ).map((d) => d.key),
+    SUGGESTED_DOCUMENTS.filter((d) => d.defaultOn).map((d) => d.key),
   );
 }
 
@@ -147,32 +214,22 @@ export function CreateDealModal({
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [files, setFiles] = useState<DealDocument[]>([]);
   const [dragging, setDragging] = useState(false);
-  // Document generation is opt-in — off by default so a deal starts lean unless
-  // the broker explicitly wants Buildout to draft collateral.
-  const [generateDocsOn, setGenerateDocsOn] = useState(false);
+  // Which wizard step is showing: 1 = deal essentials, 2 = documents setup.
+  const [step, setStep] = useState<1 | 2>(1);
   // Underwriting is optional at creation; when off, the depth control collapses
   // and the deal starts with no underwriting.
   const [underwritingOn, setUnderwritingOn] = useState(false);
-  // Underwriting depth + which suggested docs are checked. Sliding the depth
-  // re-derives the recommended docs; individual docs can still be toggled after.
+  // The underwriting depth selection. The slider drives only the underwriting
+  // checks — it no longer affects which documents are checked below.
   const [underwritingSel, setUnderwritingSel] = useState<Set<number>>(
     () => new Set(DEFAULT_UNDERWRITING_SELECTION),
   );
-  const [checkedDocKeys, setCheckedDocKeys] = useState<Set<string>>(() =>
-    suggestedKeysForDepth(DEFAULT_UNDERWRITING_SELECTION.size),
-  );
-
-  function handleUnderwritingChange(next: Set<number>) {
-    setUnderwritingSel(next);
-    setCheckedDocKeys(suggestedKeysForDepth(next.size));
-  }
-
-  // Turning underwriting off drops the depth-driven doc suggestions back to the
-  // always-on set; turning it on re-applies the current depth's suggestions.
-  function toggleUnderwriting(on: boolean) {
-    setUnderwritingOn(on);
-    setCheckedDocKeys(suggestedKeysForDepth(on ? underwritingSel.size : 0));
-  }
+  // Which suggested documents are checked — independent of the underwriting
+  // depth; starts at the default set and is toggled by hand.
+  const [checkedDocKeys, setCheckedDocKeys] =
+    useState<Set<string>>(defaultDocKeys);
+  // Free-text filter over the (large) catalog — only narrows the Available list.
+  const [docSearch, setDocSearch] = useState("");
 
   function toggleDoc(key: string, on: boolean) {
     setCheckedDocKeys((prev) => {
@@ -199,18 +256,21 @@ export function CreateDealModal({
   // Resolve the full property record (for its units) from the locked prop or the
   // selected combobox option. Typed-but-unmatched addresses have no record/units.
   const selectedProperty = useMemo<Property | undefined>(
-    () => property ?? (propertyOption ? getProperty(propertyOption.value) : undefined),
+    () =>
+      property ??
+      (propertyOption ? getProperty(propertyOption.value) : undefined),
     [property, propertyOption],
   );
   const units = selectedProperty?.units ?? [];
   const hasUnits = units.length > 0;
 
-  // Reset the scope whenever the property changes — a fresh property defaults to
-  // a whole-building deal with no unit chosen.
+  // Reset the scope whenever the property or deal type changes. A Sale defaults
+  // to representing the whole building (you're selling the asset); a Lease starts
+  // unscoped so the broker picks the specific unit being leased.
   useEffect(() => {
-    setWholeBuilding(false);
+    setWholeBuilding(dealType === "Sale");
     setSelectedUnitId(null);
-  }, [selectedProperty?.id]);
+  }, [selectedProperty?.id, dealType]);
 
   // Seed from the initiating contact/property each time the modal opens.
   useEffect(() => {
@@ -268,14 +328,14 @@ export function CreateDealModal({
       setPropertyInput(initialAddress ?? "");
     }
 
+    setStep(1);
     setDealType("Sale");
     setStage("proposal");
-    setGenerateDocsOn(false);
     setUnderwritingOn(false);
     setUnderwritingSel(new Set(DEFAULT_UNDERWRITING_SELECTION));
-    // Underwriting starts off, so the doc suggestions start at the always-on
-    // baseline; turning the switch on re-applies the depth-driven set.
-    setCheckedDocKeys(suggestedKeysForDepth(0));
+    // Documents start at the default suggested set, independent of underwriting.
+    setCheckedDocKeys(defaultDocKeys());
+    setDocSearch("");
     setFiles([]);
     setDragging(false);
   }, [open, contact, property, initialAddress]);
@@ -309,21 +369,42 @@ export function CreateDealModal({
   }
 
   const hasProperty = propertyOption !== null || propertyInput.trim() !== "";
+  const hasContact = contactOption !== null;
   // A unit-scoped deal needs a unit picked; whole-building (or a property with no
   // units) is always fine.
   const unitOk = !hasUnits || wholeBuilding || selectedUnitId !== null;
-  const canCreate =
-    side !== null && contactOption !== null && hasProperty && unitOk;
+  // A deal needs a side plus at least one of contact/property; a chosen property
+  // with units also needs a unit (or whole-building).
+  const canCreate = side !== null && (hasContact || hasProperty) && unitOk;
 
-  function handleCreate() {
+  // Spell out what's still required so the disabled buttons aren't a dead end.
+  const missingBits: string[] = [];
+  if (side === null) missingBits.push("a side");
+  if (!hasContact && !hasProperty) missingBits.push("a contact or property");
+  if (hasUnits && !unitOk) missingBits.push("a unit");
+  const missingHint = missingBits.length
+    ? `Add ${joinList(missingBits)} to continue.`
+    : "";
+
+  // Split the catalog into what's chosen vs. still available. Search only narrows
+  // the available list, so a checked doc never disappears mid-search.
+  const docQuery = docSearch.trim().toLowerCase();
+  const selectedDocs = SUGGESTED_DOCUMENTS.filter((d) =>
+    checkedDocKeys.has(d.key),
+  );
+  const availableDocs = SUGGESTED_DOCUMENTS.filter(
+    (d) =>
+      !checkedDocKeys.has(d.key) && d.name.toLowerCase().includes(docQuery),
+  );
+  const selectedCount = selectedDocs.length + (underwritingOn ? 1 : 0);
+
+  // `withDocuments` is false for the step-1 skip ("Create deal" → bare shell) and
+  // true for the step-2 finish (uploads + selected suggested docs + underwriting).
+  function handleCreate(withDocuments: boolean) {
     if (!canCreate || !side) return;
     const contactId = contactOption?.value ?? "";
     const now = new Date().toISOString();
-    // Suggested docs + underwriting are pitching-phase setup — a deal started
-    // already in-flight skips them (Buildout isn't generating fresh collateral).
-    const isPitching = stage === "proposal";
-    const suggestedDocuments: DealDocument[] =
-      isPitching && generateDocsOn
+    const suggestedDocuments: DealDocument[] = withDocuments
       ? SUGGESTED_DOCUMENTS.filter((d) => checkedDocKeys.has(d.key)).map(
           (d) => ({
             id: crypto.randomUUID(),
@@ -351,10 +432,10 @@ export function CreateDealModal({
       unitId: unit?.id ?? null,
       sellerContactId: side === "seller" ? contactId : "",
       buyerContactId: side === "buyer" ? contactId : "",
-      documents: files,
+      documents: withDocuments ? files : [],
       suggestedDocuments,
       underwriting:
-        isPitching && underwritingOn
+        withDocuments && underwritingOn
           ? underwritingFromSelection(underwritingSel)
           : undefined,
     };
@@ -368,507 +449,602 @@ export function CreateDealModal({
 
   return (
     <Modal open={open} onOpenChange={onOpenChange}>
-      <Modal.Content
-        size="lg"
-        scrollable
-        centered
-        style={{ maxWidth: "34.375rem" }}
-      >
+      <Modal.Content scrollable centered>
         <Modal.Header>
           <Modal.Title>New deal</Modal.Title>
           <Modal.Description>
-            {contact
-              ? `For ${contactName(contact)} · set the property and link the listing.`
-              : "Set the side, contact, and property to start a deal."}
+            {step === 2
+              ? "Choose the documents and underwriting Buildout should draft."
+              : contact
+                ? `For ${contactName(contact)} · set the side and link a property.`
+                : "Set the side, then add a contact or property."}
           </Modal.Description>
         </Modal.Header>
 
         <Modal.Body className="d-flex flex-column gap-4">
-          <Tabs
-            value={dealType}
-            onValueChange={(v) => setDealType(v as NewListingDraft["dealType"])}
-            className="mb-3"
-          >
-            <Tabs.List variant="pills">
-              <Tabs.Tab
-                value="Sale"
-                className="flex-grow-1 justify-content-center"
-              >
-                Sale
-              </Tabs.Tab>
-              <Tabs.Tab
-                value="Lease"
-                className="flex-grow-1 justify-content-center"
-              >
-                Lease
-              </Tabs.Tab>
-            </Tabs.List>
-          </Tabs>
+          <StepIndicator step={step} />
 
-          {/* Side */}
-          <Field>
-            <Field.Label>Side</Field.Label>
-            <div className="row g-3">
-              {SIDE_ORDER.map((sideValue) => {
-                const s = SIDE_DISPLAY[sideValue];
-                const { title, blurb } = s[dealType];
-                const active = side === sideValue;
-                return (
-                  <div key={sideValue} className="col-6">
-                    <button
-                      type="button"
-                      aria-pressed={active}
-                      onClick={() => setSide(sideValue)}
-                      className="w-100 h-100 text-start border rounded p-3 d-flex flex-column gap-1 bg-transparent"
-                      style={{
-                        borderColor: active ? s.color : undefined,
-                        boxShadow: active ? `0 0 0 1px ${s.color}` : undefined,
-                        cursor: "pointer",
-                      }}
-                    >
-                      <span
-                        className="d-inline-flex align-items-center gap-2 fw-semibold"
-                        style={{ color: active ? s.color : undefined }}
-                      >
-                        <FontAwesomeIcon icon={s.icon} />
-                        {title}
-                      </span>
-                      <span className="text-muted fs-small">{blurb}</span>
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </Field>
-
-          {/* Stage — most deals start in Pitching, but a broker can start one
-              already in-flight in a later stage. */}
-          <Field>
-            <Field.Label>Stage</Field.Label>
-            <Select
-              value={stage}
-              onValueChange={(v) => v && setStage(v as PropertyStatus)}
-            >
-              <Select.Trigger>
-                <Select.Value>
-                  {(v) => STAGE_LABEL[v as PropertyStatus]}
-                </Select.Value>
-              </Select.Trigger>
-              <Select.Content>
-                {PROPERTY_STATUSES.map((s) => (
-                  <Select.Item key={s} value={s}>
-                    {STAGE_LABEL[s]}
-                  </Select.Item>
-                ))}
-              </Select.Content>
-            </Select>
-            <Field.Description>
-              Most deals start in Pitching. Pick a later stage if this deal is
-              already in-flight.
-            </Field.Description>
-          </Field>
-
-          {/* Contact + Property share one line. When the deal is initiated
-              from a contact, Contact is hidden and Property takes full width. */}
-          <div className="row g-3">
-            {!contact && (
-              <div className="col-12 col-md-6">
-                <Field>
-                  <Field.Label>Contact</Field.Label>
-                  <Combobox
-                    items={contactOptions}
-                    value={contactOption}
-                    onValueChange={(v) =>
-                      setContactOption(v as ContactOption | null)
-                    }
-                  >
-                    <Combobox.InputGroup>
-                      <InputGroup.Addon>
-                        <FontAwesomeIcon icon={faUser} />
-                      </InputGroup.Addon>
-                      <Combobox.Input
-                        placeholder="Search contacts…"
-                        showClear
-                      />
-                    </Combobox.InputGroup>
-                    <Combobox.Content>
-                      <Combobox.Empty className="text-muted">
-                        No matching contacts
-                      </Combobox.Empty>
-                      <Combobox.List>
-                        {(item: ContactOption) => {
-                          const meta = [item.title, item.company]
-                            .filter(Boolean)
-                            .join(" · ");
-                          return (
-                            <Combobox.Item key={item.value} value={item}>
-                              <span
-                                className="d-flex gap-2 user-select-none"
-                                style={{ minWidth: 0 }}
-                              >
-                                <FontAwesomeIcon
-                                  icon={faUser}
-                                  className="text-muted flex-shrink-0 d-inline-block mt-1"
-                                />
-                                <span
-                                  className="d-flex flex-column"
-                                  style={{ minWidth: 0 }}
-                                >
-                                  <span className="d-flex align-items-center gap-2">
-                                    <span className="text-truncate">
-                                      {item.name}
-                                    </span>
-                                    <span className="flex-shrink-0">
-                                      <RelationshipPill
-                                        value={item.relationship}
-                                      />
-                                    </span>
-                                  </span>
-                                  {meta && (
-                                    <span className="text-muted fs-small text-truncate">
-                                      {meta}
-                                    </span>
-                                  )}
-                                </span>
-                              </span>
-                            </Combobox.Item>
-                          );
-                        }}
-                      </Combobox.List>
-                    </Combobox.Content>
-                  </Combobox>
-                </Field>
-              </div>
-            )}
-
-            {/* Property */}
-            <div className={contact ? "col-12" : "col-12 col-md-6"}>
-              {property ? (
-                <Field>
-                  <Field.Label>Property</Field.Label>
-                  <div className="d-flex align-items-center gap-2 border rounded px-3 py-2">
-                    <FontAwesomeIcon
-                      icon={TYPE_ICONS[property.propertyType]}
-                      className="text-muted"
-                    />
-                    <span className="flex-grow-1 text-truncate">
-                      {[property.street, property.city, property.state]
-                        .filter(Boolean)
-                        .join(", ") || property.name}
-                    </span>
-                    <Badge
-                      variant="secondary"
-                      appearance="muted"
-                      className="flex-shrink-0"
-                    >
-                      {TYPE_LABELS[property.propertyType]}
-                    </Badge>
-                  </div>
-                </Field>
-              ) : (
-                <Field>
-                  <Field.Label>Property</Field.Label>
-                  <Combobox
-                    items={propertyOptions}
-                    value={propertyOption}
-                    onValueChange={(v) =>
-                      selectProperty(v as PropertyOption | null)
-                    }
-                    inputValue={propertyInput}
-                    onInputValueChange={(v: string) => typeProperty(v)}
-                  >
-                    <Combobox.InputGroup>
-                      <InputGroup.Addon>
-                        <FontAwesomeIcon icon={faMagnifyingGlass} />
-                      </InputGroup.Addon>
-                      <Combobox.Input
-                        placeholder="Search a listing or type an address…"
-                        showClear
-                      />
-                    </Combobox.InputGroup>
-                    <Combobox.Content>
-                      <Combobox.Empty className="text-muted">
-                        No match — we’ll create a new property from what you
-                        typed.
-                      </Combobox.Empty>
-                      <Combobox.List>
-                        {(item: PropertyOption) => (
-                          <Combobox.Item key={item.value} value={item}>
-                            <span
-                              className="d-flex gap-2 user-select-none"
-                              style={{ minWidth: 0 }}
-                            >
-                              <FontAwesomeIcon
-                                icon={TYPE_ICONS[item.propertyType]}
-                                className="text-muted flex-shrink-0 d-inline-block mt-1"
-                              />
-                              <span
-                                className="d-flex flex-column"
-                                style={{ minWidth: 0 }}
-                              >
-                                <span className="d-flex align-items-center gap-2">
-                                  <span className="text-truncate">
-                                    {item.label}
-                                  </span>
-                                  <Badge
-                                    variant="secondary"
-                                    appearance="muted"
-                                    className="flex-shrink-0"
-                                  >
-                                    {TYPE_LABELS[item.propertyType]}
-                                  </Badge>
-                                </span>
-                                <span className="text-muted fs-small text-truncate">
-                                  {item.subtype}
-                                  {item.sizeLabel ? ` · ${item.sizeLabel}` : ""}
-                                </span>
-                              </span>
-                            </span>
-                          </Combobox.Item>
-                        )}
-                      </Combobox.List>
-                    </Combobox.Content>
-                  </Combobox>
-                </Field>
-              )}
-            </div>
-          </div>
-
-          {/* Deal scope — only when the chosen property already has units on
-              record. Whole-building by default; unchecking reveals a single-select
-              list of the property's units. */}
-          {hasUnits && (
-            <Field>
-              <Field.Label>Deal scope</Field.Label>
-              <label
-                className="d-flex align-items-center gap-2 mb-0"
-                style={{ cursor: "pointer" }}
-              >
-                <Checkbox
-                  checked={wholeBuilding}
-                  onCheckedChange={(c) => {
-                    const on = c === true;
-                    setWholeBuilding(on);
-                    if (on) setSelectedUnitId(null);
-                  }}
-                />
-                <span>Represent the whole building</span>
-              </label>
-
-              {!wholeBuilding && (
-                <>
-                  <Field.Description className="mt-2 mb-1">
-                    Select the unit this deal is for.
-                  </Field.Description>
-                  <RadioGroup
-                    value={selectedUnitId ?? ""}
-                    onValueChange={(v) => setSelectedUnitId(v as string)}
-                  >
-                    <div
-                      className="d-flex flex-column border rounded p-1 overflow-auto"
-                      style={{ maxHeight: 168 }}
-                    >
-                      {units.map((u) => (
-                        <label
-                          key={u.id}
-                          className="d-flex align-items-center gap-2 mb-0 px-2 py-2 rounded"
-                          style={{ cursor: "pointer" }}
-                        >
-                          <RadioGroup.Item value={u.id} />
-                          <span
-                            className="d-flex flex-column flex-grow-1"
-                            style={{ minWidth: 0 }}
-                          >
-                            <span className="fw-semibold text-truncate">
-                              {u.label}
-                            </span>
-                            <span className="text-muted fs-small text-truncate text-capitalize">
-                              {u.unitType}
-                              {u.sqft > 0
-                                ? ` · ${u.sqft.toLocaleString()} SF`
-                                : ""}
-                            </span>
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </RadioGroup>
-                </>
-              )}
-            </Field>
-          )}
-
-          {/* Add your own files */}
-          <Field>
-            <Field.Label className="d-flex align-items-center gap-2">
-              Add your own files
-              <span className="text-primary fw-normal">Optional</span>
-            </Field.Label>
-            <Field.Description>
-              Add OMs, financials, or notes to help inform this deal.
-            </Field.Description>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept={ACCEPTED}
-              className="d-none"
-              onChange={(e) => {
-                addFiles(e.target.files);
-                e.target.value = "";
-              }}
-            />
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => fileInputRef.current?.click()}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  fileInputRef.current?.click();
+          {step === 1 && (
+            <>
+              <Tabs
+                value={dealType}
+                onValueChange={(v) =>
+                  setDealType(v as NewListingDraft["dealType"])
                 }
-              }}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragging(true);
-              }}
-              onDragLeave={() => setDragging(false)}
-              onDrop={(e) => {
-                e.preventDefault();
-                setDragging(false);
-                addFiles(e.dataTransfer.files);
-              }}
-              className="border border-2 border-dashed rounded d-flex flex-column align-items-center justify-content-center text-center gap-1 p-4"
-              style={{
-                borderColor: dragging ? "var(--bs-primary)" : undefined,
-                cursor: "pointer",
-              }}
-            >
-              <FontAwesomeIcon
-                icon={faCloudArrowUp}
-                className="text-muted fs-4"
-                aria-hidden
-              />
-              <span>
-                Drop files here or{" "}
-                <span className="text-primary">click to upload</span>
-              </span>
-              <span className="text-muted fs-small">
-                PDF, Word, Excel, or PowerPoint · up to {MAX_FILES} files
-              </span>
-            </div>
-
-            {files.length > 0 && (
-              <div className="d-flex flex-column gap-2 mt-2">
-                {files.map((f) => (
-                  <div
-                    key={f.id}
-                    className="d-flex align-items-center gap-2 border rounded px-3 py-2"
+                className="mb-3"
+              >
+                <Tabs.List variant="pills">
+                  <Tabs.Tab
+                    value="Sale"
+                    className="flex-grow-1 justify-content-center"
                   >
-                    <FontAwesomeIcon
-                      icon={faFileLines}
-                      className="text-muted"
-                    />
-                    <span className="flex-grow-1 text-truncate fs-small">
-                      {f.name}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={`Remove ${f.name}`}
-                      onClick={() =>
-                        setFiles((prev) => prev.filter((x) => x.id !== f.id))
-                      }
-                    >
-                      <FontAwesomeIcon icon={faXmark} />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Field>
+                    Sale
+                  </Tabs.Tab>
+                  <Tabs.Tab
+                    value="Lease"
+                    className="flex-grow-1 justify-content-center"
+                  >
+                    Lease
+                  </Tabs.Tab>
+                </Tabs.List>
+              </Tabs>
 
-          {/* Suggested for this deal — pitching-phase setup only. A deal started
-              already in-flight skips the generated collateral + underwriting. */}
-          {stage === "proposal" && (
-            <div className="d-flex flex-column gap-3">
-              <div>
-                <div className="fw-semibold">Suggested for this deal</div>
-                <div className="text-muted fs-small">
-                  From your firm’s defaults · based on similar deals
+              {/* Side */}
+              <Field>
+                <Field.Label>Side</Field.Label>
+                <div className="row g-3">
+                  {SIDE_ORDER.map((sideValue) => {
+                    const s = SIDE_DISPLAY[sideValue];
+                    const { title, blurb } = s[dealType];
+                    const active = side === sideValue;
+                    return (
+                      <div key={sideValue} className="col-6">
+                        <button
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() => setSide(sideValue)}
+                          className="w-100 h-100 text-start border rounded p-3 d-flex flex-column gap-1 bg-transparent"
+                          style={{
+                            borderColor: active ? s.color : undefined,
+                            boxShadow: active
+                              ? `0 0 0 1px ${s.color}`
+                              : undefined,
+                            cursor: "pointer",
+                          }}
+                        >
+                          <span
+                            className="d-inline-flex align-items-center gap-2 fw-semibold"
+                            style={{ color: active ? s.color : undefined }}
+                          >
+                            <FontAwesomeIcon icon={s.icon} />
+                            {title}
+                          </span>
+                          <span className="text-muted fs-small">{blurb}</span>
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
-
-              <Field orientation="horizontal">
-                <Switch
-                  checked={underwritingOn}
-                  onCheckedChange={(c) => toggleUnderwriting(c === true)}
-                />
-                <Field.Label className="mb-0">
-                  Start underwriting in Pitching
-                </Field.Label>
               </Field>
 
-              {underwritingOn && (
-                <UnderwritingDepth
-                  value={underwritingSel}
-                  onChange={handleUnderwritingChange}
-                />
+              {/* Stage — most deals start in Pitching, but a broker can start one
+              already in-flight in a later stage. */}
+              <Field>
+                <Field.Label>Stage</Field.Label>
+                <Select
+                  value={stage}
+                  onValueChange={(v) => v && setStage(v as PropertyStatus)}
+                >
+                  <Select.Trigger>
+                    <Select.Value>
+                      {(v) => STAGE_LABEL[v as PropertyStatus]}
+                    </Select.Value>
+                  </Select.Trigger>
+                  <Select.Content>
+                    {PROPERTY_STATUSES.map((s) => (
+                      <Select.Item key={s} value={s}>
+                        {STAGE_LABEL[s]}
+                      </Select.Item>
+                    ))}
+                  </Select.Content>
+                </Select>
+                <Field.Description>
+                  Most deals start in Pitching. Pick a later stage if this deal
+                  is already in-flight.
+                </Field.Description>
+              </Field>
+
+              {/* Contact + Property share one line. When the deal is initiated
+              from a contact, Contact is hidden and Property takes full width. */}
+              <div className="row g-3">
+                {!contact && (
+                  <div className="col-12 col-md-6">
+                    <Field>
+                      <Field.Label>Contact</Field.Label>
+                      <Combobox
+                        items={contactOptions}
+                        value={contactOption}
+                        onValueChange={(v) =>
+                          setContactOption(v as ContactOption | null)
+                        }
+                      >
+                        <Combobox.InputGroup>
+                          <InputGroup.Addon>
+                            <FontAwesomeIcon icon={faUser} />
+                          </InputGroup.Addon>
+                          <Combobox.Input
+                            placeholder="Search contacts…"
+                            showClear
+                          />
+                        </Combobox.InputGroup>
+                        <Combobox.Content>
+                          <Combobox.Empty className="text-muted">
+                            No matching contacts
+                          </Combobox.Empty>
+                          <Combobox.List>
+                            {(item: ContactOption) => {
+                              const meta = [item.title, item.company]
+                                .filter(Boolean)
+                                .join(" · ");
+                              return (
+                                <Combobox.Item key={item.value} value={item}>
+                                  <span
+                                    className="d-flex gap-2 user-select-none"
+                                    style={{ minWidth: 0 }}
+                                  >
+                                    <FontAwesomeIcon
+                                      icon={faUser}
+                                      className="text-muted flex-shrink-0 d-inline-block mt-1"
+                                    />
+                                    <span
+                                      className="d-flex flex-column"
+                                      style={{ minWidth: 0 }}
+                                    >
+                                      <span className="d-flex align-items-center gap-2">
+                                        <span className="text-truncate">
+                                          {item.name}
+                                        </span>
+                                        <span className="flex-shrink-0">
+                                          <RelationshipPill
+                                            value={item.relationship}
+                                          />
+                                        </span>
+                                      </span>
+                                      {meta && (
+                                        <span className="text-muted fs-small text-truncate">
+                                          {meta}
+                                        </span>
+                                      )}
+                                    </span>
+                                  </span>
+                                </Combobox.Item>
+                              );
+                            }}
+                          </Combobox.List>
+                        </Combobox.Content>
+                      </Combobox>
+                    </Field>
+                  </div>
+                )}
+
+                {/* Property */}
+                <div className={contact ? "col-12" : "col-12 col-md-6"}>
+                  {property ? (
+                    <Field>
+                      <Field.Label>Property</Field.Label>
+                      <div className="d-flex align-items-center gap-2 border rounded px-3 py-2">
+                        <FontAwesomeIcon
+                          icon={TYPE_ICONS[property.propertyType]}
+                          className="text-muted"
+                        />
+                        <span className="flex-grow-1 text-truncate">
+                          {[property.street, property.city, property.state]
+                            .filter(Boolean)
+                            .join(", ") || property.name}
+                        </span>
+                        <Badge
+                          variant="secondary"
+                          appearance="muted"
+                          className="flex-shrink-0"
+                        >
+                          {TYPE_LABELS[property.propertyType]}
+                        </Badge>
+                      </div>
+                    </Field>
+                  ) : (
+                    <Field>
+                      <Field.Label>Property</Field.Label>
+                      <Combobox
+                        items={propertyOptions}
+                        value={propertyOption}
+                        onValueChange={(v) =>
+                          selectProperty(v as PropertyOption | null)
+                        }
+                        inputValue={propertyInput}
+                        onInputValueChange={(v: string) => typeProperty(v)}
+                      >
+                        <Combobox.InputGroup>
+                          <InputGroup.Addon>
+                            <FontAwesomeIcon icon={faMagnifyingGlass} />
+                          </InputGroup.Addon>
+                          <Combobox.Input
+                            placeholder="Search a listing or type an address…"
+                            showClear
+                          />
+                        </Combobox.InputGroup>
+                        <Combobox.Content>
+                          <Combobox.Empty className="text-muted">
+                            No match — we’ll create a new property from what you
+                            typed.
+                          </Combobox.Empty>
+                          <Combobox.List>
+                            {(item: PropertyOption) => (
+                              <Combobox.Item key={item.value} value={item}>
+                                <span
+                                  className="d-flex gap-2 user-select-none"
+                                  style={{ minWidth: 0 }}
+                                >
+                                  <FontAwesomeIcon
+                                    icon={TYPE_ICONS[item.propertyType]}
+                                    className="text-muted flex-shrink-0 d-inline-block mt-1"
+                                  />
+                                  <span
+                                    className="d-flex flex-column"
+                                    style={{ minWidth: 0 }}
+                                  >
+                                    <span className="d-flex align-items-center gap-2">
+                                      <span className="text-truncate">
+                                        {item.label}
+                                      </span>
+                                      <Badge
+                                        variant="secondary"
+                                        appearance="muted"
+                                        className="flex-shrink-0"
+                                      >
+                                        {TYPE_LABELS[item.propertyType]}
+                                      </Badge>
+                                    </span>
+                                    <span className="text-muted fs-small text-truncate">
+                                      {item.subtype}
+                                      {item.sizeLabel
+                                        ? ` · ${item.sizeLabel}`
+                                        : ""}
+                                    </span>
+                                  </span>
+                                </span>
+                              </Combobox.Item>
+                            )}
+                          </Combobox.List>
+                        </Combobox.Content>
+                      </Combobox>
+                    </Field>
+                  )}
+                </div>
+              </div>
+
+              {/* Deal scope — only when the chosen property already has units on
+              record. Whole-building by default; unchecking reveals a single-select
+              list of the property's units. */}
+              {hasUnits && (
+                <Field>
+                  <Field.Label>Deal scope</Field.Label>
+                  <label
+                    className="d-flex align-items-center gap-2 mb-0"
+                    style={{ cursor: "pointer" }}
+                  >
+                    <Checkbox
+                      checked={wholeBuilding}
+                      onCheckedChange={(c) => {
+                        const on = c === true;
+                        setWholeBuilding(on);
+                        if (on) setSelectedUnitId(null);
+                      }}
+                    />
+                    <span>Represent the whole building</span>
+                  </label>
+
+                  {!wholeBuilding && (
+                    <>
+                      <Field.Description className="mt-2 mb-1">
+                        Select the unit this deal is for.
+                      </Field.Description>
+                      <RadioGroup
+                        value={selectedUnitId ?? ""}
+                        onValueChange={(v) => setSelectedUnitId(v as string)}
+                      >
+                        <div
+                          className="d-flex flex-column border rounded p-1 overflow-auto"
+                          style={{ maxHeight: 168 }}
+                        >
+                          {units.map((u) => (
+                            <label
+                              key={u.id}
+                              className="d-flex align-items-center gap-2 mb-0 px-2 py-2 rounded"
+                              style={{ cursor: "pointer" }}
+                            >
+                              <RadioGroup.Item value={u.id} />
+                              <span
+                                className="d-flex flex-column flex-grow-1"
+                                style={{ minWidth: 0 }}
+                              >
+                                <span className="fw-semibold text-truncate">
+                                  {u.label}
+                                </span>
+                                <span className="text-muted fs-small text-truncate text-capitalize">
+                                  {u.unitType}
+                                  {u.sqft > 0
+                                    ? ` · ${u.sqft.toLocaleString()} SF`
+                                    : ""}
+                                </span>
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </RadioGroup>
+                    </>
+                  )}
+                </Field>
               )}
 
+              {missingHint && (
+                <p className="text-muted fs-small mb-0">{missingHint}</p>
+              )}
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              {/* Add your own files */}
               <Field>
-                <div className="d-flex align-items-center gap-2">
-                  <Switch
-                    checked={generateDocsOn}
-                    onCheckedChange={(c) => setGenerateDocsOn(c === true)}
-                  />
-                  <Field.Label className="mb-0">
-                    Documents to generate
-                  </Field.Label>
-                </div>
+                <Field.Label className="d-flex align-items-center gap-2">
+                  Add your own files
+                  <span className="text-primary fw-normal">Optional</span>
+                </Field.Label>
                 <Field.Description>
-                  Turn on to have Buildout draft collateral when the deal is
-                  created. Deeper underwriting suggests more.
+                  Add OMs, financials, or notes to help inform this deal.
                 </Field.Description>
-                {generateDocsOn && (
-                  <div
-                    className="d-flex flex-column gap-2 border rounded p-2 overflow-auto"
-                    style={{ maxHeight: 168 }}
-                  >
-                    {SUGGESTED_DOCUMENTS.map((d) => (
-                      <label
-                        key={d.key}
-                        className="d-flex align-items-center gap-2 mb-0"
-                        style={{ cursor: "pointer" }}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept={ACCEPTED}
+                  className="d-none"
+                  onChange={(e) => {
+                    addFiles(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => fileInputRef.current?.click()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      fileInputRef.current?.click();
+                    }
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragging(true);
+                  }}
+                  onDragLeave={() => setDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragging(false);
+                    addFiles(e.dataTransfer.files);
+                  }}
+                  className="border border-2 border-dashed rounded d-flex flex-column align-items-center justify-content-center text-center gap-1 p-4"
+                  style={{
+                    borderColor: dragging ? "var(--bs-primary)" : undefined,
+                    cursor: "pointer",
+                  }}
+                >
+                  <FontAwesomeIcon
+                    icon={faCloudArrowUp}
+                    className="text-muted fs-4"
+                    aria-hidden
+                  />
+                  <span>
+                    Drop files here or{" "}
+                    <span className="text-primary">click to upload</span>
+                  </span>
+                  <span className="text-muted fs-small">
+                    PDF, Word, Excel, or PowerPoint · up to {MAX_FILES} files
+                  </span>
+                </div>
+
+                {files.length > 0 && (
+                  <div className="d-flex flex-column gap-2 mt-2">
+                    {files.map((f) => (
+                      <div
+                        key={f.id}
+                        className="d-flex align-items-center gap-2 border rounded px-3 py-2"
                       >
-                        <Checkbox
-                          checked={checkedDocKeys.has(d.key)}
-                          onCheckedChange={(c) => toggleDoc(d.key, c === true)}
+                        <FontAwesomeIcon
+                          icon={faFileLines}
+                          className="text-muted"
                         />
                         <span className="flex-grow-1 text-truncate fs-small">
-                          {d.name}
+                          {f.name}
                         </span>
-                      </label>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`Remove ${f.name}`}
+                          onClick={() =>
+                            setFiles((prev) =>
+                              prev.filter((x) => x.id !== f.id),
+                            )
+                          }
+                        >
+                          <FontAwesomeIcon icon={faXmark} />
+                        </Button>
+                      </div>
                     ))}
                   </div>
                 )}
               </Field>
-            </div>
+
+              {/* Suggested documents — the firm's preset catalog. Defaults are
+              pre-selected; search narrows the Available list. Underwriting lives
+              here as a deliverable that reveals its depth control once chosen. */}
+              <div>
+                <div className="fw-semibold fs-large">Suggested documents</div>
+                <div className="text-muted fs-small">
+                  Buildout drafts these when the deal is created.
+                </div>
+                <div className="d-flex flex-column gap-3 border rounded p-2 mt-2">
+                  {/* Available — search narrows this list. Underwriting is pinned
+                      to the top here (until chosen) and ignores the filter. */}
+                  <div className="d-flex flex-column gap-2">
+                    <div className="fw-semibold fs-small text-muted">
+                      Available
+                    </div>
+                    <InputGroup>
+                      <InputGroup.Addon>
+                        <FontAwesomeIcon icon={faMagnifyingGlass} />
+                      </InputGroup.Addon>
+                      <Input
+                        type="search"
+                        placeholder="Search documents…"
+                        value={docSearch}
+                        onChange={(e) => setDocSearch(e.target.value)}
+                      />
+                    </InputGroup>
+                    <div
+                      className="d-flex flex-column gap-2 overflow-auto"
+                      style={{ maxHeight: 208 }}
+                    >
+                      {!underwritingOn && (
+                        <label
+                          className="d-flex align-items-center gap-2 mb-0"
+                          style={{ cursor: "pointer" }}
+                        >
+                          <Checkbox
+                            checked={false}
+                            onCheckedChange={() => setUnderwritingOn(true)}
+                          />
+                          <span className="flex-grow-1 text-truncate fs-small">
+                            Underwriting
+                          </span>
+                        </label>
+                      )}
+                      {availableDocs.map((d) => (
+                        <label
+                          key={d.key}
+                          className="d-flex align-items-center gap-2 mb-0"
+                          style={{ cursor: "pointer" }}
+                        >
+                          <Checkbox
+                            checked={false}
+                            onCheckedChange={() => toggleDoc(d.key, true)}
+                          />
+                          <span className="flex-grow-1 text-truncate fs-small">
+                            {d.name}
+                          </span>
+                          <span className="text-muted fs-small flex-shrink-0">
+                            {d.category}
+                          </span>
+                        </label>
+                      ))}
+                      {availableDocs.length === 0 && (
+                        <span className="text-muted fs-small">
+                          {docQuery
+                            ? `No documents match “${docSearch.trim()}”.`
+                            : "All documents selected."}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Selected — what will be generated. Underwriting shows its
+                      depth control inline once chosen. */}
+                  {(underwritingOn || selectedDocs.length > 0) && (
+                    <div className="d-flex flex-column gap-2">
+                      <div className="fw-semibold fs-small text-muted">
+                        Selected ({selectedCount})
+                      </div>
+                      {underwritingOn && (
+                        <>
+                          <label
+                            className="d-flex align-items-center gap-2 mb-0"
+                            style={{ cursor: "pointer" }}
+                          >
+                            <Checkbox
+                              checked
+                              onCheckedChange={() => setUnderwritingOn(false)}
+                            />
+                            <span className="flex-grow-1 text-truncate fs-small">
+                              Underwriting
+                            </span>
+                          </label>
+                          <UnderwritingDepth
+                            value={underwritingSel}
+                            onChange={setUnderwritingSel}
+                          />
+                        </>
+                      )}
+                      {selectedDocs.map((d) => (
+                        <label
+                          key={d.key}
+                          className="d-flex align-items-center gap-2 mb-0"
+                          style={{ cursor: "pointer" }}
+                        >
+                          <Checkbox
+                            checked
+                            onCheckedChange={() => toggleDoc(d.key, false)}
+                          />
+                          <span className="flex-grow-1 text-truncate fs-small">
+                            {d.name}
+                          </span>
+                          <span className="text-muted fs-small flex-shrink-0">
+                            {d.category}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
           )}
         </Modal.Body>
 
         <Modal.Footer>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            disabled={!canCreate}
-            onClick={handleCreate}
-          >
-            <FontAwesomeIcon icon={faCheck} />
-            Create deal
-          </Button>
+          {step === 1 ? (
+            <>
+              <Button variant="ghost" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={!canCreate}
+                onClick={() => handleCreate(false)}
+              >
+                Create deal
+              </Button>
+              <Button
+                variant="primary"
+                disabled={!canCreate}
+                onClick={() => setStep(2)}
+              >
+                Next
+                <FontAwesomeIcon icon={faArrowRight} />
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" onClick={() => setStep(1)}>
+                <FontAwesomeIcon icon={faArrowLeft} />
+                Back
+              </Button>
+              <Button variant="primary" onClick={() => handleCreate(true)}>
+                <FontAwesomeIcon icon={faCheck} />
+                Create deal
+              </Button>
+            </>
+          )}
         </Modal.Footer>
       </Modal.Content>
     </Modal>

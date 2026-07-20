@@ -7,6 +7,7 @@ import { requestSetupCompletion } from "#/components/deals/useStageGate";
 import { TodayPlanner } from "#/components/deals/TodayPlanner";
 import { DealContextRail } from "#/components/deals/DealContextRail";
 import type { Listing } from "#/data/types";
+import { ListingPageHeader } from "#/components/listings/ListingPageHeader";
 
 export const Route = createFileRoute("/_shell/listings/$listingId/overview")({
   component: OverviewRoute,
@@ -58,7 +59,10 @@ function OverviewRoute() {
     <div>
       <SetupIncompleteBanner listing={listing} />
       <div className="d-flex align-items-stretch">
-        <div className="flex-grow-1" style={{ minWidth: 0 }}>
+        <div className="flex-grow-1 d-flex flex-column" style={{ minWidth: 0 }}>
+          <div className="px-4 py-3">
+            <ListingPageHeader title="Overview" />
+          </div>
           <TodayPlanner listing={listing} />
         </div>
         <div

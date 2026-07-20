@@ -9,7 +9,12 @@ import {
   faCirclePlus,
   faArrowRotateRight,
 } from "@fortawesome/pro-regular-svg-icons";
-import type { DealHistoryEntry, DealTask, Listing, ListingStage } from "#/data/types";
+import type {
+  DealHistoryEntry,
+  DealTask,
+  Listing,
+  ListingStage,
+} from "#/data/types";
 import { STATUS_COLORS } from "#/components/properties/propertyDisplay";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
 import { cn } from "@buildoutinc/blueprint-react/lib/utils";
@@ -20,7 +25,9 @@ const SPINE = "#e2e8f0";
 export function formatPlannerDate(iso: string | null): string {
   if (!iso) return "TBD";
   const d = new Date(iso);
-  const mon = d.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" }).toUpperCase();
+  const mon = d
+    .toLocaleDateString("en-US", { month: "short", timeZone: "UTC" })
+    .toUpperCase();
   return `${d.getUTCDate()} ${mon}, ${d.getUTCFullYear()}`;
 }
 
@@ -49,7 +56,10 @@ export function stageStartDate(
   status: ListingStage,
   createdAt: string,
 ): string {
-  const entry = history.slice().reverse().find((h) => h.toStage === status);
+  const entry = history
+    .slice()
+    .reverse()
+    .find((h) => h.toStage === status);
   return entry?.timestamp ?? createdAt;
 }
 
@@ -145,10 +155,13 @@ function TaskMarker({
       style={{ lineHeight: 0 }}
     >
       <span
-        className={cn('d-inline-flex align-items-center justify-content-center border border-2 rounded-3 fs-xs', {
-          'text-bg-accent': complete,
-          'bg-card': !complete,
-        })}
+        className={cn(
+          "d-inline-flex align-items-center justify-content-center border border-2 rounded-3 fs-xs",
+          {
+            "text-bg-accent": complete,
+            "bg-card": !complete,
+          },
+        )}
         style={{
           width: 22,
           height: 22,
@@ -203,11 +216,7 @@ function TaskRow({ task, onToggle }: { task: DealTask; onToggle: () => void }) {
       }
     >
       <div className="fw-semibold">{task.label}</div>
-      {task.detail && (
-        <div className="text-muted fs-small">
-          {task.detail}
-        </div>
-      )}
+      {task.detail && <div className="text-muted fs-small">{task.detail}</div>}
       {!complete && task.date && (
         <div className="text-muted fs-small">
           {formatPlannerDate(task.date)}
@@ -235,8 +244,16 @@ function Planner({ listing }: { listing: Listing }) {
       ),
     );
 
-  const start = stageStartDate(listing.history, listing.status, listing.createdAt);
-  const end = endMilestone(listing.status, start, listing.transaction.backOffice.closeDate);
+  const start = stageStartDate(
+    listing.history,
+    listing.status,
+    listing.createdAt,
+  );
+  const end = endMilestone(
+    listing.status,
+    start,
+    listing.transaction.backOffice.closeDate,
+  );
 
   return (
     <div className="d-flex flex-column">
@@ -257,7 +274,12 @@ function Planner({ listing }: { listing: Listing }) {
           <TaskRow key={t.id} task={t} onToggle={() => toggle(t.id)} />
         ))}
         {end && (
-          <Milestone label={end.label} date={end.date} spine="end" accent={accent} />
+          <Milestone
+            label={end.label}
+            date={end.date}
+            spine="end"
+            accent={accent}
+          />
         )}
       </div>
     </div>
@@ -297,7 +319,10 @@ function HeaderActions({ listing }: { listing: Listing }) {
 export function TodayPlanner({ listing }: { listing: Listing }) {
   return (
     <div className="d-flex flex-column gap-5 p-4">
-      <ListingPageHeader title="Planner" actions={<HeaderActions listing={listing} />} />
+      <div className="d-flex align-items-center gap-2">
+        <h2 className="fs-large fw-semibold mb-0 flex-grow-1">Planner</h2>
+        <HeaderActions listing={listing} />
+      </div>
       <Planner listing={listing} />
     </div>
   );
