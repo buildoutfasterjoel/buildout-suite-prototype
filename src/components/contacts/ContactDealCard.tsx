@@ -7,7 +7,6 @@ import {
   faEllipsisVertical,
   faFile,
   faUserGroup,
-  faUpRightFromSquare,
   faCheckToSlot,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
@@ -23,6 +22,7 @@ import {
 import { dealHeadlineLabel } from "#/components/deals/dealDisplay";
 import { SIDE_DISPLAY } from "#/components/contacts/contactDisplay";
 import { DealStageChip } from "#/components/deals/DealStageChip";
+import { ContactLinkButton } from "#/components/contacts/ContactLinkButton";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
 
 function medDate(iso: string): string {
@@ -44,38 +44,6 @@ function dealNextAction(
     return { label: "Build Underwriting", icon: faCheckToSlot };
   }
   return null;
-}
-
-/** A conditionally-shown quick link (Documents, Leads) with a count + open icon. */
-function QuickLink({
-  icon,
-  label,
-  count,
-  onClick,
-}: {
-  icon: IconDefinition;
-  label: string;
-  count: number;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      className="contact-deal-card__link btn btn-link text-reset text-decoration-none d-flex align-items-center gap-2 w-100 px-2 py-0"
-      style={{ height: 36 }}
-      onClick={onClick}
-    >
-      <FontAwesomeIcon icon={icon} className="text-muted" />
-      <span className="fw-semibold">{label}</span>
-      <Badge variant="secondary" appearance="muted">
-        {count}
-      </Badge>
-      <FontAwesomeIcon
-        icon={faUpRightFromSquare}
-        className="contact-deal-card__link-open text-muted ms-auto"
-      />
-    </button>
-  );
 }
 
 /**
@@ -221,7 +189,7 @@ export function ContactDealCard({ listingId }: { listingId: string }) {
       {(docsCount > 0 || leadsCount > 0) && (
         <div className="border-top d-flex flex-column">
           {docsCount > 0 && (
-            <QuickLink
+            <ContactLinkButton
               icon={faFile}
               label="Documents"
               count={docsCount}
@@ -234,7 +202,7 @@ export function ContactDealCard({ listingId }: { listingId: string }) {
             />
           )}
           {leadsCount > 0 && (
-            <QuickLink
+            <ContactLinkButton
               icon={faUserGroup}
               label="Leads"
               count={leadsCount}
