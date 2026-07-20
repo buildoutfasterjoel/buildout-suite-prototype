@@ -881,11 +881,18 @@
   transition: none;
 }
 
+// Identical track geometry in BOTH modes (only the background + indicator
+// fill/shadow differ). Keeping the padding/radius constant means switching
+// modes never moves the tabs, so Base UI's cached indicator position stays
+// valid and the active pill can't briefly clip ("cut off") on the switch.
+.tabtrack .nav-pills {
+  border-radius: 8px;
+  padding: 3px;
+}
+
 .tabtrack--system {
   .nav-pills {
     background: var(--color-storm-grey-50, #f6f7f9);
-    border-radius: 8px;
-    padding: 3px;
   }
   // White active pill + soft shadow (the Blueprint pill default).
   .nav-pills .tabs-indicator {
@@ -899,7 +906,6 @@
 .tabtrack--ghost {
   .nav-pills {
     background: transparent;
-    padding: 0;
   }
   // Purple-accent active pill, no shadow.
   .nav-pills .tabs-indicator {
