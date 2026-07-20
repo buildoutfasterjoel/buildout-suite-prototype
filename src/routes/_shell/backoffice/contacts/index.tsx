@@ -539,14 +539,14 @@ function PeoplePage() {
               {/* Toolbar */}
               <div className="d-flex flex-column gap-3">
                 <div className="d-flex align-items-center gap-3 flex-wrap">
-                  <div style={{ minWidth: 280 }}>
+                  <div style={{ minWidth: 340 }}>
                     <InputGroup>
                       <InputGroup.Addon>
                         <FontAwesomeIcon icon={faMagnifyingGlass} />
                       </InputGroup.Addon>
                       <Input
                         type="search"
-                        placeholder="Search by name, email, and company"
+                        placeholder="Search by name, email, or company"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                       />

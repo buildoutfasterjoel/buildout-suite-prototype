@@ -379,6 +379,11 @@ export interface NewContactInput {
   source?: ContactSource
   doNotCall?: boolean
   notes?: string
+  /** Primary address (line 1), if captured. */
+  street?: string
+  city?: string
+  state?: string
+  zip?: string
 }
 
 /** Fields the Edit Contact form can change. Phones/emails carry a primary plus optional extras. */
@@ -476,10 +481,10 @@ export function createContact(input: NewContactInput): { contact: Contact } {
     lastTouch: 'Added manually',
     lastContactedAt: null,
     openTaskCount: 0,
-    street: '',
-    city: '',
-    state: '',
-    zip: '',
+    street: input.street?.trim() ?? '',
+    city: input.city?.trim() ?? '',
+    state: input.state?.trim() ?? '',
+    zip: input.zip?.trim() ?? '',
     tags: [],
     notes: input.notes?.trim() || undefined,
   }
