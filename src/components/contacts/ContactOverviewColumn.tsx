@@ -132,6 +132,7 @@ export function ContactOverviewColumn({
   const setShowDetails = useContactUiPrefs((s) => s.setShowDetails);
   const showPastDeals = useContactUiPrefs((s) => s.showPastDeals);
   const setShowPastDeals = useContactUiPrefs((s) => s.setShowPastDeals);
+  const legacyAccordions = useContactUiPrefs((s) => s.legacyAccordions);
   const [tags, setTags] = useState(contact.tags);
   const [newDealOpen, setNewDealOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -319,7 +320,9 @@ export function ContactOverviewColumn({
 
       {/* Collapsible sections */}
       <Accordion
-        className="contact-overview-accordion"
+        className={`contact-overview-accordion${
+          legacyAccordions ? " contact-overview-accordion--legacy" : ""
+        }`}
         multiple
         value={open}
         onValueChange={setOpen}

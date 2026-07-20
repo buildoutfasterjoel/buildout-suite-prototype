@@ -333,6 +333,29 @@
     background: var(--bp-card-bg, #fff);
     padding-top: 8px;
   }
+
+  // Legacy style (design-comparison toggle): chevrons on the LEFT and flush
+  // white content backgrounds — the look before the deal-rail-style refresh.
+  &.contact-overview-accordion--legacy {
+    .accordion-body {
+      background-color: var(--bp-card-bg, #fff);
+    }
+    // Move the chevron ahead of the label (the button is a flex row) and undo
+    // its right-edge alignment.
+    .accordion-button::after {
+      order: -1;
+      margin-left: 0;
+      margin-right: 8px;
+    }
+    // Old style was flush white — no header/content divider.
+    .accordion-button:not(.collapsed) {
+      border-bottom-width: 0;
+    }
+    // The chevron vacates the right edge, so the action returns to the far right.
+    .contact-accordion__action {
+      right: 16px;
+    }
+  }
 }
 
 // Contact deal card: 8px radius, a base shadow, and a pointer + deeper shadow
@@ -1838,6 +1861,15 @@
     color: inherit;
     text-align: left;
     cursor: pointer;
+
+    // Legacy style (design-comparison toggle): chevron on the left (rendered
+    // inline in the heading) with "Last touch" on the same row, to the right.
+    &--legacy {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
   }
 
   // Heading row: sparkle + "Briefing" on the left, the chevron pinned right

@@ -20,6 +20,13 @@ interface ContactUiPrefs {
   tasksOpen: boolean;
   /** Whether the AI Briefing section (top of the middle column) is expanded. */
   briefingOpen: boolean;
+  /**
+   * Design-comparison toggle: when true, the contact detail accordions render
+   * the legacy style (chevrons on the LEFT, white content backgrounds) instead
+   * of the current style (right chevrons, tinted content). Flipped via the
+   * floating toggle on the contact detail page.
+   */
+  legacyAccordions: boolean;
 
   setOverviewSections: (sections: string[]) => void;
   setShowDetails: (open: boolean) => void;
@@ -27,6 +34,7 @@ interface ContactUiPrefs {
   setShowCompletedTasks: (open: boolean) => void;
   setTasksOpen: (open: boolean) => void;
   setBriefingOpen: (open: boolean) => void;
+  setLegacyAccordions: (legacy: boolean) => void;
 }
 
 export const useContactUiPrefs = create<ContactUiPrefs>((set) => ({
@@ -39,6 +47,7 @@ export const useContactUiPrefs = create<ContactUiPrefs>((set) => ({
   showCompletedTasks: false,
   tasksOpen: false,
   briefingOpen: true,
+  legacyAccordions: false,
 
   setOverviewSections: (overviewSections) => set({ overviewSections }),
   setShowDetails: (showDetails) => set({ showDetails }),
@@ -46,4 +55,5 @@ export const useContactUiPrefs = create<ContactUiPrefs>((set) => ({
   setShowCompletedTasks: (showCompletedTasks) => set({ showCompletedTasks }),
   setTasksOpen: (tasksOpen) => set({ tasksOpen }),
   setBriefingOpen: (briefingOpen) => set({ briefingOpen }),
+  setLegacyAccordions: (legacyAccordions) => set({ legacyAccordions }),
 }));
