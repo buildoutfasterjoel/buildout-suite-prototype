@@ -1393,7 +1393,8 @@
     min-width: 20px;
     height: 18px;
     padding: 0 6px;
-    border-radius: 999px;
+    // Match the corner radius of Blueprint badges (not a full pill).
+    border-radius: var(--bp-border-radius-sm, 4px);
     font-size: 11px;
     font-weight: 600;
     line-height: 1;
@@ -1442,25 +1443,10 @@
   cursor: pointer;
   white-space: nowrap;
 
-  &__count {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 6px;
-    border-radius: 999px;
-    font-size: 11px;
-    background: var(--color-storm-grey-100, #eceef2);
-    color: var(--color-storm-grey-700, #424e62);
-  }
+  // The count is a Blueprint Badge (primary when > 0, muted grey at 0).
 
   &.is-on {
     color: var(--color-purple-heart-700, #6b21c8);
-    .tl-needs-reply__count {
-      background: var(--color-purple-heart-100, #f2e8ff);
-      color: var(--color-purple-heart-700, #6b21c8);
-    }
   }
 }
 
@@ -2052,4 +2038,14 @@
       line-height: 1.5;
     }
   }
+}
+
+// Dock toast alerts at the bottom CENTER of the screen (Blueprint defaults to
+// bottom-right). Single-class selector, loaded after the theme, so it wins by
+// source order without !important.
+.toast-viewport {
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  align-items: center;
 }
