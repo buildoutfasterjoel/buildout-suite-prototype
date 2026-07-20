@@ -43,7 +43,7 @@ const navContexts: NavContext[] = [
   { label: "NOW", href: "/suite", isLive: true },
   { label: "Tasks", href: "/tasks", icon: faSquareCheck },
   { label: "Properties", href: "/properties", icon: faBuilding },
-  { label: "People", href: "/backoffice/contacts", icon: faUsers },
+  { label: "Contacts", href: "/backoffice/contacts", icon: faUsers },
   { label: "Deals", href: "/listings", icon: faHandshake },
   { label: "Reports", href: "/reports", icon: faSignal },
 ];

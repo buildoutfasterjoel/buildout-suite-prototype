@@ -16,6 +16,7 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact, DealSummary, PropertyStatus } from "#/data/types";
 import {
+  buildLastTouch,
   contactAddressLines,
   contactFullName,
   contactInitials,
@@ -69,8 +70,10 @@ function InfoRow({
   );
 }
 
-/** A "Label value" row used in the expanded contact details. */
+/** A "Label value" row used in the expanded contact details. Hidden when the
+ *  contact has no value for it. */
 function FieldRow({ label, value }: { label: string; value: string }) {
+  if (!value.trim()) return null;
   return (
     <div>
       <span className="fw-semibold me-2">{label}</span>
@@ -136,7 +139,16 @@ export function ContactOverviewColumn({
   const [tags, setTags] = useState(contact.tags);
   const [newDealOpen, setNewDealOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [addressLine1, addressLine2] = contactAddressLines(contact);
+  const [addressLine1] = contactAddressLines(contact);
+  // City / state / zip, joined cleanly so partial addresses don't show stray
+  // commas (e.g. just a state renders "IL", not ", IL ").
+  const cityStateZip = [
+    [contact.city, contact.state].filter(Boolean).join(", "),
+    contact.zip,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const hasAddress = !!(addressLine1 || cityStateZip);
   const phoneInvalid = contact.phoneStatus === "invalid";
 
   // Primary phone/email first, then any extras (de-duplicated) — the details
@@ -219,12 +231,14 @@ export function ContactOverviewColumn({
               {contactFullName(contact)}
             </span>
             <div className="text-muted d-flex flex-column">
-              <span style={{ fontSize: 16, fontWeight: 500 }}>
-                {contact.title} · {contact.company}
-              </span>
+              {(contact.title || contact.company) && (
+                <span style={{ fontSize: 16, fontWeight: 500 }}>
+                  {[contact.title, contact.company].filter(Boolean).join(" · ")}
+                </span>
+              )}
               <span style={{ fontSize: 14 }}>
-                Created:{" "}
-                <span className="fw-bold">{medDate(contact.createdAt)}</span>
+                Last touch:{" "}
+                <span className="fw-bold">{buildLastTouch(contact)}</span>
               </span>
             </div>
           </div>
@@ -253,50 +267,63 @@ export function ContactOverviewColumn({
 
         {showDetails && (
           <div className="contact-details-panel d-flex flex-column gap-3">
-            {/* Contact info */}
-            <div className="d-flex flex-column gap-2 border-bottom pb-3">
-              <InfoRow icon={faPhone}>
-                <div className="d-flex flex-column gap-1">
-                  {allPhones.map((phone, i) => (
-                    <span
-                      key={`${phone}-${i}`}
-                      className={
-                        i === 0 && phoneInvalid
-                          ? "text-decoration-line-through text-destructive"
-                          : undefined
-                      }
+            {/* Contact info — each line hidden when the contact has no value
+                for it; the whole block drops out if there's nothing to show. */}
+            {(allPhones.length > 0 || allEmails.length > 0 || hasAddress) && (
+              <div className="d-flex flex-column gap-2 border-bottom pb-3">
+                {allPhones.length > 0 && (
+                  <InfoRow icon={faPhone}>
+                    <div className="d-flex flex-column gap-1">
+                      {allPhones.map((phone, i) => (
+                        <span
+                          key={`${phone}-${i}`}
+                          className={
+                            i === 0 && phoneInvalid
+                              ? "text-decoration-line-through text-destructive"
+                              : undefined
+                          }
+                        >
+                          {phone}{" "}
+                          {i === 0 && (
+                            <span className="text-muted fs-small">(mobile)</span>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  </InfoRow>
+                )}
+                {allEmails.length > 0 && (
+                  <InfoRow icon={faEnvelope}>
+                    <div
+                      className="d-flex flex-column gap-1"
+                      style={{ minWidth: 0 }}
                     >
-                      {phone}{" "}
-                      {i === 0 && (
-                        <span className="text-muted fs-small">(mobile)</span>
-                      )}
-                    </span>
-                  ))}
-                </div>
-              </InfoRow>
-              <InfoRow icon={faEnvelope}>
-                <div className="d-flex flex-column gap-1" style={{ minWidth: 0 }}>
-                  {allEmails.map((email, i) => (
-                    <span
-                      key={`${email}-${i}`}
-                      className="text-truncate d-inline-block w-100"
-                    >
-                      {email}
-                    </span>
-                  ))}
-                </div>
-              </InfoRow>
-              <InfoRow icon={faLocationDot}>
-                <div>{addressLine1}</div>
-                <div>{addressLine2}</div>
-              </InfoRow>
-            </div>
+                      {allEmails.map((email, i) => (
+                        <span
+                          key={`${email}-${i}`}
+                          className="text-truncate d-inline-block w-100"
+                        >
+                          {email}
+                        </span>
+                      ))}
+                    </div>
+                  </InfoRow>
+                )}
+                {hasAddress && (
+                  <InfoRow icon={faLocationDot}>
+                    {addressLine1 && <div>{addressLine1}</div>}
+                    {cityStateZip && <div>{cityStateZip}</div>}
+                  </InfoRow>
+                )}
+              </div>
+            )}
 
             {/* Details */}
             <div className="d-flex flex-column gap-2">
               <FieldRow label="Source" value={contact.source} />
               <FieldRow label="Company" value={contact.company} />
               <FieldRow label="Title" value={contact.title} />
+              <FieldRow label="Created" value={medDate(contact.createdAt)} />
               <div className="d-flex flex-wrap align-items-center gap-2 pt-1">
                 <span className="fw-semibold">Tags</span>
                 {tags.map((t) => (

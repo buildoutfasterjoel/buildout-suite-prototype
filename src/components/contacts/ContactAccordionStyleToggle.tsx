@@ -5,14 +5,20 @@ import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
 
 /**
  * A floating design-comparison toggle, docked in the lower-left of the contact
- * detail page. Flips the accordions (and the AI briefing header) between the
- * current style — chevrons on the right, tinted content backgrounds — and the
- * legacy style — chevrons on the left, white content. Prototype-only affordance
- * for reviewing the two treatments side by side.
+ * detail page. Flips the accordions (and the AI briefing header) between two
+ * treatments. Prototype-only affordance for reviewing them side by side.
+ *
+ * Labels (what the user sees):
+ *  - "Legacy" — chevron on the RIGHT, grey body background.
+ *  - "New"    — chevron on the LEFT, white body background (the default).
+ *
+ * The store flag is named `legacyAccordions` for historical reasons (that style
+ * predated the deal-rail refresh); `true` renders the "New" treatment above.
+ * The labels here are the source of truth for what's shown.
  */
 export function ContactAccordionStyleToggle() {
-  const legacy = useContactUiPrefs((s) => s.legacyAccordions);
-  const setLegacy = useContactUiPrefs((s) => s.setLegacyAccordions);
+  const newStyle = useContactUiPrefs((s) => s.legacyAccordions);
+  const setNewStyle = useContactUiPrefs((s) => s.setLegacyAccordions);
 
   return (
     <Button
@@ -20,11 +26,11 @@ export function ContactAccordionStyleToggle() {
       size="sm"
       className="position-fixed shadow"
       style={{ left: 16, bottom: 16, zIndex: 1050 }}
-      aria-pressed={legacy}
-      onClick={() => setLegacy(!legacy)}
+      aria-pressed={newStyle}
+      onClick={() => setNewStyle(!newStyle)}
     >
       <FontAwesomeIcon icon={faArrowRightArrowLeft} />
-      Accordions: {legacy ? "Legacy" : "Current"}
+      Accordions: {newStyle ? "New" : "Legacy"}
     </Button>
   );
 }

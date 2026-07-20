@@ -17,12 +17,10 @@ import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
  */
 export function ContactBriefingSection({
   briefing,
-  lastTouch,
   open,
   onToggle,
 }: {
   briefing: string;
-  lastTouch: string;
   open: boolean;
   onToggle: () => void;
 }) {
@@ -47,12 +45,6 @@ export function ContactBriefingSection({
     </span>
   );
 
-  const lastTouchLine = (
-    <span className="text-muted fs-small">
-      Last touch: <span className="fw-bold">{lastTouch}</span>
-    </span>
-  );
-
   return (
     <Card className="contact-panel-card overflow-hidden contact-briefing">
       <button
@@ -64,22 +56,16 @@ export function ContactBriefingSection({
         onClick={onToggle}
       >
         {legacy ? (
-          <>
-            {heading}
-            {lastTouchLine}
-          </>
+          heading
         ) : (
-          <>
-            <span className="contact-briefing__heading-row">
-              {heading}
-              <FontAwesomeIcon
-                icon={open ? faChevronUp : faChevronDown}
-                className="text-muted"
-                style={{ fontSize: 14, opacity: 0.55 }}
-              />
-            </span>
-            {lastTouchLine}
-          </>
+          <span className="contact-briefing__heading-row">
+            {heading}
+            <FontAwesomeIcon
+              icon={open ? faChevronUp : faChevronDown}
+              className="text-muted"
+              style={{ fontSize: 14, opacity: 0.55 }}
+            />
+          </span>
         )}
       </button>
 
