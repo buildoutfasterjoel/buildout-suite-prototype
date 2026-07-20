@@ -2,12 +2,13 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faStar,
   faThumbtack,
-  faComment,
+  faPhone,
+  faReply,
+  faReplyAll,
+  faShare,
   faEllipsis,
 } from "@fortawesome/pro-regular-svg-icons";
-import { faStar as faStarSolid } from "@fortawesome/pro-solid-svg-icons";
 import {
   TYPE_CONFIG,
   UNIVERSAL_OVERFLOW,
@@ -61,31 +62,23 @@ export function TimelineActionBar({
 }
 
 /**
- * Tier-2 hover toolbar — quick secondary actions (star / pin / comment) plus the
- * Tier-3 overflow trigger. Appears on row hover/focus (see SCSS).
+ * Tier-2 hover toolbar — Pin is always present; call rows get a Call button and
+ * email rows get Reply / Reply all / Forward. The Tier-3 overflow trigger closes
+ * the bar for every type. Appears on row hover/focus (see SCSS). Channel is read
+ * from the type's filter bucket ("calls" / "emails").
  */
 export function TimelineHoverToolbar({
   type,
-  starred,
   pinned,
   onAction,
 }: {
   type: TimelineEventType;
-  starred: boolean;
   pinned: boolean;
   onAction: ActionDispatch;
 }) {
+  const channel = TYPE_CONFIG[type].filter;
   return (
     <div className="tl-toolbar">
-      <button
-        type="button"
-        className={`tl-toolbar__btn ${starred ? "is-active" : ""}`}
-        aria-label={starred ? "Unstar" : "Star"}
-        aria-pressed={starred}
-        onClick={() => onAction("Star")}
-      >
-        <FontAwesomeIcon icon={starred ? faStarSolid : faStar} />
-      </button>
       <button
         type="button"
         className={`tl-toolbar__btn ${pinned ? "is-active" : ""}`}
@@ -95,14 +88,47 @@ export function TimelineHoverToolbar({
       >
         <FontAwesomeIcon icon={faThumbtack} />
       </button>
-      <button
-        type="button"
-        className="tl-toolbar__btn"
-        aria-label="Comment"
-        onClick={() => onAction("Comment")}
-      >
-        <FontAwesomeIcon icon={faComment} />
-      </button>
+
+      {channel === "calls" && (
+        <button
+          type="button"
+          className="tl-toolbar__btn"
+          aria-label="Call"
+          onClick={() => onAction("Call")}
+        >
+          <FontAwesomeIcon icon={faPhone} />
+        </button>
+      )}
+
+      {channel === "emails" && (
+        <>
+          <button
+            type="button"
+            className="tl-toolbar__btn"
+            aria-label="Reply"
+            onClick={() => onAction("Reply")}
+          >
+            <FontAwesomeIcon icon={faReply} />
+          </button>
+          <button
+            type="button"
+            className="tl-toolbar__btn"
+            aria-label="Reply all"
+            onClick={() => onAction("Reply all")}
+          >
+            <FontAwesomeIcon icon={faReplyAll} />
+          </button>
+          <button
+            type="button"
+            className="tl-toolbar__btn"
+            aria-label="Forward"
+            onClick={() => onAction("Forward")}
+          >
+            <FontAwesomeIcon icon={faShare} />
+          </button>
+        </>
+      )}
+
       <TimelineOverflowMenu type={type} onAction={onAction} />
     </div>
   );

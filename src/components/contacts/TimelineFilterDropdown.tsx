@@ -1,7 +1,9 @@
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   FILTER_TABS,
+  FILTER_ICON,
   filterCounts,
   type FilterKey,
   type TimelineEvent,
@@ -47,18 +49,31 @@ export function TimelineFilterDropdown({
       <Select value={value} onValueChange={(v) => v && onChange(v as FilterKey)}>
         <Select.Trigger className="tl-filter-select" aria-label="Filter timeline by type">
           <Select.Value>
-            {(v) => LABELS[v as FilterKey] ?? "All"}
+            {(v) => {
+              const key = (v as FilterKey) ?? "all";
+              const icon = FILTER_ICON[key];
+              return (
+                <span className="tl-filter-item__value">
+                  {icon && <FontAwesomeIcon icon={icon} className="tl-filter-item__icon" />}
+                  {LABELS[key] ?? "All"}
+                </span>
+              );
+            }}
           </Select.Value>
         </Select.Trigger>
         <Select.Content>
-          {FILTER_TABS.map((t) => (
-            <Select.Item key={t.key} value={t.key}>
-              <span className="tl-filter-item">
-                <span className="tl-filter-item__label">{t.label}</span>
-                <span className="tl-filter-item__count">{counts[t.key]}</span>
-              </span>
-            </Select.Item>
-          ))}
+          {FILTER_TABS.map((t) => {
+            const icon = FILTER_ICON[t.key];
+            return (
+              <Select.Item key={t.key} value={t.key}>
+                <span className="tl-filter-item">
+                  {icon && <FontAwesomeIcon icon={icon} className="tl-filter-item__icon" />}
+                  <span className="tl-filter-item__label">{t.label}</span>
+                  <span className="tl-filter-item__count">{counts[t.key]}</span>
+                </span>
+              </Select.Item>
+            );
+          })}
         </Select.Content>
       </Select>
     </div>

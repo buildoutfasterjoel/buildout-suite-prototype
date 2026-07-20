@@ -8,7 +8,6 @@ import {
   faPaperclip,
   faChevronRight,
 } from "@fortawesome/pro-regular-svg-icons";
-import { faStar as faStarSolid } from "@fortawesome/pro-solid-svg-icons";
 import { IconBadge } from "#/components/contacts/IconBadge";
 import { TimelineBadge } from "#/components/contacts/TimelineBadge";
 import { ClampText } from "#/components/contacts/ClampText";
@@ -30,14 +29,13 @@ import {
 
 /**
  * The single row that renders every timeline event type via composition. State
- * overlays are boolean props (starred / pinned / replyOpen / threadOpen); every
- * action flows out through one `onAction` dispatch, so the row itself has no
+ * overlays are boolean props (pinned / replyOpen / threadOpen); every action
+ * flows out through one `onAction` dispatch, so the row itself has no
  * side-effects.
  */
 export function TimelineEvent({
   event,
   attention,
-  starred,
   pinned,
   replyOpen,
   threadOpen,
@@ -48,7 +46,6 @@ export function TimelineEvent({
   event: TimelineEventData;
   /** Row still needs action (missed call / unreplied email / open inquiry). */
   attention: boolean;
-  starred: boolean;
   pinned: boolean;
   replyOpen: boolean;
   threadOpen: boolean;
@@ -69,7 +66,6 @@ export function TimelineEvent({
     <article
       className="tl-row"
       data-type={event.type}
-      data-starred={starred || undefined}
       data-pinned={pinned || undefined}
     >
       <div className="tl-row__rail">
@@ -95,9 +91,6 @@ export function TimelineEvent({
           <span className="tl-row__head-right">
             {pinned && (
               <FontAwesomeIcon icon={faThumbtack} className="tl-row__flag" title="Pinned" />
-            )}
-            {starred && (
-              <FontAwesomeIcon icon={faStarSolid} className="tl-row__flag is-star" title="Starred" />
             )}
             {event.hasAttachment && (
               <FontAwesomeIcon icon={faPaperclip} className="tl-row__flag" title="Has attachment" />
@@ -218,12 +211,7 @@ export function TimelineEvent({
         )}
       </div>
 
-      <TimelineHoverToolbar
-        type={event.type}
-        starred={starred}
-        pinned={pinned}
-        onAction={onAction}
-      />
+      <TimelineHoverToolbar type={event.type} pinned={pinned} onAction={onAction} />
     </article>
   );
 }
