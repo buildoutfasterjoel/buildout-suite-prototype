@@ -12,6 +12,7 @@ import { ContactEngagementPanel } from "#/components/contacts/ContactEngagementP
 import { ContactTasksPanel } from "#/components/contacts/ContactTasksPanel";
 import { ContactBriefingSection } from "#/components/contacts/ContactBriefingSection";
 import { ContactAccordionStyleToggle } from "#/components/contacts/ContactAccordionStyleToggle";
+import { ContactTabTrackToggle } from "#/components/contacts/ContactTabTrackToggle";
 import { ShareContactModal } from "#/components/contacts/ShareContactModal";
 import { LiveCallBar } from "#/components/contacts/LiveCallBar";
 import { LogCallModal } from "#/components/contacts/LogCallModal";
@@ -175,7 +176,8 @@ function ContactDetailPage() {
         }}
       />
 
-      {/* Floating design-comparison toggle (prototype-only). */}
+      {/* Floating design-comparison toggles (prototype-only). */}
+      <ContactTabTrackToggle />
       <ContactAccordionStyleToggle />
     </div>
   );

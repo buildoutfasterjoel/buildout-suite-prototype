@@ -20,6 +20,7 @@ import {
 } from "#/components/contacts/timeline";
 import { TimelineEvent } from "#/components/contacts/TimelineEvent";
 import { TimelineFilterBar } from "#/components/contacts/TimelineFilterBar";
+import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
 
 export function ContactEngagementPanel({
   contact,
@@ -35,6 +36,7 @@ export function ContactEngagementPanel({
   onLog: (draft: ComposedDraft) => void;
   onStartCall: (phone: string) => void;
 }) {
+  const tabTrack = useContactUiPrefs((s) => s.tabTrack);
   const [filter, setFilter] = useState<FilterKey>("all");
   // Ephemeral per-event UI state (prototype — resets on reload).
   const [overrides, setOverrides] = useState<
@@ -108,9 +110,9 @@ export function ContactEngagementPanel({
   }
 
   return (
-    <div className="d-flex flex-column gap-4">
-      {/* Composer card — the "Activity" title shares the header row with the
-          compose tabs. */}
+    <div className={`d-flex flex-column gap-4 tabtrack tabtrack--${tabTrack}`}>
+      {/* Composer card — the "Log Activity" title shares the header row with
+          the compose tabs. */}
       <Card className="contact-panel-card overflow-hidden">
         <ContactComposeModule
           contact={contact}
@@ -122,17 +124,26 @@ export function ContactEngagementPanel({
               className="fw-semibold"
               style={{ fontSize: 20, lineHeight: "26px" }}
             >
-              Activity
+              Log Activity
             </span>
           }
         />
       </Card>
 
-      {/* Timeline card — filter pills + the grouped feed. */}
+      {/* Timeline card — "Timeline" title shares the header row with the filter
+          pills (same pattern as the composer), then the grouped feed. */}
       <Card className="contact-panel-card overflow-hidden">
-        <Card.Body className="d-flex flex-column gap-3">
+        <div className="compose-header">
+          <span
+            className="fw-semibold"
+            style={{ fontSize: 20, lineHeight: "26px" }}
+          >
+            Timeline
+          </span>
           <TimelineFilterBar events={events} value={filter} onChange={setFilter} />
+        </div>
 
+        <div className="d-flex flex-column gap-3 p-4">
           {groups.length === 0 ? (
             <span className="text-muted fs-small">No activity to show.</span>
           ) : (
@@ -159,7 +170,7 @@ export function ContactEngagementPanel({
               </div>
             </Tooltip.Provider>
           )}
-        </Card.Body>
+        </div>
       </Card>
     </div>
   );
