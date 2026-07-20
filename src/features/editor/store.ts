@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
-import type { Property } from "#/data/types";
+import type { DealUnderwriting, Property } from "#/data/types";
 import type {
   Block,
   DropTarget,
@@ -53,7 +53,7 @@ interface EditorState {
   sidebarPoppedOpen: boolean;
 
   // Phase 1 actions (selection + navigation + view).
-  initDocument: (listing: Property | undefined) => void;
+  initDocument: (listing: Property | undefined, underwriting?: DealUnderwriting) => void;
   /** Clear the dirty flag — called after a Save & Close. */
   markSaved: () => void;
   /** Merge a patch into the bound listing (e.g. from Edit Listing) so dynamic fields refresh. */
@@ -140,8 +140,8 @@ export const useEditorStore = create<EditorState>((set) => {
   sidebarPinned: true,
   sidebarPoppedOpen: false,
 
-  initDocument: (listing) => {
-    const document = buildSampleDocument(listing);
+  initDocument: (listing, underwriting) => {
+    const document = buildSampleDocument(listing, underwriting);
     set({
       activeListing: listing,
       document,
