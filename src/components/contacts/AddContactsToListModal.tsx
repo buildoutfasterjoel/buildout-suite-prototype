@@ -90,7 +90,7 @@ export function AddContactsToListModal({
             </InputGroup.Addon>
             <Input
               type="search"
-              placeholder="Search by name, email, and company"
+              placeholder="Search by name, email, or company"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
