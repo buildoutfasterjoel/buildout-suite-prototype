@@ -23,7 +23,6 @@ import { useLiveCall } from "#/components/contacts/useLiveCall";
 import type { ComposedDraft } from "#/components/contacts/ContactComposeModule";
 import {
   buildBriefing,
-  buildLastTouch,
   contactFullName,
   type ComposedActivity,
 } from "#/components/contacts/contactDisplay";
@@ -143,7 +142,6 @@ function ContactDetailPage() {
             {/* AI briefing — floats above the Tasks section */}
             <ContactBriefingSection
               briefing={buildBriefing(contact, deals)}
-              lastTouch={buildLastTouch(contact)}
               open={briefingOpen}
               onToggle={() => setBriefingOpen(!briefingOpen)}
             />

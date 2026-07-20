@@ -61,7 +61,9 @@ export const useContactUiPrefs = create<ContactUiPrefs>((set) => ({
   showCompletedTasks: false,
   tasksOpen: false,
   briefingOpen: true,
-  legacyAccordions: false,
+  // Default to the "New" accordion treatment (chevron on the left, white body).
+  // The flag name is historical; `true` renders that style. See the toggle.
+  legacyAccordions: true,
   tabTrack: "system",
   timelineFilter: "dropdown",
 
