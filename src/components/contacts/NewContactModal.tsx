@@ -46,6 +46,11 @@ interface Row {
   value: string;
 }
 
+interface CompanyRow {
+  company: string;
+  jobTitle: string;
+}
+
 interface AddressRow {
   name: string;
   line1: string;
@@ -91,6 +96,111 @@ function PlainLabel({
 }
 
 /**
+ * One company row: a searchable company lookup (with a "Create new company"
+ * action) plus a Job Title, and a remove button. Owns its own combobox
+ * query/open state so multiple rows don't collide.
+ */
+function CompanyLookupRow({
+  value,
+  jobTitle,
+  companyItems,
+  onChangeCompany,
+  onChangeJobTitle,
+  onCreateCompany,
+  onRemove,
+}: {
+  value: string;
+  jobTitle: string;
+  companyItems: string[];
+  onChangeCompany: (v: string) => void;
+  onChangeJobTitle: (v: string) => void;
+  onCreateCompany: (name: string) => void;
+  onRemove: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const trimmed = query.trim();
+  const canCreate =
+    trimmed.length > 0 &&
+    !companyItems.some((c) => c.toLowerCase() === trimmed.toLowerCase());
+
+  return (
+    <div className="d-flex align-items-start gap-2">
+      <div className="flex-grow-1" style={{ minWidth: 0 }}>
+        <Combobox
+          items={companyItems}
+          value={value || null}
+          onValueChange={(v) => onChangeCompany((v as string | null) ?? "")}
+          onInputValueChange={(v) => setQuery(v ?? "")}
+          open={open}
+          onOpenChange={setOpen}
+        >
+          <Combobox.InputGroup>
+            <InputGroup.Addon>
+              <FontAwesomeIcon icon={faMagnifyingGlass} />
+            </InputGroup.Addon>
+            <Combobox.Input
+              placeholder="Enter company name or email"
+              showTrigger
+              showClear
+              {...NO_AUTOFILL}
+            />
+          </Combobox.InputGroup>
+          <Combobox.Content>
+            <Combobox.Empty className="text-muted p-2">
+              No matching companies
+            </Combobox.Empty>
+            <Combobox.List>
+              {(item: string) => (
+                <Combobox.Item key={item} value={item}>
+                  <FontAwesomeIcon
+                    icon={faBuilding}
+                    className="text-muted me-2"
+                  />
+                  {item}
+                </Combobox.Item>
+              )}
+            </Combobox.List>
+            {canCreate && (
+              <button
+                type="button"
+                className="btn btn-link text-decoration-none w-100 text-start px-3 py-2 border-top fw-semibold"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  onCreateCompany(trimmed);
+                  onChangeCompany(trimmed);
+                  setOpen(false);
+                }}
+              >
+                <FontAwesomeIcon icon={faPlus} className="me-2" />
+                Create new company
+              </button>
+            )}
+          </Combobox.Content>
+        </Combobox>
+      </div>
+      <div style={{ width: 150 }} className="flex-shrink-0">
+        <Input
+          value={jobTitle}
+          onChange={(e) => onChangeJobTitle(e.target.value)}
+          placeholder="Job Title"
+          aria-label="Job Title"
+          {...NO_AUTOFILL}
+        />
+      </div>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label="Remove company"
+        onClick={onRemove}
+      >
+        <FontAwesomeIcon icon={faXmark} />
+      </Button>
+    </div>
+  );
+}
+
+/**
  * The New Contact form — a Blueprint recreation of the reference CRM's
  * "New Contact" modal. Name plus at least one phone or email is required;
  * everything else is optional. Phones, emails, and addresses are repeatable
@@ -114,12 +224,8 @@ export function NewContactModal({
   const [doNotCall, setDoNotCall] = useState(false);
   const [notes, setNotes] = useState("");
 
-  // Company/entity lookup (hidden until the user adds one).
-  const [showCompany, setShowCompany] = useState(false);
-  const [company, setCompany] = useState("");
-  const [jobTitle, setJobTitle] = useState("");
-  const [companyQuery, setCompanyQuery] = useState("");
-  const [companyOpen, setCompanyOpen] = useState(false);
+  // Company/entity lookups (hidden until the user adds one; all removable).
+  const [companies, setCompanies] = useState<CompanyRow[]>([]);
   const [createdCompanies, setCreatedCompanies] = useState<string[]>([]);
 
   // Addresses (hidden until the user adds one).
@@ -136,11 +242,7 @@ export function NewContactModal({
       setSource(DEFAULT_SOURCE);
       setDoNotCall(false);
       setNotes("");
-      setShowCompany(false);
-      setCompany("");
-      setJobTitle("");
-      setCompanyQuery("");
-      setCompanyOpen(false);
+      setCompanies([]);
       setCreatedCompanies([]);
       setAddresses([]);
       setPrimaryAddress(0);
@@ -158,22 +260,20 @@ export function NewContactModal({
     return [...set].sort((a, b) => a.localeCompare(b));
   }, [open, createdCompanies]);
 
-  const trimmedCompanyQuery = companyQuery.trim();
-  const canCreateCompany =
-    trimmedCompanyQuery.length > 0 &&
-    !companyItems.some(
-      (c) => c.toLowerCase() === trimmedCompanyQuery.toLowerCase(),
+  // Register a just-created company name so it becomes a known lookup item.
+  const registerCompany = (name: string) =>
+    setCreatedCompanies((prev) =>
+      prev.includes(name) ? prev : [...prev, name],
     );
 
-  const handleCreateCompany = () => {
-    const next = trimmedCompanyQuery;
-    if (!next) return;
-    setCreatedCompanies((prev) =>
-      prev.includes(next) ? prev : [...prev, next],
+  const updateCompany = (i: number, patch: Partial<CompanyRow>) =>
+    setCompanies((prev) =>
+      prev.map((c, idx) => (idx === i ? { ...c, ...patch } : c)),
     );
-    setCompany(next);
-    setCompanyOpen(false);
-  };
+  const addCompany = () =>
+    setCompanies((prev) => [...prev, { company: "", jobTitle: "" }]);
+  const removeCompany = (i: number) =>
+    setCompanies((prev) => prev.filter((_, idx) => idx !== i));
 
   const updateRow = (
     rows: Row[],
@@ -210,13 +310,17 @@ export function NewContactModal({
     }
     const { firstName, lastName } = splitName(trimmed);
     const primary = addresses[primaryAddress];
+    // The data model holds one company + title, so persist the first company row
+    // (extra rows are UI-only, like extra phones/emails). Job title (tied to a
+    // company) replaces the free-text Role when any company is present.
+    const hasCompany = companies.length > 0;
+    const firstCompany = companies[0];
     onCreate({
       firstName,
       lastName,
-      company: showCompany ? company.trim() || undefined : undefined,
-      // Job title (tied to a company) replaces the free-text Role when present.
-      title: showCompany
-        ? jobTitle.trim() || undefined
+      company: hasCompany ? firstCompany?.company.trim() || undefined : undefined,
+      title: hasCompany
+        ? firstCompany?.jobTitle.trim() || undefined
         : role.trim() || undefined,
       phone: firstPhone,
       email: firstEmail,
@@ -232,6 +336,11 @@ export function NewContactModal({
     onOpenChange(false);
   };
 
+  // Required fields: a name plus at least one phone or email. Gates the Save button.
+  const canSave =
+    name.trim().length > 0 &&
+    (phones.some((p) => p.value.trim()) || emails.some((e) => e.value.trim()));
+
   return (
     <Modal open={open} onOpenChange={onOpenChange}>
       <Modal.Content
@@ -240,14 +349,20 @@ export function NewContactModal({
         centered
         style={{ maxWidth: "34.375rem" }}
       >
-        <Modal.Header>
+        <Modal.Header
+          className="border-bottom"
+          style={{ padding: "20px 24px" }}
+        >
           <Modal.Title>New Contact</Modal.Title>
           <Modal.Description>
             Name + at least one of phone or email. Everything else is optional.
           </Modal.Description>
         </Modal.Header>
 
-        <Modal.Body className="d-flex flex-column gap-4">
+        <Modal.Body
+          className="d-flex flex-column gap-4"
+          style={{ padding: 24, maxHeight: 560 }}
+        >
           <Field>
             <Field.Label>Name</Field.Label>
             <Input
@@ -259,71 +374,35 @@ export function NewContactModal({
             />
           </Field>
 
-          {/* Company / entity — hidden until added. When present it also
-              captures a job title, replacing the free-text Role field. */}
-          {showCompany ? (
+          {/* Company / entity — hidden until added, repeatable, and all rows
+              can be removed. When any company is present it captures a job title
+              per company, replacing the free-text Role field. */}
+          {companies.length > 0 ? (
             <Field>
               <Field.Label>Company</Field.Label>
-              <div className="d-flex align-items-start gap-2">
-                <div className="flex-grow-1" style={{ minWidth: 0 }}>
-                  <Combobox
-                    items={companyItems}
-                    value={company || null}
-                    onValueChange={(v) => setCompany((v as string | null) ?? "")}
-                    onInputValueChange={(v) => setCompanyQuery(v ?? "")}
-                    open={companyOpen}
-                    onOpenChange={setCompanyOpen}
-                  >
-                    <Combobox.InputGroup>
-                      <InputGroup.Addon>
-                        <FontAwesomeIcon icon={faMagnifyingGlass} />
-                      </InputGroup.Addon>
-                      <Combobox.Input
-                        placeholder="Enter company name or email"
-                        showTrigger
-                        showClear
-                        {...NO_AUTOFILL}
-                      />
-                    </Combobox.InputGroup>
-                    <Combobox.Content>
-                      <Combobox.Empty className="text-muted p-2">
-                        No matching companies
-                      </Combobox.Empty>
-                      <Combobox.List>
-                        {(item: string) => (
-                          <Combobox.Item key={item} value={item}>
-                            <FontAwesomeIcon
-                              icon={faBuilding}
-                              className="text-muted me-2"
-                            />
-                            {item}
-                          </Combobox.Item>
-                        )}
-                      </Combobox.List>
-                      {canCreateCompany && (
-                        <button
-                          type="button"
-                          className="btn btn-link text-decoration-none w-100 text-start px-3 py-2 border-top fw-semibold"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={handleCreateCompany}
-                        >
-                          <FontAwesomeIcon icon={faPlus} className="me-2" />
-                          Create new company
-                        </button>
-                      )}
-                    </Combobox.Content>
-                  </Combobox>
-                </div>
-                <div style={{ width: 150 }} className="flex-shrink-0">
-                  <Input
-                    value={jobTitle}
-                    onChange={(e) => setJobTitle(e.target.value)}
-                    placeholder="Job Title"
-                    aria-label="Job Title"
-                    {...NO_AUTOFILL}
+              <div className="d-flex flex-column gap-2">
+                {companies.map((row, i) => (
+                  <CompanyLookupRow
+                    key={i}
+                    value={row.company}
+                    jobTitle={row.jobTitle}
+                    companyItems={companyItems}
+                    onChangeCompany={(v) => updateCompany(i, { company: v })}
+                    onChangeJobTitle={(v) => updateCompany(i, { jobTitle: v })}
+                    onCreateCompany={registerCompany}
+                    onRemove={() => removeCompany(i)}
                   />
-                </div>
+                ))}
               </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="align-self-start mt-1"
+                onClick={addCompany}
+              >
+                <FontAwesomeIcon icon={faPlus} />
+                Add another company
+              </Button>
             </Field>
           ) : (
             <>
@@ -331,7 +410,7 @@ export function NewContactModal({
                 variant="ghost"
                 size="sm"
                 className="align-self-start"
-                onClick={() => setShowCompany(true)}
+                onClick={addCompany}
               >
                 <FontAwesomeIcon icon={faPlus} />
                 Add company/entity
@@ -676,11 +755,11 @@ export function NewContactModal({
           </Field>
         </Modal.Body>
 
-        <Modal.Footer>
+        <Modal.Footer className="border-top" style={{ padding: 16 }}>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-          <Button variant="primary" onClick={handleSave}>
+          <Button variant="primary" onClick={handleSave} disabled={!canSave}>
             Save
           </Button>
         </Modal.Footer>
