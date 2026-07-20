@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { Accordion } from "@buildoutinc/blueprint-react/ui/Accordion";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
@@ -26,9 +27,17 @@ import { ContactHeroAccessAvatars } from "#/components/contacts/ContactHeroAcces
 import type { ContactShare } from "#/data/teammates";
 import { ContactDealCard } from "#/components/contacts/ContactDealCard";
 import { ContactPropertyCard } from "#/components/contacts/ContactPropertyCard";
+import { ContactLinkButton } from "#/components/contacts/ContactLinkButton";
 import { EditContactModal } from "#/components/contacts/EditContactModal";
 import { CreateDealModal } from "#/components/deals/CreateDealModal";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
+import { useContactListNav } from "#/components/contacts/useContactListNav";
+import {
+  emptyContactFilters,
+  deserializeContactFilters,
+} from "#/components/contacts/contactFilterModel";
+import { callListToContactList } from "#/data/contactLists";
+import { useDataStore } from "#/data/dataStore";
 import { updateContact } from "#/data/actions";
 
 /** Deal statuses considered "past" (shown behind a toggle). */
@@ -88,6 +97,34 @@ export function ContactOverviewColumn({
   shares: ContactShare[];
   onOpenShare: () => void;
 }) {
+  const navigate = useNavigate();
+  // Lists this contact belongs to — static (membership snapshot) or dynamic
+  // (live filter). Read reactively so joining/leaving a list re-renders here.
+  const callListsMap = useDataStore((s) => s.callLists);
+  const memberLists = useMemo(
+    () =>
+      [...callListsMap.values()]
+        .map(callListToContactList)
+        .filter((l) => l.predicate(contact)),
+    [callListsMap, contact],
+  );
+
+  // Open the People page filtered to a given list (via the shared restore path).
+  // A dynamic list "is" its saved filters (the People page skips the predicate
+  // and filters by the working set), so restore those; static lists filter by
+  // their membership predicate and start with a clean filter set.
+  const openList = (listId: string, label: string) => {
+    const cl = callListsMap.get(listId);
+    const filters =
+      cl?.type === "dynamic" && cl.filters
+        ? deserializeContactFilters(cl.filters)
+        : emptyContactFilters();
+    const nav = useContactListNav.getState();
+    nav.setList([], { variant: "list", label, listId, filters, search: "" });
+    nav.requestRestore();
+    void navigate({ to: "/backoffice/contacts" });
+  };
+
   // Collapse state persists across contacts (see useContactUiPrefs).
   const open = useContactUiPrefs((s) => s.overviewSections);
   const setOpen = useContactUiPrefs((s) => s.setOverviewSections);
@@ -359,12 +396,27 @@ export function ContactOverviewColumn({
         <ContactSection
           value="lists"
           label="Lists"
-          count={0}
+          count={memberLists.length}
           open={open.includes("lists")}
         >
-          <div className="text-muted fs-small">
-            Lists this contact belongs to will appear here.
-          </div>
+          {memberLists.length === 0 ? (
+            <span className="text-muted fs-small">
+              Lists this contact belongs to will appear here.
+            </span>
+          ) : (
+            <div className="d-flex flex-column">
+              {memberLists.map((list) => (
+                <ContactLinkButton
+                  key={list.id}
+                  icon={list.icon}
+                  iconColor={list.iconColor}
+                  iconClassName={list.iconClass}
+                  label={list.label}
+                  onClick={() => openList(list.id, list.label)}
+                />
+              ))}
+            </div>
+          )}
         </ContactSection>
 
         <ContactSection

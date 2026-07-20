@@ -328,14 +328,15 @@
     0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
-// Quick-link open icon (Documents/Leads): hidden by default, revealed when
-// hovering the link so the affordance stays quiet until it's actionable.
-.contact-deal-card__link-open {
+// Contact link-button open icon (deal-card Documents/Leads + Lists section):
+// hidden by default, revealed on hover/focus so the affordance stays quiet
+// until it's actionable.
+.contact-link-btn__open {
   opacity: 0;
   transition: opacity 0.15s ease;
 }
-.contact-deal-card__link:hover .contact-deal-card__link-open,
-.contact-deal-card__link:focus-visible .contact-deal-card__link-open {
+.contact-link-btn:hover .contact-link-btn__open,
+.contact-link-btn:focus-visible .contact-link-btn__open {
   opacity: 1;
 }
 
