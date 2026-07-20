@@ -56,7 +56,7 @@ export const useContactUiPrefs = create<ContactUiPrefs>((set) => ({
   tasksOpen: false,
   briefingOpen: true,
   legacyAccordions: false,
-  tabTrack: "ghost",
+  tabTrack: "system",
 
   setOverviewSections: (overviewSections) => set({ overviewSections }),
   setShowDetails: (showDetails) => set({ showDetails }),
