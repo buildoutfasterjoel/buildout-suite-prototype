@@ -45,7 +45,7 @@ export function ContactEngagementPanel({
   const [needsReply, setNeedsReply] = useState(false);
   // Ephemeral per-event UI state (prototype — resets on reload).
   const [overrides, setOverrides] = useState<
-    Record<string, { starred?: boolean; pinned?: boolean }>
+    Record<string, { pinned?: boolean }>
   >({});
   const [deleted, setDeleted] = useState<Set<string>>(new Set());
   const [replyOpenId, setReplyOpenId] = useState<string | null>(null);
@@ -57,7 +57,7 @@ export function ContactEngagementPanel({
     setResolved((r) => (r.has(id) ? r : new Set(r).add(id)));
 
   // The feed = session-logged compose/call events + the synthesized history,
-  // with per-event star/pin overrides applied and deleted rows removed.
+  // with per-event pin overrides applied and deleted rows removed.
   const events = useMemo(() => {
     const base = [
       ...logged.map((l) => composedToEvent(l, contact)),
@@ -67,7 +67,6 @@ export function ContactEngagementPanel({
       .filter((e) => !deleted.has(e.id))
       .map((e) => ({
         ...e,
-        starred: overrides[e.id]?.starred ?? e.starred,
         pinned: overrides[e.id]?.pinned ?? e.pinned,
       }));
   }, [logged, contact, deals, overrides, deleted]);
@@ -93,12 +92,7 @@ export function ContactEngagementPanel({
 
   // Single action dispatch for every row — the row itself has no side-effects.
   function handleAction(event: TimelineEventData, id: string) {
-    if (id === "Star") {
-      setOverrides((o) => ({
-        ...o,
-        [event.id]: { ...o[event.id], starred: !(o[event.id]?.starred ?? event.starred) },
-      }));
-    } else if (id === "Pin to top") {
+    if (id === "Pin to top") {
       setOverrides((o) => ({
         ...o,
         [event.id]: { ...o[event.id], pinned: !(o[event.id]?.pinned ?? event.pinned) },
@@ -201,7 +195,6 @@ export function ContactEngagementPanel({
                         attention={
                           needsAttention(event) && !resolved.has(event.id)
                         }
-                        starred={!!event.starred}
                         pinned={!!event.pinned}
                         replyOpen={replyOpenId === event.id}
                         threadOpen={threadOpenId === event.id}

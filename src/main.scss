@@ -1483,6 +1483,18 @@
     color: var(--color-storm-grey-500, #62748e);
     font-variant-numeric: tabular-nums;
   }
+  // Leading channel glyph — muted so the label reads first; fixed width keeps
+  // the labels aligned across items.
+  &__icon {
+    width: 14px;
+    color: var(--color-storm-grey-500, #62748e);
+  }
+  // Selected value shown in the trigger — icon + label, no count.
+  &__value {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
 }
 
 .tl-feed {
@@ -1513,7 +1525,7 @@
   // card's padding).
   border-radius: 8px;
   margin: 0 -8px;
-  padding: 0 8px;
+  padding: 4px 12px;
   transition: background-color 0.12s ease-in-out;
 
   &:hover {
@@ -1550,9 +1562,9 @@
 
   &__head {
     display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 8px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
   }
   &__actors {
     font-size: 13px;
@@ -1578,9 +1590,6 @@
   &__flag {
     font-size: 12px;
     color: var(--color-storm-grey-400, #8495ac);
-    &.is-star {
-      color: var(--color-harvest-gold-500, #fd9a00);
-    }
   }
   &__time {
     font-size: 12px;
@@ -1799,7 +1808,7 @@
 // Tier-2 hover toolbar — overlays the top-right of the row on hover/focus.
 .tl-toolbar {
   position: absolute;
-  top: 0;
+  top: -12px;
   right: 0;
   display: flex;
   align-items: center;

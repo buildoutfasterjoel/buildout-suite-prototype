@@ -1,33 +1,13 @@
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import {
-  faNoteSticky,
-  faPhone,
-  faEnvelope,
-  faCalendar,
-  faBinoculars,
-} from "@fortawesome/pro-regular-svg-icons";
 import {
   FILTER_TABS,
+  FILTER_ICON,
   filterCounts,
   type FilterKey,
   type TimelineEvent,
 } from "#/components/contacts/timeline";
-
-/**
- * Icon per filter tab. "All" keeps its text label (no icon); every other tab is
- * icon-only with the label surfaced via tooltip. Meetings/Tours reuse the
- * compose-tab icons (calendar / binoculars).
- */
-const FILTER_ICON: Partial<Record<FilterKey, IconDefinition>> = {
-  notes: faNoteSticky,
-  calls: faPhone,
-  emails: faEnvelope,
-  meetings: faCalendar,
-  tours: faBinoculars,
-};
 
 /**
  * Above-feed filter as pill tabs with live counts. Icon-only (except All), each
@@ -50,7 +30,9 @@ export function TimelineFilterBar({
         <Tabs value={value} onValueChange={(v) => v && onChange(v as FilterKey)}>
           <Tabs.List variant="pills">
             {FILTER_TABS.map((t) => {
-              const icon = FILTER_ICON[t.key];
+              // "All" stays a text label in the tab track (the list icon is a
+              // dropdown-only treatment).
+              const icon = t.key === "all" ? undefined : FILTER_ICON[t.key];
               const tab = (
                 <Tabs.Tab
                   key={t.key}

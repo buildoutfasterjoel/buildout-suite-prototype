@@ -16,6 +16,9 @@ import {
   faShuffle,
   faUserGear,
   faGear,
+  faListUl,
+  faCalendar,
+  faBinoculars,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact, DealSummary } from "#/data/types";
 import { CURRENT_USER } from "#/data/teammates";
@@ -27,7 +30,7 @@ import { contactFullName } from "#/components/contacts/contactDisplay";
 //
 // A single `TimelineEvent` shape backs every row (mirrors the Figma
 // `TimelineEvent` component set). The `type` drives icon/tone/content via the
-// `TYPE_CONFIG` map; per-row booleans (starred, pinned, …) and PR2 state props
+// `TYPE_CONFIG` map; per-row booleans (pinned, …) and PR2 state props
 // (action bar, reply open, …) toggle overlays. No per-type component forks.
 //
 // Excluded per product scope: Text/SMS, saved/viewed property, property search,
@@ -75,8 +78,7 @@ export type FilterKey =
   | "tours"
   | "attachments"
   | "activity"
-  | "marketing"
-  | "starred";
+  | "marketing";
 
 export interface TimelineActor {
   name: string;
@@ -167,7 +169,6 @@ export interface TimelineEvent {
   associations?: TimelineAssociation[];
   source: TimelineSource;
   visibility?: TimelineVisibility;
-  starred?: boolean;
   pinned?: boolean;
   hasAttachment?: boolean;
   /** Voicemail / missed flag — flips the icon to an outline/amber treatment. */
@@ -180,7 +181,7 @@ export interface TypeConfig {
   tone: IconTone;
   /** Default fill; `attempted`/system rows render outline. */
   filled: boolean;
-  filter: Exclude<FilterKey, "all" | "starred" | "attachments">;
+  filter: Exclude<FilterKey, "all" | "attachments">;
   /** Default headline when an event supplies no `title`. */
   defaultTitle: string;
   /** System / marketing rows are not 1:1 editable. */
@@ -193,7 +194,6 @@ export interface TypeConfig {
 
 /** Overflow-menu items appended to every type's own items (Tier-3). */
 export const UNIVERSAL_OVERFLOW = [
-  "Star",
   "Pin to top",
   "Comment",
   "Create task",
@@ -393,9 +393,23 @@ export const FILTER_TABS: { key: FilterKey; label: string }[] = [
   { key: "tours", label: "Tours" },
 ];
 
+/**
+ * Icon per filter — shared by the pill tab track and the dropdown so both read
+ * identically. Meetings/Tours reuse the compose-tab icons (calendar/binoculars);
+ * "All" uses a list glyph (surfaced only in the dropdown — the tab track shows
+ * its text label instead).
+ */
+export const FILTER_ICON: Partial<Record<FilterKey, IconDefinition>> = {
+  all: faListUl,
+  notes: faNoteSticky,
+  calls: faPhone,
+  emails: faEnvelope,
+  meetings: faCalendar,
+  tours: faBinoculars,
+};
+
 export function matchesFilter(event: TimelineEvent, key: FilterKey): boolean {
   if (key === "all") return true;
-  if (key === "starred") return !!event.starred;
   if (key === "attachments") return !!event.hasAttachment;
   return TYPE_CONFIG[event.type].filter === key;
 }
@@ -404,7 +418,7 @@ export function matchesFilter(event: TimelineEvent, key: FilterKey): boolean {
  * The hybrid email-thread model. `All` collapses a thread into its one
  * Conversation card (member messages hidden); `Emails` expands the thread into
  * its individual message cards (Conversation card hidden). Other filters show
- * whatever matches — a starred or attachment-bearing member still surfaces.
+ * whatever matches — an attachment-bearing member still surfaces.
  */
 export function visibleEvents(
   events: TimelineEvent[],
@@ -571,7 +585,6 @@ export function buildTimeline(c: Contact, deals: DealSummary[]): TimelineEvent[]
       ],
       associations: assoc(dealA),
       source: "user",
-      starred: true,
     },
     {
       id: `${c.id}-inbound-email-1`,
@@ -590,19 +603,6 @@ export function buildTimeline(c: Contact, deals: DealSummary[]): TimelineEvent[]
       hasAttachment: true,
       source: "user",
     },
-    {
-      id: `${c.id}-task-1`,
-      type: "task",
-      actor: owner,
-      contact: contactRef,
-      timestamp: daysAgo(3, 8, 30),
-      seq: next(),
-      title: `Send revised BOV to ${first}`,
-      badges: [{ label: "Due Jul 24", tone: "activity" }],
-      associations: assoc(dealA),
-      source: "user",
-    },
-
     // ── This month ──
     {
       id: `${c.id}-conversation-1`,
