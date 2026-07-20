@@ -339,13 +339,14 @@
   &.contact-overview-accordion--legacy {
     .accordion-body {
       background-color: var(--bp-card-bg, #fff);
+      padding-top: 0;
     }
     // Move the chevron ahead of the label (the button is a flex row) and undo
     // its right-edge alignment.
     .accordion-button::after {
       order: -1;
       margin-left: 0;
-      margin-right: 8px;
+      margin-right: 4px;
     }
     // Old style was flush white — no header/content divider.
     .accordion-button:not(.collapsed) {
