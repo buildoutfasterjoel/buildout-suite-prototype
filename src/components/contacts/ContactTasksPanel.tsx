@@ -81,7 +81,7 @@ export function ContactTasksPanel({
   return (
     <Card className="contact-panel-card overflow-hidden">
       <Accordion
-        className="contact-overview-accordion"
+        className="contact-overview-accordion contact-overview-accordion--white"
         multiple
         value={tasksOpen ? ["tasks"] : []}
         onValueChange={(v) => setTasksOpen(v.includes("tasks"))}
@@ -90,9 +90,13 @@ export function ContactTasksPanel({
           value="tasks"
           label="Tasks"
           count={active.length}
-          open={tasksOpen}
           action={
-            <Button variant="ghost" size="icon-sm" aria-label="Add task">
+            <Button
+              variant="ghost"
+              appearance="muted"
+              size="icon"
+              aria-label="Add task"
+            >
               <FontAwesomeIcon icon={faPlus} />
             </Button>
           }
