@@ -92,8 +92,14 @@ export interface TimelineBadgeData {
 
 /** A labeled bullet group (Call summary, Next steps, To…). */
 export interface TimelineBlock {
-  kicker: string;
+  /** Optional uppercase subhead; omit to show the items with no label. */
+  kicker?: string;
   items: string[];
+  /**
+   * Render the (single) item as a 2-line-clamped paragraph with a "Show
+   * more" toggle instead of a bullet list — used for a voicemail transcript.
+   */
+  clamp?: boolean;
 }
 
 /** An inbound reply nested under a sent message (PR2 renders the ReplyCard). */
@@ -124,7 +130,8 @@ export interface TimelineThread {
 export interface TimelineAssociation {
   type: "deal" | "property" | "relationship";
   label: string;
-  href?: string;
+  /** Deal/listing id — when present the label links to the deal detail page. */
+  id?: string;
 }
 
 export type TimelineSource = "user" | "system" | "api" | "automation";
@@ -529,7 +536,7 @@ export function buildTimeline(c: Contact, deals: DealSummary[]): TimelineEvent[]
   const dealA = deals[0];
   const dealB = deals[1] ?? deals[0];
   const assoc = (d?: DealSummary): TimelineAssociation[] =>
-    d ? [{ type: "property", label: d.name, href: `/backoffice/deals/${d.id}` }] : [];
+    d ? [{ type: "deal", label: d.name, id: d.id }] : [];
 
   const threadId = `thr-${c.id}`;
   let seq = 0;
@@ -698,14 +705,12 @@ export function buildTimeline(c: Contact, deals: DealSummary[]): TimelineEvent[]
       title: `Coffee with ${first}`,
       blocks: [
         {
-          kicker: "Notes",
           items: [
             "Walked the comp set; comfortable with pricing band.",
             "Introduce to lending contact next.",
           ],
         },
       ],
-      badges: [{ label: "Held", tone: "reply" }],
       associations: assoc(dealA),
       source: "user",
     },
@@ -721,13 +726,13 @@ export function buildTimeline(c: Contact, deals: DealSummary[]): TimelineEvent[]
       attempted: true,
       blocks: [
         {
-          kicker: "Voicemail",
+          kicker: "Voicemail Transcript",
+          clamp: true,
           items: [
-            `"Hi, it's ${first} — give me a ring back when you have a minute about the retail space."`,
+            `"Hi, it's ${first} — sorry I missed you. I was hoping to catch you about the retail space we walked last month. My partner and I talked it over and we're ready to move on it, but we have a few questions on the lease terms and the parking situation before we put anything in writing. Give me a ring back when you get a minute — ideally before Friday since we're weighing another spot across town. Thanks."`,
           ],
         },
       ],
-      badges: [{ label: "Voicemail", tone: "error" }],
       source: "user",
     },
     {
@@ -741,7 +746,6 @@ export function buildTimeline(c: Contact, deals: DealSummary[]): TimelineEvent[]
       title: `Toured ${dealA ? dealA.name : "2 properties"} with ${first}`,
       blocks: [
         {
-          kicker: "Feedback",
           items: [
             "Liked the frontage; wants to see parking ratios.",
             "Interest: high.",

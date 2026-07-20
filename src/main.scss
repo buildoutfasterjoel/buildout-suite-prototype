@@ -1560,6 +1560,11 @@
     color: var(--color-storm-grey-900, #22262f);
     min-width: 0;
   }
+  // Contact name (after the "›") reads as regular weight — the actor name stays
+  // semibold so the header line has a clear owner.
+  &__contact-name {
+    font-weight: 400;
+  }
   &__duration {
     color: var(--color-storm-grey-600, #506079);
     font-weight: 500;
@@ -1606,10 +1611,24 @@
     gap: 6px;
     margin-top: 2px;
   }
-  &__assoc {
+  // Deal / property links — plain hyperlinked text sitting directly under the
+  // subject line (not pills).
+  &__deals {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    align-items: center;
+    gap: 2px 10px;
+    margin-top: -2px;
+  }
+  &__deal-link {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-buildout-blue-600, #2350c9);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
   }
   &__visibility {
     display: inline-flex;
@@ -1639,18 +1658,18 @@
   }
 }
 
-// ── Association chip ──
-.tl-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-buildout-blue-700, #1f47ad);
-  background: var(--color-buildout-blue-50, #eef3fe);
-  border: 1px solid var(--color-buildout-blue-100, #d6e2fc);
+// ── Voicemail transcript clamp ──
+.tl-clamp {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  &__text {
+    margin: 0;
+    font-size: 14px;
+    color: var(--color-storm-grey-700, #424e62);
+    line-height: 1.5;
+  }
 }
 
 // ── Collapsed conversation preview ──
@@ -1703,6 +1722,11 @@
 
   &--resting {
     background: var(--color-storm-grey-400, #8495ac);
+  }
+  // Needs-reply attention state — one purple for every channel (was per-channel
+  // red/blue), so the color reads simply as "act on this".
+  &--attention {
+    background: var(--color-purple-heart-500, #9f55f7);
   }
   &--green {
     background: var(--color-mountain-meadow-500, #00bc7d);
@@ -1826,6 +1850,12 @@
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 4px;
+
+  // Secondary (outline) actions — Reply all / Forward — take a softer grey
+  // border to sit quieter next to the primary action.
+  &__secondary {
+    border-color: var(--color-storm-grey-200, #d5dae2);
+  }
 }
 
 // Tier-3 overflow menu — destructive item.
