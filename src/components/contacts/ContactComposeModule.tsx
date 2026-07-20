@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { Textarea } from "@buildoutinc/blueprint-react/ui/Textarea";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { Popover } from "@buildoutinc/blueprint-react/ui/Popover";
@@ -44,6 +45,15 @@ const TABS: { key: ComposeKind; label: string; icon: typeof faPhone }[] = [
   { key: "meeting", label: "Meeting", icon: faCalendar },
   { key: "tour", label: "Tour", icon: faBinoculars },
 ];
+
+/** Hover tooltip per compose tab — the action each icon performs. */
+const TAB_TOOLTIP: Record<ComposeKind, string> = {
+  note: "Log Notes",
+  call: "Log and Make Calls",
+  email: "Send Emails",
+  meeting: "Log Meetings",
+  tour: "Log Tours",
+};
 
 const CTA_LABEL: Record<ComposeKind, string> = {
   note: "Log Note",
@@ -406,19 +416,28 @@ export function ContactComposeModule({
       <div className="compose-header">
         {headerStart}
         <div className="compose-tabs">
-          <Tabs value={tab} onValueChange={(v) => v && setTab(v as ComposeKind)}>
-            <Tabs.List>
-              {TABS.map((t) => (
-                <Tabs.Tab
-                  key={t.key}
-                  value={t.key}
-                  icon={<FontAwesomeIcon icon={t.icon} />}
-                >
-                  {t.label}
-                </Tabs.Tab>
-              ))}
-            </Tabs.List>
-          </Tabs>
+          <Tooltip.Provider delay={150}>
+            <Tabs value={tab} onValueChange={(v) => v && setTab(v as ComposeKind)}>
+              <Tabs.List variant="pills">
+                {TABS.map((t) => (
+                  <Tooltip key={t.key}>
+                    <Tooltip.Trigger
+                      render={
+                        <Tabs.Tab
+                          value={t.key}
+                          aria-label={TAB_TOOLTIP[t.key]}
+                          icon={<FontAwesomeIcon icon={t.icon} />}
+                        >
+                          {t.label}
+                        </Tabs.Tab>
+                      }
+                    />
+                    <Tooltip.Content>{TAB_TOOLTIP[t.key]}</Tooltip.Content>
+                  </Tooltip>
+                ))}
+              </Tabs.List>
+            </Tabs>
+          </Tooltip.Provider>
         </div>
       </div>
 

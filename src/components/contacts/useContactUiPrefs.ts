@@ -27,6 +27,13 @@ interface ContactUiPrefs {
    * floating toggle on the contact detail page.
    */
   legacyAccordions: boolean;
+  /**
+   * Design-comparison toggle for the middle-column tab tracks (Log Activity +
+   * Timeline): "system" uses the Blueprint pill variant (grey track, white
+   * active pill + shadow); "ghost" uses the transparent-track purple-accent
+   * treatment. Flipped via a floating toggle on the contact detail page.
+   */
+  tabTrack: "system" | "ghost";
 
   setOverviewSections: (sections: string[]) => void;
   setShowDetails: (open: boolean) => void;
@@ -35,6 +42,7 @@ interface ContactUiPrefs {
   setTasksOpen: (open: boolean) => void;
   setBriefingOpen: (open: boolean) => void;
   setLegacyAccordions: (legacy: boolean) => void;
+  setTabTrack: (track: "system" | "ghost") => void;
 }
 
 export const useContactUiPrefs = create<ContactUiPrefs>((set) => ({
@@ -48,6 +56,7 @@ export const useContactUiPrefs = create<ContactUiPrefs>((set) => ({
   tasksOpen: false,
   briefingOpen: true,
   legacyAccordions: false,
+  tabTrack: "ghost",
 
   setOverviewSections: (overviewSections) => set({ overviewSections }),
   setShowDetails: (showDetails) => set({ showDetails }),
@@ -56,4 +65,5 @@ export const useContactUiPrefs = create<ContactUiPrefs>((set) => ({
   setTasksOpen: (tasksOpen) => set({ tasksOpen }),
   setBriefingOpen: (briefingOpen) => set({ briefingOpen }),
   setLegacyAccordions: (legacyAccordions) => set({ legacyAccordions }),
+  setTabTrack: (tabTrack) => set({ tabTrack }),
 }));

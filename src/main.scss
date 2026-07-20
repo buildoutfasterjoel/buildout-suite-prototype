@@ -801,44 +801,46 @@
   justify-content: space-between;
   gap: 8px;
   padding: 16px 16px 0;
+
+  // The section label holds its line; the tab track takes the remaining space
+  // and scrolls if the labelled tabs exceed it in a narrow column.
+  > :first-child {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
 }
 
+// Compose tabs use the Blueprint `nav-pills` variant. Sizing + text colors are
+// mode-independent (below); the track background and active-pill fill/shadow
+// come from the `.tabtrack--*` treatments further down.
 .compose-tabs {
   min-width: 0;
 
-  .nav-tabs {
-    // Drive the DS label colors through its own vars (base-ui sets the color on
-    // the label via these), then reinforce on the text node below.
-    --bp-nav-link-color: var(--color-storm-grey-600, #506079);
-    --bp-nav-link-hover-color: var(--color-storm-grey-600, #506079);
-    --bp-nav-tabs-link-active-color: var(--color-purple-heart-950, #360764);
+  .nav-pills {
     align-items: center;
     flex-wrap: nowrap;
     gap: 4px;
-    border-bottom: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
-  // Base UI renders a moving underline indicator; the pill style doesn't use it.
-  .tabs-indicator {
-    display: none;
-  }
-
-  // Pill tabs that hug their icon + label. Default = transparent with a dark
-  // label + muted icon; active = soft purple pill (purple-heart-100).
+  // Pills hug their icon + label. Default = muted label + icon; active =
+  // purple-heart secondary text/icon (the pill itself is the moving indicator).
+  // Sized to match the Timeline filter tabs (8/12 padding, 6px gap).
   .nav-link {
     flex: 0 0 auto;
     justify-content: center;
     align-items: center;
-    gap: 5px;
-    min-height: 28px;
-    padding: 4px 8px;
+    gap: 6px;
+    padding: 8px 12px;
     border: 0;
     border-radius: var(--bp-border-radius, 6px);
     color: var(--color-storm-grey-600, #506079);
     font-weight: 600;
     white-space: nowrap;
-    text-decoration: none;
-    background: transparent;
 
     .nav-link-icon {
       align-self: center;
@@ -849,18 +851,11 @@
       color: var(--color-storm-grey-600, #506079);
     }
 
-    // Background tint is the only hover cue — no underline.
-    &:hover {
-      background: var(--color-storm-grey-50, #f6f7f9);
-      text-decoration: none;
-    }
-
     // Base UI marks the active tab with `aria-selected` / `data-active`.
     &[aria-selected="true"],
     &[data-active] {
       color: var(--color-purple-heart-950, #360764);
-      font-weight: 700;
-      background: var(--color-purple-heart-100, #f2e8ff);
+      font-weight: 600;
 
       .nav-link-text {
         color: var(--color-purple-heart-950, #360764);
@@ -868,18 +863,54 @@
       .nav-link-icon {
         color: var(--color-purple-heart-950, #360764);
       }
-      &:hover {
-        background: var(--color-purple-heart-100, #f2e8ff);
-      }
     }
   }
+}
 
-  // The DS draws a 1px hover underline on inactive tabs via a `::after` bar; the
-  // pill style uses only the background tint, so suppress it. Selector mirrors
-  // the DS rule (…:not(.active):not([data-active]):hover::after) with the extra
-  // `.compose-tabs` scope so it wins on specificity.
-  .nav-tabs .nav-link:not(.active):not([data-active]):hover::after {
-    display: none;
+// ── Tab-track treatments (design-comparison toggle) ──────────────────────────
+// Both middle-column tracks (compose tabs + timeline filter pills) render with
+// the `nav-pills` variant; the wrapper class flips ONLY the track background and
+// the active-pill (indicator) fill/shadow. Text colors are shared above.
+
+// Base UI animates the active-pill indicator's width/translate. On the FIRST
+// positioning (before any tab has been activated) the width grows from zero,
+// which reads as the active tab being "cut off". Suppress the transition until a
+// tab is actually activated — base UI flips `data-activation-direction` off
+// "none" on the first click, after which slide animations resume.
+.tabtrack .tabs-indicator[data-activation-direction="none"] {
+  transition: none;
+}
+
+.tabtrack--system {
+  .nav-pills {
+    background: var(--color-storm-grey-50, #f6f7f9);
+    border-radius: 8px;
+    padding: 3px;
+  }
+  // White active pill + soft shadow (the Blueprint pill default).
+  .nav-pills .tabs-indicator {
+    background: #ffffff;
+    box-shadow:
+      0 1px 2px -1px rgba(15, 23, 42, 0.1),
+      0 1px 3px 0 rgba(15, 23, 42, 0.1);
+  }
+}
+
+.tabtrack--ghost {
+  .nav-pills {
+    background: transparent;
+    padding: 0;
+  }
+  // Purple-accent active pill, no shadow.
+  .nav-pills .tabs-indicator {
+    background: var(--color-purple-heart-100, #f2e8ff);
+    box-shadow: none;
+  }
+  // On the purple pill the count chip needs contrast (system tints it on white).
+  .tl-filterbar .nav-link[aria-selected="true"] .tl-filterbar__count,
+  .tl-filterbar .nav-link[data-active] .tl-filterbar__count {
+    background: #ffffff;
+    color: var(--color-purple-heart-700, #6b21c8);
   }
 }
 
@@ -1312,6 +1343,8 @@
 // migrate into the Blueprint DS later without touching component code.
 
 .tl-filterbar {
+  min-width: 0;
+
   .nav {
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -1369,6 +1402,17 @@
   .nav-link.active &__count {
     background: var(--color-purple-heart-100, #ede0fe);
     color: var(--color-purple-heart-700, #6b21c8);
+  }
+
+  // Active tab label + icon use the purple-heart secondary color.
+  .nav-link[aria-selected="true"],
+  .nav-link[data-active] {
+    color: var(--color-purple-heart-950, #360764);
+
+    .nav-link-icon,
+    .tl-filterbar__label {
+      color: var(--color-purple-heart-950, #360764);
+    }
   }
 }
 
