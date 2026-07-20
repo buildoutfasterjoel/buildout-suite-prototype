@@ -1445,6 +1445,17 @@
 .tl-row {
   display: flex;
   gap: 12px;
+  // Full-row grey hover — extends slightly past the content on each side so the
+  // highlight reads as one surface (the negative margin is absorbed by the
+  // card's padding).
+  border-radius: 8px;
+  margin: 0 -8px;
+  padding: 0 8px;
+  transition: background-color 0.12s ease-in-out;
+
+  &:hover {
+    background: var(--color-storm-grey-50, #f6f7f9);
+  }
 
   &__rail {
     display: flex;
@@ -1511,6 +1522,10 @@
   }
 
   &__subject {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
     font-size: 14px;
     font-weight: 600;
     color: var(--color-storm-grey-900, #22262f);
@@ -1609,19 +1624,9 @@
   }
 }
 
-// ── Icon badge — 6 tones × filled / outline ──
-@mixin tl-tone($solid, $tint, $ink) {
-  &.is-filled {
-    background: $solid;
-    color: #fff;
-  }
-  &.is-outline {
-    background: $tint;
-    color: $ink;
-    border: 1px solid rgba(0, 0, 0, 0.04);
-  }
-}
-
+// ── Icon badge — solid bubble, white glyph ──
+// Resting rows are grey so the feed stays calm; attention rows (missed call,
+// unreplied email, open inquiry) take their channel tone so color = "act on it".
 .tl-icon {
   display: inline-flex;
   align-items: center;
@@ -1631,24 +1636,28 @@
   border-radius: 50%;
   font-size: 13px;
   flex-shrink: 0;
+  color: #fff;
 
+  &--resting {
+    background: var(--color-storm-grey-400, #8495ac);
+  }
   &--green {
-    @include tl-tone(var(--color-mountain-meadow-500, #00bc7d), #e3f7ef, var(--color-mountain-meadow-600, #009966));
+    background: var(--color-mountain-meadow-500, #00bc7d);
   }
   &--amber {
-    @include tl-tone(var(--color-harvest-gold-500, #fd9a00), #fdf0d9, var(--color-harvest-gold-600, #c77e00));
+    background: var(--color-harvest-gold-500, #fd9a00);
   }
   &--blue {
-    @include tl-tone(var(--color-buildout-blue-500, #3f86f2), #e7f0fe, var(--color-buildout-blue-600, #2350c9));
+    background: var(--color-buildout-blue-500, #3f86f2);
   }
   &--rose {
-    @include tl-tone(var(--bp-destructive, #d92d20), #fce4e2, #b42318);
+    background: var(--color-solid-pink-400, #ff5961);
   }
   &--accent {
-    @include tl-tone(var(--color-purple-heart-500, #9f55f7), #f2e8fe, var(--color-purple-heart-600, #8833ea));
+    background: var(--color-purple-heart-500, #9f55f7);
   }
   &--slate {
-    @include tl-tone(var(--color-storm-grey-500, #64748b), #eef0f3, var(--color-storm-grey-700, #424e62));
+    background: var(--color-storm-grey-500, #64748b);
   }
 }
 

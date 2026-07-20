@@ -14,6 +14,7 @@ import {
   buildTimeline,
   composedToEvent,
   groupByBucket,
+  needsAttention,
   visibleEvents,
   type FilterKey,
   type TimelineEvent as TimelineEventData,
@@ -45,6 +46,11 @@ export function ContactEngagementPanel({
   const [deleted, setDeleted] = useState<Set<string>>(new Set());
   const [replyOpenId, setReplyOpenId] = useState<string | null>(null);
   const [threadOpenId, setThreadOpenId] = useState<string | null>(null);
+  // Rows the broker has acted on (replied / responded / called back). Clears the
+  // attention color + removes the reply options once handled.
+  const [resolved, setResolved] = useState<Set<string>>(new Set());
+  const resolve = (id: string) =>
+    setResolved((r) => (r.has(id) ? r : new Set(r).add(id)));
 
   // The feed = session-logged compose/call events + the synthesized history,
   // with per-event star/pin overrides applied and deleted rows removed.
@@ -81,6 +87,11 @@ export function ContactEngagementPanel({
       }));
     } else if (/^(Reply|Reply all|Forward|Respond)$/.test(id)) {
       setReplyOpenId((cur) => (cur === event.id ? null : event.id));
+    } else if (id === "Call back" || id === "Dismiss") {
+      // "Call back" is itself the follow-up; "Dismiss" is "seen it, no response
+      // needed". Either way the row is handled — clear its attention state
+      // (greys the icon, removes the action bar) without logging anything.
+      resolve(event.id);
     } else if (id === "View full thread") {
       setThreadOpenId((cur) => (cur === event.id ? null : event.id));
     } else if (id === "Delete") {
@@ -89,8 +100,8 @@ export function ContactEngagementPanel({
         setDeleted((d) => new Set(d).add(event.id));
       }
     }
-    // Other actions (Call back, Create task, Associate, …) are prototype no-ops
-    // — they still dispatch through here so wiring stays centralized.
+    // Other actions (Create task, Associate, …) are prototype no-ops — they
+    // still dispatch through here so wiring stays centralized.
   }
 
   function handleReplySend(event: TimelineEventData, text: string) {
@@ -107,6 +118,8 @@ export function ContactEngagementPanel({
       date: todayISO(),
     });
     setReplyOpenId(null);
+    // Replying handles the inbound email/thread — drop its attention state.
+    resolve(event.id);
   }
 
   return (
@@ -156,6 +169,9 @@ export function ContactEngagementPanel({
                       <TimelineEvent
                         key={event.id}
                         event={event}
+                        attention={
+                          needsAttention(event) && !resolved.has(event.id)
+                        }
                         starred={!!event.starred}
                         pinned={!!event.pinned}
                         replyOpen={replyOpenId === event.id}

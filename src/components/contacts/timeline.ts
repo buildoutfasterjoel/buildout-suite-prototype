@@ -5,7 +5,7 @@ import {
   faEnvelope,
   faEnvelopeOpen,
   faReply,
-  faComments,
+  faEnvelopes,
   faCalendarUsers,
   faBuilding,
   faNoteSticky,
@@ -149,6 +149,8 @@ export interface TimelineEvent {
   subject?: string;
   blocks?: TimelineBlock[];
   body?: string;
+  /** Source-channel tag rendered inline with the headline (e.g. an inquiry's "LoopNet"). */
+  sourceTag?: string;
   badges?: TimelineBadgeData[];
   reply?: TimelineReply;
   threadId?: string;
@@ -204,7 +206,7 @@ export const TYPE_CONFIG: Record<TimelineEventType, TypeConfig> = {
     filled: true,
     filter: "calls",
     defaultTitle: "Logged a call",
-    actionBar: { primary: "Call back", ghosts: ["Text back", "Log follow-up"] },
+    actionBar: { primary: "Call back", ghosts: ["Log follow-up"] },
     overflow: ["Play recording", "Edit summary", "Log call"],
   },
   email: {
@@ -236,15 +238,15 @@ export const TYPE_CONFIG: Record<TimelineEventType, TypeConfig> = {
   },
   "inbound-call": {
     icon: faPhoneArrowDownLeft,
-    tone: "amber",
+    tone: "rose",
     filled: false,
     filter: "calls",
     defaultTitle: "Inbound call",
-    actionBar: { primary: "Call back", ghosts: ["Text back"] },
+    actionBar: { primary: "Call back", ghosts: [] },
     overflow: ["Play voicemail", "Create task", "Log call"],
   },
   conversation: {
-    icon: faComments,
+    icon: faEnvelopes,
     tone: "blue",
     filled: true,
     filter: "emails",
@@ -281,11 +283,11 @@ export const TYPE_CONFIG: Record<TimelineEventType, TypeConfig> = {
   },
   inquiry: {
     icon: faCircleQuestion,
-    tone: "amber",
+    tone: "blue",
     filled: false,
     filter: "activity",
     defaultTitle: "Property inquiry",
-    actionBar: { primary: "Respond", ghosts: ["Text back"] },
+    actionBar: { primary: "Respond", ghosts: [] },
     overflow: ["Send listing", "Create task"],
   },
   marketing: {
@@ -348,6 +350,29 @@ export const TYPE_CONFIG: Record<TimelineEventType, TypeConfig> = {
 /** Universal overflow items appended after any type-specific ones (PR2). */
 export function overflowItems(type: TimelineEventType): string[] {
   return [...(TYPE_CONFIG[type].overflow ?? []), ...UNIVERSAL_OVERFLOW];
+}
+
+/**
+ * Whether a row still needs the broker's attention (drives the colored icon +
+ * the Tier-1 action bar). Only three cases qualify — a missed inbound call, an
+ * inbound email not yet replied to, and an inquiry not yet followed up (plus an
+ * email thread whose latest message is inbound). Everything else is "resting".
+ * Callers additionally clear this once the row has been actioned (see the panel
+ * `resolved` set) so the color earns its meaning.
+ */
+export function needsAttention(e: TimelineEvent): boolean {
+  switch (e.type) {
+    case "inbound-call":
+      return !!e.attempted;
+    case "inbound-email":
+    case "email-reply":
+    case "inquiry":
+      return true;
+    case "conversation":
+      return e.thread?.messages.at(-1)?.direction === "in";
+    default:
+      return false;
+  }
 }
 
 // ── Filtering ────────────────────────────────────────────────────────────────
@@ -537,7 +562,6 @@ export function buildTimeline(c: Contact, deals: DealSummary[]): TimelineEvent[]
           ],
         },
       ],
-      badges: [{ label: "Connected", tone: "reply" }],
       associations: assoc(dealA),
       source: "user",
       starred: true,
@@ -610,7 +634,6 @@ export function buildTimeline(c: Contact, deals: DealSummary[]): TimelineEvent[]
           },
         ],
       },
-      badges: [{ label: "3 in thread", tone: "activity" }],
       threadId,
       source: "user",
     },
@@ -736,7 +759,6 @@ export function buildTimeline(c: Contact, deals: DealSummary[]): TimelineEvent[]
       timestamp: daysAgo(20, 15, 10),
       seq: next(),
       body: `${first} mentioned they're expanding into the Southeast — keep an eye out for retail pads in Charleston and Savannah.`,
-      visibility: "shared",
       source: "user",
     },
     {
@@ -749,24 +771,9 @@ export function buildTimeline(c: Contact, deals: DealSummary[]): TimelineEvent[]
       seq: next(),
       title: `Inquired about ${dealA ? dealA.name : "a listing"}`,
       body: "Requested the offering memorandum and current rent roll.",
-      badges: [{ label: "LoopNet", tone: "system" }],
+      sourceTag: "LoopNet",
       associations: assoc(dealA),
       source: "api",
-    },
-    {
-      id: `${c.id}-marketing-1`,
-      type: "marketing",
-      actor: { name: "Buildout Marketing" },
-      contact: contactRef,
-      direction: "out",
-      timestamp: daysAgo(27, 7, 0),
-      seq: next(),
-      subject: "New listing: Class-A retail on King Street",
-      badges: [
-        { label: "Delivered", tone: "sent" },
-        { label: "Opened", tone: "open" },
-      ],
-      source: "automation",
     },
 
     // ── Earlier this year ──
@@ -845,7 +852,12 @@ export function composedToEvent(a: ComposedActivity, c: Contact): TimelineEvent 
     seq: 1_000_000 + a.seq,
     subject: isEmail ? a.subject : undefined,
     body: a.body || undefined,
-    badges: a.outcome ? [{ label: a.outcome, tone: "reply" }] : undefined,
+    // "Connected" is the default/assumed call outcome — only surface a badge for
+    // the outcomes that actually carry information (No Answer, Left Voicemail…).
+    badges:
+      a.outcome && a.outcome !== "Connected"
+        ? [{ label: a.outcome, tone: "reply" }]
+        : undefined,
     associations: a.relatedDeal
       ? [{ type: "deal", label: a.relatedDeal }]
       : undefined,

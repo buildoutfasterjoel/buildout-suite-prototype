@@ -3,24 +3,23 @@ import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { IconTone } from "#/components/contacts/timeline";
 
 /**
- * Circular channel glyph for a timeline row. Six tones map to channels; `filled`
- * marks connected/positive, outline marks attempted/system. Tone + fill come
- * from the type config (and per-row `attempted` overrides), so the mapping is
- * deterministic.
+ * Circular channel glyph for a timeline row. By default the bubble is a neutral
+ * grey (white glyph) so the feed stays calm; when a row still needs attention —
+ * a missed call, an unreplied email, an un-followed-up inquiry — it takes its
+ * channel tone so the color actually means "act on this". Resolving the row
+ * flips `attention` off and the bubble returns to grey.
  */
 export function IconBadge({
   icon,
   tone,
-  filled,
+  attention,
 }: {
   icon: IconDefinition;
   tone: IconTone;
-  filled: boolean;
+  attention: boolean;
 }) {
   return (
-    <span
-      className={`tl-icon tl-icon--${tone} ${filled ? "is-filled" : "is-outline"}`}
-    >
+    <span className={`tl-icon ${attention ? `tl-icon--${tone}` : "tl-icon--resting"}`}>
       <FontAwesomeIcon icon={icon} />
     </span>
   );
