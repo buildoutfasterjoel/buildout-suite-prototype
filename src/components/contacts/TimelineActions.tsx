@@ -40,6 +40,16 @@ export function TimelineActionBar({
           {g}
         </Button>
       ))}
+      {/* "Seen it, no response needed" — clears the attention state (greys the
+          icon, removes the bar) without logging any follow-up. */}
+      <Button
+        variant="ghost"
+        size="sm"
+        className="tl-actionbar__dismiss"
+        onClick={() => onAction("Dismiss")}
+      >
+        Dismiss
+      </Button>
     </div>
   );
 }

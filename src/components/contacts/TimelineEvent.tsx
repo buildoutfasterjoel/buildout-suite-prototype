@@ -34,6 +34,7 @@ import {
  */
 export function TimelineEvent({
   event,
+  attention,
   starred,
   pinned,
   replyOpen,
@@ -43,6 +44,8 @@ export function TimelineEvent({
   onReplyCancel,
 }: {
   event: TimelineEventData;
+  /** Row still needs action (missed call / unreplied email / open inquiry). */
+  attention: boolean;
   starred: boolean;
   pinned: boolean;
   replyOpen: boolean;
@@ -52,7 +55,6 @@ export function TimelineEvent({
   onReplyCancel: () => void;
 }) {
   const config = TYPE_CONFIG[event.type];
-  const filled = event.attempted ? false : config.filled;
 
   const names = event.contact
     ? `${event.actor.name} › ${event.contact.name}`
@@ -60,12 +62,10 @@ export function TimelineEvent({
 
   const headline = event.subject ?? event.title ?? config.defaultTitle;
 
-  // Tier-1 action bar shows on actionable inbound rows (and the conversation
-  // card, whose latest message is inbound). Read-only system rows never get it.
-  const isActionable =
-    !config.readOnly &&
-    !!config.actionBar?.primary &&
-    (event.direction === "in" || event.type === "conversation");
+  // Tier-1 action bar shows only while the row still needs attention (unreplied
+  // email, missed call, open inquiry, live thread); resolving it removes the
+  // reply/respond/call-back options. Read-only system rows never get it.
+  const isActionable = !config.readOnly && !!config.actionBar?.primary && attention;
 
   return (
     <article
@@ -75,7 +75,7 @@ export function TimelineEvent({
       data-pinned={pinned || undefined}
     >
       <div className="tl-row__rail">
-        <IconBadge icon={config.icon} tone={config.tone} filled={filled} />
+        <IconBadge icon={config.icon} tone={config.tone} attention={attention} />
         <span className="tl-row__connector" aria-hidden="true" />
       </div>
 
@@ -107,7 +107,14 @@ export function TimelineEvent({
           </span>
         </div>
 
-        {headline && <div className="tl-row__subject">{headline}</div>}
+        {headline && (
+          <div className="tl-row__subject">
+            <span>{headline}</span>
+            {event.sourceTag && (
+              <TimelineBadge badge={{ label: event.sourceTag, tone: "system" }} />
+            )}
+          </div>
+        )}
 
         {event.type === "conversation" && event.thread ? (
           <>
