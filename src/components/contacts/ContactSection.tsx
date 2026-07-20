@@ -17,12 +17,19 @@ export function ContactSection({
   value,
   label,
   count,
+  primaryCount = false,
   action,
   children,
 }: {
   value: string;
   label: string;
   count?: number;
+  /**
+   * When true, a non-zero count renders as a solid primary (purple) badge; zero
+   * falls back to the muted grey badge. Used for the Tasks indicator. Other
+   * sections use the grey badge regardless.
+   */
+  primaryCount?: boolean;
   action?: ReactNode;
   children: ReactNode;
 }) {
@@ -36,11 +43,18 @@ export function ContactSection({
           >
             {label}
           </span>
-          {count !== undefined && (
-            <Badge variant="secondary" appearance="muted">
-              {count}
-            </Badge>
-          )}
+          {count !== undefined &&
+            (primaryCount && count > 0 ? (
+              <Badge variant="primary">{count}</Badge>
+            ) : (
+              <Badge
+                variant="secondary"
+                appearance="muted"
+                style={{ backgroundColor: "#ECEEF2" }}
+              >
+                {count}
+              </Badge>
+            ))}
         </span>
       </Accordion.Trigger>
       {action && <div className="contact-accordion__action">{action}</div>}

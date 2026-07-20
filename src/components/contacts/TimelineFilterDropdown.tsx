@@ -1,5 +1,6 @@
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
+import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   FILTER_TABS,
@@ -43,7 +44,13 @@ export function TimelineFilterDropdown({
           onCheckedChange={(checked) => onNeedsReplyChange(!!checked)}
         />
         <span>Needs Reply</span>
-        <span className="tl-needs-reply__count">{attentionCount}</span>
+        {attentionCount > 0 ? (
+          <Badge variant="primary">{attentionCount}</Badge>
+        ) : (
+          <Badge variant="secondary" appearance="muted">
+            {attentionCount}
+          </Badge>
+        )}
       </label>
 
       <Select value={value} onValueChange={(v) => v && onChange(v as FilterKey)}>

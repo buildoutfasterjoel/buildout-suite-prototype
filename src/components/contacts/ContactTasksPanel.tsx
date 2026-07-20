@@ -93,6 +93,7 @@ export function ContactTasksPanel({
           value="tasks"
           label="Tasks"
           count={active.length}
+          primaryCount
           action={
             <Button
               variant="ghost"
