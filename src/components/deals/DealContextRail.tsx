@@ -56,7 +56,7 @@ function FilesSection({ documents }: { documents: DealDocument[] }) {
   return (
     <Card.Body>
       <div className="d-flex align-items-center justify-content-between mb-2">
-        <h6 className="mb-0">Files</h6>
+        <h6 className="mb-0 fw-semibold">Files</h6>
         <Button variant="outline" size="sm" aria-label="Add file">
           <FontAwesomeIcon icon={faCirclePlus} />
           Add
@@ -230,7 +230,7 @@ export function DealContextRail({ listing }: { listing: Listing }) {
       {parent && (
         <>
           <Card.Body>
-            <h6 className="pb-2">Parent</h6>
+            <h6 className="pb-2 fw-semibold">Parent</h6>
             <LinkedParentDeal parent={parent} />
           </Card.Body>
           <Separator />
@@ -242,14 +242,14 @@ export function DealContextRail({ listing }: { listing: Listing }) {
       <Separator />
 
       <Card.Body>
-        <h6 className="pb-2">Property</h6>
+        <h6 className="pb-2 fw-semibold">Property</h6>
         <LinkedProperty listing={listing} />
       </Card.Body>
 
       <Separator />
 
       <div className="d-flex align-items-center justify-content-between px-3 py-2">
-        <h6 className="mb-0">Contacts</h6>
+        <h6 className="mb-0 fw-semibold">Contacts</h6>
         <DropdownMenu>
           <DropdownMenu.Trigger
             render={

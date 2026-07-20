@@ -272,6 +272,14 @@ export interface DealUnderwriting {
   tier: string
   /** Indices (into the underwriting-checks list) selected for this deal. */
   selectedChecks: number[]
+  /**
+   * Where the underwriting is in the Cactus generation flow. Absent is treated
+   * as 'not-started'. 'generating' is the auto-start signal the deal-overview
+   * planner reads on mount (set when a deal is created with underwriting on).
+   */
+  status?: 'not-started' | 'generating' | 'ready'
+  /** Once generated, where the underwriting page was filed. */
+  placement?: { documentId?: string; documentName: string }
 }
 
 /** A folder or file in a deal's internal Files workspace (the "lite Dropbox" page). */

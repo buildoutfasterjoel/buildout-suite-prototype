@@ -110,24 +110,60 @@ export interface NewListingDraft {
 export interface SuggestedDocument {
   key: string
   name: string
+  /** Grouping used to organize the catalog (e.g. "Financials", "Legal"). */
+  category: string
   /** Pre-checked by default in the create-deal flow. */
   defaultOn: boolean
-  /** Auto-checked once the chosen underwriting depth reaches this many checks. */
-  minChecks?: number
 }
 
 /**
- * The imagined "firm playbook" of documents Buildout suggests for a new deal —
- * some always recommended, some that turn on as the underwriting depth deepens.
- * In production this would be driven by company defaults and similar past deals.
+ * The imagined "firm playbook" of documents Buildout suggests for a new deal.
+ * A real company can have hundreds of preset templates; this stands in for that
+ * catalog — a handful recommended by default, the rest searchable. In production
+ * this would be driven by company defaults and similar past deals.
  */
 export const SUGGESTED_DOCUMENTS: SuggestedDocument[] = [
-  { key: 'om', name: 'Offering Memorandum', defaultOn: true },
-  { key: 'rent-roll', name: 'Rent Roll 2026', defaultOn: true },
-  { key: 'bov', name: "Broker's Opinion of Value", defaultOn: true },
-  { key: 't12', name: 'T-12 Operating Statement', defaultOn: false, minChecks: 6 },
-  { key: 'phase-1', name: 'Environmental Phase I', defaultOn: false, minChecks: 9 },
-  { key: 'sensitivity', name: 'Sensitivity Analysis', defaultOn: false, minChecks: 12 },
+  // Marketing collateral
+  { key: 'om', name: 'Offering Memorandum', category: 'Marketing', defaultOn: true },
+  { key: 'bov', name: "Broker's Opinion of Value", category: 'Marketing', defaultOn: true },
+  { key: 'flyer', name: 'Property Flyer', category: 'Marketing', defaultOn: false },
+  { key: 'teaser', name: 'Deal Teaser', category: 'Marketing', defaultOn: false },
+  { key: 'email-blast', name: 'Email Blast Template', category: 'Marketing', defaultOn: false },
+  { key: 'aerial', name: 'Aerial & Site Map', category: 'Marketing', defaultOn: false },
+  { key: 'brochure', name: 'Investment Brochure', category: 'Marketing', defaultOn: false },
+
+  // Financials
+  { key: 'rent-roll', name: 'Rent Roll 2026', category: 'Financials', defaultOn: true },
+  { key: 't12', name: 'T-12 Operating Statement', category: 'Financials', defaultOn: false },
+  { key: 'proforma', name: 'Pro Forma Cash Flow', category: 'Financials', defaultOn: false },
+  { key: 'noi', name: 'NOI Statement', category: 'Financials', defaultOn: false },
+  { key: 'sensitivity', name: 'Sensitivity Analysis', category: 'Financials', defaultOn: false },
+  { key: 'debt-summary', name: 'Debt Summary', category: 'Financials', defaultOn: false },
+  { key: 'cap-ex', name: 'Capital Expenditure Budget', category: 'Financials', defaultOn: false },
+  { key: 'tax-summary', name: 'Property Tax Summary', category: 'Financials', defaultOn: false },
+
+  // Comparables & market
+  { key: 'sales-comps', name: 'Sales Comparables', category: 'Market', defaultOn: false },
+  { key: 'rent-comps', name: 'Rent Comparables', category: 'Market', defaultOn: false },
+  { key: 'market-report', name: 'Submarket Report', category: 'Market', defaultOn: false },
+  { key: 'demographics', name: 'Demographics Report', category: 'Market', defaultOn: false },
+  { key: 'traffic', name: 'Traffic Count Study', category: 'Market', defaultOn: false },
+
+  // Due diligence
+  { key: 'phase-1', name: 'Environmental Phase I', category: 'Due Diligence', defaultOn: false },
+  { key: 'pca', name: 'Property Condition Assessment', category: 'Due Diligence', defaultOn: false },
+  { key: 'survey', name: 'ALTA Survey', category: 'Due Diligence', defaultOn: false },
+  { key: 'zoning', name: 'Zoning Report', category: 'Due Diligence', defaultOn: false },
+  { key: 'title', name: 'Title Commitment', category: 'Due Diligence', defaultOn: false },
+  { key: 'appraisal', name: 'Appraisal Report', category: 'Due Diligence', defaultOn: false },
+
+  // Legal
+  { key: 'listing-agreement', name: 'Listing Agreement', category: 'Legal', defaultOn: false },
+  { key: 'nda', name: 'Non-Disclosure Agreement', category: 'Legal', defaultOn: false },
+  { key: 'loi', name: 'Letter of Intent', category: 'Legal', defaultOn: false },
+  { key: 'psa', name: 'Purchase & Sale Agreement', category: 'Legal', defaultOn: false },
+  { key: 'lease-abstract', name: 'Lease Abstract', category: 'Legal', defaultOn: false },
+  { key: 'estoppel', name: 'Estoppel Certificate', category: 'Legal', defaultOn: false },
 ]
 
 /** A sensible blank draft to seed the manual-entry form. */
@@ -327,7 +363,7 @@ function shiftDate(now: string, days: number): string {
  */
 function seedProposalPlan(
   now: string,
-  opts: { underwritingTier?: string; includeBov: boolean },
+  opts: { includeBov: boolean },
 ): DealTask[] {
   const auto = (label: string, detail: string): DealTask => ({
     id: crypto.randomUUID(),
@@ -355,13 +391,10 @@ function seedProposalPlan(
     hasAttachment: false,
   })
 
-  const underwriteDetail =
-    opts.underwritingTier && opts.underwritingTier !== 'None'
-      ? `${opts.underwritingTier} underwrite complete`
-      : 'First-pass underwrite complete'
-
+  // Underwriting is no longer seeded as a completed task — the deal-overview
+  // planner renders a dedicated AI-underwriting row (idle → generate → review)
+  // driven by `listing.underwriting`.
   return [
-    auto('Underwriting', underwriteDetail),
     auto('Listing proposal', 'Generated automatically'),
     // The BOV auto-task only appears when the broker kept the BOV document.
     ...(opts.includeBov
@@ -439,10 +472,7 @@ export function createProposalListing(draft: NewListingDraft): Listing {
   const suggested = draft.suggestedDocuments ?? seedProposalDocuments(now)
   const documents = [...suggested, ...draft.documents]
   const includeBov = suggested.some((d) => /opinion.of.value/i.test(d.name))
-  const tasks = seedProposalPlan(now, {
-    underwritingTier: draft.underwriting?.tier,
-    includeBov,
-  })
+  const tasks = seedProposalPlan(now, { includeBov })
   const nextCriticalDate =
     tasks.find((t) => t.status !== 'complete' && t.date)?.date ?? null
 
@@ -482,7 +512,11 @@ export function createProposalListing(draft: NewListingDraft): Listing {
       },
     ],
     documents,
-    underwriting: draft.underwriting,
+    // A deal created with underwriting selected lands on its overview already
+    // 'generating', so the planner kicks off the Cactus flow automatically.
+    underwriting: draft.underwriting
+      ? { ...draft.underwriting, status: draft.underwriting.status ?? 'generating' }
+      : undefined,
     financials: {
       askingPrice: draft.listingPrice,
       askingPriceUnits: 'total',

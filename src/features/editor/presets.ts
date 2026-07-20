@@ -1,4 +1,4 @@
-import type { Property } from "#/data/types";
+import type { DealUnderwriting, Property } from "#/data/types";
 import type {
   Block,
   ColumnsBlock,
@@ -10,6 +10,7 @@ import type {
   TextStyle,
 } from "./types";
 import { pricePerSf } from "./dynamic";
+import { buildUnderwritingSection } from "./underwritingPages";
 import {
   DEFAULT_CELL_STYLE,
   DEFAULT_TEXT_STYLE,
@@ -17,9 +18,8 @@ import {
   uid,
 } from "./blocks/blockFactory";
 
-/** "Better Homes and Gardens"-style placeholder header logo. */
-export const LOGO_SRC =
-  "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Better_Homes_and_Gardens_Real_Estate_logo.svg/320px-Better_Homes_and_Gardens_Real_Estate_logo.svg.png";
+/** Brand header logo shown at the top of document pages (served from /public). */
+export const LOGO_SRC = "/assets/branding/gemini-logo.png";
 
 /** Preset (template) pages the user can add. Layout is fixed; content is editable. */
 export type PresetKey = "financialSummary" | "propertyOverview";
@@ -267,13 +267,19 @@ function withPageIdentity(page: Page, name: string): Page {
  * is a real, selectable page — two reuse the richer hand-built presets above,
  * the rest are lightweight stubs.
  */
-export function buildDocumentPages(property?: Property): Page[] {
+export function buildDocumentPages(
+  property?: Property,
+  underwriting?: DealUnderwriting,
+): Page[] {
   const propertySummary = withPageIdentity(buildPropertyOverviewPage(property), "Property Summary");
   const financialSummary = withPageIdentity(buildFinancialSummaryPage(property), "Financial Summary");
 
   return [
     buildStubPage(property, { name: "Cover Page", seed: "editor-cover" }),
     buildStubPage(property, { name: "Table of Contents", seed: "editor-toc" }),
+    // Once Cactus has generated underwriting for this deal, it leads the body —
+    // pages scale with the thoroughness the user chose. Empty otherwise.
+    ...buildUnderwritingSection(property, underwriting),
     buildDividerPage(property, "Property Information"),
     propertySummary,
     buildStubPage(property, {

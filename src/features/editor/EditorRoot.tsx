@@ -5,6 +5,7 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faClockRotateLeft } from "@fortawesome/pro-regular-svg-icons";
 import type { Property } from "#/data/types";
+import { getListing } from "#/data/store";
 import { SIDEBAR_PIN_STORAGE_KEY, useEditorStore } from "./store";
 import { DocsNavRail } from "./DocsNavRail";
 import { PropertiesPanel } from "./PropertiesPanel";
@@ -21,9 +22,12 @@ import "./editor.scss";
 export function EditorRoot({
   listing,
   listingId,
+  focusUnderwriting = false,
 }: {
   listing: Property | undefined;
   listingId: string;
+  /** When true (from `?focus=underwriting`), scroll to the underwriting section on open. */
+  focusUnderwriting?: boolean;
 }) {
   const navigate = useNavigate();
   const initDocument = useEditorStore((s) => s.initDocument);
@@ -32,8 +36,20 @@ export function EditorRoot({
   const [switchToClassicOpen, setSwitchToClassicOpen] = useState(false);
 
   useEffect(() => {
-    initDocument(listing);
-  }, [listing, initDocument]);
+    initDocument(listing, getListing(listingId)?.underwriting);
+  }, [listing, listingId, initDocument]);
+
+  // Arriving from the deal's "Review" button — land on the underwriting section.
+  useEffect(() => {
+    if (!focusUnderwriting) return;
+    const t = setTimeout(() => {
+      const doc = useEditorStore.getState().document;
+      const page = doc.pages.find((p) => p.name.startsWith("Underwriting"));
+      const block = page?.blocks[0];
+      if (block) useEditorStore.getState().highlightBlock(block.id);
+    }, 150);
+    return () => clearTimeout(t);
+  }, [focusUnderwriting, listingId]);
 
   function handleSaveAndClose() {
     markSaved();

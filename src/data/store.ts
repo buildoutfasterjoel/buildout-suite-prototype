@@ -7,6 +7,8 @@ import type {
   Contact,
   PropertyType,
   RelationshipStage,
+  DealUnderwriting,
+  DealDocument,
 } from './types'
 import type { Email } from './emails'
 import { useDataStore } from './dataStore'
@@ -132,6 +134,42 @@ export function addListing(listing: Listing): void {
     return { listings }
   })
   useDataStore.getState().persist()
+}
+
+/** Persist a patch to a listing (clone map → setState → persist). */
+function patchListing(listingId: string, patch: Partial<Listing>): Listing | undefined {
+  const existing = useDataStore.getState().listings.get(listingId)
+  if (!existing) return undefined
+  const updated: Listing = { ...existing, ...patch, updatedAt: new Date().toISOString() }
+  useDataStore.setState((s) => {
+    const listings = new Map(s.listings)
+    listings.set(listingId, updated)
+    return { listings }
+  })
+  useDataStore.getState().persist()
+  return updated
+}
+
+/**
+ * Merge a patch into a deal's underwriting record — the Cactus generation flow
+ * uses this to flip status ('generating' → 'ready') and record placement. Seeds
+ * a fresh record when the deal had none.
+ */
+export function updateListingUnderwriting(
+  listingId: string,
+  patch: Partial<DealUnderwriting>,
+): Listing | undefined {
+  const existing = useDataStore.getState().listings.get(listingId)
+  if (!existing) return undefined
+  const base: DealUnderwriting = existing.underwriting ?? { tier: 'None', selectedChecks: [] }
+  return patchListing(listingId, { underwriting: { ...base, ...patch } })
+}
+
+/** Append a generated document to a deal's context documents (shows in the deal rail). */
+export function addDealDocument(listingId: string, doc: DealDocument): Listing | undefined {
+  const existing = useDataStore.getState().listings.get(listingId)
+  if (!existing) return undefined
+  return patchListing(listingId, { documents: [...(existing.documents ?? []), doc] })
 }
 
 export function getContact(contactId: string): Contact | undefined {
