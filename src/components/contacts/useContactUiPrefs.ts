@@ -52,14 +52,14 @@ interface ContactUiPrefs {
 }
 
 export const useContactUiPrefs = create<ContactUiPrefs>((set) => ({
-  // Everything collapsed by default — only the AI Briefing starts open. State
-  // persists across contact navigation (in-memory store) but resets to these
-  // defaults on a fresh page load.
+  // The AI Briefing, contact Details, and Tasks section start open; everything
+  // else collapsed. State persists across contact navigation (in-memory store)
+  // but resets to these defaults on a fresh page load.
   overviewSections: [],
-  showDetails: false,
+  showDetails: true,
   showPastDeals: false,
   showCompletedTasks: false,
-  tasksOpen: false,
+  tasksOpen: true,
   briefingOpen: true,
   // Default to the "New" accordion treatment (chevron on the left, white body).
   // The flag name is historical; `true` renders that style. See the toggle.
