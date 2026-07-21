@@ -14,7 +14,7 @@ import { notify } from "#/lib/notify";
 type Mode = "existing" | "new";
 
 /**
- * The payoff modal after generation: file the finished underwriting into an
+ * The payoff modal after generation: save the finished underwriting into an
  * existing deal document or spin up a new one. Persists the placement + flips the
  * underwriting to 'ready', then hands the placement back so the planner row can
  * settle into its "Review" state.
@@ -47,11 +47,11 @@ export function UnderwritingPlacementModal({
   }, [open, hasDocs, documents, defaultName]);
 
   const trimmedName = newName.trim();
-  const canFile =
+  const canSave =
     mode === "existing" ? Boolean(docId) : trimmedName.length > 0;
 
-  function handleFile() {
-    if (!canFile) return;
+  function handleSave() {
+    if (!canSave) return;
     let placement: NonNullable<DealUnderwriting["placement"]>;
 
     if (mode === "existing") {
@@ -71,7 +71,7 @@ export function UnderwritingPlacementModal({
 
     updateListingUnderwriting(listing.id, { status: "ready", placement });
     notify({
-      title: "Underwriting filed",
+      title: "Underwriting saved",
       description: `Added to ${placement.documentName}.`,
     });
     onPlaced(placement);
@@ -84,7 +84,7 @@ export function UnderwritingPlacementModal({
         <Modal.Header>
           <Modal.Title>Underwriting ready</Modal.Title>
           <Modal.Description>
-            The AI underwriting is ready. Choose where this page should live.
+            The AI underwriting is ready. Choose where to save this page.
           </Modal.Description>
         </Modal.Header>
 
@@ -104,7 +104,7 @@ export function UnderwritingPlacementModal({
                     Add to an existing document
                   </span>
                   <span className="text-muted fs-small">
-                    Drop the underwriting page into a document already on this deal.
+                    Save the underwriting page into a document already on this deal.
                   </span>
                   {mode === "existing" && hasDocs && (
                     <div className="mt-2" onClick={(e) => e.preventDefault()}>
@@ -164,8 +164,8 @@ export function UnderwritingPlacementModal({
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button variant="primary" disabled={!canFile} onClick={handleFile}>
-            File underwriting
+          <Button variant="primary" disabled={!canSave} onClick={handleSave}>
+            Save underwriting
           </Button>
         </Modal.Footer>
       </Modal.Content>
