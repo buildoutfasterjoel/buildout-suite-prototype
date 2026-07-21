@@ -622,14 +622,12 @@
   }
 }
 
-// Access avatars nested inside the Share button: strip the group's pill
-// styling (drop shadow, padding, and white fill/border) so the stacked
-// avatars sit cleanly in place of the button's leading icon.
-.contact-share-avatars {
-  padding: 0;
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
+// Manage-sharing icon button: icon-sm pins the glyph to 12px, so restore the
+// default 14px icon size while keeping the compact 28px button footprint.
+.contact-hero__share-btn .svg-inline--fa {
+  width: 14px;
+  height: 14px;
+  font-size: 14px;
 }
 
 // Bulk-selection actions bar (People table): a tinted blue band that appears

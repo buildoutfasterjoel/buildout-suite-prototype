@@ -95,11 +95,7 @@ function ContactDetailPage() {
       style={{ maxWidth: "96rem" }}
     >
       {/* Fixed top bar */}
-      <ContactDetailTopBar
-        contact={contact}
-        access={access}
-        onOpenShare={() => setShareOpen(true)}
-      />
+      <ContactDetailTopBar contact={contact} />
 
       {/* Live call bar — docks full-width above the columns while a call runs. */}
       {liveCall.call && (

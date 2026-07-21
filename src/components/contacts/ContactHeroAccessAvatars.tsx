@@ -1,6 +1,9 @@
 import type { KeyboardEvent } from "react";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
+import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faUserGear } from "@fortawesome/pro-regular-svg-icons";
 import {
   CURRENT_USER,
   accessTierLabel,
@@ -91,6 +94,23 @@ export function ContactHeroAccessAvatars({
           onOpenShare={onOpenShare}
         />
       ))}
+      <Tooltip>
+        <Tooltip.Trigger
+          render={
+            <Button
+              variant="ghost"
+              appearance="muted"
+              size="icon-sm"
+              aria-label="Manage sharing"
+              onClick={onOpenShare}
+              className="contact-hero__share-btn"
+            >
+              <FontAwesomeIcon icon={faUserGear} />
+            </Button>
+          }
+        />
+        <Tooltip.Content>Manage sharing</Tooltip.Content>
+      </Tooltip>
     </div>
   );
 }
