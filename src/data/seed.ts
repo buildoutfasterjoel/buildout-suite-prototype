@@ -1552,7 +1552,13 @@ interface HeroFixture {
   lastTouch: string
   openTaskCount: number
   /** The deal the hero's arc runs on — null for the no-deal-yet stages. */
-  deal: { status: ListingStage; side: DealSide } | null
+  deal: { status: ListingStage; side: DealSide; dealType?: DealType } | null
+  /**
+   * Story-specific name for the hero's property + deal (e.g. Earl's
+   * "The Thompson Block"). Renames the claimed listing's property and every
+   * listing on it so the whole Contact → Deal → Property path reads on-story.
+   */
+  dealName?: string
 }
 
 const HERO_FIXTURES: HeroFixture[] = [
@@ -1590,7 +1596,8 @@ const HERO_FIXTURES: HeroFixture[] = [
     lastContactedDaysAgo: 2,
     lastTouch: 'Logged a call',
     openTaskCount: 1,
-    deal: { status: 'proposal', side: 'seller' },
+    deal: { status: 'proposal', side: 'seller', dealType: 'Sale' },
+    dealName: 'The Thompson Block',
   },
   {
     heroKey: 'victor',
@@ -1671,7 +1678,11 @@ function forceListingStage(l: Listing, status: ListingStage): void {
  * wire each to a listing at their story's stage/side. Mutates in place; runs
  * before `reconcileContactDealFields` so the derived fields follow the wiring.
  */
-function applyHeroes(contacts: Contact[], listings: Listing[]): void {
+function applyHeroes(
+  contacts: Contact[],
+  listings: Listing[],
+  properties: Property[],
+): void {
   const DAY_MS = 86_400_000
   const daysAgoIso = (n: number) => new Date(Date.now() - n * DAY_MS).toISOString()
   const claimed = new Set<string>()
@@ -1710,11 +1721,38 @@ function applyHeroes(contacts: Contact[], listings: Listing[]): void {
     }
     if (!h.deal) return
 
+    // Prefer a listing matching both stage and deal type (when the story pins
+    // one), degrading to stage-only, then to anything unclaimed.
     const target =
+      listings.find(
+        (l) =>
+          l.status === h.deal!.status &&
+          (!h.deal!.dealType || l.dealType === h.deal!.dealType) &&
+          !claimed.has(l.id),
+      ) ??
       listings.find((l) => l.status === h.deal!.status && !claimed.has(l.id)) ??
       listings.find((l) => !claimed.has(l.id))!
     claimed.add(target.id)
     forceListingStage(target, h.deal.status)
+
+    // Story-specific rename: the claimed property and every listing on it, so
+    // the name reads on-story from the contact page through deal and property.
+    if (h.dealName) {
+      const property = properties.find((p) => p.id === target.propertyId)
+      if (property) {
+        const oldName = property.name
+        property.name = h.dealName
+        for (const l of listings) {
+          if (l.propertyId !== property.id) continue
+          l.name = l.name.replace(oldName, h.dealName)
+          l.transaction.backOffice.name = l.name
+          l.marketing.saleTitle = l.marketing.saleTitle.replace(oldName, h.dealName)
+          if (l.marketing.leaseTitle) {
+            l.marketing.leaseTitle = l.marketing.leaseTitle.replace(oldName, h.dealName)
+          }
+        }
+      }
+    }
 
     if (h.deal.side === 'seller') {
       target.sellerContactIds = [host.id, ...target.sellerContactIds]
@@ -1802,7 +1840,7 @@ export function generateDataset() {
 
   // Overwrite five generated contacts with the hand-authored hero personas and
   // wire their deals — before reconciliation so derived fields follow.
-  applyHeroes(contacts, listings)
+  applyHeroes(contacts, listings, properties)
 
   // Reconcile each contact's deal-derived fields with the deals they're actually
   // a party to. The listings are the source of truth for the contact↔deal graph,
