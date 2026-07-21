@@ -281,8 +281,10 @@ export interface DealUnderwriting {
    * Where the underwriting is in the AI generation flow. Absent is treated
    * as 'not-started'. 'generating' is the auto-start signal the deal-overview
    * planner reads on mount (set when a deal is created with underwriting on).
+   * 'generated' means the page is built but not yet filed — the planner shows a
+   * "Choose document" action so the broker files it on their own schedule.
    */
-  status?: 'not-started' | 'generating' | 'ready'
+  status?: 'not-started' | 'generating' | 'generated' | 'ready'
   /** Once generated, where the underwriting page was filed. */
   placement?: { documentId?: string; documentName: string }
 }

@@ -6,6 +6,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faWandMagicSparkles } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing, Property } from "#/data/types";
 import { updateListingUnderwriting } from "#/data/store";
+import { notify } from "#/lib/notify";
 import { propertyQualifiesForUnderwriting } from "./eligibility";
 import { PlannerRow, TaskMarker } from "../TodayPlanner";
 import { UnderwritingDepth } from "../UnderwritingDepth";
@@ -41,7 +42,10 @@ export function showsUnderwritingRow(
 /**
  * The AI underwriting row on the deal planner. Owns the whole flow:
  * idle (Generate button) → a depth-setup modal → inline generation progress →
- * a placement modal → "Review". A deal created with underwriting on lands here
+ * 'generated' (a toast fires and the row shows "Choose document") → placement
+ * modal → "Review". Generation finishes async: it never auto-opens the
+ * placement modal, so the broker's overview is never hijacked — they file the
+ * page whenever they like. A deal created with underwriting on lands here
  * already 'generating', so it kicks off automatically with no click.
  */
 export function UnderwritingPlannerRow({ listing }: { listing: Listing }) {
@@ -59,9 +63,11 @@ export function UnderwritingPlannerRow({ listing }: { listing: Listing }) {
   const [phase, setPhase] = useState<Phase>(
     listing.underwriting?.status === "ready"
       ? "ready"
-      : listing.underwriting?.status === "generating"
-        ? "generating"
-        : "idle",
+      : listing.underwriting?.status === "generated"
+        ? "generated"
+        : listing.underwriting?.status === "generating"
+          ? "generating"
+          : "idle",
   );
   const [setupOpen, setSetupOpen] = useState(false);
   const [runStrategy, setRunStrategy] = useState<UnderwritingStrategyId>(initialStrategy);
@@ -151,8 +157,15 @@ export function UnderwritingPlannerRow({ listing }: { listing: Listing }) {
               strategy={runStrategy}
               selectedChecks={[...runSelection]}
               onComplete={() => {
+                // Finish async: land in the "generated" state and let the broker
+                // file it whenever they want — a toast is the only interruption,
+                // no modal takes over their overview.
+                updateListingUnderwriting(listing.id, { status: "generated" });
                 setPhase("generated");
-                setPlacementOpen(true);
+                notify({
+                  title: "Underwriting ready",
+                  description: `Choose where to file it from ${listing.name}'s planner.`,
+                });
               }}
             />
           </div>
