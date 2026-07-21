@@ -18,6 +18,7 @@ import {
   type AccessTier,
   type ContactShare,
 } from './teammates'
+import { DEFAULT_STRATEGY, strategyLabel } from '#/components/deals/underwriting/strategies'
 
 /** All email campaigns from the live store (seeded mocks + any AI/user drafts). */
 export function getEmailsList(): Email[] {
@@ -151,7 +152,7 @@ function patchListing(listingId: string, patch: Partial<Listing>): Listing | und
 }
 
 /**
- * Merge a patch into a deal's underwriting record — the Cactus generation flow
+ * Merge a patch into a deal's underwriting record — the AI generation flow
  * uses this to flip status ('generating' → 'ready') and record placement. Seeds
  * a fresh record when the deal had none.
  */
@@ -161,7 +162,12 @@ export function updateListingUnderwriting(
 ): Listing | undefined {
   const existing = useDataStore.getState().listings.get(listingId)
   if (!existing) return undefined
-  const base: DealUnderwriting = existing.underwriting ?? { tier: 'None', selectedChecks: [] }
+  const base: DealUnderwriting =
+    existing.underwriting ?? {
+      strategy: DEFAULT_STRATEGY,
+      tier: strategyLabel(DEFAULT_STRATEGY),
+      selectedChecks: [],
+    }
   return patchListing(listingId, { underwriting: { ...base, ...patch } })
 }
 

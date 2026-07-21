@@ -15,33 +15,24 @@ import {
   uid,
 } from "./blocks/blockFactory";
 import { LOGO_SRC } from "./presets";
+import {
+  checksFor,
+  coerceStrategy,
+  strategyLabel,
+} from "#/components/deals/underwriting/strategies";
 
 /**
- * Builds the "Underwriting" section injected into a deal's document once Cactus
+ * Builds the "Underwriting" section injected into a deal's document once the AI
  * has generated it. The checks the user selected (thoroughness) decide which
  * section pages appear — a Rapid Screen yields a short section, an Institutional
  * run a long one. All figures are FAKE but derived deterministically from the
  * property, so the numbers are stable across the editor's repeated rebuilds
  * (the editor holds no persistence) and never use Math.random.
  *
- * The 12 sections are indexed to match `UNDERWRITING_CHECKS` in
- * `src/components/deals/UnderwritingDepth.tsx`.
+ * Sections are resolved by the stable `key` on each check in the deal's chosen
+ * strategy (see `checksFor` in `src/components/deals/underwriting/strategies.ts`),
+ * not by numeric index into a single global list.
  */
-
-const CHECK_LABELS = [
-  "Rent roll summary",
-  "Net operating income",
-  "T-12 operating statement",
-  "Cap rate & DSCR",
-  "Sales comparables",
-  "Rent comparables",
-  "Cash flow projection",
-  "Tenant credit review",
-  "Lease abstraction",
-  "Market & demographics",
-  "Environmental (Phase I)",
-  "Sensitivity & stress test",
-] as const;
 
 // ── Styles ──────────────────────────────────────────────────────────────────
 
@@ -71,12 +62,6 @@ const sectionHeadingStyle: TextStyle = {
   bold: true,
   fontSize: 15,
   color: "#1f2a3d",
-};
-
-const bodyStyle: TextStyle = {
-  ...DEFAULT_TEXT_STYLE,
-  fontSize: 12.5,
-  lineHeight: 21,
 };
 
 // ── Cell / table / block helpers ──────────────────────────────────────────────
@@ -162,7 +147,7 @@ function buildCtx(property: Property | undefined): Ctx {
   return { price, sqft, cap, noi, egi, opex, pgi, vacancy, rentPerSf, loan, debtService };
 }
 
-// ── Section builders (indexed to CHECK_LABELS) ────────────────────────────────
+// ── Section builders (resolved by strategy check key via SECTION_BUILDERS) ────
 
 interface Section {
   name: string;
@@ -201,9 +186,46 @@ function rentRollSection(c: Ctx): Section {
   return section("Rent Roll Summary", table(rows));
 }
 
-function noiSection(c: Ctx): Section {
+function projectInfoSection(c: Ctx, property: Property | undefined): Section {
+  const type = property?.propertyType ?? "Multifamily";
+  const year = property?.yearBuilt && property.yearBuilt > 0 ? String(property.yearBuilt) : "—";
+  const zoning = property?.zoning || "Mixed-use (MU-2)";
+  const lot = property?.lotSqFt && property.lotSqFt > 0 ? property.lotSqFt : Math.round(c.sqft * 1.8);
+  const submarket = property?.submarket || "Central Business District";
   return section(
-    "Net Operating Income",
+    "Project Information",
+    table([
+      [hcell("Property Type"), vcell(type, { align: "left" })],
+      [hcell("Submarket"), vcell(submarket, { align: "left" })],
+      [hcell("Year Built"), vcell(year)],
+      [hcell("Building Size"), vcell(`${c.sqft.toLocaleString()} SF`)],
+      [hcell("Lot Size"), vcell(`${lot.toLocaleString()} SF`)],
+      [hcell("Zoning"), vcell(zoning, { align: "left" })],
+    ]),
+  );
+}
+
+function unitMixSection(c: Ctx): Section {
+  const units = Math.max(4, Math.round(c.sqft / 850));
+  const studio = Math.round(units * 0.2);
+  const one = Math.round(units * 0.45);
+  const two = units - studio - one;
+  const baseRent = Math.max(1200, Math.round((c.rentPerSf * 850) / 12));
+  return section(
+    "Unit Mix",
+    table([
+      [hcell("Unit Type"), hcell("Units", "right"), hcell("Avg SF", "right"), hcell("Proj. Rent / mo", "right")],
+      [vcell("Studio", { align: "left" }), vcell(String(studio)), vcell("520"), vcell(money(baseRent * 0.8))],
+      [vcell("1 Bed / 1 Bath", { align: "left" }), vcell(String(one)), vcell("780"), vcell(money(baseRent))],
+      [vcell("2 Bed / 2 Bath", { align: "left" }), vcell(String(two)), vcell("1,150"), vcell(money(baseRent * 1.45))],
+      [hcell("Total"), hcell(String(units), "right"), hcell("—", "right"), hcell("—", "right")],
+    ]),
+  );
+}
+
+function incomeExpensesSection(c: Ctx, label: string): Section {
+  return section(
+    label,
     table([
       [hcell("Potential Gross Income"), vcell(money(c.pgi))],
       [hcell("Vacancy & Credit Loss"), vcell(`(${money(c.vacancy)})`)],
@@ -214,193 +236,128 @@ function noiSection(c: Ctx): Section {
   );
 }
 
-function t12Section(c: Ctx): Section {
+function investmentCostSection(c: Ctx): Section {
+  const land = Math.round(c.price * 0.35);
+  const hard = Math.round(c.sqft * 185);
+  const soft = Math.round(hard * 0.18);
+  const contingency = Math.round((hard + soft) * 0.05);
+  const total = land + hard + soft + contingency;
   return section(
-    "Trailing 12-Month Operating Statement",
+    "Investment Cost Assumptions",
     table([
-      [hcell("Metric"), hcell("Q1", "right"), hcell("Q2", "right"), hcell("Q3", "right"), hcell("Q4", "right")],
-      [
-        vcell("Revenue", { align: "left" }),
-        vcell(money(c.egi * 0.24)),
-        vcell(money(c.egi * 0.25)),
-        vcell(money(c.egi * 0.25)),
-        vcell(money(c.egi * 0.26)),
-      ],
-      [
-        vcell("Expenses", { align: "left" }),
-        vcell(money(c.opex * 0.25)),
-        vcell(money(c.opex * 0.26)),
-        vcell(money(c.opex * 0.24)),
-        vcell(money(c.opex * 0.25)),
-      ],
-      [
-        vcell("NOI", { align: "left" }),
-        vcell(money(c.noi * 0.23)),
-        vcell(money(c.noi * 0.25)),
-        vcell(money(c.noi * 0.26)),
-        vcell(money(c.noi * 0.26)),
-      ],
+      [hcell("Land / Acquisition"), vcell(money(land))],
+      [hcell("Hard Costs"), vcell(money(hard))],
+      [hcell("Soft Costs"), vcell(money(soft))],
+      [hcell("Contingency (5%)"), vcell(money(contingency))],
+      [hcell("Total Project Cost"), vcell(money(total))],
     ]),
   );
 }
 
-function capDscrSection(c: Ctx): Section {
+function exitDispositionSection(c: Ctx): Section {
+  const exitCap = c.cap - 0.005;
+  const exitValue = Math.round(c.noi / exitCap / 10_000) * 10_000;
+  return section(
+    "Exit / Disposition Assumptions",
+    table([
+      [hcell("Hold Period"), vcell("5 years")],
+      [hcell("Exit Cap Rate"), vcell(pct(exitCap))],
+      [hcell("Projected Reversion Value"), vcell(money(exitValue))],
+      [hcell("Cost of Sale"), vcell("2.0%")],
+    ]),
+  );
+}
+
+function financingSection(c: Ctx): Section {
   const dscr = c.noi / c.debtService;
   return section(
-    "Cap Rate & DSCR",
+    "Financing Assumptions",
     table([
-      [hcell("Going-In Cap Rate"), vcell(pct(c.cap))],
       [hcell("Loan Amount (65% LTV)"), vcell(money(c.loan))],
-      [hcell("Annual Debt Service (7.5%)"), vcell(money(c.debtService))],
+      [hcell("Interest Rate"), vcell("7.5%")],
+      [hcell("Amortization"), vcell("30 years")],
       [hcell("Debt Service Coverage"), vcell(`${dscr.toFixed(2)}x`)],
       [hcell("Debt Yield"), vcell(pct(c.noi / c.loan))],
     ]),
   );
 }
 
-function salesCompsSection(c: Ctx): Section {
-  const factors = [0.94, 1.06, 0.98, 1.03];
-  const caps = [c.cap + 0.003, c.cap - 0.002, c.cap + 0.001, c.cap - 0.001];
-  const addrs = ["1420 Commerce St", "88 Harbor Blvd", "500 Innovation Dr", "2201 Gateway Ave"];
-  const dates = ["Nov 2025", "Sep 2025", "Jul 2025", "May 2025"];
-  const rows: Cell[][] = [
-    [hcell("Address"), hcell("Date", "right"), hcell("Price", "right"), hcell("$/SF", "right"), hcell("Cap", "right")],
-  ];
-  addrs.forEach((addr, i) => {
-    const p = Math.round((c.price * factors[i]) / 10_000) * 10_000;
-    rows.push([
-      vcell(addr, { align: "left" }),
-      vcell(dates[i]),
-      vcell(money(p)),
-      vcell(perSf(p / c.sqft)),
-      vcell(pct(caps[i])),
-    ]);
-  });
-  return section("Sales Comparables", table(rows));
-}
-
-function rentCompsSection(c: Ctx): Section {
-  const rates = [c.rentPerSf + 1, c.rentPerSf - 0.75, c.rentPerSf + 2, c.rentPerSf];
-  const names = ["The Meridian", "Gateway Commons", "Harbor Point", "Union Square"];
-  const types = ["Class A", "Class B", "Class A", "Class B"];
-  const rows: Cell[][] = [
-    [hcell("Property"), hcell("Class", "right"), hcell("$/SF/yr", "right"), hcell("Occupancy", "right")],
-  ];
-  names.forEach((name, i) => {
-    rows.push([
-      vcell(name, { align: "left" }),
-      vcell(types[i]),
-      vcell(perSf(Math.max(8, rates[i]))),
-      vcell(pct(0.9 + i * 0.02)),
-    ]);
-  });
-  return section("Rent Comparables", table(rows));
-}
-
-function cashFlowSection(c: Ctx): Section {
-  const rows: Cell[][] = [
-    [hcell("Year"), hcell("EGI", "right"), hcell("OpEx", "right"), hcell("NOI", "right"), hcell("Cash Flow", "right")],
-  ];
-  for (let y = 0; y < 5; y++) {
-    const g = Math.pow(1.03, y);
-    const egi = c.egi * g;
-    const opex = c.opex * Math.pow(1.025, y);
-    const noi = egi - opex;
-    rows.push([
-      vcell(`Year ${y + 1}`, { align: "left" }),
-      vcell(money(egi)),
-      vcell(`(${money(opex)})`),
-      vcell(money(noi)),
-      vcell(money(noi - c.debtService)),
-    ]);
-  }
-  return section("Five-Year Cash Flow Projection", table(rows));
-}
-
-function tenantCreditSection(): Section {
-  const rows: Cell[][] = [
-    [hcell("Tenant"), hcell("Credit", "right"), hcell("% of NOI", "right"), hcell("Term Remaining", "right")],
-    [vcell("Northwind Traders", { align: "left" }), vcell("A / Stable"), vcell("34%"), vcell("6.2 yrs")],
-    [vcell("Contoso Ltd.", { align: "left" }), vcell("BBB"), vcell("27%"), vcell("3.8 yrs")],
-    [vcell("Fabrikam Retail", { align: "left" }), vcell("BB / Watch"), vcell("21%"), vcell("2.1 yrs")],
-    [vcell("Adventure Works", { align: "left" }), vcell("A-"), vcell("18%"), vcell("4.5 yrs")],
-  ];
-  return section("Tenant Credit Review", table(rows));
-}
-
-function leaseAbstractionSection(): Section {
-  const rows: Cell[][] = [
-    [hcell("Tenant"), hcell("Start", "right"), hcell("Expiry", "right"), hcell("Escalations", "right")],
-    [vcell("Northwind Traders", { align: "left" }), vcell("Jan 2022"), vcell("Dec 2031"), vcell("3.0% / yr")],
-    [vcell("Contoso Ltd.", { align: "left" }), vcell("Jun 2021"), vcell("May 2029"), vcell("2.5% / yr")],
-    [vcell("Fabrikam Retail", { align: "left" }), vcell("Mar 2023"), vcell("Feb 2028"), vcell("CPI")],
-    [vcell("Adventure Works", { align: "left" }), vcell("Oct 2022"), vcell("Sep 2030"), vcell("3.0% / yr")],
-  ];
-  return section("Lease Abstraction", table(rows));
-}
-
-function demographicsSection(): Section {
+function gpLpTermsSection(c: Ctx): Section {
+  const equity = Math.round(c.price * 0.35);
   return section(
-    "Market & Demographics",
+    "GP / LP Terms",
     table([
-      [hcell("Population (3-mile)"), vcell("184,320")],
-      [hcell("Median Household Income"), vcell(money(94_500))],
-      [hcell("5-Year Population Growth"), vcell("+6.4%")],
-      [hcell("Submarket Vacancy"), vcell("7.1%")],
-      [hcell("Avg. Asking Rent"), vcell(perSf(26.5))],
+      [hcell("Total Equity"), vcell(money(equity))],
+      [hcell("LP / GP Split"), vcell("90% / 10%", { align: "left" })],
+      [hcell("Preferred Return"), vcell("8.0%")],
+      [hcell("Promote (above pref)"), vcell("20%")],
+      [hcell("Target Equity Multiple"), vcell("1.9x")],
     ]),
   );
 }
 
-function environmentalSection(): Section {
+function renovationBudgetSection(c: Ctx): Section {
+  const units = Math.max(4, Math.round(c.sqft / 850));
+  const perUnit = 22_500;
+  const interior = units * perUnit;
+  const common = Math.round(interior * 0.3);
+  const exterior = Math.round(c.sqft * 6);
+  const total = interior + common + exterior;
   return section(
-    "Environmental — Phase I ESA",
-    text(
-      "Phase I Environmental Site Assessment completed to ASTM E1527-21 standards. " +
-        "No Recognized Environmental Conditions (RECs) were identified. Historical use is " +
-        "consistent with commercial occupancy; no further investigation or remediation is " +
-        "recommended at this time.",
-      bodyStyle,
-    ),
+    "Renovation & Capex Budget",
+    table([
+      [hcell("Scope"), hcell("Basis", "right"), hcell("Cost", "right")],
+      [vcell("Interior units", { align: "left" }), vcell(`${units} × ${money(perUnit)}`), vcell(money(interior))],
+      [vcell("Common areas", { align: "left" }), vcell("Lump sum"), vcell(money(common))],
+      [vcell("Exterior / systems", { align: "left" }), vcell(`${c.sqft.toLocaleString()} SF`), vcell(money(exterior))],
+      [hcell("Total Capex"), hcell("", "right"), vcell(money(total))],
+    ]),
   );
 }
 
-function sensitivitySection(c: Ctx): Section {
-  const scenarios: [string, number][] = [
-    ["Downside", c.cap + 0.0075],
-    ["Base", c.cap],
-    ["Upside", c.cap - 0.005],
-  ];
-  const rows: Cell[][] = [
-    [hcell("Scenario"), hcell("Exit Cap", "right"), hcell("Value", "right"), hcell("DSCR", "right")],
-  ];
-  scenarios.forEach(([name, cap]) => {
-    const value = Math.round(c.noi / cap / 10_000) * 10_000;
-    rows.push([
-      vcell(name, { align: "left" }),
-      vcell(pct(cap)),
-      vcell(money(value)),
-      vcell(`${(c.noi / c.debtService).toFixed(2)}x`),
-    ]);
-  });
-  return section("Sensitivity & Stress Test", table(rows));
+function stabilizedProformaSection(c: Ctx): Section {
+  const stabilizedNoi = Math.round(c.noi * 1.28);
+  const stabilizedValue = Math.round(stabilizedNoi / c.cap / 10_000) * 10_000;
+  return section(
+    "Stabilized (Post-Reno) Pro-Forma",
+    table([
+      [hcell("Metric"), hcell("In-Place", "right"), hcell("Stabilized", "right")],
+      [vcell("Effective Gross Income", { align: "left" }), vcell(money(c.egi)), vcell(money(Math.round(c.egi * 1.22)))],
+      [vcell("Net Operating Income", { align: "left" }), vcell(money(c.noi)), vcell(money(stabilizedNoi))],
+      [
+        vcell("Value @ Going-In Cap", { align: "left" }),
+        vcell(money(Math.round(c.noi / c.cap / 10_000) * 10_000)),
+        vcell(money(stabilizedValue)),
+      ],
+    ]),
+  );
 }
 
-/** The 12 section builders, indexed to match CHECK_LABELS / UNDERWRITING_CHECKS. */
-const SECTIONS: ((c: Ctx) => Section)[] = [
-  rentRollSection,
-  noiSection,
-  t12Section,
-  capDscrSection,
-  salesCompsSection,
-  rentCompsSection,
-  cashFlowSection,
-  tenantCreditSection,
-  leaseAbstractionSection,
-  demographicsSection,
-  environmentalSection,
-  sensitivitySection,
-];
+type SectionBuilder = (c: Ctx, property: Property | undefined) => Section;
+
+/** Resolves each strategy check `key` to its document section builder. */
+const SECTION_BUILDERS: Record<string, SectionBuilder> = {
+  "project-info": (c, p) => projectInfoSection(c, p),
+  "unit-mix": (c) => unitMixSection(c),
+  "income-expenses": (c) => incomeExpensesSection(c, "Pro-Forma Income & Expenses"),
+  "income-expenses-inplace": (c) => incomeExpensesSection(c, "In-Place Income & Expenses"),
+  "investment-cost": (c) => investmentCostSection(c),
+  "exit-disposition": (c) => exitDispositionSection(c),
+  financing: (c) => financingSection(c),
+  "gp-lp-terms": (c) => gpLpTermsSection(c),
+  "rent-roll": (c) => renameSection(rentRollSection(c), "Current Rent Roll"),
+  "renovation-budget": (c) => renovationBudgetSection(c),
+  "stabilized-proforma": (c) => stabilizedProformaSection(c),
+};
+
+/** Rename a section (and its heading block) without rebuilding it. */
+function renameSection(s: Section, name: string): Section {
+  const blocks = [...s.blocks];
+  if (blocks[0]?.type === "heading" || blocks[0]?.type === "text") {
+    blocks[0] = { ...blocks[0], text: name } as ContentBlock;
+  }
+  return { name, blocks };
+}
 
 // ── Page assembly ─────────────────────────────────────────────────────────────
 
@@ -412,11 +369,13 @@ function addressOf(property: Property | undefined): string {
 
 /** The lead summary page: title, headline metrics, and the scope checklist. */
 function buildSummaryPage(property: Property | undefined, uw: DealUnderwriting, c: Ctx): Page {
+  const strategy = coerceStrategy(uw.strategy);
+  const checks = checksFor(strategy);
   const selected = new Set(uw.selectedChecks);
   const scopeRows: Cell[][] = [
     [hcell("Analysis"), hcell("Status", "right")],
-    ...CHECK_LABELS.map((label, i): Cell[] => [
-      vcell(label, { align: "left" }),
+    ...checks.map((check, i): Cell[] => [
+      vcell(check.label, { align: "left" }),
       vcell(selected.has(i) ? "✓ Included" : "—"),
     ]),
   ];
@@ -431,6 +390,7 @@ function buildSummaryPage(property: Property | undefined, uw: DealUnderwriting, 
     [hcell("Building Size"), vcell(`${c.sqft.toLocaleString()} SF`)],
   ]);
 
+  const includedCount = checks.filter((_, i) => selected.has(i)).length;
   return {
     id: uid("page"),
     name: "Underwriting",
@@ -438,9 +398,12 @@ function buildSummaryPage(property: Property | undefined, uw: DealUnderwriting, 
     locked: true,
     blocks: [
       heading("Underwriting", headingStyle),
-      text(`${uw.tier} · Generated by Cactus · ${addressOf(property)}`, subtitleStyle),
       text(
-        "This underwriting was assembled automatically by Cactus from property, market, and " +
+        `${strategyLabel(strategy)} · ${includedCount} of ${checks.length} analyses · Generated by AI · ${addressOf(property)}`,
+        subtitleStyle,
+      ),
+      text(
+        "This underwriting was assembled automatically by AI from property, market, and " +
           "financial data. Figures are estimates for review and should be verified before use.",
         introStyle,
       ),
@@ -482,10 +445,15 @@ export function buildUnderwritingSection(
   if (!underwriting || underwriting.status !== "ready") return [];
 
   const ctx = buildCtx(property);
+  const strategy = coerceStrategy(underwriting.strategy);
+  const checks = checksFor(strategy);
   const selected = [...underwriting.selectedChecks]
-    .filter((i) => i >= 0 && i < SECTIONS.length)
+    .filter((i) => i >= 0 && i < checks.length)
     .sort((a, b) => a - b);
-  const sections = selected.map((i) => SECTIONS[i](ctx));
+  const sections = selected
+    .map((i) => SECTION_BUILDERS[checks[i].key])
+    .filter((b): b is SectionBuilder => Boolean(b))
+    .map((build) => build(ctx, property));
 
   const pages: Page[] = [buildSummaryPage(property, underwriting, ctx)];
   const PER_PAGE = 2;

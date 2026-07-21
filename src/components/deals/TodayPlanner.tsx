@@ -16,6 +16,7 @@ import type {
   ListingStage,
 } from "#/data/types";
 import { STATUS_COLORS } from "#/components/properties/propertyDisplay";
+import { getProperty } from "#/data/store";
 import { cn } from "@buildoutinc/blueprint-react/lib/utils";
 import {
   UnderwritingPlannerRow,
@@ -273,7 +274,7 @@ function Planner({ listing }: { listing: Listing }) {
           spine="start"
           accent={accent}
         />
-        {showsUnderwritingRow(listing) && (
+        {showsUnderwritingRow(listing, getProperty(listing.propertyId)) && (
           <UnderwritingPlannerRow listing={listing} />
         )}
         {tasks.map((t) => (

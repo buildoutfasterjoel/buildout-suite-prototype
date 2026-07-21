@@ -1,114 +1,116 @@
 import { useState } from "react";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
+import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleCheck } from "@fortawesome/pro-solid-svg-icons";
-import { faCircle } from "@fortawesome/pro-regular-svg-icons";
 import {
+  faCircle,
   faChevronDown,
   faChevronRight,
 } from "@fortawesome/pro-regular-svg-icons";
-import type { DealUnderwriting } from "#/data/types";
+import {
+  UNDERWRITING_STRATEGIES,
+  STRATEGY_ORDER,
+  DEFAULT_STRATEGY,
+  checksFor,
+  strategyLabel,
+  defaultSelectionFor,
+  type UnderwritingStrategyId,
+} from "./underwriting/strategies";
 import "./UnderwritingDepth.scss";
 
-// The underwriting checks, in the order they turn on as the slider advances.
-// Rendered row-major into a two-column grid (left→right, top→bottom).
-export const UNDERWRITING_CHECKS = [
-  "Rent roll summary",
-  "Net operating income",
-  "T-12 operating statement",
-  "Cap rate & DSCR",
-  "Sales comparables",
-  "Rent comparables",
-  "Cash flow projection",
-  "Tenant credit review",
-  "Lease abstraction",
-  "Market & demographics",
-  "Environmental (Phase I)",
-  "Sensitivity & stress test",
-] as const;
-
-export const UNDERWRITING_TOTAL = UNDERWRITING_CHECKS.length; // 12
-
-/** The default selection when a deal is created — the first 6 checks ("Standard"). */
-export const DEFAULT_UNDERWRITING_SELECTION = new Set([0, 1, 2, 3, 4, 5]);
-
-// Four depth tiers, one per band of three selected checks.
-export function tierForCount(count: number): string {
-  if (count <= 3) return "Rapid Screen";
-  if (count <= 6) return "Standard";
-  if (count <= 9) return "Deep Dive";
-  return "Institutional";
-}
-
-/** Convert a set of selected check indices into a persistable `DealUnderwriting`. */
-export function underwritingFromSelection(sel: Set<number>): DealUnderwriting {
-  const count = sel.size;
-  return {
-    tier: count === 0 ? "None" : tierForCount(count),
-    selectedChecks: [...sel].sort((a, b) => a - b),
-  };
-}
-
 /**
- * Underwriting depth control — the slider selects the first N of 12 checks and
- * swaps a tier badge; individual checks can also be toggled. Controlled when
- * `value`/`onChange` are supplied (deal-creation flow), otherwise self-managed.
+ * Underwriting control — pick a strategy (New Construction / Value-Add), then set
+ * how thorough the analysis is. The strategy chooses which checks exist; the
+ * slider selects the first N of them, and individual checks can be toggled.
+ * Controlled when `strategy`/`value`/`onStrategyChange`/`onChange` are supplied,
+ * otherwise fully self-managed.
  */
 export function UnderwritingDepth({
+  strategy,
   value,
+  onStrategyChange,
   onChange,
 }: {
+  strategy?: UnderwritingStrategyId;
   value?: Set<number>;
+  onStrategyChange?: (next: UnderwritingStrategyId) => void;
   onChange?: (next: Set<number>) => void;
 } = {}) {
-  // The set of selected check indices. The slider and the individual check
-  // toggles both drive this: dragging selects the first N in order, clicking a
-  // check toggles just that one. Default is the first 6 (Standard).
-  const [internal, setInternal] = useState<Set<number>>(
-    () => new Set(DEFAULT_UNDERWRITING_SELECTION),
+  const [internalStrategy, setInternalStrategy] =
+    useState<UnderwritingStrategyId>(DEFAULT_STRATEGY);
+  const [internalSel, setInternalSel] = useState<Set<number>>(() =>
+    defaultSelectionFor(DEFAULT_STRATEGY),
   );
-  const selectedSet = value ?? internal;
-  const update = (next: Set<number>) =>
-    onChange ? onChange(next) : setInternal(next);
   const [checksOpen, setChecksOpen] = useState(false);
 
-  const count = selectedSet.size;
-  const tier = count === 0 ? "None" : tierForCount(count);
+  const activeStrategy = strategy ?? internalStrategy;
+  const selectedSet = value ?? internalSel;
+  const checks = checksFor(activeStrategy);
+  const total = checks.length;
+  const count = [...selectedSet].filter((i) => i >= 0 && i < total).length;
+  const fillPct = (count / total) * 100;
 
-  // Percent filled, used to color the slider track up to the thumb.
-  const fillPct = (count / UNDERWRITING_TOTAL) * 100;
+  const setStrategy = (next: UnderwritingStrategyId) => {
+    // Switching strategy resets the depth to that strategy's full check list.
+    const resetSel = defaultSelectionFor(next);
+    if (onStrategyChange) onStrategyChange(next);
+    else setInternalStrategy(next);
+    if (onChange) onChange(resetSel);
+    else setInternalSel(resetSel);
+  };
+
+  const updateSel = (next: Set<number>) =>
+    onChange ? onChange(next) : setInternalSel(next);
 
   // Dragging the slider selects the first N checks in order.
-  function setDepth(n: number) {
-    update(new Set(Array.from({ length: n }, (_, i) => i)));
-  }
+  const setDepth = (n: number) =>
+    updateSel(new Set(Array.from({ length: n }, (_, i) => i)));
 
   // Clicking a check toggles just that one (selection may be non-contiguous).
-  function toggleCheck(i: number) {
+  const toggleCheck = (i: number) => {
     const next = new Set(selectedSet);
     if (next.has(i)) next.delete(i);
     else next.add(i);
-    update(next);
-  }
+    updateSel(next);
+  };
 
   return (
     <div className="underwriting-depth border rounded p-3">
-      <div className="d-flex align-items-center justify-content-between gap-2 mb-1">
-        <span className="fw-semibold">Underwriting depth</span>
-        <Badge
-          key={tier}
-          variant="secondary"
-          appearance={count === 0 ? "muted" : "accent"}
-          className="underwriting-depth__badge"
-        >
-          {tier}
+      <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
+        <span className="fw-semibold">Underwriting strategy</span>
+        <Badge variant="secondary" appearance="accent" className="underwriting-depth__badge">
+          {strategyLabel(activeStrategy)}
         </Badge>
       </div>
 
-      <p className="fs-small text-muted mb-3">
-        Set how thorough the underwriting is. Slide, or pick the checks you want
-        below.
+      <Select
+        value={activeStrategy}
+        onValueChange={(v) => v && setStrategy(v as UnderwritingStrategyId)}
+      >
+        <Select.Trigger>
+          <Select.Value>
+            {(v) => strategyLabel(v as UnderwritingStrategyId)}
+          </Select.Value>
+        </Select.Trigger>
+        <Select.Content>
+          {STRATEGY_ORDER.map((id) => (
+            <Select.Item key={id} value={id}>
+              <div className="d-flex flex-column">
+                <span className="fw-medium">{UNDERWRITING_STRATEGIES[id].label}</span>
+                <span className="fs-small text-muted">
+                  {UNDERWRITING_STRATEGIES[id].description}
+                </span>
+              </div>
+            </Select.Item>
+          ))}
+        </Select.Content>
+      </Select>
+
+      <p className="fs-small text-muted mt-2 mb-3">
+        {UNDERWRITING_STRATEGIES[activeStrategy].description} Set how thorough the
+        analysis is below.
       </p>
 
       <div className="d-flex justify-content-between fs-small text-muted mb-1">
@@ -119,7 +121,7 @@ export function UnderwritingDepth({
         type="range"
         className="underwriting-depth__slider"
         min={0}
-        max={UNDERWRITING_TOTAL}
+        max={total}
         step={1}
         value={count}
         onChange={(e) => setDepth(Number(e.target.value))}
@@ -139,19 +141,18 @@ export function UnderwritingDepth({
           {checksOpen ? "Hide checks" : "Show checks"}
         </button>
         <span className="fs-small text-muted">
-          <span className="fw-semibold text-body">{count}</span> of{" "}
-          {UNDERWRITING_TOTAL}
+          <span className="fw-semibold text-body">{count}</span> of {total} checks
         </span>
       </div>
 
       {checksOpen && (
         <div className="underwriting-depth__checks mt-3">
-          {UNDERWRITING_CHECKS.map((label, i) => {
+          {checks.map((check, i) => {
             const on = selectedSet.has(i);
             return (
               <button
                 type="button"
-                key={label}
+                key={check.key}
                 className={`underwriting-depth__check${on ? " is-on" : ""}`}
                 onClick={() => toggleCheck(i)}
                 aria-pressed={on}
@@ -160,7 +161,7 @@ export function UnderwritingDepth({
                   <FontAwesomeIcon icon={faCircle} className="uw-icon uw-icon--off" />
                   <FontAwesomeIcon icon={faCircleCheck} className="uw-icon uw-icon--on" />
                 </span>
-                <span>{label}</span>
+                <span>{check.label}</span>
               </button>
             );
           })}

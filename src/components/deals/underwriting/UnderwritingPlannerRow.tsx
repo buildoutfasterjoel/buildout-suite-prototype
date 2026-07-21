@@ -4,39 +4,57 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faWandMagicSparkles } from "@fortawesome/pro-regular-svg-icons";
-import type { Listing } from "#/data/types";
+import type { Listing, Property } from "#/data/types";
 import { updateListingUnderwriting } from "#/data/store";
+import { propertyQualifiesForUnderwriting } from "./eligibility";
 import { PlannerRow, TaskMarker } from "../TodayPlanner";
+import { UnderwritingDepth } from "../UnderwritingDepth";
 import {
-  UnderwritingDepth,
-  DEFAULT_UNDERWRITING_SELECTION,
+  defaultSelectionFor,
   underwritingFromSelection,
-} from "../UnderwritingDepth";
+  coerceStrategy,
+  checksFor,
+  type UnderwritingStrategyId,
+} from "./strategies";
 import { UnderwritingProgress } from "./UnderwritingProgress";
 import { UnderwritingPlacementModal } from "./UnderwritingPlacementModal";
 
 type Phase = "idle" | "generating" | "generated" | "ready";
 
-/** Whether a deal should render the AI-underwriting planner row at all. */
-export function showsUnderwritingRow(listing: Listing): boolean {
+/**
+ * Whether a deal should render the AI-underwriting planner row at all. The AI
+ * underwriting is only offered for supported asset classes (Multi-Family, Self
+ * Storage, Industrial Outdoor Storage), so a non-qualifying property hides the
+ * row — unless a run already exists on the deal, which we always let the broker
+ * return to.
+ */
+export function showsUnderwritingRow(
+  listing: Listing,
+  property: Property | undefined,
+): boolean {
   const hasUwTask = listing.tasks.some((t) => t.label === "Underwriting");
-  return !hasUwTask && (listing.status === "proposal" || listing.underwriting != null);
+  if (hasUwTask) return false;
+  if (listing.underwriting != null) return true;
+  return listing.status === "proposal" && propertyQualifiesForUnderwriting(property);
 }
 
 /**
- * The Cactus underwriting row on the deal planner. Owns the whole flow:
+ * The AI underwriting row on the deal planner. Owns the whole flow:
  * idle (Generate button) → a depth-setup modal → inline generation progress →
  * a placement modal → "Review". A deal created with underwriting on lands here
  * already 'generating', so it kicks off automatically with no click.
  */
 export function UnderwritingPlannerRow({ listing }: { listing: Listing }) {
   const navigate = useNavigate();
-  const initialSelection = () =>
-    new Set(
-      listing.underwriting?.selectedChecks?.length
-        ? listing.underwriting.selectedChecks
-        : DEFAULT_UNDERWRITING_SELECTION,
-    );
+  const initialStrategy = (): UnderwritingStrategyId =>
+    coerceStrategy(listing.underwriting?.strategy);
+  const initialSelection = (strat: UnderwritingStrategyId) => {
+    const count = checksFor(strat).length;
+    const persisted = listing.underwriting?.selectedChecks;
+    return persisted?.length
+      ? new Set(persisted.filter((i) => i >= 0 && i < count))
+      : new Set(defaultSelectionFor(strat));
+  };
 
   const [phase, setPhase] = useState<Phase>(
     listing.underwriting?.status === "ready"
@@ -46,26 +64,36 @@ export function UnderwritingPlannerRow({ listing }: { listing: Listing }) {
         : "idle",
   );
   const [setupOpen, setSetupOpen] = useState(false);
+  const [runStrategy, setRunStrategy] = useState<UnderwritingStrategyId>(initialStrategy);
   // The selection the current run is generating against.
-  const [runSelection, setRunSelection] = useState<Set<number>>(initialSelection);
+  const [runSelection, setRunSelection] = useState<Set<number>>(() =>
+    initialSelection(initialStrategy()),
+  );
+  const [setupStrategy, setSetupStrategy] =
+    useState<UnderwritingStrategyId>(initialStrategy);
   // The setup modal's working selection (committed on Start).
-  const [setupSelection, setSetupSelection] = useState<Set<number>>(initialSelection);
+  const [setupSelection, setSetupSelection] = useState<Set<number>>(() =>
+    initialSelection(initialStrategy()),
+  );
   const [placementOpen, setPlacementOpen] = useState(false);
   const [placedName, setPlacedName] = useState<string | undefined>(
     listing.underwriting?.placement?.documentName,
   );
 
   function openSetup() {
-    setSetupSelection(initialSelection());
+    const strat = initialStrategy();
+    setSetupStrategy(strat);
+    setSetupSelection(initialSelection(strat));
     setSetupOpen(true);
   }
 
   function startGeneration() {
     const sel = setupSelection.size > 0 ? setupSelection : new Set([0]);
     updateListingUnderwriting(listing.id, {
-      ...underwritingFromSelection(sel),
+      ...underwritingFromSelection(setupStrategy, sel),
       status: "generating",
     });
+    setRunStrategy(setupStrategy);
     setRunSelection(sel);
     setSetupOpen(false);
     setPhase("generating");
@@ -120,6 +148,7 @@ export function UnderwritingPlannerRow({ listing }: { listing: Listing }) {
           <div className="pe-2">
             <div className="fw-semibold mb-2">AI underwriting</div>
             <UnderwritingProgress
+              strategy={runStrategy}
               selectedChecks={[...runSelection]}
               onComplete={() => {
                 setPhase("generated");
@@ -134,10 +163,10 @@ export function UnderwritingPlannerRow({ listing }: { listing: Listing }) {
               {phase === "ready"
                 ? placedName
                   ? `Filed in ${placedName}`
-                  : "Generated by Cactus"
+                  : "Generated by AI"
                 : phase === "generated"
                   ? "Underwriting ready — choose where to file it."
-                  : "Generate a Cactus underwriting page for this deal."}
+                  : "Generate an AI underwriting page for this deal."}
             </div>
           </>
         )}
@@ -154,7 +183,12 @@ export function UnderwritingPlannerRow({ listing }: { listing: Listing }) {
             </Modal.Description>
           </Modal.Header>
           <Modal.Body>
-            <UnderwritingDepth value={setupSelection} onChange={setSetupSelection} />
+            <UnderwritingDepth
+              strategy={setupStrategy}
+              value={setupSelection}
+              onStrategyChange={setSetupStrategy}
+              onChange={setSetupSelection}
+            />
           </Modal.Body>
           <Modal.Footer>
             <Button variant="ghost" onClick={() => setSetupOpen(false)}>

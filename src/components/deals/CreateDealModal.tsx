@@ -53,11 +53,14 @@ import {
   PROPERTY_STATUSES,
 } from "#/components/properties/propertyDisplay";
 import { RelationshipPill } from "#/components/contacts/pills";
+import { UnderwritingDepth } from "./UnderwritingDepth";
 import {
-  UnderwritingDepth,
+  DEFAULT_STRATEGY,
+  defaultSelectionFor,
   underwritingFromSelection,
-  DEFAULT_UNDERWRITING_SELECTION,
-} from "./UnderwritingDepth";
+  type UnderwritingStrategyId,
+} from "./underwriting/strategies";
+import { propertyQualifiesForUnderwriting } from "./underwriting/eligibility";
 
 /**
  * The two sides a broker can start a deal on, in display order. The `seller`/
@@ -219,10 +222,11 @@ export function CreateDealModal({
   // Underwriting is optional at creation; when off, the depth control collapses
   // and the deal starts with no underwriting.
   const [underwritingOn, setUnderwritingOn] = useState(false);
-  // The underwriting depth selection. The slider drives only the underwriting
-  // checks — it no longer affects which documents are checked below.
-  const [underwritingSel, setUnderwritingSel] = useState<Set<number>>(
-    () => new Set(DEFAULT_UNDERWRITING_SELECTION),
+  const [underwritingStrategy, setUnderwritingStrategy] =
+    useState<UnderwritingStrategyId>(DEFAULT_STRATEGY);
+  // The underwriting depth selection — indices into the chosen strategy's checks.
+  const [underwritingSel, setUnderwritingSel] = useState<Set<number>>(() =>
+    defaultSelectionFor(DEFAULT_STRATEGY),
   );
   // Which suggested documents are checked — independent of the underwriting
   // depth; starts at the default set and is toggled by hand.
@@ -263,6 +267,9 @@ export function CreateDealModal({
   );
   const units = selectedProperty?.units ?? [];
   const hasUnits = units.length > 0;
+  // AI underwriting is only offered for supported asset classes (Multi-Family,
+  // Self Storage, Industrial Outdoor Storage).
+  const underwritingEligible = propertyQualifiesForUnderwriting(selectedProperty);
 
   // Reset the scope whenever the property or deal type changes. A Sale defaults
   // to representing the whole building (you're selling the asset); a Lease starts
@@ -271,6 +278,12 @@ export function CreateDealModal({
     setWholeBuilding(dealType === "Sale");
     setSelectedUnitId(null);
   }, [selectedProperty?.id, dealType]);
+
+  // Drop underwriting if the property is switched to a non-qualifying class, so
+  // a stale "on" state can't slip through to a deal that shouldn't have it.
+  useEffect(() => {
+    if (!underwritingEligible) setUnderwritingOn(false);
+  }, [underwritingEligible]);
 
   // Seed from the initiating contact/property each time the modal opens.
   useEffect(() => {
@@ -332,7 +345,8 @@ export function CreateDealModal({
     setDealType("Sale");
     setStage("proposal");
     setUnderwritingOn(false);
-    setUnderwritingSel(new Set(DEFAULT_UNDERWRITING_SELECTION));
+    setUnderwritingStrategy(DEFAULT_STRATEGY);
+    setUnderwritingSel(defaultSelectionFor(DEFAULT_STRATEGY));
     // Documents start at the default suggested set, independent of underwriting.
     setCheckedDocKeys(defaultDocKeys());
     setDocSearch("");
@@ -437,8 +451,8 @@ export function CreateDealModal({
       documents: files,
       suggestedDocuments,
       underwriting:
-        withDocuments && underwritingOn
-          ? underwritingFromSelection(underwritingSel)
+        withDocuments && underwritingOn && underwritingEligible
+          ? underwritingFromSelection(underwritingStrategy, underwritingSel)
           : undefined,
     };
     const { deal: listing } = createDeal(draft);
@@ -918,7 +932,7 @@ export function CreateDealModal({
                       className="d-flex flex-column gap-2 overflow-auto"
                       style={{ maxHeight: 208 }}
                     >
-                      {!underwritingOn && (
+                      {underwritingEligible && !underwritingOn && (
                         <label
                           className="d-flex align-items-center gap-2 mb-0"
                           style={{ cursor: "pointer" }}
@@ -982,7 +996,9 @@ export function CreateDealModal({
                             </span>
                           </label>
                           <UnderwritingDepth
+                            strategy={underwritingStrategy}
                             value={underwritingSel}
+                            onStrategyChange={setUnderwritingStrategy}
                             onChange={setUnderwritingSel}
                           />
                         </>

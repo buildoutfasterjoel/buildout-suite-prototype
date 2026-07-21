@@ -170,6 +170,8 @@ export interface Page {
    * stays editable. Absent/false = fully freeform.
    */
   locked?: boolean;
+  /** Hidden pages stay in the document but are excluded from the exported/rendered output. */
+  hidden?: boolean;
   blocks: Block[];
 }
 

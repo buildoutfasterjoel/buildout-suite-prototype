@@ -277,7 +277,7 @@ export function buildDocumentPages(
   return [
     buildStubPage(property, { name: "Cover Page", seed: "editor-cover" }),
     buildStubPage(property, { name: "Table of Contents", seed: "editor-toc" }),
-    // Once Cactus has generated underwriting for this deal, it leads the body —
+    // Once the AI has generated underwriting for this deal, it leads the body —
     // pages scale with the thoroughness the user chose. Empty otherwise.
     ...buildUnderwritingSection(property, underwriting),
     buildDividerPage(property, "Property Information"),

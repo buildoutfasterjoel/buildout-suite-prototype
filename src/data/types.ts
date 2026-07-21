@@ -48,6 +48,7 @@ export type PropertySubtype =
   | 'Hotel'
   | 'Motel'
   | 'Self-Storage'
+  | 'Industrial Outdoor Storage'
   | 'Mixed-Use'
 
 export type BuildingClass = 'A' | 'B' | 'C'
@@ -199,6 +200,8 @@ export interface PropertyFinancialRecord {
   occupancyPct: number
 }
 
+import type { UnderwritingStrategyId } from '#/components/deals/underwriting/strategies'
+
 /**
  * A Listing is a marketable space/offering that belongs to a Property (a building
  * can have several — e.g. retail pads or office suites). It IS its deal (1:1), so it
@@ -266,14 +269,16 @@ export interface DealDocument {
   aiGenerated?: boolean
 }
 
-/** The underwriting scope chosen for a deal at creation (depth tier + which checks). */
+/** The underwriting scope chosen for a deal — which strategy, its checks, and progress. */
 export interface DealUnderwriting {
-  /** Depth tier label — "Rapid Screen" | "Standard" | "Deep Dive" | "Institutional" | "None". */
+  /** Which underwriting strategy this deal uses. Drives the check list end to end. */
+  strategy: UnderwritingStrategyId
+  /** Display label for the depth badge / document subtitle — the strategy's label. */
   tier: string
-  /** Indices (into the underwriting-checks list) selected for this deal. */
+  /** Indices into THIS strategy's checks list (see `checksFor`). Read with `strategy`. */
   selectedChecks: number[]
   /**
-   * Where the underwriting is in the Cactus generation flow. Absent is treated
+   * Where the underwriting is in the AI generation flow. Absent is treated
    * as 'not-started'. 'generating' is the auto-start signal the deal-overview
    * planner reads on mount (set when a deal is created with underwriting on).
    */

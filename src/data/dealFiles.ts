@@ -11,12 +11,16 @@ function daysAfter(iso: string, days: number): string {
  * memorandum, financials, notes) plus a couple of standard folders so the page
  * isn't empty on first visit. Deterministic — no Date.now()/Math.random() — so
  * server and client render the same initial state.
+ *
+ * Only the broker's own uploaded files seed the Files workspace — Buildout's
+ * AI-generated documents live on the Documents page, not here.
  */
 export function buildInitialFiles(listing: Listing): DealFileItem[] {
   const { id: listingId, createdAt, documents } = listing
   const items: DealFileItem[] = []
 
   for (const doc of documents ?? []) {
+    if (doc.aiGenerated) continue
     items.push({
       id: doc.id,
       name: doc.name,

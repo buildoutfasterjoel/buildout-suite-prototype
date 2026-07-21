@@ -3,7 +3,8 @@ import { Progress, CircularProgress } from "@buildoutinc/blueprint-react/ui/Prog
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faCircle } from "@fortawesome/pro-regular-svg-icons";
 import { cn } from "@buildoutinc/blueprint-react/lib/utils";
-import { UNDERWRITING_CHECKS } from "../UnderwritingDepth";
+import { checksFor, coerceStrategy } from './strategies'
+import type { UnderwritingStrategyId } from './strategies'
 
 /** Total run time for the fake generation, scaled by how many checks were chosen. */
 function durationFor(count: number): number {
@@ -12,25 +13,29 @@ function durationFor(count: number): number {
 }
 
 /**
- * The inline "Cactus is generating your underwriting" experience — a progress
+ * The inline "AI is generating your underwriting" experience — a progress
  * bar over a checklist of the selected checks, each one flipping from pending →
  * working (spinner) → done as the fake work advances. The more thorough the
  * underwriting, the more steps and the longer it runs (capped at 10s). Purely
  * client-side theater; there is no real backend.
  */
 export function UnderwritingProgress({
+  strategy,
   selectedChecks,
   onComplete,
 }: {
-  selectedChecks: number[];
-  onComplete: () => void;
+  strategy?: UnderwritingStrategyId
+  selectedChecks: number[]
+  onComplete: () => void
 }) {
-  // The checks to walk through, in slider order; fall back to a single step so
-  // an empty selection still resolves cleanly.
+  const checks = checksFor(coerceStrategy(strategy))
   const steps =
     selectedChecks.length > 0
-      ? [...selectedChecks].sort((a, b) => a - b).map((i) => UNDERWRITING_CHECKS[i])
-      : ["Assembling underwriting"];
+      ? [...selectedChecks]
+          .sort((a, b) => a - b)
+          .filter((i) => i >= 0 && i < checks.length)
+          .map((i) => `Building ${checks[i].label.toLowerCase()}`)
+      : ['Assembling underwriting']
 
   // How many steps have finished. `steps.length` means everything is done.
   const [done, setDone] = useState(0);
@@ -64,7 +69,7 @@ export function UnderwritingProgress({
         )}
         <span className="fw-semibold flex-grow-1">
           {done < steps.length
-            ? "Cactus is building your underwriting…"
+            ? "AI is building your underwriting…"
             : "Underwriting ready"}
         </span>
         <span className="text-muted fs-small">
