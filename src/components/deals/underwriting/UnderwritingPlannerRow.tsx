@@ -4,8 +4,9 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faWandMagicSparkles } from "@fortawesome/pro-regular-svg-icons";
-import type { Listing } from "#/data/types";
+import type { Listing, Property } from "#/data/types";
 import { updateListingUnderwriting } from "#/data/store";
+import { propertyQualifiesForUnderwriting } from "./eligibility";
 import { PlannerRow, TaskMarker } from "../TodayPlanner";
 import { UnderwritingDepth } from "../UnderwritingDepth";
 import {
@@ -20,10 +21,21 @@ import { UnderwritingPlacementModal } from "./UnderwritingPlacementModal";
 
 type Phase = "idle" | "generating" | "generated" | "ready";
 
-/** Whether a deal should render the AI-underwriting planner row at all. */
-export function showsUnderwritingRow(listing: Listing): boolean {
+/**
+ * Whether a deal should render the AI-underwriting planner row at all. The AI
+ * underwriting is only offered for supported asset classes (Multi-Family, Self
+ * Storage, Industrial Outdoor Storage), so a non-qualifying property hides the
+ * row — unless a run already exists on the deal, which we always let the broker
+ * return to.
+ */
+export function showsUnderwritingRow(
+  listing: Listing,
+  property: Property | undefined,
+): boolean {
   const hasUwTask = listing.tasks.some((t) => t.label === "Underwriting");
-  return !hasUwTask && (listing.status === "proposal" || listing.underwriting != null);
+  if (hasUwTask) return false;
+  if (listing.underwriting != null) return true;
+  return listing.status === "proposal" && propertyQualifiesForUnderwriting(property);
 }
 
 /**

@@ -194,7 +194,7 @@ const PROPERTY_CONFIGS: Record<PropertyType, PropertyConfig> = {
     basementProbability: 0.1,
   },
   industrial: {
-    subtypes: ['Warehouse', 'Flex', 'Distribution', 'Manufacturing', 'Cold Storage'],
+    subtypes: ['Warehouse', 'Flex', 'Distribution', 'Manufacturing', 'Cold Storage', 'Industrial Outdoor Storage'],
     sqFtRange: [10000, 500000],
     storiesRange: [1, 3],
     pricePerSqFt: [80, 200],
@@ -298,7 +298,7 @@ const NAME_PARTS: Record<PropertyType, { prefixes: string[]; suffixes: string[] 
   },
   industrial: {
     prefixes: ['Northgate', 'Westport', 'Ironwood', 'Summit', 'Commerce', 'Gateway', 'Patriot'],
-    suffixes: ['Logistics Center', 'Distribution Center', 'Business Park', 'Industrial Park', 'Commerce Park'],
+    suffixes: ['Logistics Center', 'Distribution Center', 'Business Park', 'Industrial Park', 'Commerce Park', 'Storage Yard'],
   },
   multifamily: {
     prefixes: ['The', 'Park at', 'Residences at', 'Villas at', 'Heights at', 'Reserve at'],

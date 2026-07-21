@@ -48,6 +48,7 @@ export type PropertySubtype =
   | 'Hotel'
   | 'Motel'
   | 'Self-Storage'
+  | 'Industrial Outdoor Storage'
   | 'Mixed-Use'
 
 export type BuildingClass = 'A' | 'B' | 'C'

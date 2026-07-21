@@ -60,6 +60,7 @@ import {
   underwritingFromSelection,
   type UnderwritingStrategyId,
 } from "./underwriting/strategies";
+import { propertyQualifiesForUnderwriting } from "./underwriting/eligibility";
 
 /**
  * The two sides a broker can start a deal on, in display order. The `seller`/
@@ -266,6 +267,9 @@ export function CreateDealModal({
   );
   const units = selectedProperty?.units ?? [];
   const hasUnits = units.length > 0;
+  // AI underwriting is only offered for supported asset classes (Multi-Family,
+  // Self Storage, Industrial Outdoor Storage).
+  const underwritingEligible = propertyQualifiesForUnderwriting(selectedProperty);
 
   // Reset the scope whenever the property or deal type changes. A Sale defaults
   // to representing the whole building (you're selling the asset); a Lease starts
@@ -274,6 +278,12 @@ export function CreateDealModal({
     setWholeBuilding(dealType === "Sale");
     setSelectedUnitId(null);
   }, [selectedProperty?.id, dealType]);
+
+  // Drop underwriting if the property is switched to a non-qualifying class, so
+  // a stale "on" state can't slip through to a deal that shouldn't have it.
+  useEffect(() => {
+    if (!underwritingEligible) setUnderwritingOn(false);
+  }, [underwritingEligible]);
 
   // Seed from the initiating contact/property each time the modal opens.
   useEffect(() => {
@@ -441,7 +451,7 @@ export function CreateDealModal({
       documents: files,
       suggestedDocuments,
       underwriting:
-        withDocuments && underwritingOn
+        withDocuments && underwritingOn && underwritingEligible
           ? underwritingFromSelection(underwritingStrategy, underwritingSel)
           : undefined,
     };
@@ -922,7 +932,7 @@ export function CreateDealModal({
                       className="d-flex flex-column gap-2 overflow-auto"
                       style={{ maxHeight: 208 }}
                     >
-                      {!underwritingOn && (
+                      {underwritingEligible && !underwritingOn && (
                         <label
                           className="d-flex align-items-center gap-2 mb-0"
                           style={{ cursor: "pointer" }}
