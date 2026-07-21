@@ -11,7 +11,6 @@ import {
   type ComposedActivity,
 } from "#/components/contacts/contactDisplay";
 import {
-  buildTimeline,
   composedToEvent,
   groupByBucket,
   needsAttention,
@@ -19,6 +18,7 @@ import {
   type FilterKey,
   type TimelineEvent as TimelineEventData,
 } from "#/components/contacts/timeline";
+import { buildContactTimeline } from "#/components/contacts/timelineArcs";
 import { TimelineEvent } from "#/components/contacts/TimelineEvent";
 import { TimelineFilterBar } from "#/components/contacts/TimelineFilterBar";
 import { TimelineFilterDropdown } from "#/components/contacts/TimelineFilterDropdown";
@@ -61,7 +61,7 @@ export function ContactEngagementPanel({
   const events = useMemo(() => {
     const base = [
       ...logged.map((l) => composedToEvent(l, contact)),
-      ...buildTimeline(contact, deals),
+      ...buildContactTimeline(contact, deals),
     ];
     return base
       .filter((e) => !deleted.has(e.id))
