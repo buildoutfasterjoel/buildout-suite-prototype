@@ -9,8 +9,6 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact } from "#/data/types";
 import { contactFullName } from "#/components/contacts/contactDisplay";
-import { ContactAccessAvatars } from "#/components/contacts/ContactAccessAvatars";
-import type { ContactSharesApi } from "#/components/contacts/useContactShares";
 import { useContactListNav } from "#/components/contacts/useContactListNav";
 
 /**
@@ -58,23 +56,14 @@ function ContactListPager({ contactId }: { contactId: string }) {
 }
 
 /**
- * Fixed top bar for the contact detail page: a list pager + breadcrumbs on the
- * left, a share control (collaborator avatars + a Share button) on the right.
+ * Fixed top bar for the contact detail page: a list pager + breadcrumbs.
  *
  * The breadcrumb root adapts to the source list — "Contacts", "Contacts
  * (Filtered)", or the list's (truncated) name — and clicking it restores that
- * exact view on the People page (see useContactListNav). The Share button opens
- * the sharing modal (owned by the route so the hero can open it too).
+ * exact view on the People page (see useContactListNav). Sharing now lives
+ * entirely in the contact hero, so the top bar carries no share control.
  */
-export function ContactDetailTopBar({
-  contact,
-  access,
-  onOpenShare,
-}: {
-  contact: Contact;
-  access: ContactSharesApi;
-  onOpenShare: () => void;
-}) {
+export function ContactDetailTopBar({ contact }: { contact: Contact }) {
   const source = useContactListNav((s) => s.source);
   const rootLabel = source?.label ?? "Contacts";
 
@@ -114,15 +103,6 @@ export function ContactDetailTopBar({
         </Breadcrumb>
       </div>
 
-      <div className="d-flex align-items-center gap-2 flex-shrink-0">
-        <Button variant="outline" size="sm" onClick={onOpenShare}>
-          <ContactAccessAvatars
-            shares={access.shares}
-            className="contact-share-avatars"
-          />
-          Share
-        </Button>
-      </div>
     </div>
   );
 }
