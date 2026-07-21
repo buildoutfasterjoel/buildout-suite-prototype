@@ -28,6 +28,7 @@ import type {
   PropertyFinancialRecord,
   FinancialRecordSource,
   RentRollRow,
+  HeroKey,
 } from './types'
 import type { CallList } from './contactLists'
 import type { SerializedContactFilters } from '#/components/contacts/contactFilterModel'
@@ -1525,6 +1526,237 @@ export function seedCallLists(): CallList[] {
   return [...dynamicLists, ...staticLists]
 }
 
+// ── Hero personas ─────────────────────────────────────────────────────────────
+//
+// Five hand-authored demo contacts — one per lifecycle stage — with fully
+// hand-written activity arcs (see timelineHeroes.ts). Each hero overwrites a
+// deterministic generated contact's identity and is wired to a listing at the
+// stage/side their story requires, so the derived relationship/dealStage land
+// exactly where the arc says they are. `createdAt`/`lastContactedAt` are pinned
+// to the arc's hand-picked beat dates so the People table and feed agree.
+
+interface HeroFixture {
+  heroKey: HeroKey
+  firstName: string
+  lastName: string
+  company: string
+  title: string
+  role: ContactRole
+  source: ContactSource
+  relationship: RelationshipStage
+  tags: string[]
+  notes: string
+  /** Days ago the contact entered the book / was last really touched. */
+  createdDaysAgo: number
+  lastContactedDaysAgo: number
+  lastTouch: string
+  openTaskCount: number
+  /** The deal the hero's arc runs on — null for the no-deal-yet stages. */
+  deal: { status: ListingStage; side: DealSide } | null
+}
+
+const HERO_FIXTURES: HeroFixture[] = [
+  {
+    heroKey: 'rosa',
+    firstName: 'Rosa',
+    lastName: 'Delgado',
+    company: 'Delgado Family Properties LLC',
+    title: 'Owner',
+    role: 'owner',
+    source: 'Cold outreach',
+    relationship: 'nurturing',
+    tags: ['Local', 'Longtime owner'],
+    notes:
+      'Lost her husband last year — the building was their first joint investment. Slow play: no ask until she asks.',
+    createdDaysAgo: 160,
+    lastContactedDaysAgo: 8,
+    lastTouch: 'Logged a call',
+    openTaskCount: 1,
+    deal: null,
+  },
+  {
+    heroKey: 'earl',
+    firstName: 'Earl',
+    lastName: 'Pettigrew',
+    company: 'Pettigrew Holdings',
+    title: 'Owner',
+    role: 'owner',
+    source: 'Referral',
+    relationship: 'pitching',
+    tags: ['Local', 'VIP'],
+    notes:
+      'Owned the storefront since 1979. Will only list with a broker who commits to a preservation-minded buyer.',
+    createdDaysAgo: 40,
+    lastContactedDaysAgo: 2,
+    lastTouch: 'Logged a call',
+    openTaskCount: 1,
+    deal: { status: 'proposal', side: 'seller' },
+  },
+  {
+    heroKey: 'victor',
+    firstName: 'Victor',
+    lastName: 'Osei',
+    company: 'Osei Capital Partners',
+    title: 'Managing Principal',
+    role: 'owner',
+    source: 'Networking event',
+    relationship: 'client',
+    tags: ['Investor', 'Repeat client'],
+    notes:
+      'Numbers guy, not a story guy. Signed-lease pro formas only; report interest in writing.',
+    createdDaysAgo: 120,
+    lastContactedDaysAgo: 1,
+    lastTouch: 'Logged a call',
+    openTaskCount: 1,
+    deal: { status: 'active', side: 'seller' },
+  },
+  {
+    heroKey: 'margaret',
+    firstName: 'Margaret',
+    lastName: 'Kwan',
+    company: 'Kwan Family Trust',
+    title: 'Trustee',
+    role: 'buyer',
+    source: 'Referral',
+    relationship: 'client',
+    tags: ['Out-of-state', '1031 exchange'],
+    notes:
+      'Out-of-state heir on a 1031 clock. Never tours in person — proxy video, same day. Her CPA re-runs every number.',
+    createdDaysAgo: 100,
+    lastContactedDaysAgo: 2,
+    lastTouch: 'Logged a call',
+    openTaskCount: 1,
+    deal: { status: 'under-contract', side: 'buyer' },
+  },
+  {
+    heroKey: 'patricia',
+    firstName: 'Patricia',
+    lastName: 'Vance',
+    company: 'Meridian Realty Trust',
+    title: 'VP of Acquisitions',
+    role: 'owner',
+    source: 'Manual entry',
+    relationship: 'past_client',
+    tags: ['Institutional'],
+    notes:
+      'Institutional, data-driven, board approves the final buyer. Closed at value — next asset teed up for next year.',
+    createdDaysAgo: 210,
+    lastContactedDaysAgo: 5,
+    lastTouch: 'Logged a call',
+    openTaskCount: 0,
+    deal: { status: 'closed', side: 'seller' },
+  },
+]
+
+/** Force a listing to the stage a hero's story requires, keeping history sane. */
+function forceListingStage(l: Listing, status: ListingStage): void {
+  if (l.status === status) return
+  const stageStartedAt = new Date(Date.now() - 30 * 86_400_000).toISOString()
+  l.history.push({
+    id: faker.string.uuid(),
+    label: 'Stage updated from',
+    fromStage: l.status,
+    toStage: status,
+    actor: l.internalBrokers[0]?.name ?? 'System',
+    timestamp: stageStartedAt,
+  })
+  l.status = status
+  if (status === 'active' || status === 'under-contract' || status === 'closed') {
+    l.publishedAt = l.publishedAt ?? stageStartedAt
+  }
+}
+
+/**
+ * Overwrite five deterministic generated contacts with the hero personas and
+ * wire each to a listing at their story's stage/side. Mutates in place; runs
+ * before `reconcileContactDealFields` so the derived fields follow the wiring.
+ */
+function applyHeroes(contacts: Contact[], listings: Listing[]): void {
+  const DAY_MS = 86_400_000
+  const daysAgoIso = (n: number) => new Date(Date.now() - n * DAY_MS).toISOString()
+  const claimed = new Set<string>()
+
+  HERO_FIXTURES.forEach((h, i) => {
+    // A stable host well past the front of the directory sort.
+    const host = contacts[10 + i]
+
+    Object.assign(host, {
+      heroKey: h.heroKey,
+      firstName: h.firstName,
+      lastName: h.lastName,
+      email: `${h.firstName.toLowerCase()}@${h.company.toLowerCase().replace(/[^a-z0-9]+/g, '')}.com`,
+      company: h.company,
+      title: h.title,
+      role: h.role,
+      assignedTo: ASSIGNEES[0],
+      source: h.source,
+      relationship: h.relationship,
+      tags: h.tags,
+      notes: h.notes,
+      createdAt: daysAgoIso(h.createdDaysAgo),
+      lastContactedAt: daysAgoIso(h.lastContactedDaysAgo),
+      lastTouch: h.lastTouch,
+      openTaskCount: h.openTaskCount,
+      inquiries: 0,
+      phoneStatus: 'valid',
+      doNotCall: false,
+    } satisfies Partial<Contact>)
+
+    // Detach the host from every deal, then wire the story's deal (if any).
+    for (const l of listings) {
+      l.sellerContactIds = l.sellerContactIds.filter((id) => id !== host.id)
+      l.buyerContactIds = l.buyerContactIds.filter((id) => id !== host.id)
+      l.otherContactIds = l.otherContactIds.filter((id) => id !== host.id)
+    }
+    if (!h.deal) return
+
+    const target =
+      listings.find((l) => l.status === h.deal!.status && !claimed.has(l.id)) ??
+      listings.find((l) => !claimed.has(l.id))!
+    claimed.add(target.id)
+    forceListingStage(target, h.deal.status)
+
+    if (h.deal.side === 'seller') {
+      target.sellerContactIds = [host.id, ...target.sellerContactIds]
+      target.transaction.backOffice.relatedContactsLabel = `${h.firstName} ${h.lastName}`
+    } else {
+      target.buyerContactIds = [host.id, ...target.buyerContactIds]
+    }
+    if (!host.propertyIds.includes(target.propertyId)) {
+      host.propertyIds.push(target.propertyId)
+    }
+  })
+
+  // Detaching heroes can leave a listing without a seller — and progressed
+  // deals (under contract / closed) must also keep a buyer, per the stage-gate
+  // rules (`buyerLinked`, see stageGates.ts). Repair with another non-hero
+  // contact linked to the same property (any non-hero contact as a last
+  // resort), never double-casting a contact on both sides of one deal.
+  const heroIds = new Set(
+    HERO_FIXTURES.map((_, i) => contacts[10 + i].id),
+  )
+  const repair = (l: Listing, exclude: string[]): string => {
+    const ok = (c: Contact) =>
+      !heroIds.has(c.id) && !exclude.includes(c.id)
+    const fallback =
+      contacts.find((c) => ok(c) && c.propertyIds.includes(l.propertyId)) ??
+      contacts.find(ok)!
+    if (!fallback.propertyIds.includes(l.propertyId)) {
+      fallback.propertyIds.push(l.propertyId)
+    }
+    return fallback.id
+  }
+  for (const l of listings) {
+    if (l.sellerContactIds.length === 0) {
+      l.sellerContactIds = [repair(l, l.buyerContactIds)]
+    }
+    const progressed = l.status === 'under-contract' || l.status === 'closed'
+    if (progressed && l.buyerContactIds.length === 0) {
+      l.buyerContactIds = [repair(l, l.sellerContactIds)]
+    }
+  }
+}
+
 // ── Top-level export ──────────────────────────────────────────────────────────
 
 export function generateDataset() {
@@ -1567,6 +1799,10 @@ export function generateDataset() {
   const listings = properties.flatMap((p) =>
     generateListings(p, contactsByProperty.get(p.id) ?? contacts, dealIdRef),
   )
+
+  // Overwrite five generated contacts with the hand-authored hero personas and
+  // wire their deals — before reconciliation so derived fields follow.
+  applyHeroes(contacts, listings)
 
   // Reconcile each contact's deal-derived fields with the deals they're actually
   // a party to. The listings are the source of truth for the contact↔deal graph,

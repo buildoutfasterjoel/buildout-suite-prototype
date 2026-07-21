@@ -633,6 +633,13 @@ export type ContactDealStage =
 /** Quality of the contact's phone number. */
 export type PhoneStatus = 'valid' | 'invalid' | 'unknown'
 
+/**
+ * Hand-authored demo personas. A contact carrying a `heroKey` gets a fully
+ * hand-written activity arc (see timelineHeroes.ts) instead of the
+ * parameterized stage arc — one guaranteed-great contact per lifecycle stage.
+ */
+export type HeroKey = 'rosa' | 'earl' | 'victor' | 'margaret' | 'patricia'
+
 export interface Contact {
   id: string
   firstName: string
@@ -676,6 +683,8 @@ export interface Contact {
   tags: string[]
   /** Freeform notes captured when the contact was created (optional). */
   notes?: string
+  /** Set on the hand-authored demo personas — selects their hero arc. */
+  heroKey?: HeroKey
 }
 
 /**
