@@ -85,6 +85,10 @@ interface EditorState {
   addPage: (kind: "blank" | PresetKey, atIndex?: number) => void;
   /** Reorder a page to sit at `toIndex` in the document's top-level page list. */
   movePage: (pageId: string, toIndex: number) => void;
+  /** Remove a page from the document (no-op if it's the last remaining page). */
+  removePage: (pageId: string) => void;
+  /** Toggle a page's hidden flag — hidden pages are kept but excluded from output. */
+  togglePageHidden: (pageId: string) => void;
 
   // Phase 2 actions (structural mutation via drag-and-drop).
   addBlock: (target: DropTarget, type: Block["type"], variant?: BlockVariant) => void;
@@ -238,6 +242,36 @@ export const useEditorStore = create<EditorState>((set) => {
       const [moved] = pages.splice(fromIndex, 1);
       pages.splice(clampIndex(toIndex, pages.length), 0, moved);
       return { document: { ...s.document, pages }, dirty: true };
+    }),
+
+  removePage: (pageId) =>
+    set((s) => {
+      const index = s.document.pages.findIndex((p) => p.id === pageId);
+      // Keep at least one page around — a document with no pages has nothing to edit.
+      if (index === -1 || s.document.pages.length <= 1) return s;
+      const pages = s.document.pages.filter((p) => p.id !== pageId);
+      const templatePages = s.templateDocument.pages.filter((p) => p.id !== pageId);
+      // If the removed page was in view/selected, fall back to its neighbor.
+      const fallback = pages[Math.min(index, pages.length - 1)];
+      return {
+        document: { ...s.document, pages },
+        templateDocument: { ...s.templateDocument, pages: templatePages },
+        activePageId: s.activePageId === pageId ? fallback.id : s.activePageId,
+        selection: s.selection?.pageId === pageId ? null : s.selection,
+        highlightedBlockId: null,
+        dirty: true,
+      };
+    }),
+
+  togglePageHidden: (pageId) =>
+    set((s) => {
+      const toggle = (pages: typeof s.document.pages) =>
+        pages.map((p) => (p.id === pageId ? { ...p, hidden: !p.hidden } : p));
+      return {
+        document: { ...s.document, pages: toggle(s.document.pages) },
+        templateDocument: { ...s.templateDocument, pages: toggle(s.templateDocument.pages) },
+        dirty: true,
+      };
     }),
 
   addBlock: (target, type, variant) =>

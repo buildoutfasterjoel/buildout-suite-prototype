@@ -74,6 +74,9 @@ export function Canvas() {
               key={page.id}
               data-page-id={page.id}
               onClick={(e) => e.stopPropagation()}
+              // Hidden pages stay in the canvas (so they can be un-hidden) but
+              // dim to signal they're excluded from the rendered/exported output.
+              style={page.hidden ? { opacity: 0.4 } : undefined}
             >
               <PageView page={page} selection={selection} />
             </div>

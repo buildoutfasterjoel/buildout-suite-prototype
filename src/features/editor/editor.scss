@@ -1,7 +1,13 @@
 /* Document editor prototype — chrome styles that need real CSS (hover,
-   pseudo-elements, range thumbs). Component layout uses Bootstrap utilities. */
+   pseudo-elements, range thumbs). Component layout uses Bootstrap utilities.
 
-@use "@buildoutinc/blueprint-tokens/scss/colors" as tokens;
+   Values come from Blueprint tokens wherever one maps exactly: `tokens.*`
+   (colors, spacing, radius, shadows, type) and `motion.*` (durations/easings).
+   The primary purple uses the runtime `--bp-primary` var so it tracks the theme.
+   A handful of literals remain because the editor's fine 2px chrome rhythm
+   (6/10/14px, 3px radii, component pixel dimensions) has no token equivalent. */
+
+@use "@buildoutinc/blueprint-tokens/scss/semantic" as tokens;
 @use "@buildoutinc/blueprint-theme/scss/bridge/vars" as motion;
 
 .bo-editor {
@@ -10,7 +16,7 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  background: #fff;
+  background: tokens.$white;
   overflow: hidden;
 }
 
@@ -41,7 +47,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: tokens.$spacing-0-5;
   border: 0;
   background: transparent;
   cursor: pointer;
@@ -53,22 +59,22 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: 6px;
-  color: #360764;
-  font-size: 14px;
+  border-radius: tokens.$border-radius-md;
+  color: tokens.$purple-heart-950;
+  font-size: tokens.$font-size-body;
 }
 .bo-editor-rail-btn:hover .bo-editor-rail-icon,
 .bo-editor-rail-btn.is-active .bo-editor-rail-icon {
-  background: #f9f5ff;
+  background: tokens.$purple-heart-50;
 }
 .bo-editor-rail-label {
-  font-size: 12px;
+  font-size: tokens.$font-size-small;
   line-height: 16px;
-  color: #506079;
+  color: tokens.$body-text-muted;
 }
 .bo-editor-rail-btn.is-active .bo-editor-rail-label {
-  color: #360764;
-  font-weight: 600;
+  color: tokens.$purple-heart-950;
+  font-weight: tokens.$font-weight-semibold;
 }
 
 /* ---- Custom slider ---- */
@@ -77,9 +83,9 @@
   -webkit-appearance: none;
   width: 100%;
   height: 6px;
-  border-radius: 999px;
-  background: #f6f7f9;
-  border: 1px solid #d5dae2;
+  border-radius: tokens.$border-radius-full;
+  background: tokens.$body-bg;
+  border: 1px solid tokens.$root-border-color;
   outline: none;
   cursor: pointer;
 }
@@ -88,35 +94,35 @@
   -webkit-appearance: none;
   width: 12px;
   height: 12px;
-  border-radius: 999px;
-  background: #7422ce;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  border-radius: tokens.$border-radius-full;
+  background: var(--bp-primary);
+  box-shadow: tokens.$shadow-base;
   cursor: pointer;
 }
 .bo-editor-slider::-moz-range-thumb {
   width: 12px;
   height: 12px;
   border: 0;
-  border-radius: 999px;
-  background: #7422ce;
+  border-radius: tokens.$border-radius-full;
+  background: var(--bp-primary);
 }
 
 /* ---- Color swatches ---- */
 .bo-editor-swatch {
   width: 20px;
   height: 20px;
-  border-radius: 4px;
-  border: 1px solid #d5dae2;
+  border-radius: tokens.$border-radius-sm;
+  border: 1px solid tokens.$root-border-color;
   padding: 0;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #506079;
-  background: #fff;
+  color: tokens.$body-text-muted;
+  background: tokens.$white;
 }
 .bo-editor-swatch.is-selected {
-  outline: 2px solid #7422ce;
+  outline: 2px solid var(--bp-primary);
   outline-offset: 1px;
 }
 
@@ -124,7 +130,7 @@
 .bo-editor-toggle-group {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: tokens.$spacing-0-5;
 }
 
 /* ---- Canvas + page ---- */
@@ -144,7 +150,7 @@
 // popover so its translateX centering never fights the slide transform.
 .bo-editor-rt-anchor {
   position: absolute;
-  top: 12px;
+  top: tokens.$spacing-3;
   left: 50%;
   transform: translateX(-50%);
   z-index: 20;
@@ -155,9 +161,9 @@
 .bo-editor-rt-popover {
   min-width: 0;
   padding: 6px;
-  background: #fff;
-  border: 1px solid #eceef2;
-  border-radius: 8px;
+  background: tokens.$white;
+  border: 1px solid tokens.$card-border-color;
+  border-radius: tokens.$border-radius-lg;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 
   &[data-state="open"] {
@@ -199,8 +205,8 @@
   display: inline-flex;
   align-items: stretch;
   height: 26px;
-  border: 1px solid #d5dae2;
-  border-radius: 6px;
+  border: 1px solid tokens.$root-border-color;
+  border-radius: tokens.$border-radius-md;
   overflow: hidden;
 }
 .bo-editor-rt-step-btn {
@@ -209,23 +215,23 @@
   align-items: center;
   justify-content: center;
   border: 0;
-  background: #fff;
-  color: #424e62;
+  background: tokens.$white;
+  color: tokens.$storm-grey-700;
   font-size: 11px;
   cursor: pointer;
 }
 .bo-editor-rt-step-btn:hover {
-  background: #f2f4f7;
+  background: tokens.$storm-grey-100;
 }
 .bo-editor-rt-size-input {
   width: 38px;
   border: 0;
-  border-left: 1px solid #d5dae2;
-  border-right: 1px solid #d5dae2;
+  border-left: 1px solid tokens.$root-border-color;
+  border-right: 1px solid tokens.$root-border-color;
   text-align: center;
   font-size: 13px;
-  color: #22262f;
-  background: #fff;
+  color: tokens.$body-color;
+  background: tokens.$white;
   -moz-appearance: textfield;
   appearance: textfield;
 }
@@ -241,27 +247,27 @@
   flex: 1 0 0;
   min-height: 0;
   overflow: auto;
-  background: #f6f7f9;
-  padding: 24px;
+  background: tokens.$body-bg;
+  padding: tokens.$spacing-6;
 }
 .bo-editor-pages {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 28px;
+  gap: tokens.$spacing-7;
   transform-origin: top center;
 }
 
 .bo-editor-page {
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  background: tokens.$white;
+  box-shadow: tokens.$shadow-base;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   flex-shrink: 0;
   outline: 2px solid transparent;
   outline-offset: 2px;
-  transition: outline-color 0.1s ease;
+  transition: outline-color motion.$short2 ease;
 }
 /* The page itself (not a block inside it) is selected — a soft accent outline
    distinguishes it from the stronger purple block-selection outline. */
@@ -275,19 +281,19 @@
   cursor: pointer;
   outline: 2px solid transparent;
   outline-offset: 2px;
-  transition: outline-color 0.1s ease;
+  transition: outline-color motion.$short2 ease;
 }
 .bo-editor-block:hover {
-  outline-color: rgba(116, 34, 206, 0.35);
+  outline-color: rgba(var(--bp-primary-rgb), 0.35);
 }
 .bo-editor-block.is-selected {
-  outline-color: #7422ce;
+  outline-color: var(--bp-primary);
 }
 .bo-editor-cell {
   cursor: pointer;
 }
 .bo-editor-cell.is-selected {
-  box-shadow: inset 0 0 0 2px #7422ce;
+  box-shadow: inset 0 0 0 2px var(--bp-primary);
 }
 
 /* ---- Drag & drop ---- */
@@ -297,9 +303,9 @@
 /* "Located" from the Layers panel — a dashed outline that reads as "here it is",
    distinct from the solid selection outline. */
 .bo-editor-sortable.is-located {
-  outline: 2px dashed #7422ce;
+  outline: 2px dashed var(--bp-primary);
   outline-offset: 3px;
-  border-radius: 4px;
+  border-radius: tokens.$border-radius-sm;
 }
 .bo-editor-drag-handle {
   position: absolute;
@@ -311,12 +317,12 @@
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: 4px;
+  border-radius: tokens.$border-radius-sm;
   background: transparent;
-  color: #94a3b8;
+  color: tokens.$storm-grey-400;
   cursor: grab;
   opacity: 0;
-  transition: opacity 0.1s ease;
+  transition: opacity motion.$short2 ease;
   touch-action: none;
   z-index: 3;
 }
@@ -335,16 +341,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #d5dae2;
-  border-radius: 4px;
-  background: #fff;
-  color: #e7000b;
+  border: 1px solid tokens.$root-border-color;
+  border-radius: tokens.$border-radius-sm;
+  background: tokens.$white;
+  color: var(--bp-destructive);
   cursor: pointer;
-  font-size: 12px;
+  font-size: tokens.$font-size-small;
   z-index: 3;
 }
 .bo-editor-block-delete:hover {
-  background: #fef2f2;
+  background: tokens.$solid-pink-50;
 }
 
 /* Insertion line shown above the block currently under the pointer. */
@@ -354,8 +360,8 @@
   left: 0;
   right: 0;
   height: 2px;
-  border-radius: 2px;
-  background: #7422ce;
+  border-radius: tokens.$border-radius-xs;
+  background: var(--bp-primary);
   z-index: 4;
 }
 
@@ -369,43 +375,43 @@
   align-items: center;
   justify-content: center;
   border: 1px dashed #c7ccd6;
-  border-radius: 6px;
-  color: #94a3b8;
-  font-size: 12px;
+  border-radius: tokens.$border-radius-md;
+  color: tokens.$storm-grey-400;
+  font-size: tokens.$font-size-small;
 }
 .bo-editor-dropzone.is-over {
-  background: #f9f5ff;
-  border-color: #7422ce;
-  color: #7422ce;
+  background: tokens.$purple-heart-50;
+  border-color: var(--bp-primary);
+  color: var(--bp-primary);
 }
 
 /* Floating drag preview. */
 .bo-editor-drag-ghost {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: tokens.$spacing-2;
   padding: 6px 12px;
-  border-radius: 6px;
-  background: #fff;
-  border: 1px solid #7422ce;
+  border-radius: tokens.$border-radius-md;
+  background: tokens.$white;
+  border: 1px solid var(--bp-primary);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  color: #22262f;
+  color: tokens.$body-color;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: tokens.$font-weight-semibold;
   cursor: grabbing;
 }
 
 /* Palette items (Blocks panel). */
 .bo-editor-palette-item {
-  border: 1px solid #d5dae2;
-  border-radius: 6px;
-  background: #fff;
+  border: 1px solid tokens.$root-border-color;
+  border-radius: tokens.$border-radius-md;
+  background: tokens.$white;
   cursor: grab;
   touch-action: none;
 }
 .bo-editor-palette-item:hover {
-  border-color: #7422ce;
-  background: #f9f5ff;
+  border-color: var(--bp-primary);
+  background: tokens.$purple-heart-50;
 }
 .bo-editor-palette-item:active {
   cursor: grabbing;
@@ -414,14 +420,14 @@
 /* ---- Layout (container) blocks ---- */
 .bo-editor-columns {
   display: flex;
-  gap: 16px;
+  gap: tokens.$spacing-4;
 }
 .bo-editor-column {
   flex: 1 1 0;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: tokens.$spacing-3;
 }
 .bo-editor-section {
   display: flex;
@@ -435,19 +441,19 @@
 .bo-editor-spacer.is-selected {
   background: repeating-linear-gradient(
     45deg,
-    #f9f5ff,
-    #f9f5ff 6px,
-    #f3ebff 6px,
-    #f3ebff 12px
+    tokens.$purple-heart-50,
+    tokens.$purple-heart-50 6px,
+    tokens.$purple-heart-100 6px,
+    tokens.$purple-heart-100 12px
   );
 }
 .bo-editor-spacer-label {
   font-size: 11px;
-  color: #7422ce;
+  color: var(--bp-primary);
 }
 .bo-editor-dynamic {
-  background: rgba(116, 34, 206, 0.06);
-  border-radius: 4px;
+  background: rgba(var(--bp-primary-rgb), 0.06);
+  border-radius: tokens.$border-radius-sm;
   padding: 2px 6px;
 }
 
@@ -483,7 +489,7 @@
   border-radius: 3px;
   cursor: pointer;
   pointer-events: auto;
-  transition: background 0.1s ease;
+  transition: background motion.$short2 ease;
   z-index: 1;
 }
 .bo-editor-col-handle:hover,
@@ -505,23 +511,23 @@
   border: 0;
   /* A base shadow keeps the dot legible when it lands on top of an image or a
      dark background. */
-  border-radius: 999px;
+  border-radius: tokens.$border-radius-full;
   background: tokens.$storm-grey-200;
-  color: #fff;
+  color: tokens.$white;
   font-size: 9px;
   cursor: pointer;
   pointer-events: auto;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.28);
   transform: translate(-50%, -50%);
   transition:
-    width 0.1s ease,
-    height 0.1s ease,
-    background 0.1s ease;
+    width motion.$short2 ease,
+    height motion.$short2 ease,
+    background motion.$short2 ease;
   z-index: 2;
 }
 .bo-editor-insert-dot > svg {
   opacity: 0;
-  transition: opacity 0.1s ease;
+  transition: opacity motion.$short2 ease;
 }
 .bo-editor-insert-dot:hover {
   width: 18px;
@@ -546,10 +552,10 @@
   position: fixed;
   display: flex;
   align-items: center;
-  padding: 4px;
-  background: #fff;
-  border: 1px solid #eceef2;
-  border-radius: 8px;
+  padding: tokens.$spacing-1;
+  background: tokens.$white;
+  border: 1px solid tokens.$card-border-color;
+  border-radius: tokens.$border-radius-lg;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   transform: translate(-100%, -50%);
   z-index: 30;
@@ -557,7 +563,7 @@
 
 /* Empty-cell placeholder — gives new cells a visible, clickable target. */
 .bo-editor-cell-placeholder {
-  color: #aab2c0;
+  color: tokens.$storm-grey-300;
   user-select: none;
 }
 
@@ -571,7 +577,7 @@
 }
 .bo-editor-cell-edit.is-empty::before {
   content: attr(data-placeholder);
-  color: #aab2c0;
+  color: tokens.$storm-grey-300;
   pointer-events: none;
 }
 
@@ -585,7 +591,7 @@
 }
 .bo-editor-inline-text.is-empty::before {
   content: attr(data-placeholder);
-  color: #aab2c0;
+  color: tokens.$storm-grey-300;
   pointer-events: none;
 }
 
@@ -593,14 +599,14 @@
 .bo-editor-panel {
   width: 280px;
   flex-shrink: 0;
-  border-right: 1px solid #eceef2;
+  border-right: 1px solid tokens.$card-border-color;
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #fff;
+  background: tokens.$white;
   transition:
-    transform 0.15s ease,
-    opacity 0.15s ease;
+    transform motion.$short3 ease,
+    opacity motion.$short3 ease;
 }
 /* Docked (pinned): a normal flex child of .bo-editor-rail-wrap, pushing the
    canvas — identical to the panel's original always-visible layout. */
@@ -636,21 +642,21 @@
   overflow-y: auto;
 }
 .bo-editor-section-title {
-  font-size: 17px;
-  font-weight: 600;
-  color: #22262f;
+  font-size: tokens.$font-size-large;
+  font-weight: tokens.$font-weight-semibold;
+  color: tokens.$body-color;
 }
 .bo-editor-subsection-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #22262f;
+  font-size: tokens.$font-size-body;
+  font-weight: tokens.$font-weight-semibold;
+  color: tokens.$body-color;
 }
 
 /* ---- Layers panel rows ---- */
 .bo-editor-layer-grip {
   border: 0;
   background: transparent;
-  color: #94a3b8;
+  color: tokens.$storm-grey-400;
   padding: 0;
   display: flex;
   align-items: center;
@@ -664,24 +670,24 @@
 .bo-editor-layer-action {
   border: 0;
   background: transparent;
-  color: #94a3b8;
+  color: tokens.$storm-grey-400;
   padding: 2px 5px;
-  border-radius: 4px;
+  border-radius: tokens.$border-radius-sm;
   display: flex;
   align-items: center;
   cursor: pointer;
   flex-shrink: 0;
   transition:
-    color 0.1s ease,
-    background 0.1s ease;
+    color motion.$short2 ease,
+    background motion.$short2 ease;
 }
 .bo-editor-layer-action:hover {
-  color: #22262f;
-  background: #eceef2;
+  color: tokens.$body-color;
+  background: tokens.$card-border-color;
 }
 .bo-editor-layer-action-danger:hover {
-  color: #e7000b;
-  background: #fef2f2;
+  color: var(--bp-destructive);
+  background: tokens.$solid-pink-50;
 }
 
 /* ---- Pages panel rows ---- */
@@ -693,13 +699,61 @@
   min-height: 0;
   overflow-y: auto;
   /* Room for the last row's trailing insert-gap, which hangs below its bottom edge. */
-  padding-bottom: 8px;
+  padding-bottom: tokens.$spacing-2;
 }
 .bo-editor-pages-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
   cursor: pointer;
+  /* Tighter left inset than Bootstrap's default list-group padding so the
+     page index/name sit closer to the panel edge. */
+  padding-left: tokens.$spacing-2;
+  padding-right: 6px;
+}
+/* Hidden pages read as "excluded from output" — dimmed, with the name struck. */
+.bo-editor-pages-row.is-hidden .bo-editor-pages-row-index,
+.bo-editor-pages-row.is-hidden .bo-editor-pages-row-name {
+  opacity: 0.5;
+}
+.bo-editor-pages-row.is-hidden .bo-editor-pages-row-name {
+  text-decoration: line-through;
+}
+
+/* Right-aligned row actions (hide / delete) — revealed on row hover or focus,
+   and kept visible when the page is hidden so the state stays legible.
+   Absolutely anchored to the right edge so they reserve no layout space at
+   rest: the dynamic-data bolt keeps its natural spot and the buttons simply
+   fade in over that area as the bolt fades out. */
+.bo-editor-pages-row-actions {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: tokens.$spacing-0-5;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+.bo-editor-pages-row:hover .bo-editor-pages-row-actions,
+.bo-editor-pages-row:focus-within .bo-editor-pages-row-actions,
+.bo-editor-pages-row-actions.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.bo-editor-pages-row-actions .bo-editor-layer-action:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+/* Dynamic-data bolt fades out on hover to clear the way for the row actions,
+   but stays in flow so its slot (and the name's truncation) never shift. */
+.bo-editor-pages-row:hover .bo-editor-pages-bolt,
+.bo-editor-pages-row:focus-within .bo-editor-pages-bolt,
+.bo-editor-pages-row.is-hidden .bo-editor-pages-bolt {
+  opacity: 0;
 }
 .bo-editor-pages-grip-slot {
   flex-shrink: 0;
@@ -711,18 +765,19 @@
 .bo-editor-pages-row-index {
   flex-shrink: 0;
   width: 20px;
-  font-size: 12px;
-  color: #94a3b8;
+  font-size: tokens.$font-size-small;
+  color: tokens.$storm-grey-400;
   text-align: right;
 }
 .bo-editor-pages-row-name {
   flex: 1 1 0;
   min-width: 0;
-  font-size: 14px;
+  font-size: tokens.$font-size-body;
 }
 .bo-editor-pages-bolt {
   color: #f5a623;
   flex-shrink: 0;
+  transition: opacity 0.12s ease;
 }
 
 /* Hover strip nestled between rows — the list-panel counterpart to
@@ -748,25 +803,34 @@
 }
 .bo-editor-pages-row-gap-line {
   position: absolute;
-  left: 8px;
-  right: 8px;
+  left: tokens.$spacing-2;
+  right: tokens.$spacing-2;
   height: 2px;
   background: var(--bp-primary);
-  border-radius: 2px;
+  border-radius: tokens.$border-radius-xs;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.15s ease;
+  transition: opacity motion.$short3 ease;
 }
 .bo-editor-pages-row-gap-btn {
   opacity: 0;
   transform: scale(0.92);
   transition:
-    opacity 0.15s ease,
-    transform 0.15s ease;
+    opacity motion.$short3 ease,
+    transform motion.$short3 ease;
 }
 .bo-editor-pages-row-gap-hit:hover .bo-editor-pages-row-gap-line,
 .bo-editor-pages-row-gap-hit:hover .bo-editor-pages-row-gap-btn,
 .bo-editor-pages-row-gap-btn:focus-visible {
   opacity: 1;
   transform: scale(1);
+}
+/* Delay the hover reveal so a cursor passing through the seam on its way to
+   another page row doesn't pop the "Add Page" button (and get clicked by
+   accident). The delay lives only on the hover-in state — leaving the seam
+   falls back to the base rule's zero-delay transition, so it still hides
+   instantly. Keyboard focus is excluded so it reveals immediately. */
+.bo-editor-pages-row-gap-hit:hover .bo-editor-pages-row-gap-line,
+.bo-editor-pages-row-gap-hit:hover .bo-editor-pages-row-gap-btn {
+  transition-delay: motion.$medium3;
 }

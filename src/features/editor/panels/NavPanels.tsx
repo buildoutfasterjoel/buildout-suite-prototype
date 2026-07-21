@@ -18,6 +18,8 @@ import {
   faTrashCan,
   faMagnifyingGlass,
   faBolt,
+  faEye,
+  faEyeSlash,
 } from "@fortawesome/pro-regular-svg-icons";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
@@ -59,6 +61,10 @@ function PageRowContent({
   active: boolean;
   dragHandle?: ReactNode;
 }) {
+  const togglePageHidden = useEditorStore((s) => s.togglePageHidden);
+  const removePage = useEditorStore((s) => s.removePage);
+  const pageCount = useEditorStore((s) => s.document.pages.length);
+
   return (
     <>
       <span className="bo-editor-pages-grip-slot">{active && dragHandle}</span>
@@ -79,6 +85,50 @@ function PageRowContent({
           <Tooltip.Content side="left">Contains dynamic listing data</Tooltip.Content>
         </Tooltip>
       )}
+
+      {/* Hover actions — hide/show and delete. The hide button also stays
+          visible while the page is hidden so the state is legible at rest. */}
+      <span
+        className={`bo-editor-pages-row-actions${page.hidden ? " is-visible" : ""}`}
+      >
+        <Tooltip>
+          <Tooltip.Trigger
+            render={
+              <button
+                type="button"
+                className="bo-editor-layer-action"
+                aria-label={page.hidden ? "Show page" : "Hide page"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  togglePageHidden(page.id);
+                }}
+              >
+                <FontAwesomeIcon icon={page.hidden ? faEyeSlash : faEye} />
+              </button>
+            }
+          />
+          <Tooltip.Content side="top">{page.hidden ? "Show page" : "Hide page"}</Tooltip.Content>
+        </Tooltip>
+        <Tooltip>
+          <Tooltip.Trigger
+            render={
+              <button
+                type="button"
+                className="bo-editor-layer-action bo-editor-layer-action-danger"
+                aria-label="Delete page"
+                disabled={pageCount <= 1}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removePage(page.id);
+                }}
+              >
+                <FontAwesomeIcon icon={faTrashCan} />
+              </button>
+            }
+          />
+          <Tooltip.Content side="top">Delete page</Tooltip.Content>
+        </Tooltip>
+      </span>
     </>
   );
 }
@@ -148,7 +198,7 @@ function SortablePageRow({
       active={active}
       role="button"
       tabIndex={0}
-      className="bo-editor-pages-row"
+      className={`bo-editor-pages-row${page.hidden ? " is-hidden" : ""}`}
       onClick={onSelect}
     >
       <PageRowContent page={page} index={index} active={active} dragHandle={grip} />
@@ -206,7 +256,7 @@ export function PagesPanel() {
                   active={active}
                   role="button"
                   tabIndex={0}
-                  className="bo-editor-pages-row"
+                  className={`bo-editor-pages-row${page.hidden ? " is-hidden" : ""}`}
                   onClick={() => handleSelectPage(page.id)}
                 >
                   <PageRowContent page={page} index={realIndex + 1} active={active} />
