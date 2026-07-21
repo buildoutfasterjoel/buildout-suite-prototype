@@ -216,7 +216,9 @@ export function DealContextRail({ listing }: { listing: Listing }) {
     ? getListing(listing.parentDealId)
     : undefined;
 
-  const documents = listing.documents ?? [];
+  // The rail's Files section is for the broker's own uploads only — Buildout's
+  // AI-generated documents surface on the Documents page instead.
+  const documents = (listing.documents ?? []).filter((d) => !d.aiGenerated);
   const sellers = resolve(listing.sellerContactIds);
   const buyers = resolve(listing.buyerContactIds);
   const others = resolve(listing.otherContactIds);

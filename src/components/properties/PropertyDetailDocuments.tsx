@@ -23,6 +23,7 @@ import {
   faCircleInfo,
 } from "@fortawesome/pro-regular-svg-icons";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
+import { getListing } from "#/data/store";
 
 type Document = {
   id: string;
@@ -34,35 +35,13 @@ type Document = {
   viewCount: number;
 };
 
-const DOCUMENTS: Document[] = [
-  {
-    id: "1",
-    name: "Offering Memorandum (L)",
-    adminBadge: true,
-    accessLevel: "Private",
-    lastModified: "about 2 months ago",
-    primary: false,
-    viewCount: 0,
-  },
-  {
-    id: "2",
-    name: "Floor Plan",
-    adminBadge: false,
-    accessLevel: "Public",
-    lastModified: "about 3 weeks ago",
-    primary: true,
-    viewCount: 14,
-  },
-  {
-    id: "3",
-    name: "Executive Summary",
-    adminBadge: false,
-    accessLevel: "Restricted",
-    lastModified: "about 1 week ago",
-    primary: false,
-    viewCount: 7,
-  },
-];
+function formatModified(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 const CHECKBOX_COL_W = 44;
 
@@ -70,11 +49,27 @@ export function PropertyDetailDocuments({ listingId }: { listingId: string }) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
+  // The Documents page shows what Buildout drafts for the deal — the
+  // AI-generated documents chosen in the create flow. The broker's own uploads
+  // live on the Files page instead.
+  const listing = getListing(listingId);
+  const documents: Document[] = (listing?.documents ?? [])
+    .filter((d) => d.aiGenerated)
+    .map((d) => ({
+      id: d.id,
+      name: d.name,
+      adminBadge: false,
+      accessLevel: "Private",
+      lastModified: formatModified(d.uploadedAt),
+      primary: false,
+      viewCount: 0,
+    }));
+
   const filtered = search.trim()
-    ? DOCUMENTS.filter((d) =>
+    ? documents.filter((d) =>
         d.name.toLowerCase().includes(search.trim().toLowerCase()),
       )
-    : DOCUMENTS;
+    : documents;
 
   const allSelected =
     filtered.length > 0 && filtered.every((d) => selected.has(d.id));
@@ -175,7 +170,8 @@ export function PropertyDetailDocuments({ listingId }: { listingId: string }) {
         </Empty.Content>
       </Empty>
 
-      {/* Table */}
+      {/* Table — only when the deal has generated documents to show. */}
+      {documents.length > 0 && (
       <Table variant="sticky" dense>
         <Table.Header sticky>
           <Table.Row>
@@ -302,6 +298,7 @@ export function PropertyDetailDocuments({ listingId }: { listingId: string }) {
           </Table.Row>
         </Table.Footer>
       </Table>
+      )}
     </div>
   );
 }
