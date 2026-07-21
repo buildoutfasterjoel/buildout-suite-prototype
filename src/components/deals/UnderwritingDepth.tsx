@@ -9,6 +9,7 @@ import {
   faChevronRight,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { DealUnderwriting } from "#/data/types";
+import { DEFAULT_STRATEGY } from "#/components/deals/underwriting/strategies";
 import "./UnderwritingDepth.scss";
 
 // The underwriting checks, in the order they turn on as the slider advances.
@@ -45,6 +46,7 @@ export function tierForCount(count: number): string {
 export function underwritingFromSelection(sel: Set<number>): DealUnderwriting {
   const count = sel.size;
   return {
+    strategy: DEFAULT_STRATEGY,
     tier: count === 0 ? "None" : tierForCount(count),
     selectedChecks: [...sel].sort((a, b) => a - b),
   };
