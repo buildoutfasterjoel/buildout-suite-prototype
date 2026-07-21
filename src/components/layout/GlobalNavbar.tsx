@@ -173,7 +173,7 @@ export function GlobalNavbar() {
                 className="text-muted"
               />
               <span className="flex-grow-1 text-start text-muted text-truncate">
-                Search…
+                Search or ask AI
               </span>
               <Badge
                 variant="secondary"

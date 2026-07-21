@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
+import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -17,6 +19,8 @@ import {
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { searchAll } from "#/data/selectors";
 import { getProperty } from "#/data/store";
+import { useDataStore } from "#/data/dataStore";
+import type { Property, Listing, Contact } from "#/data/types";
 import { useAssistant } from "#/ai/useAssistant";
 import { useCreateDeal } from "#/data/useCreateDeal";
 import { useOmniSearch } from "#/components/search/useOmniSearch";
@@ -39,9 +43,44 @@ function statusLabel(status: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-type GroupName = "Properties" | "People" | "Deals";
+/** Escape a user token so it can be dropped into a RegExp literal safely. */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
-/** A selectable palette row (record) or the trailing Ask-AI action. */
+/**
+ * Render `text` with any occurrence of the query's whitespace-separated tokens
+ * wrapped in bold, so the matched substrings stand out from the rest of the row
+ * (e.g. searching "San" bolds the "San" in "Sandra Vega").
+ */
+function highlight(text: string, query: string): ReactNode {
+  const tokens = query.trim().split(/\s+/).filter(Boolean).map(escapeRegExp);
+  if (tokens.length === 0) return text;
+  // One capturing group → split() interleaves matches at the odd indices.
+  const parts = text.split(new RegExp(`(${tokens.join("|")})`, "ig"));
+  return parts.map((part, i) =>
+    i % 2 === 1 ? (
+      <strong key={i} className="fw-bold text-body">
+        {part}
+      </strong>
+    ) : (
+      <Fragment key={i}>{part}</Fragment>
+    ),
+  );
+}
+
+/** The result-scope tabs across the top of the palette. */
+type TabKey = "all" | "contacts" | "properties" | "deals";
+const TABS: { key: TabKey; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "contacts", label: "Contacts" },
+  { key: "properties", label: "Properties" },
+  { key: "deals", label: "Deals" },
+];
+
+type GroupName = "Contacts" | "Properties" | "Deals";
+
+/** A selectable palette row (record) or a trailing quick action. */
 type Entry =
   | {
       kind: "record";
@@ -74,13 +113,21 @@ export function OmniSearch() {
   const askAssistant = useAssistant((s) => s.ask);
   const router = useRouter();
 
+  // Reactive entity maps power the empty-query "browse" state (before the user
+  // types), so the tabs are useful immediately.
+  const properties = useDataStore((s) => s.properties);
+  const contacts = useDataStore((s) => s.contacts);
+  const listings = useDataStore((s) => s.listings);
+
   const [query, setQuery] = useState("");
+  const [tab, setTab] = useState<TabKey>("all");
   const [activeIndex, setActiveIndex] = useState(0);
   const contentRef = useRef<HTMLDivElement>(null);
 
   function close() {
     setOpen(false);
     setQuery("");
+    setTab("all");
   }
 
   const navigate = (to: string) => {
@@ -90,90 +137,111 @@ export function OmniSearch() {
 
   const entries = useMemo<Entry[]>(() => {
     const q = query.trim();
-    if (!q) return [];
 
-    const { properties, deals, contacts } = searchAll(q);
+    // With a query, use the fuzzy search; otherwise browse the full set so the
+    // palette (and its tabs) has content before the user types.
+    const matched = q
+      ? searchAll(q)
+      : {
+          properties: [...properties.values()] as Property[],
+          deals: [...listings.values()] as Listing[],
+          contacts: [...contacts.values()] as Contact[],
+        };
+
+    const showGroup = (g: GroupName) =>
+      tab === "all" ||
+      (tab === "contacts" && g === "Contacts") ||
+      (tab === "properties" && g === "Properties") ||
+      (tab === "deals" && g === "Deals");
+
     const list: Entry[] = [];
 
-    for (const p of properties.slice(0, GROUP_CAP)) {
-      list.push({
-        kind: "record",
-        key: `property-${p.id}`,
-        group: "Properties",
-        icon: faBuilding,
-        title: p.name,
-        meta: [p.street, [p.city, p.state].filter(Boolean).join(", ")]
-          .filter(Boolean)
-          .join(" · "),
-        activate: () => navigate(`/properties/${p.id}`),
-      });
+    if (showGroup("Contacts")) {
+      for (const c of matched.contacts.slice(0, GROUP_CAP)) {
+        list.push({
+          kind: "record",
+          key: `contact-${c.id}`,
+          group: "Contacts",
+          icon: faUser,
+          title: `${c.firstName} ${c.lastName}`.trim(),
+          meta: [c.title, c.company].filter(Boolean).join(" · "),
+          badge: c.relationship
+            ? (RELATIONSHIP_LABELS[c.relationship] ?? c.relationship)
+            : undefined,
+          activate: () => navigate(`/backoffice/contacts/${c.id}`),
+        });
+      }
     }
 
-    for (const c of contacts.slice(0, GROUP_CAP)) {
-      list.push({
-        kind: "record",
-        key: `contact-${c.id}`,
-        group: "People",
-        icon: faUser,
-        title: `${c.firstName} ${c.lastName}`.trim(),
-        meta: [c.title, c.company].filter(Boolean).join(" · "),
-        badge: c.relationship
-          ? (RELATIONSHIP_LABELS[c.relationship] ?? c.relationship)
-          : undefined,
-        activate: () => navigate(`/backoffice/contacts/${c.id}`),
-      });
+    if (showGroup("Properties")) {
+      for (const p of matched.properties.slice(0, GROUP_CAP)) {
+        list.push({
+          kind: "record",
+          key: `property-${p.id}`,
+          group: "Properties",
+          icon: faBuilding,
+          title: p.name,
+          meta: [p.street, [p.city, p.state].filter(Boolean).join(", ")]
+            .filter(Boolean)
+            .join(" · "),
+          activate: () => navigate(`/properties/${p.id}`),
+        });
+      }
     }
 
-    for (const d of deals.slice(0, GROUP_CAP)) {
-      const p = getProperty(d.propertyId);
+    if (showGroup("Deals")) {
+      for (const d of matched.deals.slice(0, GROUP_CAP)) {
+        const p = getProperty(d.propertyId);
+        list.push({
+          kind: "record",
+          key: `deal-${d.id}`,
+          group: "Deals",
+          icon: faHandshake,
+          title: d.name,
+          meta: [p?.city, p?.state].filter(Boolean).join(", "),
+          badge: statusLabel(d.status),
+          activate: () => navigate(`/listings/${d.id}`),
+        });
+      }
+    }
+
+    // Quick actions only make sense once there's query text to act on. The
+    // Ask-AI action leads (it's the primary fallback when nothing matches),
+    // followed by Create deal.
+    if (q) {
       list.push({
-        kind: "record",
-        key: `deal-${d.id}`,
-        group: "Deals",
+        kind: "ai",
+        key: "ai",
+        icon: faSparkles,
+        title: `Ask AI: “${q}”`,
+        activate: () => {
+          askAssistant(q);
+          close();
+        },
+      });
+
+      list.push({
+        kind: "create",
+        key: "create",
         icon: faHandshake,
-        title: d.name,
-        meta: [p?.city, p?.state].filter(Boolean).join(", "),
-        badge: statusLabel(d.status),
-        activate: () => navigate(`/listings/${d.id}`),
+        title: `Create deal for “${q}”`,
+        activate: () => {
+          useCreateDeal.getState().openFor({ initialAddress: q });
+          close();
+        },
       });
     }
-
-    // A "Create deal" quick action is always available for a non-empty query,
-    // seeding the create-deal modal's address field with the raw query text.
-    list.push({
-      kind: "create",
-      key: "create",
-      icon: faHandshake,
-      title: `Create deal for “${q}”`,
-      activate: () => {
-        useCreateDeal.getState().openFor({ initialAddress: q });
-        close();
-      },
-    });
-
-    // The Ask-AI action is always available for a non-empty query. When there
-    // are no record matches it becomes the only (and thus auto-highlighted) row.
-    list.push({
-      kind: "ai",
-      key: "ai",
-      icon: faSparkles,
-      title: `Ask AI: “${q}”`,
-      activate: () => {
-        askAssistant(q);
-        close();
-      },
-    });
 
     return list;
-    // `navigate`/`askAssistant`/`close` are stable enough for this ephemeral UI;
-    // recompute whenever the query changes.
+    // `navigate`/`askAssistant`/`close` are stable enough for this ephemeral
+    // UI; recompute whenever the query, tab, or underlying data changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query]);
+  }, [query, tab, properties, contacts, listings]);
 
-  // Highlight the first row (a record if any, else the Ask-AI row) on each new query.
+  // Highlight the first row on each new query or tab change.
   useEffect(() => {
     setActiveIndex(0);
-  }, [query]);
+  }, [query, tab]);
 
   // Focus the search input when the palette opens (after the modal mounts).
   useEffect(() => {
@@ -207,14 +275,14 @@ export function OmniSearch() {
 
   return (
     <Modal open={open} onOpenChange={(o) => (o ? setOpen(true) : close())}>
-      <Modal.Content className="p-0" scrollable centered>
+      <Modal.Content className="p-0 omni-search-popup" scrollable>
         <Modal.Title className="visually-hidden">
-          Search properties, people, and deals
+          Search contacts, properties, and deals
         </Modal.Title>
 
         <div ref={contentRef} onKeyDown={handleKeyDown}>
           {/* Search field */}
-          <div className="p-2 border-bottom">
+          <div className="p-2">
             <InputGroup>
               <InputGroup.Addon>
                 <FontAwesomeIcon
@@ -225,18 +293,28 @@ export function OmniSearch() {
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search properties, people, deals — or ask a question…"
+                placeholder="Search or ask AI"
                 aria-label="Search"
               />
             </InputGroup>
           </div>
 
+          {/* Scope tabs */}
+          <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
+            <Tabs.List className="px-3 border-bottom">
+              {TABS.map((t) => (
+                <Tabs.Tab key={t.key} value={t.key}>
+                  {t.label}
+                </Tabs.Tab>
+              ))}
+            </Tabs.List>
+          </Tabs>
+
           {/* Results */}
           <div className="overflow-auto py-2" style={{ maxHeight: 440 }}>
-            {query.trim() === "" ? (
+            {entries.length === 0 ? (
               <div className="text-muted small px-3 py-4 text-center">
-                Search across properties, people, and deals. Ask a question and
-                the assistant will take it from here.
+                No matches. Try a different search, or ask the assistant.
               </div>
             ) : (
               entries.map((entry, index) => {
@@ -278,12 +356,18 @@ export function OmniSearch() {
                         }
                       />
                       <span className="flex-grow-1" style={{ minWidth: 0 }}>
-                        <span className="d-block fw-semibold text-truncate">
-                          {entry.title}
+                        <span
+                          className={`d-block text-truncate ${
+                            entry.kind === "record" ? "" : "fw-semibold"
+                          }`}
+                        >
+                          {entry.kind === "record"
+                            ? highlight(entry.title, query)
+                            : entry.title}
                         </span>
                         {entry.kind === "record" && entry.meta && (
                           <span className="d-block text-muted small text-truncate">
-                            {entry.meta}
+                            {highlight(entry.meta, query)}
                           </span>
                         )}
                       </span>
