@@ -49,7 +49,7 @@ export function UnderwritingDepth({
   const selectedSet = value ?? internalSel;
   const checks = checksFor(activeStrategy);
   const total = checks.length;
-  const count = selectedSet.size;
+  const count = [...selectedSet].filter((i) => i >= 0 && i < total).length;
   const fillPct = (count / total) * 100;
 
   const setStrategy = (next: UnderwritingStrategyId) => {

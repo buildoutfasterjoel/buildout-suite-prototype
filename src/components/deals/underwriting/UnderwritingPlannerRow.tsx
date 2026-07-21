@@ -12,6 +12,7 @@ import {
   defaultSelectionFor,
   underwritingFromSelection,
   coerceStrategy,
+  checksFor,
   type UnderwritingStrategyId,
 } from "./strategies";
 import { UnderwritingProgress } from "./UnderwritingProgress";
@@ -35,12 +36,13 @@ export function UnderwritingPlannerRow({ listing }: { listing: Listing }) {
   const navigate = useNavigate();
   const initialStrategy = (): UnderwritingStrategyId =>
     coerceStrategy(listing.underwriting?.strategy);
-  const initialSelection = (strat: UnderwritingStrategyId) =>
-    new Set(
-      listing.underwriting?.selectedChecks?.length
-        ? listing.underwriting.selectedChecks
-        : defaultSelectionFor(strat),
-    );
+  const initialSelection = (strat: UnderwritingStrategyId) => {
+    const count = checksFor(strat).length;
+    const persisted = listing.underwriting?.selectedChecks;
+    return persisted?.length
+      ? new Set(persisted.filter((i) => i >= 0 && i < count))
+      : new Set(defaultSelectionFor(strat));
+  };
 
   const [phase, setPhase] = useState<Phase>(
     listing.underwriting?.status === "ready"

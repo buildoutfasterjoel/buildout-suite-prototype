@@ -7,6 +7,7 @@ import {
   strategyLabel,
   defaultSelectionFor,
   underwritingFromSelection,
+  coerceStrategy,
 } from './strategies'
 
 describe('strategy catalog', () => {
@@ -50,5 +51,12 @@ describe('strategy catalog', () => {
     expect(uw.strategy).toBe('value-add')
     expect(uw.tier).toBe(strategyLabel('value-add'))
     expect(uw.selectedChecks).toEqual([0, 1, 2])
+  })
+
+  it('coerces undefined and legacy/unknown values to the default strategy', () => {
+    expect(coerceStrategy(undefined)).toBe('new-construction')
+    expect(coerceStrategy('rapid-screen')).toBe('new-construction')
+    expect(coerceStrategy('value-add')).toBe('value-add')
+    expect(coerceStrategy('new-construction')).toBe('new-construction')
   })
 })
