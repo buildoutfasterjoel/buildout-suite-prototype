@@ -316,6 +316,7 @@
     opacity: 0.55;
   }
 
+
   // Panel content: a subtle grey background (matches the deal detail rail's
   // Seller/Buyer/Other accordions). Blueprint nests an inner `.accordion-content`
   // with its own padding — zero it so the inset isn't doubled.
@@ -342,11 +343,17 @@
       padding-top: 0;
     }
     // Move the chevron ahead of the label (the button is a flex row) and undo
-    // its right-edge alignment.
+    // its right-edge alignment. Collapsed points RIGHT, open points DOWN
+    // (matching the AI briefing) — re-aim Bootstrap's animated rotation instead
+    // of swapping icons so the 0.2s transition is preserved.
     .accordion-button::after {
       order: -1;
       margin-left: 0;
       margin-right: 4px;
+      transform: rotate(-90deg);
+    }
+    .accordion-button:not(.collapsed)::after {
+      transform: rotate(0deg);
     }
     // Old style was flush white — no header/content divider.
     .accordion-button:not(.collapsed) {
@@ -2048,6 +2055,20 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+  }
+
+  // Collapsed points RIGHT, open rotates DOWN — the same animated treatment
+  // (and timing) as the overview accordions' Bootstrap chevron.
+  &__chevron {
+    transform: rotate(-90deg);
+    transition: transform 0.2s ease-in-out;
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+  &__chevron--open {
+    transform: rotate(0deg);
   }
 
   &__body {
