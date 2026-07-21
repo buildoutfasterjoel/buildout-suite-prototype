@@ -1,10 +1,6 @@
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faChevronDown,
-  faChevronUp,
-  faChevronRight,
-} from "@fortawesome/pro-regular-svg-icons";
+import { faChevronDown, faChevronUp } from "@fortawesome/pro-regular-svg-icons";
 import { faSparkles } from "@fortawesome/pro-solid-svg-icons";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
 
@@ -29,9 +25,13 @@ export function ContactBriefingSection({
   const heading = (
     <span className="d-flex align-items-center gap-2 min-w-0">
       {legacy && (
+        /* Single down chevron, rotated right when collapsed — the rotation
+           (not an icon swap) is what lets the transition animate. */
         <FontAwesomeIcon
-          icon={open ? faChevronDown : faChevronRight}
-          className="text-muted"
+          icon={faChevronDown}
+          className={`text-muted contact-briefing__chevron${
+            open ? " contact-briefing__chevron--open" : ""
+          }`}
           style={{ width: 12, opacity: 0.55 }}
         />
       )}
