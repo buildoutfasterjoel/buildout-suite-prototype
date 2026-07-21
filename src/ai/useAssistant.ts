@@ -13,10 +13,16 @@ interface AssistantUIState {
    * sent as soon as the sidebar mounts. The sidebar consumes and clears it.
    */
   pendingPrompt: string | null;
-  /** Open the assistant and queue a prompt to send. */
+  /**
+   * Open the assistant, queue a prompt to send, and request that the composer
+   * input take focus — so the user is auto-answered and immediately ready to
+   * type a follow-up.
+   */
   ask: (prompt: string) => void;
   /** Read and clear the queued prompt (null if none). */
   consumePrompt: () => string | null;
+  /** Bumped whenever a surface requests the composer input be focused. */
+  focusNonce: number;
 }
 
 export const useAssistant = create<AssistantUIState>((set, get) => ({
@@ -24,10 +30,12 @@ export const useAssistant = create<AssistantUIState>((set, get) => ({
   setOpen: (open) => set({ open }),
   toggle: () => set((s) => ({ open: !s.open })),
   pendingPrompt: null,
-  ask: (prompt) => set({ open: true, pendingPrompt: prompt }),
+  ask: (prompt) =>
+    set((s) => ({ open: true, pendingPrompt: prompt, focusNonce: s.focusNonce + 1 })),
   consumePrompt: () => {
     const prompt = get().pendingPrompt;
     if (prompt !== null) set({ pendingPrompt: null });
     return prompt;
   },
+  focusNonce: 0,
 }));

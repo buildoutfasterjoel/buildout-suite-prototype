@@ -208,8 +208,10 @@ export function AssistantSidebar() {
   const setOpen = useAssistant((s) => s.setOpen);
   const pendingPrompt = useAssistant((s) => s.pendingPrompt);
   const consumePrompt = useAssistant((s) => s.consumePrompt);
+  const focusNonce = useAssistant((s) => s.focusNonce);
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
@@ -246,6 +248,17 @@ export function AssistantSidebar() {
     const prompt = consumePrompt();
     if (prompt) send(prompt);
   }, [pendingPrompt, consumePrompt, send]);
+
+  // A focus request from another surface (e.g. omni search "Ask AI") focuses the
+  // composer input, so once the queued prompt auto-sends the user is already
+  // positioned to type a follow-up. Keyed off a nonce so repeat requests re-fire.
+  useEffect(() => {
+    if (focusNonce === 0) return;
+    const id = requestAnimationFrame(() => {
+      formRef.current?.querySelector("input")?.focus();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [focusNonce]);
 
   // The panel is launched from the global navbar; render nothing when closed
   // so the content area reclaims the full width.
@@ -311,6 +324,7 @@ export function AssistantSidebar() {
 
       {/* Input */}
       <form
+        ref={formRef}
         className="d-flex align-items-center gap-2 p-3 border-top"
         onSubmit={(e) => {
           e.preventDefault();

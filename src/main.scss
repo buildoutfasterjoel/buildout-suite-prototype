@@ -665,6 +665,13 @@
   justify-content: center;
 }
 
+// Omni-search command palette: pin near the top of the viewport (≈5% down)
+// rather than vertically centered, so results grow downward from a stable
+// anchor. Scoped to the palette via `:has()` so other modals are untouched.
+.modal:has(.omni-search-popup) .modal-dialog {
+  margin-top: 5vh;
+}
+
 // Add-to-list modal: selectable list rows with a clear hover affordance.
 .add-to-list__row {
   cursor: pointer;
