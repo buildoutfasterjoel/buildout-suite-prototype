@@ -6,7 +6,8 @@ import {
   serializeContactFilters,
   type ContactFilterState,
 } from '#/components/contacts/contactFilterModel'
-import type { Contact, ContactRole, ContactSource, DealHistoryEntry, DealMarketing, DealTransaction, Listing, PropertyStatus } from './types'
+import type { Contact, ContactRole, ContactSource, DealHistoryEntry, DealMarketing, DealTransaction, Listing, PropertyStatus, Task } from './types'
+import { CURRENT_USER, TEAMMATES } from './teammates'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
 import { reconcileContactDealFields } from './contactStage'
 import { notify } from '#/lib/notify'
@@ -363,6 +364,63 @@ export function unlinkContactFromDeal(dealId: string, contactId: string): { deal
       otherContactIds: l.otherContactIds.filter((id) => id !== contactId),
     })),
   }
+}
+
+/** Fields the Add Task modal collects. Dates are ISO `YYYY-MM-DD` strings. */
+export interface NewTaskInput {
+  name: string
+  /** Teammate id; defaults to the current user when omitted. */
+  assigneeId?: string
+  dueDate?: string | null
+  type?: string | null
+  /** 'contact' | 'deal' | 'listing' | 'property'. Defaults to 'contact'. */
+  source?: string
+  contactId?: string | null
+  dealId?: string | null
+  notes?: string
+  reminders?: string[]
+  followUpDate?: string | null
+  requireAttachments?: boolean
+}
+
+/** Resolve a teammate's two-letter initials from their id (falls back to the current user). */
+function assigneeInitialsFor(assigneeId: string): string {
+  const member =
+    [CURRENT_USER, ...TEAMMATES].find((m) => m.id === assigneeId) ?? CURRENT_USER
+  return member.initials
+}
+
+/**
+ * Create a standalone task from the Add Task modal and insert it into the store.
+ * Tasks start `open`; the created task surfaces in its linked contact's Tasks
+ * column (see {@link getContactDetailClient}). Persists via the single write path.
+ */
+export function createTask(input: NewTaskInput): { task: Task } {
+  const assigneeId = input.assigneeId ?? CURRENT_USER.id
+  const task: Task = {
+    id: crypto.randomUUID(),
+    name: input.name.trim(),
+    assigneeId,
+    assigneeInitials: assigneeInitialsFor(assigneeId),
+    dueDate: input.dueDate ?? null,
+    type: input.type ?? null,
+    source: input.source ?? 'contact',
+    contactId: input.contactId ?? null,
+    dealId: input.dealId ?? null,
+    notes: input.notes?.trim() ?? '',
+    reminders: input.reminders ?? [],
+    followUpDate: input.followUpDate ?? null,
+    requireAttachments: input.requireAttachments ?? false,
+    status: 'open',
+    createdAt: new Date().toISOString(),
+  }
+  useDataStore.setState((s) => {
+    const tasks = new Map(s.tasks)
+    tasks.set(task.id, task)
+    return { tasks }
+  })
+  useDataStore.getState().persist()
+  return { task }
 }
 
 export interface NewContactInput {

@@ -78,18 +78,20 @@ export function ContactTaskCard({
                 {due}
               </span>
             )}
-            <Link
-              to="/listings/$listingId"
-              params={{ listingId: task.dealId }}
-              className="contact-task-card__source"
-              title={task.dealName}
-              onClick={(e) => {
-                if (shouldIgnoreRowClick(e)) e.stopPropagation();
-              }}
-            >
-              <FontAwesomeIcon icon={faHandshake} />
-              <span className="text-truncate">{task.dealName}</span>
-            </Link>
+            {task.dealId && (
+              <Link
+                to="/listings/$listingId"
+                params={{ listingId: task.dealId }}
+                className="contact-task-card__source"
+                title={task.dealName}
+                onClick={(e) => {
+                  if (shouldIgnoreRowClick(e)) e.stopPropagation();
+                }}
+              >
+                <FontAwesomeIcon icon={faHandshake} />
+                <span className="text-truncate">{task.dealName}</span>
+              </Link>
+            )}
           </div>
         </div>
 
