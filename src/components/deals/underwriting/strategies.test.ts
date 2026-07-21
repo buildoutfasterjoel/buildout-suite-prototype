@@ -24,7 +24,7 @@ describe('strategy catalog', () => {
     }
   })
 
-  it('orders new-construction checks to match the Cactus screen', () => {
+  it('orders new-construction checks to match the extraction screen', () => {
     expect(checksFor('new-construction').map((c) => c.key)).toEqual([
       'project-info',
       'unit-mix',

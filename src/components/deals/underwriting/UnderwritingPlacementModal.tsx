@@ -84,7 +84,7 @@ export function UnderwritingPlacementModal({
         <Modal.Header>
           <Modal.Title>Underwriting ready</Modal.Title>
           <Modal.Description>
-            Cactus finished the underwriting. Choose where this page should live.
+            The AI underwriting is ready. Choose where this page should live.
           </Modal.Description>
         </Modal.Header>
 

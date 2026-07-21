@@ -277,7 +277,7 @@ export interface DealUnderwriting {
   /** Indices into THIS strategy's checks list (see `checksFor`). Read with `strategy`. */
   selectedChecks: number[]
   /**
-   * Where the underwriting is in the Cactus generation flow. Absent is treated
+   * Where the underwriting is in the AI generation flow. Absent is treated
    * as 'not-started'. 'generating' is the auto-start signal the deal-overview
    * planner reads on mount (set when a deal is created with underwriting on).
    */

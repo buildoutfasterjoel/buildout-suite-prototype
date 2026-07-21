@@ -13,7 +13,7 @@ function durationFor(count: number): number {
 }
 
 /**
- * The inline "Cactus is generating your underwriting" experience — a progress
+ * The inline "AI is generating your underwriting" experience — a progress
  * bar over a checklist of the selected checks, each one flipping from pending →
  * working (spinner) → done as the fake work advances. The more thorough the
  * underwriting, the more steps and the longer it runs (capped at 10s). Purely
@@ -69,7 +69,7 @@ export function UnderwritingProgress({
         )}
         <span className="fw-semibold flex-grow-1">
           {done < steps.length
-            ? "Cactus is building your underwriting…"
+            ? "AI is building your underwriting…"
             : "Underwriting ready"}
         </span>
         <span className="text-muted fs-small">

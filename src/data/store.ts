@@ -152,7 +152,7 @@ function patchListing(listingId: string, patch: Partial<Listing>): Listing | und
 }
 
 /**
- * Merge a patch into a deal's underwriting record — the Cactus generation flow
+ * Merge a patch into a deal's underwriting record — the AI generation flow
  * uses this to flip status ('generating' → 'ready') and record placement. Seeds
  * a fresh record when the deal had none.
  */

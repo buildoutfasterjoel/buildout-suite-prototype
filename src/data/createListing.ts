@@ -513,7 +513,7 @@ export function createProposalListing(draft: NewListingDraft): Listing {
     ],
     documents,
     // A deal created with underwriting selected lands on its overview already
-    // 'generating', so the planner kicks off the Cactus flow automatically.
+    // 'generating', so the planner kicks off the AI flow automatically.
     underwriting: draft.underwriting
       ? { ...draft.underwriting, status: draft.underwriting.status ?? 'generating' }
       : undefined,
