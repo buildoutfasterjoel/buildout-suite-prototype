@@ -6,6 +6,7 @@ import {
   createContact,
   createDeal,
   createEmailDraft,
+  createTask,
   linkContactToDeal,
   unlinkContactFromDeal,
   updateDeal,
@@ -15,7 +16,8 @@ import {
 } from './actions'
 import { emptyDraft } from './createListing'
 import { publishReadiness } from './stageGates'
-import { listContactsForDeal } from './selectors'
+import { getContactDetailClient, listContactsForDeal } from './selectors'
+import { TEAMMATES } from './teammates'
 import { setNotifier } from '#/lib/notify'
 
 describe('actions', () => {
@@ -206,5 +208,31 @@ describe('actions', () => {
     expect(updated?.transaction.commissionAmount).toBe(60_000)
     // Sibling fields survive the merge.
     expect(updated?.transaction.pricePerSqFt).toBe(originalPricePerSqFt)
+  })
+
+  it('createTask inserts an open task and surfaces it on the linked contact', () => {
+    const contact = [...useDataStore.getState().contacts.values()][0]
+    const { task } = createTask({
+      name: '  Send proposal  ',
+      contactId: contact.id,
+      dueDate: '2026-08-01',
+    })
+    // Trimmed, defaulted, and stored.
+    expect(task.name).toBe('Send proposal')
+    expect(task.status).toBe('open')
+    expect(task.source).toBe('contact')
+    expect(useDataStore.getState().tasks.get(task.id)).toBeTruthy()
+
+    // Appears (newest-first) in the contact detail's open tasks column.
+    const detail = getContactDetailClient(contact.id)
+    expect(detail?.tasks[0]?.id).toBe(task.id)
+    expect(detail?.tasks[0]?.label).toBe('Send proposal')
+    expect(detail?.tasks[0]?.dealId).toBeUndefined()
+  })
+
+  it('createTask resolves assignee initials from the teammate roster', () => {
+    const teammate = TEAMMATES[0]
+    const { task } = createTask({ name: 'Call back', assigneeId: teammate.id })
+    expect(task.assigneeInitials).toBe(teammate.initials)
   })
 })

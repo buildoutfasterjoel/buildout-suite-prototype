@@ -6,6 +6,12 @@
       "runtimeExecutable": "bun",
       "runtimeArgs": ["--bun", "run", "dev"],
       "port": 3000
+    },
+    {
+      "name": "dev-auto",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["--bun", "x", "vite", "dev"],
+      "autoPort": true
     }
   ]
 }

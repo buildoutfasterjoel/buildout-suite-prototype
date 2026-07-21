@@ -8,6 +8,7 @@ import type { Contact, ContactTask } from "#/data/types";
 import { ContactSection } from "#/components/contacts/ContactSection";
 import { ContactTaskCard } from "#/components/contacts/ContactTaskCard";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
+import { useAddTask } from "#/data/useAddTask";
 
 /** A task plus its resolved completion state and completion order for sorting. */
 interface TaskRow {
@@ -28,7 +29,7 @@ interface TaskRow {
  * Deals section uses for past deals.
  */
 export function ContactTasksPanel({
-  contact: _contact,
+  contact,
   tasks,
   completedTasks,
 }: {
@@ -100,6 +101,7 @@ export function ContactTasksPanel({
               appearance="muted"
               size="icon"
               aria-label="Add task"
+              onClick={() => useAddTask.getState().openFor(contact.id)}
             >
               <FontAwesomeIcon icon={faPlus} />
             </Button>

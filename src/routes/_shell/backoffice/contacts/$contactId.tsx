@@ -60,9 +60,11 @@ function ContactNotFound() {
 
 function ContactDetailPage() {
   const { contactId } = Route.useParams();
-  // Subscribe to the contacts map so edits (e.g. the hero's Edit Contact form)
-  // re-render the page; getContactDetailClient itself reads a fresh snapshot.
+  // Subscribe to the contacts + tasks maps so edits (e.g. the hero's Edit Contact
+  // form, or a newly added task) re-render the page; getContactDetailClient
+  // itself reads a fresh snapshot.
   useDataStore((s) => s.contacts);
+  useDataStore((s) => s.tasks);
   const detail = getContactDetailClient(contactId);
   // Called before the early return to satisfy the rules of hooks. The sharing
   // modal is owned here so both the top-bar Share button and the hero avatars

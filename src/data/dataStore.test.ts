@@ -24,6 +24,7 @@ describe('useDataStore', () => {
       emails: new Map(),
       callLists: new Map(),
       contactShares: new Map(),
+      tasks: new Map(),
     })
     const after = useDataStore.getState().properties
     expect(after).not.toBe(before)
@@ -37,6 +38,7 @@ describe('hydrate / reset', () => {
     useDataStore.getState()._replaceAll({
       properties: new Map(), listings: new Map(), comps: new Map(), contacts: new Map(),
       dealFiles: new Map(), emails: new Map(), callLists: new Map(), contactShares: new Map(),
+      tasks: new Map(),
     })
     await useDataStore.getState().reset()
     expect(useDataStore.getState().properties.size).toBe(50)
@@ -50,6 +52,7 @@ describe('hydrate / reset', () => {
       properties: new Map([['only', { id: 'only' } as any]]),
       listings: new Map(), comps: new Map(), contacts: new Map(),
       dealFiles: new Map(), emails: new Map(), callLists: new Map(), contactShares: new Map(),
+      tasks: new Map(),
     })
     await useDataStore.getState().hydrate()
     expect(useDataStore.getState().properties.size).toBe(1)
