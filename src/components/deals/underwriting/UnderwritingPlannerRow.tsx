@@ -7,11 +7,13 @@ import { faWandMagicSparkles } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing } from "#/data/types";
 import { updateListingUnderwriting } from "#/data/store";
 import { PlannerRow, TaskMarker } from "../TodayPlanner";
+import { UnderwritingDepth } from "../UnderwritingDepth";
 import {
-  UnderwritingDepth,
-  DEFAULT_UNDERWRITING_SELECTION,
+  defaultSelectionFor,
   underwritingFromSelection,
-} from "../UnderwritingDepth";
+  coerceStrategy,
+  type UnderwritingStrategyId,
+} from "./strategies";
 import { UnderwritingProgress } from "./UnderwritingProgress";
 import { UnderwritingPlacementModal } from "./UnderwritingPlacementModal";
 
@@ -31,11 +33,13 @@ export function showsUnderwritingRow(listing: Listing): boolean {
  */
 export function UnderwritingPlannerRow({ listing }: { listing: Listing }) {
   const navigate = useNavigate();
-  const initialSelection = () =>
+  const initialStrategy = (): UnderwritingStrategyId =>
+    coerceStrategy(listing.underwriting?.strategy);
+  const initialSelection = (strat: UnderwritingStrategyId) =>
     new Set(
       listing.underwriting?.selectedChecks?.length
         ? listing.underwriting.selectedChecks
-        : DEFAULT_UNDERWRITING_SELECTION,
+        : defaultSelectionFor(strat),
     );
 
   const [phase, setPhase] = useState<Phase>(
@@ -46,26 +50,36 @@ export function UnderwritingPlannerRow({ listing }: { listing: Listing }) {
         : "idle",
   );
   const [setupOpen, setSetupOpen] = useState(false);
+  const [runStrategy, setRunStrategy] = useState<UnderwritingStrategyId>(initialStrategy);
   // The selection the current run is generating against.
-  const [runSelection, setRunSelection] = useState<Set<number>>(initialSelection);
+  const [runSelection, setRunSelection] = useState<Set<number>>(() =>
+    initialSelection(initialStrategy()),
+  );
+  const [setupStrategy, setSetupStrategy] =
+    useState<UnderwritingStrategyId>(initialStrategy);
   // The setup modal's working selection (committed on Start).
-  const [setupSelection, setSetupSelection] = useState<Set<number>>(initialSelection);
+  const [setupSelection, setSetupSelection] = useState<Set<number>>(() =>
+    initialSelection(initialStrategy()),
+  );
   const [placementOpen, setPlacementOpen] = useState(false);
   const [placedName, setPlacedName] = useState<string | undefined>(
     listing.underwriting?.placement?.documentName,
   );
 
   function openSetup() {
-    setSetupSelection(initialSelection());
+    const strat = initialStrategy();
+    setSetupStrategy(strat);
+    setSetupSelection(initialSelection(strat));
     setSetupOpen(true);
   }
 
   function startGeneration() {
     const sel = setupSelection.size > 0 ? setupSelection : new Set([0]);
     updateListingUnderwriting(listing.id, {
-      ...underwritingFromSelection(sel),
+      ...underwritingFromSelection(setupStrategy, sel),
       status: "generating",
     });
+    setRunStrategy(setupStrategy);
     setRunSelection(sel);
     setSetupOpen(false);
     setPhase("generating");
@@ -120,6 +134,7 @@ export function UnderwritingPlannerRow({ listing }: { listing: Listing }) {
           <div className="pe-2">
             <div className="fw-semibold mb-2">AI underwriting</div>
             <UnderwritingProgress
+              strategy={runStrategy}
               selectedChecks={[...runSelection]}
               onComplete={() => {
                 setPhase("generated");
@@ -154,7 +169,12 @@ export function UnderwritingPlannerRow({ listing }: { listing: Listing }) {
             </Modal.Description>
           </Modal.Header>
           <Modal.Body>
-            <UnderwritingDepth value={setupSelection} onChange={setSetupSelection} />
+            <UnderwritingDepth
+              strategy={setupStrategy}
+              value={setupSelection}
+              onStrategyChange={setSetupStrategy}
+              onChange={setSetupSelection}
+            />
           </Modal.Body>
           <Modal.Footer>
             <Button variant="ghost" onClick={() => setSetupOpen(false)}>

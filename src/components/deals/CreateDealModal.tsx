@@ -53,11 +53,13 @@ import {
   PROPERTY_STATUSES,
 } from "#/components/properties/propertyDisplay";
 import { RelationshipPill } from "#/components/contacts/pills";
+import { UnderwritingDepth } from "./UnderwritingDepth";
 import {
-  UnderwritingDepth,
+  DEFAULT_STRATEGY,
+  defaultSelectionFor,
   underwritingFromSelection,
-  DEFAULT_UNDERWRITING_SELECTION,
-} from "./UnderwritingDepth";
+  type UnderwritingStrategyId,
+} from "./underwriting/strategies";
 
 /**
  * The two sides a broker can start a deal on, in display order. The `seller`/
@@ -219,10 +221,11 @@ export function CreateDealModal({
   // Underwriting is optional at creation; when off, the depth control collapses
   // and the deal starts with no underwriting.
   const [underwritingOn, setUnderwritingOn] = useState(false);
-  // The underwriting depth selection. The slider drives only the underwriting
-  // checks — it no longer affects which documents are checked below.
-  const [underwritingSel, setUnderwritingSel] = useState<Set<number>>(
-    () => new Set(DEFAULT_UNDERWRITING_SELECTION),
+  const [underwritingStrategy, setUnderwritingStrategy] =
+    useState<UnderwritingStrategyId>(DEFAULT_STRATEGY);
+  // The underwriting depth selection — indices into the chosen strategy's checks.
+  const [underwritingSel, setUnderwritingSel] = useState<Set<number>>(() =>
+    defaultSelectionFor(DEFAULT_STRATEGY),
   );
   // Which suggested documents are checked — independent of the underwriting
   // depth; starts at the default set and is toggled by hand.
@@ -332,7 +335,8 @@ export function CreateDealModal({
     setDealType("Sale");
     setStage("proposal");
     setUnderwritingOn(false);
-    setUnderwritingSel(new Set(DEFAULT_UNDERWRITING_SELECTION));
+    setUnderwritingStrategy(DEFAULT_STRATEGY);
+    setUnderwritingSel(defaultSelectionFor(DEFAULT_STRATEGY));
     // Documents start at the default suggested set, independent of underwriting.
     setCheckedDocKeys(defaultDocKeys());
     setDocSearch("");
@@ -438,7 +442,7 @@ export function CreateDealModal({
       suggestedDocuments,
       underwriting:
         withDocuments && underwritingOn
-          ? underwritingFromSelection(underwritingSel)
+          ? underwritingFromSelection(underwritingStrategy, underwritingSel)
           : undefined,
     };
     const { deal: listing } = createDeal(draft);
@@ -982,7 +986,9 @@ export function CreateDealModal({
                             </span>
                           </label>
                           <UnderwritingDepth
+                            strategy={underwritingStrategy}
                             value={underwritingSel}
+                            onStrategyChange={setUnderwritingStrategy}
                             onChange={setUnderwritingSel}
                           />
                         </>
