@@ -208,7 +208,7 @@ describe("buildContactTimeline", () => {
 });
 
 describe("hero personas in the seed", () => {
-  const { contacts, listings } = generateDataset();
+  const { contacts, listings, properties } = generateDataset();
   const heroes = new Map(
     contacts.filter((c) => c.heroKey).map((c) => [c.heroKey!, c]),
   );
@@ -216,6 +216,16 @@ describe("hero personas in the seed", () => {
   it("pins all five heroes", () => {
     expect([...heroes.keys()].sort()).toEqual(
       ["earl", "margaret", "patricia", "rosa", "victor"].sort(),
+    );
+  });
+
+  it("names Earl's property and deal 'The Thompson Block', as a Sale", () => {
+    const earl = heroes.get("earl")!;
+    const deal = listings.find((l) => l.sellerContactIds[0] === earl.id)!;
+    expect(deal.name).toContain("The Thompson Block");
+    expect(deal.dealType).toBe("Sale");
+    expect(properties.find((p) => p.id === deal.propertyId)?.name).toBe(
+      "The Thompson Block",
     );
   });
 
