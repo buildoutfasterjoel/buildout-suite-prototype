@@ -18,6 +18,13 @@ import {
   faVectorSquare,
   faHardDrive,
   faCalculator,
+  faUsers,
+  faListCheck,
+  faClockRotateLeft,
+  faTowerBroadcast,
+  faRulerCombined,
+  faReceipt,
+  faNoteSticky,
 } from "@fortawesome/pro-regular-svg-icons";
 import { useDataStore } from "#/data/dataStore";
 import { getListing, getProperty } from "#/data/store";
@@ -31,13 +38,16 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Deal",
     items: [
       { label: "Overview", href: "overview", icon: faGaugeHigh },
-      { label: "Spaces", href: "spaces", icon: faVectorSquare },
+      { label: "Contacts", href: "contacts", icon: faUsers },
+      { label: "Planner", href: "planner", icon: faListCheck },
       {
         label: "Client Report",
         href: "client-report",
         icon: faFileChartColumn,
       },
       { label: "Activity", href: "activities", icon: faBolt },
+      { label: "History", href: "history", icon: faClockRotateLeft },
+      { label: "Spaces", href: "spaces", icon: faVectorSquare },
       { label: "Data", href: "files", icon: faHardDrive },
       { label: "Underwriting", href: "underwriting", icon: faCalculator },
     ],
@@ -49,9 +59,11 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Documents", href: "documents", icon: faFileLines },
       { label: "Website", href: "website", icon: faGlobe },
       { label: "Email", href: "email", icon: faEnvelope },
+      { label: "Syndication", href: "syndication", icon: faTowerBroadcast },
       { label: "Media", href: "media", icon: faImage },
       { label: "Demographics", href: "demographics", icon: faMapLocationDot },
       { label: "Grids", href: "grids", icon: faTableCells },
+      { label: "Plans", href: "plans", icon: faRulerCombined },
     ],
   },
   {
@@ -59,8 +71,12 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Transaction", href: "transaction", icon: faHandshake },
       { label: "Financials", href: "financials", icon: faFileInvoiceDollar },
-      // { label: "Invoices", href: "invoices", icon: faFileInvoice },
-      // { label: "Deposits", href: "deposits", icon: faMoneyCheckDollar },
+      {
+        label: "Financial Documents",
+        href: "financial-documents",
+        icon: faReceipt,
+      },
+      { label: "Notes", href: "notes", icon: faNoteSticky },
     ],
   },
 ];
