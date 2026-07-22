@@ -208,9 +208,11 @@ export function PagesPanel() {
   const pages = useEditorStore((s) => s.document.pages);
   const activePageId = useEditorStore((s) => s.activePageId);
   const goToPage = useEditorStore((s) => s.goToPage);
-  const addPage = useEditorStore((s) => s.addPage);
   const [search, setSearch] = useState("");
   const [galleryOpen, setGalleryOpen] = useState(false);
+  // Where a gallery-added page lands: a number inserts at that position (the
+  // inline "+" gaps); undefined appends (the bottom "Add Page" button).
+  const [galleryIndex, setGalleryIndex] = useState<number | undefined>(undefined);
 
   const isFiltering = search.trim() !== "";
   const filtered = useMemo(() => filterPages(pages, search), [pages, search]);
@@ -224,7 +226,10 @@ export function PagesPanel() {
       ?.scrollIntoView({ block: "start", behavior: "smooth" });
   }
 
-  const addBlankPageAt = (index: number) => addPage("blank", index);
+  const openGalleryAt = (index?: number) => {
+    setGalleryIndex(index);
+    setGalleryOpen(true);
+  };
 
   return (
     <div className="d-flex flex-column gap-3 h-100">
@@ -260,7 +265,7 @@ export function PagesPanel() {
                 >
                   <PageRowContent page={page} index={realIndex + 1} active={active} />
                 </List.Item>
-                <PageRowGap index={realIndex + 1} onAdd={addBlankPageAt} />
+                <PageRowGap index={realIndex + 1} onAdd={openGalleryAt} />
               </Fragment>
             );
           })
@@ -274,18 +279,18 @@ export function PagesPanel() {
                   active={activePageId === page.id}
                   onSelect={() => handleSelectPage(page.id)}
                 />
-                <PageRowGap index={i + 1} onAdd={addBlankPageAt} />
+                <PageRowGap index={i + 1} onAdd={openGalleryAt} />
               </Fragment>
             ))}
           </SortableContext>
         )}
       </List>
 
-      <Button variant="secondary" className="w-100" onClick={() => setGalleryOpen(true)}>
+      <Button variant="secondary" className="w-100" onClick={() => openGalleryAt()}>
         <FontAwesomeIcon icon={faPlus} />
         Add Page
       </Button>
-      <TemplateGallery open={galleryOpen} onOpenChange={setGalleryOpen} />
+      <TemplateGallery open={galleryOpen} onOpenChange={setGalleryOpen} atIndex={galleryIndex} />
     </div>
   );
 }
