@@ -7,6 +7,8 @@ import {
   createDeal,
   createEmailDraft,
   createTask,
+  deleteTask,
+  updateTask,
   linkContactToDeal,
   unlinkContactFromDeal,
   updateDeal,
@@ -234,5 +236,32 @@ describe('actions', () => {
     const teammate = TEAMMATES[0]
     const { task } = createTask({ name: 'Call back', assigneeId: teammate.id })
     expect(task.assigneeInitials).toBe(teammate.initials)
+  })
+
+  it('updateTask edits fields in place while preserving id, status, and createdAt', () => {
+    const { task } = createTask({ name: 'Draft', dueDate: '2026-08-01' })
+    const { task: updated } = updateTask(task.id, {
+      name: '  Draft v2  ',
+      dueDate: '2026-09-15',
+      type: 'call',
+    })
+    expect(updated?.id).toBe(task.id)
+    expect(updated?.createdAt).toBe(task.createdAt)
+    expect(updated?.status).toBe('open')
+    expect(updated?.name).toBe('Draft v2')
+    expect(updated?.dueDate).toBe('2026-09-15')
+    expect(updated?.type).toBe('call')
+    expect(useDataStore.getState().tasks.get(task.id)?.name).toBe('Draft v2')
+  })
+
+  it('updateTask returns null for an unknown id', () => {
+    expect(updateTask('does-not-exist', { name: 'x' }).task).toBeNull()
+  })
+
+  it('deleteTask removes the task from the store', () => {
+    const { task } = createTask({ name: 'Temp' })
+    expect(useDataStore.getState().tasks.get(task.id)).toBeTruthy()
+    deleteTask(task.id)
+    expect(useDataStore.getState().tasks.get(task.id)).toBeUndefined()
   })
 })

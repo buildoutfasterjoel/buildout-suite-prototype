@@ -35,10 +35,13 @@ export function ContactTaskCard({
   task,
   done,
   onToggle,
+  onOpen,
 }: {
   task: ContactTask;
   done: boolean;
   onToggle: () => void;
+  /** When provided, clicking the card (outside its controls) opens the task. */
+  onOpen?: () => void;
 }) {
   const due = taskDueLabel(task.date);
   const isOverdue = task.status === "overdue";
@@ -49,7 +52,19 @@ export function ContactTaskCard({
   const showSparkle = isAiSuggested(task);
 
   return (
-    <div className={`contact-task-card${done ? " contact-task-card--done" : ""}`}>
+    <div
+      className={`contact-task-card${done ? " contact-task-card--done" : ""}`}
+      role={onOpen ? "button" : undefined}
+      style={onOpen ? { cursor: "pointer" } : undefined}
+      onClick={
+        onOpen
+          ? (e) => {
+              // Let the checkbox and deal link behave normally.
+              if (!shouldIgnoreRowClick(e)) onOpen();
+            }
+          : undefined
+      }
+    >
       {/* Completion checkbox (circular, per design) */}
       <button
         type="button"

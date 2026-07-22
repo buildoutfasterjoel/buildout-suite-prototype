@@ -6,7 +6,7 @@ import {
   serializeContactFilters,
   type ContactFilterState,
 } from '#/components/contacts/contactFilterModel'
-import type { Contact, ContactRole, ContactSource, DealHistoryEntry, DealMarketing, DealTransaction, Listing, PropertyStatus, Task } from './types'
+import type { Contact, ContactRole, ContactSource, DealHistoryEntry, DealMarketing, DealTask, DealTransaction, Listing, PropertyStatus, Task } from './types'
 import { CURRENT_USER, TEAMMATES } from './teammates'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
 import { reconcileContactDealFields } from './contactStage'
@@ -421,6 +421,83 @@ export function createTask(input: NewTaskInput): { task: Task } {
   })
   useDataStore.getState().persist()
   return { task }
+}
+
+/**
+ * Update an existing standalone task from the Edit Task modal. Rebuilds the
+ * editable fields from the form input while preserving id, status, and
+ * createdAt. Persists via the single write path.
+ */
+export function updateTask(
+  id: string,
+  input: NewTaskInput,
+): { task: Task | null } {
+  const existing = useDataStore.getState().tasks.get(id)
+  if (!existing) return { task: null }
+  const assigneeId = input.assigneeId ?? existing.assigneeId
+  const task: Task = {
+    ...existing,
+    name: input.name.trim(),
+    assigneeId,
+    assigneeInitials: assigneeInitialsFor(assigneeId),
+    dueDate: input.dueDate ?? null,
+    type: input.type ?? null,
+    source: input.source ?? existing.source,
+    contactId: input.contactId ?? null,
+    dealId: input.dealId ?? null,
+    notes: input.notes?.trim() ?? '',
+    reminders: input.reminders ?? [],
+    followUpDate: input.followUpDate ?? null,
+    requireAttachments: input.requireAttachments ?? false,
+  }
+  useDataStore.setState((s) => {
+    const tasks = new Map(s.tasks)
+    tasks.set(id, task)
+    return { tasks }
+  })
+  useDataStore.getState().persist()
+  return { task }
+}
+
+/** Delete a standalone task (from the Edit Task modal). Persists the removal. */
+export function deleteTask(id: string): void {
+  useDataStore.setState((s) => {
+    if (!s.tasks.has(id)) return {}
+    const tasks = new Map(s.tasks)
+    tasks.delete(id)
+    return { tasks }
+  })
+  useDataStore.getState().persist()
+}
+
+/**
+ * Patch a single deal-embedded planner task in place. Used by the Edit Task
+ * modal when a deal-derived task (not a standalone {@link Task}) is opened.
+ */
+export function updateDealTask(
+  dealId: string,
+  taskId: string,
+  patch: Partial<DealTask>,
+): { deal: Listing | null } {
+  return {
+    deal: patchListing(dealId, (l) => ({
+      ...l,
+      tasks: l.tasks.map((t) => (t.id === taskId ? { ...t, ...patch } : t)),
+    })),
+  }
+}
+
+/** Remove a deal-embedded planner task from its deal (Edit Task modal → Delete). */
+export function deleteDealTask(
+  dealId: string,
+  taskId: string,
+): { deal: Listing | null } {
+  return {
+    deal: patchListing(dealId, (l) => ({
+      ...l,
+      tasks: l.tasks.filter((t) => t.id !== taskId),
+    })),
+  }
 }
 
 export interface NewContactInput {

@@ -110,6 +110,7 @@ export function getContactDetailClient(id: string): ContactDetail | null {
     dealName: t.dealId
       ? useDataStore.getState().listings.get(t.dealId)?.name
       : undefined,
+    editable: true,
   })
   const standalone = [...useDataStore.getState().tasks.values()]
     .filter((t) => t.contactId === id)

@@ -80,6 +80,18 @@ export function ContactTasksPanel({
       return (b.task.date ?? "").localeCompare(a.task.date ?? "");
     });
 
+  // Open a task in the Edit modal — standalone tasks edit via the task store,
+  // deal-derived tasks edit against their deal. Returns undefined (not clickable)
+  // for anything that can't be opened.
+  const openTask = (task: ContactTask): (() => void) | undefined => {
+    if (task.editable) return () => useAddTask.getState().openEdit(task.id);
+    if (task.dealId) {
+      const dealId = task.dealId;
+      return () => useAddTask.getState().openEditDeal(dealId, task.id);
+    }
+    return undefined;
+  };
+
   return (
     <Card className="contact-panel-card overflow-hidden">
       <Accordion
@@ -119,6 +131,7 @@ export function ContactTasksPanel({
                   task={r.task}
                   done={false}
                   onToggle={() => toggle(r.task, false)}
+                  onOpen={openTask(r.task)}
                 />
               ))
             )}
@@ -144,6 +157,7 @@ export function ContactTasksPanel({
                   task={r.task}
                   done
                   onToggle={() => toggle(r.task, true)}
+                  onOpen={openTask(r.task)}
                 />
               ))}
           </div>

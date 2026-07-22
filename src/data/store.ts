@@ -245,6 +245,20 @@ export function getContactOptions(): ContactOption[] {
     .sort((a, b) => a.name.localeCompare(b.name))
 }
 
+/** A deal picker option — the deal's id, display name, and side (Sale/Lease). */
+export interface DealOption {
+  value: string
+  label: string
+  dealType: string
+}
+
+/** Options over all deals (listings), for a deal picker. Sorted by name. */
+export function getDealOptions(): DealOption[] {
+  return [...getStore().listings.values()]
+    .map((l) => ({ value: l.id, label: l.name, dealType: l.dealType }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+}
+
 // ── Contact sharing ─────────────────────────────────────────────────────────
 
 /**

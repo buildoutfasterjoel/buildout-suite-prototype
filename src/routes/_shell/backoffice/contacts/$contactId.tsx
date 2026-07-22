@@ -65,6 +65,7 @@ function ContactDetailPage() {
   // itself reads a fresh snapshot.
   useDataStore((s) => s.contacts);
   useDataStore((s) => s.tasks);
+  useDataStore((s) => s.listings);
   const detail = getContactDetailClient(contactId);
   // Called before the early return to satisfy the rules of hooks. The sharing
   // modal is owned here so both the top-bar Share button and the hero avatars
