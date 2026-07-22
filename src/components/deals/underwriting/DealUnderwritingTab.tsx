@@ -4,6 +4,7 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
 import { Table } from "@buildoutinc/blueprint-react/ui/Table";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
+import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faWandMagicSparkles, faCalculator, faFileLines } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing, UnderwritingResult, UnderwritingResultSection } from "#/data/types";
@@ -204,24 +205,30 @@ function UnderwritingBreakdown({
     <div className="d-flex flex-column gap-4">
       <div className="d-flex justify-content-between align-items-start gap-3">
         <div>
-          <div className="h5 mb-1">{strategyLabel}</div>
-          <div className="text-muted fs-small">
-            {result.sections.length} {result.sections.length === 1 ? "analysis" : "analyses"}
-            {generatedAt ? ` · Generated ${relativeTime(generatedAt)}` : ""} · reflects data for {result.inputs.address}
+          <div className="h5 mb-1">Underwriting</div>
+          <div className="d-flex align-items-center flex-wrap gap-2 text-muted fs-small">
+            <Badge variant="secondary" appearance="muted">
+              {strategyLabel}
+            </Badge>
+            <span>
+              {result.sections.length}{" "}
+              {result.sections.length === 1 ? "analysis" : "analyses"}
+              {generatedAt ? ` · Generated ${relativeTime(generatedAt)}` : ""} · reflects data for {result.inputs.address}
+            </span>
           </div>
         </div>
         <div className="d-flex gap-2 flex-shrink-0">
-          {!saved && (
-            <Button variant="primary" size="sm" onClick={onSave}>Save to document</Button>
-          )}
-          <Button variant="outline" size="sm" onClick={onRegenerate}>
-            <FontAwesomeIcon icon={faWandMagicSparkles} />
-            Re-generate
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onViewInDocument}>
+          <Button variant="ghost" onClick={onViewInDocument}>
             <FontAwesomeIcon icon={faFileLines} />
             View in document
           </Button>
+          <Button variant="outline" onClick={onRegenerate}>
+            <FontAwesomeIcon icon={faWandMagicSparkles} />
+            Re-generate
+          </Button>
+          {!saved && (
+            <Button variant="primary" onClick={onSave}>Save to document</Button>
+          )}
         </div>
       </div>
 
@@ -263,14 +270,25 @@ function SectionTable({ section }: { section: UnderwritingResultSection }) {
         <Table.Body>
           {section.rows.map((r, ri) => (
             <Table.Row key={ri}>
-              {r.cells.map((cell, ci) => (
-                <Table.Cell
-                  key={ci}
-                  className={[ci === 0 ? "" : "text-end", r.emphasis || (section.kind === "keyValue" && ci === 0) ? "fw-semibold" : ""].join(" ").trim() || undefined}
-                >
-                  {cell}
-                </Table.Cell>
-              ))}
+              {r.cells.map((cell, ci) => {
+                // keyValue tables lead with a row-header <th> so the label
+                // renders as a side heading (Blueprint's native th styling).
+                if (section.kind === "keyValue" && ci === 0) {
+                  return (
+                    <Table.Head key={ci} scope="row" style={{ width: "50%" }}>
+                      {cell}
+                    </Table.Head>
+                  );
+                }
+                return (
+                  <Table.Cell
+                    key={ci}
+                    className={[ci === 0 ? "" : "text-end", r.emphasis ? "fw-semibold" : ""].join(" ").trim() || undefined}
+                  >
+                    {cell}
+                  </Table.Cell>
+                );
+              })}
             </Table.Row>
           ))}
         </Table.Body>
