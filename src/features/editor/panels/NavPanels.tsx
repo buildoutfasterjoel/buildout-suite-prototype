@@ -9,11 +9,9 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  faFileLines,
   faPlus,
   faGripDotsVertical,
   faLock,
-  faTableLayout,
   faPencil,
   faTrashCan,
   faMagnifyingGlass,
@@ -25,7 +23,6 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { List } from "@buildoutinc/blueprint-react/ui/List";
-import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
@@ -33,8 +30,8 @@ import { useEditorStore } from "../store";
 import type { Block, ContentBlock, Page } from "../types";
 import { BLOCK_ICONS, blockLabel } from "../blocks/blockMeta";
 import type { BlockVariant } from "../blocks/blockFactory";
-import { PRESETS } from "../presets";
 import { pageHasDynamicContent } from "../tree";
+import { TemplateGallery } from "./TemplateGallery";
 import { CRE_PHOTO_IDS, crePhotoUrl } from "#/components/properties/propertyDisplay";
 
 function PanelHeading({ children }: { children: string }) {
@@ -213,6 +210,7 @@ export function PagesPanel() {
   const goToPage = useEditorStore((s) => s.goToPage);
   const addPage = useEditorStore((s) => s.addPage);
   const [search, setSearch] = useState("");
+  const [galleryOpen, setGalleryOpen] = useState(false);
 
   const isFiltering = search.trim() !== "";
   const filtered = useMemo(() => filterPages(pages, search), [pages, search]);
@@ -283,35 +281,11 @@ export function PagesPanel() {
         )}
       </List>
 
-      <DropdownMenu>
-        <DropdownMenu.Trigger
-          render={
-            <Button variant="secondary" className="w-100">
-              <FontAwesomeIcon icon={faPlus} />
-              Add Page
-            </Button>
-          }
-        />
-        <DropdownMenu.Content align="start" sideOffset={6}>
-          <DropdownMenu.Item onClick={() => addPage("blank")}>
-            <FontAwesomeIcon icon={faFileLines} />
-            Blank page
-          </DropdownMenu.Item>
-          <DropdownMenu.Separator />
-          <DropdownMenu.Group>
-            <DropdownMenu.GroupLabel>Presets</DropdownMenu.GroupLabel>
-            {PRESETS.map((preset) => (
-              <DropdownMenu.Item
-                key={preset.key}
-                onClick={() => addPage(preset.key)}
-              >
-                <FontAwesomeIcon icon={faTableLayout} />
-                {preset.label}
-              </DropdownMenu.Item>
-            ))}
-          </DropdownMenu.Group>
-        </DropdownMenu.Content>
-      </DropdownMenu>
+      <Button variant="secondary" className="w-100" onClick={() => setGalleryOpen(true)}>
+        <FontAwesomeIcon icon={faPlus} />
+        Add Page
+      </Button>
+      <TemplateGallery open={galleryOpen} onOpenChange={setGalleryOpen} />
     </div>
   );
 }
