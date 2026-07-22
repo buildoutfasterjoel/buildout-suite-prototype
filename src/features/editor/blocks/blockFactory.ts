@@ -7,12 +7,14 @@ import type {
   TextStyle,
 } from "../types";
 
-/* ---- Shared font + style defaults (also used to seed the sample doc) ---- */
-export const SERIF = "'PT Serif', Georgia, serif";
-export const SANS = "'proxima-nova', system-ui, sans-serif";
+/* ---- Shared font + style defaults (also used to seed the sample doc) ----
+ * SERIF/SANS now live in brand.ts (the brand typography source); re-exported
+ * here so existing `from ".../blockFactory"` imports keep working. */
+export { SERIF, SANS } from "../brand";
+import { BRAND, SERIF } from "../brand";
 
 export const DEFAULT_TEXT_STYLE: TextStyle = {
-  fontFamily: SANS,
+  fontFamily: BRAND.fonts.body,
   fontSize: 14,
   bold: false,
   italic: false,
@@ -21,7 +23,7 @@ export const DEFAULT_TEXT_STYLE: TextStyle = {
   lineHeight: 0,
   align: "left",
   transform: "none",
-  color: null,
+  color: BRAND.palette.ink,
   background: null,
 };
 
