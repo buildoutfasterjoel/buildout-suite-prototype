@@ -9,6 +9,7 @@ import type {
   TableBlock,
   TextStyle,
 } from "./types";
+import { getPhotoUrl } from "#/components/properties/propertyDisplay";
 import { pricePerSf } from "./dynamic";
 import { buildUnderwritingSection } from "./underwritingPages";
 import {
@@ -79,7 +80,7 @@ function heroImage(seed: string, w = 736, h = 300): ImageBlock {
   return {
     id: uid("block"),
     type: "image",
-    src: `https://picsum.photos/seed/${seed}/${w}/${h}`,
+    src: getPhotoUrl(seed, w, h),
     alt: "Property photo",
   };
 }
@@ -204,7 +205,7 @@ export function buildBlankPage(): Page {
  */
 interface StubPageSpec {
   name: string;
-  /** Picsum seed, for visual variety across pages. */
+  /** Photo seed, for visual variety across pages. */
   seed: string;
   dynamicKey?: DynamicKey;
   dynamicLabel?: string;

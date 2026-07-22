@@ -17,6 +17,7 @@ import type { Block, Cell, ImageBlock, TextStyle } from "../types";
 import { blockLabel } from "../blocks/blockMeta";
 import { DYNAMIC_FIELD_LABELS } from "../dynamic";
 import { useEditorStore } from "../store";
+import { CRE_PHOTO_IDS, crePhotoUrl } from "#/components/properties/propertyDisplay";
 
 const FONT_STYLE_ITEMS: ToggleItem<"bold" | "italic" | "underline">[] = [
   { value: "bold", icon: faBold, label: "Bold" },
@@ -135,9 +136,6 @@ function cap(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-/** Picsum seeds offered as swappable images (mirrors the Images panel). */
-const SWAP_SEEDS = Array.from({ length: 9 }, (_, i) => `editor-${i}`);
-
 /** Image block controls — swap the image source without moving/removing it. */
 function ImageStyleControls({ block }: { block: ImageBlock }) {
   const setImageSrc = useEditorStore((s) => s.setImageSrc);
@@ -148,14 +146,14 @@ function ImageStyleControls({ block }: { block: ImageBlock }) {
         Choose a replacement image.
       </p>
       <div className="d-flex flex-wrap" style={{ gap: 8 }}>
-        {SWAP_SEEDS.map((seed) => {
-          const selected = block.src.includes(`/${seed}/`);
+        {CRE_PHOTO_IDS.map((photoId) => {
+          const selected = block.src.includes(photoId);
           return (
             <img
-              key={seed}
-              src={`https://picsum.photos/seed/${seed}/120/120`}
+              key={photoId}
+              src={crePhotoUrl(photoId, 120, 120)}
               alt=""
-              onClick={() => setImageSrc(block.id, `https://picsum.photos/seed/${seed}/736/300`)}
+              onClick={() => setImageSrc(block.id, crePhotoUrl(photoId, 736, 300))}
               style={{
                 width: 78,
                 height: 78,

@@ -35,6 +35,7 @@ import { BLOCK_ICONS, blockLabel } from "../blocks/blockMeta";
 import type { BlockVariant } from "../blocks/blockFactory";
 import { PRESETS } from "../presets";
 import { pageHasDynamicContent } from "../tree";
+import { CRE_PHOTO_IDS, crePhotoUrl } from "#/components/properties/propertyDisplay";
 
 function PanelHeading({ children }: { children: string }) {
   return <span className="bo-editor-section-title">{children}</span>;
@@ -763,10 +764,10 @@ export function ImagesPanel() {
     <div className="d-flex flex-column gap-3">
       <PanelHeading>Images</PanelHeading>
       <div className="d-flex flex-wrap" style={{ gap: 8 }}>
-        {Array.from({ length: 9 }).map((_, i) => (
+        {CRE_PHOTO_IDS.map((photoId) => (
           <img
-            key={i}
-            src={`https://picsum.photos/seed/editor-${i}/120/120`}
+            key={photoId}
+            src={crePhotoUrl(photoId, 120, 120)}
             alt=""
             style={{
               width: 78,

@@ -1,3 +1,4 @@
+import { getPhotoUrl } from "#/components/properties/propertyDisplay";
 import type {
   Block,
   Cell,
@@ -98,7 +99,7 @@ export function createBlock(type: Block["type"], variant?: BlockVariant): Block 
       return {
         id: uid("block"),
         type: "image",
-        src: "https://picsum.photos/seed/editor-block/640/360",
+        src: getPhotoUrl("editor-block", 640, 360),
         alt: "Image",
       };
     case "dynamic":
