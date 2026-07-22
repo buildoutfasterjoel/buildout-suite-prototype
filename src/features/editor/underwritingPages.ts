@@ -20,6 +20,7 @@ import {
   coerceStrategy,
   strategyLabel,
 } from "#/components/deals/underwriting/strategies";
+import { buildCtx, type Ctx } from "#/components/deals/underwriting/underwritingResult";
 
 /**
  * Builds the "Underwriting" section injected into a deal's document once the AI
@@ -116,36 +117,6 @@ function spacer(height: number): ContentBlock {
 const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 const pct = (d: number) => `${(d * 100).toFixed(1)}%`;
 const perSf = (n: number) => `$${n.toFixed(2)}`;
-
-interface Ctx {
-  price: number;
-  sqft: number;
-  cap: number;
-  noi: number;
-  egi: number;
-  opex: number;
-  pgi: number;
-  vacancy: number;
-  rentPerSf: number;
-  loan: number;
-  debtService: number;
-}
-
-function buildCtx(property: Property | undefined): Ctx {
-  const price = property && property.askingPrice > 0 ? property.askingPrice : 2_450_000;
-  const sqft = property && property.buildingSqFt > 0 ? property.buildingSqFt : 42_000;
-  const cap = property && property.capRate > 0 ? property.capRate : 0.062;
-  const noi = Math.round(price * cap);
-  // Back into a simple income model: 38% expense ratio, 6% vacancy.
-  const egi = Math.round(noi / 0.62);
-  const opex = egi - noi;
-  const pgi = Math.round(egi / 0.94);
-  const vacancy = pgi - egi;
-  const rentPerSf = Math.round((pgi / sqft) * 100) / 100;
-  const loan = Math.round(price * 0.65);
-  const debtService = Math.round(loan * 0.075);
-  return { price, sqft, cap, noi, egi, opex, pgi, vacancy, rentPerSf, loan, debtService };
-}
 
 // ── Section builders (resolved by strategy check key via SECTION_BUILDERS) ────
 

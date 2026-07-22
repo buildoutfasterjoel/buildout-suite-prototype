@@ -31,6 +31,7 @@ import { Route as ShellEditorListingIdRouteImport } from './routes/_shell/editor
 import { Route as ShellListingsListingIdIndexRouteImport } from './routes/_shell/listings/$listingId/index'
 import { Route as ShellBackofficeContactsIndexRouteImport } from './routes/_shell/backoffice/contacts/index'
 import { Route as ShellListingsListingIdWebsiteRouteImport } from './routes/_shell/listings/$listingId/website'
+import { Route as ShellListingsListingIdUnderwritingRouteImport } from './routes/_shell/listings/$listingId/underwriting'
 import { Route as ShellListingsListingIdTransactionRouteImport } from './routes/_shell/listings/$listingId/transaction'
 import { Route as ShellListingsListingIdSpacesRouteImport } from './routes/_shell/listings/$listingId/spaces'
 import { Route as ShellListingsListingIdOverviewRouteImport } from './routes/_shell/listings/$listingId/overview'
@@ -160,6 +161,12 @@ const ShellListingsListingIdWebsiteRoute =
     path: '/website',
     getParentRoute: () => ShellListingsListingIdRoute,
   } as any)
+const ShellListingsListingIdUnderwritingRoute =
+  ShellListingsListingIdUnderwritingRouteImport.update({
+    id: '/underwriting',
+    path: '/underwriting',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
 const ShellListingsListingIdTransactionRoute =
   ShellListingsListingIdTransactionRouteImport.update({
     id: '/transaction',
@@ -285,6 +292,7 @@ export interface FileRoutesByFullPath {
   '/listings/$listingId/overview': typeof ShellListingsListingIdOverviewRoute
   '/listings/$listingId/spaces': typeof ShellListingsListingIdSpacesRoute
   '/listings/$listingId/transaction': typeof ShellListingsListingIdTransactionRoute
+  '/listings/$listingId/underwriting': typeof ShellListingsListingIdUnderwritingRoute
   '/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
   '/backoffice/contacts/': typeof ShellBackofficeContactsIndexRoute
   '/listings/$listingId/': typeof ShellListingsListingIdIndexRoute
@@ -317,6 +325,7 @@ export interface FileRoutesByTo {
   '/listings/$listingId/overview': typeof ShellListingsListingIdOverviewRoute
   '/listings/$listingId/spaces': typeof ShellListingsListingIdSpacesRoute
   '/listings/$listingId/transaction': typeof ShellListingsListingIdTransactionRoute
+  '/listings/$listingId/underwriting': typeof ShellListingsListingIdUnderwritingRoute
   '/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
   '/backoffice/contacts': typeof ShellBackofficeContactsIndexRoute
   '/listings/$listingId': typeof ShellListingsListingIdIndexRoute
@@ -357,6 +366,7 @@ export interface FileRoutesById {
   '/_shell/listings/$listingId/overview': typeof ShellListingsListingIdOverviewRoute
   '/_shell/listings/$listingId/spaces': typeof ShellListingsListingIdSpacesRoute
   '/_shell/listings/$listingId/transaction': typeof ShellListingsListingIdTransactionRoute
+  '/_shell/listings/$listingId/underwriting': typeof ShellListingsListingIdUnderwritingRoute
   '/_shell/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
   '/_shell/backoffice/contacts/': typeof ShellBackofficeContactsIndexRoute
   '/_shell/listings/$listingId/': typeof ShellListingsListingIdIndexRoute
@@ -397,6 +407,7 @@ export interface FileRouteTypes {
     | '/listings/$listingId/overview'
     | '/listings/$listingId/spaces'
     | '/listings/$listingId/transaction'
+    | '/listings/$listingId/underwriting'
     | '/listings/$listingId/website'
     | '/backoffice/contacts/'
     | '/listings/$listingId/'
@@ -429,6 +440,7 @@ export interface FileRouteTypes {
     | '/listings/$listingId/overview'
     | '/listings/$listingId/spaces'
     | '/listings/$listingId/transaction'
+    | '/listings/$listingId/underwriting'
     | '/listings/$listingId/website'
     | '/backoffice/contacts'
     | '/listings/$listingId'
@@ -468,6 +480,7 @@ export interface FileRouteTypes {
     | '/_shell/listings/$listingId/overview'
     | '/_shell/listings/$listingId/spaces'
     | '/_shell/listings/$listingId/transaction'
+    | '/_shell/listings/$listingId/underwriting'
     | '/_shell/listings/$listingId/website'
     | '/_shell/backoffice/contacts/'
     | '/_shell/listings/$listingId/'
@@ -633,6 +646,13 @@ declare module '@tanstack/react-router' {
       path: '/website'
       fullPath: '/listings/$listingId/website'
       preLoaderRoute: typeof ShellListingsListingIdWebsiteRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
+    '/_shell/listings/$listingId/underwriting': {
+      id: '/_shell/listings/$listingId/underwriting'
+      path: '/underwriting'
+      fullPath: '/listings/$listingId/underwriting'
+      preLoaderRoute: typeof ShellListingsListingIdUnderwritingRouteImport
       parentRoute: typeof ShellListingsListingIdRoute
     }
     '/_shell/listings/$listingId/transaction': {
@@ -810,6 +830,7 @@ interface ShellListingsListingIdRouteChildren {
   ShellListingsListingIdOverviewRoute: typeof ShellListingsListingIdOverviewRoute
   ShellListingsListingIdSpacesRoute: typeof ShellListingsListingIdSpacesRoute
   ShellListingsListingIdTransactionRoute: typeof ShellListingsListingIdTransactionRoute
+  ShellListingsListingIdUnderwritingRoute: typeof ShellListingsListingIdUnderwritingRoute
   ShellListingsListingIdWebsiteRoute: typeof ShellListingsListingIdWebsiteRoute
   ShellListingsListingIdIndexRoute: typeof ShellListingsListingIdIndexRoute
 }
@@ -835,6 +856,8 @@ const ShellListingsListingIdRouteChildren: ShellListingsListingIdRouteChildren =
     ShellListingsListingIdSpacesRoute: ShellListingsListingIdSpacesRoute,
     ShellListingsListingIdTransactionRoute:
       ShellListingsListingIdTransactionRoute,
+    ShellListingsListingIdUnderwritingRoute:
+      ShellListingsListingIdUnderwritingRoute,
     ShellListingsListingIdWebsiteRoute: ShellListingsListingIdWebsiteRoute,
     ShellListingsListingIdIndexRoute: ShellListingsListingIdIndexRoute,
   }

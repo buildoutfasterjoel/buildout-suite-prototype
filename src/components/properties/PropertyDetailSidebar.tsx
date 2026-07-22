@@ -15,11 +15,13 @@ import {
   faTableCells,
   faMapLocationDot,
   faFileChartColumn,
-  faFolder,
   faVectorSquare,
+  faHardDrive,
+  faCalculator,
 } from "@fortawesome/pro-regular-svg-icons";
 import { useDataStore } from "#/data/dataStore";
-import { getListing } from "#/data/store";
+import { getListing, getProperty } from "#/data/store";
+import { propertyQualifiesForUnderwriting } from "#/components/deals/underwriting/eligibility";
 
 type NavItem = { label: string; href: string; icon: IconDefinition };
 type NavGroup = { label?: string; items: NavItem[] };
@@ -36,7 +38,8 @@ const NAV_GROUPS: NavGroup[] = [
         icon: faFileChartColumn,
       },
       { label: "Activity", href: "activities", icon: faBolt },
-      { label: "Files", href: "files", icon: faFolder },
+      { label: "Data", href: "files", icon: faHardDrive },
+      { label: "Underwriting", href: "underwriting", icon: faCalculator },
     ],
   },
   {
@@ -72,18 +75,23 @@ export function PropertyDetailSidebar() {
   const listing = getListing(listingId);
   const canAddSpace =
     listing?.dealType === "Lease" && listing?.parentDealId == null;
+  const property = listing ? getProperty(listing.propertyId) : undefined;
+  const showsUnderwriting =
+    listing?.underwriting != null || propertyQualifiesForUnderwriting(property);
 
   const navGroups = NAV_GROUPS.map((group) => ({
     ...group,
-    items: group.items.filter(
-      (item) => item.href !== "spaces" || canAddSpace,
-    ),
+    items: group.items.filter((item) => {
+      if (item.href === "spaces") return canAddSpace;
+      if (item.href === "underwriting") return showsUnderwriting;
+      return true;
+    }),
   }));
 
   function handleTabChange(value: string) {
-    const item = navGroups.flatMap((g) => g.items).find(
-      (i) => i.label === value,
-    );
+    const item = navGroups
+      .flatMap((g) => g.items)
+      .find((i) => i.label === value);
     if (!item) return;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     void navigate({ to: `/listings/${listingId}/${item.href}` } as any);
