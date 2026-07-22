@@ -5,7 +5,7 @@ import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faWandMagicSparkles } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing, Property } from "#/data/types";
-import { updateListingUnderwriting } from "#/data/store";
+import { updateListingUnderwriting, generateUnderwritingResult } from "#/data/store";
 import { notify } from "#/lib/notify";
 import { propertyQualifiesForUnderwriting } from "./eligibility";
 import { PlannerRow, TaskMarker } from "../TodayPlanner";
@@ -157,9 +157,9 @@ export function UnderwritingPlannerRow({ listing }: { listing: Listing }) {
               strategy={runStrategy}
               selectedChecks={[...runSelection]}
               onComplete={() => {
-                // Finish async: land in the "generated" state and let the broker
-                // save it whenever they want — a toast is the only interruption,
-                // no modal takes over their overview.
+                // Persist the structured result first, then flip to 'generated' so the
+                // tab/document/dynamic-fields all read the same stored output.
+                generateUnderwritingResult(listing.id);
                 updateListingUnderwriting(listing.id, { status: "generated" });
                 setPhase("generated");
                 notify({
