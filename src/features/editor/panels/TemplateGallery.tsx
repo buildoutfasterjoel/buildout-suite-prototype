@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
+import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileLines, faSwatchbook } from "@fortawesome/pro-regular-svg-icons";
 import { useEditorStore } from "../store";
@@ -51,14 +52,16 @@ export function TemplateGallery({
             {/* Category rail */}
             <div className="d-flex flex-column gap-1" style={{ width: 160, flexShrink: 0 }}>
               {CATEGORIES.map((c) => (
-                <button
+                <Button
                   key={c}
-                  type="button"
-                  className={`btn btn-sm text-start ${active === c ? "btn-primary" : "btn-ghost"}`}
+                  variant={active === c ? "primary" : "ghost"}
+                  size="sm"
+                  className="text-start"
+                  aria-pressed={active === c}
                   onClick={() => setActive(c)}
                 >
                   {c}
-                </button>
+                </Button>
               ))}
             </div>
 
@@ -86,6 +89,7 @@ export function TemplateGallery({
                     type="button"
                     className="d-flex flex-column gap-2 p-2 border rounded bg-transparent text-start"
                     style={{ width: 200, cursor: "pointer" }}
+                    aria-label={`Add ${t.name} page`}
                     onClick={() => pick(t.key)}
                   >
                     <PagePreview page={buildTemplatePage(t.key, activeListing)} width={184} />
@@ -110,6 +114,7 @@ function BlankCard({
       type="button"
       className="d-flex flex-column gap-2 p-3 border rounded bg-transparent text-start justify-content-center align-items-center"
       style={{ width: 200, height: 160, cursor: "pointer" }}
+      aria-label={`Add ${title}`}
       onClick={onClick}
     >
       <FontAwesomeIcon icon={icon} style={{ fontSize: 28, color: BRAND.palette.primary }} />
