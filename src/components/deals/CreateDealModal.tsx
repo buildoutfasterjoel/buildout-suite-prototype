@@ -11,6 +11,7 @@ import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
+import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
@@ -403,9 +404,12 @@ export function CreateDealModal({
   // Split the catalog into what's chosen vs. still available. Search only narrows
   // the available list, so a checked doc never disappears mid-search.
   const docQuery = docSearch.trim().toLowerCase();
-  const selectedDocs = SUGGESTED_DOCUMENTS.filter((d) =>
-    checkedDocKeys.has(d.key),
-  );
+  // Walk `checkedDocKeys` (a Set — insertion-ordered) rather than the catalog so
+  // newly-checked docs append to the bottom of the Selected list in the order
+  // they were picked, instead of jumping to their catalog position.
+  const selectedDocs = Array.from(checkedDocKeys)
+    .map((key) => SUGGESTED_DOCUMENTS.find((d) => d.key === key))
+    .filter((d): d is (typeof SUGGESTED_DOCUMENTS)[number] => Boolean(d));
   const availableDocs = SUGGESTED_DOCUMENTS.filter(
     (d) =>
       !checkedDocKeys.has(d.key) && d.name.toLowerCase().includes(docQuery),
@@ -910,13 +914,65 @@ export function CreateDealModal({
                 <div className="text-muted fs-small">
                   Buildout drafts these when the deal is created.
                 </div>
-                <div className="d-flex flex-column gap-3 border rounded p-2 mt-2">
+                <div className="d-flex flex-column gap-3 mt-2">
+                  {/* Selected — what will be generated. Always shown so the
+                      layout stays put; underwriting reveals its depth control
+                      inline once chosen. */}
+                  <div className="d-flex flex-column gap-2">
+                    <div className="fw-semibold">
+                      Selected ({selectedCount})
+                    </div>
+                    {underwritingOn && (
+                      <>
+                        <label
+                          className="d-flex align-items-center gap-2 mb-0"
+                          style={{ cursor: "pointer" }}
+                        >
+                          <Checkbox
+                            checked
+                            onCheckedChange={() => setUnderwritingOn(false)}
+                          />
+                          <span className="flex-grow-1 text-truncate fs-small">
+                            Underwriting
+                          </span>
+                        </label>
+                        <UnderwritingDepth
+                          strategy={underwritingStrategy}
+                          value={underwritingSel}
+                          onStrategyChange={setUnderwritingStrategy}
+                          onChange={setUnderwritingSel}
+                        />
+                      </>
+                    )}
+                    {selectedDocs.map((d) => (
+                      <label
+                        key={d.key}
+                        className="d-flex align-items-center gap-2 mb-0"
+                        style={{ cursor: "pointer" }}
+                      >
+                        <Checkbox
+                          checked
+                          onCheckedChange={() => toggleDoc(d.key, false)}
+                        />
+                        <span className="flex-grow-1 text-truncate fs-small">
+                          {d.name}
+                        </span>
+                        <span className="text-muted fs-small flex-shrink-0">
+                          {d.category}
+                        </span>
+                      </label>
+                    ))}
+                    {!underwritingOn && selectedDocs.length === 0 && (
+                      <span className="fs-small">Nothing selected yet.</span>
+                    )}
+                  </div>
+
+                  <Separator />
+
                   {/* Available — search narrows this list. Underwriting is pinned
                       to the top here (until chosen) and ignores the filter. */}
                   <div className="d-flex flex-column gap-2">
-                    <div className="fw-semibold fs-small text-muted">
-                      Available
-                    </div>
+                    <div className="fw-semibold">Available</div>
                     <InputGroup>
                       <InputGroup.Addon>
                         <FontAwesomeIcon icon={faMagnifyingGlass} />
@@ -929,12 +985,12 @@ export function CreateDealModal({
                       />
                     </InputGroup>
                     <div
-                      className="d-flex flex-column gap-2 overflow-auto"
-                      style={{ maxHeight: 208 }}
+                      className="d-flex flex-column gap-2 border rounded p-2"
+                      style={{ maxHeight: 208, overflowY: "scroll" }}
                     >
                       {underwritingEligible && !underwritingOn && (
                         <label
-                          className="d-flex align-items-center gap-2 mb-0"
+                          className="d-flex align-items-center gap-2 mb-0 pe-2"
                           style={{ cursor: "pointer" }}
                         >
                           <Checkbox
@@ -949,7 +1005,7 @@ export function CreateDealModal({
                       {availableDocs.map((d) => (
                         <label
                           key={d.key}
-                          className="d-flex align-items-center gap-2 mb-0"
+                          className="d-flex align-items-center gap-2 mb-0 pe-2"
                           style={{ cursor: "pointer" }}
                         >
                           <Checkbox
@@ -973,56 +1029,6 @@ export function CreateDealModal({
                       )}
                     </div>
                   </div>
-
-                  {/* Selected — what will be generated. Underwriting shows its
-                      depth control inline once chosen. */}
-                  {(underwritingOn || selectedDocs.length > 0) && (
-                    <div className="d-flex flex-column gap-2">
-                      <div className="fw-semibold fs-small text-muted">
-                        Selected ({selectedCount})
-                      </div>
-                      {underwritingOn && (
-                        <>
-                          <label
-                            className="d-flex align-items-center gap-2 mb-0"
-                            style={{ cursor: "pointer" }}
-                          >
-                            <Checkbox
-                              checked
-                              onCheckedChange={() => setUnderwritingOn(false)}
-                            />
-                            <span className="flex-grow-1 text-truncate fs-small">
-                              Underwriting
-                            </span>
-                          </label>
-                          <UnderwritingDepth
-                            strategy={underwritingStrategy}
-                            value={underwritingSel}
-                            onStrategyChange={setUnderwritingStrategy}
-                            onChange={setUnderwritingSel}
-                          />
-                        </>
-                      )}
-                      {selectedDocs.map((d) => (
-                        <label
-                          key={d.key}
-                          className="d-flex align-items-center gap-2 mb-0"
-                          style={{ cursor: "pointer" }}
-                        >
-                          <Checkbox
-                            checked
-                            onCheckedChange={() => toggleDoc(d.key, false)}
-                          />
-                          <span className="flex-grow-1 text-truncate fs-small">
-                            {d.name}
-                          </span>
-                          <span className="text-muted fs-small flex-shrink-0">
-                            {d.category}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
             </>
