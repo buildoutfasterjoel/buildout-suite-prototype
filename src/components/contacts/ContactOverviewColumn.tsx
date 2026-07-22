@@ -11,7 +11,7 @@ import {
   faLocationDot,
   faPlus,
   faChevronDown,
-  faChevronUp,
+  faChevronRight,
   faPencil,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact, DealSummary, PropertyStatus } from "#/data/types";
@@ -257,11 +257,14 @@ export function ContactOverviewColumn({
             variant="outline"
             size="sm"
             className="contact-details-toggle flex-shrink-0"
+            style={{ padding: "8px 12px 8px 8px" }}
             aria-expanded={showDetails}
             onClick={() => setShowDetails(!showDetails)}
           >
+            <FontAwesomeIcon
+              icon={showDetails ? faChevronDown : faChevronRight}
+            />
             Details
-            <FontAwesomeIcon icon={showDetails ? faChevronUp : faChevronDown} />
           </Button>
         </div>
 
