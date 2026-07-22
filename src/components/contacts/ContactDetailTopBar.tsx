@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Breadcrumb } from "@buildoutinc/blueprint-react/ui/Breadcrumb";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChevronLeft,
@@ -13,44 +14,62 @@ import { useContactListNav } from "#/components/contacts/useContactListNav";
 
 /**
  * Prev/next pager with an "N of M" index, mirroring the source list the contact
- * was opened from. Renders only when the current contact belongs to a tracked
- * list; each arrow steps to the adjacent contact in that list.
+ * was opened from. Renders only when stepping through a specific list or a
+ * filtered set — not the full, unfiltered Contacts book. Navigation loops: past
+ * either end wraps around to the other.
  */
 function ContactListPager({ contactId }: { contactId: string }) {
   const navigate = useNavigate();
   const ids = useContactListNav((s) => s.ids);
+  const source = useContactListNav((s) => s.source);
   const index = ids.indexOf(contactId);
+  // Limit the pager to lists + filtered views; hide it for unfiltered Contacts.
+  if (source?.variant === "all") return null;
   if (index === -1 || ids.length < 2) return null;
 
+  const n = ids.length;
   const go = (i: number) =>
     void navigate({
       to: "/backoffice/contacts/$contactId",
-      params: { contactId: ids[i] },
+      // Wrap around so the pager loops at either end.
+      params: { contactId: ids[(i + n) % n] },
     });
 
   return (
     <div className="d-flex align-items-center gap-1 flex-shrink-0">
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label="Previous contact"
-        disabled={index <= 0}
-        onClick={() => go(index - 1)}
-      >
-        <FontAwesomeIcon icon={faChevronLeft} />
-      </Button>
+      <Tooltip>
+        <Tooltip.Trigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Previous contact"
+              onClick={() => go(index - 1)}
+            >
+              <FontAwesomeIcon icon={faChevronLeft} />
+            </Button>
+          }
+        />
+        <Tooltip.Content>Previous contact</Tooltip.Content>
+      </Tooltip>
       <span className="text-muted text-nowrap" style={{ fontSize: 14 }}>
         {index + 1} of {ids.length}
       </span>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label="Next contact"
-        disabled={index >= ids.length - 1}
-        onClick={() => go(index + 1)}
-      >
-        <FontAwesomeIcon icon={faChevronRight} />
-      </Button>
+      <Tooltip>
+        <Tooltip.Trigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Next contact"
+              onClick={() => go(index + 1)}
+            >
+              <FontAwesomeIcon icon={faChevronRight} />
+            </Button>
+          }
+        />
+        <Tooltip.Content>Next contact</Tooltip.Content>
+      </Tooltip>
     </div>
   );
 }
