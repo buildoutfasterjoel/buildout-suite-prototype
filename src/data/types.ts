@@ -287,6 +287,42 @@ export interface DealUnderwriting {
   status?: 'not-started' | 'generating' | 'generated' | 'ready'
   /** Once generated, where the underwriting page was filed. */
   placement?: { documentId?: string; documentName: string }
+
+  /** The stored, structured output — computed once at generation, read by the tab + document + future dynamic fields. */
+  result?: UnderwritingResult
+  /** ISO timestamp of the last generation. Stamped by the store/UI layer, never the pure builder. */
+  generatedAt?: string
+}
+
+/** A single addressable metric — the unit a future dynamic field references. */
+export interface UnderwritingMetric {
+  key: string
+  label: string
+  value: number
+  display: string
+  format: 'money' | 'percent' | 'number' | 'ratio' | 'sqft' | 'text'
+}
+
+/** One row of a breakdown section. `emphasis` marks a total/summary row. */
+export interface UnderwritingResultRow {
+  cells: string[]
+  emphasis?: boolean
+}
+
+/** A plain-data breakdown table. `keyValue` = label/value pairs (no header row); `matrix` = a header row + data rows. */
+export interface UnderwritingResultSection {
+  key: string
+  name: string
+  kind: 'keyValue' | 'matrix'
+  columns?: string[]
+  rows: UnderwritingResultRow[]
+}
+
+export interface UnderwritingResult {
+  strategy: UnderwritingStrategyId
+  metrics: UnderwritingMetric[]
+  sections: UnderwritingResultSection[]
+  inputs: { address: string; askingPrice: number; buildingSqFt: number; capRate: number }
 }
 
 /** A folder or file in a deal's internal Files workspace (the "lite Dropbox" page). */
