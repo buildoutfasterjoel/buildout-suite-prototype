@@ -19,6 +19,7 @@ import {
   type ContactShare,
 } from './teammates'
 import { DEFAULT_STRATEGY, strategyLabel } from '#/components/deals/underwriting/strategies'
+import { buildUnderwritingResult } from '#/components/deals/underwriting/underwritingResult'
 
 /** All email campaigns from the live store (seeded mocks + any AI/user drafts). */
 export function getEmailsList(): Email[] {
@@ -169,6 +170,23 @@ export function updateListingUnderwriting(
       selectedChecks: [],
     }
   return patchListing(listingId, { underwriting: { ...base, ...patch } })
+}
+
+/**
+ * Compute a deal's underwriting result from its current scope + property and
+ * persist it with a fresh timestamp. The single path every entry point uses so
+ * the stored result never diverges. Stamps `generatedAt` here (not in the pure
+ * builder, which must stay deterministic).
+ */
+export function generateUnderwritingResult(listingId: string): Listing | undefined {
+  const listing = useDataStore.getState().listings.get(listingId)
+  if (!listing?.underwriting) return undefined
+  const property = getProperty(listing.propertyId)
+  const result = buildUnderwritingResult(property, listing.underwriting)
+  return updateListingUnderwriting(listingId, {
+    result,
+    generatedAt: new Date().toISOString(),
+  })
 }
 
 /** Append a generated document to a deal's context documents (shows in the deal rail). */
