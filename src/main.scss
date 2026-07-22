@@ -670,11 +670,368 @@
   justify-content: center;
 }
 
-// Omni-search command palette: pin near the top of the viewport (≈5% down)
-// rather than vertically centered, so results grow downward from a stable
-// anchor. Scoped to the palette via `:has()` so other modals are untouched.
+// ── Omni-search: gradient "AI omnibar" trigger (navbar) ──────────────────────
+// A purple→blue wash over the dark navbar with a purple border + soft shadow;
+// on hover the gradient brightens and a purple glow blooms. The ⌘K hint fades
+// on hover as the voice affordance lights up.
+.omni-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  width: 288px;
+  height: 36px;
+  padding: 4px 4px 4px 8px;
+  border: 1px solid var(--color-purple-heart-500, #9f55f7);
+  border-radius: var(--bp-border-radius-xl, 12px);
+  cursor: pointer;
+  outline: none;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08)),
+    linear-gradient(
+      90deg,
+      rgba(184, 140, 242, 0.18) 0%,
+      rgba(140, 166, 247, 0.18) 50%,
+      rgba(97, 194, 255, 0.18) 100%
+    );
+  box-shadow:
+    0 12px 20px 0 rgba(54, 7, 100, 0.1),
+    0 8px 10px 0 rgba(33, 83, 212, 0.1);
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:focus-visible {
+    box-shadow:
+      0 0 0 3px rgba(159, 85, 247, 0.45),
+      0 8px 10px 0 rgba(33, 83, 212, 0.1);
+  }
+
+  &:hover {
+    background:
+      linear-gradient(90deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.12)),
+      linear-gradient(
+        90deg,
+        rgba(184, 140, 242, 0.34) 0%,
+        rgba(140, 166, 247, 0.34) 50%,
+        rgba(97, 194, 255, 0.34) 100%
+      );
+    box-shadow:
+      0 0 16px 0 rgba(212, 180, 254, 0.6),
+      0 12px 20px 0 rgba(54, 7, 100, 0.1),
+      0 8px 10px 0 rgba(33, 83, 212, 0.1);
+  }
+
+  &__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 20px;
+    color: var(--color-purple-heart-200, #e7d5ff);
+    font-size: 14px;
+  }
+
+  &__label {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: #fff;
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 19px;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__end {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  &__kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 20px;
+    min-width: 28px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: var(--color-purple-heart-600, #8833ea);
+    color: var(--color-purple-heart-50, #f9f5ff);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    transition: opacity 0.2s ease;
+  }
+
+  &:hover &__kbd {
+    opacity: 0;
+  }
+
+  &__voice {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--bp-border-radius-lg, 8px);
+    background: transparent;
+    color: var(--color-purple-heart-200, #e7d5ff);
+    font-size: 12px;
+    cursor: pointer;
+    transition:
+      background 0.15s ease,
+      color 0.15s ease;
+  }
+
+  // On bar hover the voice button gains a translucent purple fill…
+  &:hover &__voice {
+    background: rgba(159, 85, 247, 0.55);
+    color: var(--color-purple-heart-50, #f9f5ff);
+  }
+
+  // …and hovering the voice button itself deepens it to a solid gradient.
+  &:hover &__voice:hover,
+  & &__voice:hover {
+    background: linear-gradient(
+      221deg,
+      rgba(159, 85, 247, 0.9) 13%,
+      rgba(99, 33, 168, 0.9) 84%
+    );
+    color: var(--color-purple-heart-50, #f9f5ff);
+  }
+}
+
+// ── Omni-search: command palette (open menu) ─────────────────────────────────
+// Top-aligned with the navbar omnibar and horizontally centered. Widen past the
+// Blueprint default and round the corners per the popover design.
 .modal:has(.omni-search-popup) .modal-dialog {
-  margin-top: 5vh;
+  margin-top: 8px;
+  max-width: 540px;
+}
+
+.omni-search-popup.omni-search-popup {
+  border: 1px solid var(--color-storm-grey-100, #eceef2);
+  border-radius: 16px;
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+// The gradient AI omnibar inside the popover header.
+.omni-menu__bar-wrap {
+  padding: 8px;
+}
+.omni-menu__bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 48px;
+  padding: 4px 8px;
+  border: 1px solid var(--color-purple-heart-500, #9f55f7);
+  border-radius: var(--bp-border-radius-xl, 12px);
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.6)),
+    linear-gradient(
+      90deg,
+      rgba(184, 140, 242, 0.2) 0%,
+      rgba(140, 166, 247, 0.2) 50%,
+      rgba(97, 194, 255, 0.2) 100%
+    );
+  box-shadow: 0 8px 10px 0 rgba(33, 83, 212, 0.1);
+}
+.omni-menu__bar-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  color: var(--color-purple-heart-600, #8833ea);
+  font-size: 16px;
+}
+
+// The real input, stripped of its own chrome — the bar provides the frame.
+.omni-menu__input.omni-menu__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--color-storm-grey-900, #22262f);
+  font-size: 14px;
+  font-weight: 500;
+
+  &:focus,
+  &:focus-visible {
+    border: 0;
+    box-shadow: none;
+    outline: none;
+  }
+  &::placeholder {
+    color: var(--color-storm-grey-500, #62748e);
+    font-weight: 500;
+    opacity: 1;
+  }
+}
+
+.omni-menu__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--bp-border-radius, 6px);
+  background: transparent;
+  color: var(--color-purple-heart-950, #360764);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+
+  &:hover {
+    background: var(--color-purple-heart-50, #f9f5ff);
+  }
+}
+.omni-menu__voice {
+  border-radius: var(--bp-border-radius-lg, 8px);
+}
+
+// Tab track — underline tabs matching the popover spec.
+.omni-tabs {
+  .nav {
+    padding: 0 8px;
+    border-bottom: 1px solid var(--color-storm-grey-100, #eceef2);
+    gap: 0;
+  }
+  .nav-link {
+    min-height: 36px;
+    padding: 8px 12px;
+    border: 0;
+    color: var(--color-storm-grey-500, #62748e);
+    font-weight: 400;
+    font-size: 14px;
+  }
+  .nav-link[aria-selected="true"],
+  .nav-link[data-active] {
+    color: var(--color-storm-grey-900, #22262f);
+    font-weight: 600;
+  }
+  .tabs-indicator {
+    height: 2px;
+    background: #394353;
+  }
+}
+
+// Results body.
+.omni-menu__body {
+  padding: 8px;
+}
+
+// Group divider label (Contacts / Properties / Deals).
+.omni-group {
+  padding: 8px 8px 4px;
+  color: var(--color-storm-grey-600, #506079);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 19px;
+}
+
+.omni-sep {
+  margin: 8px 4px;
+  border: 0;
+  border-top: 1px solid var(--color-storm-grey-100, #eceef2);
+  opacity: 1;
+}
+
+// List item — colored icon badge, title + meta, right-aligned type label.
+.omni-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-radius: var(--bp-border-radius-md, 6px);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s ease;
+
+  &:hover,
+  &.is-active {
+    background: var(--color-buildout-blue-50, #eff6ff);
+  }
+
+  &__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--bp-border-radius-lg, 8px);
+    font-size: 14px;
+
+    &--contact {
+      background: var(--color-purple-heart-100, #f2e8ff);
+      color: var(--color-purple-heart-800, #6321a8);
+    }
+    &--property {
+      background: var(--color-buildout-blue-100, #dcebfd);
+      color: var(--color-buildout-blue-800, #2042a7);
+    }
+    &--deal {
+      background: var(--color-mountain-meadow-100, #cdfee5);
+      color: var(--color-mountain-meadow-800, #00674a);
+    }
+    &--ai {
+      color: var(--color-purple-heart-700, #6b21c8);
+      background:
+        linear-gradient(0deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.55)),
+        linear-gradient(45deg, #b88cf2 0%, #8ca6f7 50%, #61c2ff 100%);
+    }
+  }
+
+  &__label {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  &__title {
+    color: var(--color-storm-grey-900, #22262f);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 19px;
+  }
+  &__meta {
+    color: var(--color-storm-grey-600, #506079);
+    font-size: 12px;
+    line-height: 16px;
+  }
+
+  &__type {
+    flex-shrink: 0;
+    align-self: center;
+    padding-left: 8px;
+    color: var(--color-storm-grey-500, #62748e);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
 }
 
 // Add-to-list modal: selectable list rows with a clear hover affordance.
