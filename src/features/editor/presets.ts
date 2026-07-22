@@ -4,9 +4,11 @@ import type {
   ColumnsBlock,
   Cell,
   DynamicKey,
+  HeadingBlock,
   ImageBlock,
   Page,
   TableBlock,
+  TextBlock,
   TextStyle,
 } from "./types";
 import { getPhotoUrl } from "#/components/properties/propertyDisplay";
@@ -18,18 +20,10 @@ import {
   SERIF,
   uid,
 } from "./blocks/blockFactory";
+import { BRAND } from "./brand";
 
 /** Brand header logo shown at the top of document pages (served from /public). */
-export const LOGO_SRC = "/assets/branding/gemini-logo.png";
-
-/** Preset (template) pages the user can add. Layout is fixed; content is editable. */
-export type PresetKey = "financialSummary" | "propertyOverview";
-
-/** Menu of addable presets, in display order. */
-export const PRESETS: { key: PresetKey; label: string }[] = [
-  { key: "financialSummary", label: "Financial Summary" },
-  { key: "propertyOverview", label: "Property Overview" },
-];
+export const LOGO_SRC = BRAND.logoSrc;
 
 function headerCell(value: string): Cell {
   return {
@@ -82,6 +76,26 @@ function heroImage(seed: string, w = 736, h = 300): ImageBlock {
     type: "image",
     src: getPhotoUrl(seed, w, h),
     alt: "Property photo",
+  };
+}
+
+/** A heading block in the brand heading font + ink. */
+export function brandHeading(text: string, size = 28): HeadingBlock {
+  return {
+    id: uid("block"),
+    type: "heading",
+    text,
+    style: { ...DEFAULT_TEXT_STYLE, fontFamily: BRAND.fonts.heading, fontSize: size, color: BRAND.palette.ink },
+  };
+}
+
+/** A body-copy text block in the brand body font. */
+export function brandBody(text: string, size = 13): TextBlock {
+  return {
+    id: uid("block"),
+    type: "text",
+    text,
+    style: { ...DEFAULT_TEXT_STYLE, fontFamily: BRAND.fonts.body, fontSize: size, lineHeight: 22, color: BRAND.palette.ink },
   };
 }
 
@@ -179,11 +193,46 @@ function buildPropertyOverviewPage(property: Property | undefined): Page {
   };
 }
 
-/** Build a locked preset page of the given kind, seeded with the listing. */
-export function buildPresetPage(key: PresetKey, property?: Property): Page {
-  return key === "financialSummary"
-    ? buildFinancialSummaryPage(property)
-    : buildPropertyOverviewPage(property);
+export type TemplateCategory =
+  | "Cover" | "Financials" | "Property" | "Location" | "Comparables" | "Team";
+
+export interface TemplateDef {
+  key: string;
+  name: string;
+  category: TemplateCategory;
+  description: string;
+  build: (property?: Property) => Page;
+}
+
+/** All designer templates, in gallery display order. Populated in Task 4. */
+export const TEMPLATES: TemplateDef[] = [
+  {
+    key: "propertyOverview",
+    name: "Property Overview",
+    category: "Property",
+    description: "Magazine-style two-column overview with a highlights table.",
+    build: (property) => buildPropertyOverviewPage(property),
+  },
+  {
+    key: "financialSummary",
+    name: "Financial Summary",
+    category: "Financials",
+    description: "Address header with a data-bound financial summary table.",
+    build: (property) => buildFinancialSummaryPage(property),
+  },
+];
+
+/** Build a template page by key (falls back to the first template). */
+export function buildTemplatePage(key: string, property?: Property): Page {
+  const def = TEMPLATES.find((t) => t.key === key) ?? TEMPLATES[0];
+  return def.build(property);
+}
+
+// --- Back-compat shims (existing callers) ---
+export type PresetKey = string;
+export const PRESETS: { key: string; label: string }[] = TEMPLATES.map((t) => ({ key: t.key, label: t.name }));
+export function buildPresetPage(key: string, property?: Property): Page {
+  return buildTemplatePage(key, property);
 }
 
 /** An empty, fully freeform page the user builds up from the Blocks palette. */
