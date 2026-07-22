@@ -775,6 +775,8 @@ export interface ContactTask {
    */
   dealId?: string
   dealName?: string
+  /** True for standalone {@link Task}s (editable/deletable via the Edit Task modal). */
+  editable?: boolean
 }
 
 /** Everything the contact detail page needs, assembled server-side. */
