@@ -18,6 +18,7 @@ import { blockLabel } from "../blocks/blockMeta";
 import { DYNAMIC_FIELD_LABELS } from "../dynamic";
 import { useEditorStore } from "../store";
 import { CRE_PHOTO_IDS, crePhotoUrl } from "#/components/properties/propertyDisplay";
+import { BRAND } from "../brand";
 
 const FONT_STYLE_ITEMS: ToggleItem<"bold" | "italic" | "underline">[] = [
   { value: "bold", icon: faBold, label: "Bold" },
@@ -52,7 +53,7 @@ function FontControls({ style }: { style: TextStyle }) {
       <span className="bo-editor-subsection-title">Font</span>
       <div className="d-flex flex-column gap-2">
         <EditorOption label="Font">
-          <FauxSelect value={style.fontFamily.includes("PT Serif") ? "PT Serif" : "Proxima Nova"} />
+          <FauxSelect value={style.fontFamily === BRAND.fonts.heading ? "PT Serif (Brand)" : "Proxima Nova (Brand)"} />
         </EditorOption>
         <EditorOption label="Font Size">
           <FauxSelect value={`${style.fontSize}px`} />
