@@ -3,18 +3,15 @@ import type { ReactNode } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
-import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
-import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faMagnifyingGlass,
   faBuilding,
   faUser,
   faHandshake,
   faSparkles,
-  faChevronRight,
-  faArrowTurnDownLeft,
+  faMicrophone,
+  faXmark,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { searchAll } from "#/data/selectors";
@@ -27,15 +24,6 @@ import { useOmniSearch } from "#/components/search/useOmniSearch";
 
 /** Max rows shown per entity group in the palette. */
 const GROUP_CAP = 5;
-
-const RELATIONSHIP_LABELS: Record<string, string> = {
-  cold: "Cold",
-  nurturing: "Nurturing",
-  active: "Active",
-  pitching: "Pitching",
-  client: "Client",
-  past_client: "Past client",
-};
 
 /** Turn a PropertyStatus like "under-contract" into "Under contract". */
 function statusLabel(status: string): string {
@@ -80,32 +68,37 @@ const TABS: { key: TabKey; label: string }[] = [
 
 type GroupName = "Contacts" | "Properties" | "Deals";
 
+/** Colored icon-badge treatment for a palette row. */
+type IconVariant = "contact" | "property" | "deal" | "ai";
+
 /** A selectable palette row (record) or a trailing quick action. */
-type Entry =
-  | {
-      kind: "record";
-      key: string;
-      group: GroupName;
-      icon: IconDefinition;
-      title: string;
-      meta?: string;
-      badge?: string;
-      activate: () => void;
-    }
-  | {
-      kind: "ai";
-      key: "ai";
-      icon: IconDefinition;
-      title: string;
-      activate: () => void;
-    }
-  | {
-      kind: "create";
-      key: "create";
-      icon: IconDefinition;
-      title: string;
-      activate: () => void;
-    };
+type Entry = {
+  kind: "record" | "ai" | "create";
+  key: string;
+  group?: GroupName;
+  iconVariant: IconVariant;
+  icon: IconDefinition;
+  title: string;
+  meta?: string;
+  /** Right-aligned entity/action label (e.g. "Contact", "Ask AI"). */
+  typeLabel: string;
+  activate: () => void;
+};
+
+/** The 36px colored icon badge that leads each row. */
+function OmniItemIcon({
+  variant,
+  icon,
+}: {
+  variant: IconVariant;
+  icon: IconDefinition;
+}) {
+  return (
+    <span className={`omni-item__icon omni-item__icon--${variant}`}>
+      <FontAwesomeIcon icon={icon} />
+    </span>
+  );
+}
 
 export function OmniSearch() {
   const open = useOmniSearch((s) => s.open);
@@ -162,12 +155,11 @@ export function OmniSearch() {
           kind: "record",
           key: `contact-${c.id}`,
           group: "Contacts",
+          iconVariant: "contact",
           icon: faUser,
           title: `${c.firstName} ${c.lastName}`.trim(),
           meta: [c.title, c.company].filter(Boolean).join(" · "),
-          badge: c.relationship
-            ? (RELATIONSHIP_LABELS[c.relationship] ?? c.relationship)
-            : undefined,
+          typeLabel: "Contact",
           activate: () => navigate(`/backoffice/contacts/${c.id}`),
         });
       }
@@ -179,11 +171,13 @@ export function OmniSearch() {
           kind: "record",
           key: `property-${p.id}`,
           group: "Properties",
+          iconVariant: "property",
           icon: faBuilding,
           title: p.name,
           meta: [p.street, [p.city, p.state].filter(Boolean).join(", ")]
             .filter(Boolean)
             .join(" · "),
+          typeLabel: "Property",
           activate: () => navigate(`/properties/${p.id}`),
         });
       }
@@ -196,10 +190,13 @@ export function OmniSearch() {
           kind: "record",
           key: `deal-${d.id}`,
           group: "Deals",
+          iconVariant: "deal",
           icon: faHandshake,
           title: d.name,
-          meta: [p?.city, p?.state].filter(Boolean).join(", "),
-          badge: statusLabel(d.status),
+          meta: [statusLabel(d.status), [p?.city, p?.state].filter(Boolean).join(", ")]
+            .filter(Boolean)
+            .join(" · "),
+          typeLabel: "Deal",
           activate: () => navigate(`/listings/${d.id}`),
         });
       }
@@ -212,8 +209,10 @@ export function OmniSearch() {
       list.push({
         kind: "ai",
         key: "ai",
+        iconVariant: "ai",
         icon: faSparkles,
         title: `Ask AI: “${q}”`,
+        typeLabel: "Ask AI",
         activate: () => {
           askAssistant(q);
           close();
@@ -223,8 +222,10 @@ export function OmniSearch() {
       list.push({
         kind: "create",
         key: "create",
+        iconVariant: "deal",
         icon: faHandshake,
         title: `Create deal for “${q}”`,
+        typeLabel: "Create",
         activate: () => {
           useCreateDeal.getState().openFor({ initialAddress: q });
           close();
@@ -281,27 +282,44 @@ export function OmniSearch() {
         </Modal.Title>
 
         <div ref={contentRef} onKeyDown={handleKeyDown}>
-          {/* Search field */}
-          <div className="p-2">
-            <InputGroup>
-              <InputGroup.Addon>
-                <FontAwesomeIcon
-                  icon={faMagnifyingGlass}
-                  className="text-muted"
-                />
-              </InputGroup.Addon>
+          {/* Search field — the gradient "AI omnibar" */}
+          <div className="omni-menu__bar-wrap">
+            <div className="omni-menu__bar">
+              <span className="omni-menu__bar-icon">
+                <FontAwesomeIcon icon={faSparkles} />
+              </span>
               <Input
+                className="omni-menu__input"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search or ask AI"
                 aria-label="Search"
               />
-            </InputGroup>
+              <button
+                type="button"
+                className="omni-menu__icon-btn omni-menu__voice"
+                aria-label="Voice search"
+              >
+                <FontAwesomeIcon icon={faMicrophone} />
+              </button>
+              <button
+                type="button"
+                className="omni-menu__icon-btn"
+                aria-label="Close search"
+                onClick={close}
+              >
+                <FontAwesomeIcon icon={faXmark} />
+              </button>
+            </div>
           </div>
 
           {/* Scope tabs */}
-          <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
-            <Tabs.List className="px-3 border-bottom">
+          <Tabs
+            className="omni-tabs"
+            value={tab}
+            onValueChange={(v) => setTab(v as TabKey)}
+          >
+            <Tabs.List>
               {TABS.map((t) => (
                 <Tabs.Tab key={t.key} value={t.key}>
                   {t.label}
@@ -311,7 +329,7 @@ export function OmniSearch() {
           </Tabs>
 
           {/* Results */}
-          <div className="overflow-auto py-2" style={{ maxHeight: 440 }}>
+          <div className="omni-menu__body overflow-auto" style={{ maxHeight: 440 }}>
             {entries.length === 0 ? (
               <div className="text-muted small px-3 py-4 text-center">
                 No matches. Try a different search, or ask the assistant.
@@ -323,8 +341,7 @@ export function OmniSearch() {
                   entry.kind === "record" &&
                   (index === 0 ||
                     entries[index - 1].kind !== "record" ||
-                    (entries[index - 1] as Extract<Entry, { kind: "record" }>)
-                      .group !== entry.group);
+                    entries[index - 1].group !== entry.group);
                 const showTopSeparator =
                   (entry.kind === "ai" || entry.kind === "create") &&
                   index > 0 &&
@@ -332,58 +349,31 @@ export function OmniSearch() {
 
                 return (
                   <div key={entry.key}>
-                    {showHeader && entry.kind === "record" && (
-                      <div className="text-muted fs-xs text-uppercase fw-semibold px-3 pt-2 pb-1">
-                        {entry.group}
-                      </div>
+                    {showHeader && entry.group && (
+                      <div className="omni-group">{entry.group}</div>
                     )}
-                    {showTopSeparator && <hr className="my-2" />}
+                    {showTopSeparator && <hr className="omni-sep" />}
                     <button
                       type="button"
                       data-omni-index={index}
                       onMouseEnter={() => setActiveIndex(index)}
                       onClick={() => entry.activate()}
-                      className={`btn w-100 text-start border-0 rounded-0 d-flex align-items-center gap-3 px-3 py-2 ${
-                        active ? "bg-buildout-blue-50" : "bg-transparent"
-                      }`}
+                      className={`omni-item ${active ? "is-active" : ""}`}
                     >
-                      <FontAwesomeIcon
-                        icon={entry.icon}
-                        className={
-                          entry.kind === "record"
-                            ? "text-muted"
-                            : "text-buildout-blue-700"
-                        }
-                      />
-                      <span className="flex-grow-1" style={{ minWidth: 0 }}>
-                        <span
-                          className={`d-block text-truncate ${
-                            entry.kind === "record" ? "" : "fw-semibold"
-                          }`}
-                        >
+                      <OmniItemIcon variant={entry.iconVariant} icon={entry.icon} />
+                      <span className="omni-item__label">
+                        <span className="omni-item__title text-truncate">
                           {entry.kind === "record"
                             ? highlight(entry.title, query)
                             : entry.title}
                         </span>
-                        {entry.kind === "record" && entry.meta && (
-                          <span className="d-block text-muted small text-truncate">
+                        {entry.meta && (
+                          <span className="omni-item__meta text-truncate">
                             {highlight(entry.meta, query)}
                           </span>
                         )}
                       </span>
-                      {entry.kind === "record" && entry.badge && (
-                        <Badge
-                          variant="secondary"
-                          appearance="muted"
-                          className="flex-shrink-0"
-                        >
-                          {entry.badge}
-                        </Badge>
-                      )}
-                      <FontAwesomeIcon
-                        icon={active ? faArrowTurnDownLeft : faChevronRight}
-                        className="text-muted flex-shrink-0"
-                      />
+                      <span className="omni-item__type">{entry.typeLabel}</span>
                     </button>
                   </div>
                 );

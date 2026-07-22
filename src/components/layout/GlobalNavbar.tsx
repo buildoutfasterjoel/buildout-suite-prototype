@@ -15,7 +15,7 @@ import {
   faCirclePlus,
   faArrowsRotate,
   faSparkles,
-  faMagnifyingGlass,
+  faMicrophone,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { formatForDisplay } from "@tanstack/hotkeys";
@@ -157,33 +157,43 @@ export function GlobalNavbar() {
             </Navbar.Item>
           ))}
 
-          {/* Omni search — a nav item so it shares the navbar-nav flex row and
-              stays inline with the other items instead of wrapping to a second
-              line. Opposite color from the navbar (buildout-blue-50) so it
-              stands out; a trigger, not a live input, that opens the overlay. */}
+          {/* Omni search — a gradient "AI omnibar" trigger that opens the
+              command palette. A div (not a button) so the nested voice button
+              is valid markup; it's keyboard-activatable via role + handlers. */}
           <Navbar.Item className="d-flex align-items-center ms-2">
-            <button
-              type="button"
+            {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+            <div
+              role="button"
+              tabIndex={0}
               onClick={() => openOmniSearch(true)}
-              aria-label="Search properties, people, and deals"
-              className="omni-search-trigger btn bg-buildout-blue-100 border d-inline-flex align-items-center gap-2 rounded px-3 py-2 flex-shrink-0"
-              style={{ width: 260 }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  openOmniSearch(true);
+                }
+              }}
+              aria-label="Search or ask AI"
+              className="omni-bar flex-shrink-0"
             >
-              <FontAwesomeIcon
-                icon={faMagnifyingGlass}
-                className="text-muted"
-              />
-              <span className="flex-grow-1 text-start text-muted text-truncate">
-                Search or ask AI
+              <span className="omni-bar__icon">
+                <FontAwesomeIcon icon={faSparkles} />
               </span>
-              <Badge
-                variant="secondary"
-                appearance="muted"
-                className="flex-shrink-0"
-              >
-                {SEARCH_HINT}
-              </Badge>
-            </button>
+              <span className="omni-bar__label">Search or ask AI</span>
+              <span className="omni-bar__end">
+                <span className="omni-bar__kbd">{SEARCH_HINT}</span>
+                <button
+                  type="button"
+                  className="omni-bar__voice"
+                  aria-label="Voice search"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openOmniSearch(true);
+                  }}
+                >
+                  <FontAwesomeIcon icon={faMicrophone} />
+                </button>
+              </span>
+            </div>
           </Navbar.Item>
         </Navbar.Nav>
       </Navbar.Content>
