@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { Comp, Contact, DealFileItem, Listing, Property, Task } from './types'
-import { generateDataset, seedCallLists } from './seed'
+import { generateDataset, seedCallLists, seedContactShares } from './seed'
 import { getEmails, type Email } from './emails'
 import type { CallList } from './contactLists'
 import type { ContactShare } from './teammates'
@@ -48,7 +48,7 @@ export function seedSlice(): DataSlice {
     dealFiles: new Map(),
     emails: new Map(getEmails().map((e) => [e.id, e])),
     callLists: new Map(seedCallLists().map((l) => [l.id, l])),
-    contactShares: new Map(),
+    contactShares: seedContactShares(contacts),
     tasks: new Map(),
   }
 }
