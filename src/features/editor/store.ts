@@ -9,7 +9,7 @@ import type {
   Selection,
 } from "./types";
 import { buildSampleDocument } from "./sampleDocument";
-import { buildBlankPage, buildOnBrandBlankPage, buildTemplatePage } from "./presets";
+import { buildBlankPage, buildOnBrandBlankPage, buildTemplatePage } from "./templates";
 import { createBlock, createCell, type BlockVariant } from "./blocks/blockFactory";
 import {
   findBlock,

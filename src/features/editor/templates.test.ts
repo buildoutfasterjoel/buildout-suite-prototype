@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { TEMPLATES, buildTemplatePage, buildOnBrandBlankPage } from './presets'
+import { TEMPLATES, buildTemplatePage, buildOnBrandBlankPage } from './templates'
 import { BRAND } from './brand'
 
 describe('TEMPLATES registry', () => {

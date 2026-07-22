@@ -4,7 +4,7 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileLines, faSwatchbook } from "@fortawesome/pro-regular-svg-icons";
 import { useEditorStore } from "../store";
-import { TEMPLATES, buildTemplatePage, type TemplateCategory } from "../presets";
+import { TEMPLATES, buildTemplatePage, type TemplateCategory } from "../templates";
 import { PagePreview } from "../PagePreview";
 import { BRAND } from "../brand";
 

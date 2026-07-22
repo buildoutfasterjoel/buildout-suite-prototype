@@ -14,7 +14,7 @@ import {
   SERIF,
   uid,
 } from "./blocks/blockFactory";
-import { LOGO_SRC } from "./presets";
+import { LOGO_SRC } from "./templates/helpers";
 import {
   checksFor,
   coerceStrategy,
