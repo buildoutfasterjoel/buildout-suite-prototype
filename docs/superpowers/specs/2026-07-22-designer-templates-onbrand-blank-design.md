@@ -68,12 +68,13 @@ keep the prototype honest with minimal maintenance.
 
 ### 1. Brand layer — new `src/features/editor/brand.ts`
 
-Single source of truth for the demo brand ("Gemini Realty," matching the
+Single source of truth for the demo brand ("Meridian Point Real Estate,"
+matching the name shown in the
 existing document logo). Exports:
 
 ```ts
 export const BRAND = {
-  name: "Gemini Realty",
+  name: "Meridian Point Real Estate",
   logoSrc: "/assets/branding/gemini-logo.png",
   fonts: { heading: SERIF, body: SANS }, // reuse existing SERIF / SANS
   palette: {
