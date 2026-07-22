@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { TEMPLATES, buildTemplatePage } from './presets'
+import { TEMPLATES, buildTemplatePage, buildOnBrandBlankPage } from './presets'
 import { BRAND } from './brand'
 
 describe('TEMPLATES registry', () => {
@@ -33,5 +33,20 @@ describe('TEMPLATES registry', () => {
     const cover = buildTemplatePage('cover')
     const heading = cover.blocks.find((b) => b.type === 'heading') as { style: { fontFamily: string } }
     expect(heading.style.fontFamily).toBe(BRAND.fonts.heading)
+  })
+})
+
+describe('buildOnBrandBlankPage', () => {
+  it('is freeform (not locked) but carries the brand logo', () => {
+    const page = buildOnBrandBlankPage()
+    expect(page.locked ?? false).toBe(false)
+    expect(page.logoSrc).toBe(BRAND.logoSrc)
+  })
+
+  it('seeds a brand-font title and a light scaffold', () => {
+    const page = buildOnBrandBlankPage()
+    const heading = page.blocks.find((b) => b.type === 'heading') as { style: { fontFamily: string } }
+    expect(heading.style.fontFamily).toBe(BRAND.fonts.heading)
+    expect(page.blocks.some((b) => b.type === 'columns')).toBe(true)
   })
 })

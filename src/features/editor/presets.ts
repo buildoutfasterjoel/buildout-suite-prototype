@@ -352,6 +352,30 @@ export function buildBlankPage(): Page {
 }
 
 /**
+ * On-brand blank page — freeform (fully editable/rearrangeable), but seeded so
+ * it never starts as an off-brand white void: brand logo header, a brand title,
+ * and a faint two-column guide. Everything here is deletable.
+ */
+export function buildOnBrandBlankPage(): Page {
+  const scaffold: ColumnsBlock = {
+    id: uid("block"),
+    type: "columns",
+    columnCount: 2,
+    columns: [
+      [brandBody("Drag blocks here, or type to start.")],
+      [brandBody("Your brand fonts and colors are already applied.")],
+    ],
+  };
+  return {
+    id: uid("page"),
+    name: "New Page",
+    logoSrc: BRAND.logoSrc,
+    locked: false,
+    blocks: [brandHeading("Untitled Section"), scaffold],
+  };
+}
+
+/**
  * Spec for a lightweight locked page in the sample proposal: a heading, address,
  * and hero image, plus (when `dynamicKey` is set) a one-row table binding a live
  * listing field — this is what makes the Pages panel's "has dynamic data" bolt
