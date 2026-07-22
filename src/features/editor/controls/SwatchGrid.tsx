@@ -1,10 +1,12 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDoNotEnter } from "@fortawesome/pro-regular-svg-icons";
 import { SWATCHES } from "../tokens";
+import { BRAND_SWATCHES } from "../brand";
 
 /**
- * Color swatch grid with a leading "none" swatch, matching the Figma. The
- * selected color gets a primary outline.
+ * Color swatch grid. Leads with the brand palette (so on-brand choices are the
+ * default path), then a divider, then the general palette. A leading "none"
+ * swatch clears the color. The selected color gets a primary outline.
  */
 export function SwatchGrid({
   value,
@@ -13,26 +15,33 @@ export function SwatchGrid({
   value: string | null;
   onChange?: (color: string | null) => void;
 }) {
+  const swatch = (color: string) => (
+    <button
+      key={color}
+      type="button"
+      className={`bo-editor-swatch${value === color ? " is-selected" : ""}`}
+      style={{ background: color }}
+      aria-label={color}
+      onClick={() => onChange?.(color)}
+    />
+  );
   return (
-    <div className="d-flex flex-wrap" style={{ gap: 2 }}>
-      <button
-        type="button"
-        className={`bo-editor-swatch${value === null ? " is-selected" : ""}`}
-        aria-label="No color"
-        onClick={() => onChange?.(null)}
-      >
-        <FontAwesomeIcon icon={faDoNotEnter} style={{ fontSize: 12 }} />
-      </button>
-      {SWATCHES.map((color) => (
+    <div className="d-flex flex-column gap-2">
+      <div className="d-flex flex-wrap" style={{ gap: 2 }}>
         <button
-          key={color}
           type="button"
-          className={`bo-editor-swatch${value === color ? " is-selected" : ""}`}
-          style={{ background: color }}
-          aria-label={color}
-          onClick={() => onChange?.(color)}
-        />
-      ))}
+          className={`bo-editor-swatch${value === null ? " is-selected" : ""}`}
+          aria-label="No color"
+          onClick={() => onChange?.(null)}
+        >
+          <FontAwesomeIcon icon={faDoNotEnter} style={{ fontSize: 12 }} />
+        </button>
+        {BRAND_SWATCHES.map(swatch)}
+      </div>
+      <div style={{ height: 1, background: "#eceef2" }} />
+      <div className="d-flex flex-wrap" style={{ gap: 2 }}>
+        {SWATCHES.map(swatch)}
+      </div>
     </div>
   );
 }

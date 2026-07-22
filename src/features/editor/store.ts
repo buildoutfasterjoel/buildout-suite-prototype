@@ -9,7 +9,7 @@ import type {
   Selection,
 } from "./types";
 import { buildSampleDocument } from "./sampleDocument";
-import { buildBlankPage, buildPresetPage, type PresetKey } from "./presets";
+import { buildBlankPage, buildOnBrandBlankPage, buildTemplatePage } from "./templates";
 import { createBlock, createCell, type BlockVariant } from "./blocks/blockFactory";
 import {
   findBlock,
@@ -82,7 +82,7 @@ interface EditorState {
 
   // Page management.
   /** Adds at `atIndex` when given, otherwise appends to the end. */
-  addPage: (kind: "blank" | PresetKey, atIndex?: number) => void;
+  addPage: (kind: "blank" | "onBrandBlank" | string, atIndex?: number) => void;
   /** Reorder a page to sit at `toIndex` in the document's top-level page list. */
   movePage: (pageId: string, toIndex: number) => void;
   /** Remove a page from the document (no-op if it's the last remaining page). */
@@ -217,7 +217,11 @@ export const useEditorStore = create<EditorState>((set) => {
   addPage: (kind, atIndex) =>
     set((s) => {
       const page =
-        kind === "blank" ? buildBlankPage() : buildPresetPage(kind, s.activeListing);
+        kind === "blank"
+          ? buildBlankPage()
+          : kind === "onBrandBlank"
+            ? buildOnBrandBlankPage()
+            : buildTemplatePage(kind, s.activeListing);
       const index = atIndex ?? s.document.pages.length;
       const pages = [...s.document.pages];
       pages.splice(index, 0, page);

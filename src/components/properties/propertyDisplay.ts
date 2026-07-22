@@ -104,7 +104,7 @@ export function getRefId(id: string): number {
  * multifamily, hospitality, and development sites — so every property/deal
  * thumbnail reads as commercial real estate.
  */
-const CRE_PHOTO_IDS = [
+export const CRE_PHOTO_IDS = [
   "photo-1486406146926-c627a92ad1ab", // downtown office towers
   "photo-1582407947304-fd86f028f716", // glass high-rises
   "photo-1554435493-93422e8220c8", // office building exterior
@@ -121,8 +121,13 @@ const CRE_PHOTO_IDS = [
   "photo-1564501049412-61c2a3083791", // hospitality / hotel
 ];
 
+/** Build an Unsplash URL for a specific commercial-real-estate photo id. */
+export function crePhotoUrl(photoId: string, w = 480, h = 280): string {
+  return `https://images.unsplash.com/${photoId}?w=${w}&h=${h}&fit=crop&auto=format&q=75`;
+}
+
 /** Deterministic commercial-real-estate photo for a property/deal. */
 export function getPhotoUrl(id: string, w = 480, h = 280): string {
   const photo = CRE_PHOTO_IDS[hash(id) % CRE_PHOTO_IDS.length];
-  return `https://images.unsplash.com/${photo}?w=${w}&h=${h}&fit=crop&auto=format&q=75`;
+  return crePhotoUrl(photo, w, h);
 }

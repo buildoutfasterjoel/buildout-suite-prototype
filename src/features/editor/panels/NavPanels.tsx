@@ -9,11 +9,9 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  faFileLines,
   faPlus,
   faGripDotsVertical,
   faLock,
-  faTableLayout,
   faPencil,
   faTrashCan,
   faMagnifyingGlass,
@@ -25,7 +23,6 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { List } from "@buildoutinc/blueprint-react/ui/List";
-import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
@@ -33,8 +30,9 @@ import { useEditorStore } from "../store";
 import type { Block, ContentBlock, Page } from "../types";
 import { BLOCK_ICONS, blockLabel } from "../blocks/blockMeta";
 import type { BlockVariant } from "../blocks/blockFactory";
-import { PRESETS } from "../presets";
 import { pageHasDynamicContent } from "../tree";
+import { TemplateGallery } from "./TemplateGallery";
+import { CRE_PHOTO_IDS, crePhotoUrl } from "#/components/properties/propertyDisplay";
 
 function PanelHeading({ children }: { children: string }) {
   return <span className="bo-editor-section-title">{children}</span>;
@@ -210,8 +208,11 @@ export function PagesPanel() {
   const pages = useEditorStore((s) => s.document.pages);
   const activePageId = useEditorStore((s) => s.activePageId);
   const goToPage = useEditorStore((s) => s.goToPage);
-  const addPage = useEditorStore((s) => s.addPage);
   const [search, setSearch] = useState("");
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  // Where a gallery-added page lands: a number inserts at that position (the
+  // inline "+" gaps); undefined appends (the bottom "Add Page" button).
+  const [galleryIndex, setGalleryIndex] = useState<number | undefined>(undefined);
 
   const isFiltering = search.trim() !== "";
   const filtered = useMemo(() => filterPages(pages, search), [pages, search]);
@@ -225,7 +226,10 @@ export function PagesPanel() {
       ?.scrollIntoView({ block: "start", behavior: "smooth" });
   }
 
-  const addBlankPageAt = (index: number) => addPage("blank", index);
+  const openGalleryAt = (index?: number) => {
+    setGalleryIndex(index);
+    setGalleryOpen(true);
+  };
 
   return (
     <div className="d-flex flex-column gap-3 h-100">
@@ -261,7 +265,7 @@ export function PagesPanel() {
                 >
                   <PageRowContent page={page} index={realIndex + 1} active={active} />
                 </List.Item>
-                <PageRowGap index={realIndex + 1} onAdd={addBlankPageAt} />
+                <PageRowGap index={realIndex + 1} onAdd={openGalleryAt} />
               </Fragment>
             );
           })
@@ -275,42 +279,18 @@ export function PagesPanel() {
                   active={activePageId === page.id}
                   onSelect={() => handleSelectPage(page.id)}
                 />
-                <PageRowGap index={i + 1} onAdd={addBlankPageAt} />
+                <PageRowGap index={i + 1} onAdd={openGalleryAt} />
               </Fragment>
             ))}
           </SortableContext>
         )}
       </List>
 
-      <DropdownMenu>
-        <DropdownMenu.Trigger
-          render={
-            <Button variant="secondary" className="w-100">
-              <FontAwesomeIcon icon={faPlus} />
-              Add Page
-            </Button>
-          }
-        />
-        <DropdownMenu.Content align="start" sideOffset={6}>
-          <DropdownMenu.Item onClick={() => addPage("blank")}>
-            <FontAwesomeIcon icon={faFileLines} />
-            Blank page
-          </DropdownMenu.Item>
-          <DropdownMenu.Separator />
-          <DropdownMenu.Group>
-            <DropdownMenu.GroupLabel>Presets</DropdownMenu.GroupLabel>
-            {PRESETS.map((preset) => (
-              <DropdownMenu.Item
-                key={preset.key}
-                onClick={() => addPage(preset.key)}
-              >
-                <FontAwesomeIcon icon={faTableLayout} />
-                {preset.label}
-              </DropdownMenu.Item>
-            ))}
-          </DropdownMenu.Group>
-        </DropdownMenu.Content>
-      </DropdownMenu>
+      <Button variant="secondary" className="w-100" onClick={() => openGalleryAt()}>
+        <FontAwesomeIcon icon={faPlus} />
+        Add Page
+      </Button>
+      <TemplateGallery open={galleryOpen} onOpenChange={setGalleryOpen} atIndex={galleryIndex} />
     </div>
   );
 }
@@ -763,10 +743,10 @@ export function ImagesPanel() {
     <div className="d-flex flex-column gap-3">
       <PanelHeading>Images</PanelHeading>
       <div className="d-flex flex-wrap" style={{ gap: 8 }}>
-        {Array.from({ length: 9 }).map((_, i) => (
+        {CRE_PHOTO_IDS.map((photoId) => (
           <img
-            key={i}
-            src={`https://picsum.photos/seed/editor-${i}/120/120`}
+            key={photoId}
+            src={crePhotoUrl(photoId, 120, 120)}
             alt=""
             style={{
               width: 78,
