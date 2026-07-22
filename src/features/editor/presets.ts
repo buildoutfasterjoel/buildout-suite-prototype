@@ -333,13 +333,6 @@ export function buildTemplatePage(key: string, property?: Property): Page {
   return def.build(property);
 }
 
-// --- Back-compat shims (existing callers) ---
-export type PresetKey = string;
-export const PRESETS: { key: string; label: string }[] = TEMPLATES.map((t) => ({ key: t.key, label: t.name }));
-export function buildPresetPage(key: string, property?: Property): Page {
-  return buildTemplatePage(key, property);
-}
-
 /** An empty, fully freeform page the user builds up from the Blocks palette. */
 export function buildBlankPage(): Page {
   return {

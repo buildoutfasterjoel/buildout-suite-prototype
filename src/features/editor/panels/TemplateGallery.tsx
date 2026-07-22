@@ -5,6 +5,7 @@ import { faFileLines, faSwatchbook } from "@fortawesome/pro-regular-svg-icons";
 import { useEditorStore } from "../store";
 import { TEMPLATES, buildTemplatePage, type TemplateCategory } from "../presets";
 import { PagePreview } from "../PagePreview";
+import { BRAND } from "../brand";
 
 const CATEGORIES: (TemplateCategory | "Blank")[] = [
   "Cover", "Financials", "Property", "Location", "Comparables", "Team", "Blank",
@@ -89,7 +90,7 @@ export function TemplateGallery({
                   >
                     <PagePreview page={buildTemplatePage(t.key, activeListing)} width={184} />
                     <span className="fw-semibold" style={{ fontSize: 14 }}>{t.name}</span>
-                    <span className="fs-small" style={{ color: "#506079" }}>{t.description}</span>
+                    <span className="fs-small" style={{ color: BRAND.palette.neutral }}>{t.description}</span>
                   </button>
                 ))
               )}
@@ -111,9 +112,9 @@ function BlankCard({
       style={{ width: 200, height: 160, cursor: "pointer" }}
       onClick={onClick}
     >
-      <FontAwesomeIcon icon={icon} style={{ fontSize: 28, color: "#7422ce" }} />
+      <FontAwesomeIcon icon={icon} style={{ fontSize: 28, color: BRAND.palette.primary }} />
       <span className="fw-semibold" style={{ fontSize: 14 }}>{title}</span>
-      <span className="fs-small text-center" style={{ color: "#506079" }}>{desc}</span>
+      <span className="fs-small text-center" style={{ color: BRAND.palette.neutral }}>{desc}</span>
     </button>
   );
 }
