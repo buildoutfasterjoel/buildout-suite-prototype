@@ -99,12 +99,10 @@ export function accessTierLabel(tier: AccessTier): string {
 }
 
 /**
- * Access a contact starts with before it's ever been shared explicitly — one
- * existing collaborator so the access list isn't empty. Reused by reference (a
- * single module-level constant, never mutated in place) so the store selector
- * stays referentially stable for untouched contacts and avoids spurious
- * re-renders.
+ * Access a contact has before it's shared explicitly: none — owner-only. Most
+ * contacts start private; the seed grants a realistic subset to teammates (see
+ * `seedContactShares`). Reused by reference (a single, never-mutated module-level
+ * constant) so the store selector stays referentially stable for unshared
+ * contacts and avoids spurious re-renders.
  */
-export const DEFAULT_CONTACT_SHARES: ContactShare[] = [
-  { member: TEAMMATES[0], tier: "contributor" },
-];
+export const DEFAULT_CONTACT_SHARES: ContactShare[] = [];

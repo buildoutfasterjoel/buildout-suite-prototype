@@ -33,6 +33,7 @@ import type {
 import type { CallList } from './contactLists'
 import type { SerializedContactFilters } from '#/components/contacts/contactFilterModel'
 import { reconcileContactDealFields } from './contactStage'
+import { TEAMMATES, type AccessTier, type ContactShare } from './teammates'
 
 const SEED = 20240101
 const PROPERTY_COUNT = 50
@@ -1860,4 +1861,33 @@ export function generateDataset() {
   })
 
   return { properties, listings, comps, contacts: finalContacts }
+}
+
+/**
+ * Seed a realistic subset of contacts with teammate access. Most contacts stay
+ * private (owner-only); roughly one in four is shared — usually with a single
+ * collaborator, occasionally two — drawing varied teammates and tiers. Keyed off
+ * the contact's index so the assignment is deterministic and stable across runs.
+ */
+export function seedContactShares(
+  contacts: Contact[],
+): Map<string, ContactShare[]> {
+  const tiers: AccessTier[] = ['view', 'contributor', 'outreach']
+  const map = new Map<string, ContactShare[]>()
+  contacts.forEach((c, i) => {
+    // ~1 in 4 contacts is shared; the rest stay owner-only.
+    if (i % 4 !== 1) return
+    const shares: ContactShare[] = [
+      { member: TEAMMATES[i % TEAMMATES.length], tier: tiers[i % tiers.length] },
+    ]
+    // A minority also carry a second collaborator.
+    if (i % 12 === 1) {
+      shares.push({
+        member: TEAMMATES[(i + 3) % TEAMMATES.length],
+        tier: tiers[(i + 2) % tiers.length],
+      })
+    }
+    map.set(c.id, shares)
+  })
+  return map
 }
