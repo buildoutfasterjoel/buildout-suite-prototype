@@ -1,7 +1,9 @@
 import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { BuildingSection } from "#/components/listings/edit/sections/BuildingSection";
+import { CondosSection } from "#/components/listings/edit/sections/CondosSection";
 import { LandSection } from "#/components/listings/edit/sections/LandSection";
 import { LocationSection } from "#/components/listings/edit/sections/LocationSection";
+import { LotsSection } from "#/components/listings/edit/sections/LotsSection";
 import { PropertySection } from "#/components/listings/edit/sections/PropertySection";
 import { SaleSection } from "#/components/listings/edit/sections/SaleSection";
 import { TransitSection } from "#/components/listings/edit/sections/TransitSection";
@@ -78,6 +80,10 @@ export function ListingFormEditor({
 					<SaleSection marketing={marketing} patchMarketing={patchMarketing} />
 				</>
 			)}
+			<Separator />
+			<LotsSection property={property} patchProperty={patchProperty} />
+			<Separator />
+			<CondosSection property={property} patchProperty={patchProperty} />
 		</div>
 	);
 }
