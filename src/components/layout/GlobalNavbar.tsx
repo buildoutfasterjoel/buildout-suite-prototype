@@ -1,7 +1,6 @@
 import { useState, type MouseEvent } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { Navbar } from "@buildoutinc/blueprint-react/ui/Navbar";
-import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -14,9 +13,10 @@ import {
   faBell,
   faPlus,
   faArrowsRotate,
-  faSparkles,
   faMicrophone,
 } from "@fortawesome/pro-regular-svg-icons";
+// The AI assistant launcher uses the solid sparkle (per Figma).
+import { faSparkles } from "@fortawesome/pro-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { formatForDisplay } from "@tanstack/hotkeys";
 import BuildoutIcon from "#/features/assets/buildout-icon";
@@ -248,13 +248,7 @@ export function GlobalNavbar() {
                   >
                     <Navbar.ItemLinkIcon className="position-relative">
                       <FontAwesomeIcon icon={faSquareCheck} />
-                      <Badge
-                        variant="primary"
-                        className="position-absolute top-0 start-100 translate-middle"
-                        style={{ transform: "translate(calc(-50% + 3px), -50%)" }}
-                      >
-                        4
-                      </Badge>
+                      <span className="navbar-dot" aria-hidden />
                     </Navbar.ItemLinkIcon>
                   </Navbar.ItemLink>
                 }
@@ -274,13 +268,7 @@ export function GlobalNavbar() {
                   >
                     <Navbar.ItemLinkIcon className="position-relative">
                       <FontAwesomeIcon icon={faBell} />
-                      <Badge
-                        variant="primary"
-                        className="position-absolute top-0 start-100 translate-middle"
-                        style={{ transform: "translate(calc(-50% + 3px), -50%)" }}
-                      >
-                        3
-                      </Badge>
+                      <span className="navbar-dot" aria-hidden />
                     </Navbar.ItemLinkIcon>
                   </Navbar.ItemLink>
                 }
