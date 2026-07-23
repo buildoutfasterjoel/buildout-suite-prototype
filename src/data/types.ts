@@ -51,7 +51,7 @@ export type PropertySubtype =
   | 'Industrial Outdoor Storage'
   | 'Mixed-Use'
 
-export type BuildingClass = 'A' | 'B' | 'C'
+export type BuildingClass = 'A+' | 'A' | 'B' | 'C'
 export type CompType = 'sale' | 'lease'
 export type LeaseType = 'NNN' | 'Gross' | 'MG'
 export type CompSource = 'CoStar' | 'LoopNet' | 'Public Records' | 'MLS' | 'Internal'

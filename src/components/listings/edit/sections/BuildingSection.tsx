@@ -13,7 +13,7 @@ import {
 	buildingClassOptions,
 	propertyTypeEffects,
 } from "#/data/listingFormLogic";
-import type { BuildingClass, Property } from "#/data/types";
+import type { Property } from "#/data/types";
 
 const TENANCY_OPTIONS: ("Single" | "Multiple")[] = ["Single", "Multiple"];
 
@@ -110,9 +110,7 @@ export function BuildingSection({
 						label="Building Class"
 						value={property.buildingClass}
 						options={buildingClassOptions(property.country)}
-						onChange={(v) =>
-							patchProperty({ buildingClass: v as BuildingClass })
-						}
+						onChange={(v) => patchProperty({ buildingClass: v })}
 					/>
 				</Col>
 				<Col>

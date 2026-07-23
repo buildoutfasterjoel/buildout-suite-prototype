@@ -1,5 +1,5 @@
 import type {
-  DealType, MarketingChannel, PropertyStatus, PropertySubtype, PropertyType,
+  BuildingClass, DealType, MarketingChannel, PropertyStatus, PropertySubtype, PropertyType,
 } from './types'
 
 const ALL_SALE_CHANNELS: MarketingChannel[] = [
@@ -47,8 +47,8 @@ export function propertyTypeEffects(type: PropertyType): {
 }
 
 /** Building-class options; A+ only for eligible countries (PRD §6/§9). */
-export function buildingClassOptions(country: string | undefined): string[] {
-  const base = ['A', 'B', 'C']
+export function buildingClassOptions(country: string | undefined): BuildingClass[] {
+  const base: BuildingClass[] = ['A', 'B', 'C']
   // unset country → treat as domestic (US): A+ eligible
   return !country || country === 'United States' ? ['A+', ...base] : base
 }
