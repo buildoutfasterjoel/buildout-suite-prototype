@@ -1,9 +1,11 @@
 import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { BuildingSection } from "#/components/listings/edit/sections/BuildingSection";
+import { LandSection } from "#/components/listings/edit/sections/LandSection";
 import { LocationSection } from "#/components/listings/edit/sections/LocationSection";
 import { PropertySection } from "#/components/listings/edit/sections/PropertySection";
 import { TransitSection } from "#/components/listings/edit/sections/TransitSection";
 import { UnitsSection } from "#/components/listings/edit/sections/UnitsSection";
+import { propertyTypeEffects } from "#/data/listingFormLogic";
 import type {
 	DealMarketing,
 	DealPitchFinancials,
@@ -37,6 +39,8 @@ export function ListingFormEditor({
 	financials: DealPitchFinancials;
 	patchFinancials: (p: Partial<DealPitchFinancials>) => void;
 }) {
+	const effects = propertyTypeEffects(property.propertyType);
+
 	return (
 		<div className="d-flex flex-column gap-6">
 			<LocationSection
@@ -60,6 +64,12 @@ export function ListingFormEditor({
 				financials={financials}
 				patchFinancials={patchFinancials}
 			/>
+			{effects.landSections && (
+				<>
+					<Separator />
+					<LandSection property={property} patchProperty={patchProperty} />
+				</>
+			)}
 		</div>
 	);
 }
