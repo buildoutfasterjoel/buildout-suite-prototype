@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { Accordion } from "@buildoutinc/blueprint-react/ui/Accordion";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { ButtonGroup } from "@buildoutinc/blueprint-react/ui/ButtonGroup";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
@@ -11,8 +13,6 @@ import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCaretDown,
-  faChevronDown,
-  faChevronRight,
   faFilter,
   faLayerGroup,
   faList,
@@ -29,12 +29,12 @@ import { todayISO } from "#/components/contacts/contactDisplay";
 import { TaskListRow } from "#/components/tasks/TaskListRow";
 import { TaskFilters } from "#/components/tasks/TaskFilters";
 import { TaskFilterBar } from "#/components/tasks/TaskFilterBar";
+import { useTaskUiPrefs } from "#/components/tasks/useTaskUiPrefs";
 import {
   countActiveTaskFilters,
   dueBucket,
   emptyTaskFilters,
   matchesTaskFilters,
-  type TaskFilterState,
 } from "#/components/tasks/taskFilterModel";
 
 export const Route = createFileRoute("/_shell/tasks/")({
@@ -73,10 +73,14 @@ function TasksPage() {
   const all = useMemo(() => listAllTasks(), [tasksMap, listingsMap]);
   const today = todayISO();
 
-  const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState<TaskFilterState>(emptyTaskFilters());
+  // Search, filters, and view persist across navigation (kept in a store).
+  const search = useTaskUiPrefs((s) => s.search);
+  const setSearch = useTaskUiPrefs((s) => s.setSearch);
+  const filters = useTaskUiPrefs((s) => s.filters);
+  const setFilters = useTaskUiPrefs((s) => s.setFilters);
+  const view = useTaskUiPrefs((s) => s.view);
+  const setView = useTaskUiPrefs((s) => s.setView);
   const [showFilters, setShowFilters] = useState(false);
-  const [view, setView] = useState<"grouped" | "list">("grouped");
   const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
@@ -160,11 +164,22 @@ function TasksPage() {
   const current = Math.min(page, pageCount);
   const paged = sorted.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
 
+  // The list view is a fixed-height column so its rows scroll internally and
+  // pagination stays pinned. The grouped view just lets the page scroll, so its
+  // accordion sections size to their content instead of bunching up.
+  const isList = view === "list";
+
   return (
-    <div className="h-100 overflow-auto p-4">
-      <div className="mx-auto w-100" style={{ maxWidth: "56rem" }}>
-        <Card>
-          <Card.Body className="d-flex flex-column gap-4">
+    <div className={isList ? "h-100 overflow-hidden p-4 d-flex" : "h-100 overflow-auto p-4"}>
+      <Card
+        className={`mx-auto w-100${
+          isList ? " flex-grow-1 d-flex flex-column overflow-hidden" : ""
+        }`}
+        style={{ maxWidth: "56rem" }}
+      >
+        <Card.Body
+          className={`d-flex flex-column gap-4${isList ? " overflow-hidden" : ""}`}
+        >
             {/* Header */}
             <div className="d-flex align-items-start gap-3">
               <div className="flex-grow-1">
@@ -196,11 +211,7 @@ function TasksPage() {
                     }
                   />
                   <DropdownMenu.Content align="end">
-                    <DropdownMenu.Item
-                      onClick={() => useAddTask.getState().openFor()}
-                    >
-                      New Task
-                    </DropdownMenu.Item>
+                    <DropdownMenu.Item>Import Tasks</DropdownMenu.Item>
                   </DropdownMenu.Content>
                 </DropdownMenu>
               </div>
@@ -237,13 +248,14 @@ function TasksPage() {
                 </span>
 
                 {/* View toggle */}
-                <div className="ms-auto d-flex align-items-center gap-1">
+                <ButtonGroup aria-label="View switcher" className="ms-auto">
                   <Tooltip>
                     <Tooltip.Trigger
                       render={
                         <Button
-                          variant={view === "grouped" ? "secondary" : "outline"}
+                          variant="outline"
                           size="icon"
+                          className={view === "grouped" ? "active" : ""}
                           aria-label="Grouped view"
                           aria-pressed={view === "grouped"}
                           onClick={() => setView("grouped")}
@@ -258,8 +270,9 @@ function TasksPage() {
                     <Tooltip.Trigger
                       render={
                         <Button
-                          variant={view === "list" ? "secondary" : "outline"}
+                          variant="outline"
                           size="icon"
+                          className={view === "list" ? "active" : ""}
                           aria-label="List view"
                           aria-pressed={view === "list"}
                           onClick={() => setView("list")}
@@ -270,7 +283,7 @@ function TasksPage() {
                     />
                     <Tooltip.Content>List view</Tooltip.Content>
                   </Tooltip>
-                </div>
+                </ButtonGroup>
               </div>
 
               <TaskFilterBar
@@ -299,6 +312,7 @@ function TasksPage() {
                 </Empty.Content>
               </Empty>
             ) : view === "grouped" ? (
+              // The page scrolls in this view, so sections size to content.
               <div className="d-flex flex-column gap-4">
                 {sections.map((s) => (
                   <TaskGroup
@@ -312,8 +326,9 @@ function TasksPage() {
                 ))}
               </div>
             ) : (
-              <div className="d-flex flex-column gap-3">
-                <div className="border rounded-3 overflow-hidden">
+              // The rows scroll inside a bounded box so pagination stays visible.
+              <div className="d-flex flex-column gap-3 flex-grow-1 overflow-hidden">
+                <div className="border rounded-3 overflow-auto flex-grow-1">
                   <div className="px-3">
                     {paged.map((t) => (
                       <TaskListRow
@@ -377,12 +392,15 @@ function TasksPage() {
             )}
           </Card.Body>
         </Card>
-      </div>
     </div>
   );
 }
 
-/** A collapsible section for the grouped view. */
+/**
+ * A collapsible section for the grouped view. Uses Blueprint's Accordion so the
+ * chevron matches the Contact Details accordions; the title matches their
+ * 20px / 26px sizing.
+ */
 function TaskGroup({
   title,
   tone,
@@ -396,41 +414,44 @@ function TaskGroup({
   onToggle: (t: TaskView) => void;
   onOpen: (t: TaskView) => void;
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState<string[]>(["open"]);
   return (
-    <div className="border rounded-3 overflow-hidden">
-      <button
-        type="button"
-        className={`tasks-group__header w-100 d-flex align-items-center gap-2 px-3 py-3${
-          open ? " border-bottom" : ""
-        }`}
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-      >
-        <FontAwesomeIcon
-          icon={open ? faChevronDown : faChevronRight}
-          className="text-muted"
-        />
-        <span className="fs-5 fw-semibold">{title}</span>
-        <span
-          className="tasks-group__count"
-          data-tone={tone === "overdue" ? "overdue" : "default"}
-        >
-          {tasks.length}
-        </span>
-      </button>
-      {open && (
-        <div className="px-3">
-          {tasks.map((t) => (
-            <TaskListRow
-              key={t.id}
-              task={t}
-              onToggle={() => onToggle(t)}
-              onOpen={() => onOpen(t)}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+    <Accordion
+      multiple
+      value={open}
+      onValueChange={setOpen}
+      className="tasks-group border rounded-3 overflow-hidden"
+    >
+      <Accordion.Item value="open">
+        <Accordion.Trigger>
+          <span className="d-flex align-items-center gap-2">
+            <span
+              className="fw-semibold"
+              style={{ fontSize: 20, lineHeight: "26px" }}
+            >
+              {title}
+            </span>
+            <span
+              className="tasks-group__count"
+              data-tone={tone === "overdue" ? "overdue" : "default"}
+            >
+              {tasks.length}
+            </span>
+          </span>
+        </Accordion.Trigger>
+        <Accordion.Content>
+          <div className="px-3">
+            {tasks.map((t) => (
+              <TaskListRow
+                key={t.id}
+                task={t}
+                onToggle={() => onToggle(t)}
+                onOpen={() => onOpen(t)}
+              />
+            ))}
+          </div>
+        </Accordion.Content>
+      </Accordion.Item>
+    </Accordion>
   );
 }
