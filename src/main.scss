@@ -726,9 +726,13 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    width: 20px;
-    color: var(--color-purple-heart-200, #e7d5ff);
-    font-size: 14px;
+    width: 22px;
+    // The custom gradient SVG is sized via font-size (1em).
+    font-size: 18px;
+
+    svg {
+      display: block;
+    }
   }
 
   &__label {
@@ -855,8 +859,12 @@
   flex-shrink: 0;
   width: 28px;
   height: 28px;
-  color: var(--color-purple-heart-600, #8833ea);
-  font-size: 16px;
+  // The custom gradient SVG is sized via font-size (1em).
+  font-size: 18px;
+
+  svg {
+    display: block;
+  }
 }
 
 // The real input, stripped of its own chrome — the bar provides the frame.
@@ -2444,4 +2452,73 @@
   left: 50%;
   transform: translateX(-50%);
   align-items: center;
+}
+
+// ── Global top nav: item states + restyled footer controls ───────────────────
+.global-navbar {
+  // Main nav items (Properties, Contacts, Deals, Reports): never filled. Muted
+  // when inactive, white on hover, white + bold with a purple icon when active.
+  .navbar-collapse .nav-link {
+    background: transparent;
+    color: var(--color-storm-grey-300, #afb9ca);
+    font-weight: 400;
+
+    .nav-link-icon {
+      color: var(--color-storm-grey-300, #afb9ca);
+    }
+
+    &:hover {
+      background: transparent;
+      color: #fff;
+
+      .nav-link-icon {
+        color: #fff;
+      }
+    }
+
+    &.active,
+    &.active:hover {
+      background: transparent;
+      color: #fff;
+      font-weight: 700;
+
+      .nav-link-icon {
+        color: var(--color-purple-heart-500, #9f55f7);
+      }
+    }
+  }
+
+  // AI assistant launcher: a filled purple-gradient circle (per Figma).
+  .navbar-ai-btn.nav-link {
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 999px;
+    border: 1px solid var(--color-purple-heart-600, #8833ea);
+    background: linear-gradient(
+      222.88deg,
+      var(--color-purple-heart-500, #9f55f7) 1.85%,
+      var(--color-purple-heart-950, #360764) 98.15%
+    );
+    box-shadow:
+      0 12px 20px -8px rgba(54, 7, 100, 0.1),
+      0 8px 10px -6px rgba(33, 83, 212, 0.1);
+
+    .nav-link-icon {
+      color: var(--color-purple-heart-100, #f2e8ff);
+    }
+
+    &:hover,
+    &.active {
+      filter: brightness(1.08);
+    }
+  }
+
+  // Group triggers (New, Account) auto-append a dropdown caret; hide it.
+  .navbar-new-trigger .nav-link-icon:last-child,
+  .navbar-user-trigger .nav-link-icon:last-child {
+    display: none;
+  }
 }

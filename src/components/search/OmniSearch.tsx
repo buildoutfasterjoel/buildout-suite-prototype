@@ -21,6 +21,7 @@ import type { Property, Listing, Contact } from "#/data/types";
 import { useAssistant } from "#/ai/useAssistant";
 import { useCreateDeal } from "#/data/useCreateDeal";
 import { useOmniSearch } from "#/components/search/useOmniSearch";
+import { OmniSparkleIcon } from "#/components/search/OmniSparkleIcon";
 
 /** Max rows shown per entity group in the palette. */
 const GROUP_CAP = 5;
@@ -286,7 +287,7 @@ export function OmniSearch() {
           <div className="omni-menu__bar-wrap">
             <div className="omni-menu__bar">
               <span className="omni-menu__bar-icon">
-                <FontAwesomeIcon icon={faSparkles} />
+                <OmniSparkleIcon />
               </span>
               <Input
                 className="omni-menu__input"

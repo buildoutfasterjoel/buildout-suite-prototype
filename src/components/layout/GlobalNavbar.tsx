@@ -12,7 +12,7 @@ import {
   faHandshake,
   faSignal,
   faBell,
-  faCirclePlus,
+  faPlus,
   faArrowsRotate,
   faSparkles,
   faMicrophone,
@@ -24,6 +24,7 @@ import BuildoutWordmark from "#/features/assets/buildout-wordmark";
 import { useDataStore } from "#/data/dataStore";
 import { useAssistant } from "#/ai/useAssistant";
 import { useOmniSearch } from "#/components/search/useOmniSearch";
+import { OmniSparkleIcon } from "#/components/search/OmniSparkleIcon";
 import { useCreateDeal } from "#/data/useCreateDeal";
 import { useNewContact } from "#/data/useNewContact";
 import { useAddTask } from "#/data/useAddTask";
@@ -36,13 +37,12 @@ type Role = "principal" | "broker" | "marketing";
 type NavContext = {
   label: string;
   href: string;
-  icon?: IconDefinition;
-  isLive?: boolean;
+  icon: IconDefinition;
 };
 
+// NOW is no longer a nav item — the logo links to /suite. Tasks moved to a
+// footer icon button.
 const navContexts: NavContext[] = [
-  { label: "NOW", href: "/suite", isLive: true },
-  { label: "Tasks", href: "/tasks", icon: faSquareCheck },
   { label: "Properties", href: "/properties", icon: faBuilding },
   { label: "Contacts", href: "/backoffice/contacts", icon: faUsers },
   { label: "Deals", href: "/listings", icon: faHandshake },
@@ -115,7 +115,7 @@ export function GlobalNavbar() {
   }
 
   return (
-    <Navbar expand="lg">
+    <Navbar expand="lg" className="global-navbar">
       <Navbar.Brand
         href="/suite"
         onClick={(e) => handleNavClick(e, "/suite")}
@@ -142,15 +142,7 @@ export function GlobalNavbar() {
                 }
               >
                 <Navbar.ItemLinkIcon>
-                  {ctx.isLive ? (
-                    <span
-                      className="rounded-circle bg-success d-inline-block"
-                      style={{ width: 8, height: 8 }}
-                      aria-hidden
-                    />
-                  ) : (
-                    ctx.icon && <FontAwesomeIcon icon={ctx.icon} />
-                  )}
+                  <FontAwesomeIcon icon={ctx.icon} />
                 </Navbar.ItemLinkIcon>
                 <Navbar.ItemLinkLabel>{ctx.label}</Navbar.ItemLinkLabel>
               </Navbar.ItemLink>
@@ -176,7 +168,7 @@ export function GlobalNavbar() {
               className="omni-bar flex-shrink-0"
             >
               <span className="omni-bar__icon">
-                <FontAwesomeIcon icon={faSparkles} />
+                <OmniSparkleIcon variant="navbar" />
               </span>
               <span className="omni-bar__label">Search or ask AI</span>
               <span className="omni-bar__end">
@@ -205,9 +197,12 @@ export function GlobalNavbar() {
             <Tooltip>
               <Tooltip.Trigger
                 render={
-                  <Navbar.GroupTrigger aria-label="New">
+                  <Navbar.GroupTrigger
+                    className="navbar-new-trigger"
+                    aria-label="New"
+                  >
                     <Navbar.ItemLinkIcon>
-                      <FontAwesomeIcon icon={faCirclePlus} />
+                      <FontAwesomeIcon icon={faPlus} />
                     </Navbar.ItemLinkIcon>
                   </Navbar.GroupTrigger>
                 }
@@ -237,27 +232,34 @@ export function GlobalNavbar() {
             </Navbar.GroupMenu>
           </Navbar.Group>
 
-          {/* AI Assistant launcher */}
+          {/* Tasks — moved out of the main nav into a footer icon button. */}
           <Navbar.Item>
             <Tooltip>
               <Tooltip.Trigger
                 render={
                   <Navbar.ItemLink
-                    aria-label="Assistant"
-                    isActive={assistantOpen}
-                    render={<a href="#" />}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      toggleAssistant();
-                    }}
+                    aria-label="Tasks"
+                    render={
+                      <a
+                        href="/tasks"
+                        onClick={(e) => handleNavClick(e, "/tasks")}
+                      />
+                    }
                   >
-                    <Navbar.ItemLinkIcon>
-                      <FontAwesomeIcon icon={faSparkles} />
+                    <Navbar.ItemLinkIcon className="position-relative">
+                      <FontAwesomeIcon icon={faSquareCheck} />
+                      <Badge
+                        variant="primary"
+                        className="position-absolute top-0 start-100 translate-middle"
+                        style={{ transform: "translate(calc(-50% + 3px), -50%)" }}
+                      >
+                        4
+                      </Badge>
                     </Navbar.ItemLinkIcon>
                   </Navbar.ItemLink>
                 }
               />
-              <Tooltip.Content>Assistant</Tooltip.Content>
+              <Tooltip.Content>Tasks</Tooltip.Content>
             </Tooltip>
           </Navbar.Item>
 
@@ -275,6 +277,7 @@ export function GlobalNavbar() {
                       <Badge
                         variant="primary"
                         className="position-absolute top-0 start-100 translate-middle"
+                        style={{ transform: "translate(calc(-50% + 3px), -50%)" }}
                       >
                         3
                       </Badge>
@@ -285,22 +288,48 @@ export function GlobalNavbar() {
               <Tooltip.Content>Notifications</Tooltip.Content>
             </Tooltip>
           </Navbar.Item>
+
+          {/* AI Assistant launcher — a filled purple-gradient circle. */}
+          <Navbar.Item>
+            <Tooltip>
+              <Tooltip.Trigger
+                render={
+                  <Navbar.ItemLink
+                    aria-label="Assistant"
+                    className="navbar-ai-btn"
+                    isActive={assistantOpen}
+                    render={<a href="#" />}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      toggleAssistant();
+                    }}
+                  >
+                    <Navbar.ItemLinkIcon>
+                      <FontAwesomeIcon icon={faSparkles} />
+                    </Navbar.ItemLinkIcon>
+                  </Navbar.ItemLink>
+                }
+              />
+              <Tooltip.Content>Assistant</Tooltip.Content>
+            </Tooltip>
+          </Navbar.Item>
         </Navbar.Nav>
         {/* User profile */}
-        <Navbar.Nav>
+        <Navbar.Nav className="ms-2">
           <Navbar.Group>
-            <Navbar.GroupTrigger>
+            <Navbar.GroupTrigger
+              className="navbar-user-trigger"
+              aria-label="Account"
+            >
               <Navbar.ItemLinkIcon>
-                <Avatar size="sm">
+                <Avatar style={{ width: 28, height: 28 }}>
+                  <Avatar.Image
+                    src="https://randomuser.me/api/portraits/men/32.jpg"
+                    alt="Ethan Thompson"
+                  />
                   <Avatar.Fallback>E</Avatar.Fallback>
                 </Avatar>
               </Navbar.ItemLinkIcon>
-              <Navbar.ItemLinkLabel>
-                <span className="d-inline-flex flex-column">
-                  <span className="fw-semibold">Ethan Thompson</span>
-                  <span className="fs-xs">{ROLE_LABELS[role]}</span>
-                </span>
-              </Navbar.ItemLinkLabel>
             </Navbar.GroupTrigger>
             <Navbar.GroupMenu>
               {(Object.keys(ROLE_LABELS) as Role[]).map((r) => (
