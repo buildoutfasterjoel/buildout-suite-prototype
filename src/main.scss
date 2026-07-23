@@ -2618,17 +2618,50 @@
 }
 
 // ── Tasks page (grouped view) ───────────────────────────────────────────────
-// Collapsible section header: chevron + title + count badge. The header button
-// resets native styling and matches the card surface.
-.tasks-group__header {
-  background: transparent;
-  border: 0;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
+// Each section is a bordered rounded card wrapping a Blueprint Accordion, so
+// the collapse chevron matches the Contact Details accordions (default chevron
+// on the right, dimmed). The outer .border/.rounded-3 owns the card frame, so
+// the accordion item's own border is zeroed.
+.tasks-group {
+  .accordion-item {
+    border: 0;
+    border-radius: 0;
+    margin-top: 0;
+    background: transparent;
+  }
 
-  &:hover {
-    background: var(--color-storm-grey-50, #f6f7f9);
+  .accordion-button,
+  .accordion-button:not(.collapsed) {
+    background: var(--bp-card-bg, #fff);
+    box-shadow: none;
+    border: 0 solid var(--color-storm-grey-100, #eceef2);
+    color: inherit;
+    padding: 12px 16px;
+  }
+  // Bottom border only while open, so the header reads as separated from rows.
+  .accordion-button:not(.collapsed) {
+    border-bottom-width: 1px;
+  }
+  // Chevron on the LEFT, ahead of the title, dimmed. Collapsed points RIGHT,
+  // open points DOWN — re-aiming Bootstrap's animated rotation (matches the
+  // user-facing "New" contact accordions, `--legacy` in code).
+  .accordion-button::after {
+    order: -1;
+    margin-left: 0;
+    margin-right: 8px;
+    opacity: 0.55;
+    transform: rotate(-90deg);
+  }
+  .accordion-button:not(.collapsed)::after {
+    transform: rotate(0deg);
+  }
+
+  // Rows provide their own inset (via .px-3), so zero the panel padding.
+  .accordion-body {
+    padding: 0;
+  }
+  .accordion-content {
+    padding: 0;
   }
 }
 
