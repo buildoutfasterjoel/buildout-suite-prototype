@@ -34,10 +34,8 @@ import { Route as ShellListingsListingIdIndexRouteImport } from './routes/_shell
 import { Route as ShellBackofficeContactsIndexRouteImport } from './routes/_shell/backoffice/contacts/index'
 import { Route as ShellListingsListingIdWebsiteRouteImport } from './routes/_shell/listings/$listingId/website'
 import { Route as ShellListingsListingIdUnderwritingRouteImport } from './routes/_shell/listings/$listingId/underwriting'
-import { Route as ShellListingsListingIdTransactionRouteImport } from './routes/_shell/listings/$listingId/transaction'
 import { Route as ShellListingsListingIdSpacesRouteImport } from './routes/_shell/listings/$listingId/spaces'
 import { Route as ShellListingsListingIdPlansRouteImport } from './routes/_shell/listings/$listingId/plans'
-import { Route as ShellListingsListingIdPlannerRouteImport } from './routes/_shell/listings/$listingId/planner'
 import { Route as ShellListingsListingIdOverviewRouteImport } from './routes/_shell/listings/$listingId/overview'
 import { Route as ShellListingsListingIdNotesRouteImport } from './routes/_shell/listings/$listingId/notes'
 import { Route as ShellListingsListingIdMediaRouteImport } from './routes/_shell/listings/$listingId/media'
@@ -51,7 +49,6 @@ import { Route as ShellListingsListingIdEmailRouteImport } from './routes/_shell
 import { Route as ShellListingsListingIdEditRouteImport } from './routes/_shell/listings/$listingId/edit'
 import { Route as ShellListingsListingIdDocumentsRouteImport } from './routes/_shell/listings/$listingId/documents'
 import { Route as ShellListingsListingIdDemographicsRouteImport } from './routes/_shell/listings/$listingId/demographics'
-import { Route as ShellListingsListingIdContactsRouteImport } from './routes/_shell/listings/$listingId/contacts'
 import { Route as ShellListingsListingIdClientReportRouteImport } from './routes/_shell/listings/$listingId/client-report'
 import { Route as ShellListingsListingIdActivitiesRouteImport } from './routes/_shell/listings/$listingId/activities'
 import { Route as ShellBackofficeContactsContactIdRouteImport } from './routes/_shell/backoffice/contacts/$contactId'
@@ -185,12 +182,6 @@ const ShellListingsListingIdUnderwritingRoute =
     path: '/underwriting',
     getParentRoute: () => ShellListingsListingIdRoute,
   } as any)
-const ShellListingsListingIdTransactionRoute =
-  ShellListingsListingIdTransactionRouteImport.update({
-    id: '/transaction',
-    path: '/transaction',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
 const ShellListingsListingIdSpacesRoute =
   ShellListingsListingIdSpacesRouteImport.update({
     id: '/spaces',
@@ -201,12 +192,6 @@ const ShellListingsListingIdPlansRoute =
   ShellListingsListingIdPlansRouteImport.update({
     id: '/plans',
     path: '/plans',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
-const ShellListingsListingIdPlannerRoute =
-  ShellListingsListingIdPlannerRouteImport.update({
-    id: '/planner',
-    path: '/planner',
     getParentRoute: () => ShellListingsListingIdRoute,
   } as any)
 const ShellListingsListingIdOverviewRoute =
@@ -287,12 +272,6 @@ const ShellListingsListingIdDemographicsRoute =
     path: '/demographics',
     getParentRoute: () => ShellListingsListingIdRoute,
   } as any)
-const ShellListingsListingIdContactsRoute =
-  ShellListingsListingIdContactsRouteImport.update({
-    id: '/contacts',
-    path: '/contacts',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
 const ShellListingsListingIdClientReportRoute =
   ShellListingsListingIdClientReportRouteImport.update({
     id: '/client-report',
@@ -336,7 +315,6 @@ export interface FileRoutesByFullPath {
   '/backoffice/contacts/$contactId': typeof ShellBackofficeContactsContactIdRoute
   '/listings/$listingId/activities': typeof ShellListingsListingIdActivitiesRoute
   '/listings/$listingId/client-report': typeof ShellListingsListingIdClientReportRoute
-  '/listings/$listingId/contacts': typeof ShellListingsListingIdContactsRoute
   '/listings/$listingId/demographics': typeof ShellListingsListingIdDemographicsRoute
   '/listings/$listingId/documents': typeof ShellListingsListingIdDocumentsRoute
   '/listings/$listingId/edit': typeof ShellListingsListingIdEditRoute
@@ -350,10 +328,8 @@ export interface FileRoutesByFullPath {
   '/listings/$listingId/media': typeof ShellListingsListingIdMediaRoute
   '/listings/$listingId/notes': typeof ShellListingsListingIdNotesRoute
   '/listings/$listingId/overview': typeof ShellListingsListingIdOverviewRoute
-  '/listings/$listingId/planner': typeof ShellListingsListingIdPlannerRoute
   '/listings/$listingId/plans': typeof ShellListingsListingIdPlansRoute
   '/listings/$listingId/spaces': typeof ShellListingsListingIdSpacesRoute
-  '/listings/$listingId/transaction': typeof ShellListingsListingIdTransactionRoute
   '/listings/$listingId/underwriting': typeof ShellListingsListingIdUnderwritingRoute
   '/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
   '/backoffice/contacts/': typeof ShellBackofficeContactsIndexRoute
@@ -376,7 +352,6 @@ export interface FileRoutesByTo {
   '/backoffice/contacts/$contactId': typeof ShellBackofficeContactsContactIdRoute
   '/listings/$listingId/activities': typeof ShellListingsListingIdActivitiesRoute
   '/listings/$listingId/client-report': typeof ShellListingsListingIdClientReportRoute
-  '/listings/$listingId/contacts': typeof ShellListingsListingIdContactsRoute
   '/listings/$listingId/demographics': typeof ShellListingsListingIdDemographicsRoute
   '/listings/$listingId/documents': typeof ShellListingsListingIdDocumentsRoute
   '/listings/$listingId/edit': typeof ShellListingsListingIdEditRoute
@@ -390,10 +365,8 @@ export interface FileRoutesByTo {
   '/listings/$listingId/media': typeof ShellListingsListingIdMediaRoute
   '/listings/$listingId/notes': typeof ShellListingsListingIdNotesRoute
   '/listings/$listingId/overview': typeof ShellListingsListingIdOverviewRoute
-  '/listings/$listingId/planner': typeof ShellListingsListingIdPlannerRoute
   '/listings/$listingId/plans': typeof ShellListingsListingIdPlansRoute
   '/listings/$listingId/spaces': typeof ShellListingsListingIdSpacesRoute
-  '/listings/$listingId/transaction': typeof ShellListingsListingIdTransactionRoute
   '/listings/$listingId/underwriting': typeof ShellListingsListingIdUnderwritingRoute
   '/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
   '/backoffice/contacts': typeof ShellBackofficeContactsIndexRoute
@@ -425,7 +398,6 @@ export interface FileRoutesById {
   '/_shell/backoffice/contacts/$contactId': typeof ShellBackofficeContactsContactIdRoute
   '/_shell/listings/$listingId/activities': typeof ShellListingsListingIdActivitiesRoute
   '/_shell/listings/$listingId/client-report': typeof ShellListingsListingIdClientReportRoute
-  '/_shell/listings/$listingId/contacts': typeof ShellListingsListingIdContactsRoute
   '/_shell/listings/$listingId/demographics': typeof ShellListingsListingIdDemographicsRoute
   '/_shell/listings/$listingId/documents': typeof ShellListingsListingIdDocumentsRoute
   '/_shell/listings/$listingId/edit': typeof ShellListingsListingIdEditRoute
@@ -439,10 +411,8 @@ export interface FileRoutesById {
   '/_shell/listings/$listingId/media': typeof ShellListingsListingIdMediaRoute
   '/_shell/listings/$listingId/notes': typeof ShellListingsListingIdNotesRoute
   '/_shell/listings/$listingId/overview': typeof ShellListingsListingIdOverviewRoute
-  '/_shell/listings/$listingId/planner': typeof ShellListingsListingIdPlannerRoute
   '/_shell/listings/$listingId/plans': typeof ShellListingsListingIdPlansRoute
   '/_shell/listings/$listingId/spaces': typeof ShellListingsListingIdSpacesRoute
-  '/_shell/listings/$listingId/transaction': typeof ShellListingsListingIdTransactionRoute
   '/_shell/listings/$listingId/underwriting': typeof ShellListingsListingIdUnderwritingRoute
   '/_shell/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
   '/_shell/backoffice/contacts/': typeof ShellBackofficeContactsIndexRoute
@@ -474,7 +444,6 @@ export interface FileRouteTypes {
     | '/backoffice/contacts/$contactId'
     | '/listings/$listingId/activities'
     | '/listings/$listingId/client-report'
-    | '/listings/$listingId/contacts'
     | '/listings/$listingId/demographics'
     | '/listings/$listingId/documents'
     | '/listings/$listingId/edit'
@@ -488,10 +457,8 @@ export interface FileRouteTypes {
     | '/listings/$listingId/media'
     | '/listings/$listingId/notes'
     | '/listings/$listingId/overview'
-    | '/listings/$listingId/planner'
     | '/listings/$listingId/plans'
     | '/listings/$listingId/spaces'
-    | '/listings/$listingId/transaction'
     | '/listings/$listingId/underwriting'
     | '/listings/$listingId/website'
     | '/backoffice/contacts/'
@@ -514,7 +481,6 @@ export interface FileRouteTypes {
     | '/backoffice/contacts/$contactId'
     | '/listings/$listingId/activities'
     | '/listings/$listingId/client-report'
-    | '/listings/$listingId/contacts'
     | '/listings/$listingId/demographics'
     | '/listings/$listingId/documents'
     | '/listings/$listingId/edit'
@@ -528,10 +494,8 @@ export interface FileRouteTypes {
     | '/listings/$listingId/media'
     | '/listings/$listingId/notes'
     | '/listings/$listingId/overview'
-    | '/listings/$listingId/planner'
     | '/listings/$listingId/plans'
     | '/listings/$listingId/spaces'
-    | '/listings/$listingId/transaction'
     | '/listings/$listingId/underwriting'
     | '/listings/$listingId/website'
     | '/backoffice/contacts'
@@ -562,7 +526,6 @@ export interface FileRouteTypes {
     | '/_shell/backoffice/contacts/$contactId'
     | '/_shell/listings/$listingId/activities'
     | '/_shell/listings/$listingId/client-report'
-    | '/_shell/listings/$listingId/contacts'
     | '/_shell/listings/$listingId/demographics'
     | '/_shell/listings/$listingId/documents'
     | '/_shell/listings/$listingId/edit'
@@ -576,10 +539,8 @@ export interface FileRouteTypes {
     | '/_shell/listings/$listingId/media'
     | '/_shell/listings/$listingId/notes'
     | '/_shell/listings/$listingId/overview'
-    | '/_shell/listings/$listingId/planner'
     | '/_shell/listings/$listingId/plans'
     | '/_shell/listings/$listingId/spaces'
-    | '/_shell/listings/$listingId/transaction'
     | '/_shell/listings/$listingId/underwriting'
     | '/_shell/listings/$listingId/website'
     | '/_shell/backoffice/contacts/'
@@ -769,13 +730,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellListingsListingIdUnderwritingRouteImport
       parentRoute: typeof ShellListingsListingIdRoute
     }
-    '/_shell/listings/$listingId/transaction': {
-      id: '/_shell/listings/$listingId/transaction'
-      path: '/transaction'
-      fullPath: '/listings/$listingId/transaction'
-      preLoaderRoute: typeof ShellListingsListingIdTransactionRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
-    }
     '/_shell/listings/$listingId/spaces': {
       id: '/_shell/listings/$listingId/spaces'
       path: '/spaces'
@@ -788,13 +742,6 @@ declare module '@tanstack/react-router' {
       path: '/plans'
       fullPath: '/listings/$listingId/plans'
       preLoaderRoute: typeof ShellListingsListingIdPlansRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
-    }
-    '/_shell/listings/$listingId/planner': {
-      id: '/_shell/listings/$listingId/planner'
-      path: '/planner'
-      fullPath: '/listings/$listingId/planner'
-      preLoaderRoute: typeof ShellListingsListingIdPlannerRouteImport
       parentRoute: typeof ShellListingsListingIdRoute
     }
     '/_shell/listings/$listingId/overview': {
@@ -888,13 +835,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellListingsListingIdDemographicsRouteImport
       parentRoute: typeof ShellListingsListingIdRoute
     }
-    '/_shell/listings/$listingId/contacts': {
-      id: '/_shell/listings/$listingId/contacts'
-      path: '/contacts'
-      fullPath: '/listings/$listingId/contacts'
-      preLoaderRoute: typeof ShellListingsListingIdContactsRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
-    }
     '/_shell/listings/$listingId/client-report': {
       id: '/_shell/listings/$listingId/client-report'
       path: '/client-report'
@@ -974,7 +914,6 @@ const ShellEmailRouteWithChildren = ShellEmailRoute._addFileChildren(
 interface ShellListingsListingIdRouteChildren {
   ShellListingsListingIdActivitiesRoute: typeof ShellListingsListingIdActivitiesRoute
   ShellListingsListingIdClientReportRoute: typeof ShellListingsListingIdClientReportRoute
-  ShellListingsListingIdContactsRoute: typeof ShellListingsListingIdContactsRoute
   ShellListingsListingIdDemographicsRoute: typeof ShellListingsListingIdDemographicsRoute
   ShellListingsListingIdDocumentsRoute: typeof ShellListingsListingIdDocumentsRoute
   ShellListingsListingIdEditRoute: typeof ShellListingsListingIdEditRoute
@@ -988,10 +927,8 @@ interface ShellListingsListingIdRouteChildren {
   ShellListingsListingIdMediaRoute: typeof ShellListingsListingIdMediaRoute
   ShellListingsListingIdNotesRoute: typeof ShellListingsListingIdNotesRoute
   ShellListingsListingIdOverviewRoute: typeof ShellListingsListingIdOverviewRoute
-  ShellListingsListingIdPlannerRoute: typeof ShellListingsListingIdPlannerRoute
   ShellListingsListingIdPlansRoute: typeof ShellListingsListingIdPlansRoute
   ShellListingsListingIdSpacesRoute: typeof ShellListingsListingIdSpacesRoute
-  ShellListingsListingIdTransactionRoute: typeof ShellListingsListingIdTransactionRoute
   ShellListingsListingIdUnderwritingRoute: typeof ShellListingsListingIdUnderwritingRoute
   ShellListingsListingIdWebsiteRoute: typeof ShellListingsListingIdWebsiteRoute
   ShellListingsListingIdIndexRoute: typeof ShellListingsListingIdIndexRoute
@@ -1003,7 +940,6 @@ const ShellListingsListingIdRouteChildren: ShellListingsListingIdRouteChildren =
       ShellListingsListingIdActivitiesRoute,
     ShellListingsListingIdClientReportRoute:
       ShellListingsListingIdClientReportRoute,
-    ShellListingsListingIdContactsRoute: ShellListingsListingIdContactsRoute,
     ShellListingsListingIdDemographicsRoute:
       ShellListingsListingIdDemographicsRoute,
     ShellListingsListingIdDocumentsRoute: ShellListingsListingIdDocumentsRoute,
@@ -1020,11 +956,8 @@ const ShellListingsListingIdRouteChildren: ShellListingsListingIdRouteChildren =
     ShellListingsListingIdMediaRoute: ShellListingsListingIdMediaRoute,
     ShellListingsListingIdNotesRoute: ShellListingsListingIdNotesRoute,
     ShellListingsListingIdOverviewRoute: ShellListingsListingIdOverviewRoute,
-    ShellListingsListingIdPlannerRoute: ShellListingsListingIdPlannerRoute,
     ShellListingsListingIdPlansRoute: ShellListingsListingIdPlansRoute,
     ShellListingsListingIdSpacesRoute: ShellListingsListingIdSpacesRoute,
-    ShellListingsListingIdTransactionRoute:
-      ShellListingsListingIdTransactionRoute,
     ShellListingsListingIdUnderwritingRoute:
       ShellListingsListingIdUnderwritingRoute,
     ShellListingsListingIdWebsiteRoute: ShellListingsListingIdWebsiteRoute,

@@ -18,7 +18,7 @@ import {
   faSitemap,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import type { Contact, Listing, DealDocument } from "#/data/types";
+import type { Contact, Listing, DealDocument, DealBroker } from "#/data/types";
 import { getListing, getProperty, getStore } from "#/data/store";
 import {
   TYPE_ICONS,
@@ -203,6 +203,57 @@ function ContactSection({
   );
 }
 
+/** A broker row in the rail — mirrors ContactRow, with the gross commission % on the right. */
+function BrokerRow({ broker }: { broker: DealBroker }) {
+  return (
+    <div className="d-flex align-items-center gap-2 py-2">
+      <Avatar size="lg">
+        <Avatar.Fallback>{initials(broker.name)}</Avatar.Fallback>
+      </Avatar>
+      <div className="flex-grow-1" style={{ minWidth: 0 }}>
+        <div className="fw-semibold text-truncate">{broker.name}</div>
+        {broker.role && (
+          <div className="text-muted text-truncate fs-small">{broker.role}</div>
+        )}
+      </div>
+      <div className="text-end flex-shrink-0">
+        <div className="fw-semibold">{broker.commissionSplitPct}%</div>
+        <div className="text-muted fs-small">Gross comm.</div>
+      </div>
+    </div>
+  );
+}
+
+function BrokerSection({
+  value,
+  label,
+  brokers,
+}: {
+  value: string;
+  label: string;
+  brokers: DealBroker[];
+}) {
+  return (
+    <Accordion.Item value={value}>
+      <Accordion.Trigger>
+        <span className="d-flex align-items-center gap-2">
+          {label}
+          <Badge variant="secondary" appearance="muted">
+            {brokers.length}
+          </Badge>
+        </span>
+      </Accordion.Trigger>
+      <Accordion.Content>
+        {brokers.length === 0 ? (
+          <div className="text-muted fs-small py-2">No brokers added.</div>
+        ) : (
+          brokers.map((b) => <BrokerRow key={b.id} broker={b} />)
+        )}
+      </Accordion.Content>
+    </Accordion.Item>
+  );
+}
+
 /**
  * Persistent right-hand "deal context" rail — keeps files, the linked property,
  * the deal's contacts, and the deal summary in view across every tab.
@@ -226,6 +277,10 @@ export function DealContextRail({ listing }: { listing: Listing }) {
   const [open, setOpen] = useState<string[]>(["seller"]);
   const addTo = (section: string) =>
     setOpen((prev) => (prev.includes(section) ? prev : [...prev, section]));
+
+  const [brokersOpen, setBrokersOpen] = useState<string[]>(["internal"]);
+  const addBroker = (section: string) =>
+    setBrokersOpen((prev) => (prev.includes(section) ? prev : [...prev, section]));
 
   return (
     <div>
@@ -279,6 +334,33 @@ export function DealContextRail({ listing }: { listing: Listing }) {
         <ContactSection value="seller" label="Seller" contacts={sellers} />
         <ContactSection value="buyer" label="Buyer" contacts={buyers} />
         <ContactSection value="other" label="Other" contacts={others} />
+      </Accordion>
+
+      <div className="d-flex align-items-center justify-content-between px-3 py-2">
+        <h6 className="mb-0 fw-semibold">Brokers</h6>
+        <DropdownMenu>
+          <DropdownMenu.Trigger
+            render={
+              <Button variant="outline" size="sm">
+                <FontAwesomeIcon icon={faCirclePlus} />
+                Add
+                <FontAwesomeIcon icon={faCaretDown} />
+              </Button>
+            }
+          />
+          <DropdownMenu.Content>
+            <DropdownMenu.Item onClick={() => addBroker("internal")}>
+              Add internal broker
+            </DropdownMenu.Item>
+            <DropdownMenu.Item onClick={() => addBroker("outside")}>
+              Add outside broker
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
+        </DropdownMenu>
+      </div>
+      <Accordion multiple value={brokersOpen} onValueChange={setBrokersOpen}>
+        <BrokerSection value="internal" label="Internal" brokers={listing.internalBrokers} />
+        <BrokerSection value="outside" label="Outside" brokers={listing.outsideBrokers} />
       </Accordion>
     </div>
   );

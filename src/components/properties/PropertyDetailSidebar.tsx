@@ -8,7 +8,6 @@ import {
   faGaugeHigh,
   faAddressBook,
   faBolt,
-  faHandshake,
   faFileInvoiceDollar,
   faFileLines,
   faGlobe,
@@ -20,8 +19,6 @@ import {
   faVectorSquare,
   faHardDrive,
   faCalculator,
-  faUsers,
-  faListCheck,
   faClockRotateLeft,
   faRulerCombined,
   faReceipt,
@@ -43,8 +40,6 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Deal",
     items: [
       { label: "Overview", href: "overview", icon: faGaugeHigh },
-      { label: "Contacts", href: "contacts", icon: faUsers },
-      { label: "Planner", href: "planner", icon: faListCheck },
       {
         label: "Client Report",
         href: "client-report",
@@ -73,10 +68,9 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Back Office",
     items: [
-      { label: "Transaction", href: "transaction", icon: faHandshake },
-      { label: "Financials", href: "financials", icon: faFileInvoiceDollar },
+      { label: "Voucher", href: "financials", icon: faFileInvoiceDollar },
       {
-        label: "Financial Docs",
+        label: "Invoices",
         href: "financial-documents",
         icon: faReceipt,
       },
