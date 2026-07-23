@@ -1,16 +1,18 @@
 import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { BuildingSection } from "#/components/listings/edit/sections/BuildingSection";
+import { BuyerSection } from "#/components/listings/edit/sections/BuyerSection";
 import { CondosSection } from "#/components/listings/edit/sections/CondosSection";
 import { LandSection } from "#/components/listings/edit/sections/LandSection";
 import { LeaseSection } from "#/components/listings/edit/sections/LeaseSection";
 import { LeaseSpacesSection } from "#/components/listings/edit/sections/LeaseSpacesSection";
 import { LocationSection } from "#/components/listings/edit/sections/LocationSection";
 import { LotsSection } from "#/components/listings/edit/sections/LotsSection";
+import { MarketingVisibilitySection } from "#/components/listings/edit/sections/MarketingVisibilitySection";
 import { PropertySection } from "#/components/listings/edit/sections/PropertySection";
 import { SaleSection } from "#/components/listings/edit/sections/SaleSection";
 import { TransitSection } from "#/components/listings/edit/sections/TransitSection";
 import { UnitsSection } from "#/components/listings/edit/sections/UnitsSection";
-import { propertyTypeEffects } from "#/data/listingFormLogic";
+import { propertyTypeEffects, showBuyerSection } from "#/data/listingFormLogic";
 import type {
 	DealMarketing,
 	DealPitchFinancials,
@@ -28,6 +30,7 @@ import type {
  */
 export function ListingFormEditor({
 	dealType,
+	status,
 	marketing,
 	patchMarketing,
 	property,
@@ -93,6 +96,24 @@ export function ListingFormEditor({
 					<Separator />
 					<LeaseSpacesSection
 						property={property}
+						marketing={marketing}
+						patchMarketing={patchMarketing}
+					/>
+				</>
+			)}
+			<Separator />
+			<MarketingVisibilitySection
+				dealType={dealType}
+				status={status}
+				marketing={marketing}
+				patchMarketing={patchMarketing}
+			/>
+			{showBuyerSection(dealType, status) && (
+				<>
+					<Separator />
+					<BuyerSection
+						dealType={dealType}
+						status={status}
 						marketing={marketing}
 						patchMarketing={patchMarketing}
 					/>
