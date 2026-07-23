@@ -110,7 +110,10 @@ export function PropertyDetailSidebar() {
     if (open) next.delete(label);
     else next.add(label);
     setCollapsed(next);
-    window.localStorage.setItem(COLLAPSED_STORAGE_KEY, JSON.stringify([...next]));
+    window.localStorage.setItem(
+      COLLAPSED_STORAGE_KEY,
+      JSON.stringify([...next]),
+    );
   }
   // Reactive: re-render when the listing changes (e.g. promoted to an umbrella).
   const version = useDataStore((s) => s.listings);
@@ -146,9 +149,7 @@ export function PropertyDetailSidebar() {
         const activeInGroup =
           group.items.find((item) => pathname.endsWith(`/${item.href}`))
             ?.label ?? "";
-        const isCollapsed = group.label
-          ? collapsed.has(group.label)
-          : false;
+        const isCollapsed = group.label ? collapsed.has(group.label) : false;
         const tabs = (
           <Tabs
             value={activeInGroup}
@@ -183,10 +184,7 @@ export function PropertyDetailSidebar() {
             onOpenChange={(open) => setGroupOpen(group.label!, open)}
             className="d-flex flex-column gap-1 mb-2"
           >
-            <Collapsible.Trigger
-              className="d-flex align-items-center gap-2 w-100 border-0 bg-transparent p-0 mt-1 fw-semibold text-body"
-              style={{ cursor: "pointer" }}
-            >
+            <Collapsible.Trigger className="d-flex align-items-center gap-2 w-100 border-0 bg-transparent p-0 mt-1 fw-semibold text-body">
               <FontAwesomeIcon
                 icon={faChevronRight}
                 style={{
