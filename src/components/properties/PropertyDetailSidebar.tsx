@@ -72,7 +72,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Transaction", href: "transaction", icon: faHandshake },
       { label: "Financials", href: "financials", icon: faFileInvoiceDollar },
       {
-        label: "Financial Documents",
+        label: "Financial Docs",
         href: "financial-documents",
         icon: faReceipt,
       },
