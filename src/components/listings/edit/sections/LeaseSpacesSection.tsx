@@ -152,8 +152,9 @@ function UnitLeaseCard({
 						<Col>
 							<SelectField
 								label="Space Type"
-								value={terms.spaceType ?? ALL_SUBTYPES[0]}
+								value={terms.spaceType ?? null}
 								options={ALL_SUBTYPES}
+								placeholder="— Select —"
 								onChange={(v) => onChange({ spaceType: v })}
 							/>
 						</Col>

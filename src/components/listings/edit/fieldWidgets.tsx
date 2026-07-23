@@ -163,12 +163,18 @@ export function SelectField<T extends string>({
   options,
   onChange,
   labels,
+  placeholder,
 }: {
   label: string;
-  value: T;
+  /** `null` renders the placeholder instead of forcing a default option —
+   * use this for a field that hasn't been set rather than coercing to
+   * `options[0]` (which would silently imply a choice the user never made). */
+  value: T | null;
   options: readonly T[];
   onChange: (v: T) => void;
   labels?: Record<string, string>;
+  /** Shown in the trigger when `value` is null. Defaults to "Select…". */
+  placeholder?: string;
 }) {
   return (
     <Field>
@@ -176,7 +182,13 @@ export function SelectField<T extends string>({
       <Select value={value} onValueChange={(v) => v && onChange(v as T)}>
         <Select.Trigger className="w-100">
           <Select.Value>
-            {(v) => (labels ? (labels[v as string] ?? String(v)) : String(v))}
+            {(v) =>
+              v == null
+                ? (placeholder ?? "Select…")
+                : labels
+                  ? (labels[v as string] ?? String(v))
+                  : String(v)
+            }
           </Select.Value>
         </Select.Trigger>
         <Select.Content>

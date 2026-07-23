@@ -8,12 +8,22 @@ import type {
 	DealType,
 	MarketingChannel,
 	PropertyStatus,
+	VisibilityTier,
 } from "#/data/types";
 
 const DISCONNECT_CHANNELS: MarketingChannel[] = [
 	"Buildout Syndication Network",
 	"Buildout Buyer Network",
 ];
+
+/** A marketing channel implies a fixed visibility tier (per the PRD) — there is
+ * no separate Visibility Tier control; picking a channel derives it. */
+const TIER_FOR_CHANNEL: Record<MarketingChannel, VisibilityTier> = {
+	None: "Fully Private",
+	"Buildout Buyer Network": "Private",
+	"My Brokerage Website": "Semi-Public",
+	"Buildout Syndication Network": "Fully Public",
+};
 
 /**
  * Listing tab — Marketing Visibility. Status-gated channel picker (Sale reads/
@@ -38,13 +48,23 @@ export function MarketingVisibilitySection({
 	const current =
 		(dealType === "Sale"
 			? marketing.saleMarketingChannel
-			: marketing.leaseMarketingChannel) ?? "None";
+			: marketing.leaseMarketingChannel) ??
+		marketing.marketingChannel ??
+		"None";
 
 	const pick = (c: MarketingChannel) =>
 		patchMarketing(
 			dealType === "Sale"
-				? { saleMarketingChannel: c, marketingChannel: c }
-				: { leaseMarketingChannel: c, marketingChannel: c },
+				? {
+						saleMarketingChannel: c,
+						marketingChannel: c,
+						visibilityTier: TIER_FOR_CHANNEL[c],
+					}
+				: {
+						leaseMarketingChannel: c,
+						marketingChannel: c,
+						visibilityTier: TIER_FOR_CHANNEL[c],
+					},
 		);
 
 	const showDisconnectWarning = DISCONNECT_CHANNELS.includes(current);

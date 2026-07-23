@@ -57,6 +57,16 @@ import {
 } from "#/components/listings/edit/fieldWidgets";
 import { ListingFormEditor } from "#/components/listings/edit/ListingFormEditor";
 
+// ── Read-only computed-field display formatting ─────────────────────────────
+/** Rounded, comma-formatted currency-ish figure; blank (not "0") when null. */
+function formatCalcAmount(v: number | null): string {
+	return v == null ? "" : Math.round(v).toLocaleString();
+}
+/** Percentage with 2 decimals; blank (not "0.00") when null. */
+function formatCalcPercent(v: number | null): string {
+	return v == null ? "" : `${v.toFixed(2)}%`;
+}
+
 // ── Broker rows ──────────────────────────────────────────────────────────────
 function BrokerEditor({
 	title,
@@ -646,12 +656,12 @@ export function DealMarketingEditor({
 										<Field.Label>Total Scheduled Income (calc)</Field.Label>
 										<Input
 											readOnly
-											value={
+											value={formatCalcAmount(
 												totalScheduledIncome(
 													financials.grossScheduledIncome,
 													financials.otherIncome,
-												) ?? ""
-											}
+												),
+											)}
 										/>
 									</Field>
 								</Col>
@@ -660,12 +670,12 @@ export function DealMarketingEditor({
 										<Field.Label>Vacancy Cost (calc)</Field.Label>
 										<Input
 											readOnly
-											value={
+											value={formatCalcAmount(
 												vacancyCost(
 													financials.grossScheduledIncome,
 													financials.vacancyPct,
-												) ?? ""
-											}
+												),
+											)}
 										/>
 									</Field>
 								</Col>
@@ -674,7 +684,7 @@ export function DealMarketingEditor({
 										<Field.Label>Gross Income (calc)</Field.Label>
 										<Input
 											readOnly
-											value={
+											value={formatCalcAmount(
 												grossIncome(
 													totalScheduledIncome(
 														financials.grossScheduledIncome,
@@ -684,8 +694,8 @@ export function DealMarketingEditor({
 														financials.grossScheduledIncome,
 														financials.vacancyPct,
 													),
-												) ?? ""
-											}
+												),
+											)}
 										/>
 									</Field>
 								</Col>
@@ -694,9 +704,9 @@ export function DealMarketingEditor({
 										<Field.Label>Cap Rate (calc)</Field.Label>
 										<Input
 											readOnly
-											value={
-												capRate(financials.noi, financials.askingPrice) ?? ""
-											}
+											value={formatCalcPercent(
+												capRate(financials.noi, financials.askingPrice),
+											)}
 										/>
 									</Field>
 								</Col>
