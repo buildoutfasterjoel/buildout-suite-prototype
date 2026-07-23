@@ -2459,6 +2459,7 @@
   // Main nav items (Properties, Contacts, Deals, Reports): never filled. Muted
   // when inactive, white on hover, white + bold with a purple icon when active.
   .navbar-collapse .nav-link {
+    align-items: center;
     background: transparent;
     color: var(--color-storm-grey-300, #afb9ca);
     font-weight: 400;
@@ -2483,7 +2484,7 @@
       font-weight: 700;
 
       .nav-link-icon {
-        color: var(--color-purple-heart-500, #9f55f7);
+        color: var(--color-purple-heart-400, #b984fc);
       }
     }
   }
@@ -2520,5 +2521,17 @@
   .navbar-new-trigger .nav-link-icon:last-child,
   .navbar-user-trigger .nav-link-icon:last-child {
     display: none;
+  }
+
+  // Attention dot on the Tasks / Notifications icon buttons (purple-400),
+  // replacing the numeric count badge. Pinned to the icon glyph's top-right.
+  .navbar-dot {
+    position: absolute;
+    top: -3px;
+    right: -5px;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--color-purple-heart-400, #b984fc);
   }
 }
