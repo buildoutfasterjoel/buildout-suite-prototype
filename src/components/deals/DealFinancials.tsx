@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip as ChartTooltip } from "recharts";
+import {
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip as ChartTooltip,
+} from "recharts";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { Switch } from "@buildoutinc/blueprint-react/ui/Switch";
@@ -80,7 +86,9 @@ function StatTile({
   return (
     <div className="bg-card border rounded p-3" style={{ borderRadius: 6 }}>
       <div className="text-muted text-truncate fs-small">{label}</div>
-      <div className={`fw-bold mt-1 ${accent ? "text-danger" : ""}`}>{value}</div>
+      <div className={`fw-bold mt-1 ${accent ? "text-danger" : ""}`}>
+        {value}
+      </div>
     </div>
   );
 }
@@ -96,7 +104,13 @@ type BreakdownRow = {
 };
 
 /** One row of the breakdown list — its color swatch doubles as the donut's legend entry. */
-function BreakdownListRow({ row, isLast }: { row: BreakdownRow; isLast: boolean }) {
+function BreakdownListRow({
+  row,
+  isLast,
+}: {
+  row: BreakdownRow;
+  isLast: boolean;
+}) {
   return (
     <div
       className={`d-flex align-items-center justify-content-between gap-3 py-2${isLast ? "" : " border-bottom"}`}
@@ -109,9 +123,13 @@ function BreakdownListRow({ row, isLast }: { row: BreakdownRow; isLast: boolean 
             aria-hidden="true"
           />
         )}
-        <span className={row.emphasis ? "fw-semibold" : "text-muted"}>{row.label}</span>
+        <span className={row.emphasis ? "fw-semibold" : "text-muted"}>
+          {row.label}
+        </span>
       </div>
-      <span className={`${row.emphasis ? "fw-bold" : "fw-semibold"}${row.accent ? " text-danger" : ""}`}>
+      <span
+        className={`${row.emphasis ? "fw-bold" : "fw-semibold"}${row.accent ? " text-danger" : ""}`}
+      >
         {row.value}
       </span>
     </div>
@@ -126,19 +144,33 @@ function BreakdownSection({ listing }: { listing: Listing }) {
   useEffect(() => setMounted(true), []);
 
   const preSplitTotal = sum(financials.preSplitDeductions.map((d) => d.amount));
-  const brokerTotal = sum(listing.internalBrokers.map((b) => b.grossCommission));
+  const brokerTotal = sum(
+    listing.internalBrokers.map((b) => b.grossCommission),
+  );
   const allocated = preSplitTotal + brokerTotal;
   const unallocated = Math.max(0, commissionAmount - allocated);
 
   const segments = [
-    { label: "Pre-Split Deductions", value: preSplitTotal, color: DEDUCTIONS_COLOR },
+    {
+      label: "Pre-Split Deductions",
+      value: preSplitTotal,
+      color: DEDUCTIONS_COLOR,
+    },
     { label: "Broker Commission", value: brokerTotal, color: BROKER_COLOR },
     { label: "Unallocated", value: unallocated, color: UNALLOCATED_COLOR },
   ];
 
   const rows: BreakdownRow[] = [
-    { label: "Pre-Split Deductions", value: formatCurrency(preSplitTotal), color: DEDUCTIONS_COLOR },
-    { label: "Broker Commission", value: formatCurrency(brokerTotal), color: BROKER_COLOR },
+    {
+      label: "Pre-Split Deductions",
+      value: formatCurrency(preSplitTotal),
+      color: DEDUCTIONS_COLOR,
+    },
+    {
+      label: "Broker Commission",
+      value: formatCurrency(brokerTotal),
+      color: BROKER_COLOR,
+    },
     { label: "Allocated", value: formatCurrency(allocated), emphasis: true },
     {
       label: "Unallocated",
@@ -149,13 +181,15 @@ function BreakdownSection({ listing }: { listing: Listing }) {
   ];
 
   return (
-    <Section
-      title="Gross Commission Breakdown"
-    >
+    <Section title="Gross Commission Breakdown">
       <div className="row g-4 align-items-center">
         <div className="col-md-7">
           {rows.map((row, i) => (
-            <BreakdownListRow key={row.label} row={row} isLast={i === rows.length - 1} />
+            <BreakdownListRow
+              key={row.label}
+              row={row}
+              isLast={i === rows.length - 1}
+            />
           ))}
         </div>
         <div className="col-md-5">
@@ -163,7 +197,9 @@ function BreakdownSection({ listing }: { listing: Listing }) {
             {mounted && (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <ChartTooltip formatter={(value) => formatCurrency(Number(value))} />
+                  <ChartTooltip
+                    formatter={(value) => formatCurrency(Number(value))}
+                  />
                   <Pie
                     data={segments}
                     dataKey="value"
@@ -223,15 +259,21 @@ function InternalCommissionsSection({ listing }: { listing: Listing }) {
                   <PersonLink name={b.name} contactId={b.id} />
                 </Table.Cell>
                 <Table.Cell>{dealSideLabel(listing)}</Table.Cell>
-                <Table.Cell className="text-end">{b.commissionSplitPct}</Table.Cell>
-                <Table.Cell className="text-end">{formatCurrency(b.grossCommission)}</Table.Cell>
+                <Table.Cell className="text-end">
+                  {b.commissionSplitPct}
+                </Table.Cell>
+                <Table.Cell className="text-end">
+                  {formatCurrency(b.grossCommission)}
+                </Table.Cell>
               </Table.Row>
             ))}
             <Table.Row>
               <Table.Cell colSpan={3} className="fw-semibold">
                 Sum
               </Table.Cell>
-              <Table.Cell className="text-end fw-semibold">{formatCurrency(grossTotal)}</Table.Cell>
+              <Table.Cell className="text-end fw-semibold">
+                {formatCurrency(grossTotal)}
+              </Table.Cell>
             </Table.Row>
           </Table.Body>
         </Table>
@@ -249,7 +291,9 @@ function InternalCommissionsSection({ listing }: { listing: Listing }) {
           <Table.Body>
             {brokers.map((b) => {
               const splitPct = b.personalSplitPct ?? 0;
-              const netAmount = Math.round(b.grossCommission * (splitPct / 100));
+              const netAmount = Math.round(
+                b.grossCommission * (splitPct / 100),
+              );
               return (
                 <Table.Row key={b.id}>
                   <Table.Cell>
@@ -257,7 +301,9 @@ function InternalCommissionsSection({ listing }: { listing: Listing }) {
                   </Table.Cell>
                   <Table.Cell>{b.commissionPlan ?? "No Plan"}</Table.Cell>
                   <Table.Cell className="text-end">{splitPct}</Table.Cell>
-                  <Table.Cell className="text-end">{formatCurrency(netAmount)}</Table.Cell>
+                  <Table.Cell className="text-end">
+                    {formatCurrency(netAmount)}
+                  </Table.Cell>
                   <Table.Cell className="text-end">
                     <Button variant="ghost" size="sm">
                       View Est.
@@ -285,7 +331,9 @@ function OutsideCommissionsSection({ brokers }: { brokers: DealBroker[] }) {
       }
     >
       {brokers.length === 0 ? (
-        <p className="text-muted mb-0">No outside commissions have been added.</p>
+        <p className="text-muted mb-0">
+          No outside commissions have been added.
+        </p>
       ) : (
         <Table>
           <Table.Header>
@@ -301,8 +349,12 @@ function OutsideCommissionsSection({ brokers }: { brokers: DealBroker[] }) {
                 <Table.Cell>
                   <PersonLink name={b.name} contactId={b.id} />
                 </Table.Cell>
-                <Table.Cell className="text-end">{b.commissionSplitPct}</Table.Cell>
-                <Table.Cell className="text-end">{formatCurrency(b.grossCommission)}</Table.Cell>
+                <Table.Cell className="text-end">
+                  {b.commissionSplitPct}
+                </Table.Cell>
+                <Table.Cell className="text-end">
+                  {formatCurrency(b.grossCommission)}
+                </Table.Cell>
               </Table.Row>
             ))}
           </Table.Body>
@@ -328,7 +380,9 @@ function PreSplitDeductionsSection({ listing }: { listing: Listing }) {
       }
     >
       {deductions.length === 0 ? (
-        <p className="text-muted mb-0">No pre-split deductions have been added.</p>
+        <p className="text-muted mb-0">
+          No pre-split deductions have been added.
+        </p>
       ) : (
         <Table>
           <Table.Header>
@@ -347,7 +401,9 @@ function PreSplitDeductionsSection({ listing }: { listing: Listing }) {
                 <Table.Cell>{d.category}</Table.Cell>
                 <Table.Cell>{d.description}</Table.Cell>
                 <Table.Cell className="text-end">{d.pct}</Table.Cell>
-                <Table.Cell className="text-end">{formatCurrency(d.amount)}</Table.Cell>
+                <Table.Cell className="text-end">
+                  {formatCurrency(d.amount)}
+                </Table.Cell>
                 <Table.Cell className="text-end">
                   {d.covered !== null ? formatCurrency(d.covered) : "None"}
                 </Table.Cell>
@@ -362,8 +418,12 @@ function PreSplitDeductionsSection({ listing }: { listing: Listing }) {
               <Table.Cell colSpan={3} className="fw-semibold">
                 Sum
               </Table.Cell>
-              <Table.Cell className="text-end fw-semibold">{formatCurrency(amountTotal)}</Table.Cell>
-              <Table.Cell className="text-end fw-semibold">{formatCurrency(coveredTotal)}</Table.Cell>
+              <Table.Cell className="text-end fw-semibold">
+                {formatCurrency(amountTotal)}
+              </Table.Cell>
+              <Table.Cell className="text-end fw-semibold">
+                {formatCurrency(coveredTotal)}
+              </Table.Cell>
               <Table.Cell />
             </Table.Row>
           </Table.Body>
@@ -378,7 +438,8 @@ function ReceivablesSection({ listing }: { listing: Listing }) {
   const amountTotal = sum(receivables.map((r) => r.amount));
   const creditedTotal = sum(receivables.map((r) => r.credited));
   // Receivables don't carry a payer id, but every payer is the deal's buyer (or seller) contact.
-  const payerContactId = listing.buyerContactIds[0] ?? listing.sellerContactIds[0];
+  const payerContactId =
+    listing.buyerContactIds[0] ?? listing.sellerContactIds[0];
 
   return (
     <Section
@@ -419,7 +480,9 @@ function ReceivablesSection({ listing }: { listing: Listing }) {
                 </Table.Cell>
                 <Table.Cell>{formatDate(r.dueDate)}</Table.Cell>
                 <Table.Cell>{r.billingDescription}</Table.Cell>
-                <Table.Cell className="text-end">{formatCurrency(r.amount)}</Table.Cell>
+                <Table.Cell className="text-end">
+                  {formatCurrency(r.amount)}
+                </Table.Cell>
                 <Table.Cell className="text-end">
                   {r.credited > 0 ? formatCurrency(r.credited) : "None"}
                 </Table.Cell>
@@ -429,8 +492,12 @@ function ReceivablesSection({ listing }: { listing: Listing }) {
               <Table.Cell colSpan={3} className="fw-semibold">
                 Sum
               </Table.Cell>
-              <Table.Cell className="text-end fw-semibold">{formatCurrency(amountTotal)}</Table.Cell>
-              <Table.Cell className="text-end fw-semibold">{formatCurrency(creditedTotal)}</Table.Cell>
+              <Table.Cell className="text-end fw-semibold">
+                {formatCurrency(amountTotal)}
+              </Table.Cell>
+              <Table.Cell className="text-end fw-semibold">
+                {formatCurrency(creditedTotal)}
+              </Table.Cell>
             </Table.Row>
           </Table.Body>
         </Table>
@@ -453,7 +520,9 @@ function ToggleControl({
     <div className="d-flex align-items-center gap-2">
       <span>{label}</span>
       <Switch checked={checked} onCheckedChange={onChange} aria-label={label} />
-      <span className="text-muted fs-small fw-semibold">{checked ? "ON" : "OFF"}</span>
+      <span className="text-muted fs-small fw-semibold">
+        {checked ? "ON" : "OFF"}
+      </span>
     </div>
   );
 }
@@ -487,7 +556,8 @@ function EditableCell({
       return;
     }
     const n = Number.parseFloat(draft);
-    if (!Number.isNaN(n)) onCommit(type === "int" ? Math.max(1, Math.round(n)) : Math.max(0, n));
+    if (!Number.isNaN(n))
+      onCommit(type === "int" ? Math.max(1, Math.round(n)) : Math.max(0, n));
   }
 
   if (editing) {
@@ -530,7 +600,10 @@ function EditableCell({
         }
       }}
       className="d-inline-block"
-      style={{ cursor: "pointer", borderBottom: "1px dashed var(--bs-border-color)" }}
+      style={{
+        cursor: "pointer",
+        borderBottom: "1px dashed var(--bs-border-color)",
+      }}
     >
       {display}
     </span>
@@ -558,7 +631,12 @@ function RowActions({
         <Tooltip key={a.label}>
           <Tooltip.Trigger
             render={
-              <Button variant="ghost" size="icon-sm" aria-label={a.label} onClick={a.onClick}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={a.label}
+                onClick={a.onClick}
+              >
                 <FontAwesomeIcon icon={a.icon} />
               </Button>
             }
@@ -595,15 +673,28 @@ function RentScheduleSection({ listing }: { listing: Listing }) {
 
   const total = computeTotal(rows);
 
-  function editField(index: number, field: EditableField, next: number | string) {
-    setRows((prev) => reflowDates(prev.map((r, i) => (i === index ? { ...r, [field]: next } : r))));
+  function editField(
+    index: number,
+    field: EditableField,
+    next: number | string,
+  ) {
+    setRows((prev) =>
+      reflowDates(
+        prev.map((r, i) => (i === index ? { ...r, [field]: next } : r)),
+      ),
+    );
   }
 
   /** Insert a 12-month term at `index`, inheriting the reference term's rate & commission. */
   function insertTerm(index: number) {
     setRows((prev) => {
       const ref = prev[Math.min(index, prev.length - 1)] ?? schedule.rows[0];
-      const row = makeRow(ref.startDate, 12, ref.monthlyRate, ref.commissionPct);
+      const row = makeRow(
+        ref.startDate,
+        12,
+        ref.monthlyRate,
+        ref.commissionPct,
+      );
       return reflowDates([...prev.slice(0, index), row, ...prev.slice(index)]);
     });
   }
@@ -620,7 +711,10 @@ function RentScheduleSection({ listing }: { listing: Listing }) {
       const monthlyRate = autoCalcRents
         ? last.monthlyRate * (1 + schedule.escalatorPct / 100)
         : last.monthlyRate;
-      return reflowDates([...prev, makeRow(prev[0].startDate, 12, monthlyRate, last.commissionPct)]);
+      return reflowDates([
+        ...prev,
+        makeRow(prev[0].startDate, 12, monthlyRate, last.commissionPct),
+      ]);
     });
   }
 
@@ -677,7 +771,11 @@ function RentScheduleSection({ listing }: { listing: Listing }) {
               </Table.Cell>
               <Table.Cell>{formatScheduleDate(r.endDate)}</Table.Cell>
               <Table.Cell>
-                <EditableCell type="int" value={r.months} onCommit={(next) => editField(i, "months", next)} />
+                <EditableCell
+                  type="int"
+                  value={r.months}
+                  onCommit={(next) => editField(i, "months", next)}
+                />
               </Table.Cell>
               <Table.Cell className="text-end">
                 <EditableCell
@@ -687,7 +785,9 @@ function RentScheduleSection({ listing }: { listing: Listing }) {
                   onCommit={(next) => editField(i, "monthlyRate", next)}
                 />
               </Table.Cell>
-              <Table.Cell className="text-end">{formatCurrency(r.totalRent)}</Table.Cell>
+              <Table.Cell className="text-end">
+                {formatCurrency(r.totalRent)}
+              </Table.Cell>
               <Table.Cell className="text-end">
                 <EditableCell
                   type="percent"
@@ -696,7 +796,9 @@ function RentScheduleSection({ listing }: { listing: Listing }) {
                   onCommit={(next) => editField(i, "commissionPct", next)}
                 />
               </Table.Cell>
-              <Table.Cell className="text-end">{formatCurrency(r.commissionAmount)}</Table.Cell>
+              <Table.Cell className="text-end">
+                {formatCurrency(r.commissionAmount)}
+              </Table.Cell>
               <Table.Cell className="text-end">
                 <RowActions
                   onAddAbove={() => insertTerm(i)}
@@ -708,13 +810,23 @@ function RentScheduleSection({ listing }: { listing: Listing }) {
           ))}
           {total && (
             <Table.Row>
-              <Table.Cell className="fw-semibold">{formatScheduleDate(total.startDate)}</Table.Cell>
-              <Table.Cell className="fw-semibold">{formatScheduleDate(total.endDate)}</Table.Cell>
+              <Table.Cell className="fw-semibold">
+                {formatScheduleDate(total.startDate)}
+              </Table.Cell>
+              <Table.Cell className="fw-semibold">
+                {formatScheduleDate(total.endDate)}
+              </Table.Cell>
               <Table.Cell className="fw-semibold">{total.months}</Table.Cell>
               <Table.Cell />
-              <Table.Cell className="text-end fw-semibold">{formatCurrency(total.totalRent)}</Table.Cell>
-              <Table.Cell className="text-end fw-semibold">{total.commissionPct}%</Table.Cell>
-              <Table.Cell className="text-end fw-semibold">{formatCurrency(total.commissionAmount)}</Table.Cell>
+              <Table.Cell className="text-end fw-semibold">
+                {formatCurrency(total.totalRent)}
+              </Table.Cell>
+              <Table.Cell className="text-end fw-semibold">
+                {total.commissionPct}%
+              </Table.Cell>
+              <Table.Cell className="text-end fw-semibold">
+                {formatCurrency(total.commissionAmount)}
+              </Table.Cell>
               <Table.Cell />
             </Table.Row>
           )}
@@ -734,7 +846,8 @@ function TransactionSummarySection({ listing }: { listing: Listing }) {
   const { transaction } = listing;
   const isLease = listing.dealType === "Lease";
   const leaseTerms = listing.marketing.spaceLeaseTerms ?? [];
-  const terms = leaseTerms.find((t) => t.unitId === listing.unitId) ?? leaseTerms[0];
+  const terms =
+    leaseTerms.find((t) => t.unitId === listing.unitId) ?? leaseTerms[0];
 
   const headlineLabel = isLease ? "Lease Rate" : "Sale Price";
   const headlineValue = isLease
@@ -747,15 +860,20 @@ function TransactionSummarySection({ listing }: { listing: Listing }) {
     isLease
       ? [
           `Deal ID ${listing.dealId}`,
-          terms?.leaseTermMonths != null ? `Lease Term ${terms.leaseTermMonths} mo` : null,
+          terms?.leaseTermMonths != null
+            ? `Lease Term ${terms.leaseTermMonths} mo`
+            : null,
           `Available ${listing.marketing.availableSqFt.toLocaleString()} SF`,
         ]
       : [
           `Deal ID ${listing.dealId}`,
-          `Price / SF $${listing.financials.pricePerSqFt.toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}`,
+          `Price / SF $${listing.financials.pricePerSqFt.toLocaleString(
+            undefined,
+            {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            },
+          )}`,
         ]
   ).filter(Boolean);
 
@@ -778,19 +896,32 @@ function TransactionSummarySection({ listing }: { listing: Listing }) {
           <StatTile label={headlineLabel} value={headlineValue} />
         </div>
         <div className="col-md-3">
-          <StatTile label="Commission %" value={`${transaction.commissionPct}%`} />
+          <StatTile
+            label="Commission %"
+            value={`${transaction.commissionPct}%`}
+          />
         </div>
         <div className="col-md-3">
-          <StatTile label="Commission $" value={formatCurrency(transaction.commissionAmount)} />
+          <StatTile
+            label="Commission $"
+            value={formatCurrency(transaction.commissionAmount)}
+          />
         </div>
         <div className="col-md-3">
-          <StatTile label="Close Probability" value={`${transaction.closeProbability}%`} />
+          <StatTile
+            label="Close Probability"
+            value={`${transaction.closeProbability}%`}
+          />
         </div>
       </div>
       <p className="text-muted fs-small mb-0">{secondary.join(" · ")}</p>
 
       {editOpen && (
-        <EditTransactionDialog listing={listing} open={editOpen} onOpenChange={setEditOpen} />
+        <EditTransactionDialog
+          listing={listing}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+        />
       )}
     </Section>
   );
@@ -801,7 +932,7 @@ export function DealFinancials({ listing }: { listing: Listing }) {
   return (
     <div className="d-flex flex-column gap-5 p-4">
       <ListingPageHeader
-        title="Financials"
+        title="Voucher"
         actions={
           <div className="d-flex gap-2">
             <Button variant="outline">Deal Sheet</Button>
@@ -830,7 +961,8 @@ export function DealFinancials({ listing }: { listing: Listing }) {
 
       <Section title="Payables">
         <p className="text-muted mb-0">
-          Payables will be automatically created when deposits are applied to this deal.
+          Payables will be automatically created when deposits are applied to
+          this deal.
         </p>
       </Section>
     </div>
