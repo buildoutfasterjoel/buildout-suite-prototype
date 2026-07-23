@@ -587,36 +587,40 @@ function PeoplePage() {
                     ))}
                   <span className="text-muted">{filtered.length} contacts</span>
 
-                  <div className="ms-auto d-flex align-items-center gap-2">
-                    <Tooltip>
-                      <Tooltip.Trigger
-                        render={
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            aria-label="Email this list"
-                          >
-                            <FontAwesomeIcon icon={faEnvelope} />
-                          </Button>
-                        }
-                      />
-                      <Tooltip.Content>Email this list</Tooltip.Content>
-                    </Tooltip>
-                    <Tooltip>
-                      <Tooltip.Trigger
-                        render={
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            aria-label="Call this list"
-                          >
-                            <FontAwesomeIcon icon={faPhone} />
-                          </Button>
-                        }
-                      />
-                      <Tooltip.Content>Call this list</Tooltip.Content>
-                    </Tooltip>
-                  </div>
+                  {/* Email/call actions apply to a specific list — hidden on the
+                      full, unfiltered All Contacts book. */}
+                  {activeListId !== ALL_CONTACTS_ID && (
+                    <div className="ms-auto d-flex align-items-center gap-2">
+                      <Tooltip>
+                        <Tooltip.Trigger
+                          render={
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              aria-label="Email this list"
+                            >
+                              <FontAwesomeIcon icon={faEnvelope} />
+                            </Button>
+                          }
+                        />
+                        <Tooltip.Content>Email this list</Tooltip.Content>
+                      </Tooltip>
+                      <Tooltip>
+                        <Tooltip.Trigger
+                          render={
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              aria-label="Call this list"
+                            >
+                              <FontAwesomeIcon icon={faPhone} />
+                            </Button>
+                          }
+                        />
+                        <Tooltip.Content>Call this list</Tooltip.Content>
+                      </Tooltip>
+                    </div>
+                  )}
                 </div>
 
                 {selected.size > 0 && (
