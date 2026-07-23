@@ -357,6 +357,7 @@ export function DealMarketingEditor({
 		listing.financials,
 	);
 	const [marketing, setMarketing] = useState(listing.marketing);
+	const [internalNotes, setInternalNotes] = useState(listing.internalNotes);
 
 	const isSale = dealType !== "Lease";
 
@@ -406,6 +407,7 @@ export function DealMarketingEditor({
 			transaction,
 			financials,
 			marketing,
+			internalNotes,
 		});
 		updateProperty(property.id, propertyDraft);
 		back();
@@ -735,6 +737,8 @@ export function DealMarketingEditor({
 					patchProperty={patchProperty}
 					financials={financials}
 					patchFinancials={patchFinancials}
+					internalNotes={internalNotes}
+					setInternalNotes={setInternalNotes}
 				/>
 			)}
 

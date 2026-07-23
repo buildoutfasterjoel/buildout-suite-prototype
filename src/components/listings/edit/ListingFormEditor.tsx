@@ -12,6 +12,8 @@ import { PropertySection } from "#/components/listings/edit/sections/PropertySec
 import { SaleSection } from "#/components/listings/edit/sections/SaleSection";
 import { TransitSection } from "#/components/listings/edit/sections/TransitSection";
 import { UnitsSection } from "#/components/listings/edit/sections/UnitsSection";
+import { VisualMediaSection } from "#/components/listings/edit/sections/VisualMediaSection";
+import { DisclaimerNotesSection } from "#/components/listings/edit/sections/DisclaimerNotesSection";
 import { propertyTypeEffects, showBuyerSection } from "#/data/listingFormLogic";
 import type {
 	DealMarketing,
@@ -37,6 +39,8 @@ export function ListingFormEditor({
 	patchProperty,
 	financials,
 	patchFinancials,
+	internalNotes,
+	setInternalNotes,
 }: {
 	listing: Listing;
 	dealType: DealType;
@@ -47,6 +51,8 @@ export function ListingFormEditor({
 	patchProperty: (p: Partial<Property>) => void;
 	financials: DealPitchFinancials;
 	patchFinancials: (p: Partial<DealPitchFinancials>) => void;
+	internalNotes: string;
+	setInternalNotes: (v: string) => void;
 }) {
 	const effects = propertyTypeEffects(property.propertyType);
 
@@ -119,6 +125,15 @@ export function ListingFormEditor({
 					/>
 				</>
 			)}
+			<Separator />
+			<VisualMediaSection marketing={marketing} patchMarketing={patchMarketing} />
+			<Separator />
+			<DisclaimerNotesSection
+				marketing={marketing}
+				patchMarketing={patchMarketing}
+				internalNotes={internalNotes}
+				setInternalNotes={setInternalNotes}
+			/>
 		</div>
 	);
 }
