@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useParams, useNavigate } from "@tanstack/react-router";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
+import { Collapsible } from "@buildoutinc/blueprint-react/ui/Collapsible";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
@@ -104,9 +105,9 @@ export function PropertyDetailSidebar() {
     }
   }, []);
 
-  function toggleGroup(label: string) {
+  function setGroupOpen(label: string, open: boolean) {
     const next = new Set(collapsed);
-    if (next.has(label)) next.delete(label);
+    if (open) next.delete(label);
     else next.add(label);
     setCollapsed(next);
     window.localStorage.setItem(COLLAPSED_STORAGE_KEY, JSON.stringify([...next]));
@@ -148,50 +149,56 @@ export function PropertyDetailSidebar() {
         const isCollapsed = group.label
           ? collapsed.has(group.label)
           : false;
+        const tabs = (
+          <Tabs
+            value={activeInGroup}
+            onValueChange={handleTabChange}
+            orientation="vertical"
+          >
+            <Tabs.List variant="pills" orientation="vertical">
+              {group.items.map((item) => (
+                <Tabs.Tab
+                  key={item.label}
+                  value={item.label}
+                  icon={<FontAwesomeIcon icon={item.icon} />}
+                >
+                  {item.label}
+                </Tabs.Tab>
+              ))}
+            </Tabs.List>
+          </Tabs>
+        );
+        // Groups without a label (none today) are not collapsible.
+        if (!group.label) {
+          return (
+            <div key={`group-${i}`} className="d-flex flex-column gap-1 mb-2">
+              {tabs}
+            </div>
+          );
+        }
         return (
-          <div
-            key={group.label ?? `group-${i}`}
+          <Collapsible
+            key={group.label}
+            open={!isCollapsed}
+            onOpenChange={(open) => setGroupOpen(group.label!, open)}
             className="d-flex flex-column gap-1 mb-2"
           >
-            {group.label && (
-              <button
-                type="button"
-                onClick={() => toggleGroup(group.label!)}
-                aria-expanded={!isCollapsed}
-                className="d-flex align-items-center gap-2 w-100 border-0 bg-transparent p-0 mt-1 fw-semibold text-body"
-                style={{ cursor: "pointer" }}
-              >
-                <FontAwesomeIcon
-                  icon={faChevronRight}
-                  style={{
-                    fontSize: 12,
-                    transition: "transform 0.15s ease",
-                    transform: isCollapsed ? "rotate(0deg)" : "rotate(90deg)",
-                  }}
-                />
-                <span>{group.label}</span>
-              </button>
-            )}
-            {!isCollapsed && (
-              <Tabs
-                value={activeInGroup}
-                onValueChange={handleTabChange}
-                orientation="vertical"
-              >
-                <Tabs.List variant="pills" orientation="vertical">
-                  {group.items.map((item) => (
-                    <Tabs.Tab
-                      key={item.label}
-                      value={item.label}
-                      icon={<FontAwesomeIcon icon={item.icon} />}
-                    >
-                      {item.label}
-                    </Tabs.Tab>
-                  ))}
-                </Tabs.List>
-              </Tabs>
-            )}
-          </div>
+            <Collapsible.Trigger
+              className="d-flex align-items-center gap-2 w-100 border-0 bg-transparent p-0 mt-1 fw-semibold text-body"
+              style={{ cursor: "pointer" }}
+            >
+              <FontAwesomeIcon
+                icon={faChevronRight}
+                style={{
+                  fontSize: 12,
+                  transition: "transform 0.15s ease",
+                  transform: isCollapsed ? "rotate(0deg)" : "rotate(90deg)",
+                }}
+              />
+              <span>{group.label}</span>
+            </Collapsible.Trigger>
+            <Collapsible.Content>{tabs}</Collapsible.Content>
+          </Collapsible>
         );
       })}
     </nav>
