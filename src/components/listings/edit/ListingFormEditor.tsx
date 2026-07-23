@@ -2,6 +2,8 @@ import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { BuildingSection } from "#/components/listings/edit/sections/BuildingSection";
 import { CondosSection } from "#/components/listings/edit/sections/CondosSection";
 import { LandSection } from "#/components/listings/edit/sections/LandSection";
+import { LeaseSection } from "#/components/listings/edit/sections/LeaseSection";
+import { LeaseSpacesSection } from "#/components/listings/edit/sections/LeaseSpacesSection";
 import { LocationSection } from "#/components/listings/edit/sections/LocationSection";
 import { LotsSection } from "#/components/listings/edit/sections/LotsSection";
 import { PropertySection } from "#/components/listings/edit/sections/PropertySection";
@@ -84,6 +86,18 @@ export function ListingFormEditor({
 			<LotsSection property={property} patchProperty={patchProperty} />
 			<Separator />
 			<CondosSection property={property} patchProperty={patchProperty} />
+			{dealType === "Lease" && (
+				<>
+					<Separator />
+					<LeaseSection marketing={marketing} patchMarketing={patchMarketing} />
+					<Separator />
+					<LeaseSpacesSection
+						property={property}
+						marketing={marketing}
+						patchMarketing={patchMarketing}
+					/>
+				</>
+			)}
 		</div>
 	);
 }

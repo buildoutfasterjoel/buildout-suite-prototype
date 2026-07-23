@@ -24,6 +24,7 @@ export function TextField({
   placeholder,
   textarea,
   rows,
+  required,
 }: {
   label: string;
   value: string;
@@ -31,10 +32,15 @@ export function TextField({
   placeholder?: string;
   textarea?: boolean;
   rows?: number;
+  /** Renders a red `*` after the label (visual hint only — no validation). */
+  required?: boolean;
 }) {
   return (
     <Field>
-      <Field.Label>{label}</Field.Label>
+      <Field.Label>
+        {label}
+        {required && <span className="text-danger ms-1">*</span>}
+      </Field.Label>
       {textarea ? (
         <Textarea
           rows={rows ?? 3}
