@@ -10,6 +10,7 @@ import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faMagnifyingGlass,
@@ -19,6 +20,8 @@ import {
   faCircleXmark,
   faCaretDown,
   faAddressBook,
+  faEnvelope,
+  faPhone,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact, Property } from "#/data/types";
 import { getStore } from "#/data/store";
@@ -224,6 +227,37 @@ export function PropertyDetailLeads({ property }: { property: Property }) {
           <FontAwesomeIcon icon={faSliders} />
           All Filters
         </Button>
+
+        <div className="ms-auto d-flex align-items-center gap-2">
+          <Tooltip>
+            <Tooltip.Trigger
+              render={
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Email this list"
+                >
+                  <FontAwesomeIcon icon={faEnvelope} />
+                </Button>
+              }
+            />
+            <Tooltip.Content>Email this list</Tooltip.Content>
+          </Tooltip>
+          <Tooltip>
+            <Tooltip.Trigger
+              render={
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Call this list"
+                >
+                  <FontAwesomeIcon icon={faPhone} />
+                </Button>
+              }
+            />
+            <Tooltip.Content>Call this list</Tooltip.Content>
+          </Tooltip>
+        </div>
       </div>
 
       {/* Table */}
