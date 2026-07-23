@@ -34,7 +34,7 @@ import type {
 import type { CallList } from './contactLists'
 import type { SerializedContactFilters } from '#/components/contacts/contactFilterModel'
 import { reconcileContactDealFields } from './contactStage'
-import { TEAMMATES, type AccessTier, type ContactShare } from './teammates'
+import { CURRENT_USER, TEAMMATES, type AccessTier, type ContactShare } from './teammates'
 
 const SEED = 20240101
 const PROPERTY_COUNT = 50
@@ -1194,14 +1194,30 @@ function generateListings(
     ).toISOString()
     const tasks = generateTasks(status, taskAnchor)
     const nextTask = tasks.find((t) => t.status !== 'complete' && t.date)
-    const messages = Array.from(
-      { length: faker.number.int({ min: 0, max: 2 }) },
-      () => ({
+    const MESSAGE_LINES = [
+      'Sent the OM over to the buyer’s counsel this morning.',
+      'Any update on the estoppel certificates?',
+      'Confirmed the tour for Thursday at 2pm.',
+      'Seller countered at asking minus 3%. Discussing internally.',
+      'Loan commitment letter is in — uploading to Files now.',
+      'Can we get the T-12 refreshed before the call?',
+      'Buyer’s inspection is scheduled for next week.',
+      'Title came back clean, no surprises.',
+      'Pushing the LOI deadline to Friday per their request.',
+      'Great meeting today — momentum is good on this one.',
+    ]
+    const messageAuthors = [CURRENT_USER, ...TEAMMATES]
+    const messageCount = faker.number.int({ min: 2, max: 5 })
+    const messages = Array.from({ length: messageCount }, () => {
+      const author = faker.helpers.arrayElement(messageAuthors)
+      return {
         id: faker.string.uuid(),
-        author: `${faker.person.firstName()} ${faker.person.lastName()}`,
-        text: faker.lorem.sentence(),
+        author: author.name,
+        text: faker.helpers.arrayElement(MESSAGE_LINES),
         timestamp: faker.date.recent({ days: 30 }).toISOString(),
-      }),
+      }
+    }).sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
     )
 
     const voucherStatus = status === 'closed'
