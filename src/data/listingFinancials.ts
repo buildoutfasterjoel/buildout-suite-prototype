@@ -2,7 +2,7 @@ const has = (n: number | null | undefined): n is number => n != null && !Number.
 
 export function totalScheduledIncome(gross: number | null, other: number | null): number | null {
   if (!has(gross) && !has(other)) return null
-  return (gross ?? 0) + (other ?? 0)
+  return (has(gross) ? gross : 0) + (has(other) ? other : 0)
 }
 
 export function vacancyCost(gross: number | null, vacancyPct: number | null): number | null {
@@ -12,12 +12,12 @@ export function vacancyCost(gross: number | null, vacancyPct: number | null): nu
 
 export function grossIncome(totalScheduled: number | null, vacancy: number | null): number | null {
   if (!has(totalScheduled)) return null
-  return totalScheduled - (vacancy ?? 0)
+  return totalScheduled - (has(vacancy) ? vacancy : 0)
 }
 
 export function noi(gross: number | null, opex: number | null): number | null {
   if (!has(gross)) return null
-  return gross - (opex ?? 0)
+  return gross - (has(opex) ? opex : 0)
 }
 
 export function capRate(noiValue: number | null, price: number | null): number | null {
@@ -30,6 +30,7 @@ export function autoFillRentRow(
   size: number | null, ratePerSf: number | null, annualRent: number | null,
 ): { size: number | null; ratePerSf: number | null; annualRent: number | null } {
   const known = [has(size), has(ratePerSf), has(annualRent)].filter(Boolean).length
+  // Fewer than two known: nothing to derive — return inputs verbatim.
   if (known < 2) return { size, ratePerSf, annualRent }
   if (has(size) && has(ratePerSf)) return { size, ratePerSf, annualRent: size * ratePerSf }
   if (has(size) && has(annualRent)) return { size, ratePerSf: size === 0 ? null : annualRent / size, annualRent }
