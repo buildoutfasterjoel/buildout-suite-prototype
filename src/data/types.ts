@@ -641,7 +641,7 @@ export interface RentRollRow {
   tenant: string
   actualRent: number
   marketRent: number
-  rentPerSf: number
+  rentPerSf: number | null
   securityDeposit: number
   leaseStart: string | null
   leaseEnd: string | null

@@ -226,7 +226,7 @@ export function UnitsSection({
 			return {
 				...merged,
 				size: filled.size,
-				rentPerSf: filled.ratePerSf ?? 0,
+				rentPerSf: filled.ratePerSf,
 				annualRent: filled.annualRent,
 			};
 		});
@@ -239,7 +239,7 @@ export function UnitsSection({
 		tenant: "",
 		actualRent: 0,
 		marketRent: 0,
-		rentPerSf: 0,
+		rentPerSf: null,
 		securityDeposit: 0,
 		leaseStart: null,
 		leaseEnd: null,
