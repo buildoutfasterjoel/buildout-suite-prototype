@@ -9,6 +9,7 @@ import type {
   RelationshipStage,
   DealUnderwriting,
   DealDocument,
+  DealMessage,
 } from './types'
 import type { Email } from './emails'
 import { useDataStore } from './dataStore'
@@ -194,6 +195,22 @@ export function addDealDocument(listingId: string, doc: DealDocument): Listing |
   const existing = useDataStore.getState().listings.get(listingId)
   if (!existing) return undefined
   return patchListing(listingId, { documents: [...(existing.documents ?? []), doc] })
+}
+
+/** Append a message to a deal's Messages thread (shows in the Activities-tab rail). */
+export function addDealMessage(
+  listingId: string,
+  message: { author: string; text: string },
+): Listing | undefined {
+  const existing = useDataStore.getState().listings.get(listingId)
+  if (!existing) return undefined
+  const full: DealMessage = {
+    id: crypto.randomUUID(),
+    author: message.author,
+    text: message.text,
+    timestamp: new Date().toISOString(),
+  }
+  return patchListing(listingId, { messages: [...existing.messages, full] })
 }
 
 export function getContact(contactId: string): Contact | undefined {
