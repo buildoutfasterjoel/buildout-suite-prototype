@@ -470,6 +470,18 @@ export function deleteTask(id: string): void {
   useDataStore.getState().persist()
 }
 
+/** Toggle a standalone task's completion (the Tasks page checkbox). Persists. */
+export function setTaskCompleted(id: string, completed: boolean): void {
+  useDataStore.setState((s) => {
+    const existing = s.tasks.get(id)
+    if (!existing) return {}
+    const tasks = new Map(s.tasks)
+    tasks.set(id, { ...existing, status: completed ? 'complete' : 'open' })
+    return { tasks }
+  })
+  useDataStore.getState().persist()
+}
+
 /**
  * Patch a single deal-embedded planner task in place. Used by the Edit Task
  * modal when a deal-derived task (not a standalone {@link Task}) is opened.
