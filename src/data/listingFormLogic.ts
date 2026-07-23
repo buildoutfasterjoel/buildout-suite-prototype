@@ -49,6 +49,7 @@ export function propertyTypeEffects(type: PropertyType): {
 /** Building-class options; A+ only for eligible countries (PRD §6/§9). */
 export function buildingClassOptions(country: string | undefined): string[] {
   const base = ['A', 'B', 'C']
+  // unset country → treat as domestic (US): A+ eligible
   return !country || country === 'United States' ? ['A+', ...base] : base
 }
 
