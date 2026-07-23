@@ -11,6 +11,10 @@ import type {
   DealTask,
   DealUnderwriting,
   SpaceLeaseTerms,
+  Lot,
+  Condo,
+  UnitMixRow,
+  VisualMediaLink,
 } from './types'
 
 /** A blank per-unit lease-terms record — used as a default for units without terms yet. */
@@ -45,7 +49,75 @@ export function emptySpaceLeaseTerms(unitId: string): SpaceLeaseTerms {
     buyoutAllowance: null,
     concession: null,
     netLeaseInvestment: false,
+    status: 'Active',
+    closeDate: null,
+    spaceType: null,
+    spaceTypeLabelOverride: '',
+    tenantName: '',
+    majorTenant: false,
+    spaceName: '',
+    suite: '',
+    floor: null,
+    zipPlus4: '',
+    leaseRateMode: 'Flat',
+    leaseRateTo: null,
+    leaseRateUnitLabelOverride: '',
+    spaceSize: null,
+    spaceSizeUnits: 'SF',
+    leaseTypeLabelOverride: '',
+    subleaseExpiration: null,
+    ceilingHeight: null,
+    previousUsage: '',
+    officeSpace: null,
+    gradeLevelDoors: null,
+    dockHighDoors: null,
+    driveInBays: null,
+    numberOfCranes: null,
+    powerDescription: '',
+    warehouseAllotmentPct: null,
+    parkingSpaces: null,
+    conferenceRooms: null,
+    offices: null,
+    furnished: false,
+    heating: 'NA',
+    heatingDescription: '',
+    cooling: 'NA',
+    coolingDescription: '',
+    lighting: 'NA',
+    lightingDescription: '',
+    hvacTonnage: '',
+    rentConcession: '',
+    leaseTermsText: '',
+    salePrice: null,
   }
+}
+
+export function emptyLot(): Lot {
+  return {
+    id: crypto.randomUUID(), status: 'active', closeDate: null, buyerReferralSource: null,
+    lotNumber: '', address: '', apn: '', subtype: null, salePrice: null,
+    priceUnits: 'Total', size: null, sizeUnits: 'Acre', description: '', zoning: '',
+  }
+}
+
+export function emptyCondo(): Condo {
+  return {
+    id: crypto.randomUUID(), status: 'active', closeDate: null, addressUnit: '',
+    salePrice: null, priceUnits: 'Total', hidePrice: false, hidePriceLabel: null,
+    size: null, sizeUnits: 'Sq Ft', description: '',
+  }
+}
+
+export function emptyUnitMixRow(): UnitMixRow {
+  return {
+    id: crypto.randomUUID(), unitType: '', bedrooms: null, bathrooms: null, count: null,
+    size: null, rackRate: null, rent: null, minRent: null, maxRent: null,
+    marketRent: null, securityDeposit: null, description: '',
+  }
+}
+
+export function emptyVisualMediaLink(): VisualMediaLink {
+  return { id: crypto.randomUUID(), url: '', mediaType: 'Interactive Site Plan' }
 }
 import {
   addListing,
