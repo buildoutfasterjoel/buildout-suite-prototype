@@ -3,6 +3,7 @@ import { BuildingSection } from "#/components/listings/edit/sections/BuildingSec
 import { LandSection } from "#/components/listings/edit/sections/LandSection";
 import { LocationSection } from "#/components/listings/edit/sections/LocationSection";
 import { PropertySection } from "#/components/listings/edit/sections/PropertySection";
+import { SaleSection } from "#/components/listings/edit/sections/SaleSection";
 import { TransitSection } from "#/components/listings/edit/sections/TransitSection";
 import { UnitsSection } from "#/components/listings/edit/sections/UnitsSection";
 import { propertyTypeEffects } from "#/data/listingFormLogic";
@@ -22,6 +23,7 @@ import type {
  * never owns state of its own.
  */
 export function ListingFormEditor({
+	dealType,
 	marketing,
 	patchMarketing,
 	property,
@@ -68,6 +70,12 @@ export function ListingFormEditor({
 				<>
 					<Separator />
 					<LandSection property={property} patchProperty={patchProperty} />
+				</>
+			)}
+			{dealType === "Sale" && (
+				<>
+					<Separator />
+					<SaleSection marketing={marketing} patchMarketing={patchMarketing} />
 				</>
 			)}
 		</div>
