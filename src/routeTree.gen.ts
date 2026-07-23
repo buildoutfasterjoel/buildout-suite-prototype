@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ShellRouteImport } from './routes/_shell'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ShellTasksRouteImport } from './routes/_shell/tasks'
 import { Route as ShellSuiteRouteImport } from './routes/_shell/suite'
 import { Route as ShellPropertiesRouteImport } from './routes/_shell/properties'
 import { Route as ShellListingsRouteImport } from './routes/_shell/listings'
@@ -19,6 +20,7 @@ import { Route as ShellEmailRouteImport } from './routes/_shell/email'
 import { Route as ShellEditorRouteImport } from './routes/_shell/editor'
 import { Route as ShellBackofficeRouteImport } from './routes/_shell/backoffice'
 import { Route as ShellAppRouteImport } from './routes/_shell/app'
+import { Route as ShellTasksIndexRouteImport } from './routes/_shell/tasks/index'
 import { Route as ShellSuiteIndexRouteImport } from './routes/_shell/suite/index'
 import { Route as ShellPropertiesIndexRouteImport } from './routes/_shell/properties/index'
 import { Route as ShellListingsIndexRouteImport } from './routes/_shell/listings/index'
@@ -62,6 +64,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShellTasksRoute = ShellTasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
+  getParentRoute: () => ShellRoute,
+} as any)
 const ShellSuiteRoute = ShellSuiteRouteImport.update({
   id: '/suite',
   path: '/suite',
@@ -96,6 +103,11 @@ const ShellAppRoute = ShellAppRouteImport.update({
   id: '/app',
   path: '/app',
   getParentRoute: () => ShellRoute,
+} as any)
+const ShellTasksIndexRoute = ShellTasksIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShellTasksRoute,
 } as any)
 const ShellSuiteIndexRoute = ShellSuiteIndexRouteImport.update({
   id: '/',
@@ -268,6 +280,7 @@ export interface FileRoutesByFullPath {
   '/listings': typeof ShellListingsRouteWithChildren
   '/properties': typeof ShellPropertiesRouteWithChildren
   '/suite': typeof ShellSuiteRouteWithChildren
+  '/tasks': typeof ShellTasksRouteWithChildren
   '/editor/$listingId': typeof ShellEditorListingIdRoute
   '/email/$emailId': typeof ShellEmailEmailIdRoute
   '/listings/$listingId': typeof ShellListingsListingIdRouteWithChildren
@@ -277,6 +290,7 @@ export interface FileRoutesByFullPath {
   '/listings/': typeof ShellListingsIndexRoute
   '/properties/': typeof ShellPropertiesIndexRoute
   '/suite/': typeof ShellSuiteIndexRoute
+  '/tasks/': typeof ShellTasksIndexRoute
   '/backoffice/contacts/$contactId': typeof ShellBackofficeContactsContactIdRoute
   '/listings/$listingId/activities': typeof ShellListingsListingIdActivitiesRoute
   '/listings/$listingId/client-report': typeof ShellListingsListingIdClientReportRoute
@@ -310,6 +324,7 @@ export interface FileRoutesByTo {
   '/listings': typeof ShellListingsIndexRoute
   '/properties': typeof ShellPropertiesIndexRoute
   '/suite': typeof ShellSuiteIndexRoute
+  '/tasks': typeof ShellTasksIndexRoute
   '/backoffice/contacts/$contactId': typeof ShellBackofficeContactsContactIdRoute
   '/listings/$listingId/activities': typeof ShellListingsListingIdActivitiesRoute
   '/listings/$listingId/client-report': typeof ShellListingsListingIdClientReportRoute
@@ -342,6 +357,7 @@ export interface FileRoutesById {
   '/_shell/listings': typeof ShellListingsRouteWithChildren
   '/_shell/properties': typeof ShellPropertiesRouteWithChildren
   '/_shell/suite': typeof ShellSuiteRouteWithChildren
+  '/_shell/tasks': typeof ShellTasksRouteWithChildren
   '/_shell/editor/$listingId': typeof ShellEditorListingIdRoute
   '/_shell/email/$emailId': typeof ShellEmailEmailIdRoute
   '/_shell/listings/$listingId': typeof ShellListingsListingIdRouteWithChildren
@@ -351,6 +367,7 @@ export interface FileRoutesById {
   '/_shell/listings/': typeof ShellListingsIndexRoute
   '/_shell/properties/': typeof ShellPropertiesIndexRoute
   '/_shell/suite/': typeof ShellSuiteIndexRoute
+  '/_shell/tasks/': typeof ShellTasksIndexRoute
   '/_shell/backoffice/contacts/$contactId': typeof ShellBackofficeContactsContactIdRoute
   '/_shell/listings/$listingId/activities': typeof ShellListingsListingIdActivitiesRoute
   '/_shell/listings/$listingId/client-report': typeof ShellListingsListingIdClientReportRoute
@@ -383,6 +400,7 @@ export interface FileRouteTypes {
     | '/listings'
     | '/properties'
     | '/suite'
+    | '/tasks'
     | '/editor/$listingId'
     | '/email/$emailId'
     | '/listings/$listingId'
@@ -392,6 +410,7 @@ export interface FileRouteTypes {
     | '/listings/'
     | '/properties/'
     | '/suite/'
+    | '/tasks/'
     | '/backoffice/contacts/$contactId'
     | '/listings/$listingId/activities'
     | '/listings/$listingId/client-report'
@@ -425,6 +444,7 @@ export interface FileRouteTypes {
     | '/listings'
     | '/properties'
     | '/suite'
+    | '/tasks'
     | '/backoffice/contacts/$contactId'
     | '/listings/$listingId/activities'
     | '/listings/$listingId/client-report'
@@ -456,6 +476,7 @@ export interface FileRouteTypes {
     | '/_shell/listings'
     | '/_shell/properties'
     | '/_shell/suite'
+    | '/_shell/tasks'
     | '/_shell/editor/$listingId'
     | '/_shell/email/$emailId'
     | '/_shell/listings/$listingId'
@@ -465,6 +486,7 @@ export interface FileRouteTypes {
     | '/_shell/listings/'
     | '/_shell/properties/'
     | '/_shell/suite/'
+    | '/_shell/tasks/'
     | '/_shell/backoffice/contacts/$contactId'
     | '/_shell/listings/$listingId/activities'
     | '/_shell/listings/$listingId/client-report'
@@ -515,6 +537,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_shell/tasks': {
+      id: '/_shell/tasks'
+      path: '/tasks'
+      fullPath: '/tasks'
+      preLoaderRoute: typeof ShellTasksRouteImport
+      parentRoute: typeof ShellRoute
+    }
     '/_shell/suite': {
       id: '/_shell/suite'
       path: '/suite'
@@ -563,6 +592,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app'
       preLoaderRoute: typeof ShellAppRouteImport
       parentRoute: typeof ShellRoute
+    }
+    '/_shell/tasks/': {
+      id: '/_shell/tasks/'
+      path: '/'
+      fullPath: '/tasks/'
+      preLoaderRoute: typeof ShellTasksIndexRouteImport
+      parentRoute: typeof ShellTasksRoute
     }
     '/_shell/suite/': {
       id: '/_shell/suite/'
@@ -907,6 +943,18 @@ const ShellSuiteRouteWithChildren = ShellSuiteRoute._addFileChildren(
   ShellSuiteRouteChildren,
 )
 
+interface ShellTasksRouteChildren {
+  ShellTasksIndexRoute: typeof ShellTasksIndexRoute
+}
+
+const ShellTasksRouteChildren: ShellTasksRouteChildren = {
+  ShellTasksIndexRoute: ShellTasksIndexRoute,
+}
+
+const ShellTasksRouteWithChildren = ShellTasksRoute._addFileChildren(
+  ShellTasksRouteChildren,
+)
+
 interface ShellRouteChildren {
   ShellAppRoute: typeof ShellAppRouteWithChildren
   ShellBackofficeRoute: typeof ShellBackofficeRouteWithChildren
@@ -915,6 +963,7 @@ interface ShellRouteChildren {
   ShellListingsRoute: typeof ShellListingsRouteWithChildren
   ShellPropertiesRoute: typeof ShellPropertiesRouteWithChildren
   ShellSuiteRoute: typeof ShellSuiteRouteWithChildren
+  ShellTasksRoute: typeof ShellTasksRouteWithChildren
 }
 
 const ShellRouteChildren: ShellRouteChildren = {
@@ -925,6 +974,7 @@ const ShellRouteChildren: ShellRouteChildren = {
   ShellListingsRoute: ShellListingsRouteWithChildren,
   ShellPropertiesRoute: ShellPropertiesRouteWithChildren,
   ShellSuiteRoute: ShellSuiteRouteWithChildren,
+  ShellTasksRoute: ShellTasksRouteWithChildren,
 }
 
 const ShellRouteWithChildren = ShellRoute._addFileChildren(ShellRouteChildren)
