@@ -9,14 +9,10 @@ import {
 	SelectField,
 	SwitchRow,
 	TextField,
+	YesNoNaField,
 } from "#/components/listings/edit/fieldWidgets";
 import { Section } from "#/components/listings/listingWidgets";
-import type {
-	DealMarketing,
-	InvestmentType,
-	PropertyUse,
-	YesNoNA,
-} from "#/data/types";
+import type { DealMarketing, InvestmentType, PropertyUse } from "#/data/types";
 
 // ── Option lists (string unions from the data model) ────────────────────────
 const PROPERTY_USES: PropertyUse[] = [
@@ -33,28 +29,6 @@ const INVESTMENT_TYPES: InvestmentType[] = [
 	"Opportunistic",
 	"Distressed",
 ];
-
-const YES_NO_NA_OPTIONS: YesNoNA[] = ["Y", "N", "NA"];
-
-/** Y/N/NA select, e.g. 1031 Exchange/Consider Exchange. */
-function YesNoNaField({
-	label,
-	value,
-	onChange,
-}: {
-	label: string;
-	value: YesNoNA | undefined;
-	onChange: (v: YesNoNA) => void;
-}) {
-	return (
-		<SelectField
-			label={label}
-			value={value ?? "NA"}
-			options={YES_NO_NA_OPTIONS}
-			onChange={onChange}
-		/>
-	);
-}
 
 /**
  * Listing tab — Sale Marketing & Terms. Only rendered for Sale deals

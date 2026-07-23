@@ -14,6 +14,7 @@ import {
   faTrashCan,
   faCalendar,
 } from "@fortawesome/pro-regular-svg-icons";
+import type { YesNoNA } from "#/data/types";
 
 // ── Small field wrappers ─────────────────────────────────────────────────────
 export function TextField({
@@ -181,6 +182,28 @@ export function SelectField<T extends string>({
         </Select.Content>
       </Select>
     </Field>
+  );
+}
+
+export const YES_NO_NA_OPTIONS: YesNoNA[] = ["Y", "N", "NA"];
+
+/** Y/N/NA select, e.g. Irrigation/Water/1031 Exchange availability. */
+export function YesNoNaField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: YesNoNA | undefined;
+  onChange: (v: YesNoNA) => void;
+}) {
+  return (
+    <SelectField
+      label={label}
+      value={value ?? "NA"}
+      options={YES_NO_NA_OPTIONS}
+      onChange={onChange}
+    />
   );
 }
 

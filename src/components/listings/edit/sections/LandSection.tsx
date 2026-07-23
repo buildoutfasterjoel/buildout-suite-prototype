@@ -4,33 +4,11 @@ import {
 	Col,
 	FieldGrid,
 	NumberField,
-	SelectField,
 	TextField,
+	YesNoNaField,
 } from "#/components/listings/edit/fieldWidgets";
 import { Section } from "#/components/listings/listingWidgets";
-import type { Property, YesNoNA } from "#/data/types";
-
-const YES_NO_NA_OPTIONS: YesNoNA[] = ["Y", "N", "NA"];
-
-/** Y/N/NA select, e.g. Irrigation/Water/Telephone/Cable/Sewer availability. */
-function YesNoNaField({
-	label,
-	value,
-	onChange,
-}: {
-	label: string;
-	value: YesNoNA | undefined;
-	onChange: (v: YesNoNA) => void;
-}) {
-	return (
-		<SelectField
-			label={label}
-			value={value ?? "NA"}
-			options={YES_NO_NA_OPTIONS}
-			onChange={onChange}
-		/>
-	);
-}
+import type { Property } from "#/data/types";
 
 /**
  * Listing tab — Land. Only rendered for the Land property type
