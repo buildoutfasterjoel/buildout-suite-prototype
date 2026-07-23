@@ -409,19 +409,37 @@
   --bp-btn-active-border-color: var(--color-purple-heart-950, #360764);
 }
 
-// Contact task row: a flat list item (per Figma) — no card border/shadow, just
-// a circular completion checkbox, the task label, a due-date + source meta row,
-// right-aligned author/type badges, and a bottom divider between rows.
-// Self-contained until Blueprint ships a Task component.
+// Contact task tile (Figma "Task"): an inset row whose gray hover background
+// reads as a card. Horizontal padding + a matching negative margin keep the
+// content aligned to the column while the hover fill bleeds toward the panel
+// edges. The top row holds the title + assignee; the bottom row holds badges
+// (AI, type, deal) and a right-aligned due date. A divider (inside the inset)
+// separates rows. Self-contained until Blueprint ships a Task component.
 .contact-task-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--color-storm-grey-100, #eceef2);
+  padding: 0 12px;
+  margin: 0 -12px;
+  border-radius: var(--bp-border-radius, 6px);
 
-  // No trailing divider when a task row is the last item in the list.
-  &:last-child {
+  // Gray "card" on hover, only for openable tiles.
+  &--interactive {
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-storm-grey-50, #f6f7f9);
+    }
+  }
+
+  &__inner {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    min-height: 59px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--color-storm-grey-200, #d5dae2);
+  }
+
+  // No trailing divider on the last tile in the list.
+  &:last-child &__inner {
     border-bottom: 0;
   }
 
@@ -457,8 +475,26 @@
     }
   }
 
-  // Task label.
+  // Content column: title row + meta row.
+  &__content {
+    flex: 1 0 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  // Top row: title (grows) + assignee avatar.
+  &__titlerow {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+    width: 100%;
+  }
+
   &__label {
+    flex: 1 0 0;
+    min-width: 0;
     font-size: 14px;
     font-weight: 600;
     line-height: 19px;
@@ -466,70 +502,100 @@
     word-break: break-word;
   }
 
-  // Due-date and source meta chips.
-  &__meta,
-  &__source {
-    display: inline-flex;
+  &__avatar {
+    flex-shrink: 0;
+  }
+
+  // Bottom row: badges (left, wrap) + due date (right).
+  &__meta {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+  }
+
+  &__badges {
+    flex: 1 0 0;
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 4px;
-    font-size: 12px;
-    line-height: 16px;
-    white-space: nowrap;
-
-    svg {
-      font-size: 12px;
-    }
   }
 
-  &__meta {
-    flex-shrink: 0;
-    color: var(--color-storm-grey-600, #506079);
-
-    svg {
-      color: var(--color-storm-grey-500, #62748e);
-    }
-
-    &--overdue {
-      color: var(--bp-destructive, #d92d20);
-
-      svg {
-        color: var(--bp-destructive, #d92d20);
-      }
-    }
-  }
-
-  &__source {
-    min-width: 0;
-    font-weight: 600;
-    color: var(--bp-link-color, #2042a7);
-    text-decoration: none;
-
-    svg {
-      flex-shrink: 0;
-      color: var(--color-storm-grey-500, #62748e);
-    }
-
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-
-  // Small icon-only badge (AI-suggested sparkle, task type).
+  // Badges: 20px tall, 6px radius, 4px padding. Type is text-only (no icon).
   &__badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 4px;
+    height: 20px;
     padding: 4px;
-    border-radius: 6px;
-    font-size: 10px;
-    line-height: 1;
+    border-radius: var(--bp-border-radius, 6px);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 13px;
+    white-space: nowrap;
+
+    svg {
+      font-size: 10px;
+    }
+
+    &--ai {
+      width: 20px;
+      background: #f2e8ff;
+      color: var(--color-purple-heart-950, #360764);
+    }
+
+    &--type {
+      background: var(--color-storm-grey-100, #eceef2);
+      color: var(--color-storm-grey-900, #22262f);
+    }
+
+    &--deal {
+      max-width: 100%;
+      border: 1px solid var(--color-storm-grey-200, #d5dae2);
+      color: #333a47;
+
+      svg {
+        color: #333a47;
+      }
+
+      .text-truncate {
+        max-width: 160px;
+      }
+    }
   }
 
-  // Completed state: tint the row storm-grey-50, mute + strike the label, and
-  // give the checkbox a soft buildout-blue-100 fill (no border).
-  &--done {
-    background: var(--color-storm-grey-50, #f6f7f9);
+  // Due date, pushed to the right of the meta row. No icon unless overdue.
+  &__due {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 20px;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 16px;
+    white-space: nowrap;
+    color: var(--color-storm-grey-600, #506079);
 
+    svg {
+      font-size: 14px;
+    }
+
+    &--overdue {
+      font-weight: 600;
+      color: #900c12;
+
+      svg {
+        color: #af050d;
+      }
+    }
+  }
+
+  // Completed: mute + strike the label and give the checkbox a soft fill.
+  &--done {
     .contact-task-card__label {
       color: var(--color-storm-grey-500, #62748e);
       text-decoration: line-through;

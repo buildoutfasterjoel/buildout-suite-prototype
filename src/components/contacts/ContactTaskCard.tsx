@@ -1,35 +1,33 @@
-import { Link } from "@tanstack/react-router";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faCalendar,
+  faAlarmExclamation,
   faHandshake,
   faSparkles,
   faCheck,
 } from "@fortawesome/pro-regular-svg-icons";
-import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { ContactTask } from "#/data/types";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
+import { todayISO } from "#/components/contacts/contactDisplay";
 import {
-  TASK_TYPE_META,
-  GENERIC_TASK_ICON,
-  deriveTaskType,
   isAiSuggested,
   taskDueLabel,
+  taskTypeLabel,
 } from "#/components/contacts/taskDisplay";
 
 /**
- * A single open task in the contact detail page's Tasks column, matching the
- * Figma "Task" component: a completion checkbox, the task label, a due-date and
- * source (deal) meta row, and — on the right — the assignee avatar stacked over
- * an optional AI-suggested sparkle and the task-type badge.
+ * A single task in the contact detail page's Tasks column, matching the Figma
+ * "Task" component. The tile is inset (horizontal padding) so a gray hover
+ * background reads as a card. Layout:
+ *  - top row: completion checkbox, the title, and the assignee avatar;
+ *  - bottom row: badges (AI sparkle if AI-created, a text type label, and an
+ *    outlined deal badge when the source is a deal) with the due date pushed to
+ *    the right — muted with no icon normally, red + bold with an alarm icon when
+ *    overdue.
  *
- * This is a local, self-contained stand-in: Blueprint doesn't ship a Task
- * component yet. Keep the markup contained here so it can be swapped for the
- * design-system component wholesale once it lands.
- *
- * Completion is controlled by the parent panel (which moves completed tasks to
- * its collapsible "completed" section), so `done`/`onToggle` come in as props.
+ * Self-contained until Blueprint ships a Task component. Completion is
+ * controlled by the parent panel, so `done`/`onToggle` come in as props.
  */
 export function ContactTaskCard({
   task,
@@ -40,118 +38,117 @@ export function ContactTaskCard({
   task: ContactTask;
   done: boolean;
   onToggle: () => void;
-  /** When provided, clicking the card (outside its controls) opens the task. */
+  /** When provided, clicking the tile (outside its controls) opens the task. */
   onOpen?: () => void;
 }) {
   const due = taskDueLabel(task.date);
-  const isOverdue = task.status === "overdue";
-  const type = deriveTaskType(task.label);
-  const typeMeta = type ? TASK_TYPE_META[type] : null;
-  const typeIcon = typeMeta?.icon ?? GENERIC_TASK_ICON;
-  const typeLabel = typeMeta?.label ?? "Task";
+  // Overdue purely by date: an incomplete task whose due date is before today.
+  const isOverdue = !done && !!task.date && task.date < todayISO();
+  const typeLabel = taskTypeLabel(task);
   const showSparkle = isAiSuggested(task);
 
   return (
     <div
-      className={`contact-task-card${done ? " contact-task-card--done" : ""}`}
+      className={`contact-task-card${done ? " contact-task-card--done" : ""}${
+        onOpen ? " contact-task-card--interactive" : ""
+      }`}
       role={onOpen ? "button" : undefined}
-      style={onOpen ? { cursor: "pointer" } : undefined}
       onClick={
         onOpen
           ? (e) => {
-              // Let the checkbox and deal link behave normally.
+              // Let the checkbox behave normally.
               if (!shouldIgnoreRowClick(e)) onOpen();
             }
           : undefined
       }
     >
-      {/* Completion checkbox (circular, per design) */}
-      <button
-        type="button"
-        role="checkbox"
-        aria-checked={done}
-        aria-label={done ? "Mark task incomplete" : "Mark task complete"}
-        className="contact-task-card__check"
-        onClick={onToggle}
-      >
-        {done && <FontAwesomeIcon icon={faCheck} />}
-      </button>
+      <div className="contact-task-card__inner">
+        {/* Completion checkbox (circular, per design) */}
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={done}
+          aria-label={done ? "Mark task incomplete" : "Mark task complete"}
+          className="contact-task-card__check"
+          onClick={onToggle}
+        >
+          {done && <FontAwesomeIcon icon={faCheck} />}
+        </button>
 
-      {/* Task info + author */}
-      <div className="d-flex flex-grow-1 gap-2" style={{ minWidth: 0 }}>
-        <div className="d-flex flex-column flex-grow-1 gap-1" style={{ minWidth: 0 }}>
-          <div className="contact-task-card__label">{task.label}</div>
+        <div className="contact-task-card__content">
+          {/* Top row: title + assignee avatar */}
+          <div className="contact-task-card__titlerow">
+            <span className="contact-task-card__label">{task.label}</span>
+            {/* Assignee avatar — only when the contact is shared with others. */}
+            {task.showAssignee && (
+              <Tooltip>
+                <Tooltip.Trigger
+                  render={
+                    <Avatar
+                      size="sm"
+                      className="contact-task-card__avatar"
+                      style={{ width: 18, height: 18 }}
+                    >
+                      {task.assigneeAvatarUrl && (
+                        <Avatar.Image
+                          src={task.assigneeAvatarUrl}
+                          alt={task.assigneeName ?? task.assigneeInitials}
+                        />
+                      )}
+                      <Avatar.Fallback style={{ fontSize: 8 }}>
+                        {task.assigneeInitials}
+                      </Avatar.Fallback>
+                    </Avatar>
+                  }
+                />
+                <Tooltip.Content>
+                  Assigned to {task.assigneeName ?? task.assigneeInitials}
+                </Tooltip.Content>
+              </Tooltip>
+            )}
+          </div>
 
-          <div className="d-flex align-items-center gap-2" style={{ minWidth: 0 }}>
+          {/* Bottom row: badges + due date */}
+          <div className="contact-task-card__meta">
+            <div className="contact-task-card__badges">
+              {showSparkle && (
+                <span
+                  className="contact-task-card__badge contact-task-card__badge--ai"
+                  aria-label="AI suggested"
+                  title="AI suggested"
+                >
+                  <FontAwesomeIcon icon={faSparkles} />
+                </span>
+              )}
+              {typeLabel && (
+                <span className="contact-task-card__badge contact-task-card__badge--type">
+                  {typeLabel}
+                </span>
+              )}
+              {task.dealId && (
+                <span
+                  className="contact-task-card__badge contact-task-card__badge--deal"
+                  title={task.dealName}
+                >
+                  <FontAwesomeIcon icon={faHandshake} />
+                  <span className="text-truncate">{task.dealName}</span>
+                </span>
+              )}
+            </div>
+
             {due && (
               <span
-                className={`contact-task-card__meta${
-                  isOverdue ? " contact-task-card__meta--overdue" : ""
+                className={`contact-task-card__due${
+                  isOverdue ? " contact-task-card__due--overdue" : ""
                 }`}
               >
-                <FontAwesomeIcon icon={faCalendar} />
+                {isOverdue && <FontAwesomeIcon icon={faAlarmExclamation} />}
                 {due}
               </span>
             )}
-            {task.dealId && (
-              <Link
-                to="/listings/$listingId"
-                params={{ listingId: task.dealId }}
-                className="contact-task-card__source"
-                title={task.dealName}
-                onClick={(e) => {
-                  if (shouldIgnoreRowClick(e)) e.stopPropagation();
-                }}
-              >
-                <FontAwesomeIcon icon={faHandshake} />
-                <span className="text-truncate">{task.dealName}</span>
-              </Link>
-            )}
           </div>
-        </div>
-
-        {/* Author avatar + type badges */}
-        <div className="d-flex flex-column align-items-end gap-1 flex-shrink-0">
-          <Avatar size="sm" style={{ width: 18, height: 18 }}>
-            <Avatar.Fallback style={{ fontSize: 8 }}>
-              {task.assigneeInitials}
-            </Avatar.Fallback>
-          </Avatar>
-          {showSparkle && (
-            <TaskBadge
-              icon={faSparkles}
-              label="AI suggested"
-              bg="#f9f5ff"
-              color="#360764"
-            />
-          )}
-          <TaskBadge icon={typeIcon} label={typeLabel} bg="#f6f7f9" color="#22262f" />
         </div>
       </div>
     </div>
-  );
-}
-
-/** A small icon-only chip used for the AI-suggested and task-type indicators. */
-function TaskBadge({
-  icon,
-  label,
-  bg,
-  color,
-}: {
-  icon: IconDefinition;
-  label: string;
-  bg: string;
-  color: string;
-}) {
-  return (
-    <span
-      className="contact-task-card__badge"
-      style={{ backgroundColor: bg, color }}
-      aria-label={label}
-      title={label}
-    >
-      <FontAwesomeIcon icon={icon} />
-    </span>
   );
 }

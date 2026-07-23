@@ -29,6 +29,7 @@ import type {
   FinancialRecordSource,
   RentRollRow,
   HeroKey,
+  PropertyStatus,
 } from './types'
 import type { CallList } from './contactLists'
 import type { SerializedContactFilters } from '#/components/contacts/contactFilterModel'
@@ -1174,7 +1175,24 @@ function generateListings(
       })
     }
 
-    const tasks = generateTasks(status, stageStartedAt)
+    // Task due dates get their own recent anchor (not stageStartedAt, which can
+    // be up to 120 days old) so the planner stays relevant to "now": completed
+    // items sit in the recent past and open items are mostly upcoming, with only
+    // a few genuinely overdue. Chosen per stage to offset generateTasks's fixed
+    // day-offsets, plus a little jitter so deals don't share identical dates.
+    const TASK_ANCHOR_DAYS_AGO: Record<PropertyStatus, number> = {
+      proposal: 4,
+      active: 14,
+      'under-contract': 14,
+      closed: 45,
+      inactive: 7,
+    }
+    const taskAnchor = new Date(
+      Date.now() -
+        (TASK_ANCHOR_DAYS_AGO[status] + faker.number.int({ min: -2, max: 2 })) *
+          86_400_000,
+    ).toISOString()
+    const tasks = generateTasks(status, taskAnchor)
     const nextTask = tasks.find((t) => t.status !== 'complete' && t.date)
     const messages = Array.from(
       { length: faker.number.int({ min: 0, max: 2 }) },

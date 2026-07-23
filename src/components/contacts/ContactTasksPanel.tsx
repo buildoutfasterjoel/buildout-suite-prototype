@@ -70,9 +70,19 @@ export function ContactTasksPanel({
     });
   }, [tasks, completedTasks, overrides]);
 
-  // Active tasks keep source order; completed tasks sort most-recently-completed
-  // first (session completions by seq desc, then pre-existing by due date desc).
-  const active = rows.filter((r) => !r.done);
+  // Active tasks sort by due date ascending — overdue and due-soonest first,
+  // tasks with no date last. Completed tasks sort most-recently-completed first
+  // (session completions by seq desc, then pre-existing by due date desc).
+  const active = rows
+    .filter((r) => !r.done)
+    .sort((a, b) => {
+      const da = a.task.date;
+      const db = b.task.date;
+      if (!da && !db) return 0;
+      if (!da) return 1; // undated → after dated
+      if (!db) return -1;
+      return da.localeCompare(db); // ISO dates sort chronologically as strings
+    });
   const completed = rows
     .filter((r) => r.done)
     .sort((a, b) => {
