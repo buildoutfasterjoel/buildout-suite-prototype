@@ -1,82 +1,58 @@
-import {
-  faPhone,
-  faEnvelope,
-  faCalendarUsers,
-  faFileSignature,
-  faNoteSticky,
-  faListCheck,
-} from "@fortawesome/pro-regular-svg-icons";
-import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { ContactTask } from "#/data/types";
 
 /**
  * Presentation helpers for the contact detail Tasks column.
  *
- * The data model ({@link ContactTask}) has no explicit task *type* — tasks come
- * from deal planners as free-text labels — so we infer a type from the label to
- * drive the small type badge on each card (call, email, meeting, …). This is
- * prototype presentation logic; when tasks carry a real type field, swap
- * {@link deriveTaskType} for a direct lookup.
+ * Task types are scoped to the set the Add/Edit Task modal offers — Call, Email,
+ * Meeting, To-Do, Follow-Up, Showing (plus "None" ⇒ no badge). Standalone tasks
+ * carry an explicit type; deal-derived tasks have only a free-text label, so we
+ * infer a type from it, mapping only into that same scoped set.
  */
 
-export type ContactTaskType =
+export type TaskTypeKey =
   | "call"
   | "email"
   | "meeting"
-  | "document"
-  | "note";
+  | "to-do"
+  | "follow-up"
+  | "showing";
 
-/** Icon + accessible label for each task type's badge. */
-export const TASK_TYPE_META: Record<
-  ContactTaskType,
-  { icon: IconDefinition; label: string }
-> = {
-  call: { icon: faPhone, label: "Call" },
-  email: { icon: faEnvelope, label: "Email" },
-  meeting: { icon: faCalendarUsers, label: "Meeting" },
-  document: { icon: faFileSignature, label: "Document" },
-  note: { icon: faNoteSticky, label: "Note" },
+/** Display label for each scoped task type. */
+export const TASK_TYPE_LABELS: Record<TaskTypeKey, string> = {
+  call: "Call",
+  email: "Email",
+  meeting: "Meeting",
+  "to-do": "To-Do",
+  "follow-up": "Follow-Up",
+  showing: "Showing",
 };
 
-/** Fallback icon for tasks that don't match a specific type. */
-export const GENERIC_TASK_ICON = faListCheck;
-
 /** Keyword → type rules, checked in order; first match wins. */
-const TYPE_RULES: Array<{ type: ContactTaskType; keywords: string[] }> = [
+const TYPE_RULES: Array<{ type: TaskTypeKey; keywords: string[] }> = [
   {
-    type: "call",
-    keywords: ["call", "phone", "follow up", "follow-up", "reach out"],
-  },
-  { type: "email", keywords: ["email", "send", "outreach"] },
-  {
-    type: "meeting",
-    keywords: ["schedule", "tour", "inspection", "meeting", "walkthrough"],
+    type: "follow-up",
+    keywords: ["follow up", "follow-up", "check in", "check-in", "circle back", "touch base"],
   },
   {
-    type: "document",
+    type: "showing",
+    keywords: ["tour", "showing", "walkthrough", "walk-through", "open house", "inspection", "site visit"],
+  },
+  { type: "call", keywords: ["call", "phone", "dial", "reach out"] },
+  { type: "email", keywords: ["email", "outreach", "send"] },
+  { type: "meeting", keywords: ["meeting", "meet with", "schedule", "sync"] },
+  {
+    type: "to-do",
     keywords: [
-      "upload",
-      "order",
-      "publish",
-      "website",
-      "agreement",
-      "disclosure",
-      "title",
-      "escrow",
-      "signage",
-      "statement",
-      "photography",
-      "document",
+      "upload", "order", "publish", "review", "confirm", "prepare", "draft",
+      "underwrit", "sign", "agreement", "disclosure", "title", "escrow",
+      "signage", "statement", "photography", "proposal", "opinion", "diligence",
+      "offer", "financing", "appraisal", "closing", "list", "archive", "task",
     ],
-  },
-  {
-    type: "note",
-    keywords: ["review", "confirm", "underwrit", "opinion", "archive"],
   },
 ];
 
-/** Infers a task type from its label; returns null when nothing matches. */
-export function deriveTaskType(label: string): ContactTaskType | null {
+/** Infers a scoped task type from a label; returns null when nothing matches. */
+export function deriveTaskType(label: string): TaskTypeKey | null {
   const text = label.toLowerCase();
   for (const rule of TYPE_RULES) {
     if (rule.keywords.some((k) => text.includes(k))) return rule.type;
@@ -85,14 +61,26 @@ export function deriveTaskType(label: string): ContactTaskType | null {
 }
 
 /**
+ * The short type-badge label for a task, scoped to the Task types. Prefers a
+ * standalone task's explicit `type`; otherwise infers from the label. Returns
+ * null when there's no meaningful type (so the badge is hidden), e.g. a
+ * "None"-typed task or an unmatched label.
+ */
+export function taskTypeLabel(task: ContactTask): string | null {
+  if (task.type) return TASK_TYPE_LABELS[task.type as TaskTypeKey] ?? null;
+  const derived = deriveTaskType(task.label);
+  return derived ? TASK_TYPE_LABELS[derived] : null;
+}
+
+/**
  * Whether a task reads as AI-suggested — shown with a sparkle badge. Auto-
  * generated tasks always qualify; otherwise we surface follow-up-style tasks
- * (calls/emails) the assistant would queue after an interaction.
+ * (calls/emails/follow-ups) the assistant would queue after an interaction.
  */
 export function isAiSuggested(task: ContactTask): boolean {
   if (task.autoGenerated) return true;
-  const type = deriveTaskType(task.label);
-  return type === "call" || type === "email";
+  const type = task.type ?? deriveTaskType(task.label);
+  return type === "call" || type === "email" || type === "follow-up";
 }
 
 /**
