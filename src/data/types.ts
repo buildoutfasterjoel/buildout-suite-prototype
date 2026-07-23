@@ -649,6 +649,8 @@ export interface RentRollRow {
   type?: PropertyType | null
   beds?: number | null
   baths?: number | null
+  /** Leasable area for the row — feeds the size/rate/annual auto-fill (PRD §19). */
+  size?: number | null
   annualRent?: number | null
   rentEscalations?: { id: string; date: string | null; ratePerSf: number | null }[]
   comments?: string

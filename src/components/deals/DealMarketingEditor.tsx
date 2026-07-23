@@ -733,6 +733,8 @@ export function DealMarketingEditor({
 					patchMarketing={patchMarketing}
 					property={propertyDraft}
 					patchProperty={patchProperty}
+					financials={financials}
+					patchFinancials={patchFinancials}
 				/>
 			)}
 

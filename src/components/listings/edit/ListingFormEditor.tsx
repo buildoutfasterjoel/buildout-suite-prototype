@@ -3,8 +3,10 @@ import { BuildingSection } from "#/components/listings/edit/sections/BuildingSec
 import { LocationSection } from "#/components/listings/edit/sections/LocationSection";
 import { PropertySection } from "#/components/listings/edit/sections/PropertySection";
 import { TransitSection } from "#/components/listings/edit/sections/TransitSection";
+import { UnitsSection } from "#/components/listings/edit/sections/UnitsSection";
 import type {
 	DealMarketing,
+	DealPitchFinancials,
 	DealType,
 	Listing,
 	Property,
@@ -22,6 +24,8 @@ export function ListingFormEditor({
 	patchMarketing,
 	property,
 	patchProperty,
+	financials,
+	patchFinancials,
 }: {
 	listing: Listing;
 	dealType: DealType;
@@ -30,6 +34,8 @@ export function ListingFormEditor({
 	patchMarketing: (p: Partial<DealMarketing>) => void;
 	property: Property;
 	patchProperty: (p: Partial<Property>) => void;
+	financials: DealPitchFinancials;
+	patchFinancials: (p: Partial<DealPitchFinancials>) => void;
 }) {
 	return (
 		<div className="d-flex flex-column gap-6">
@@ -45,6 +51,15 @@ export function ListingFormEditor({
 			<PropertySection property={property} patchProperty={patchProperty} />
 			<Separator />
 			<BuildingSection property={property} patchProperty={patchProperty} />
+			<Separator />
+			<UnitsSection
+				property={property}
+				patchProperty={patchProperty}
+				marketing={marketing}
+				patchMarketing={patchMarketing}
+				financials={financials}
+				patchFinancials={patchFinancials}
+			/>
 		</div>
 	);
 }
