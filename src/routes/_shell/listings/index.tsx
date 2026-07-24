@@ -297,8 +297,15 @@ function PropertyListings() {
 
   // Commission forecast: each deal's commission discounted by its close
   // probability (Closed = 100%, Lost ≈ 0%), split between the logged-in broker
-  // ("you") and the whole firm ("brokerage"), over the visible deals.
-  const commission = useMemo(() => commissionForecast(filtered), [filtered]);
+  // ("you") and the whole firm ("brokerage"), over the visible deals. Umbrella
+  // (parent) deals are excluded — their child space listings are the real deals
+  // and already carry their own commission. `version` is a dep because
+  // `isUmbrella` reads child relationships live.
+  const commission = useMemo(
+    () => commissionForecast(filtered.filter((l) => !isUmbrella(l.id))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filtered, version],
+  );
 
   return (
     <div className="d-flex flex-column h-100 overflow-hidden">

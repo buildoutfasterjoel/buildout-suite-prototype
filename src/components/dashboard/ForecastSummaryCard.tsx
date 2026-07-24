@@ -6,6 +6,7 @@ import { Link } from "@tanstack/react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight } from "@fortawesome/pro-regular-svg-icons";
 import { getStore } from "#/data/store";
+import { isUmbrella } from "#/data/leaseSpaces";
 import { commissionForecast } from "#/data/commission";
 import { formatPrice } from "#/components/properties/propertyDisplay";
 import { FORECAST } from "./dashboardData";
@@ -27,8 +28,14 @@ function StatCard({ label, value }: { label: string; value: string }) {
 }
 
 export function ForecastSummaryCard() {
+  // Umbrella (parent) deals are shells that hold child space listings — the
+  // children are the real deals and carry their own commission, so exclude the
+  // parent from the forecast to avoid double-counting the building.
   const commission = useMemo(
-    () => commissionForecast([...getStore().listings.values()]),
+    () =>
+      commissionForecast(
+        [...getStore().listings.values()].filter((l) => !isUmbrella(l.id)),
+      ),
     [],
   );
 
