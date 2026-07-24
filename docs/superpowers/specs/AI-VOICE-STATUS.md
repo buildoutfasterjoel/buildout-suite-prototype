@@ -17,11 +17,11 @@ should read before picking up work.
 | 1 — Generative agent layer | ✅ Built | `2026-07-23-ai-phase-1-generative-agent-layer-design.md` | `../plans/2026-07-23-ai-phase-1-...md` |
 | 2 — Voice foundation | ✅ Built | `2026-07-23-ai-phase-2-voice-foundation-design.md` | `../plans/2026-07-23-ai-phase-2-voice-foundation.md` |
 | 3 — Live-call simulation | ✅ Built (smoke-tested) | `2026-07-24-ai-phase-3-live-call-simulation-design.md` | `../plans/2026-07-24-ai-phase-3-live-call-simulation.md` |
-| 4 — Hero-arc orchestration | 🔨 In progress — decomposed into 4A–4D | see below | — |
+| 4 — Hero-arc orchestration | ✅ Built (smoke-test pending) — 4A–4D all built | see below | — |
 | ↳ 4A — Signal + greeting + recap hero-extensions | ✅ Built (smoke-test pending) | `2026-07-24-ai-phase-4a-signal-greeting-recap-extensions-design.md` | `../plans/2026-07-24-ai-phase-4a-signal-greeting-recap-extensions.md` |
 | ↳ 4B — Self-arriving inbound email | ✅ Built (smoke-test pending) | `2026-07-24-ai-phase-4b-self-arriving-inbound-email-design.md` | `../plans/2026-07-24-ai-phase-4b-self-arriving-inbound-email.md` |
 | ↳ 4C — Underwrite + BOV | ✅ Built (smoke-test pending) | `2026-07-24-ai-phase-4c-underwrite-bov-design.md` | `../plans/2026-07-24-ai-phase-4c-underwrite-bov.md` |
-| ↳ 4D — The director (reset/replay + loop-closing beat) | 📐 Designed (plan ready) | `2026-07-24-ai-phase-4d-director-reset-replay-design.md` | `../plans/2026-07-24-ai-phase-4d-director-reset-replay.md` |
+| ↳ 4D — The director (reset/replay + loop-closing beat) | ✅ Built (smoke-test pending) | `2026-07-24-ai-phase-4d-director-reset-replay-design.md` | `../plans/2026-07-24-ai-phase-4d-director-reset-replay.md` |
 
 > Git history on `joel/ai-tools` is the authoritative build record — each task is its own
 > descriptive commit (`git log --oneline`).
