@@ -391,6 +391,28 @@
     0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
+// Brief spotlight on a just-created deal card (AI Start-a-Deal flow): a purple
+// ring + tint that fades back to the card's resting style, played once.
+.contact-deal-card--spotlight {
+  animation: contact-deal-spotlight 2.4s ease-out both;
+}
+@keyframes contact-deal-spotlight {
+  0% {
+    background-color: var(--color-purple-heart-50, #f9f5ff);
+    box-shadow: 0 0 0 3px rgba(159, 85, 247, 0.5);
+  }
+  55% {
+    background-color: var(--color-purple-heart-50, #f9f5ff);
+    box-shadow: 0 0 0 3px rgba(159, 85, 247, 0.3);
+  }
+  100% {
+    background-color: #fff;
+    box-shadow:
+      0 1px 2px -1px rgba(0, 0, 0, 0.1),
+      0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  }
+}
+
 // Contact link-button open icon (deal-card Documents/Leads + Lists section):
 // hidden by default, revealed on hover/focus so the affordance stays quiet
 // until it's actionable.
@@ -1418,6 +1440,82 @@
   }
 }
 
+// AI-assistant draft status line under a textarea the assistant writes into
+// (post-call summary). The sparkle pulses while thinking/streaming.
+.ai-draft {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-storm-grey-600, #506079);
+
+  &__icon {
+    color: var(--color-purple-heart-400, #b984fc);
+  }
+
+  &.is-drafting {
+    color: var(--color-purple-heart-700, #6b21c8);
+
+    .ai-draft__icon {
+      animation: ai-draft-pulse 1.1s ease-in-out infinite;
+    }
+  }
+}
+
+// AI deal-creation progress modal — three sequential steps, each with a
+// pending glyph → spinner → green check lifecycle.
+.ai-deal-progress__title-icon {
+  color: var(--color-purple-heart-400, #b984fc);
+}
+.ai-deal-progress__step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  &.is-pending {
+    opacity: 0.45;
+  }
+
+  .ai-deal-progress__status {
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+    color: var(--color-storm-grey-500, #62748e);
+  }
+  &.is-active .ai-deal-progress__status {
+    color: var(--color-purple-heart-500, #9f55f7);
+  }
+  &.is-done .ai-deal-progress__status {
+    color: var(--color-mountain-meadow-500, #00bc7d);
+  }
+
+  .ai-deal-progress__label {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--color-storm-grey-800, #2f3949);
+  }
+  .ai-deal-progress__detail {
+    font-size: 12px;
+    color: var(--color-storm-grey-600, #506079);
+  }
+}
+
+@keyframes ai-draft-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(1.25);
+  }
+}
+
 // The editable activity date, revealed once a draft has content.
 .compose-date-btn {
   font-weight: 600;
@@ -2130,6 +2228,41 @@
     font-size: 14px;
     color: var(--color-storm-grey-700, #424e62);
     line-height: 1.5;
+  }
+}
+
+// ── Attached-document chips (email events) ──
+.tl-attach {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px 6px 10px;
+    border: 1px solid var(--color-storm-grey-100, #eceef2);
+    border-radius: 8px;
+    background: var(--color-storm-grey-50, #f6f7f9);
+  }
+  &__icon {
+    font-size: 16px;
+    color: var(--color-buildout-blue-600, #2350c9);
+  }
+  &__label {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+  }
+  &__name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-storm-grey-800, #2f3949);
+  }
+  &__meta {
+    font-size: 11px;
+    color: var(--color-storm-grey-600, #506079);
   }
 }
 

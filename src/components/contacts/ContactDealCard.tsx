@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
@@ -56,11 +57,25 @@ function dealNextAction(
  * The whole card navigates to the deal on a plain click; interactive controls
  * (stage chip, ⋮ menu, quick links, AI action) are excluded via the shared guard.
  */
-export function ContactDealCard({ listingId }: { listingId: string }) {
+export function ContactDealCard({
+  listingId,
+  highlight = false,
+}: {
+  listingId: string;
+  /** Briefly spotlight the card (just-created deal) — plays once on mount/flip. */
+  highlight?: boolean;
+}) {
   const navigate = useNavigate();
   // Reactive so a committed stage transition (via the shared gate) re-renders
   // the card with the new status immediately.
   const listing = useDataStore((s) => s.listings.get(listingId));
+  // Bring the spotlit card into view (the overview column scrolls).
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (highlight) {
+      cardRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [highlight]);
   if (!listing) return null;
 
   const property = getProperty(listing.propertyId);
@@ -78,7 +93,10 @@ export function ContactDealCard({ listingId }: { listingId: string }) {
 
   return (
     <div
-      className="contact-deal-card position-relative bg-card border d-flex flex-column gap-3 p-3"
+      ref={cardRef}
+      className={`contact-deal-card position-relative bg-card border d-flex flex-column gap-3 p-3${
+        highlight ? " contact-deal-card--spotlight" : ""
+      }`}
       onClick={(e) => {
         if (shouldIgnoreRowClick(e)) return;
         void navigate({
