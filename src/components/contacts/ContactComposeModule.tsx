@@ -36,7 +36,8 @@ import {
 } from "#/components/contacts/callLogFields";
 
 /** The payload emitted on submit — the panel stamps `id`/`seq`. */
-export type ComposedDraft = Omit<ComposedActivity, "id" | "seq">;
+// `createdAt` is stamped centrally by the page's `addLog`, not by composers.
+export type ComposedDraft = Omit<ComposedActivity, "id" | "seq" | "createdAt">;
 
 const TABS: { key: ComposeKind; label: string; icon: typeof faPhone }[] = [
   { key: "note", label: "Note", icon: faNoteSticky },

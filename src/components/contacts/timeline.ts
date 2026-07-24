@@ -569,9 +569,11 @@ export function composedToEvent(a: ComposedActivity, c: Contact): TimelineEvent 
     actor: owner,
     contact: { name: contactFullName(c), id: c.id },
     direction: "out",
-    // Logged items are the most recent thing that happened — stamp to now-ish
-    // but keep them above the seed via a high seq.
-    timestamp: `${a.date}T${new Date().toTimeString().slice(0, 8)}`,
+    // The chosen activity date + the (fixed) time-of-day it was logged. Using
+    // the stored creation moment keeps the row's position stable relative to
+    // other session events — re-stamping to "now" here would bump logged items
+    // above genuinely newer events whenever the feed recomputes.
+    timestamp: `${a.date}T${new Date(a.createdAt).toTimeString().slice(0, 8)}`,
     seq: 1_000_000 + a.seq,
     subject: isEmail ? a.subject : undefined,
     body: a.body || undefined,

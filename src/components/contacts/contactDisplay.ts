@@ -186,6 +186,13 @@ export interface ComposedActivity {
   date: string;
   /** Monotonic creation order so the newest logged item sorts to the top. */
   seq: number;
+  /**
+   * ISO moment the activity was logged — stamped once by the page's `addLog`.
+   * The timeline derives the row's time-of-day from this, so a logged item
+   * keeps its place relative to other session events instead of re-stamping
+   * to "now" on every recompute.
+   */
+  createdAt: string;
   /** Call outcome chip (call only), e.g. "Connected". */
   outcome?: string;
   /** Email subject (email only). */
