@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useRouterState } from "@tanstack/react-router";
+import { useHotkey } from "@tanstack/react-hotkeys";
 import { useChat, type UIMessage } from "@tanstack/ai-react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
@@ -15,13 +16,45 @@ import {
   faFileLines,
   faScrewdriverWrench,
   faChevronRight,
+  faMicrophone,
+  faVolumeHigh,
+  faVolumeXmark,
 } from "@fortawesome/pro-regular-svg-icons";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { createClientTools } from "#/ai/tools";
-import { aiChat } from "#/ai/relay";
+import { aiChat, aiConfigured } from "#/ai/relay";
+import { buildAssistantContext, serializeContext } from "#/ai/context";
+import { renderLightHtml } from "#/ai/renderLightHtml";
 import { useAssistant } from "#/ai/useAssistant";
+import { useVoice } from "#/ai/voice/useVoice";
+import { voiceEngine } from "#/ai/voice/voiceEngine";
+import { useHandsFree } from "#/ai/voice/useHandsFree";
+import { useGreeting } from "#/ai/voice/useGreeting";
+import { registerStopForCall, callFlow } from "#/components/call/callFlow";
+import { useCallStore } from "#/components/call/useCallStore";
+import { CallRecapCard } from "#/components/call/CallRecapCard";
+import { composeRecapReport, recapSpeechText } from "#/components/call/callRecap";
 import { DealCardById } from "#/components/deals/DealCard";
+import { EmailDraftCard, type EmailDraftCardData } from "#/components/ai/EmailDraftCard";
+import { formatCurrency } from "#/components/deals/dealDisplay";
+import { useHeroOffer, matchOfferIntent } from "#/ai/heroOffer";
+import { getContact } from "#/data/store";
+import { signalText } from "#/data/signal";
+import { generateCallBrief, callBriefFallback } from "#/ai/generate";
+import { CallBriefCard } from "#/components/call/CallBriefCard";
+import type { CallBriefSpecT } from "#/ai/generate/schemas";
+import { InboundEmailCard } from "#/components/call/InboundEmailCard";
+import { useInboundEmail } from "#/components/call/useInboundEmail";
+import { inboundSummaryText } from "#/components/call/heroInbound";
+import { BovCard } from "#/components/call/BovCard";
+import { useBovDraft, bovSummaryText } from "#/components/call/useBovDraft";
+import { HeroDemoCard } from "#/components/call/HeroDemoCard";
+import { useHeroDemo, arcCompleteText, resetHeroDemo } from "#/components/call/heroDemo";
+
+/** Shown instead of sending when the server has no Anthropic key configured. */
+const NOT_CONFIGURED_MESSAGE =
+  "The assistant isn't configured — no API key — so I can't run AI actions right now.";
 
 /** Human label for the context chip, derived from the current route. */
 function scopeLabel(pathname: string): string {
@@ -77,6 +110,79 @@ function entitiesOf(output: unknown): {
   };
 }
 
+/** Extract a generated email draft from a tool-call's output, if present. */
+function emailDraftOf(output: unknown): EmailDraftCardData | null {
+  const o = (output ?? {}) as { emailDraft?: unknown };
+  return o.emailDraft ? (o.emailDraft as EmailDraftCardData) : null;
+}
+
+/** Extract a generated contact brief (§3.10) from a tool-call's output, if present. */
+function briefOf(output: unknown): string | null {
+  const o = (output ?? {}) as { brief?: unknown };
+  return typeof o.brief === "string" ? o.brief : null;
+}
+
+/** Extract a generated book-strategy answer (§3.9, `analyze_book`) from a
+ * tool-call's output, if present. This is light HTML, not markdown — render
+ * it via `renderLightHtml`, never raw. */
+function answerOf(output: unknown): string | null {
+  const o = (output ?? {}) as { answer?: unknown };
+  return typeof o.answer === "string" ? o.answer : null;
+}
+
+type MarketingPackageData = {
+  doc: { tagline: string; summary: string; highlights: string[]; callToAction: string };
+  email: { subject: string; to: string[]; body: string; signature: string };
+  financials: { askingPrice: number | null; assetType: string | null };
+};
+
+/** Extract a generated marketing package (§3.4+3.2, `build_marketing_package`)
+ * from a tool-call's output, if present. */
+function marketingPackageOf(output: unknown): MarketingPackageData | null {
+  const o = (output ?? {}) as { package?: unknown };
+  return o.package ? (o.package as MarketingPackageData) : null;
+}
+
+/** A generated marketing flyer (tagline/summary/highlights/CTA + a financial
+ * line) paired with the launch email, rendered from `build_marketing_package`. */
+function MarketingPackageCard({ pkg }: { pkg: MarketingPackageData }) {
+  const { doc, email, financials } = pkg;
+  const hasFinancials = financials.askingPrice != null || financials.assetType;
+  return (
+    <div className="d-flex flex-column gap-2">
+      <div className="border rounded p-3 bg-white d-flex flex-column gap-2">
+        <div className="d-flex align-items-center gap-2">
+          <FontAwesomeIcon icon={faFileLines} className="text-buildout-blue-700" />
+          <span className="fw-semibold small text-uppercase text-muted">Marketing flyer</span>
+        </div>
+        <div className="fw-semibold">{doc.tagline}</div>
+        {doc.summary && <div className="small text-body">{doc.summary}</div>}
+        {doc.highlights.length > 0 && (
+          <ul className="small mb-0 ps-3">
+            {doc.highlights.map((h, i) => (
+              <li key={i}>{h}</li>
+            ))}
+          </ul>
+        )}
+        {hasFinancials && (
+          <div className="d-flex align-items-center gap-2 small">
+            {financials.assetType && (
+              <Badge variant="secondary" appearance="muted">
+                {financials.assetType}
+              </Badge>
+            )}
+            {financials.askingPrice != null && (
+              <span className="fw-semibold">{formatCurrency(financials.askingPrice)}</span>
+            )}
+          </div>
+        )}
+        {doc.callToAction && <div className="small text-muted">{doc.callToAction}</div>}
+      </div>
+      <EmailDraftCard draft={{ id: "marketing-package-email", ...email }} />
+    </div>
+  );
+}
+
 /** A clickable card row (deal or contact) that navigates on click. */
 function ResultCard({
   title,
@@ -117,7 +223,19 @@ function ResultCard({
 function ToolResultCards({ output }: { output: unknown }) {
   const router = useRouter();
   const { deals, contacts } = entitiesOf(output);
-  if (deals.length === 0 && contacts.length === 0) return null;
+  const emailDraft = emailDraftOf(output);
+  const brief = briefOf(output);
+  const answer = answerOf(output);
+  const marketingPackage = marketingPackageOf(output);
+  if (
+    deals.length === 0 &&
+    contacts.length === 0 &&
+    !emailDraft &&
+    !brief &&
+    !answer &&
+    !marketingPackage
+  )
+    return null;
 
   return (
     <div className="d-flex flex-column gap-2">
@@ -135,6 +253,19 @@ function ToolResultCards({ output }: { output: unknown }) {
           }
         />
       ))}
+      {emailDraft && <EmailDraftCard draft={emailDraft} />}
+      {marketingPackage && <MarketingPackageCard pkg={marketingPackage} />}
+      {brief && (
+        <div className="assistant-markdown" style={{ whiteSpace: "pre-wrap" }}>
+          {brief}
+        </div>
+      )}
+      {answer && (
+        <div
+          className="assistant-markdown"
+          dangerouslySetInnerHTML={{ __html: renderLightHtml(answer) }}
+        />
+      )}
     </div>
   );
 }
@@ -164,7 +295,14 @@ function MessageBubble({ message }: { message: UIMessage }) {
   );
   const cardCalls = toolCalls.filter((p) => {
     const { deals, contacts } = entitiesOf(p.output);
-    return deals.length > 0 || contacts.length > 0;
+    return (
+      deals.length > 0 ||
+      contacts.length > 0 ||
+      emailDraftOf(p.output) !== null ||
+      briefOf(p.output) !== null ||
+      answerOf(p.output) !== null ||
+      marketingPackageOf(p.output) !== null
+    );
   });
   const chipCalls = toolCalls.filter((p) => !cardCalls.includes(p));
 
@@ -203,6 +341,25 @@ function MessageBubble({ message }: { message: UIMessage }) {
   );
 }
 
+/** The hero offer's quick-response chips ("Yes, call now" / "Brief me first").
+ * Reads the offer reactively so it disappears the moment `send` clears it, and
+ * calls `send(...)` for both so the click path shares the exact same routing as
+ * voice/typed input. */
+function HeroOfferChips({ onCall, onBrief }: { onCall: () => void; onBrief: () => void }) {
+  const offer = useHeroOffer((s) => s.pendingOffer);
+  if (!offer) return null;
+  return (
+    <div className="d-flex gap-2 px-3 pb-2">
+      <Button variant="primary" size="sm" onClick={onCall}>
+        Yes, call now
+      </Button>
+      <Button variant="outline" size="sm" onClick={onBrief}>
+        Brief me first
+      </Button>
+    </div>
+  );
+}
+
 export function AssistantSidebar() {
   const open = useAssistant((s) => s.open);
   const setOpen = useAssistant((s) => s.setOpen);
@@ -210,6 +367,9 @@ export function AssistantSidebar() {
   const consumePrompt = useAssistant((s) => s.consumePrompt);
   const focusNonce = useAssistant((s) => s.focusNonce);
   const [draft, setDraft] = useState("");
+  const [brief, setBrief] = useState<{ spec: CallBriefSpecT; name: string; contactId: string } | null>(
+    null,
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
@@ -222,23 +382,226 @@ export function AssistantSidebar() {
 
   const fetcher = useCallback(
     ({ messages }: { messages: Array<UIMessage> }, { signal }: { signal: AbortSignal }) =>
-      aiChat({ data: { messages }, signal }),
+      aiChat({ data: { messages, context: serializeContext(buildAssistantContext()) }, signal }),
     [],
   );
 
-  const { messages, sendMessage, isLoading, error, stop } = useChat({ fetcher, tools });
+  const { messages, sendMessage, setMessages, isLoading, error, stop } = useChat({ fetcher, tools });
+
+  // Checked once (and cached) so the panel never hands `useChat` a stream from
+  // an unconfigured server — a missing key is resolved entirely client-side,
+  // before any network call to the agent itself. `null` = "not checked yet",
+  // and an unreachable/erroring check fails open (treated as configured) so a
+  // flaky check doesn't block a working assistant; the normal error banner
+  // covers that path instead.
+  const configuredRef = useRef<boolean | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void aiConfigured()
+      .then((res) => {
+        if (!cancelled) configuredRef.current = res.configured;
+      })
+      .catch(() => {
+        if (!cancelled) configuredRef.current = true;
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const send = useCallback(
     (text: string) => {
       const content = text.trim();
       if (!content || isLoading) return;
       setDraft("");
+
+      // A pending hero offer (§Phase 4A) takes priority over the normal agent
+      // turn: "yes" opens the live call, "brief me first" generates a call
+      // brief, and anything else clears the offer and falls through below.
+      const offer = useHeroOffer.getState().pendingOffer;
+      if (offer) {
+        const intent = matchOfferIntent(content);
+        if (intent) {
+          useHeroOffer.getState().clearOffer();
+          setDraft("");
+          const contact = getContact(offer.contactId);
+          if (contact && intent === "call") {
+            callFlow.open(contact);
+            return;
+          }
+          if (contact && intent === "brief") {
+            void generateCallBrief({
+              data: {
+                candidate: {
+                  name: `${contact.firstName} ${contact.lastName}`.trim(),
+                  role: contact.role,
+                  entity: contact.company,
+                  note: contact.notes ?? "",
+                  phone: contact.phone,
+                },
+                property: null,
+                signal: contact.signal?.detail ?? signalText(contact),
+                firstName: contact.firstName,
+              },
+            })
+              .then((spec) =>
+                setBrief({ spec, name: `${contact.firstName} ${contact.lastName}`.trim(), contactId: contact.id }),
+              )
+              .catch(() => {
+                const spec = callBriefFallback(contact.signal?.detail ?? signalText(contact), contact.firstName);
+                setBrief({ spec, name: `${contact.firstName} ${contact.lastName}`.trim(), contactId: contact.id });
+              });
+            return;
+          }
+        } else {
+          useHeroOffer.getState().clearOffer(); // fall through to the agent
+        }
+      }
+
+      if (configuredRef.current === false) {
+        const stamp = Date.now();
+        setMessages([
+          ...messages,
+          { id: `local-${stamp}-user`, role: "user", parts: [{ type: "text", content }] },
+          {
+            id: `local-${stamp}-assistant`,
+            role: "assistant",
+            parts: [{ type: "text", content: NOT_CONFIGURED_MESSAGE }],
+          },
+        ]);
+        requestAnimationFrame(() => {
+          scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+        });
+        return;
+      }
+
       void sendMessage(content).then(() => {
         scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
       });
     },
-    [isLoading, sendMessage],
+    [isLoading, sendMessage, setMessages, messages],
   );
+
+  const voiceEnabled = useVoice((s) => s.voiceEnabled);
+  const setVoiceEnabled = useVoice((s) => s.setVoiceEnabled);
+  const listening = useVoice((s) => s.listening);
+  const setConversationMode = useVoice((s) => s.setConversationMode);
+  const speakNextReplyRef = useRef(false);
+
+  // Hands-free: submit final transcript to Otto, and mark that the reply should
+  // be spoken back so the loop can re-arm after Otto finishes.
+  const { start: startHandsFree, stopForCall } = useHandsFree({
+    onSubmit: (text) => {
+      speakNextReplyRef.current = true;
+      send(text);
+    },
+  });
+  useEffect(() => {
+    registerStopForCall(stopForCall);
+    return () => registerStopForCall(null);
+  }, [stopForCall]);
+
+  // Greeting: render + speak once per session on first open; then open the mic.
+  useGreeting({
+    onGreeting: (text) =>
+      setMessages([
+        ...messages,
+        { id: `greeting-${Date.now()}`, role: "assistant", parts: [{ type: "text", content: text }] },
+      ]),
+    onEnterConversation: () => startHandsFree(),
+  });
+
+  // Speak Otto's reply when a voice turn completes, then re-arm the mic.
+  const prevLoading = useRef(isLoading);
+  useEffect(() => {
+    const finished = prevLoading.current && !isLoading;
+    prevLoading.current = isLoading;
+    if (!finished || !speakNextReplyRef.current) return;
+    speakNextReplyRef.current = false;
+    const last = [...messages].reverse().find((m) => m.role === "assistant");
+    const text =
+      last?.parts
+        .filter((p): p is Extract<typeof p, { type: "text" }> => p.type === "text")
+        .map((p) => p.content)
+        .join("") ?? "";
+    if (!text || !voiceEnabled) return;
+    void voiceEngine.speak(text).then(() => {
+      if (useVoice.getState().conversationMode) setTimeout(() => startHandsFree(), 350);
+    });
+  }, [isLoading, messages, voiceEnabled, startHandsFree]);
+
+  // Speak the hang-up recap once when it appears (Otto reports, §6.1). This is a
+  // one-way report — it must NOT enter conversationMode or re-arm the mic.
+  const recap = useCallStore((s) => s.recap);
+  const recapTarget = useCallStore((s) => s.target);
+  const spokenRecapRef = useRef<object | null>(null);
+  useEffect(() => {
+    if (!recap || recap === spokenRecapRef.current) return;
+    spokenRecapRef.current = recap;
+    // Scroll the recap into view at the bottom of the flow (regardless of voice).
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    });
+    if (!voiceEnabled) return;
+    const { message } = composeRecapReport(recap, recapTarget?.name ?? "your contact");
+    const hero = useCallStore.getState().heroActions;
+    const spoken = hero ? `${recapSpeechText(message)} ${hero.narration}` : recapSpeechText(message);
+    void voiceEngine.speak(spoken); // no re-arm: not in conversationMode
+  }, [recap, recapTarget, voiceEnabled]);
+
+  // Speak the inbound owner-email summary once when it self-arrives (§Phase 4B).
+  // Also a one-way report — it must NOT enter conversationMode or re-arm the mic.
+  const inbound = useInboundEmail((s) => s.inbound);
+  const spokenInboundRef = useRef<object | null>(null);
+  useEffect(() => {
+    if (!inbound || inbound === spokenInboundRef.current) return;
+    spokenInboundRef.current = inbound;
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    });
+    if (!voiceEnabled) return;
+    void voiceEngine.speak(inboundSummaryText(inbound)); // one-way: no re-arm
+  }, [inbound, voiceEnabled]);
+
+  // Speak the BOV draft's summary once when it appears (Otto drafts the BOV,
+  // §Phase 4C). Also a one-way report — it must NOT enter conversationMode or
+  // re-arm the mic.
+  const bovDraft = useBovDraft((s) => s.draft);
+  const spokenBovRef = useRef<object | null>(null);
+  useEffect(() => {
+    if (!bovDraft || bovDraft === spokenBovRef.current) return;
+    spokenBovRef.current = bovDraft;
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    });
+    if (!voiceEnabled) return;
+    void voiceEngine.speak(bovSummaryText(bovDraft)); // one-way: no re-arm
+  }, [bovDraft, voiceEnabled]);
+
+  // Speak the loop-closing completion beat once when the hero arc finishes
+  // (BOV sent, Phase 4D). Also a one-way report — it must NOT enter
+  // conversationMode or re-arm the mic.
+  const arcComplete = useHeroDemo((s) => s.arcComplete);
+  const spokenArcRef = useRef(false);
+  useEffect(() => {
+    if (!arcComplete) {
+      spokenArcRef.current = false;
+      return;
+    }
+    if (spokenArcRef.current) return;
+    spokenArcRef.current = true;
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    });
+    if (!voiceEnabled) return;
+    void voiceEngine.speak(arcCompleteText()); // one-way: no re-arm
+  }, [arcComplete, voiceEnabled]);
+
+  // Presenter kill-switch: Escape silences Otto instantly and ends conversation.
+  useHotkey("Escape", () => {
+    voiceEngine.cancel();
+    setConversationMode(false);
+  });
 
   // A prompt queued from another surface (e.g. omni search "Ask AI") is sent as
   // soon as it lands. This effect runs before the early return below, so the
@@ -276,6 +639,21 @@ export function AssistantSidebar() {
           <span className="fw-semibold">Assistant</span>
           <span className="text-muted small text-truncate">Your Buildout assistant</span>
         </div>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={voiceEnabled ? "Turn voice off" : "Turn voice on"}
+          onClick={() => {
+            const next = !voiceEnabled;
+            setVoiceEnabled(next);
+            if (!next) {
+              voiceEngine.cancel();
+              setConversationMode(false);
+            }
+          }}
+        >
+          <FontAwesomeIcon icon={voiceEnabled ? faVolumeHigh : faVolumeXmark} />
+        </Button>
         <Badge variant="secondary" appearance="muted" className="flex-shrink-0">
           {scopeLabel(pathname)}
         </Badge>
@@ -291,7 +669,7 @@ export function AssistantSidebar() {
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-grow-1 overflow-auto p-3 d-flex flex-column gap-2">
-        {messages.length === 0 ? (
+        {messages.length === 0 && !recap && !inbound ? (
           <div className="text-muted small">
             Ask about your properties, contacts, and deals — or have me draft an email, build a
             call list, or move a deal along.
@@ -305,13 +683,55 @@ export function AssistantSidebar() {
             Working…
           </div>
         )}
+        {listening && (
+          <div className="text-buildout-blue-700 small d-inline-flex align-items-center gap-2">
+            <FontAwesomeIcon icon={faMicrophone} beatFade />
+            Listening…
+          </div>
+        )}
         {error && (
           <div className="text-danger small">Something went wrong: {error.message}</div>
         )}
+        {/* The hang-up recap is the newest event — render it at the BOTTOM of the
+            flow (after the messages), not the top, so the conversation reads
+            chronologically. */}
+        {recap && <CallRecapCard />}
+        {/* The inbound owner email self-arrives after the recap (§Phase 4B) —
+            render it at the bottom of the flow too, chronologically after the recap. */}
+        <InboundEmailCard />
+        {/* The BOV draft self-arrives after the underwriting result is ready
+            (§Phase 4C) — render it at the bottom of the flow too. */}
+        <BovCard />
+        {/* The loop-closing completion beat (§Phase 4D) fires once the BOV is
+            sent — render it after the BOV card, chronologically last. */}
+        <HeroDemoCard
+          onRunAgain={() => {
+            setMessages([]);
+            void resetHeroDemo();
+          }}
+        />
       </div>
 
-      {/* Suggested actions (only before the first message) */}
-      {messages.length === 0 && (
+      {/* Call brief (Phase 4A "brief me first") + the hero-offer chips */}
+      {brief && (
+        <div className="px-3 pb-2">
+          <CallBriefCard
+            brief={brief.spec}
+            contactName={brief.name}
+            onCall={() => {
+              const c = getContact(brief.contactId);
+              if (c) {
+                setBrief(null);
+                callFlow.open(c);
+              }
+            }}
+          />
+        </div>
+      )}
+      <HeroOfferChips onCall={() => send("yes")} onBrief={() => send("brief me first")} />
+
+      {/* Suggested actions (only before the first message, and not under a recap) */}
+      {messages.length === 0 && !recap && (
         <div className="px-3 pb-2 d-flex flex-wrap gap-2">
           {SUGGESTIONS.map((s) => (
             <Button key={s.label} variant="outline" size="sm" onClick={() => setDraft(s.prompt)}>
@@ -337,6 +757,23 @@ export function AssistantSidebar() {
           placeholder="Ask the assistant…"
           aria-label="Message the assistant"
         />
+        <Button
+          type="button"
+          variant={listening ? "primary" : "outline"}
+          size="icon"
+          aria-label={listening ? "Listening — tap to stop" : "Speak to the assistant"}
+          onClick={() => {
+            if (listening) {
+              voiceEngine.cancel();
+              setConversationMode(false);
+            } else {
+              setConversationMode(true);
+              startHandsFree();
+            }
+          }}
+        >
+          <FontAwesomeIcon icon={faMicrophone} />
+        </Button>
         {isLoading ? (
           <Button type="button" variant="outline" size="icon" aria-label="Stop" onClick={stop}>
             <FontAwesomeIcon icon={faStop} />
