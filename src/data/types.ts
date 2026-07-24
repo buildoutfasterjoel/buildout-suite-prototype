@@ -937,12 +937,22 @@ export type ContactDealStage =
 /** Quality of the contact's phone number. */
 export type PhoneStatus = 'valid' | 'invalid' | 'unknown'
 
+export interface OwnerSignal {
+  kind: 'loan-maturity' | 'hold-expiry' | 'ownership-change' | 'market-pressure'
+  /** Short, for the greeting — e.g. "$4.2M CMBS loan maturing". */
+  headline: string
+  /** Full sentence — for the brief / call-turn / prospect. */
+  detail: string
+  /** ISO date; "overnight". */
+  observedAt: string
+}
+
 /**
  * Hand-authored demo personas. A contact carrying a `heroKey` gets a fully
  * hand-written activity arc (see timelineHeroes.ts) instead of the
  * parameterized stage arc — one guaranteed-great contact per lifecycle stage.
  */
-export type HeroKey = 'rosa' | 'earl' | 'victor' | 'margaret' | 'patricia'
+export type HeroKey = 'rosa' | 'earl' | 'victor' | 'margaret' | 'patricia' | 'marcus'
 
 export interface Contact {
   id: string
@@ -1000,6 +1010,8 @@ export interface Contact {
   notes?: string
   /** Set on the hand-authored demo personas — selects their hero arc. */
   heroKey?: HeroKey
+  /** An overnight market signal on this owner (Phase 4A). */
+  signal?: OwnerSignal
 }
 
 /**
