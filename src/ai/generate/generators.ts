@@ -15,6 +15,10 @@ import {
   type ContactBriefSpecT,
   StrategySpec,
   type StrategySpecT,
+  CallTurnSpec,
+  type CallTurnSpecT,
+  CallRecapSpec,
+  type CallRecapSpecT,
 } from "./schemas";
 import {
   FILTER_PROMPT,
@@ -24,8 +28,10 @@ import {
   PROSPECT_PROMPT,
   CONTACT_BRIEF_PROMPT,
   STRATEGY_PROMPT,
+  CALL_TURN_PROMPT,
+  CALL_RECAP_PROMPT,
 } from "./prompts";
-import { filterFallback, callListFallback } from "./fallbacks";
+import { filterFallback, callListFallback, callTurnFallback, callRecapFallback } from "./fallbacks";
 
 /** §3.1 — plain-English listings query → structured `FilterSpec`, applied to
  * the Listings grid by `filter_listings` (see `src/ai/tools.ts`). */
@@ -184,5 +190,47 @@ export const generateStrategy = createServerFn({ method: "POST" })
       user: `QUESTION: ${data.question}\n\nBOOK:\n${data.book}`,
       schema: StrategySpec,
       fallback: () => strategyFallback(data.book),
+    }),
+  );
+
+/** §3.7 — live-call owner turn. Fast model (short, latency-sensitive turn). */
+export const generateCallTurn = createServerFn({ method: "POST" })
+  .validator(
+    (d: {
+      candidate: { name: string; role: string; entity: string; note: string; phone: string };
+      property: unknown | null;
+      history: Array<{ speaker: "you" | "them"; text: string }>;
+      brokerLine: string;
+    }) => d,
+  )
+  .handler(({ data }): Promise<CallTurnSpecT> =>
+    runGenerator({
+      system: CALL_TURN_PROMPT,
+      user: JSON.stringify({
+        candidate: data.candidate,
+        property: data.property ?? null,
+        history: data.history,
+        brokerLine: data.brokerLine,
+      }),
+      schema: CallTurnSpec,
+      fallback: () => callTurnFallback(),
+    }),
+  );
+
+/** §3.4 — hang-up recap. REASONING model (synthesis over the transcript). */
+export const generateCallRecap = createServerFn({ method: "POST" })
+  .validator(
+    (d: {
+      transcript: Array<{ speaker: "you" | "them"; text: string }>;
+      contact: { name: string; firstName: string; entity: string };
+    }) => d,
+  )
+  .handler(({ data }): Promise<CallRecapSpecT> =>
+    runGenerator({
+      model: AI_MODEL_REASONING,
+      system: CALL_RECAP_PROMPT,
+      user: JSON.stringify({ transcript: data.transcript, contact: data.contact }),
+      schema: CallRecapSpec,
+      fallback: () => callRecapFallback(data.transcript, data.contact.firstName),
     }),
   );

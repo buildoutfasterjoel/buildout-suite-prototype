@@ -60,3 +60,20 @@ export type ContactBriefSpecT = z.infer<typeof ContactBriefSpec>;
 /** §3.9 book strategy. */
 export const StrategySpec = z.object({ answer: z.string() });
 export type StrategySpecT = z.infer<typeof StrategySpec>;
+
+/** §3.7 live-call owner turn. */
+export const CallTurnSpec = z.object({
+  ownerReply: z.string(),
+  suggestions: z.array(z.string()).max(3),
+  shouldEnd: z.boolean(),
+});
+export type CallTurnSpecT = z.infer<typeof CallTurnSpec>;
+
+/** §3.4 hang-up recap. */
+export const CallRecapSpec = z.object({
+  sentiment: z.enum(["positive", "neutral", "negative"]),
+  keyPoints: z.array(z.string()),
+  tasks: z.array(z.object({ title: z.string(), due: z.string().nullable() })),
+  opportunity: z.object({ name: z.string(), address: z.string() }).nullable(),
+});
+export type CallRecapSpecT = z.infer<typeof CallRecapSpec>;

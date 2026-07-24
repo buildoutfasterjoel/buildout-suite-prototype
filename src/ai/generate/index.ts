@@ -11,4 +11,7 @@ export {
   contactBriefFallback,
   generateStrategy,
   strategyFallback,
+  generateCallTurn,
+  generateCallRecap,
 } from "./generators";
+export { callTurnFallback, callRecapFallback } from "./fallbacks";

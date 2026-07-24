@@ -1,4 +1,4 @@
-import type { FilterSpecT, CallListSpecT } from "./schemas";
+import type { FilterSpecT, CallListSpecT, CallTurnSpecT, CallRecapSpecT } from "./schemas";
 
 /** §3.1 — deterministic filter when the model is unavailable: dumps the raw
  * query into search and leaves everything else unset. */
@@ -33,5 +33,28 @@ export function callListFallback(
       score: Math.max(40, 95 - i * 7),
       reason: "Overdue for a touch given their stage.",
     })),
+  };
+}
+
+/** §3.7 — minimal owner turn when the model is unavailable: the owner nudges
+ * the broker to keep talking and never ends the call on its own. */
+export function callTurnFallback(): CallTurnSpecT {
+  return { ownerReply: "Mhm, go on.", suggestions: [], shouldEnd: false };
+}
+
+/** §3.4 — deterministic recap when the model is unavailable: a neutral summary
+ * derived from the transcript plus one generic follow-up task on the contact. */
+export function callRecapFallback(
+  transcript: { speaker: "you" | "them"; text: string }[],
+  contactFirstName: string,
+): CallRecapSpecT {
+  const spoke = transcript.length > 0;
+  return {
+    sentiment: "neutral",
+    keyPoints: spoke
+      ? [`You spoke with ${contactFirstName}; review the transcript for details.`]
+      : [`Call with ${contactFirstName} ended before much was said.`],
+    tasks: [{ title: `Follow up with ${contactFirstName}`, due: null }],
+    opportunity: null,
   };
 }

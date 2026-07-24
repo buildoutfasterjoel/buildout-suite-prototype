@@ -35,3 +35,21 @@ Return only the structured object (a single 'brief' string).`;
 
 /** §3.9 — a book-level snapshot → portfolio/strategy answer. */
 export const STRATEGY_PROMPT = `You reason across the broker's WHOLE book to answer portfolio questions (who to work, who can close in 90 days, who's gone cold, how to drum up business, review the pipeline). Use ONLY the supplied book data. Name actual contacts; for each give the WHY (stage, signal, deal value, days since last touch) and a concrete NEXT ACTION; rank by what moves revenue fastest. For time-window questions reason from stage + signal. Honest and concise; light HTML (<strong>) on names/numbers only; a short ranked list is ideal. Return only the structured object (a single 'answer' string).`;
+
+/** §3.7 — owner profile + property + conversation-so-far + broker's latest line → in-character owner reply + suggested broker lines. */
+export const CALL_TURN_PROMPT = `You are role-playing a commercial real-estate property OWNER on a live phone call with a broker. You are given the owner's profile (name, role, entity, a broker note), the property (or null), the conversation so far, and the broker's latest line.
+
+Reply as the OWNER, in character, conversationally — not formally. One line, 1-2 short sentences. Reference one specific thing from the broker's line. Let the broker note shape your tone (decision-maker, retiring, family member, guarded, warm, busy).
+
+Also return exactly 2-3 SUGGESTED NEXT LINES for the broker, tactically VARIED (e.g. one accepts/advances, one redirects, one closes for time). Each under 20 words, all fitting the same thread.
+
+Set shouldEnd to true ONLY when you (the owner) are clearly wrapping up the call.
+
+Return ONLY the structured object.`;
+
+/** §3.4 — full call transcript + contact → hang-up recap (sentiment, key points, follow-up tasks, optional new opportunity). */
+export const CALL_RECAP_PROMPT = `You are Al, a sharp CRE assistant, summarizing a broker's call that just ended. You are given the full transcript and the contact.
+
+Produce: an overall sentiment (positive | neutral | negative); 1-3 concrete key points drawn ONLY from the transcript; 1-3 follow-up TASKS as concrete next steps (title + optional natural-language due like "Thursday" or "in 3 days", else null); and an opportunity ONLY if the call clearly implies a new deal to open (its name and address), otherwise null.
+
+Never invent facts not in the transcript. Return ONLY the structured object.`;
