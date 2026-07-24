@@ -56,8 +56,47 @@ describe('hydrate / reset', () => {
       tasks: new Map(),
     })
     await useDataStore.getState().hydrate()
-    expect(useDataStore.getState().properties.size).toBe(1)
+    // The snapshot's property, plus Rosa's building layered back in by the
+    // demo-reset pass (hydrate is snapshot + Rosa's pristine slice).
+    expect(useDataStore.getState().properties.has('only')).toBe(true)
+    expect(useDataStore.getState().properties.size).toBe(2)
     expect(useDataStore.getState().hydrated).toBe(true)
+  })
+})
+
+describe('Rosa demo reset on hydrate', () => {
+  it('a hard refresh resets Rosa and the deals on her building, keeps the rest', async () => {
+    // Start from a clean seed (also persists it).
+    await useDataStore.getState().reset()
+    const seed = useDataStore.getState()
+    const rosa = [...seed.contacts.values()].find((c) => c.heroKey === 'rosa')!
+    const buildingId = rosa.ownedPropertyIds![0]
+    const otherContact = [...seed.contacts.values()].find((c) => !c.heroKey)!
+
+    // Simulate a played demo + an unrelated edit, persisted as the snapshot.
+    const { saveSnapshot } = await import('./persistence')
+    const contacts = new Map(seed.contacts)
+    contacts.set(rosa.id, { ...rosa, relationship: 'pitching', dealStage: 'pitching' })
+    contacts.set(otherContact.id, { ...otherContact, notes: 'kept edit' })
+    const listings = new Map(seed.listings)
+    listings.set('demo-deal', { id: 'demo-deal', propertyId: buildingId } as never)
+    const tasks = new Map(seed.tasks)
+    tasks.set('t-rosa', { id: 't-rosa', contactId: rosa.id } as never)
+    await saveSnapshot({
+      properties: seed.properties, listings, comps: seed.comps, contacts,
+      dealFiles: seed.dealFiles, emails: seed.emails, callLists: seed.callLists,
+      contactShares: seed.contactShares, tasks,
+    })
+
+    await useDataStore.getState().hydrate()
+
+    const after = useDataStore.getState()
+    // Rosa + her building's deals reset to seed…
+    expect(after.contacts.get(rosa.id)?.relationship).toBe('nurturing')
+    expect(after.listings.has('demo-deal')).toBe(false)
+    expect(after.tasks.has('t-rosa')).toBe(false)
+    // …while unrelated snapshot edits survive.
+    expect(after.contacts.get(otherContact.id)?.notes).toBe('kept edit')
   })
 })
 

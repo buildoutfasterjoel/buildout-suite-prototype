@@ -54,6 +54,73 @@ export function seedSlice(): DataSlice {
   }
 }
 
+/**
+ * Rosa's demo arc (call back → her email → Start a Deal → the BOV wizard) is
+ * built to be replayed. On every hydrate — i.e. a hard refresh — her slice of
+ * the world resets to the seed: her contact record, any deals on her owned
+ * building (the seed ships none, so everything there is demo-created), their
+ * files/tasks, and her sharing state. The rest of the world keeps its
+ * persisted snapshot; Reset Demo remains the full wipe. Ids line up because
+ * generation is deterministic and snapshots only load under a matching
+ * SEED_VERSION.
+ */
+export function resetRosaDemoState(
+  snapshot: DataSlice,
+  fresh: DataSlice,
+): DataSlice {
+  const freshRosa = [...fresh.contacts.values()].find(
+    (c) => c.heroKey === 'rosa',
+  )
+  if (!freshRosa) return snapshot
+  const rosaPropertyIds = new Set(freshRosa.ownedPropertyIds ?? [])
+
+  const contacts = new Map(snapshot.contacts)
+  contacts.set(freshRosa.id, freshRosa)
+
+  const listings = new Map(snapshot.listings)
+  const removedDealIds = new Set<string>()
+  for (const [id, l] of listings) {
+    if (rosaPropertyIds.has(l.propertyId)) {
+      listings.delete(id)
+      removedDealIds.add(id)
+    }
+  }
+
+  const properties = new Map(snapshot.properties)
+  for (const pid of rosaPropertyIds) {
+    const p = fresh.properties.get(pid)
+    if (p) properties.set(pid, p)
+  }
+
+  const tasks = new Map(snapshot.tasks)
+  for (const [id, t] of tasks) {
+    if (
+      t.contactId === freshRosa.id ||
+      (t.dealId != null && removedDealIds.has(t.dealId))
+    ) {
+      tasks.delete(id)
+    }
+  }
+
+  const dealFiles = new Map(snapshot.dealFiles)
+  for (const id of removedDealIds) dealFiles.delete(id)
+
+  const contactShares = new Map(snapshot.contactShares)
+  const freshShares = fresh.contactShares.get(freshRosa.id)
+  if (freshShares) contactShares.set(freshRosa.id, freshShares)
+  else contactShares.delete(freshRosa.id)
+
+  return {
+    ...snapshot,
+    contacts,
+    listings,
+    properties,
+    tasks,
+    dealFiles,
+    contactShares,
+  }
+}
+
 let _persistTimer: ReturnType<typeof setTimeout> | null = null
 
 export const useDataStore = create<DataState>((set) => ({
@@ -69,15 +136,18 @@ export const useDataStore = create<DataState>((set) => ({
     }
     const slice = await loadSnapshot()
     if (slice) {
-      set({
+      const normalized: DataSlice = {
         ...slice,
         dealFiles: slice.dealFiles ?? new Map(),
         emails: slice.emails ?? new Map(getEmails().map((e) => [e.id, e])),
         callLists: slice.callLists ?? new Map(),
         contactShares: slice.contactShares ?? new Map(),
         tasks: slice.tasks ?? new Map(),
-        hydrated: true,
-      })
+      }
+      // Rosa's demo arc resets on every hard refresh — the pre-hydrate state
+      // is the fresh seed, so it supplies her pristine records.
+      const fresh = useDataStore.getState()
+      set({ ...resetRosaDemoState(normalized, fresh), hydrated: true })
     } else {
       // First visit: persist the seed so the world is stable from here on.
       const { properties, listings, comps, contacts, dealFiles, emails, callLists, contactShares, tasks } =
