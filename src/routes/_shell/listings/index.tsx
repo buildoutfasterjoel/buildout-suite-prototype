@@ -249,6 +249,12 @@ function PropertyListings() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterSpec]);
 
+  // Clear the shared AI filter spec when leaving Listings so the next mount
+  // starts clean — otherwise a stale spec from an earlier AI filter session
+  // would silently re-apply on mount and clobber a fresh `?q=` deep-link
+  // (e.g. from ContactPropertyCard) with old search/facet values.
+  useEffect(() => () => useListingsFilter.getState().clear(), []);
+
   // The stage/"Deal" facet lives on the board columns now, so it's dropped here.
   const facets: Facet[] = useMemo(
     () => [
