@@ -1816,6 +1816,22 @@ function applyHeroes(
       heroProp.propertySubtype = 'Mid-Rise'
       if (h.dealName) heroProp.name = h.dealName
       host.propertyIds = [heroProp.id, ...host.propertyIds.filter((id) => id !== heroProp.id)]
+
+      // Phase 4C: make the hero property read like a real 48-unit workforce building
+      // with a STATED (marketing) vs ACTUAL (T-12) occupancy gap the underwrite flags.
+      heroProp.residentialUnits = 48
+      heroProp.buildingSqFt = 41_000
+      heroProp.askingPrice = 6_200_000
+      heroProp.capRate = 0.058
+      heroProp.occupancyPct = 94 // stated
+      if (heroProp.financialRecords[0]) {
+        heroProp.financialRecords[0].source = 'T-12 actuals'
+        heroProp.financialRecords[0].occupancyPct = 78 // actual
+        heroProp.financialRecords[0].vacancyRate = 0.22
+        // Keep the latest record's capRate mirroring the property's (existing seed
+        // invariant, seed.test.ts:92) — only occupancy is meant to diverge here.
+        heroProp.financialRecords[0].capRate = heroProp.capRate
+      }
     }
 
     // Detach the host from every deal, then wire the story's deal (if any).
