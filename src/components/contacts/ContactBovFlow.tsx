@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
@@ -117,21 +116,21 @@ function FlowHeader({
 }
 
 /**
- * Step 2 — the assembled BOV's cover page, previewed in place. "Edit document"
- * jumps to the doc editor; "Continue to email" advances the wizard.
+ * Step 2 — the assembled BOV's cover page, previewed in place. "Continue to
+ * email" advances the wizard. Deliberately no in-flow link to the doc editor:
+ * navigating away mid-wizard broke the flow, and the sent email's timeline
+ * chip already links to the document afterward.
  */
 function BovPreviewModal({
   open,
   property,
   documentName,
-  onEdit,
   onContinue,
   onClose,
 }: {
   open: boolean;
   property: Property;
   documentName: string;
-  onEdit: () => void;
   onContinue: () => void;
   onClose: () => void;
 }) {
@@ -170,15 +169,10 @@ function BovPreviewModal({
           <Button variant="ghost" appearance="muted" onClick={onClose}>
             Cancel
           </Button>
-          <div className="d-flex gap-2">
-            <Button variant="outline" onClick={onEdit}>
-              Edit document
-            </Button>
-            <Button variant="primary" onClick={onContinue}>
-              Continue to email
-              <FontAwesomeIcon icon={faArrowRight} />
-            </Button>
-          </div>
+          <Button variant="primary" onClick={onContinue}>
+            Continue to email
+            <FontAwesomeIcon icon={faArrowRight} />
+          </Button>
         </Modal.Footer>
       </Modal.Content>
     </Modal>
@@ -324,7 +318,6 @@ export function ContactBovFlow({
   /** Log the sent email into the page's activity list (timeline). */
   onLog: (draft: ComposedDraft) => void;
 }) {
-  const navigate = useNavigate();
   const flow = useBovFlow();
   const listing = useDataStore((s) =>
     flow.listingId ? s.listings.get(flow.listingId) : undefined,
@@ -332,15 +325,6 @@ export function ContactBovFlow({
   if (!listing) return null;
   const property = getProperty(listing.propertyId);
   if (!property) return null;
-
-  const openEditor = () => {
-    flow.close();
-    void navigate({
-      to: "/editor/$listingId",
-      params: { listingId: listing.id },
-      search: { focus: "underwriting" },
-    });
-  };
 
   const handleSend = (subject: string, body: string) => {
     onLog({
@@ -414,7 +398,6 @@ export function ContactBovFlow({
         open={flow.step === "preview"}
         property={property}
         documentName={flow.documentName ?? "Broker Opinion of Value"}
-        onEdit={openEditor}
         onContinue={flow.toEmail}
         onClose={flow.close}
       />

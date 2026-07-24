@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
@@ -23,8 +23,11 @@ import type { ComposedDraft } from "#/components/contacts/ContactComposeModule";
 import {
   buildBriefing,
   contactFullName,
-  type ComposedActivity,
 } from "#/components/contacts/contactDisplay";
+import {
+  selectLogged,
+  useContactSession,
+} from "#/components/contacts/useContactSession";
 
 export const Route = createFileRoute("/_shell/backoffice/contacts/$contactId")({
   component: ContactDetailPage,
@@ -77,17 +80,12 @@ function ContactDetailPage() {
   const briefingOpen = useContactUiPrefs((s) => s.briefingOpen);
   const setBriefingOpen = useContactUiPrefs((s) => s.setBriefingOpen);
 
-  // Activity logged this session (compose module + live calls). Owned here so
-  // the full-width call bar and the middle column write to one list.
-  const [logged, setLogged] = useState<ComposedActivity[]>([]);
-  const seqRef = useRef(0);
-  const addLog = (draft: ComposedDraft) => {
-    const seq = seqRef.current++;
-    setLogged((prev) => [
-      { ...draft, id: `logged-${seq}`, seq, createdAt: new Date().toISOString() },
-      ...prev,
-    ]);
-  };
+  // Activity logged this session (compose module + live calls). Lives in the
+  // contact-session store — not component state — so navigating away and back
+  // keeps the timeline intact; a hard refresh starts fresh.
+  const logged = useContactSession(selectLogged(contactId));
+  const addLog = (draft: ComposedDraft) =>
+    useContactSession.getState().addLog(contactId, draft);
   const liveCall = useLiveCall({ contact: detail?.contact ?? null });
 
   if (!detail) return <ContactNotFound />;
