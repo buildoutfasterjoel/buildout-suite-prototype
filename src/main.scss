@@ -2057,6 +2057,39 @@
   }
 }
 
+.contact-call-bar__panel {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.contact-call-bar__transcript {
+  max-height: 8rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+.contact-call-bar__line { display: flex; gap: 0.5rem; }
+.contact-call-bar__line--you { color: rgba(255, 255, 255, 0.95); }
+.contact-call-bar__line--them { color: rgba(255, 255, 255, 0.8); }
+.contact-call-bar__speaker { font-weight: 600; min-width: 3.5rem; }
+.contact-call-bar__hint,
+.contact-call-bar__wrapup { font-size: 0.85rem; opacity: 0.8; font-style: italic; }
+.contact-call-bar__chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.contact-call-bar__chip {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.contact-call-bar__chip:disabled { opacity: 0.5; cursor: default; }
+.contact-call-bar__compose .form-control { max-width: 28rem; }
+
 // ── Activity timeline ────────────────────────────────────────────────────────
 // Unified TimelineEvent feed. Tones/fills are scoped here so the whole set can
 // migrate into the Blueprint DS later without touching component code.

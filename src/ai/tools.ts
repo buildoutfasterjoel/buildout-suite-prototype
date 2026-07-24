@@ -3,6 +3,17 @@ import type { Contact, Listing, Property, PropertyStatus } from "#/data/types";
 import { useDataStore } from "#/data/dataStore";
 import { getListing, getProperty } from "#/data/store";
 import {
+  generateFilter,
+  generateEmail,
+  generateCallList,
+  generateContactBrief,
+  generateStrategy,
+  generateMarketingDoc,
+} from "#/ai/generate";
+import { composeContactData } from "#/ai/contactData";
+import { composeBookSnapshot } from "#/ai/bookSnapshot";
+import { useListingsFilter } from "#/routes/_shell/listings/-useListingsFilter";
+import {
   searchAll,
   getContactDetailClient,
   listDealsForContact,
@@ -15,8 +26,13 @@ import {
   linkContactToDeal,
   createEmailDraft,
   createCallList,
+  addNote,
+  createTask,
 } from "#/data/actions";
+import { parseDueDate } from "#/ai/dueDate";
+import { buildAssistantContext } from "#/ai/context";
 import { emptyDraft } from "#/data/createListing";
+import { callFlow } from "#/components/call/callFlow";
 import {
   getClientReportKpis,
   buildActivitySummaryText,
@@ -37,7 +53,19 @@ import {
   createEmailDraftDef,
   createCallListDef,
   generateDocDef,
+  filterListingsDef,
+  draftEmailDef,
+  buildCallListDef,
+  buildMarketingPackageDef,
+  researchContactDef,
+  answerAboutContactDef,
+  analyzeBookDef,
   navigateToDef,
+  addNoteDef,
+  createTaskDef,
+  findContactDef,
+  planMyDayDef,
+  startCallDef,
 } from "./toolDefs";
 
 // ── Compact summaries — keep tool results small for the model ────────────────
@@ -65,7 +93,22 @@ const dealSummary = (l: Listing) => {
   };
 };
 
-const propertySummary = (p: Property) => ({
+/**
+ * Build the `generateCallList` contact pool: excludes do-not-call contacts and
+ * strips each contact down to the recency/relationship fields the ranker needs.
+ * Shared by the `build_call_list` agent tool and the People grid's "Build call
+ * list with AI" button (`src/routes/_shell/backoffice/contacts/index.tsx`) so
+ * both stay in lockstep on the do-not-call rule.
+ */
+export const contactCallPool = (
+  contacts: Contact[],
+): Array<{ id: string; lastContactedAt: string | null; relationship: string }> =>
+  contacts
+    .filter((c) => !c.doNotCall)
+    .map((c) => ({ id: c.id, lastContactedAt: c.lastContactedAt, relationship: c.relationship }));
+
+/** Shared with the "Draft with AI" in-context button (`ListingEmail.tsx`). */
+export const propertySummary = (p: Property) => ({
   id: p.id,
   address: [p.street, p.city, p.state].filter(Boolean).join(", "),
   propertyType: p.propertyType,
@@ -74,6 +117,23 @@ const propertySummary = (p: Property) => ({
   askingPrice: p.askingPrice,
   capRate: p.capRate,
 });
+
+/**
+ * Resolve a plain-English name to a contact: exact full-name match first,
+ * falling back to a substring match. Used by the Phase-1 client tools
+ * (`add_note`, `create_task`, `start_call`) that take a `contact_name`
+ * argument instead of a resolved id.
+ */
+export function resolveContactByName(name: string): Contact | null {
+  const q = name.trim().toLowerCase();
+  if (!q) return null;
+  const contacts = [...useDataStore.getState().contacts.values()];
+  return (
+    contacts.find((c) => `${c.firstName} ${c.lastName}`.trim().toLowerCase() === q) ??
+    contacts.find((c) => `${c.firstName} ${c.lastName}`.toLowerCase().includes(q)) ??
+    null
+  );
+}
 
 /**
  * Build the browser-executed client tools, matched by name to the shared
@@ -246,6 +306,176 @@ export function createClientTools({
       const { path } = args as { path: string };
       navigate(path);
       return { navigatedTo: path };
+    }),
+
+    filterListingsDef.client(async (args) => {
+      const { query } = args as { query: string };
+      const spec = await generateFilter({ data: { query } });
+      useListingsFilter.getState().apply(spec);
+      navigate("/listings");
+      return { explanation: spec.explanation };
+    }),
+
+    draftEmailDef.client(async (args) => {
+      const { propertyId, listingId, intent } = args as {
+        propertyId?: string;
+        listingId?: string;
+        intent: string;
+      };
+      const listing = listingId ? getListing(listingId) : undefined;
+      const property = propertyId
+        ? getProperty(propertyId)
+        : listing
+          ? getProperty(listing.propertyId)
+          : undefined;
+      const propPayload = property
+        ? propertySummary(property)
+        : { name: listing?.name ?? "the property" };
+      const draft = await generateEmail({ data: { property: propPayload, intent, recipients: [] } });
+      const { email } = createEmailDraft({ subject: draft.subject });
+      return { emailDraft: { ...draft, id: email.id } };
+    }),
+
+    buildCallListDef.client(async (args) => {
+      const { intent } = args as { intent?: string };
+      const pool = contactCallPool([...useDataStore.getState().contacts.values()]);
+      const ranked = await generateCallList({ data: { intent, contacts: pool } });
+      const { callList } = createCallList({
+        name: intent ? `AI: ${intent}` : "AI call list",
+        contactIds: ranked.calls.map((c) => c.contactId),
+        description: ranked.headline,
+        source: "ai",
+      });
+      const byId = new Map(
+        [...useDataStore.getState().contacts.values()].map((c) => [c.id, c]),
+      );
+      return {
+        callListId: callList.id,
+        headline: ranked.headline,
+        contacts: ranked.calls.map((c) => {
+          const ct = byId.get(c.contactId);
+          return {
+            id: c.contactId,
+            name: ct ? `${ct.firstName} ${ct.lastName}`.trim() : c.contactId,
+            relationship: ct?.relationship,
+            company: ct?.company,
+            score: c.score,
+            reason: c.reason,
+          };
+        }),
+      };
+    }),
+
+    buildMarketingPackageDef.client(async (args) => {
+      const { address, owner_name, asset_type, asking_price, notes } = args as {
+        address: string;
+        owner_name?: string;
+        asset_type?: string;
+        asking_price?: number;
+        notes?: string;
+      };
+      const property = {
+        name: address,
+        address,
+        assetType: asset_type,
+        askingPrice: asking_price,
+        owner: owner_name,
+        notes,
+      };
+      const [doc, email] = await Promise.all([
+        generateMarketingDoc({ data: { property, docType: "marketing_flyer" } }),
+        generateEmail({
+          data: { property, intent: `Launch marketing for ${address}`, recipients: [] },
+        }),
+      ]);
+      return {
+        package: {
+          doc,
+          email,
+          financials: { askingPrice: asking_price ?? null, assetType: asset_type ?? null },
+        },
+      };
+    }),
+
+    researchContactDef.client(async (args) => {
+      const { contactId } = args as { contactId: string };
+      const detail = getContactDetailClient(contactId);
+      if (!detail) return { error: "Contact not found" };
+      const name = `${detail.contact.firstName} ${detail.contact.lastName}`.trim();
+      const { brief } = await generateContactBrief({
+        data: { data: composeContactData(contactId), name },
+      });
+      return { brief, contactName: name };
+    }),
+
+    answerAboutContactDef.client(async (args) => {
+      const { contactId, question } = args as { contactId: string; question: string };
+      const detail = getContactDetailClient(contactId);
+      if (!detail) return { error: "Contact not found" };
+      const name = `${detail.contact.firstName} ${detail.contact.lastName}`.trim();
+      const { brief } = await generateContactBrief({
+        data: { data: composeContactData(contactId), name, question },
+      });
+      return { brief, contactName: name };
+    }),
+
+    analyzeBookDef.client(async (args) => {
+      const { question } = args as { question: string };
+      const { answer } = await generateStrategy({ data: { book: composeBookSnapshot(), question } });
+      return { answer };
+    }),
+
+    addNoteDef.client(async (args) => {
+      const { contact_name, note_text } = args as { contact_name: string; note_text: string };
+      const c = resolveContactByName(contact_name);
+      if (!c) return { error: `No contact named "${contact_name}".` };
+      addNote(c.id, note_text);
+      return { noted: true, contactId: c.id, contactName: `${c.firstName} ${c.lastName}`.trim() };
+    }),
+
+    createTaskDef.client(async (args) => {
+      const { task_title, contact_name, due } = args as {
+        task_title: string;
+        contact_name?: string;
+        due?: string;
+      };
+      const c = contact_name ? resolveContactByName(contact_name) : null;
+      const { task } = createTask({
+        name: task_title,
+        dueDate: due ? parseDueDate(due) : null,
+        contactId: c?.id ?? null,
+        source: "contact",
+      });
+      return {
+        taskId: task.id,
+        title: task.name,
+        due: task.dueDate,
+        contactName: c ? `${c.firstName} ${c.lastName}`.trim() : null,
+      };
+    }),
+
+    findContactDef.client(async (args) => {
+      const { query } = args as { query: string };
+      return { contacts: searchAll(query).contacts.slice(0, 6).map(contactSummary) };
+    }),
+
+    planMyDayDef.client(async () => {
+      const ctx = buildAssistantContext();
+      const headline =
+        ctx.tasks.overdue > 0
+          ? `You have ${ctx.tasks.overdue} overdue task${ctx.tasks.overdue === 1 ? "" : "s"} — clear those first.`
+          : ctx.tasks.dueToday > 0
+            ? `${ctx.tasks.dueToday} task${ctx.tasks.dueToday === 1 ? "" : "s"} due today. Start at the top of your list.`
+            : "Nothing overdue — good time to prospect. Want me to build a call list?";
+      return { headline, action: "Open tasks" };
+    }),
+
+    startCallDef.client(async (args) => {
+      const { contact_name } = args as { contact_name: string };
+      const c = resolveContactByName(contact_name);
+      if (!c) return { started: false, error: `No contact named "${contact_name}".` };
+      callFlow.open(c);
+      return { started: true, contactId: c.id };
     }),
   ];
 }

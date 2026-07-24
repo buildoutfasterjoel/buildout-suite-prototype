@@ -14,11 +14,9 @@ import { ContactBriefingSection } from "#/components/contacts/ContactBriefingSec
 import { ContactBovFlow } from "#/components/contacts/ContactBovFlow";
 import { ContactDesignToggles } from "#/components/contacts/ContactDesignToggles";
 import { ShareContactModal } from "#/components/contacts/ShareContactModal";
-import { LiveCallBar } from "#/components/contacts/LiveCallBar";
-import { LogCallModal } from "#/components/contacts/LogCallModal";
 import { useContactShares } from "#/components/contacts/useContactShares";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
-import { useLiveCall } from "#/components/contacts/useLiveCall";
+import { callFlow } from "#/components/call/callFlow";
 import type { ComposedDraft } from "#/components/contacts/ContactComposeModule";
 import {
   buildBriefing,
@@ -86,7 +84,6 @@ function ContactDetailPage() {
   const logged = useContactSession(selectLogged(contactId));
   const addLog = (draft: ComposedDraft) =>
     useContactSession.getState().addLog(contactId, draft);
-  const liveCall = useLiveCall({ contact: detail?.contact ?? null });
 
   if (!detail) return <ContactNotFound />;
 
@@ -99,16 +96,6 @@ function ContactDetailPage() {
     >
       {/* Fixed top bar */}
       <ContactDetailTopBar contact={contact} />
-
-      {/* Live call bar — docks full-width above the columns while a call runs. */}
-      {liveCall.call && (
-        <LiveCallBar
-          call={liveCall.call}
-          onHangUp={liveCall.hangUp}
-          onEndCall={liveCall.endCall}
-          onToggleMute={liveCall.toggleMute}
-        />
-      )}
 
       {/* Full-height 3-column row; each column scrolls independently and the
           page itself never scrolls. */}
@@ -130,7 +117,7 @@ function ContactDetailPage() {
             deals={deals}
             logged={logged}
             onLog={addLog}
-            onStartCall={liveCall.startCall}
+            onStartCall={(phone) => callFlow.open(contact, phone)}
           />
         </div>
         <div
@@ -166,17 +153,6 @@ function ContactDetailPage() {
       {/* The BOV wizard (generate → save → preview → email), launched from a
           deal card's Build Underwriting action. */}
       <ContactBovFlow contact={contact} onLog={addLog} />
-
-      {/* Mandatory post-call logging — appears when a live call ends. */}
-      <LogCallModal
-        open={liveCall.pendingLog}
-        contact={contact}
-        deals={deals}
-        onLog={(draft) => {
-          addLog(draft);
-          liveCall.clearPendingLog();
-        }}
-      />
 
       {/* Floating design-comparison menu (prototype-only). */}
       <ContactDesignToggles />

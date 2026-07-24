@@ -29,6 +29,7 @@ import type {
   FinancialRecordSource,
   RentRollRow,
   HeroKey,
+  OwnerSignal,
   PropertyStatus,
   Lot,
   Condo,
@@ -782,7 +783,7 @@ function generateComp(propertyId: string, buildingSqFt: number, propertyType: Pr
 // ── Contact generator ─────────────────────────────────────────────────────────
 
 /** Team members a contact can be assigned to — weighted to a single lead broker. */
-const ASSIGNEES = ['J. Whitfield', 'A. Mendez', 'R. Patel', 'S. Kim']
+const ASSIGNEES = ['E. Thompson', 'A. Mendez', 'R. Patel', 'S. Kim']
 
 /** CRE-flavored job titles for the contact's position line. */
 const TITLE_POOL = [
@@ -1625,6 +1626,10 @@ interface HeroFixture {
    * listing on it so the whole Contact → Deal → Property path reads on-story.
    */
   dealName?: string
+  /** An overnight market signal on this owner (Phase 4A hero). Owners with a
+   * signal but `deal: null` get a coerced multifamily "hero property" so the
+   * arc's opportunity + underwriting land on a real building. */
+  signal?: OwnerSignal
 }
 
 const HERO_FIXTURES: HeroFixture[] = [
@@ -1728,6 +1733,32 @@ const HERO_FIXTURES: HeroFixture[] = [
     openTaskCount: 0,
     deal: { status: 'closed', side: 'seller' },
   },
+  {
+    heroKey: 'marcus',
+    firstName: 'Marcus',
+    lastName: 'Pinckney',
+    company: 'Pinckney Holdings LLC',
+    title: 'Owner',
+    role: 'owner',
+    source: 'Cold outreach',
+    relationship: 'nurturing',
+    tags: ['Local', 'Off-market'],
+    notes:
+      'Owns a 48-unit workforce building on the peninsula. Guarded; hates being sold to. Lead with the loan, not the listing.',
+    createdDaysAgo: 220,
+    lastContactedDaysAgo: 95,
+    lastTouch: 'Added to book',
+    openTaskCount: 0,
+    deal: null,
+    dealName: 'Palmetto Court',
+    signal: {
+      kind: 'loan-maturity',
+      headline: "a $4.2M CMBS loan on Marcus Pinckney's Palmetto Court maturing in 90 days",
+      detail:
+        'Palmetto Court carries a $4.2M CMBS loan maturing in ~90 days; refinancing at today’s rates is tight, which often turns a reluctant owner into a seller.',
+      observedAt: new Date(Date.now() - 86_400_000).toISOString().slice(0, 10),
+    },
+  },
 ]
 
 /** Force a listing to the stage a hero's story requires, keeping history sane. */
@@ -1787,6 +1818,39 @@ function applyHeroes(
       phoneStatus: 'valid',
       doNotCall: false,
     } satisfies Partial<Contact>)
+
+    // Phase 4A hero: an owner carrying a signal but no deal yet. Give them a
+    // multifamily "hero property" (coerced if needed) so the arc's opportunity
+    // and its underwriting land on a real, eligible building.
+    if (h.signal) {
+      host.signal = h.signal
+      const usedPropIds = new Set(
+        listings.filter((l) => claimed.has(l.id)).map((l) => l.propertyId),
+      )
+      const heroProp =
+        properties.find((p) => p.propertyType === 'multifamily' && !usedPropIds.has(p.id)) ??
+        properties.find((p) => !usedPropIds.has(p.id))!
+      heroProp.propertyType = 'multifamily'
+      heroProp.propertySubtype = 'Mid-Rise'
+      if (h.dealName) heroProp.name = h.dealName
+      host.propertyIds = [heroProp.id, ...host.propertyIds.filter((id) => id !== heroProp.id)]
+
+      // Phase 4C: make the hero property read like a real 48-unit workforce building
+      // with a STATED (marketing) vs ACTUAL (T-12) occupancy gap the underwrite flags.
+      heroProp.residentialUnits = 48
+      heroProp.buildingSqFt = 41_000
+      heroProp.askingPrice = 6_200_000
+      heroProp.capRate = 0.058
+      heroProp.occupancyPct = 94 // stated
+      if (heroProp.financialRecords[0]) {
+        heroProp.financialRecords[0].source = 'T-12 actuals'
+        heroProp.financialRecords[0].occupancyPct = 78 // actual
+        heroProp.financialRecords[0].vacancyRate = 0.22
+        // Keep the latest record's capRate mirroring the property's (existing seed
+        // invariant, seed.test.ts:92) — only occupancy is meant to diverge here.
+        heroProp.financialRecords[0].capRate = heroProp.capRate
+      }
+    }
 
     // Detach the host from every deal, then wire the story's deal (if any).
     for (const l of listings) {

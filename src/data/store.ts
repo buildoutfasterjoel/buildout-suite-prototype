@@ -10,6 +10,7 @@ import type {
   DealUnderwriting,
   DealDocument,
   DealMessage,
+  DealActivity,
 } from './types'
 import type { Email } from './emails'
 import { useDataStore } from './dataStore'
@@ -211,6 +212,23 @@ export function addDealMessage(
     timestamp: new Date().toISOString(),
   }
   return patchListing(listingId, { messages: [...existing.messages, full] })
+}
+
+/** Append an activity to a deal's Activities list (shows in the Activities-tab rail). */
+export function addDealActivity(
+  listingId: string,
+  activity: { type: string; note: string; actor: string },
+): Listing | undefined {
+  const existing = useDataStore.getState().listings.get(listingId)
+  if (!existing) return undefined
+  const full: DealActivity = {
+    id: crypto.randomUUID(),
+    type: activity.type,
+    note: activity.note,
+    actor: activity.actor,
+    timestamp: new Date().toISOString(),
+  }
+  return patchListing(listingId, { activities: [...existing.activities, full] })
 }
 
 export function getContact(contactId: string): Contact | undefined {

@@ -227,6 +227,19 @@ export const createCallListDef = toolDefinition({
   },
 });
 
+export const buildCallListDef = toolDefinition({
+  name: "build_call_list",
+  description:
+    "Build a ranked, dialable call list from the broker's book and save it to the People module. Call IMMEDIATELY with no confirmation when the broker says 'build my call list' / 'who should I call'. Distinct from analyze_book (which is a written answer).",
+  inputSchema: {
+    type: "object",
+    properties: {
+      intent: { type: "string", description: "Optional focus, e.g. 'cold prospects to warm up'." },
+    },
+    additionalProperties: false,
+  },
+});
+
 export const generateDocDef = toolDefinition({
   name: "generateDoc",
   description:
@@ -235,6 +248,154 @@ export const generateDocDef = toolDefinition({
     type: "object",
     properties: { listingId: { type: "string" } },
     required: ["listingId"],
+    additionalProperties: false,
+  },
+});
+
+// ── Generative (AI Phase 1) ───────────────────────────────────────────────
+
+export const filterListingsDef = toolDefinition({
+  name: "filter_listings",
+  description:
+    "Filter the Listings grid from a plain-English query (e.g. 'stale Chicago office for sale'). Navigates to Listings and applies the filter. Use for any 'show me / find listings that…' request.",
+  inputSchema: {
+    type: "object",
+    properties: { query: { type: "string", description: "The plain-English listings query." } },
+    required: ["query"],
+    additionalProperties: false,
+  },
+});
+
+export const researchContactDef = toolDefinition({
+  name: "research_contact",
+  description:
+    "Produce a full analyst brief on ONE contact (ownership, deals, activity, takeaways). Use for broad 'tell me about / who is / research X' requests. Resolve the name with searchAll first if needed.",
+  inputSchema: {
+    type: "object",
+    properties: { contactId: { type: "string" } },
+    required: ["contactId"],
+    additionalProperties: false,
+  },
+});
+
+export const answerAboutContactDef = toolDefinition({
+  name: "answer_about_contact",
+  description:
+    "Answer a SPECIFIC question about one contact using their record. Use when the broker asks a targeted question about a named person (not a broad 'tell me about').",
+  inputSchema: {
+    type: "object",
+    properties: { contactId: { type: "string" }, question: { type: "string" } },
+    required: ["contactId", "question"],
+    additionalProperties: false,
+  },
+});
+
+export const analyzeBookDef = toolDefinition({
+  name: "analyze_book",
+  description:
+    "Portfolio strategy across the WHOLE book — who to work, who can close in 90 days, who's gone cold, how to drum up business, review the pipeline. Use for any strategy/portfolio question NOT about one named person. Never refuse for lack of a tool. Returns a written answer (distinct from build_call_list).",
+  inputSchema: {
+    type: "object",
+    properties: { question: { type: "string" } },
+    required: ["question"],
+    additionalProperties: false,
+  },
+});
+
+export const draftEmailDef = toolDefinition({
+  name: "draft_email",
+  description:
+    "Draft a professional broker outreach email about a specific property or deal. Resolve the property with searchAll first. Optionally target named recipients. Produces subject + body the broker can edit before sending.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      propertyId: { type: "string", description: "Resolved property id." },
+      listingId: { type: "string", description: "Resolved listing/deal id (alternative to propertyId)." },
+      intent: { type: "string", description: "What the email is about, e.g. 'price reduction' or 'introduce myself as the listing broker'." },
+    },
+    required: ["intent"],
+    additionalProperties: false,
+  },
+});
+
+export const buildMarketingPackageDef = toolDefinition({
+  name: "build_marketing_package",
+  description:
+    "Build a full marketing package for an address: flyer + launch email + a financial summary. REQUIRES an address; if missing, ask for it, then owner and asset type — ONE short question at a time — before calling.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      address: { type: "string" },
+      owner_name: { type: "string" },
+      asset_type: { type: "string" },
+      asking_price: { type: "number" },
+      notes: { type: "string" },
+    },
+    required: ["address"],
+    additionalProperties: false,
+  },
+});
+
+// ── Client actions (Phase 1, no LLM/key needed) ─────────────────────────────
+
+export const addNoteDef = toolDefinition({
+  name: "add_note",
+  description:
+    "Save a note on a contact's record. If the note also implies a follow-up action (a call, email, or reminder), ALSO call create_task for it so the reminder actually gets scheduled.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      contact_name: { type: "string" },
+      note_text: { type: "string" },
+    },
+    required: ["contact_name", "note_text"],
+    additionalProperties: false,
+  },
+});
+
+export const createTaskDef = toolDefinition({
+  name: "create_task",
+  description:
+    "Create a follow-up task/reminder. Use for 'remind me to…' / 'follow up …' — including reminders to CALL someone LATER (a live call NOW is start_call). due is natural language ('friday', 'in 3 days').",
+  inputSchema: {
+    type: "object",
+    properties: {
+      task_title: { type: "string" },
+      contact_name: { type: "string" },
+      due: { type: "string" },
+    },
+    required: ["task_title"],
+    additionalProperties: false,
+  },
+});
+
+export const findContactDef = toolDefinition({
+  name: "find_contact",
+  description:
+    "Search the CRM and show a clickable result card for a person. Use when the broker wants to locate someone.",
+  inputSchema: {
+    type: "object",
+    properties: { query: { type: "string" } },
+    required: ["query"],
+    additionalProperties: false,
+  },
+});
+
+export const planMyDayDef = toolDefinition({
+  name: "plan_my_day",
+  description:
+    "Name the broker's single most important next move right now (headline + action) from their live book. Use for 'what should I do' / 'plan my day' / 'what's next'.",
+  inputSchema: { type: "object", properties: {}, additionalProperties: false },
+});
+
+export const startCallDef = toolDefinition({
+  name: "start_call",
+  description:
+    "Start a call with a contact NOW (opens the call flow). A reminder to call LATER is create_task instead.",
+  inputSchema: {
+    type: "object",
+    properties: { contact_name: { type: "string" } },
+    required: ["contact_name"],
     additionalProperties: false,
   },
 });
@@ -270,5 +431,17 @@ export const TOOL_DEFS = [
   createEmailDraftDef,
   createCallListDef,
   generateDocDef,
+  filterListingsDef,
+  draftEmailDef,
+  buildCallListDef,
+  buildMarketingPackageDef,
+  researchContactDef,
+  answerAboutContactDef,
+  analyzeBookDef,
   navigateToDef,
+  addNoteDef,
+  createTaskDef,
+  findContactDef,
+  planMyDayDef,
+  startCallDef,
 ];
