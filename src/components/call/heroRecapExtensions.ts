@@ -23,7 +23,7 @@ export function isHeroCall(target: CallTarget | null): boolean {
 
 /** Derive the weekday name (e.g. "Thursday") from a "YYYY-MM-DD" ISO date string,
  * deterministically (no timezone drift from `new Date(isoString)` parsing). */
-function weekdayFromIsoDate(isoDate: string): string {
+export function weekdayFromIsoDate(isoDate: string): string {
   const [y, m, d] = isoDate.split("-").map(Number);
   if (!y || !m || !d) return "";
   return new Date(y, m - 1, d).toLocaleDateString("en-US", { weekday: "long" });

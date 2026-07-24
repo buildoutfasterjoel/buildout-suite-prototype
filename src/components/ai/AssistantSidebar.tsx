@@ -41,7 +41,7 @@ import { formatCurrency } from "#/components/deals/dealDisplay";
 import { useHeroOffer, matchOfferIntent } from "#/ai/heroOffer";
 import { getContact } from "#/data/store";
 import { signalText } from "#/data/signal";
-import { generateCallBrief } from "#/ai/generate";
+import { generateCallBrief, callBriefFallback } from "#/ai/generate";
 import { CallBriefCard } from "#/components/call/CallBriefCard";
 import type { CallBriefSpecT } from "#/ai/generate/schemas";
 
@@ -436,9 +436,14 @@ export function AssistantSidebar() {
                 signal: contact.signal?.detail ?? signalText(contact),
                 firstName: contact.firstName,
               },
-            }).then((spec) =>
-              setBrief({ spec, name: `${contact.firstName} ${contact.lastName}`.trim(), contactId: contact.id }),
-            );
+            })
+              .then((spec) =>
+                setBrief({ spec, name: `${contact.firstName} ${contact.lastName}`.trim(), contactId: contact.id }),
+              )
+              .catch(() => {
+                const spec = callBriefFallback(contact.signal?.detail ?? signalText(contact), contact.firstName);
+                setBrief({ spec, name: `${contact.firstName} ${contact.lastName}`.trim(), contactId: contact.id });
+              });
             return;
           }
         } else {
