@@ -1,63 +1,91 @@
 import { Card, CardBody } from "@buildoutinc/blueprint-react/ui/Card";
-import { List } from "@buildoutinc/blueprint-react/ui/List";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faNoteSticky, faPhone } from "@fortawesome/pro-regular-svg-icons";
-import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import { RECENT_ACTIVITY, type ActivityItem } from "./dashboardData";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
+import { IconBadge } from "#/components/contacts/IconBadge";
+import {
+  TYPE_CONFIG,
+  durationLabel,
+  exactTime,
+  relativeTime,
+} from "#/components/contacts/timeline";
+import {
+  DASHBOARD_TODAY,
+  RECENT_ACTIVITY,
+  type ActivityItem,
+} from "./dashboardData";
 
-const KIND_ICON: Record<ActivityItem["kind"], IconDefinition> = {
-  note: faNoteSticky,
-  call: faPhone,
-};
+/** The dashboard persona (matches the navbar avatar and the greeting). */
+const ACTOR_NAME = "Ethan Thompson";
 
-const KIND_COLOR: Record<ActivityItem["kind"], string> = {
-  note: "bg-buildout-blue-500",
-  call: "bg-storm-grey-400",
-};
+/** Relative times are anchored to the dashboard's fictional "today". */
+const DASHBOARD_NOW = DASHBOARD_TODAY.getTime();
 
-/** "Jul 5 · 12:47 PM" — omits the year, unlike `formatDateTime`. */
-function formatActivityTime(iso: string): string {
-  const d = new Date(iso);
-  const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-  return `${date} · ${time}`;
-}
-
+/**
+ * A recent-activity row rendered with the contact detail timeline's `.tl-row`
+ * styles: channel bubble + connector rail, "actor › contact" header with a
+ * relative timestamp, then the event title and summary text.
+ */
 function ActivityRow({ item }: { item: ActivityItem }) {
+  const config = TYPE_CONFIG[item.kind];
+
   return (
-    <List.Item>
-      <span
-        className={`rounded-circle d-inline-flex align-items-center justify-content-center text-white flex-shrink-0 ${KIND_COLOR[item.kind]}`}
-        style={{ width: 32, height: 32 }}
-      >
-        <FontAwesomeIcon icon={KIND_ICON[item.kind]} />
-      </span>
-      <List.ItemContent className="ps-3 flex-fill">
-        <List.ItemTitle className="fw-semibold">{item.title}</List.ItemTitle>
-        {item.preview && <List.ItemDescription>{item.preview}</List.ItemDescription>}
-      </List.ItemContent>
-      <List.ItemActions>
-        <span className="text-muted fs-xs text-nowrap">
-          {formatActivityTime(item.timestamp)}
-        </span>
-      </List.ItemActions>
-    </List.Item>
+    <article className="tl-row" data-type={item.kind}>
+      <div className="tl-row__rail">
+        <IconBadge icon={config.icon} tone={config.tone} attention={false} />
+        <span className="tl-row__connector" aria-hidden="true" />
+      </div>
+
+      <div className="tl-row__body">
+        <div className="tl-row__head">
+          <span className="tl-row__actors">
+            {ACTOR_NAME}
+            {" › "}
+            <span className="tl-row__contact-name">{item.contactName}</span>
+            {item.durationSecs != null && (
+              <span className="tl-row__duration">
+                {" "}
+                ({durationLabel(item.durationSecs)})
+              </span>
+            )}
+          </span>
+          <span className="tl-row__head-right">
+            <Tooltip>
+              <Tooltip.Trigger
+                render={
+                  <span className="tl-row__time">
+                    {relativeTime(item.timestamp, DASHBOARD_NOW)}
+                  </span>
+                }
+              />
+              <Tooltip.Content>{exactTime(item.timestamp)}</Tooltip.Content>
+            </Tooltip>
+          </span>
+        </div>
+
+        <div className="tl-row__subject">
+          <span>{config.defaultTitle}</span>
+        </div>
+
+        {item.body && <p className="tl-row__text">{item.body}</p>}
+      </div>
+    </article>
   );
 }
 
 export function RecentActivitySection() {
   return (
-    <Card className="shadow-sm">
+    <Card className="panel-card">
       <Card.Header>
         <Card.Title className="fs-large">Recent activity</Card.Title>
       </Card.Header>
 
-      <CardBody className="p-0">
-        <List flush>
-          {RECENT_ACTIVITY.map((item) => (
-            <ActivityRow key={item.id} item={item} />
-          ))}
-        </List>
+      <CardBody>
+        <div className="tl-feed">
+          <div>
+            {RECENT_ACTIVITY.map((item) => (
+              <ActivityRow key={item.id} item={item} />
+            ))}
+          </div>
+        </div>
       </CardBody>
     </Card>
   );

@@ -141,7 +141,7 @@ export function ContactListsSidebar({
 
   return (
     <Card
-      className={`contact-lists-sidebar d-flex flex-column flex-shrink-0 h-100 overflow-hidden${
+      className={`panel-card contact-lists-sidebar d-flex flex-column flex-shrink-0 h-100 overflow-hidden${
         collapsed ? " is-collapsed" : ""
       }`}
       style={{ width: collapsed ? 64 : 288, transition: "width .15s ease" }}

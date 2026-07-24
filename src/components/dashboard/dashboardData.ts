@@ -73,77 +73,18 @@ export const FOCUS_SIGNAL: FocusSignal = {
   secondaryCta: "Open record",
 };
 
-export type TaskUrgency = "overdue" | "today";
-export type TaskEntityType = "deal" | "contact";
-
-export interface DashboardTask {
-  id: string;
-  urgency: TaskUrgency;
-  daysOverdue?: number;
-  entityType: TaskEntityType;
-  title: string;
-  contactName: string;
-  company: string;
-}
-
-export const DASHBOARD_TASKS: DashboardTask[] = [
-  {
-    id: "task-1",
-    urgency: "overdue",
-    daysOverdue: 3,
-    entityType: "deal",
-    title: "Clear due diligence items",
-    contactName: "Sandra Vega",
-    company: "Vega 222 LLC",
-  },
-  {
-    id: "task-2",
-    urgency: "overdue",
-    daysOverdue: 2,
-    entityType: "deal",
-    title: "Confirm Hector Ravenel's valuation cap before listing window closes",
-    contactName: "Hector Ravenel",
-    company: "Ravenel Family Properties",
-  },
-  {
-    id: "task-3",
-    urgency: "today",
-    entityType: "contact",
-    title: "Send Carlos Ramirez urgent comp set + 30-day plan",
-    contactName: "Carlos Ramirez",
-    company: "Ramirez Family Properties LLC",
-  },
-  {
-    id: "task-4",
-    urgency: "today",
-    entityType: "contact",
-    title: "Call Eleanor Reyes back — confirm pricing window",
-    contactName: "Eleanor Reyes",
-    company: "Reyes Investment Trust",
-  },
-  {
-    id: "task-5",
-    urgency: "today",
-    entityType: "deal",
-    title: "Send Daniel Manigault redlined LOI + counter terms",
-    contactName: "Daniel Manigault",
-    company: "Manigault Real Estate Partners",
-  },
-  {
-    id: "task-6",
-    urgency: "today",
-    entityType: "contact",
-    title: "Email Margaret Whaley-Pope — follow up on sibling vote",
-    contactName: "Margaret Whaley-Pope",
-    company: "Whaley Pope Family LLC",
-  },
-];
-
+/**
+ * Recent-activity feed items, shaped to render with the contact detail page's
+ * timeline styles (`.tl-row`): the actor line is "you › contact", calls carry a
+ * duration, and `body` is the note/call summary text.
+ */
 export interface ActivityItem {
   id: string;
   kind: "note" | "call";
-  title: string;
-  preview?: string;
+  contactName: string;
+  /** Call length in seconds — rendered "(m:ss)" after the actor line. */
+  durationSecs?: number;
+  body?: string;
   /** ISO timestamp. */
   timestamp: string;
 }
@@ -152,38 +93,39 @@ export const RECENT_ACTIVITY: ActivityItem[] = [
   {
     id: "activity-1",
     kind: "note",
-    title: "Note on Sandra Vega",
-    preview:
-      "Closing-day gift idea: frame a print of the 1940s Spring Street streetscape for",
+    contactName: "Sandra Vega",
+    body: "Closing-day gift idea: frame a print of the 1940s Spring Street streetscape for the lobby.",
     timestamp: "2026-07-05T12:47:00",
   },
   {
     id: "activity-2",
     kind: "call",
-    title: "Call with Caroline Heyward",
-    preview: "voicemail · 0:38",
+    contactName: "Caroline Heyward",
+    durationSecs: 38,
+    body: "Voicemail — left a message about the Meeting Street walkthrough.",
     timestamp: "2026-07-04T12:47:00",
   },
   {
     id: "activity-3",
     kind: "call",
-    title: "Call with Sandra Vega",
-    preview: "warm · 6:12",
+    contactName: "Sandra Vega",
+    durationSecs: 372,
+    body: "Warm — walked the closing checklist and confirmed Friday's signing.",
     timestamp: "2026-07-04T12:47:00",
   },
   {
     id: "activity-4",
     kind: "note",
-    title: "Note on Hector Ravenel",
-    preview:
-      "BAR attorney suggested we reach out to Charleston Historical Foundation before I",
+    contactName: "Hector Ravenel",
+    body: "BAR attorney suggested we reach out to Charleston Historical Foundation before filing.",
     timestamp: "2026-07-03T12:47:00",
   },
   {
     id: "activity-5",
     kind: "call",
-    title: "Call with Hector Ravenel",
-    preview: "warm · 12:08",
+    contactName: "Hector Ravenel",
+    durationSecs: 728,
+    body: "Warm — discussed the valuation cap and the listing window timeline.",
     timestamp: "2026-07-02T12:47:00",
   },
 ];

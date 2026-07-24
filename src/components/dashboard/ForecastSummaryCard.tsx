@@ -40,7 +40,7 @@ export function ForecastSummaryCard() {
   );
 
   return (
-    <Card className="shadow-sm">
+    <Card className="panel-card">
       <Card.Header className="d-flex align-items-center gap-2">
         <Card.Title className="fs-large">Forecast</Card.Title>
         <Button

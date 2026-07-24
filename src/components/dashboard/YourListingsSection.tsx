@@ -116,7 +116,7 @@ export function YourListingsSection() {
   }, []);
 
   return (
-    <Card className="shadow-sm">
+    <Card className="panel-card">
       <Card.Header className="d-flex align-items-center gap-2">
         <Card.Title className="fs-large">Your listings</Card.Title>
         <Badge variant="secondary" appearance="muted" className="fs-xs">

@@ -416,7 +416,7 @@ function PeoplePage() {
       />
 
       {/* Main card */}
-      <Card className="flex-grow-1 d-flex flex-column overflow-hidden">
+      <Card className="panel-card flex-grow-1 d-flex flex-column overflow-hidden">
         <Card.Body className="overflow-auto d-flex flex-column gap-4">
           {view === "lists" ? (
             <>

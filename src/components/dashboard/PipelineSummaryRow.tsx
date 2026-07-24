@@ -11,7 +11,7 @@ import { PIPELINE_SUMMARY } from "./dashboardData";
 
 export function PipelineSummaryRow() {
   return (
-    <Card className="shadow-sm">
+    <Card className="panel-card">
       <Card.Header className="d-flex align-items-center gap-2">
         <Card.Title className="fs-large">Your pipeline</Card.Title>
         <Button
