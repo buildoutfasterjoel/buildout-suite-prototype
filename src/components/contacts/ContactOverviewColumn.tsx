@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Accordion } from "@buildoutinc/blueprint-react/ui/Accordion";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
@@ -32,6 +32,7 @@ import { ContactLinkButton } from "#/components/contacts/ContactLinkButton";
 import { EditContactModal } from "#/components/contacts/EditContactModal";
 import { CreateDealModal } from "#/components/deals/CreateDealModal";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
+import { useDealSpotlight } from "#/components/contacts/useDealSpotlight";
 import { useContactListNav } from "#/components/contacts/useContactListNav";
 import {
   emptyContactFilters,
@@ -162,6 +163,16 @@ export function ContactOverviewColumn({
 
   const activeDeals = deals.filter((d) => !PAST_STATUSES.has(d.status));
   const pastDeals = deals.filter((d) => PAST_STATUSES.has(d.status));
+
+  // A just-created deal (AI Start-a-Deal flow) gets a brief spotlight; clear
+  // the signal once the animation has played so it doesn't replay on
+  // re-renders or follow the user to another contact.
+  const spotlightDealId = useDealSpotlight((s) => s.dealId);
+  useEffect(() => {
+    if (!spotlightDealId) return;
+    const t = setTimeout(() => useDealSpotlight.getState().clear(), 3000);
+    return () => clearTimeout(t);
+  }, [spotlightDealId]);
 
   // One card per property in "Properties Owned" — group the contact's deals by
   // property so a property with several deals shows a single card, not one per
@@ -385,7 +396,11 @@ export function ContactOverviewColumn({
             ) : (
               <>
                 {activeDeals.map((d) => (
-                  <ContactDealCard key={d.id} listingId={d.id} />
+                  <ContactDealCard
+                    key={d.id}
+                    listingId={d.id}
+                    highlight={d.id === spotlightDealId}
+                  />
                 ))}
                 {pastDeals.length > 0 && (
                   <Button

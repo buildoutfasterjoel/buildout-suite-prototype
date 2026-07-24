@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
-import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faWandMagicSparkles } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing, Property } from "#/data/types";
@@ -9,7 +8,6 @@ import { updateListingUnderwriting, generateUnderwritingResult } from "#/data/st
 import { notify } from "#/lib/notify";
 import { propertyQualifiesForUnderwriting } from "./eligibility";
 import { PlannerRow, TaskMarker } from "../TodayPlanner";
-import { UnderwritingDepth } from "../UnderwritingDepth";
 import {
   defaultSelectionFor,
   underwritingFromSelection,
@@ -19,6 +17,7 @@ import {
 } from "./strategies";
 import { UnderwritingProgress } from "./UnderwritingProgress";
 import { UnderwritingPlacementModal } from "./UnderwritingPlacementModal";
+import { UnderwritingSetupModal } from "./UnderwritingSetupModal";
 
 type Phase = "idle" | "generating" | "generated" | "ready";
 
@@ -75,33 +74,21 @@ export function UnderwritingPlannerRow({ listing }: { listing: Listing }) {
   const [runSelection, setRunSelection] = useState<Set<number>>(() =>
     initialSelection(initialStrategy()),
   );
-  const [setupStrategy, setSetupStrategy] =
-    useState<UnderwritingStrategyId>(initialStrategy);
-  // The setup modal's working selection (committed on Start).
-  const [setupSelection, setSetupSelection] = useState<Set<number>>(() =>
-    initialSelection(initialStrategy()),
-  );
   const [placementOpen, setPlacementOpen] = useState(false);
   const [placedName, setPlacedName] = useState<string | undefined>(
     listing.underwriting?.placement?.documentName,
   );
 
-  function openSetup() {
-    const strat = initialStrategy();
-    setSetupStrategy(strat);
-    setSetupSelection(initialSelection(strat));
-    setSetupOpen(true);
-  }
-
-  function startGeneration() {
-    const sel = setupSelection.size > 0 ? setupSelection : new Set([0]);
+  function startGeneration(
+    strategy: UnderwritingStrategyId,
+    selection: Set<number>,
+  ) {
     updateListingUnderwriting(listing.id, {
-      ...underwritingFromSelection(setupStrategy, sel),
+      ...underwritingFromSelection(strategy, selection),
       status: "generating",
     });
-    setRunStrategy(setupStrategy);
-    setRunSelection(sel);
-    setSetupOpen(false);
+    setRunStrategy(strategy);
+    setRunSelection(selection);
     setPhase("generating");
   }
 
@@ -118,7 +105,7 @@ export function UnderwritingPlannerRow({ listing }: { listing: Listing }) {
               variant="outline"
               size="sm"
               className="flex-shrink-0"
-              onClick={openSetup}
+              onClick={() => setSetupOpen(true)}
             >
               <FontAwesomeIcon icon={faWandMagicSparkles} />
               Generate underwriting
@@ -185,39 +172,14 @@ export function UnderwritingPlannerRow({ listing }: { listing: Listing }) {
         )}
       </PlannerRow>
 
-      {/* Depth setup — reuse the create-flow thoroughness control. */}
-      <Modal open={setupOpen} onOpenChange={setSetupOpen}>
-        <Modal.Content centered>
-          <Modal.Header>
-            <Modal.Title>Generate underwriting</Modal.Title>
-            <Modal.Description>
-              Set how thorough the underwriting should be. More checks means a
-              deeper analysis — and a little longer to generate.
-            </Modal.Description>
-          </Modal.Header>
-          <Modal.Body>
-            <UnderwritingDepth
-              strategy={setupStrategy}
-              value={setupSelection}
-              onStrategyChange={setSetupStrategy}
-              onChange={setSetupSelection}
-            />
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="ghost" onClick={() => setSetupOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              disabled={setupSelection.size === 0}
-              onClick={startGeneration}
-            >
-              <FontAwesomeIcon icon={faWandMagicSparkles} />
-              Start underwriting
-            </Button>
-          </Modal.Footer>
-        </Modal.Content>
-      </Modal>
+      {/* Depth setup — the shared Cactus setup dialog (also hosted by the
+          contact page's deal card). */}
+      <UnderwritingSetupModal
+        open={setupOpen}
+        onOpenChange={setSetupOpen}
+        listing={listing}
+        onStart={startGeneration}
+      />
 
       <UnderwritingPlacementModal
         open={placementOpen}

@@ -194,6 +194,12 @@ export interface ComposedActivity {
   to?: string;
   /** Related deal name, when one was selected. */
   relatedDeal?: string;
+  /**
+   * Files sent with the activity (email only) — rendered as document chips on
+   * the timeline row. `dealId` links a chip to that deal's document editor
+   * (e.g. the BOV that was sent).
+   */
+  attachments?: { name: string; meta?: string; dealId?: string }[];
 }
 
 /** Timeline headline per logged activity kind. */

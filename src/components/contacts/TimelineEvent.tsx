@@ -7,6 +7,9 @@ import {
   faThumbtack,
   faPaperclip,
   faChevronRight,
+  faFile,
+  faFilePdf,
+  faFileSpreadsheet,
 } from "@fortawesome/pro-regular-svg-icons";
 import { IconBadge } from "#/components/contacts/IconBadge";
 import { TimelineBadge } from "#/components/contacts/TimelineBadge";
@@ -26,6 +29,13 @@ import {
   durationLabel,
   type TimelineEvent as TimelineEventData,
 } from "#/components/contacts/timeline";
+
+/** Pick a file-type icon from the attachment's extension. */
+function attachmentIcon(name: string) {
+  if (/\.pdf$/i.test(name)) return faFilePdf;
+  if (/\.(xlsx?|csv)$/i.test(name)) return faFileSpreadsheet;
+  return faFile;
+}
 
 /**
  * The single row that renders every timeline event type via composition. State
@@ -59,8 +69,10 @@ export function TimelineEvent({
 
   // Tier-1 action bar shows only while the row still needs attention (unreplied
   // email, missed call, open inquiry, live thread); resolving it removes the
-  // reply/respond/call-back options. Read-only system rows never get it.
-  const isActionable = !config.readOnly && !!config.actionBar?.primary && attention;
+  // reply/respond/call-back options. Read-only system rows never get it. An
+  // event can carry its own bar (e.g. "Start a Deal") over the type default.
+  const actionBar = event.actionBar ?? config.actionBar;
+  const isActionable = !config.readOnly && !!actionBar?.primary && attention;
 
   return (
     <article
@@ -179,6 +191,42 @@ export function TimelineEvent({
           </>
         )}
 
+        {event.attachments && event.attachments.length > 0 && (
+          <div className="tl-attach">
+            {event.attachments.map((a) => {
+              const chip = (
+                <>
+                  <FontAwesomeIcon
+                    icon={attachmentIcon(a.name)}
+                    className="tl-attach__icon"
+                  />
+                  <span className="tl-attach__label">
+                    <span className="tl-attach__name">{a.name}</span>
+                    {a.meta && <span className="tl-attach__meta">{a.meta}</span>}
+                  </span>
+                </>
+              );
+              // A deal-linked attachment (e.g. a sent BOV) opens that deal's
+              // document editor; plain attachments stay static chips.
+              return a.dealId ? (
+                <Link
+                  key={a.name}
+                  to="/editor/$listingId"
+                  params={{ listingId: a.dealId }}
+                  search={{ focus: "underwriting" }}
+                  className="tl-attach__chip tl-attach__chip--link"
+                >
+                  {chip}
+                </Link>
+              ) : (
+                <div key={a.name} className="tl-attach__chip">
+                  {chip}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {event.badges && event.badges.length > 0 && (
           <div className="tl-row__badges">
             {event.badges.map((b, i) => (
@@ -198,8 +246,8 @@ export function TimelineEvent({
           </div>
         )}
 
-        {isActionable && config.actionBar && (
-          <TimelineActionBar actionBar={config.actionBar} onAction={onAction} />
+        {isActionable && actionBar && (
+          <TimelineActionBar actionBar={actionBar} onAction={onAction} />
         )}
 
         {replyOpen && (

@@ -33,18 +33,25 @@ export function UnderwritingPlacementModal({
   const documents = useMemo(() => listing.documents ?? [], [listing.documents]);
   const hasDocs = documents.length > 0;
   const defaultName = `Underwriting — ${listing.name}`;
+  // The natural home for an underwriting is the deal's BOV, when it has one.
+  const defaultDocId = useMemo(
+    () =>
+      (documents.find((d) => /opinion of value/i.test(d.name)) ?? documents[0])
+        ?.id ?? "",
+    [documents],
+  );
 
   const [mode, setMode] = useState<Mode>(hasDocs ? "existing" : "new");
-  const [docId, setDocId] = useState<string>(documents[0]?.id ?? "");
+  const [docId, setDocId] = useState<string>(defaultDocId);
   const [newName, setNewName] = useState<string>(defaultName);
 
   // Re-seed the form each time the modal opens (the run's outcome is one-shot).
   useEffect(() => {
     if (!open) return;
     setMode(hasDocs ? "existing" : "new");
-    setDocId(documents[0]?.id ?? "");
+    setDocId(defaultDocId);
     setNewName(defaultName);
-  }, [open, hasDocs, documents, defaultName]);
+  }, [open, hasDocs, defaultDocId, defaultName]);
 
   const trimmedName = newName.trim();
   const canSave =

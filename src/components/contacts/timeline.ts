@@ -136,6 +136,15 @@ export interface TimelineAssociation {
   id?: string;
 }
 
+/** A file attached to an email event, rendered as a document chip. */
+export interface TimelineAttachment {
+  name: string;
+  /** Optional meta line, e.g. "PDF · 268 KB". */
+  meta?: string;
+  /** When set, the chip links to this deal's document editor (e.g. a sent BOV). */
+  dealId?: string;
+}
+
 export type TimelineSource = "user" | "system" | "api" | "automation";
 export type TimelineVisibility = "private" | "shared" | "team";
 
@@ -171,8 +180,16 @@ export interface TimelineEvent {
   visibility?: TimelineVisibility;
   pinned?: boolean;
   hasAttachment?: boolean;
+  /** Attached documents, rendered as file chips under the body. */
+  attachments?: TimelineAttachment[];
   /** Voicemail / missed flag — flips the icon to an outline/amber treatment. */
   attempted?: boolean;
+  /**
+   * Per-event action bar — overrides the type's default labels when this one
+   * row needs a special action (e.g. "Start a Deal" on an email that arrived
+   * with financial documents attached).
+   */
+  actionBar?: TypeConfig["actionBar"];
 }
 
 /** Per-type presentation + action-label config (the Figma type variant set). */
@@ -567,6 +584,8 @@ export function composedToEvent(a: ComposedActivity, c: Contact): TimelineEvent 
     associations: a.relatedDeal
       ? [{ type: "deal", label: a.relatedDeal }]
       : undefined,
+    attachments: a.attachments,
+    hasAttachment: (a.attachments?.length ?? 0) > 0,
     source: "user",
   };
 }
