@@ -1,4 +1,8 @@
-import { z } from "zod";
+// NOTE: default import is intentional. Under this repo's Vitest (Vite module
+// runner), the named `import { z } from "zod"` resolves `z` to undefined at
+// runtime, while the default import works under Vitest, `bun run build`, and
+// tsc alike. This is the only zod import in src/.
+import z from "zod";
 
 /** §3.1 listing filter. savedView enum matches the requirements doc. */
 export const FilterSpec = z.object({
