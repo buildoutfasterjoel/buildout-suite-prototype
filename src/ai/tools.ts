@@ -2,7 +2,7 @@ import type { AnyClientTool } from "@tanstack/ai";
 import type { Contact, Listing, Property, PropertyStatus } from "#/data/types";
 import { useDataStore } from "#/data/dataStore";
 import { getListing, getProperty } from "#/data/store";
-import { generateFilter } from "#/ai/generate";
+import { generateFilter, generateEmail } from "#/ai/generate";
 import { useListingsFilter } from "#/routes/_shell/listings/-useListingsFilter";
 import {
   searchAll,
@@ -40,6 +40,7 @@ import {
   createCallListDef,
   generateDocDef,
   filterListingsDef,
+  draftEmailDef,
   navigateToDef,
 } from "./toolDefs";
 
@@ -68,7 +69,8 @@ const dealSummary = (l: Listing) => {
   };
 };
 
-const propertySummary = (p: Property) => ({
+/** Shared with the "Draft with AI" in-context button (`ListingEmail.tsx`). */
+export const propertySummary = (p: Property) => ({
   id: p.id,
   address: [p.street, p.city, p.state].filter(Boolean).join(", "),
   propertyType: p.propertyType,
@@ -257,6 +259,26 @@ export function createClientTools({
       useListingsFilter.getState().apply(spec);
       navigate("/listings");
       return { explanation: spec.explanation };
+    }),
+
+    draftEmailDef.client(async (args) => {
+      const { propertyId, listingId, intent } = args as {
+        propertyId?: string;
+        listingId?: string;
+        intent: string;
+      };
+      const listing = listingId ? getListing(listingId) : undefined;
+      const property = propertyId
+        ? getProperty(propertyId)
+        : listing
+          ? getProperty(listing.propertyId)
+          : undefined;
+      const propPayload = property
+        ? propertySummary(property)
+        : { name: listing?.name ?? "the property" };
+      const draft = await generateEmail({ data: { property: propPayload, intent, recipients: [] } });
+      const { email } = createEmailDraft({ subject: draft.subject });
+      return { emailDraft: { ...draft, id: email.id } };
     }),
   ];
 }

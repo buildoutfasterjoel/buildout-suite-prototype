@@ -253,6 +253,22 @@ export const filterListingsDef = toolDefinition({
   },
 });
 
+export const draftEmailDef = toolDefinition({
+  name: "draft_email",
+  description:
+    "Draft a professional broker outreach email about a specific property or deal. Resolve the property with searchAll first. Optionally target named recipients. Produces subject + body the broker can edit before sending.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      propertyId: { type: "string", description: "Resolved property id." },
+      listingId: { type: "string", description: "Resolved listing/deal id (alternative to propertyId)." },
+      intent: { type: "string", description: "What the email is about, e.g. 'price reduction' or 'introduce myself as the listing broker'." },
+    },
+    required: ["intent"],
+    additionalProperties: false,
+  },
+});
+
 // ── Navigation ───────────────────────────────────────────────────────────────
 
 export const navigateToDef = toolDefinition({
@@ -285,5 +301,6 @@ export const TOOL_DEFS = [
   createCallListDef,
   generateDocDef,
   filterListingsDef,
+  draftEmailDef,
   navigateToDef,
 ];

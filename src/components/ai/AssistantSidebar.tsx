@@ -23,6 +23,7 @@ import { aiChat, aiConfigured } from "#/ai/relay";
 import { buildAssistantContext, serializeContext } from "#/ai/context";
 import { useAssistant } from "#/ai/useAssistant";
 import { DealCardById } from "#/components/deals/DealCard";
+import { EmailDraftCard, type EmailDraftCardData } from "#/components/ai/EmailDraftCard";
 
 /** Shown instead of sending when the server has no Anthropic key configured. */
 const NOT_CONFIGURED_MESSAGE =
@@ -82,6 +83,12 @@ function entitiesOf(output: unknown): {
   };
 }
 
+/** Extract a generated email draft from a tool-call's output, if present. */
+function emailDraftOf(output: unknown): EmailDraftCardData | null {
+  const o = (output ?? {}) as { emailDraft?: unknown };
+  return o.emailDraft ? (o.emailDraft as EmailDraftCardData) : null;
+}
+
 /** A clickable card row (deal or contact) that navigates on click. */
 function ResultCard({
   title,
@@ -122,7 +129,8 @@ function ResultCard({
 function ToolResultCards({ output }: { output: unknown }) {
   const router = useRouter();
   const { deals, contacts } = entitiesOf(output);
-  if (deals.length === 0 && contacts.length === 0) return null;
+  const emailDraft = emailDraftOf(output);
+  if (deals.length === 0 && contacts.length === 0 && !emailDraft) return null;
 
   return (
     <div className="d-flex flex-column gap-2">
@@ -140,6 +148,7 @@ function ToolResultCards({ output }: { output: unknown }) {
           }
         />
       ))}
+      {emailDraft && <EmailDraftCard draft={emailDraft} />}
     </div>
   );
 }
@@ -169,7 +178,7 @@ function MessageBubble({ message }: { message: UIMessage }) {
   );
   const cardCalls = toolCalls.filter((p) => {
     const { deals, contacts } = entitiesOf(p.output);
-    return deals.length > 0 || contacts.length > 0;
+    return deals.length > 0 || contacts.length > 0 || emailDraftOf(p.output) !== null;
   });
   const chipCalls = toolCalls.filter((p) => !cardCalls.includes(p));
 
