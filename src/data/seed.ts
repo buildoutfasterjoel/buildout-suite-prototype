@@ -1438,6 +1438,8 @@ function listFilters(
     tags: [],
     lastActivity: 'any',
     openTasks: 'any',
+    listingInquiries: 'none',
+    inquiryListingId: null,
     excludeDoNotCall: false,
     ...overrides,
   }
@@ -1593,6 +1595,12 @@ interface HeroFixture {
   /** The deal the hero's arc runs on — null for the no-deal-yet stages. */
   deal: { status: ListingStage; side: DealSide; dealType?: DealType } | null
   /**
+   * A property the hero owns outright with no deal on it yet — generated
+   * fresh (so it carries no listings) and named on-story. It becomes the
+   * hero's only linked property and shows under "Properties Owned".
+   */
+  ownedProperty?: { name: string; propertyType: PropertyType }
+  /**
    * Story-specific name for the hero's property + deal (e.g. Earl's
    * "The Thompson Block"). Renames the claimed listing's property and every
    * listing on it so the whole Contact → Deal → Property path reads on-story.
@@ -1605,7 +1613,7 @@ const HERO_FIXTURES: HeroFixture[] = [
     heroKey: 'rosa',
     firstName: 'Rosa',
     lastName: 'Delgado',
-    company: 'Delgado Family Properties LLC',
+    company: 'Delgado Properties LLC',
     title: 'Owner',
     role: 'owner',
     source: 'Cold outreach',
@@ -1618,6 +1626,8 @@ const HERO_FIXTURES: HeroFixture[] = [
     lastTouch: 'Logged a call',
     openTaskCount: 1,
     deal: null,
+    // The corner building she and Miguel bought together — owned, not listed.
+    ownedProperty: { name: 'The Delgado Building', propertyType: 'mixed-use' },
   },
   {
     heroKey: 'earl',
@@ -1758,6 +1768,26 @@ function applyHeroes(
       l.buyerContactIds = l.buyerContactIds.filter((id) => id !== host.id)
       l.otherContactIds = l.otherContactIds.filter((id) => id !== host.id)
     }
+
+    // Story-owned property: generate a fresh one (added after listing
+    // generation, so it carries no deals) and make it the hero's only linked
+    // property. Regenerate until the type matches so all the type-derived
+    // numbers (size, price, units) stay internally coherent.
+    if (h.ownedProperty) {
+      let p = generateProperty()
+      while (p.propertyType !== h.ownedProperty.propertyType) {
+        p = generateProperty()
+      }
+      p.name = h.ownedProperty.name
+      p.slug =
+        p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + p.id.slice(0, 6)
+      // Owned, not on the market — no listing exists for it.
+      p.status = 'inactive'
+      properties.push(p)
+      host.propertyIds = [p.id]
+      host.ownedPropertyIds = [p.id]
+    }
+
     if (!h.deal) return
 
     // Prefer a listing matching both stage and deal type (when the story pins
@@ -1892,6 +1922,21 @@ export function generateDataset() {
     reconcileContactDealFields(contacts, listings).map((c) => [c.id, c]),
   )
   const finalContacts = contacts.map((c) => reconciled.get(c.id) ?? c)
+
+  // Give every open inquiry a concrete listing behind it, so the Listing
+  // Inquiries filter has real data. Searchers inquire about actively marketed
+  // listings; one distinct listing per inquiry keeps the count honest.
+  const marketedListingIds = listings
+    .filter((l) => l.status === 'active')
+    .map((l) => l.id)
+  for (const c of finalContacts) {
+    if (c.inquiries > 0 && marketedListingIds.length > 0) {
+      c.inquiredListingIds = faker.helpers.arrayElements(
+        marketedListingIds,
+        Math.min(c.inquiries, marketedListingIds.length),
+      )
+    }
+  }
 
   const comps = properties.flatMap((p) => {
     const count = faker.number.int({ min: 1, max: 5 })

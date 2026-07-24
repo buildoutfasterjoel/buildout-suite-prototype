@@ -951,6 +951,12 @@ export interface Contact {
   company: string
   role: ContactRole
   propertyIds: string[]
+  /**
+   * Properties the contact owns outright, with or without a deal on them.
+   * Shown in the contact page's "Properties Owned" panel even when no deal
+   * links them (deal-linked properties surface there on their own).
+   */
+  ownedPropertyIds?: string[]
   /** Team member who owns this relationship, e.g. "J. Whitfield". */
   assignedTo: string
   source: ContactSource
@@ -961,6 +967,11 @@ export interface Contact {
   dealStage: ContactDealStage | null
   /** Count of open inquiries from this contact. */
   inquiries: number
+  /**
+   * The listings this contact has inquired about — one per open inquiry, so
+   * the length matches {@link inquiries}. Drives the Listing Inquiries filter.
+   */
+  inquiredListingIds?: string[]
   phoneStatus: PhoneStatus
   doNotCall: boolean
   /** Job title / position, e.g. "Managing Member". */

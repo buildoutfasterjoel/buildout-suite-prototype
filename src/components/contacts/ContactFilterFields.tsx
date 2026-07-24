@@ -1,7 +1,6 @@
 import { Fragment, useMemo, type ReactNode } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faCaretDown,
   faCircleUser,
   faMagnifyingGlass,
   faXmark,
@@ -9,7 +8,6 @@ import {
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
 import { Combobox } from "@buildoutinc/blueprint-react/ui/Combobox";
-import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { RadioGroup } from "@buildoutinc/blueprint-react/ui/RadioGroup";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
@@ -35,9 +33,11 @@ import { PROPERTY_TYPES, TYPE_LABELS } from "#/components/properties/propertyDis
 import {
   ALL,
   LAST_ACTIVITY_OPTIONS,
+  LISTING_INQUIRY_OPTIONS,
   OPEN_TASKS_OPTIONS,
   type ContactFilterState,
 } from "#/components/contacts/contactFilterModel";
+import { getDealOptions } from "#/data/store";
 
 interface ContactFilterFieldsProps {
   filters: ContactFilterState;
@@ -118,6 +118,23 @@ export function ContactFilterFields({
 
   const tagValue = useMemo(() => [...filters.tags], [filters.tags]);
 
+  // Listing lookup for the "Specific Listing" inquiry mode. Combobox is
+  // string-keyed on the item text, so map label ↔ id both ways (mirrors the
+  // Add Task modal's LookupField).
+  const listingOptions = useMemo(() => getDealOptions(), []);
+  const listingItems = useMemo(
+    () => [...new Set(listingOptions.map((o) => o.label))],
+    [listingOptions],
+  );
+  const listingIdByLabel = useMemo(
+    () => new Map(listingOptions.map((o) => [o.label, o.value])),
+    [listingOptions],
+  );
+  const listingLabelById = useMemo(
+    () => new Map(listingOptions.map((o) => [o.value, o.label])),
+    [listingOptions],
+  );
+
   const set = (patch: Partial<ContactFilterState>) =>
     onChange({ ...filters, ...patch });
 
@@ -129,7 +146,11 @@ export function ContactFilterFields({
     dealStage: groupMatches(query, "Deal Stage", dealLabels),
     lastActivity: groupMatches(query, "Last Activity", activityLabels),
     openTasks: groupMatches(query, "Open Tasks", []),
-    listingInquiries: groupMatches(query, "Listing Inquiries", []),
+    listingInquiries: groupMatches(
+      query,
+      "Listing Inquiries",
+      LISTING_INQUIRY_OPTIONS.map((o) => o.label),
+    ),
     propertyType: groupMatches(query, "Property Type", propLabels),
     source: groupMatches(query, "Source", CONTACT_SOURCES),
     tags: groupMatches(query, "Tags", allTags),
@@ -295,16 +316,73 @@ export function ContactFilterFields({
       visible: show.listingInquiries,
       node: (
         <div className="d-flex flex-column gap-2">
-          <GroupHeading title="Listing Inquiries" />
-          <InputGroup>
-            <InputGroup.Addon>
-              <FontAwesomeIcon icon={faMagnifyingGlass} />
-            </InputGroup.Addon>
-            <Input placeholder="Search listings" readOnly />
-            <InputGroup.Addon>
-              <FontAwesomeIcon icon={faCaretDown} />
-            </InputGroup.Addon>
-          </InputGroup>
+          <GroupHeading
+            title="Listing Inquiries"
+            description="Filter to contacts who have inquired about your listings — any listing, or one in particular"
+          />
+          <RadioGroup
+            value={filters.listingInquiries}
+            onValueChange={(v) => {
+              const mode = v as ContactFilterState["listingInquiries"];
+              set({
+                listingInquiries: mode,
+                // The picked listing only means something in "listing" mode.
+                inquiryListingId:
+                  mode === "listing" ? filters.inquiryListingId : null,
+              });
+            }}
+            className="d-flex flex-column gap-1"
+          >
+            {LISTING_INQUIRY_OPTIONS.map((o) => (
+              <label
+                key={o.key}
+                className="contact-filters__row d-flex align-items-center gap-2 mb-0 px-2 py-1 rounded-3"
+              >
+                <RadioGroup.Item value={o.key} />
+                <span>{o.label}</span>
+              </label>
+            ))}
+          </RadioGroup>
+          {filters.listingInquiries === "listing" && (
+            <Combobox
+              items={listingItems}
+              value={
+                filters.inquiryListingId
+                  ? listingLabelById.get(filters.inquiryListingId) ?? null
+                  : null
+              }
+              onValueChange={(v) =>
+                set({
+                  inquiryListingId: v
+                    ? listingIdByLabel.get(v as string) ?? null
+                    : null,
+                })
+              }
+            >
+              <Combobox.InputGroup>
+                <InputGroup.Addon>
+                  <FontAwesomeIcon icon={faMagnifyingGlass} />
+                </InputGroup.Addon>
+                <Combobox.Input
+                  placeholder="Search listings"
+                  showTrigger
+                  showClear
+                />
+              </Combobox.InputGroup>
+              <Combobox.Content>
+                <Combobox.Empty className="text-muted p-2">
+                  No matching listings
+                </Combobox.Empty>
+                <Combobox.List>
+                  {(item: string) => (
+                    <Combobox.Item key={item} value={item}>
+                      {item}
+                    </Combobox.Item>
+                  )}
+                </Combobox.List>
+              </Combobox.Content>
+            </Combobox>
+          )}
         </div>
       ),
     },

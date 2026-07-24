@@ -6,7 +6,7 @@ import type {
   PropertyType,
   RelationshipStage,
 } from "#/data/types";
-import { getProperty } from "#/data/store";
+import { getListing, getProperty } from "#/data/store";
 import {
   DEAL_STAGE_DISPLAY,
   RELATIONSHIP_DISPLAY,
@@ -90,6 +90,22 @@ export const OPEN_TASKS_OPTIONS: { key: OpenTasksFilter; label: string }[] = [
   { key: "none", label: "No open tasks" },
 ];
 
+/**
+ * Listing-inquiries modes: `none` = filter off, `any` = contacts with at least
+ * one listing inquiry, `listing` = contacts who inquired about one specific
+ * listing (picked separately as `inquiryListingId`).
+ */
+export type ListingInquiriesFilter = "none" | "any" | "listing";
+
+export const LISTING_INQUIRY_OPTIONS: {
+  key: ListingInquiriesFilter;
+  label: string;
+}[] = [
+  { key: "none", label: "None" },
+  { key: "any", label: "Any Listing Inquiry" },
+  { key: "listing", label: "Specific Listing" },
+];
+
 export interface ContactFilterState {
   /** Single-select (ALL = no filter). */
   assignedTo: string;
@@ -104,6 +120,10 @@ export interface ContactFilterState {
   lastActivity: LastActivityKey;
   /** Tri-state open-tasks filter. */
   openTasks: OpenTasksFilter;
+  /** Listing-inquiries mode; `listing` filters by {@link inquiryListingId}. */
+  listingInquiries: ListingInquiriesFilter;
+  /** The specific listing for `listingInquiries: "listing"` (null = not picked yet). */
+  inquiryListingId: string | null;
   /** Wired toggle. */
   excludeDoNotCall: boolean;
 }
@@ -119,6 +139,8 @@ export function emptyContactFilters(): ContactFilterState {
     tags: new Set(),
     lastActivity: "any",
     openTasks: "any",
+    listingInquiries: "none",
+    inquiryListingId: null,
     excludeDoNotCall: false,
   };
 }
@@ -167,14 +189,23 @@ export function matchesContactFilters(
   if (f.openTasks === "has" && c.openTaskCount <= 0) return false;
   if (f.openTasks === "none" && c.openTaskCount > 0) return false;
 
+  const inquired = c.inquiredListingIds ?? [];
+  if (f.listingInquiries === "any" && inquired.length === 0) return false;
+  // "listing" only filters once a listing is actually picked.
+  if (
+    f.listingInquiries === "listing" &&
+    f.inquiryListingId &&
+    !inquired.includes(f.inquiryListingId)
+  )
+    return false;
+
   return true;
 }
 
 /**
  * One removable chip per active *wired* filter value. Drives the toolbar chips,
- * the "Filters (N)" count, and the flyout footer count. Visual-only fields
- * (`hasOpenTasks`, `listingInquiries`) are intentionally excluded so chips,
- * count, and results always agree.
+ * the "Filters (N)" count, and the flyout footer count — so chips, count, and
+ * results always agree.
  */
 export interface ContactFilterChip {
   key: string;
@@ -266,6 +297,23 @@ export function contactFilterChips(f: ContactFilterState): ContactFilterChip[] {
       clear: (s) => ({ ...s, openTasks: "any" }),
     });
   }
+  // One chip covers the whole listing-inquiries group; clearing it resets the
+  // picked listing too. A "listing" mode with nothing picked isn't filtering
+  // yet, so it gets no chip.
+  if (
+    f.listingInquiries === "any" ||
+    (f.listingInquiries === "listing" && f.inquiryListingId)
+  ) {
+    chips.push({
+      key: "listingInquiries",
+      group: "Listing Inquiries",
+      value:
+        f.listingInquiries === "any"
+          ? "Any Listing Inquiry"
+          : getListing(f.inquiryListingId!)?.name ?? "Specific Listing",
+      clear: (s) => ({ ...s, listingInquiries: "none", inquiryListingId: null }),
+    });
+  }
   if (f.excludeDoNotCall) {
     chips.push({
       key: "excludeDoNotCall",
@@ -303,6 +351,8 @@ export interface SerializedContactFilters {
   tags: string[];
   lastActivity: LastActivityKey;
   openTasks: OpenTasksFilter;
+  listingInquiries: ListingInquiriesFilter;
+  inquiryListingId: string | null;
   excludeDoNotCall: boolean;
 }
 
@@ -319,6 +369,8 @@ export function serializeContactFilters(
     tags: [...f.tags],
     lastActivity: f.lastActivity,
     openTasks: f.openTasks,
+    listingInquiries: f.listingInquiries,
+    inquiryListingId: f.inquiryListingId,
     excludeDoNotCall: f.excludeDoNotCall,
   };
 }
@@ -336,6 +388,8 @@ export function deserializeContactFilters(
     tags: new Set(s.tags ?? []),
     lastActivity: s.lastActivity ?? "any",
     openTasks: s.openTasks ?? "any",
+    listingInquiries: s.listingInquiries ?? "none",
+    inquiryListingId: s.inquiryListingId ?? null,
     excludeDoNotCall: s.excludeDoNotCall ?? false,
   };
 }
@@ -355,6 +409,8 @@ export function filtersEqual(
     a.assignedTo === b.assignedTo &&
     a.lastActivity === b.lastActivity &&
     a.openTasks === b.openTasks &&
+    a.listingInquiries === b.listingInquiries &&
+    a.inquiryListingId === b.inquiryListingId &&
     a.excludeDoNotCall === b.excludeDoNotCall &&
     setsEqual(a.source, b.source) &&
     setsEqual(a.side, b.side) &&
