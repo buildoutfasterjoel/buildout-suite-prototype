@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useRouterState } from "@tanstack/react-router";
+import { useHotkey } from "@tanstack/react-hotkeys";
 import { useChat, type UIMessage } from "@tanstack/ai-react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
@@ -15,6 +16,9 @@ import {
   faFileLines,
   faScrewdriverWrench,
   faChevronRight,
+  faMicrophone,
+  faVolumeHigh,
+  faVolumeXmark,
 } from "@fortawesome/pro-regular-svg-icons";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -23,6 +27,10 @@ import { aiChat, aiConfigured } from "#/ai/relay";
 import { buildAssistantContext, serializeContext } from "#/ai/context";
 import { renderLightHtml } from "#/ai/renderLightHtml";
 import { useAssistant } from "#/ai/useAssistant";
+import { useVoice } from "#/ai/voice/useVoice";
+import { voiceEngine } from "#/ai/voice/voiceEngine";
+import { useHandsFree } from "#/ai/voice/useHandsFree";
+import { useGreeting } from "#/ai/voice/useGreeting";
 import { DealCardById } from "#/components/deals/DealCard";
 import { EmailDraftCard, type EmailDraftCardData } from "#/components/ai/EmailDraftCard";
 import { formatCurrency } from "#/components/deals/dealDisplay";
@@ -392,6 +400,57 @@ export function AssistantSidebar() {
     [isLoading, sendMessage, setMessages, messages],
   );
 
+  const voiceEnabled = useVoice((s) => s.voiceEnabled);
+  const setVoiceEnabled = useVoice((s) => s.setVoiceEnabled);
+  const listening = useVoice((s) => s.listening);
+  const setConversationMode = useVoice((s) => s.setConversationMode);
+  const speakNextReplyRef = useRef(false);
+
+  // Hands-free: submit final transcript to Al, and mark that the reply should
+  // be spoken back so the loop can re-arm after Al finishes.
+  const { start: startHandsFree, stopForCall } = useHandsFree({
+    onSubmit: (text) => {
+      speakNextReplyRef.current = true;
+      send(text);
+    },
+  });
+  void stopForCall; // exported for Phase 3; referenced to satisfy lint
+
+  // Greeting: render + speak once per session on first open; then open the mic.
+  useGreeting({
+    onGreeting: (text) =>
+      setMessages([
+        ...messages,
+        { id: `greeting-${Date.now()}`, role: "assistant", parts: [{ type: "text", content: text }] },
+      ]),
+    onEnterConversation: () => startHandsFree(),
+  });
+
+  // Speak Al's reply when a voice turn completes, then re-arm the mic.
+  const prevLoading = useRef(isLoading);
+  useEffect(() => {
+    const finished = prevLoading.current && !isLoading;
+    prevLoading.current = isLoading;
+    if (!finished || !speakNextReplyRef.current) return;
+    speakNextReplyRef.current = false;
+    const last = [...messages].reverse().find((m) => m.role === "assistant");
+    const text =
+      last?.parts
+        .filter((p): p is Extract<typeof p, { type: "text" }> => p.type === "text")
+        .map((p) => p.content)
+        .join("") ?? "";
+    if (!text || !voiceEnabled) return;
+    void voiceEngine.speak(text).then(() => {
+      if (useVoice.getState().conversationMode) setTimeout(() => startHandsFree(), 350);
+    });
+  }, [isLoading, messages, voiceEnabled, startHandsFree]);
+
+  // Presenter kill-switch: Escape silences Al instantly and ends conversation.
+  useHotkey("Escape", () => {
+    voiceEngine.cancel();
+    setConversationMode(false);
+  });
+
   // A prompt queued from another surface (e.g. omni search "Ask AI") is sent as
   // soon as it lands. This effect runs before the early return below, so the
   // hook order stays stable whether or not the panel is visible.
@@ -428,6 +487,21 @@ export function AssistantSidebar() {
           <span className="fw-semibold">Assistant</span>
           <span className="text-muted small text-truncate">Your Buildout assistant</span>
         </div>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={voiceEnabled ? "Turn voice off" : "Turn voice on"}
+          onClick={() => {
+            const next = !voiceEnabled;
+            setVoiceEnabled(next);
+            if (!next) {
+              voiceEngine.cancel();
+              setConversationMode(false);
+            }
+          }}
+        >
+          <FontAwesomeIcon icon={voiceEnabled ? faVolumeHigh : faVolumeXmark} />
+        </Button>
         <Badge variant="secondary" appearance="muted" className="flex-shrink-0">
           {scopeLabel(pathname)}
         </Badge>
@@ -455,6 +529,12 @@ export function AssistantSidebar() {
           <div className="text-muted small d-inline-flex align-items-center gap-2">
             <FontAwesomeIcon icon={faSparkles} beatFade />
             Working…
+          </div>
+        )}
+        {listening && (
+          <div className="text-buildout-blue-700 small d-inline-flex align-items-center gap-2">
+            <FontAwesomeIcon icon={faMicrophone} beatFade />
+            Listening…
           </div>
         )}
         {error && (
@@ -489,6 +569,23 @@ export function AssistantSidebar() {
           placeholder="Ask the assistant…"
           aria-label="Message the assistant"
         />
+        <Button
+          type="button"
+          variant={listening ? "primary" : "outline"}
+          size="icon"
+          aria-label={listening ? "Listening — tap to stop" : "Speak to the assistant"}
+          onClick={() => {
+            if (listening) {
+              voiceEngine.cancel();
+              setConversationMode(false);
+            } else {
+              setConversationMode(true);
+              startHandsFree();
+            }
+          }}
+        >
+          <FontAwesomeIcon icon={faMicrophone} />
+        </Button>
         {isLoading ? (
           <Button type="button" variant="outline" size="icon" aria-label="Stop" onClick={stop}>
             <FontAwesomeIcon icon={faStop} />
