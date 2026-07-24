@@ -2,6 +2,7 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileInvoiceDollar, faTriangleExclamation } from "@fortawesome/pro-regular-svg-icons";
 import { useBovDraft } from "#/components/call/useBovDraft";
+import { useHeroDemo } from "#/components/call/heroDemo";
 import { addDealDocument, addDealActivity } from "#/data/store";
 import { CURRENT_USER } from "#/data/teammates";
 
@@ -30,6 +31,7 @@ export function BovCard() {
       note: `Sent BOV to Marcus — ${range}`,
       actor: CURRENT_USER.name,
     });
+    useHeroDemo.getState().markArcComplete();
     clear();
   };
 
