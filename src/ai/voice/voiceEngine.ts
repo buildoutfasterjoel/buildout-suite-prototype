@@ -15,6 +15,7 @@ function createVoiceEngine() {
   let audioCtx: AudioContext | null = null;
   let ttsReady: boolean | null = null;
   let pendingResolve: (() => void) | null = null;
+  let currentUrl: string | null = null;
 
   function settle() {
     const r = pendingResolve;
@@ -37,6 +38,10 @@ function createVoiceEngine() {
       audio.pause();
       audio.src = "";
       audio = null;
+    }
+    if (currentUrl) {
+      URL.revokeObjectURL(currentUrl);
+      currentUrl = null;
     }
     if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel();
   }
@@ -65,15 +70,27 @@ function createVoiceEngine() {
       return speakViaBrowser(text, gen);
     }
     if (!guard.isCurrent(gen)) return;              // superseded during fetch — drop
-    if (!res.ok) return speakViaBrowser(text, gen); // 503/502 → fallback
-    const url = URL.createObjectURL(await res.blob());
+    let url: string;
+    try {
+      if (!res.ok) return speakViaBrowser(text, gen); // 503/502 → fallback
+      url = URL.createObjectURL(await res.blob());
+    } catch {
+      return speakViaBrowser(text, gen);
+    }
+    currentUrl = url;
     return new Promise<void>((resolve) => {
       pendingResolve = resolve;
       const el = new Audio(url);
       audio = el;
-      el.onended = () => { if (guard.isCurrent(gen)) { URL.revokeObjectURL(url); settle(); } };
-      el.onerror = () => { if (guard.isCurrent(gen)) { URL.revokeObjectURL(url); settle(); } };
-      void el.play().catch(() => settle());
+      const revoke = () => {
+        if (currentUrl === url) {
+          URL.revokeObjectURL(url);
+          currentUrl = null;
+        }
+      };
+      el.onended = () => { if (guard.isCurrent(gen)) { revoke(); settle(); } };
+      el.onerror = () => { if (guard.isCurrent(gen)) { revoke(); settle(); } };
+      void el.play().catch(() => { if (guard.isCurrent(gen)) settle(); });
     });
   }
 
@@ -101,6 +118,7 @@ function createVoiceEngine() {
       if (!clean) return;
       const gen = guard.next();     // supersede any prior speak
       stopPlayback();
+      settle();                     // resolve any still-pending prior speak before we overwrite it
       useVoice.setState({ speaking: true });
       try {
         if (await ensureTtsReady()) await speakViaServer(clean, opts?.voiceId, gen);
