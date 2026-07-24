@@ -17,6 +17,11 @@ describe("matchOfferIntent", () => {
       expect(matchOfferIntent(t)).toBeNull();
     }
   });
+  it("returns null for negated affirmatives (guards against false positives)", () => {
+    for (const t of ["absolutely not", "definitely not", "not sure", "don't do it", "please, don't"]) {
+      expect(matchOfferIntent(t)).toBeNull();
+    }
+  });
 });
 
 describe("useHeroOffer", () => {
