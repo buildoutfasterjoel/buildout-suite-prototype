@@ -19,6 +19,8 @@ import {
   type CallTurnSpecT,
   CallRecapSpec,
   type CallRecapSpecT,
+  CallBriefSpec,
+  type CallBriefSpecT,
 } from "./schemas";
 import {
   FILTER_PROMPT,
@@ -30,8 +32,15 @@ import {
   STRATEGY_PROMPT,
   CALL_TURN_PROMPT,
   CALL_RECAP_PROMPT,
+  CALL_BRIEF_PROMPT,
 } from "./prompts";
-import { filterFallback, callListFallback, callTurnFallback, callRecapFallback } from "./fallbacks";
+import {
+  filterFallback,
+  callListFallback,
+  callTurnFallback,
+  callRecapFallback,
+  callBriefFallback,
+} from "./fallbacks";
 
 /** §3.1 — plain-English listings query → structured `FilterSpec`, applied to
  * the Listings grid by `filter_listings` (see `src/ai/tools.ts`). */
@@ -232,5 +241,28 @@ export const generateCallRecap = createServerFn({ method: "POST" })
       user: JSON.stringify({ transcript: data.transcript, contact: data.contact }),
       schema: CallRecapSpec,
       fallback: () => callRecapFallback(data.transcript, data.contact.firstName),
+    }),
+  );
+
+/** §4.1 — pre-call brief. Default (fast) model; short signal-driven generation. */
+export const generateCallBrief = createServerFn({ method: "POST" })
+  .validator(
+    (d: {
+      candidate: { name: string; role: string; entity: string; note: string; phone: string };
+      property: unknown | null;
+      signal: string;
+      firstName: string;
+    }) => d,
+  )
+  .handler(({ data }): Promise<CallBriefSpecT> =>
+    runGenerator({
+      system: CALL_BRIEF_PROMPT,
+      user: JSON.stringify({
+        candidate: data.candidate,
+        property: data.property ?? null,
+        signal: data.signal,
+      }),
+      schema: CallBriefSpec,
+      fallback: () => callBriefFallback(data.signal, data.firstName),
     }),
   );

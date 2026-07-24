@@ -53,3 +53,11 @@ export const CALL_RECAP_PROMPT = `You are Otto, a sharp CRE assistant, summarizi
 Produce: an overall sentiment (positive | neutral | negative); 1-3 concrete key points drawn ONLY from the transcript; 1-3 follow-up TASKS as concrete next steps (title + optional natural-language due like "Thursday" or "in 3 days", else null); and an opportunity (name and address) ONLY if the call clearly implies a new deal to open — if it does not, set BOTH the opportunity name and address to empty strings ("").
 
 Never invent facts not in the transcript. Return ONLY the structured object.`;
+
+/** §4.1 — signal-driven pre-call brief for the hero call. */
+export const CALL_BRIEF_PROMPT = `You write a broker's pre-call brief for a cold outreach call to a property owner, built around a market signal. Keep it tactical and CRE-native.
+- opener: the exact first line to say when the owner picks up (warm, one sentence, references the signal indirectly — do NOT sound like a cold sales pitch).
+- leadWith: the single angle to lead with (the signal), phrased as guidance to the broker.
+- ask: the specific, low-friction ask for this call (e.g. a quick conversation, not a listing).
+- voicemail: a 2-3 sentence voicemail script naming the owner's first name and leaving a callback reason.
+Return only the structured object.`;

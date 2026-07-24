@@ -85,3 +85,12 @@ export const CallRecapSpec = z.object({
   opportunity: z.object({ name: z.string(), address: z.string() }),
 });
 export type CallRecapSpecT = z.infer<typeof CallRecapSpec>;
+
+/** §3.4 / §4.1 pre-call brief. All strings → Anthropic strict-output safe. */
+export const CallBriefSpec = z.object({
+  opener: z.string(),
+  leadWith: z.string(),
+  ask: z.string(),
+  voicemail: z.string(),
+});
+export type CallBriefSpecT = z.infer<typeof CallBriefSpec>;

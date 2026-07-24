@@ -1,4 +1,4 @@
-import type { FilterSpecT, CallListSpecT, CallTurnSpecT, CallRecapSpecT } from "./schemas";
+import type { FilterSpecT, CallListSpecT, CallTurnSpecT, CallRecapSpecT, CallBriefSpecT } from "./schemas";
 
 /** §3.1 — deterministic filter when the model is unavailable: dumps the raw
  * query into search and leaves everything else unset. */
@@ -56,5 +56,16 @@ export function callRecapFallback(
       : [`Call with ${contactFirstName} ended before much was said.`],
     tasks: [{ title: `Follow up with ${contactFirstName}`, due: null }],
     opportunity: { name: "", address: "" },
+  };
+}
+
+/** §4.1 — deterministic pre-call brief from the signal when the model is
+ * unavailable. */
+export function callBriefFallback(signalDetail: string, firstName: string): CallBriefSpecT {
+  return {
+    opener: `Hi ${firstName}, it's Otto's broker — do you have thirty seconds? I'll be quick.`,
+    leadWith: signalDetail || "Lead with the timing pressure on their asset, not a listing pitch.",
+    ask: "Ask for a short conversation this week — no listing talk, just options.",
+    voicemail: `${firstName}, quick call about your building — there's a time-sensitive angle worth two minutes. Call me back when you get a sec.`,
   };
 }
