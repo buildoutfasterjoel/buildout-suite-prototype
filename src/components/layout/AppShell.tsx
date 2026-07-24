@@ -12,6 +12,7 @@ import { GlobalStageGateModal } from "#/components/deals/GlobalStageGateModal";
 import { GlobalNewContactModal } from "#/components/contacts/GlobalNewContactModal";
 import { GlobalAddTaskModal } from "#/components/tasks/GlobalAddTaskModal";
 import { LiveCallBar } from "#/components/call/LiveCallBar";
+import { HeroInboundWatcher } from "#/components/call/HeroInboundWatcher";
 import { useDataStore } from "#/data/dataStore";
 
 export function AppShell() {
@@ -28,6 +29,7 @@ export function AppShell() {
         <div className="flex-grow-1 d-flex overflow-hidden">
           <main className="app-shell__main flex-grow-1 overflow-auto">
             {hydrated && <LiveCallBar />}
+            {hydrated && <HeroInboundWatcher />}
             {hydrated ? (
               <Outlet />
             ) : (
