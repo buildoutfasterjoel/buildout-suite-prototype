@@ -19,7 +19,7 @@ should read before picking up work.
 | 3 — Live-call simulation | ✅ Built (smoke-tested) | `2026-07-24-ai-phase-3-live-call-simulation-design.md` | `../plans/2026-07-24-ai-phase-3-live-call-simulation.md` |
 | 4 — Hero-arc orchestration | 🔨 In progress — decomposed into 4A–4D | see below | — |
 | ↳ 4A — Signal + greeting + recap hero-extensions | ✅ Built (smoke-test pending) | `2026-07-24-ai-phase-4a-signal-greeting-recap-extensions-design.md` | `../plans/2026-07-24-ai-phase-4a-signal-greeting-recap-extensions.md` |
-| ↳ 4B — Self-arriving inbound email | 📐 Designed | `2026-07-24-ai-phase-4b-self-arriving-inbound-email-design.md` | — |
+| ↳ 4B — Self-arriving inbound email | 📐 Designed (plan ready) | `2026-07-24-ai-phase-4b-self-arriving-inbound-email-design.md` | `../plans/2026-07-24-ai-phase-4b-self-arriving-inbound-email.md` |
 | ↳ 4C — Underwrite + BOV | ⛔ Not started | — | — |
 | ↳ 4D — The director (sequences 4A→4B→4C) | ⛔ Not started | — | — |
 
