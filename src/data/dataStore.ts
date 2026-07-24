@@ -5,6 +5,7 @@ import { getEmails, type Email } from './emails'
 import type { CallList } from './contactLists'
 import type { ContactShare } from './teammates'
 import { clearSnapshot, loadSnapshot, saveSnapshot } from './persistence'
+import { registerPinnedPhotoResolver } from '#/components/properties/propertyDisplay'
 
 export interface DataSlice {
   properties: Map<string, Property>
@@ -106,6 +107,19 @@ export const useDataStore = create<DataState>((set) => ({
     await saveSnapshot(slice)
   },
 }))
+
+// Photo pinning: story properties carry a `photoId` that overrides the
+// hash-picked pool photo. getPhotoUrl consults the live store through this
+// resolver (registered here, after store creation, because propertyDisplay is
+// already in this module's import graph via emails.ts). Resolves listing ids
+// through to their parent property, so deal thumbnails match too.
+registerPinnedPhotoResolver((id) => {
+  const s = useDataStore.getState()
+  const property =
+    s.properties.get(id) ??
+    s.properties.get(s.listings.get(id)?.propertyId ?? '')
+  return property?.photoId
+})
 
 // Kick off hydration once, on the client only. `__root.tsx` is CLI-managed, so
 // hydration lives here (a non-route module) rather than in a mounted component,

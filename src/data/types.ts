@@ -128,6 +128,12 @@ export interface Property {
   name: string
   slug: string
   status: PropertyStatus
+  /**
+   * Hand-pinned Unsplash photo id (see `CRE_PHOTO_IDS`) for story properties
+   * whose imagery must match their asset class — e.g. Rosa's multifamily
+   * building. Absent = deterministic hash-pick from the shared pool.
+   */
+  photoId?: string
 
   // Property Information
   propertyType: PropertyType
