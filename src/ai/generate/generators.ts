@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { runGenerator } from "./runGenerator";
+import { runGenerator, AI_MODEL_REASONING } from "./runGenerator";
 import {
   FilterSpec,
   type FilterSpecT,
@@ -11,8 +11,17 @@ import {
   type DocSpecT,
   ProspectSpec,
   type ProspectSpecT,
+  ContactBriefSpec,
+  type ContactBriefSpecT,
 } from "./schemas";
-import { FILTER_PROMPT, EMAIL_PROMPT, CALL_LIST_PROMPT, DOC_PROMPT, PROSPECT_PROMPT } from "./prompts";
+import {
+  FILTER_PROMPT,
+  EMAIL_PROMPT,
+  CALL_LIST_PROMPT,
+  DOC_PROMPT,
+  PROSPECT_PROMPT,
+  CONTACT_BRIEF_PROMPT,
+} from "./prompts";
 import { filterFallback, callListFallback } from "./fallbacks";
 
 /** §3.1 — plain-English listings query → structured `FilterSpec`, applied to
@@ -120,5 +129,29 @@ export const generateProspectAssessment = createServerFn({ method: "POST" })
       user: JSON.stringify({ property: data.property }),
       schema: ProspectSpec,
       fallback: () => prospectFallback(),
+    }),
+  );
+
+/** §3.10 — deterministic contact brief when the model is unavailable: echoes
+ * the raw data dump back as the brief so the broker still sees every fact
+ * that would have informed the generated version. */
+export function contactBriefFallback(dataDump: string): ContactBriefSpecT {
+  return { brief: dataDump };
+}
+
+/** §3.10 — a contact's data dump (+ optional targeted question) → long-form
+ * analyst brief or direct answer `ContactBriefSpec`, consumed by
+ * `research_contact`/`answer_about_contact` (see `src/ai/tools.ts`) and the
+ * "Brief me" affordance on the contact detail page. Uses the REASONING model
+ * since this is a synthesis task over a larger data dump. */
+export const generateContactBrief = createServerFn({ method: "POST" })
+  .validator((d: { data: string; name: string; question?: string }) => d)
+  .handler(({ data }): Promise<ContactBriefSpecT> =>
+    runGenerator({
+      model: AI_MODEL_REASONING,
+      system: CONTACT_BRIEF_PROMPT,
+      user: `CONTACT: ${data.name}\n${data.question ? `QUESTION: ${data.question}\n` : ""}\nDATA:\n${data.data}`,
+      schema: ContactBriefSpec,
+      fallback: () => contactBriefFallback(data.data),
     }),
   );

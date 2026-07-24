@@ -2,7 +2,8 @@ import type { AnyClientTool } from "@tanstack/ai";
 import type { Contact, Listing, Property, PropertyStatus } from "#/data/types";
 import { useDataStore } from "#/data/dataStore";
 import { getListing, getProperty } from "#/data/store";
-import { generateFilter, generateEmail, generateCallList } from "#/ai/generate";
+import { generateFilter, generateEmail, generateCallList, generateContactBrief } from "#/ai/generate";
+import { composeContactData } from "#/ai/contactData";
 import { useListingsFilter } from "#/routes/_shell/listings/-useListingsFilter";
 import {
   searchAll,
@@ -42,6 +43,8 @@ import {
   filterListingsDef,
   draftEmailDef,
   buildCallListDef,
+  researchContactDef,
+  answerAboutContactDef,
   navigateToDef,
 } from "./toolDefs";
 
@@ -324,6 +327,28 @@ export function createClientTools({
           };
         }),
       };
+    }),
+
+    researchContactDef.client(async (args) => {
+      const { contactId } = args as { contactId: string };
+      const detail = getContactDetailClient(contactId);
+      if (!detail) return { error: "Contact not found" };
+      const name = `${detail.contact.firstName} ${detail.contact.lastName}`.trim();
+      const { brief } = await generateContactBrief({
+        data: { data: composeContactData(contactId), name },
+      });
+      return { brief, contactName: name };
+    }),
+
+    answerAboutContactDef.client(async (args) => {
+      const { contactId, question } = args as { contactId: string; question: string };
+      const detail = getContactDetailClient(contactId);
+      if (!detail) return { error: "Contact not found" };
+      const name = `${detail.contact.firstName} ${detail.contact.lastName}`.trim();
+      const { brief } = await generateContactBrief({
+        data: { data: composeContactData(contactId), name, question },
+      });
+      return { brief, contactName: name };
     }),
   ];
 }

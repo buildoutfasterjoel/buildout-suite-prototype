@@ -89,6 +89,12 @@ function emailDraftOf(output: unknown): EmailDraftCardData | null {
   return o.emailDraft ? (o.emailDraft as EmailDraftCardData) : null;
 }
 
+/** Extract a generated contact brief (§3.10) from a tool-call's output, if present. */
+function briefOf(output: unknown): string | null {
+  const o = (output ?? {}) as { brief?: unknown };
+  return typeof o.brief === "string" ? o.brief : null;
+}
+
 /** A clickable card row (deal or contact) that navigates on click. */
 function ResultCard({
   title,
@@ -130,7 +136,8 @@ function ToolResultCards({ output }: { output: unknown }) {
   const router = useRouter();
   const { deals, contacts } = entitiesOf(output);
   const emailDraft = emailDraftOf(output);
-  if (deals.length === 0 && contacts.length === 0 && !emailDraft) return null;
+  const brief = briefOf(output);
+  if (deals.length === 0 && contacts.length === 0 && !emailDraft && !brief) return null;
 
   return (
     <div className="d-flex flex-column gap-2">
@@ -149,6 +156,11 @@ function ToolResultCards({ output }: { output: unknown }) {
         />
       ))}
       {emailDraft && <EmailDraftCard draft={emailDraft} />}
+      {brief && (
+        <div className="assistant-markdown" style={{ whiteSpace: "pre-wrap" }}>
+          {brief}
+        </div>
+      )}
     </div>
   );
 }
@@ -178,7 +190,12 @@ function MessageBubble({ message }: { message: UIMessage }) {
   );
   const cardCalls = toolCalls.filter((p) => {
     const { deals, contacts } = entitiesOf(p.output);
-    return deals.length > 0 || contacts.length > 0 || emailDraftOf(p.output) !== null;
+    return (
+      deals.length > 0 ||
+      contacts.length > 0 ||
+      emailDraftOf(p.output) !== null ||
+      briefOf(p.output) !== null
+    );
   });
   const chipCalls = toolCalls.filter((p) => !cardCalls.includes(p));
 

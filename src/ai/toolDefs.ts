@@ -266,6 +266,30 @@ export const filterListingsDef = toolDefinition({
   },
 });
 
+export const researchContactDef = toolDefinition({
+  name: "research_contact",
+  description:
+    "Produce a full analyst brief on ONE contact (ownership, deals, activity, takeaways). Use for broad 'tell me about / who is / research X' requests. Resolve the name with searchAll first if needed.",
+  inputSchema: {
+    type: "object",
+    properties: { contactId: { type: "string" } },
+    required: ["contactId"],
+    additionalProperties: false,
+  },
+});
+
+export const answerAboutContactDef = toolDefinition({
+  name: "answer_about_contact",
+  description:
+    "Answer a SPECIFIC question about one contact using their record. Use when the broker asks a targeted question about a named person (not a broad 'tell me about').",
+  inputSchema: {
+    type: "object",
+    properties: { contactId: { type: "string" }, question: { type: "string" } },
+    required: ["contactId", "question"],
+    additionalProperties: false,
+  },
+});
+
 export const draftEmailDef = toolDefinition({
   name: "draft_email",
   description:
@@ -316,5 +340,7 @@ export const TOOL_DEFS = [
   filterListingsDef,
   draftEmailDef,
   buildCallListDef,
+  researchContactDef,
+  answerAboutContactDef,
   navigateToDef,
 ];

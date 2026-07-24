@@ -7,4 +7,6 @@ export {
   docFallback,
   generateProspectAssessment,
   prospectFallback,
+  generateContactBrief,
+  contactBriefFallback,
 } from "./generators";

@@ -26,3 +26,9 @@ export const DOC_PROMPT = `You write a one-page marketing flyer spec for a comme
 
 /** §3.5 — off-market/public-records signal → cold-prospect callability `ProspectSpec`. */
 export const PROSPECT_PROMPT = `You advise whether an off-market building flagged by a public-records signal is worth a cold call THIS WEEK. Weigh the signal (loan maturity, hold-period expiry, ownership churn, market pressure), asset class, submarket, and owner-motivation cues. Be HONEST — if weak or mistimed, say "challenging"; if strong, say so without hedging. verdict is one of strong|moderate|challenging; headline is a 4–6 word broker-grade summary; reasoning is 2–3 sentences. Return only the structured object.`;
+
+/** §3.10 — a contact's record → long-form analyst brief, or a direct answer to a targeted question. */
+export const CONTACT_BRIEF_PROMPT = `You are a CRE analyst briefing a broker on ONE contact, using ONLY the supplied data. Never invent facts.
+- If a specific question is provided: answer it directly and concisely (2–4 sentences), leading with the answer; if the data doesn't contain it, say so and offer the closest fact. Plain prose, no headers.
+- If no question: produce a comprehensive brief with plain ALL-CAPS section headers (no markdown, no asterisks), including only sections where data exists: CONTACT OVERVIEW, PROPERTY OWNERSHIP, DEAL HISTORY, OCCUPIED SPACES, INQUIRIES & REQUIREMENTS, MARKET INTEL, RECENT ACTIVITY, BROKER TAKEAWAYS (2–3 bullets).
+Return only the structured object (a single 'brief' string).`;
