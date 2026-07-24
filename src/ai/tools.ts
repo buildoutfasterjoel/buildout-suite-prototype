@@ -2,7 +2,7 @@ import type { AnyClientTool } from "@tanstack/ai";
 import type { Contact, Listing, Property, PropertyStatus } from "#/data/types";
 import { useDataStore } from "#/data/dataStore";
 import { getListing, getProperty } from "#/data/store";
-import { generateFilter, generateEmail } from "#/ai/generate";
+import { generateFilter, generateEmail, generateCallList } from "#/ai/generate";
 import { useListingsFilter } from "#/routes/_shell/listings/-useListingsFilter";
 import {
   searchAll,
@@ -41,6 +41,7 @@ import {
   generateDocDef,
   filterListingsDef,
   draftEmailDef,
+  buildCallListDef,
   navigateToDef,
 } from "./toolDefs";
 
@@ -68,6 +69,20 @@ const dealSummary = (l: Listing) => {
     askingPrice: l.financials.askingPrice,
   };
 };
+
+/**
+ * Build the `generateCallList` contact pool: excludes do-not-call contacts and
+ * strips each contact down to the recency/relationship fields the ranker needs.
+ * Shared by the `build_call_list` agent tool and the People grid's "Build call
+ * list with AI" button (`src/routes/_shell/backoffice/contacts/index.tsx`) so
+ * both stay in lockstep on the do-not-call rule.
+ */
+export const contactCallPool = (
+  contacts: Contact[],
+): Array<{ id: string; lastContactedAt: string | null; relationship: string }> =>
+  contacts
+    .filter((c) => !c.doNotCall)
+    .map((c) => ({ id: c.id, lastContactedAt: c.lastContactedAt, relationship: c.relationship }));
 
 /** Shared with the "Draft with AI" in-context button (`ListingEmail.tsx`). */
 export const propertySummary = (p: Property) => ({
@@ -279,6 +294,36 @@ export function createClientTools({
       const draft = await generateEmail({ data: { property: propPayload, intent, recipients: [] } });
       const { email } = createEmailDraft({ subject: draft.subject });
       return { emailDraft: { ...draft, id: email.id } };
+    }),
+
+    buildCallListDef.client(async (args) => {
+      const { intent } = args as { intent?: string };
+      const pool = contactCallPool([...useDataStore.getState().contacts.values()]);
+      const ranked = await generateCallList({ data: { intent, contacts: pool } });
+      const { callList } = createCallList({
+        name: intent ? `AI: ${intent}` : "AI call list",
+        contactIds: ranked.calls.map((c) => c.contactId),
+        description: ranked.headline,
+        source: "ai",
+      });
+      const byId = new Map(
+        [...useDataStore.getState().contacts.values()].map((c) => [c.id, c]),
+      );
+      return {
+        callListId: callList.id,
+        headline: ranked.headline,
+        contacts: ranked.calls.map((c) => {
+          const ct = byId.get(c.contactId);
+          return {
+            id: c.contactId,
+            name: ct ? `${ct.firstName} ${ct.lastName}`.trim() : c.contactId,
+            relationship: ct?.relationship,
+            company: ct?.company,
+            score: c.score,
+            reason: c.reason,
+          };
+        }),
+      };
     }),
   ];
 }

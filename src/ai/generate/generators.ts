@@ -1,8 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { runGenerator } from "./runGenerator";
-import { FilterSpec, type FilterSpecT, EmailDraftSpec, type EmailDraftSpecT } from "./schemas";
-import { FILTER_PROMPT, EMAIL_PROMPT } from "./prompts";
-import { filterFallback } from "./fallbacks";
+import {
+  FilterSpec,
+  type FilterSpecT,
+  EmailDraftSpec,
+  type EmailDraftSpecT,
+  CallListSpec,
+  type CallListSpecT,
+} from "./schemas";
+import { FILTER_PROMPT, EMAIL_PROMPT, CALL_LIST_PROMPT } from "./prompts";
+import { filterFallback, callListFallback } from "./fallbacks";
 
 /** §3.1 — plain-English listings query → structured `FilterSpec`, applied to
  * the Listings grid by `filter_listings` (see `src/ai/tools.ts`). */
@@ -41,3 +48,27 @@ export const generateEmail = createServerFn({ method: "POST" })
       fallback: () => emailFallback(data.intent, pname),
     });
   });
+
+/** §3.3 — contact pool (+ optional property/intent) → ranked `CallListSpec`,
+ * used by the `build_call_list` agent tool and the People grid's "Build call
+ * list with AI" button (see `src/ai/tools.ts`). */
+export const generateCallList = createServerFn({ method: "POST" })
+  .validator(
+    (d: {
+      property?: unknown;
+      intent?: string;
+      contacts: Array<{ id: string; lastContactedAt: string | null; relationship: string }>;
+    }) => d,
+  )
+  .handler(({ data }): Promise<CallListSpecT> =>
+    runGenerator({
+      system: CALL_LIST_PROMPT,
+      user: JSON.stringify({
+        property: data.property ?? null,
+        intent: data.intent ?? "general outreach",
+        contacts: data.contacts,
+      }),
+      schema: CallListSpec,
+      fallback: () => callListFallback(data.contacts),
+    }),
+  );

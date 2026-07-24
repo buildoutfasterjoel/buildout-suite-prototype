@@ -17,3 +17,6 @@ export const EMAIL_PROMPT = `You draft a broker outreach email about a commercia
 - If recipients are supplied, address them by first name and use their exact emails; do not invent extras. If none supplied, invent 1–3 plausible reps at major brokerages as the audience (to[] as "First Last <email>").
 - body has no signature; signature is a short broker sign-off.
 Return only the structured object.`;
+
+/** §3.3 — contact pool → ranked, dialable `CallListSpec`. */
+export const CALL_LIST_PROMPT = `You pick and rank the 5–8 best people to call now from a supplied contact pool, given an optional property and intent. Rank by likelihood to convert using role, market, asset focus, relationship stage, and how long since the last interaction. Every contactId MUST be one of the supplied ids. reason is under 90 chars. Return only the structured object.`;

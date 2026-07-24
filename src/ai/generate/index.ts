@@ -1,1 +1,1 @@
-export { generateFilter, generateEmail, emailFallback } from "./generators";
+export { generateFilter, generateEmail, emailFallback, generateCallList } from "./generators";

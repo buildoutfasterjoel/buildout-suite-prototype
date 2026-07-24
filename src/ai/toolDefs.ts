@@ -227,6 +227,19 @@ export const createCallListDef = toolDefinition({
   },
 });
 
+export const buildCallListDef = toolDefinition({
+  name: "build_call_list",
+  description:
+    "Build a ranked, dialable call list from the broker's book and save it to the People module. Call IMMEDIATELY with no confirmation when the broker says 'build my call list' / 'who should I call'. Distinct from analyze_book (which is a written answer).",
+  inputSchema: {
+    type: "object",
+    properties: {
+      intent: { type: "string", description: "Optional focus, e.g. 'cold prospects to warm up'." },
+    },
+    additionalProperties: false,
+  },
+});
+
 export const generateDocDef = toolDefinition({
   name: "generateDoc",
   description:
@@ -302,5 +315,6 @@ export const TOOL_DEFS = [
   generateDocDef,
   filterListingsDef,
   draftEmailDef,
+  buildCallListDef,
   navigateToDef,
 ];
