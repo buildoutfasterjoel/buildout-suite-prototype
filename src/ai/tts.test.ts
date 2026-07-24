@@ -37,4 +37,12 @@ describe("synthesizeResponse", () => {
     const res = await synthesizeResponse({ text: "hi", apiKey: "k", fetchImpl });
     expect(res.status).toBe(502);
   });
+
+  it("returns 502 when reading the provider body fails", async () => {
+    const bad = new Response(new Uint8Array([1]), { status: 200 });
+    bad.arrayBuffer = () => Promise.reject(new Error("stream fail"));
+    const fetchImpl = vi.fn(async () => bad) as unknown as typeof fetch;
+    const res = await synthesizeResponse({ text: "hi", apiKey: "k", fetchImpl });
+    expect(res.status).toBe(502);
+  });
 });

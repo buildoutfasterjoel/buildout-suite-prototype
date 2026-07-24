@@ -43,7 +43,13 @@ export async function synthesizeResponse(args: {
     return new Response("TTS provider error.", { status: 502, headers: { "Cache-Control": "no-store" } });
   }
 
-  const bytes = await providerRes.arrayBuffer();
+  let bytes: ArrayBuffer;
+  try {
+    bytes = await providerRes.arrayBuffer();
+  } catch {
+    return new Response("TTS provider body read failed.", { status: 502, headers: { "Cache-Control": "no-store" } });
+  }
+
   return new Response(bytes, {
     status: 200,
     headers: { "Content-Type": "audio/mpeg", "Cache-Control": "no-store" },
