@@ -6,6 +6,7 @@ import { propertyQualifiesForUnderwriting } from "#/components/deals/underwritin
 import { underwritingFromSelection, defaultSelectionFor } from "#/components/deals/underwriting/strategies";
 import { contactFullName } from "#/components/contacts/contactDisplay";
 import { useAssistant } from "#/ai/useAssistant";
+import { useBovDraft } from "./useBovDraft";
 
 const ARRIVAL_MS = 10_000;
 
@@ -38,6 +39,7 @@ export function startUnderwriting(dealId: string): void {
     ...underwritingFromSelection("value-add", defaultSelectionFor("value-add")),
     status: "generating",
   });
+  useBovDraft.getState().armFor(dealId);
 }
 
 function clearTimer() {
