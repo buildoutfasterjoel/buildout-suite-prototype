@@ -23,6 +23,9 @@ interface AssistantUIState {
   consumePrompt: () => string | null;
   /** Bumped whenever a surface requests the composer input be focused. */
   focusNonce: number;
+  /** True once Al has greeted the broker this session (greeting fires once). */
+  greetedThisSession: boolean;
+  setGreeted: (greeted: boolean) => void;
 }
 
 export const useAssistant = create<AssistantUIState>((set, get) => ({
@@ -38,4 +41,6 @@ export const useAssistant = create<AssistantUIState>((set, get) => ({
     return prompt;
   },
   focusNonce: 0,
+  greetedThisSession: false,
+  setGreeted: (greetedThisSession) => set({ greetedThisSession }),
 }));
