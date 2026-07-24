@@ -967,6 +967,11 @@ export interface Contact {
   dealStage: ContactDealStage | null
   /** Count of open inquiries from this contact. */
   inquiries: number
+  /**
+   * The listings this contact has inquired about — one per open inquiry, so
+   * the length matches {@link inquiries}. Drives the Listing Inquiries filter.
+   */
+  inquiredListingIds?: string[]
   phoneStatus: PhoneStatus
   doNotCall: boolean
   /** Job title / position, e.g. "Managing Member". */

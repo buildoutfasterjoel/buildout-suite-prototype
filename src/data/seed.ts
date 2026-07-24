@@ -1438,6 +1438,8 @@ function listFilters(
     tags: [],
     lastActivity: 'any',
     openTasks: 'any',
+    listingInquiries: 'none',
+    inquiryListingId: null,
     excludeDoNotCall: false,
     ...overrides,
   }
@@ -1920,6 +1922,21 @@ export function generateDataset() {
     reconcileContactDealFields(contacts, listings).map((c) => [c.id, c]),
   )
   const finalContacts = contacts.map((c) => reconciled.get(c.id) ?? c)
+
+  // Give every open inquiry a concrete listing behind it, so the Listing
+  // Inquiries filter has real data. Searchers inquire about actively marketed
+  // listings; one distinct listing per inquiry keeps the count honest.
+  const marketedListingIds = listings
+    .filter((l) => l.status === 'active')
+    .map((l) => l.id)
+  for (const c of finalContacts) {
+    if (c.inquiries > 0 && marketedListingIds.length > 0) {
+      c.inquiredListingIds = faker.helpers.arrayElements(
+        marketedListingIds,
+        Math.min(c.inquiries, marketedListingIds.length),
+      )
+    }
+  }
 
   const comps = properties.flatMap((p) => {
     const count = faker.number.int({ min: 1, max: 5 })
