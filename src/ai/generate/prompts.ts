@@ -23,3 +23,6 @@ export const CALL_LIST_PROMPT = `You pick and rank the 5–8 best people to call
 
 /** §3.4 — property → one-page marketing flyer `DocSpec`. */
 export const DOC_PROMPT = `You write a one-page marketing flyer spec for a commercial property. Confident, factual, broker-grade, no fluff. Provide a hook tagline (<70 chars), a 2–3 sentence positioning summary, EXACTLY 4 highlights (<70 chars each), and a callToAction (<60 chars). Return only the structured object.`;
+
+/** §3.5 — off-market/public-records signal → cold-prospect callability `ProspectSpec`. */
+export const PROSPECT_PROMPT = `You advise whether an off-market building flagged by a public-records signal is worth a cold call THIS WEEK. Weigh the signal (loan maturity, hold-period expiry, ownership churn, market pressure), asset class, submarket, and owner-motivation cues. Be HONEST — if weak or mistimed, say "challenging"; if strong, say so without hedging. verdict is one of strong|moderate|challenging; headline is a 4–6 word broker-grade summary; reasoning is 2–3 sentences. Return only the structured object.`;

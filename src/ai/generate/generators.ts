@@ -9,8 +9,10 @@ import {
   type CallListSpecT,
   DocSpec,
   type DocSpecT,
+  ProspectSpec,
+  type ProspectSpecT,
 } from "./schemas";
-import { FILTER_PROMPT, EMAIL_PROMPT, CALL_LIST_PROMPT, DOC_PROMPT } from "./prompts";
+import { FILTER_PROMPT, EMAIL_PROMPT, CALL_LIST_PROMPT, DOC_PROMPT, PROSPECT_PROMPT } from "./prompts";
 import { filterFallback, callListFallback } from "./fallbacks";
 
 /** §3.1 — plain-English listings query → structured `FilterSpec`, applied to
@@ -95,3 +97,28 @@ export const generateMarketingDoc = createServerFn({ method: "POST" })
       fallback: () => docFallback(pname),
     });
   });
+
+/** §3.5 — deterministic prospect verdict when the model is unavailable: a
+ * cautious "moderate" default that still reads as usable broker guidance. */
+export function prospectFallback(): ProspectSpecT {
+  return {
+    verdict: "moderate",
+    headline: "Worth a first-touch call",
+    reasoning:
+      "The signal is real but not urgent. A light first touch to gauge interest is reasonable this week.",
+  };
+}
+
+/** §3.5 — off-market/public-records signal → cold-prospect callability
+ * `ProspectSpec`. No agent tool exposes this; its only entry point is the
+ * "Is this worth a call?" affordance on the dashboard's Focus card. */
+export const generateProspectAssessment = createServerFn({ method: "POST" })
+  .validator((d: { property: unknown }) => d)
+  .handler(({ data }): Promise<ProspectSpecT> =>
+    runGenerator({
+      system: PROSPECT_PROMPT,
+      user: JSON.stringify({ property: data.property }),
+      schema: ProspectSpec,
+      fallback: () => prospectFallback(),
+    }),
+  );
