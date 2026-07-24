@@ -17,3 +17,30 @@ export function commissionPctFromAmount(salePrice: number, amount: number): numb
   if (salePrice <= 0) return 0;
   return Math.round((amount / salePrice) * 10000) / 100;
 }
+
+import type { Listing } from "./types";
+
+/** The two probability-weighted commission figures shown in the forecast stat. */
+export interface CommissionForecast {
+  /** The logged-in broker's expected share (primary internal broker). */
+  you: number;
+  /** The whole firm's expected gross commission on the deals. */
+  brokerage: number;
+}
+
+/**
+ * Expected commission across a set of deals, each figure discounted by the deal's
+ * close probability. "Brokerage" is the full deal gross commission; "You" is the
+ * primary internal broker's share (treated as the logged-in user).
+ */
+export function commissionForecast(deals: Listing[]): CommissionForecast {
+  return deals.reduce<CommissionForecast>(
+    (acc, deal) => {
+      const p = deal.transaction.closeProbability / 100;
+      acc.brokerage += deal.transaction.commissionAmount * p;
+      acc.you += (deal.internalBrokers[0]?.grossCommission ?? 0) * p;
+      return acc;
+    },
+    { you: 0, brokerage: 0 },
+  );
+}

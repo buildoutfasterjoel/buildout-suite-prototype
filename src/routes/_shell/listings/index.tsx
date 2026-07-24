@@ -6,6 +6,7 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { ButtonGroup } from "@buildoutinc/blueprint-react/ui/ButtonGroup";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
+import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faMagnifyingGlass,
@@ -43,6 +44,7 @@ import {
 } from "#/components/properties/propertyFacets";
 import { dealHeadlineValue } from "#/components/deals/dealDisplay";
 import { isUmbrella } from "#/data/leaseSpaces";
+import { commissionForecast } from "#/data/commission";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 
 export const Route = createFileRoute("/_shell/listings/")({
@@ -293,15 +295,16 @@ function PropertyListings() {
 
   const total = listings.length;
 
-  // Weighted pipeline forecast: each deal's value discounted by its close
-  // probability (Closed = 100%, Lost ≈ 0%), summed over the visible deals.
-  const weightedForecast = useMemo(
-    () =>
-      filtered.reduce(
-        (sum, l) => sum + dealHeadlineValue(l) * (l.transaction.closeProbability / 100),
-        0,
-      ),
-    [filtered],
+  // Commission forecast: each deal's commission discounted by its close
+  // probability (Closed = 100%, Lost ≈ 0%), split between the logged-in broker
+  // ("you") and the whole firm ("brokerage"), over the visible deals. Umbrella
+  // (parent) deals are excluded — their child space listings are the real deals
+  // and already carry their own commission. `version` is a dep because
+  // `isUmbrella` reads child relationships live.
+  const commission = useMemo(
+    () => commissionForecast(filtered.filter((l) => !isUmbrella(l.id))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filtered, version],
   );
 
   return (
@@ -477,16 +480,26 @@ function PropertyListings() {
                     </Button>
                   ))}
                 </ButtonGroup>
-                <div className="d-flex align-items-baseline gap-2">
+                <div className="d-flex align-items-center gap-3">
                   <span
                     className="text-muted fs-xs text-uppercase"
                     style={{ letterSpacing: "0.04em" }}
                   >
-                    Weighted forecast
+                    Commission forecast
                   </span>
-                  <span className="fw-bold fs-5">
-                    {formatPrice(weightedForecast)}
-                  </span>
+                  <div className="d-flex align-items-baseline gap-2">
+                    <span className="fw-bold fs-5">
+                      {formatPrice(commission.you)}
+                    </span>
+                    <span className="text-muted fs-xs">You</span>
+                  </div>
+                  <Separator orientation="vertical" style={{ height: "1.5rem" }} />
+                  <div className="d-flex align-items-baseline gap-2">
+                    <span className="fw-bold fs-5">
+                      {formatPrice(commission.brokerage)}
+                    </span>
+                    <span className="text-muted fs-xs">Brokerage</span>
+                  </div>
                 </div>
               </div>
               <div className="flex-grow-1 overflow-hidden">

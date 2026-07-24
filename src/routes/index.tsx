@@ -60,7 +60,7 @@ function Home() {
                 <CardTitle>Suite Home Dashboard</CardTitle>
               </CardHeader>
               <CardBody>
-                Broker home dashboard — weighted pipeline forecast, a
+                Broker home dashboard — commission forecast, a
                 seller-signal-to-close pipeline snapshot, an AI-surfaced focus
                 signal, today's tasks, listing engagement, and recent activity.
               </CardBody>
