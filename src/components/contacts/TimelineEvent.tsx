@@ -193,18 +193,37 @@ export function TimelineEvent({
 
         {event.attachments && event.attachments.length > 0 && (
           <div className="tl-attach">
-            {event.attachments.map((a) => (
-              <div key={a.name} className="tl-attach__chip">
-                <FontAwesomeIcon
-                  icon={attachmentIcon(a.name)}
-                  className="tl-attach__icon"
-                />
-                <span className="tl-attach__label">
-                  <span className="tl-attach__name">{a.name}</span>
-                  {a.meta && <span className="tl-attach__meta">{a.meta}</span>}
-                </span>
-              </div>
-            ))}
+            {event.attachments.map((a) => {
+              const chip = (
+                <>
+                  <FontAwesomeIcon
+                    icon={attachmentIcon(a.name)}
+                    className="tl-attach__icon"
+                  />
+                  <span className="tl-attach__label">
+                    <span className="tl-attach__name">{a.name}</span>
+                    {a.meta && <span className="tl-attach__meta">{a.meta}</span>}
+                  </span>
+                </>
+              );
+              // A deal-linked attachment (e.g. a sent BOV) opens that deal's
+              // document editor; plain attachments stay static chips.
+              return a.dealId ? (
+                <Link
+                  key={a.name}
+                  to="/editor/$listingId"
+                  params={{ listingId: a.dealId }}
+                  search={{ focus: "underwriting" }}
+                  className="tl-attach__chip tl-attach__chip--link"
+                >
+                  {chip}
+                </Link>
+              ) : (
+                <div key={a.name} className="tl-attach__chip">
+                  {chip}
+                </div>
+              );
+            })}
           </div>
         )}
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
@@ -11,10 +11,16 @@ import {
   faCheckToSlot,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import type { PropertyStatus } from "#/data/types";
-import { getProperty } from "#/data/store";
+import type { Listing } from "#/data/types";
+import { getProperty, updateListingUnderwriting } from "#/data/store";
 import { useDataStore } from "#/data/dataStore";
 import { requestStageChange } from "#/components/deals/useStageGate";
+import { UnderwritingSetupModal } from "#/components/deals/underwriting/UnderwritingSetupModal";
+import {
+  underwritingFromSelection,
+  type UnderwritingStrategyId,
+} from "#/components/deals/underwriting/strategies";
+import { useBovFlow } from "#/components/contacts/useBovFlow";
 import {
   TYPE_ICONS,
   TYPE_LABELS,
@@ -37,14 +43,23 @@ function medDate(iso: string): string {
 /**
  * The AI-suggested next action for a deal, if any. Rule-based for now (an early
  * example, to be expanded with the AI team); returns null when nothing applies.
+ * For a proposal-stage deal the action tracks the Cactus underwriting run:
+ * build (no run yet) → view progress → save → review.
  */
 function dealNextAction(
-  status: PropertyStatus,
+  listing: Listing,
 ): { label: string; icon: IconDefinition } | null {
-  if (status === "proposal") {
-    return { label: "Build Underwriting", icon: faCheckToSlot };
+  if (listing.status !== "proposal") return null;
+  switch (listing.underwriting?.status) {
+    case "generating":
+      return { label: "View Underwriting Progress", icon: faCheckToSlot };
+    case "generated":
+      return { label: "Save Underwriting", icon: faCheckToSlot };
+    case "ready":
+      return { label: "Review Underwriting", icon: faCheckToSlot };
+    default:
+      return { label: "Build Underwriting", icon: faCheckToSlot };
   }
-  return null;
 }
 
 /**
@@ -76,7 +91,27 @@ export function ContactDealCard({
       cardRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }, [highlight]);
+  // The Cactus underwriting setup dialog, hosted here so "Build Underwriting"
+  // starts the flow right from the contact page.
+  const [setupOpen, setSetupOpen] = useState(false);
   if (!listing) return null;
+
+  /**
+   * Kick off the Cactus run with the chosen strategy/depth — the BOV flow
+   * (see ContactBovFlow) plays the generation, save, preview, and email steps
+   * in modals right here on the contact page. The underwriting record is
+   * written first so the deal page's planner row agrees on the run's state.
+   */
+  const startUnderwriting = (
+    strategy: UnderwritingStrategyId,
+    selection: Set<number>,
+  ) => {
+    updateListingUnderwriting(listingId, {
+      ...underwritingFromSelection(strategy, selection),
+      status: "generating",
+    });
+    useBovFlow.getState().start(listingId, strategy, [...selection]);
+  };
 
   const property = getProperty(listing.propertyId);
   const price = dealHeadlineLabel(listing);
@@ -89,7 +124,7 @@ export function ContactDealCard({
     listing.dealSide === "seller"
       ? listing.buyerContactIds.length + listing.otherContactIds.length
       : listing.sellerContactIds.length + listing.otherContactIds.length;
-  const nextAction = dealNextAction(listing.status);
+  const nextAction = dealNextAction(listing);
 
   return (
     <div
@@ -235,16 +270,34 @@ export function ContactDealCard({
         </div>
       )}
 
-      {/* Conditionally-visible AI next action */}
+      {/* Conditionally-visible AI next action. No run yet → open the Cactus
+          setup dialog in place; a generated-but-unsaved run → reopen the save
+          step of the contact-page BOV flow; anything else → the deal overview,
+          where the planner row shows that run's state. */}
       {nextAction && (
         <Button
           variant="outline"
           className="contact-deal-card__underwriting-btn w-100"
+          onClick={() => {
+            if (listing.underwriting == null) setSetupOpen(true);
+            else if (listing.underwriting.status === "generated")
+              useBovFlow.getState().openPlacement(listingId);
+            else void navigate({ to: "/listings/$listingId", params: { listingId } });
+          }}
         >
           <FontAwesomeIcon icon={nextAction.icon} />
           {nextAction.label}
         </Button>
       )}
+
+      <UnderwritingSetupModal
+        open={setupOpen}
+        onOpenChange={setSetupOpen}
+        listing={listing}
+        // An owned, in-place building reads as a Value-Add run by default.
+        fallbackStrategy="value-add"
+        onStart={startUnderwriting}
+      />
     </div>
   );
 }
