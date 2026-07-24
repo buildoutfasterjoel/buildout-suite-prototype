@@ -27,8 +27,8 @@ function getRecognitionCtor(): SpeechRecognitionCtor | null {
 
 /**
  * Hands-free mic loop (voice-foundation design §6.2). Own silence timer, never
- * a perpetually-hot mic. Live transcript is surfaced by the caller via onSubmit
- * of interim text is NOT sent — only the final transcript on silence.
+ * a perpetually-hot mic. The caller submits via onSubmit; interim text is NOT
+ * sent — only the final transcript, after a silence pause.
  */
 export function useHandsFree(opts: { onSubmit: (text: string) => void }) {
   const setListening = useVoice((s) => s.setListening);
@@ -54,6 +54,7 @@ export function useHandsFree(opts: { onSubmit: (text: string) => void }) {
   }, [clearTimers, setListening]);
 
   const start = useCallback(() => {
+    if (recRef.current) teardown(); // guard against re-entrant start() overwriting a live recognizer
     const Ctor = getRecognitionCtor();
     if (!Ctor) {
       notify({ title: "Voice input isn't supported here", description: "Type your message instead." });
@@ -74,7 +75,12 @@ export function useHandsFree(opts: { onSubmit: (text: string) => void }) {
       if (text) opts.onSubmit(text);
     };
 
-    startTimer.current = setTimeout(() => { if (!transcriptRef.current) teardown(); }, NO_START_MS);
+    startTimer.current = setTimeout(() => {
+      if (!transcriptRef.current) {
+        teardown();
+        setConversationMode(false); // broker never spoke — end the loop, don't strand a dead mic
+      }
+    }, NO_START_MS);
 
     rec.onresult = (e) => {
       const segs = Array.from({ length: e.results.length }, (_, i) => ({ transcript: e.results[i][0].transcript }));
@@ -83,7 +89,16 @@ export function useHandsFree(opts: { onSubmit: (text: string) => void }) {
       if (silenceTimer.current) clearTimeout(silenceTimer.current);
       silenceTimer.current = setTimeout(finish, SILENCE_MS);
     };
-    rec.onerror = (e) => { if (e.error !== "no-speech") teardown(); }; // keep waiting on no-speech
+    rec.onerror = (e) => {
+      if (e.error === "no-speech") return; // keep waiting
+      if (e.error === "not-allowed" || e.error === "service-not-allowed" || e.error === "audio-capture") {
+        notify({ title: "Microphone unavailable", description: "Check mic permissions, or type your message instead." });
+        setConversationMode(false);
+        teardown();
+        return;
+      }
+      teardown();
+    };
     rec.onend = () => { /* silence timer drives submission; nothing to do here */ };
 
     setListening(true);
