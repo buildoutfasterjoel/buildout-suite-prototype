@@ -7,6 +7,8 @@ import { generateCallTurn, generateCallRecap } from "#/ai/generate";
 import { useAssistant } from "#/ai/useAssistant";
 import { addNote } from "#/data/actions";
 import { contactFullName, contactInitials } from "#/components/contacts/contactDisplay";
+import { applyHeroRecapExtensions, isHeroCall } from "./heroRecapExtensions";
+import { signalText } from "#/data/signal";
 
 /**
  * Imperative live-call controller (Phase-3 design §3/§4). Owns the phase timers,
@@ -80,7 +82,7 @@ async function runOwnerTurn(brokerLine: string) {
           note: target.note,
           phone: target.phone,
         },
-        property: null,
+        property: target.signalText ? { signal: target.signalText } : null,
         history,
         brokerLine,
       },
@@ -140,6 +142,7 @@ export const callFlow = {
       firstName: contact.firstName,
       role: contact.role,
       note: personaNote(contact.notes),
+      signalText: signalText(contact) || undefined,
     });
     let n = 5;
     const step = () => {
@@ -219,6 +222,10 @@ export const callFlow = {
     // A new call/hangup took over during recap generation — don't surface a stale recap.
     if (mySession !== session) return;
     useCallStore.getState().setRecap(recap);
+    if (isHeroCall(target)) {
+      const actions = applyHeroRecapExtensions({ target, recap });
+      if (actions) useCallStore.getState().setHeroActions(actions);
+    }
     useAssistant.getState().setOpen(true); // sidebar renders + speaks the recap
   },
 };
