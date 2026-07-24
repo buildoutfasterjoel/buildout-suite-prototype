@@ -2685,3 +2685,13 @@
     color: #500004;
   }
 }
+
+// Listing edit — collapsible card header. The trigger fills the row and keeps
+// its label left-aligned; the leading chevron rotates from ▸ to ▾ when open
+// (base-ui sets data-panel-open on the trigger button).
+.collapsible-card-chevron {
+  transition: transform 0.15s ease;
+}
+.collapsible-card-trigger[data-panel-open] .collapsible-card-chevron {
+  transform: rotate(90deg);
+}

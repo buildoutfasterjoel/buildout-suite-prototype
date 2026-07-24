@@ -91,10 +91,18 @@ export function ListingFormEditor({
 					<SaleSection marketing={marketing} patchMarketing={patchMarketing} />
 				</>
 			)}
-			<Separator />
-			<LotsSection property={property} patchProperty={patchProperty} />
-			<Separator />
-			<CondosSection property={property} patchProperty={patchProperty} />
+			{effects.landSections && (
+				<>
+					<Separator />
+					<LotsSection property={property} patchProperty={patchProperty} />
+				</>
+			)}
+			{dealType === "Sale" && (
+				<>
+					<Separator />
+					<CondosSection property={property} patchProperty={patchProperty} />
+				</>
+			)}
 			{dealType === "Lease" && (
 				<>
 					<Separator />

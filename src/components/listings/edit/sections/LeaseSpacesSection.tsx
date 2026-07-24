@@ -11,6 +11,7 @@ import {
 	TextField,
 	YesNoNaField,
 } from "#/components/listings/edit/fieldWidgets";
+import { CollapsibleCard } from "#/components/listings/edit/ReorderableAccordion";
 import { ALL_SUBTYPES } from "#/components/listings/edit/sections/PropertySection";
 import { Section } from "#/components/listings/listingWidgets";
 import { emptySpaceLeaseTerms } from "#/data/createListing";
@@ -81,7 +82,7 @@ export function LeaseSpacesSection({
 					This property has no units to set lease terms on.
 				</p>
 			) : (
-				<Accordion variant="inline" multiple>
+				<div className="d-flex flex-column gap-2">
 					{property.units.map((unit) => (
 						<UnitLeaseCard
 							key={unit.id}
@@ -91,7 +92,7 @@ export function LeaseSpacesSection({
 							onChange={(patch) => patchUnitTerms(unit.id, patch)}
 						/>
 					))}
-				</Accordion>
+				</div>
 			)}
 		</Section>
 	);
@@ -114,8 +115,9 @@ function UnitLeaseCard({
 	const addressRequired = property.tenancy !== "Single";
 
 	return (
-		<Accordion.Item value={unit.id}>
-			<Accordion.Trigger>
+		<CollapsibleCard
+			item={unit}
+			renderTrigger={() => (
 				<span className="fw-semibold d-flex align-items-center gap-2">
 					<FontAwesomeIcon icon={faVectorSquare} className="text-muted" />
 					{unit.label}
@@ -123,9 +125,9 @@ function UnitLeaseCard({
 						{unit.sqft.toLocaleString()} SF
 					</span>
 				</span>
-			</Accordion.Trigger>
-			<Accordion.Content>
-				<div className="d-flex flex-column gap-3">
+			)}
+			renderContent={() => (
+				<>
 					{/* ── Status ── */}
 					<FieldGrid>
 						<Col>
@@ -681,8 +683,8 @@ function UnitLeaseCard({
 							</Accordion.Content>
 						</Accordion.Item>
 					</Accordion>
-				</div>
-			</Accordion.Content>
-		</Accordion.Item>
+				</>
+			)}
+		/>
 	);
 }
