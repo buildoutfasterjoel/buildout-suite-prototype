@@ -43,7 +43,6 @@ export const PIPELINE_SUMMARY: PipelineStageSummary[] = [
 ];
 
 export const FORECAST = {
-  weightedTotal: "$27.9M",
   openPipeline: "$27.0M",
   openDeals: 5,
   closedValue: "$12.4M",
