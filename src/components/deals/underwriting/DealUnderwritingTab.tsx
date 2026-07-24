@@ -5,6 +5,7 @@ import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
 import { Table } from "@buildoutinc/blueprint-react/ui/Table";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
+import { Alert } from "@buildoutinc/blueprint-react/ui/Alert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faWandMagicSparkles, faCalculator, faFileLines } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing, UnderwritingResult, UnderwritingResultSection } from "#/data/types";
@@ -12,11 +13,13 @@ import { useDataStore } from "#/data/dataStore";
 import {
   updateListingUnderwriting,
   generateUnderwritingResult,
+  getProperty,
 } from "#/data/store";
 import { notify } from "#/lib/notify";
 import { UnderwritingDepth } from "../UnderwritingDepth";
 import { UnderwritingProgress } from "./UnderwritingProgress";
 import { UnderwritingPlacementModal } from "./UnderwritingPlacementModal";
+import { computeOccupancyMismatch, type OccupancyMismatch } from "./occupancyMismatch";
 import {
   defaultSelectionFor,
   underwritingFromSelection,
@@ -92,6 +95,9 @@ export function DealUnderwritingTab({ listing: initial }: { listing: Listing }) 
 
   const result = uw?.result;
 
+  const property = getProperty(listing.propertyId);
+  const mismatch: OccupancyMismatch | null = property ? computeOccupancyMismatch(property) : null;
+
   return (
     <div className="p-4">
       {phase === "idle" && (
@@ -132,6 +138,7 @@ export function DealUnderwritingTab({ listing: initial }: { listing: Listing }) 
       {(phase === "generated" || phase === "ready") && result && (
         <UnderwritingBreakdown
           result={result}
+          mismatch={mismatch}
           strategyLabel={strategyLabel(coerceStrategy(uw?.strategy))}
           generatedAt={uw?.generatedAt}
           saved={phase === "ready"}
@@ -186,6 +193,7 @@ export function DealUnderwritingTab({ listing: initial }: { listing: Listing }) 
 
 function UnderwritingBreakdown({
   result,
+  mismatch,
   strategyLabel,
   generatedAt,
   saved,
@@ -194,6 +202,7 @@ function UnderwritingBreakdown({
   onViewInDocument,
 }: {
   result: UnderwritingResult;
+  mismatch: OccupancyMismatch | null;
   strategyLabel: string;
   generatedAt?: string;
   saved: boolean;
@@ -231,6 +240,14 @@ function UnderwritingBreakdown({
           )}
         </div>
       </div>
+
+      {mismatch?.isMismatch && (
+        <Alert severity="warning" withIcon>
+          <Alert.Title>Occupancy mismatch</Alert.Title>
+          Priced on stated {mismatch.stated}% occupancy; the T-12 actuals show{" "}
+          {mismatch.actual}% — the valuation may be overstated at the asking price.
+        </Alert>
+      )}
 
       {/* Metrics grid — all addressable metrics, body-size bold figures. */}
       <div>
