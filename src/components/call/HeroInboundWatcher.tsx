@@ -10,7 +10,8 @@ export function HeroInboundWatcher() {
 
   useEffect(() => {
     if (!heroActions) {
-      armedFor.current = null; // reset when the recap is dismissed, so a later call re-arms
+      heroInbound.cancel();      // drop any pending arrival when the recap is dismissed/undone
+      armedFor.current = null;   // reset so a later hero call re-arms
       return;
     }
     if (armedFor.current === heroActions.dealId) return; // already armed for this deal

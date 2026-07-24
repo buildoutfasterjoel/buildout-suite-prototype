@@ -54,6 +54,7 @@ async function onArrive(dealId: string, ownerContactId: string, mySession: numbe
   const property = getProperty(contact.propertyIds[0] ?? "");
   const propertyName = property?.name ?? "the property";
   const original = synthesizedOriginal(contact.firstName);
+  const from = contactFullName(contact);
 
   let res;
   try {
@@ -61,7 +62,7 @@ async function onArrive(dealId: string, ownerContactId: string, mySession: numbe
       data: {
         original,
         candidate: {
-          name: contactFullName(contact),
+          name: from,
           role: contact.role,
           entity: contact.company,
           note: contact.notes ?? "",
@@ -81,7 +82,6 @@ async function onArrive(dealId: string, ownerContactId: string, mySession: numbe
   addDealDocument(dealId, { id: crypto.randomUUID(), name: attachments[0], uploadedAt: now, size: "2.1 MB", aiGenerated: false });
   addDealDocument(dealId, { id: crypto.randomUUID(), name: attachments[1], uploadedAt: now, size: "1.4 MB", aiGenerated: false });
 
-  const from = contactFullName(contact);
   addDealMessage(dealId, { author: from, text: "Sent the rent roll and T-12 — filed to the deal." });
   notify({ title: `New email from ${from}`, description: "Rent roll + T-12 attached" });
 

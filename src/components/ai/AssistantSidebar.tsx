@@ -631,7 +631,7 @@ export function AssistantSidebar() {
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-grow-1 overflow-auto p-3 d-flex flex-column gap-2">
-        {messages.length === 0 && !recap ? (
+        {messages.length === 0 && !recap && !inbound ? (
           <div className="text-muted small">
             Ask about your properties, contacts, and deals — or have me draft an email, build a
             call list, or move a deal along.
