@@ -20,3 +20,6 @@ Return only the structured object.`;
 
 /** §3.3 — contact pool → ranked, dialable `CallListSpec`. */
 export const CALL_LIST_PROMPT = `You pick and rank the 5–8 best people to call now from a supplied contact pool, given an optional property and intent. Rank by likelihood to convert using role, market, asset focus, relationship stage, and how long since the last interaction. Every contactId MUST be one of the supplied ids. reason is under 90 chars. Return only the structured object.`;
+
+/** §3.4 — property → one-page marketing flyer `DocSpec`. */
+export const DOC_PROMPT = `You write a one-page marketing flyer spec for a commercial property. Confident, factual, broker-grade, no fluff. Provide a hook tagline (<70 chars), a 2–3 sentence positioning summary, EXACTLY 4 highlights (<70 chars each), and a callToAction (<60 chars). Return only the structured object.`;

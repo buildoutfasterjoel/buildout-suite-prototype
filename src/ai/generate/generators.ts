@@ -7,8 +7,10 @@ import {
   type EmailDraftSpecT,
   CallListSpec,
   type CallListSpecT,
+  DocSpec,
+  type DocSpecT,
 } from "./schemas";
-import { FILTER_PROMPT, EMAIL_PROMPT, CALL_LIST_PROMPT } from "./prompts";
+import { FILTER_PROMPT, EMAIL_PROMPT, CALL_LIST_PROMPT, DOC_PROMPT } from "./prompts";
 import { filterFallback, callListFallback } from "./fallbacks";
 
 /** §3.1 — plain-English listings query → structured `FilterSpec`, applied to
@@ -72,3 +74,24 @@ export const generateCallList = createServerFn({ method: "POST" })
       fallback: () => callListFallback(data.contacts),
     }),
   );
+
+/** §3.4 — deterministic marketing flyer when the model is unavailable: the
+ * property name stands in for the tagline, with no summary/highlights and a
+ * safe generic CTA. */
+export function docFallback(propertyName: string): DocSpecT {
+  return { tagline: propertyName, summary: "", highlights: [], callToAction: "Contact us to schedule a tour" };
+}
+
+/** §3.4 — property (+ optional docType) → one-page marketing flyer `DocSpec`,
+ * consumed by `build_marketing_package` (see `src/ai/tools.ts`). */
+export const generateMarketingDoc = createServerFn({ method: "POST" })
+  .validator((d: { property: unknown; docType?: string }) => d)
+  .handler(({ data }): Promise<DocSpecT> => {
+    const pname = (data.property as { name?: string })?.name ?? "This property";
+    return runGenerator({
+      system: DOC_PROMPT,
+      user: JSON.stringify({ property: data.property, docType: data.docType ?? "marketing_flyer" }),
+      schema: DocSpec,
+      fallback: () => docFallback(pname),
+    });
+  });
