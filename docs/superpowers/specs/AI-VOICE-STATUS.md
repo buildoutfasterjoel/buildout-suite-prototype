@@ -19,7 +19,7 @@ should read before picking up work.
 | 3 — Live-call simulation | ✅ Built (smoke-tested) | `2026-07-24-ai-phase-3-live-call-simulation-design.md` | `../plans/2026-07-24-ai-phase-3-live-call-simulation.md` |
 | 4 — Hero-arc orchestration | 🔨 In progress — decomposed into 4A–4D | see below | — |
 | ↳ 4A — Signal + greeting + recap hero-extensions | ✅ Built (smoke-test pending) | `2026-07-24-ai-phase-4a-signal-greeting-recap-extensions-design.md` | `../plans/2026-07-24-ai-phase-4a-signal-greeting-recap-extensions.md` |
-| ↳ 4B — Self-arriving inbound email | 📐 Designed (plan ready) | `2026-07-24-ai-phase-4b-self-arriving-inbound-email-design.md` | `../plans/2026-07-24-ai-phase-4b-self-arriving-inbound-email.md` |
+| ↳ 4B — Self-arriving inbound email | ✅ Built (smoke-test pending) | `2026-07-24-ai-phase-4b-self-arriving-inbound-email-design.md` | `../plans/2026-07-24-ai-phase-4b-self-arriving-inbound-email.md` |
 | ↳ 4C — Underwrite + BOV | ⛔ Not started | — | — |
 | ↳ 4D — The director (sequences 4A→4B→4C) | ⛔ Not started | — | — |
 
@@ -95,15 +95,16 @@ Phase 4 is decomposed into four sub-phases, each its own spec → plan → build
   `useCallStore.heroActions`. Design + plan linked in the table above.
   **Carry to 4C:** Marcus's Palmetto Court property was coerced to multifamily but keeps its
   old (non-multifamily) generated financials — 4C should seed realistic 48-unit numbers.
-- **4B — Self-arriving inbound email** (📐 designed): new `generateDraftReply` (REQUIREMENTS
-  §3.6); ~10s after the hero recap, a simulated owner email self-arrives via a
-  `heroInbound` module-singleton (armed off `useCallStore.heroActions`) → files rent roll +
-  T-12 as `DealDocument`s to the 4A deal + a deal-timeline message + a toast + a sidebar
-  `InboundEmailCard` showing the body; Otto speaks a one-line summary and offers to
-  underwrite (gated on `propertyQualifiesForUnderwriting`); accept kicks off the existing
-  underwriting flow. No inbox/route (the `Email` model is outbound-only). Occupancy-mismatch
-  data deferred to 4C. Design:
-  `2026-07-24-ai-phase-4b-self-arriving-inbound-email-design.md`.
+- **4B — Self-arriving inbound email** (✅ built, smoke-test pending): base `df4b1dc` → HEAD
+  `540b343` (6 commits); full suite 350/350, tsc 0. New `generateDraftReply` (REQUIREMENTS
+  §3.6, keyless fallback, in schemaCompat); `useInboundEmail` store; `heroInbound`
+  module-singleton (armed off `useCallStore.heroActions` by `HeroInboundWatcher` in AppShell;
+  ~10s session-guarded timer, `cancel()` on recap dismiss/undo) → files rent roll + T-12 as
+  `DealDocument`s (aiGenerated:false) to the 4A deal + a deal-timeline message + a toast +
+  a sidebar `InboundEmailCard` showing the body; Otto speaks a one-line summary (one-way, no
+  mic re-arm) and offers to underwrite (gated on `propertyQualifiesForUnderwriting`); accept
+  → `startUnderwriting(dealId)` (existing flow) + navigate. No inbox/route (the `Email` model
+  is outbound-only). Occupancy-mismatch data deferred to 4C. Design + plan linked above.
 - **4C — Underwrite + BOV** (⛔): reuse the deterministic underwriting flow
   (`src/components/deals/underwriting/`) to price the deal + flag the occupancy mismatch
   + draft the BOV → send → activity timeline. (The hero property is seeded multifamily in
