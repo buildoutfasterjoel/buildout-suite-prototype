@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { composeGreeting } from "./greeting";
+import { composeGreeting, buildGreetingWithOffer } from "./greeting";
 import type { AssistantContext } from "#/ai/context";
+import { useDataStore } from "#/data/dataStore";
+import type { Contact } from "#/data/types";
 
 const ctx = (over = 0, today = 0): AssistantContext => ({
   broker: { name: "Ethan Thompson", role: "Broker" },
@@ -35,5 +37,24 @@ describe("composeGreeting", () => {
   it("always ends in the offer", () => {
     expect(composeGreeting(ctx(0, 0), { now: new Date("2026-07-23T08:00:00") }))
       .toContain("Want me to call your most important move first?");
+  });
+});
+
+describe("buildGreetingWithOffer", () => {
+  it("names the overnight signal and arms a call offer when the hero is present", () => {
+    const marcus = {
+      id: "m", firstName: "Marcus", lastName: "Pinckney", role: "owner", propertyIds: [], heroKey: "marcus",
+      signal: { kind: "loan-maturity", headline: "a maturing CMBS loan", detail: "d", observedAt: "2026-07-24" },
+    } as unknown as Contact;
+    useDataStore.setState({ contacts: new Map([["m", marcus]]) });
+    const { text, offer } = buildGreetingWithOffer();
+    expect(text).toContain("maturing CMBS loan");
+    expect(offer).toEqual({ kind: "call", contactId: "m" });
+  });
+
+  it("has no offer when there is no hero signal", () => {
+    useDataStore.setState({ contacts: new Map() });
+    const { offer } = buildGreetingWithOffer();
+    expect(offer).toBeNull();
   });
 });

@@ -2,8 +2,8 @@ import { useEffect } from "react";
 import { useAssistant } from "#/ai/useAssistant";
 import { useVoice } from "./useVoice";
 import { voiceEngine } from "./voiceEngine";
-import { composeGreeting } from "./greeting";
-import { buildAssistantContext } from "#/ai/context";
+import { buildGreetingWithOffer } from "./greeting";
+import { useHeroOffer } from "#/ai/heroOffer";
 
 /**
  * Proactive spoken greeting (voice-foundation design §6.3). Fires once per
@@ -39,8 +39,9 @@ export function useGreeting(opts: {
   useEffect(() => {
     if (!open || greeted) return;
     setGreeted(true);
-    const text = composeGreeting(buildAssistantContext());
+    const { text, offer } = buildGreetingWithOffer();
     onGreeting(text);
+    if (offer) useHeroOffer.getState().setOffer(offer);
     if (!useVoice.getState().voiceEnabled) return; // show only, no speech/mic
     void voiceEngine.speak(text).then(() => {
       useVoice.getState().setConversationMode(true);

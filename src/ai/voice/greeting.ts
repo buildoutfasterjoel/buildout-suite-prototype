@@ -1,4 +1,7 @@
 import type { AssistantContext } from "#/ai/context";
+import { buildAssistantContext } from "#/ai/context";
+import { getOvernightSignalContact, signalText } from "#/data/signal";
+import type { HeroOffer } from "#/ai/heroOffer";
 
 const OFFER = "Want me to call your most important move first?";
 
@@ -28,4 +31,15 @@ export function composeGreeting(
     ? ` A signal also came in overnight — ${opts.overnightSignal}. I pinned it to the top of your list.`
     : "";
   return `${partOfDay(now)}, ${first}. ${taskLine}${signalLine} ${OFFER}`;
+}
+
+/** The session greeting text plus the offer to arm (call the signal owner).
+ * Composed from the live store so it works key-less. */
+export function buildGreetingWithOffer(): { text: string; offer: HeroOffer | null } {
+  const marcus = getOvernightSignalContact();
+  const text = composeGreeting(buildAssistantContext(), {
+    overnightSignal: marcus ? signalText(marcus) : undefined,
+  });
+  const offer: HeroOffer | null = marcus ? { kind: "call", contactId: marcus.id } : null;
+  return { text, offer };
 }
