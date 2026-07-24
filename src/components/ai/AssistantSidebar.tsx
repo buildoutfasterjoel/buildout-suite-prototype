@@ -32,6 +32,9 @@ import { voiceEngine } from "#/ai/voice/voiceEngine";
 import { useHandsFree } from "#/ai/voice/useHandsFree";
 import { useGreeting } from "#/ai/voice/useGreeting";
 import { registerStopForCall } from "#/components/call/callFlow";
+import { useCallStore } from "#/components/call/useCallStore";
+import { CallRecapCard } from "#/components/call/CallRecapCard";
+import { composeRecapReport, recapSpeechText } from "#/components/call/callRecap";
 import { DealCardById } from "#/components/deals/DealCard";
 import { EmailDraftCard, type EmailDraftCardData } from "#/components/ai/EmailDraftCard";
 import { formatCurrency } from "#/components/deals/dealDisplay";
@@ -449,6 +452,19 @@ export function AssistantSidebar() {
     });
   }, [isLoading, messages, voiceEnabled, startHandsFree]);
 
+  // Speak the hang-up recap once when it appears (Al reports, §6.1). This is a
+  // one-way report — it must NOT enter conversationMode or re-arm the mic.
+  const recap = useCallStore((s) => s.recap);
+  const recapTarget = useCallStore((s) => s.target);
+  const spokenRecapRef = useRef<object | null>(null);
+  useEffect(() => {
+    if (!recap || recap === spokenRecapRef.current) return;
+    spokenRecapRef.current = recap;
+    if (!voiceEnabled) return;
+    const { message } = composeRecapReport(recap, recapTarget?.name ?? "your contact");
+    void voiceEngine.speak(recapSpeechText(message)); // no re-arm: not in conversationMode
+  }, [recap, recapTarget, voiceEnabled]);
+
   // Presenter kill-switch: Escape silences Al instantly and ends conversation.
   useHotkey("Escape", () => {
     voiceEngine.cancel();
@@ -521,7 +537,8 @@ export function AssistantSidebar() {
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-grow-1 overflow-auto p-3 d-flex flex-column gap-2">
-        {messages.length === 0 ? (
+        {recap && <CallRecapCard />}
+        {messages.length === 0 && !recap ? (
           <div className="text-muted small">
             Ask about your properties, contacts, and deals — or have me draft an email, build a
             call list, or move a deal along.
