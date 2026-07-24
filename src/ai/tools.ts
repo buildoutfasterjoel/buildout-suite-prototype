@@ -2,6 +2,8 @@ import type { AnyClientTool } from "@tanstack/ai";
 import type { Contact, Listing, Property, PropertyStatus } from "#/data/types";
 import { useDataStore } from "#/data/dataStore";
 import { getListing, getProperty } from "#/data/store";
+import { generateFilter } from "#/ai/generate";
+import { useListingsFilter } from "#/routes/_shell/listings/-useListingsFilter";
 import {
   searchAll,
   getContactDetailClient,
@@ -37,6 +39,7 @@ import {
   createEmailDraftDef,
   createCallListDef,
   generateDocDef,
+  filterListingsDef,
   navigateToDef,
 } from "./toolDefs";
 
@@ -246,6 +249,14 @@ export function createClientTools({
       const { path } = args as { path: string };
       navigate(path);
       return { navigatedTo: path };
+    }),
+
+    filterListingsDef.client(async (args) => {
+      const { query } = args as { query: string };
+      const spec = await generateFilter({ data: { query } });
+      useListingsFilter.getState().apply(spec);
+      navigate("/listings");
+      return { explanation: spec.explanation };
     }),
   ];
 }

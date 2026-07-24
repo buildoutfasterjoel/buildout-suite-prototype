@@ -17,6 +17,7 @@ import {
   faTableColumns,
   faTableCellsLarge,
   faLocationDot,
+  faSparkles,
 } from "@fortawesome/pro-regular-svg-icons";
 import { getProperty, getStore } from "#/data/store";
 import { useDataStore } from "#/data/dataStore";
@@ -46,6 +47,9 @@ import { dealHeadlineValue } from "#/components/deals/dealDisplay";
 import { isUmbrella } from "#/data/leaseSpaces";
 import { commissionForecast } from "#/data/commission";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
+import { generateFilter } from "#/ai/generate";
+import type { FilterSpecT } from "#/ai/generate/schemas";
+import { useListingsFilter } from "./-useListingsFilter";
 
 export const Route = createFileRoute("/_shell/listings/")({
   // `?q=` pre-fills the address/name search — e.g. deep-linking from a contact's
@@ -96,6 +100,63 @@ function sideOptions(
     { value: "seller", label: leaseOnly ? "Landlord" : "Seller" },
     { value: "buyer", label: leaseOnly ? "Tenant" : "Buyer" },
   ];
+}
+
+// `FilterSpec.assetClass` (Task 1's schema) speaks display-style asset-class
+// names; the grid's Property Type facet is keyed by the lowercase
+// `PropertyType` values from `propertyDisplay.ts`. Map one to the other here
+// rather than teaching the model the internal enum.
+const ASSET_CLASS_TO_TYPE: Record<NonNullable<FilterSpecT["assetClass"]>, string> = {
+  Retail: "retail",
+  Office: "office",
+  Multifamily: "multifamily",
+  Industrial: "industrial",
+  Land: "land",
+};
+
+/**
+ * In-context AI filter box: turns a plain-English query into a `FilterSpec`
+ * (see `src/ai/generate`) and stashes it in `useListingsFilter`, which the
+ * grid below picks up via a `useEffect` keyed on `spec`. Shares the same
+ * store the `filter_listings` agent tool writes to, so a chat-driven filter
+ * and a typed one behave identically.
+ */
+function AiFilterBox() {
+  const [q, setQ] = useState("");
+  const [busy, setBusy] = useState(false);
+  const apply = useListingsFilter((s) => s.apply);
+  const spec = useListingsFilter((s) => s.spec);
+  return (
+    <div className="d-flex flex-column gap-1">
+      <form
+        className="d-flex align-items-center gap-2"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          if (!q.trim() || busy) return;
+          setBusy(true);
+          try {
+            apply(await generateFilter({ data: { query: q } }));
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <div className="flex-grow-1" style={{ maxWidth: 420 }}>
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Filter listings in plain English…"
+            aria-label="AI listings filter"
+          />
+        </div>
+        <Button type="submit" variant="outline" disabled={busy || !q.trim()}>
+          <FontAwesomeIcon icon={faSparkles} />
+          Filter
+        </Button>
+      </form>
+      {spec && <div className="form-text">{spec.explanation}</div>}
+    </div>
+  );
 }
 
 /** Toggle a value in a Set held in state. */
@@ -164,6 +225,29 @@ function PropertyListings() {
   const saleLease = useToggleSet<string>();
   const expiration = useToggleSet<string>();
   const stage = useToggleSet<PropertyStatus>();
+
+  // Apply a generated `FilterSpec` (from the AI filter box or the
+  // `filter_listings` agent tool, both writing through `useListingsFilter`)
+  // to the grid's own filter state. Only fields with a matching grid control
+  // are applied here — `savedView` values without one (e.g. "my-deals",
+  // "chicago", "stale") still show up via `spec.explanation` in the filter
+  // box, they just don't narrow the grid.
+  const filterSpec = useListingsFilter((s) => s.spec);
+  useEffect(() => {
+    if (!filterSpec) return;
+    setSearch(filterSpec.search ?? "");
+
+    saleLease.clear();
+    if (filterSpec.saleLease) saleLease.toggle(filterSpec.saleLease);
+
+    type.clear();
+    if (filterSpec.assetClass) type.toggle(ASSET_CLASS_TO_TYPE[filterSpec.assetClass]);
+
+    stage.clear();
+    if (filterSpec.savedView === "under-contract") stage.toggle("under-contract");
+    else if (filterSpec.savedView === "active-listings") stage.toggle("active");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterSpec]);
 
   // The stage/"Deal" facet lives on the board columns now, so it's dropped here.
   const facets: Facet[] = useMemo(
@@ -331,6 +415,13 @@ function PropertyListings() {
 
       {/* Toolbar card */}
       <div className="py-3 d-flex flex-column gap-3">
+        <div className="container">
+          <div className="row">
+            <div className="col">
+              <AiFilterBox />
+            </div>
+          </div>
+        </div>
         <div className="container">
           <div className="row">
             <div className="col">

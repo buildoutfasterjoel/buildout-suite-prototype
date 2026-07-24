@@ -239,6 +239,20 @@ export const generateDocDef = toolDefinition({
   },
 });
 
+// ── Generative (AI Phase 1) ───────────────────────────────────────────────
+
+export const filterListingsDef = toolDefinition({
+  name: "filter_listings",
+  description:
+    "Filter the Listings grid from a plain-English query (e.g. 'stale Chicago office for sale'). Navigates to Listings and applies the filter. Use for any 'show me / find listings that…' request.",
+  inputSchema: {
+    type: "object",
+    properties: { query: { type: "string", description: "The plain-English listings query." } },
+    required: ["query"],
+    additionalProperties: false,
+  },
+});
+
 // ── Navigation ───────────────────────────────────────────────────────────────
 
 export const navigateToDef = toolDefinition({
@@ -270,5 +284,6 @@ export const TOOL_DEFS = [
   createEmailDraftDef,
   createCallListDef,
   generateDocDef,
+  filterListingsDef,
   navigateToDef,
 ];
