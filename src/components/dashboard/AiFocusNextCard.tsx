@@ -6,7 +6,7 @@ import { AI_FOCUS_NEXT } from "./dashboardData";
 
 export function AiFocusNextCard() {
   return (
-    <Card className="shadow-sm bg-purple-heart-50 border border-primary">
+    <Card className="panel-card bg-purple-heart-50 border border-primary">
       <Card.Header className="d-flex align-items-center gap-2 bg-transparent">
         <Card.Title className="fs-large d-inline-flex align-items-center gap-2">
           <FontAwesomeIcon icon={faWandMagicSparkles} />

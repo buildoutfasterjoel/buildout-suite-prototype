@@ -138,7 +138,7 @@ export function ContactEngagementPanel({
     <div className={`d-flex flex-column gap-4 tabtrack tabtrack--${tabTrack}`}>
       {/* Composer card — the "Log Activity" title shares the header row with
           the compose tabs. */}
-      <Card className="contact-panel-card overflow-hidden">
+      <Card className="panel-card overflow-hidden">
         <ContactComposeModule
           contact={contact}
           deals={deals}
@@ -157,7 +157,7 @@ export function ContactEngagementPanel({
 
       {/* Timeline card — "Timeline" title shares the header row with the filter
           pills (same pattern as the composer), then the grouped feed. */}
-      <Card className="contact-panel-card overflow-hidden">
+      <Card className="panel-card overflow-hidden">
         <div className="compose-header">
           <span
             className="fw-semibold"

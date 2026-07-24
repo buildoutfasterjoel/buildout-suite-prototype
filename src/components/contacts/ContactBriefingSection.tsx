@@ -46,7 +46,7 @@ export function ContactBriefingSection({
   );
 
   return (
-    <Card className="contact-panel-card overflow-hidden contact-briefing">
+    <Card className="panel-card overflow-hidden contact-briefing">
       <button
         type="button"
         className={`contact-briefing__header${

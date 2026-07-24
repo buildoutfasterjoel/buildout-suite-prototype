@@ -172,7 +172,7 @@ function TasksPage() {
   return (
     <div className={isList ? "h-100 overflow-hidden p-4 d-flex" : "h-100 overflow-auto p-4"}>
       <Card
-        className={`mx-auto w-100${
+        className={`panel-card mx-auto w-100${
           isList ? " flex-grow-1 d-flex flex-column overflow-hidden" : ""
         }`}
         style={{ maxWidth: "56rem" }}

@@ -174,7 +174,7 @@ export function ContactOverviewColumn({
   );
 
   return (
-    <Card className="contact-panel-card overflow-hidden">
+    <Card className="panel-card overflow-hidden">
       <CreateDealModal
         open={newDealOpen}
         onOpenChange={setNewDealOpen}

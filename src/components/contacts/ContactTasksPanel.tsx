@@ -103,7 +103,7 @@ export function ContactTasksPanel({
   };
 
   return (
-    <Card className="contact-panel-card overflow-hidden">
+    <Card className="panel-card overflow-hidden">
       <Accordion
         className={`contact-overview-accordion contact-overview-accordion--white${
           legacyAccordions ? " contact-overview-accordion--legacy" : ""

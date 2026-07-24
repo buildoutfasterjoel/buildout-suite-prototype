@@ -260,13 +260,22 @@
   }
 }
 
-// Contact detail — the four main containers (overview, activity, briefing,
-// tasks) share one elevation + corner treatment.
-.contact-panel-card {
+// The main page containers (Contact Details panels, the Contacts and Tasks
+// page cards, the home dashboard sections) share one elevation + corner
+// treatment.
+.panel-card {
   border-radius: 12px;
   box-shadow:
     0 1px 3px 0 oklch(0% 0 0deg / 0.06),
     0 1px 2px -1px oklch(0% 0 0deg / 0.06);
+}
+
+// A scroll container whose descendants are .panel-card: overflow clips at the
+// padding box, so inner padding + an equal negative margin gives the panel
+// shadows room to render at the edges without shifting the layout.
+.panel-scroll {
+  padding: 6px;
+  margin: -6px;
 }
 
 // Contact detail — left overview column. The collapsible sections use a left

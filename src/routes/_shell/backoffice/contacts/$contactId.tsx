@@ -112,7 +112,7 @@ function ContactDetailPage() {
           page itself never scrolls. */}
       <div className="d-flex gap-4 flex-grow-1 overflow-hidden">
         <div
-          className="flex-shrink-0 h-100 overflow-auto"
+          className="flex-shrink-0 h-100 overflow-auto panel-scroll"
           style={{ width: 380 }}
         >
           <ContactOverviewColumn
@@ -122,7 +122,7 @@ function ContactDetailPage() {
             onOpenShare={() => setShareOpen(true)}
           />
         </div>
-        <div className="flex-grow-1 h-100 overflow-auto">
+        <div className="flex-grow-1 h-100 overflow-auto panel-scroll">
           <ContactEngagementPanel
             contact={contact}
             deals={deals}
@@ -132,7 +132,7 @@ function ContactDetailPage() {
           />
         </div>
         <div
-          className="flex-shrink-0 h-100 overflow-auto"
+          className="flex-shrink-0 h-100 overflow-auto panel-scroll"
           style={{ width: 380 }}
         >
           <div className="d-flex flex-column gap-4">

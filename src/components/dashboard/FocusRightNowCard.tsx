@@ -12,7 +12,7 @@ import { FOCUS_SIGNAL } from "./dashboardData";
 
 export function FocusRightNowCard() {
   return (
-    <Card className="shadow-sm bg-purple-heart-50 border border-purple-heart-300">
+    <Card className="panel-card bg-purple-heart-50 border border-purple-heart-300">
       <Card.Header className="d-flex align-items-center gap-2 bg-transparent">
         <Card.Title className="fs-large">Focus right now</Card.Title>
         <Badge variant="secondary" appearance="muted" className="fs-xs">
