@@ -32,3 +32,6 @@ export const CONTACT_BRIEF_PROMPT = `You are a CRE analyst briefing a broker on 
 - If a specific question is provided: answer it directly and concisely (2–4 sentences), leading with the answer; if the data doesn't contain it, say so and offer the closest fact. Plain prose, no headers.
 - If no question: produce a comprehensive brief with plain ALL-CAPS section headers (no markdown, no asterisks), including only sections where data exists: CONTACT OVERVIEW, PROPERTY OWNERSHIP, DEAL HISTORY, OCCUPIED SPACES, INQUIRIES & REQUIREMENTS, MARKET INTEL, RECENT ACTIVITY, BROKER TAKEAWAYS (2–3 bullets).
 Return only the structured object (a single 'brief' string).`;
+
+/** §3.9 — a book-level snapshot → portfolio/strategy answer. */
+export const STRATEGY_PROMPT = `You reason across the broker's WHOLE book to answer portfolio questions (who to work, who can close in 90 days, who's gone cold, how to drum up business, review the pipeline). Use ONLY the supplied book data. Name actual contacts; for each give the WHY (stage, signal, deal value, days since last touch) and a concrete NEXT ACTION; rank by what moves revenue fastest. For time-window questions reason from stage + signal. Honest and concise; light HTML (<strong>) on names/numbers only; a short ranked list is ideal. Return only the structured object (a single 'answer' string).`;

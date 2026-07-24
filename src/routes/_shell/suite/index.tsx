@@ -5,6 +5,7 @@ import { FocusRightNowCard } from "#/components/dashboard/FocusRightNowCard";
 import { DashboardTasksSection } from "#/components/dashboard/DashboardTasksSection";
 import { YourListingsSection } from "#/components/dashboard/YourListingsSection";
 import { AiFocusNextCard } from "#/components/dashboard/AiFocusNextCard";
+import { AskAboutBookCard } from "#/components/dashboard/AskAboutBookCard";
 import { RecentActivitySection } from "#/components/dashboard/RecentActivitySection";
 import { DASHBOARD_TODAY } from "#/components/dashboard/dashboardData";
 
@@ -38,6 +39,7 @@ function SuiteHome() {
         <DashboardTasksSection />
         <YourListingsSection />
         <AiFocusNextCard />
+        <AskAboutBookCard />
         <RecentActivitySection />
       </div>
     </div>

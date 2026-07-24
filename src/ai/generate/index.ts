@@ -9,4 +9,6 @@ export {
   prospectFallback,
   generateContactBrief,
   contactBriefFallback,
+  generateStrategy,
+  strategyFallback,
 } from "./generators";

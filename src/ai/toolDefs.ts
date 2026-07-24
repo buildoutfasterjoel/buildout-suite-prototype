@@ -290,6 +290,18 @@ export const answerAboutContactDef = toolDefinition({
   },
 });
 
+export const analyzeBookDef = toolDefinition({
+  name: "analyze_book",
+  description:
+    "Portfolio strategy across the WHOLE book — who to work, who can close in 90 days, who's gone cold, how to drum up business, review the pipeline. Use for any strategy/portfolio question NOT about one named person. Never refuse for lack of a tool. Returns a written answer (distinct from build_call_list).",
+  inputSchema: {
+    type: "object",
+    properties: { question: { type: "string" } },
+    required: ["question"],
+    additionalProperties: false,
+  },
+});
+
 export const draftEmailDef = toolDefinition({
   name: "draft_email",
   description:
@@ -342,5 +354,6 @@ export const TOOL_DEFS = [
   buildCallListDef,
   researchContactDef,
   answerAboutContactDef,
+  analyzeBookDef,
   navigateToDef,
 ];

@@ -2,8 +2,15 @@ import type { AnyClientTool } from "@tanstack/ai";
 import type { Contact, Listing, Property, PropertyStatus } from "#/data/types";
 import { useDataStore } from "#/data/dataStore";
 import { getListing, getProperty } from "#/data/store";
-import { generateFilter, generateEmail, generateCallList, generateContactBrief } from "#/ai/generate";
+import {
+  generateFilter,
+  generateEmail,
+  generateCallList,
+  generateContactBrief,
+  generateStrategy,
+} from "#/ai/generate";
 import { composeContactData } from "#/ai/contactData";
+import { composeBookSnapshot } from "#/ai/bookSnapshot";
 import { useListingsFilter } from "#/routes/_shell/listings/-useListingsFilter";
 import {
   searchAll,
@@ -45,6 +52,7 @@ import {
   buildCallListDef,
   researchContactDef,
   answerAboutContactDef,
+  analyzeBookDef,
   navigateToDef,
 } from "./toolDefs";
 
@@ -349,6 +357,12 @@ export function createClientTools({
         data: { data: composeContactData(contactId), name, question },
       });
       return { brief, contactName: name };
+    }),
+
+    analyzeBookDef.client(async (args) => {
+      const { question } = args as { question: string };
+      const { answer } = await generateStrategy({ data: { book: composeBookSnapshot(), question } });
+      return { answer };
     }),
   ];
 }

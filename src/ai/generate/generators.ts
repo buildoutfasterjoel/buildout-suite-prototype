@@ -13,6 +13,8 @@ import {
   type ProspectSpecT,
   ContactBriefSpec,
   type ContactBriefSpecT,
+  StrategySpec,
+  type StrategySpecT,
 } from "./schemas";
 import {
   FILTER_PROMPT,
@@ -21,6 +23,7 @@ import {
   DOC_PROMPT,
   PROSPECT_PROMPT,
   CONTACT_BRIEF_PROMPT,
+  STRATEGY_PROMPT,
 } from "./prompts";
 import { filterFallback, callListFallback } from "./fallbacks";
 
@@ -153,5 +156,33 @@ export const generateContactBrief = createServerFn({ method: "POST" })
       user: `CONTACT: ${data.name}\n${data.question ? `QUESTION: ${data.question}\n` : ""}\nDATA:\n${data.data}`,
       schema: ContactBriefSpec,
       fallback: () => contactBriefFallback(data.data),
+    }),
+  );
+
+/** §3.9 — deterministic book strategy when the model is unavailable: a local
+ * ranking that surfaces the first few contact lines already present in the
+ * supplied book snapshot (each line names a contact with their WHY built in). */
+export function strategyFallback(book: string): StrategySpecT {
+  const lines = book.split("\n").filter((l) => l.includes("—")).slice(0, 5);
+  return {
+    answer: `Here's where I'd focus, ranked by proximity to close:<br>${
+      lines.map((l) => `• ${l}`).join("<br>") || "Your book looks quiet — consider a prospecting push."
+    }`,
+  };
+}
+
+/** §3.9 — a book snapshot (+ targeted question) → portfolio strategy `StrategySpec`,
+ * consumed by the `analyze_book` agent tool and the dashboard's "Ask about my
+ * book" affordance (see `src/ai/tools.ts`, `src/ai/bookSnapshot.ts`). Uses the
+ * REASONING model since this reasons across the whole book, not one record. */
+export const generateStrategy = createServerFn({ method: "POST" })
+  .validator((d: { book: string; question: string }) => d)
+  .handler(({ data }): Promise<StrategySpecT> =>
+    runGenerator({
+      model: AI_MODEL_REASONING,
+      system: STRATEGY_PROMPT,
+      user: `QUESTION: ${data.question}\n\nBOOK:\n${data.book}`,
+      schema: StrategySpec,
+      fallback: () => strategyFallback(data.book),
     }),
   );

@@ -21,6 +21,7 @@ import remarkGfm from "remark-gfm";
 import { createClientTools } from "#/ai/tools";
 import { aiChat, aiConfigured } from "#/ai/relay";
 import { buildAssistantContext, serializeContext } from "#/ai/context";
+import { renderLightHtml } from "#/ai/renderLightHtml";
 import { useAssistant } from "#/ai/useAssistant";
 import { DealCardById } from "#/components/deals/DealCard";
 import { EmailDraftCard, type EmailDraftCardData } from "#/components/ai/EmailDraftCard";
@@ -95,6 +96,14 @@ function briefOf(output: unknown): string | null {
   return typeof o.brief === "string" ? o.brief : null;
 }
 
+/** Extract a generated book-strategy answer (§3.9, `analyze_book`) from a
+ * tool-call's output, if present. This is light HTML, not markdown — render
+ * it via `renderLightHtml`, never raw. */
+function answerOf(output: unknown): string | null {
+  const o = (output ?? {}) as { answer?: unknown };
+  return typeof o.answer === "string" ? o.answer : null;
+}
+
 /** A clickable card row (deal or contact) that navigates on click. */
 function ResultCard({
   title,
@@ -137,7 +146,8 @@ function ToolResultCards({ output }: { output: unknown }) {
   const { deals, contacts } = entitiesOf(output);
   const emailDraft = emailDraftOf(output);
   const brief = briefOf(output);
-  if (deals.length === 0 && contacts.length === 0 && !emailDraft && !brief) return null;
+  const answer = answerOf(output);
+  if (deals.length === 0 && contacts.length === 0 && !emailDraft && !brief && !answer) return null;
 
   return (
     <div className="d-flex flex-column gap-2">
@@ -160,6 +170,12 @@ function ToolResultCards({ output }: { output: unknown }) {
         <div className="assistant-markdown" style={{ whiteSpace: "pre-wrap" }}>
           {brief}
         </div>
+      )}
+      {answer && (
+        <div
+          className="assistant-markdown"
+          dangerouslySetInnerHTML={{ __html: renderLightHtml(answer) }}
+        />
       )}
     </div>
   );
@@ -194,7 +210,8 @@ function MessageBubble({ message }: { message: UIMessage }) {
       deals.length > 0 ||
       contacts.length > 0 ||
       emailDraftOf(p.output) !== null ||
-      briefOf(p.output) !== null
+      briefOf(p.output) !== null ||
+      answerOf(p.output) !== null
     );
   });
   const chipCalls = toolCalls.filter((p) => !cardCalls.includes(p));
