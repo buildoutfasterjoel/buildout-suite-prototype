@@ -49,6 +49,7 @@ export function TimelineEvent({
   pinned,
   replyOpen,
   threadOpen,
+  arriving = false,
   onAction,
   onReplySend,
   onReplyCancel,
@@ -59,6 +60,8 @@ export function TimelineEvent({
   pinned: boolean;
   replyOpen: boolean;
   threadOpen: boolean;
+  /** Just landed (simulated inbound) — plays a one-shot entrance highlight. */
+  arriving?: boolean;
   onAction: ActionDispatch;
   onReplySend: (text: string) => void;
   onReplyCancel: () => void;
@@ -76,7 +79,7 @@ export function TimelineEvent({
 
   return (
     <article
-      className="tl-row"
+      className={`tl-row${arriving ? " tl-row--arriving" : ""}`}
       data-type={event.type}
       data-pinned={pinned || undefined}
     >

@@ -15,6 +15,7 @@ import {
   faArrowUpRightFromSquare,
   faRobot,
   faCalendar,
+  faSparkle,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { PropertyStatus } from "#/data/types";
 import {
@@ -29,6 +30,7 @@ import {
   canConfirm,
   buildTransitionInput,
   seedGateForm,
+  signedListingAgreementDoc,
   EMPTY_GATE_FORM,
   type GateFormState,
 } from "#/data/stageGates";
@@ -175,6 +177,15 @@ export function StageGate({
   }
 
   if (!deal || !config) return null;
+
+  // When a signed listing agreement is on file and the deal had no stored
+  // listing dates, the seeded Executed/Expires values were AI-extracted from
+  // that document — label them so the broker knows to review, not re-enter.
+  const agreementDoc = signedListingAgreementDoc(deal);
+  const aiDatesFromAgreement =
+    !!agreementDoc &&
+    !deal.transaction.listedOnDate &&
+    !deal.transaction.listingExpirationDate;
 
   const set = <K extends keyof GateFormState>(k: K, v: GateFormState[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
@@ -544,6 +555,18 @@ export function StageGate({
                   />
                 </Field>
               )}
+
+              {aiDatesFromAgreement &&
+                (req("listedOnDate") || req("listingExpirationDate")) && (
+                  <div className="ai-draft">
+                    <FontAwesomeIcon
+                      icon={faSparkle}
+                      className="ai-draft__icon"
+                    />
+                    AI pulled the executed and expiration dates from{" "}
+                    {agreementDoc.name} — review before publishing.
+                  </div>
+                )}
 
               {req("salePrice") && (
                 <Field>

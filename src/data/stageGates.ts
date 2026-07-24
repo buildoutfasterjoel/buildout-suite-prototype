@@ -164,10 +164,39 @@ export const EMPTY_GATE_FORM: GateFormState = {
  * StageGate modal and the publish-readiness check. Review attestations start
  * unsatisfied when there are AI docs to review / a website to check.
  */
+/**
+ * The signed listing agreement on the deal, if one has been received (e.g.
+ * Rosa's story beat files "… Listing Agreement — Signed.pdf" onto the deal).
+ * Its presence lets the publish gate AI-prefill the listing dates.
+ */
+export function signedListingAgreementDoc(deal: Listing) {
+  return (deal.documents ?? []).find(
+    (d) => /listing agreement/i.test(d.name) && /signed/i.test(d.name),
+  )
+}
+
+/** Local `YYYY-MM-DD` (no timezone drift), matching stored date convention. */
+function localISO(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}`
+}
+
 export function seedGateForm(deal: Listing): GateFormState {
   const aiDocs = (deal.documents ?? []).filter((d) => d.aiGenerated)
   const isLease = deal.dealType === 'Lease'
   const space = deal.marketing.spaceLeaseTerms[0]
+
+  // When a signed listing agreement is on file and no listing dates are stored
+  // yet, the AI reads them off the document: executed today, a standard
+  // six-month term. The gate labels these as AI-extracted for review.
+  const agreement = signedListingAgreementDoc(deal)
+  const now = new Date()
+  const aiListedOn = agreement ? localISO(now) : null
+  const aiExpires = agreement
+    ? localISO(new Date(now.getFullYear(), now.getMonth() + 6, now.getDate()))
+    : null
+
   return {
     ...EMPTY_GATE_FORM,
     buyerLinked: deal.buyerContactIds.length > 0,
@@ -175,8 +204,8 @@ export function seedGateForm(deal: Listing): GateFormState {
     buyerContactId: deal.buyerContactIds[0] ?? null,
     tenantLinked: deal.tenantContactIds.length > 0,
     tenantContactId: deal.tenantContactIds[0] ?? null,
-    listedOnDate: deal.transaction.listedOnDate,
-    listingExpirationDate: deal.transaction.listingExpirationDate,
+    listedOnDate: deal.transaction.listedOnDate ?? aiListedOn,
+    listingExpirationDate: deal.transaction.listingExpirationDate ?? aiExpires,
     contractExecutedDate: deal.transaction.contractExecutedDate,
     closeDate: deal.transaction.closeDate,
     salePrice: deal.transaction.salePrice || null,

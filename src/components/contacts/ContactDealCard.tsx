@@ -21,6 +21,7 @@ import {
   type UnderwritingStrategyId,
 } from "#/components/deals/underwriting/strategies";
 import { useBovFlow } from "#/components/contacts/useBovFlow";
+import { useContactSession } from "#/components/contacts/useContactSession";
 import {
   TYPE_ICONS,
   TYPE_LABELS,
@@ -44,10 +45,13 @@ function medDate(iso: string): string {
  * The AI-suggested next action for a deal, if any. Rule-based for now (an early
  * example, to be expanded with the AI team); returns null when nothing applies.
  * For a proposal-stage deal the action tracks the Cactus underwriting run:
- * build (no run yet) → view progress → save → review.
+ * build (no run yet) → view progress → save → review. Once the BOV has gone
+ * out to the owner, the underwriting step is done — the ball is in their
+ * court, so the card offers no next action.
  */
 function dealNextAction(
   listing: Listing,
+  bovSent: boolean,
 ): { label: string; icon: IconDefinition } | null {
   if (listing.status !== "proposal") return null;
   switch (listing.underwriting?.status) {
@@ -56,7 +60,9 @@ function dealNextAction(
     case "generated":
       return { label: "Save Underwriting", icon: faCheckToSlot };
     case "ready":
-      return { label: "Review Underwriting", icon: faCheckToSlot };
+      return bovSent
+        ? null
+        : { label: "Review Underwriting", icon: faCheckToSlot };
     default:
       return { label: "Build Underwriting", icon: faCheckToSlot };
   }
@@ -94,6 +100,15 @@ export function ContactDealCard({
   // The Cactus underwriting setup dialog, hosted here so "Build Underwriting"
   // starts the flow right from the contact page.
   const [setupOpen, setSetupOpen] = useState(false);
+  // Whether the BOV email has gone out this session — a logged email carrying
+  // an attachment linked to this deal (the sent BOV pdf).
+  const bovSent = useContactSession((s) =>
+    Object.values(s.logged).some((activities) =>
+      activities.some((a) =>
+        a.attachments?.some((att) => att.dealId === listingId),
+      ),
+    ),
+  );
   if (!listing) return null;
 
   /**
@@ -124,7 +139,7 @@ export function ContactDealCard({
     listing.dealSide === "seller"
       ? listing.buyerContactIds.length + listing.otherContactIds.length
       : listing.sellerContactIds.length + listing.otherContactIds.length;
-  const nextAction = dealNextAction(listing);
+  const nextAction = dealNextAction(listing, bovSent);
 
   return (
     <div

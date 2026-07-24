@@ -2379,6 +2379,28 @@
   }
 }
 
+// ── Just-arrived row (simulated inbound email) ──
+// One-shot entrance: slides in with a purple wash that fades to resting.
+.tl-row--arriving {
+  animation: tl-row-arrive 2s ease-out both;
+  border-radius: 8px;
+}
+@keyframes tl-row-arrive {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+    background-color: var(--color-purple-heart-50, #f9f5ff);
+  }
+  30% {
+    opacity: 1;
+    transform: none;
+    background-color: var(--color-purple-heart-50, #f9f5ff);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
 // ── Attached-document chips (email events) ──
 .tl-attach {
   display: flex;
