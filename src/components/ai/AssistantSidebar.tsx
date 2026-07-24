@@ -31,6 +31,7 @@ import { useVoice } from "#/ai/voice/useVoice";
 import { voiceEngine } from "#/ai/voice/voiceEngine";
 import { useHandsFree } from "#/ai/voice/useHandsFree";
 import { useGreeting } from "#/ai/voice/useGreeting";
+import { registerStopForCall } from "#/components/call/callFlow";
 import { DealCardById } from "#/components/deals/DealCard";
 import { EmailDraftCard, type EmailDraftCardData } from "#/components/ai/EmailDraftCard";
 import { formatCurrency } from "#/components/deals/dealDisplay";
@@ -414,7 +415,10 @@ export function AssistantSidebar() {
       send(text);
     },
   });
-  void stopForCall; // exported for Phase 3; referenced to satisfy lint
+  useEffect(() => {
+    registerStopForCall(stopForCall);
+    return () => registerStopForCall(null);
+  }, [stopForCall]);
 
   // Greeting: render + speak once per session on first open; then open the mic.
   useGreeting({

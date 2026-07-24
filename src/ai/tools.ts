@@ -32,6 +32,7 @@ import {
 import { parseDueDate } from "#/ai/dueDate";
 import { buildAssistantContext } from "#/ai/context";
 import { emptyDraft } from "#/data/createListing";
+import { callFlow } from "#/components/call/callFlow";
 import {
   getClientReportKpis,
   buildActivitySummaryText,
@@ -470,12 +471,11 @@ export function createClientTools({
     }),
 
     startCallDef.client(async (args) => {
-      // Phase 1 stub: announce + navigate. Full live-call flow lands in Phase 3.
       const { contact_name } = args as { contact_name: string };
       const c = resolveContactByName(contact_name);
       if (!c) return { started: false, error: `No contact named "${contact_name}".` };
-      navigate(`/backoffice/contacts/${c.id}`);
-      return { started: true, contactId: c.id, note: "Call flow arrives in Phase 3." };
+      callFlow.open(c);
+      return { started: true, contactId: c.id };
     }),
   ];
 }
