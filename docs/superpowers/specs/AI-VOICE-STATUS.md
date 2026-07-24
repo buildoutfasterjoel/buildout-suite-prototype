@@ -17,7 +17,11 @@ should read before picking up work.
 | 1 — Generative agent layer | ✅ Built | `2026-07-23-ai-phase-1-generative-agent-layer-design.md` | `../plans/2026-07-23-ai-phase-1-...md` |
 | 2 — Voice foundation | ✅ Built | `2026-07-23-ai-phase-2-voice-foundation-design.md` | `../plans/2026-07-23-ai-phase-2-voice-foundation.md` |
 | 3 — Live-call simulation | ✅ Built (smoke-tested) | `2026-07-24-ai-phase-3-live-call-simulation-design.md` | `../plans/2026-07-24-ai-phase-3-live-call-simulation.md` |
-| 4 — Hero-arc orchestration | ⛔ Not started | — | — |
+| 4 — Hero-arc orchestration | 🔨 In progress — decomposed into 4A–4D | see below | — |
+| ↳ 4A — Signal + greeting + recap hero-extensions | 📐 Designed | `2026-07-24-ai-phase-4a-signal-greeting-recap-extensions-design.md` | — |
+| ↳ 4B — Self-arriving inbound email | ⛔ Not started | — | — |
+| ↳ 4C — Underwrite + BOV | ⛔ Not started | — | — |
+| ↳ 4D — The director (sequences 4A→4B→4C) | ⛔ Not started | — | — |
 
 > Git history on `joel/ai-tools` is the authoritative build record — each task is its own
 > descriptive commit (`git log --oneline`).
@@ -71,9 +75,32 @@ smoke test passed (owner role-play + spoken lines + recap all working).
 - **Out of scope by design (→ Phase 4):** the call brief, and the recap's hero extensions
   (opportunity → pipeline → schedule tour → narrate).
 
-### Phase 4 — Hero-arc orchestration ⛔ (next)
+### Phase 4 — Hero-arc orchestration 🔨 (decomposed into 4A–4D)
 
-The scripted main-demo director (PRD §4.1). Not yet designed. Scope:
+**Naming:** the in-product assistant is named **Otto** in this prototype (the PRD calls it
+"Al" — the source-prototype name). A global `Al → Otto` rename of Phase 1–3 code is **task 0
+of sub-phase 4A**; historical design docs + the PRD keep "Al" as a record.
+
+Phase 4 is decomposed into four sub-phases, each its own spec → plan → build, in order:
+
+- **4A — Signal + greeting + recap hero-extensions** (📐 designed): overnight signal on
+  owner Marcus Pinckney → greeting names it → "yes"/"brief me first" → the Phase-3 live
+  call → hang-up recap auto-opens the opportunity, moves it into the pipeline, schedules
+  the Thursday tour, and Otto narrates it. Reuses the hero-persona system
+  (`HeroKey`/`HERO_FIXTURES`), `composeGreeting(overnightSignal)`, `callFlow.open`, and the
+  recap seam. Design:
+  `2026-07-24-ai-phase-4a-signal-greeting-recap-extensions-design.md`.
+- **4B — Self-arriving inbound email** (⛔): new `draft-reply` generator (REQUIREMENTS
+  §3.6), ~10s self-arriving owner email with rent roll + T-12, filed to the deal.
+- **4C — Underwrite + BOV** (⛔): reuse the deterministic underwriting flow
+  (`src/components/deals/underwriting/`) to price the deal + flag the occupancy mismatch
+  + draft the BOV → send → activity timeline. (The hero property is seeded multifamily in
+  4A so it's underwriting-eligible.)
+- **4D — The director** (⛔): the scripted glue sequencing 4A→4B→4C with deterministic
+  timing/narration + reset/replay; reuses 4A's seams (`useHeroOffer`,
+  `heroRecapExtensions`, `OwnerSignal`).
+
+**Original full-scope Phase 4 description (retained for reference):**
 
 - Overnight **signal** on an owner → the greeting names it → "yes" → the live call (Phase 3,
   reuse `callFlow.open`) → hang-up recap's **hero extensions** (open opportunity → move into
