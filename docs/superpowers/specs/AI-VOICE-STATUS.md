@@ -18,7 +18,7 @@ should read before picking up work.
 | 2 — Voice foundation | ✅ Built | `2026-07-23-ai-phase-2-voice-foundation-design.md` | `../plans/2026-07-23-ai-phase-2-voice-foundation.md` |
 | 3 — Live-call simulation | ✅ Built (smoke-tested) | `2026-07-24-ai-phase-3-live-call-simulation-design.md` | `../plans/2026-07-24-ai-phase-3-live-call-simulation.md` |
 | 4 — Hero-arc orchestration | 🔨 In progress — decomposed into 4A–4D | see below | — |
-| ↳ 4A — Signal + greeting + recap hero-extensions | 📐 Designed | `2026-07-24-ai-phase-4a-signal-greeting-recap-extensions-design.md` | — |
+| ↳ 4A — Signal + greeting + recap hero-extensions | ✅ Built (smoke-test pending) | `2026-07-24-ai-phase-4a-signal-greeting-recap-extensions-design.md` | `../plans/2026-07-24-ai-phase-4a-signal-greeting-recap-extensions.md` |
 | ↳ 4B — Self-arriving inbound email | ⛔ Not started | — | — |
 | ↳ 4C — Underwrite + BOV | ⛔ Not started | — | — |
 | ↳ 4D — The director (sequences 4A→4B→4C) | ⛔ Not started | — | — |
@@ -83,13 +83,18 @@ of sub-phase 4A**; historical design docs + the PRD keep "Al" as a record.
 
 Phase 4 is decomposed into four sub-phases, each its own spec → plan → build, in order:
 
-- **4A — Signal + greeting + recap hero-extensions** (📐 designed): overnight signal on
-  owner Marcus Pinckney → greeting names it → "yes"/"brief me first" → the Phase-3 live
-  call → hang-up recap auto-opens the opportunity, moves it into the pipeline, schedules
+- **4A — Signal + greeting + recap hero-extensions** (✅ built, smoke-test pending): overnight
+  signal on owner Marcus Pinckney → greeting names it → "yes"/"brief me first" → the Phase-3
+  live call → hang-up recap auto-opens the opportunity, moves it into the pipeline, schedules
   the Thursday tour, and Otto narrates it. Reuses the hero-persona system
   (`HeroKey`/`HERO_FIXTURES`), `composeGreeting(overnightSignal)`, `callFlow.open`, and the
-  recap seam. Design:
-  `2026-07-24-ai-phase-4a-signal-greeting-recap-extensions-design.md`.
+  recap seam. Built base `547e46c` → HEAD `3c079be` (13 commits); full suite 343/343, tsc 0.
+  New: `OwnerSignal` on `Contact` + `src/data/signal.ts`; Marcus hero fixture;
+  `src/ai/heroOffer.ts` (`useHeroOffer` + `matchOfferIntent`); `buildGreetingWithOffer`;
+  `generateCallBrief` + `CallBriefCard`; `heroRecapExtensions` (open→pipeline→tour + undo);
+  `useCallStore.heroActions`. Design + plan linked in the table above.
+  **Carry to 4C:** Marcus's Palmetto Court property was coerced to multifamily but keeps its
+  old (non-multifamily) generated financials — 4C should seed realistic 48-unit numbers.
 - **4B — Self-arriving inbound email** (⛔): new `draft-reply` generator (REQUIREMENTS
   §3.6), ~10s self-arriving owner email with rent roll + T-12, filed to the deal.
 - **4C — Underwrite + BOV** (⛔): reuse the deterministic underwriting flow
