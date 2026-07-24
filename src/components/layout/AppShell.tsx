@@ -13,6 +13,7 @@ import { GlobalNewContactModal } from "#/components/contacts/GlobalNewContactMod
 import { GlobalAddTaskModal } from "#/components/tasks/GlobalAddTaskModal";
 import { LiveCallBar } from "#/components/call/LiveCallBar";
 import { HeroInboundWatcher } from "#/components/call/HeroInboundWatcher";
+import { BovWatcher } from "#/components/call/BovWatcher";
 import { useDataStore } from "#/data/dataStore";
 
 export function AppShell() {
@@ -30,6 +31,7 @@ export function AppShell() {
           <main className="app-shell__main flex-grow-1 overflow-auto">
             {hydrated && <LiveCallBar />}
             {hydrated && <HeroInboundWatcher />}
+            {hydrated && <BovWatcher />}
             {hydrated ? (
               <Outlet />
             ) : (

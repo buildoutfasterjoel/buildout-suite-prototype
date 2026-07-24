@@ -47,6 +47,8 @@ import type { CallBriefSpecT } from "#/ai/generate/schemas";
 import { InboundEmailCard } from "#/components/call/InboundEmailCard";
 import { useInboundEmail } from "#/components/call/useInboundEmail";
 import { inboundSummaryText } from "#/components/call/heroInbound";
+import { BovCard } from "#/components/call/BovCard";
+import { useBovDraft, bovSummaryText } from "#/components/call/useBovDraft";
 
 /** Shown instead of sending when the server has no Anthropic key configured. */
 const NOT_CONFIGURED_MESSAGE =
@@ -559,6 +561,21 @@ export function AssistantSidebar() {
     void voiceEngine.speak(inboundSummaryText(inbound)); // one-way: no re-arm
   }, [inbound, voiceEnabled]);
 
+  // Speak the BOV draft's summary once when it appears (Otto drafts the BOV,
+  // §Phase 4C). Also a one-way report — it must NOT enter conversationMode or
+  // re-arm the mic.
+  const bovDraft = useBovDraft((s) => s.draft);
+  const spokenBovRef = useRef<object | null>(null);
+  useEffect(() => {
+    if (!bovDraft || bovDraft === spokenBovRef.current) return;
+    spokenBovRef.current = bovDraft;
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    });
+    if (!voiceEnabled) return;
+    void voiceEngine.speak(bovSummaryText(bovDraft)); // one-way: no re-arm
+  }, [bovDraft, voiceEnabled]);
+
   // Presenter kill-switch: Escape silences Otto instantly and ends conversation.
   useHotkey("Escape", () => {
     voiceEngine.cancel();
@@ -661,6 +678,9 @@ export function AssistantSidebar() {
         {/* The inbound owner email self-arrives after the recap (§Phase 4B) —
             render it at the bottom of the flow too, chronologically after the recap. */}
         <InboundEmailCard />
+        {/* The BOV draft self-arrives after the underwriting result is ready
+            (§Phase 4C) — render it at the bottom of the flow too. */}
+        <BovCard />
       </div>
 
       {/* Call brief (Phase 4A "brief me first") + the hero-offer chips */}
