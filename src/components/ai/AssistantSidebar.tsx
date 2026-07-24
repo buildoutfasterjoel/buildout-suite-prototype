@@ -44,6 +44,9 @@ import { signalText } from "#/data/signal";
 import { generateCallBrief, callBriefFallback } from "#/ai/generate";
 import { CallBriefCard } from "#/components/call/CallBriefCard";
 import type { CallBriefSpecT } from "#/ai/generate/schemas";
+import { InboundEmailCard } from "#/components/call/InboundEmailCard";
+import { useInboundEmail } from "#/components/call/useInboundEmail";
+import { inboundSummaryText } from "#/components/call/heroInbound";
 
 /** Shown instead of sending when the server has no Anthropic key configured. */
 const NOT_CONFIGURED_MESSAGE =
@@ -542,6 +545,20 @@ export function AssistantSidebar() {
     void voiceEngine.speak(spoken); // no re-arm: not in conversationMode
   }, [recap, recapTarget, voiceEnabled]);
 
+  // Speak the inbound owner-email summary once when it self-arrives (§Phase 4B).
+  // Also a one-way report — it must NOT enter conversationMode or re-arm the mic.
+  const inbound = useInboundEmail((s) => s.inbound);
+  const spokenInboundRef = useRef<object | null>(null);
+  useEffect(() => {
+    if (!inbound || inbound === spokenInboundRef.current) return;
+    spokenInboundRef.current = inbound;
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    });
+    if (!voiceEnabled) return;
+    void voiceEngine.speak(inboundSummaryText(inbound)); // one-way: no re-arm
+  }, [inbound, voiceEnabled]);
+
   // Presenter kill-switch: Escape silences Otto instantly and ends conversation.
   useHotkey("Escape", () => {
     voiceEngine.cancel();
@@ -641,6 +658,9 @@ export function AssistantSidebar() {
             flow (after the messages), not the top, so the conversation reads
             chronologically. */}
         {recap && <CallRecapCard />}
+        {/* The inbound owner email self-arrives after the recap (§Phase 4B) —
+            render it at the bottom of the flow too, chronologically after the recap. */}
+        <InboundEmailCard />
       </div>
 
       {/* Call brief (Phase 4A "brief me first") + the hero-offer chips */}
