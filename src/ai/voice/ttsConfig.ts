@@ -6,7 +6,7 @@
  */
 const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
 
-/** Warm, neutral "Al" delivery. Default: ElevenLabs "Adam". */
+/** Warm, neutral "Otto" delivery. Default: ElevenLabs "Adam". */
 export const AL_VOICE_ID = env.ELEVENLABS_AL_VOICE_ID || "pNInz6obpgDQGcFmaJgB";
 
 /** Low-latency, low-credit model for hands-free + the Phase-3 live call. */

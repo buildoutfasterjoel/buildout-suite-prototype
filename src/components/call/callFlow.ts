@@ -129,7 +129,7 @@ export const callFlow = {
   open(contact: Contact, phone?: string) {
     clearAll();
     session += 1;
-    voiceEngine.cancel(); // Al goes quiet
+    voiceEngine.cancel(); // Otto goes quiet
     _stopForCall?.(); // mic can't capture call audio (§5.3)
     useCallStore.getState().startTarget({
       contactId: contact.id,

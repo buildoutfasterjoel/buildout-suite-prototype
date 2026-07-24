@@ -13,7 +13,7 @@ import { useAddTask } from "#/data/useAddTask";
 import { emptyDraft } from "#/data/createListing";
 
 /**
- * "Al reports" recap card (Phase-3 design §6.1). Renders when useCallStore.recap
+ * "Otto reports" recap card (Phase-3 design §6.1). Renders when useCallStore.recap
  * is set, after a call ends. Drafts follow-up tasks (keep / edit / drop) and can
  * open an opportunity. Kept tasks + the opportunity create real records.
  */

@@ -410,8 +410,8 @@ export function AssistantSidebar() {
   const setConversationMode = useVoice((s) => s.setConversationMode);
   const speakNextReplyRef = useRef(false);
 
-  // Hands-free: submit final transcript to Al, and mark that the reply should
-  // be spoken back so the loop can re-arm after Al finishes.
+  // Hands-free: submit final transcript to Otto, and mark that the reply should
+  // be spoken back so the loop can re-arm after Otto finishes.
   const { start: startHandsFree, stopForCall } = useHandsFree({
     onSubmit: (text) => {
       speakNextReplyRef.current = true;
@@ -433,7 +433,7 @@ export function AssistantSidebar() {
     onEnterConversation: () => startHandsFree(),
   });
 
-  // Speak Al's reply when a voice turn completes, then re-arm the mic.
+  // Speak Otto's reply when a voice turn completes, then re-arm the mic.
   const prevLoading = useRef(isLoading);
   useEffect(() => {
     const finished = prevLoading.current && !isLoading;
@@ -452,7 +452,7 @@ export function AssistantSidebar() {
     });
   }, [isLoading, messages, voiceEnabled, startHandsFree]);
 
-  // Speak the hang-up recap once when it appears (Al reports, §6.1). This is a
+  // Speak the hang-up recap once when it appears (Otto reports, §6.1). This is a
   // one-way report — it must NOT enter conversationMode or re-arm the mic.
   const recap = useCallStore((s) => s.recap);
   const recapTarget = useCallStore((s) => s.target);
@@ -469,7 +469,7 @@ export function AssistantSidebar() {
     void voiceEngine.speak(recapSpeechText(message)); // no re-arm: not in conversationMode
   }, [recap, recapTarget, voiceEnabled]);
 
-  // Presenter kill-switch: Escape silences Al instantly and ends conversation.
+  // Presenter kill-switch: Escape silences Otto instantly and ends conversation.
   useHotkey("Escape", () => {
     voiceEngine.cancel();
     setConversationMode(false);

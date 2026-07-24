@@ -23,7 +23,7 @@ interface AssistantUIState {
   consumePrompt: () => string | null;
   /** Bumped whenever a surface requests the composer input be focused. */
   focusNonce: number;
-  /** True once Al has greeted the broker this session (greeting fires once). */
+  /** True once Otto has greeted the broker this session (greeting fires once). */
   greetedThisSession: boolean;
   setGreeted: (greeted: boolean) => void;
 }

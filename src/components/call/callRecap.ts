@@ -7,7 +7,7 @@ const SENTIMENT_LABEL: Record<CallRecapSpecT["sentiment"], string> = {
 };
 
 /**
- * Turn a CallRecapSpec into the "Al reports" message (light HTML) plus the
+ * Turn a CallRecapSpec into the "Otto reports" message (light HTML) plus the
  * interactive card payload. Pure — no store or data writes here.
  */
 export function composeRecapReport(

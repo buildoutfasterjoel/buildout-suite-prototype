@@ -18,7 +18,7 @@ describe("synthesizeResponse", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe("audio/mpeg");
     const url = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
-    expect(url).toContain(AL_VOICE_ID); // unknown voice fell back to Al
+    expect(url).toContain(AL_VOICE_ID); // unknown voice fell back to Otto
   });
 
   it("caps text at 4000 chars before sending", async () => {

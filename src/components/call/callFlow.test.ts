@@ -35,7 +35,7 @@ describe("callFlow", () => {
     registerStopForCall(null);
   });
 
-  it("open() silences Al, kills the mic, and starts the countdown at 5", () => {
+  it("open() silences Otto, kills the mic, and starts the countdown at 5", () => {
     const stop = vi.fn();
     registerStopForCall(stop);
     callFlow.open(CONTACT);

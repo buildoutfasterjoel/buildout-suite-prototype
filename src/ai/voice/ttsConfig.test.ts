@@ -7,12 +7,12 @@ describe("ttsConfig", () => {
     expect(resolveVoiceId(known)).toBe(known);
   });
 
-  it("falls back to the Al voice for an unknown id", () => {
+  it("falls back to the Otto voice for an unknown id", () => {
     expect(resolveVoiceId("not-a-real-voice")).toBe(AL_VOICE_ID);
     expect(resolveVoiceId(undefined)).toBe(AL_VOICE_ID);
   });
 
-  it("includes the Al voice and every owner voice in the whitelist", () => {
+  it("includes the Otto voice and every owner voice in the whitelist", () => {
     expect(ALLOWED_VOICE_IDS.has(AL_VOICE_ID)).toBe(true);
     for (const id of [...OWNER_VOICES.female, ...OWNER_VOICES.male]) {
       expect(ALLOWED_VOICE_IDS.has(id)).toBe(true);
