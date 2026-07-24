@@ -33,7 +33,7 @@ function getRecognitionCtor(): SpeechRecognitionCtor | null {
 export function useHandsFree(opts: { onSubmit: (text: string) => void }) {
   const setListening = useVoice((s) => s.setListening);
   const setConversationMode = useVoice((s) => s.setConversationMode);
-  const recRef = useRef<ReturnType<SpeechRecognitionCtor> | null>(null);
+  const recRef = useRef<InstanceType<SpeechRecognitionCtor> | null>(null);
   const silenceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transcriptRef = useRef("");
