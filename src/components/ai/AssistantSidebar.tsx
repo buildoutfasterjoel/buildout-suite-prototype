@@ -31,13 +31,19 @@ import { useVoice } from "#/ai/voice/useVoice";
 import { voiceEngine } from "#/ai/voice/voiceEngine";
 import { useHandsFree } from "#/ai/voice/useHandsFree";
 import { useGreeting } from "#/ai/voice/useGreeting";
-import { registerStopForCall } from "#/components/call/callFlow";
+import { registerStopForCall, callFlow } from "#/components/call/callFlow";
 import { useCallStore } from "#/components/call/useCallStore";
 import { CallRecapCard } from "#/components/call/CallRecapCard";
 import { composeRecapReport, recapSpeechText } from "#/components/call/callRecap";
 import { DealCardById } from "#/components/deals/DealCard";
 import { EmailDraftCard, type EmailDraftCardData } from "#/components/ai/EmailDraftCard";
 import { formatCurrency } from "#/components/deals/dealDisplay";
+import { useHeroOffer, matchOfferIntent } from "#/ai/heroOffer";
+import { getContact } from "#/data/store";
+import { signalText } from "#/data/signal";
+import { generateCallBrief } from "#/ai/generate";
+import { CallBriefCard } from "#/components/call/CallBriefCard";
+import type { CallBriefSpecT } from "#/ai/generate/schemas";
 
 /** Shown instead of sending when the server has no Anthropic key configured. */
 const NOT_CONFIGURED_MESSAGE =
@@ -328,6 +334,25 @@ function MessageBubble({ message }: { message: UIMessage }) {
   );
 }
 
+/** The hero offer's quick-response chips ("Yes, call now" / "Brief me first").
+ * Reads the offer reactively so it disappears the moment `send` clears it, and
+ * calls `send(...)` for both so the click path shares the exact same routing as
+ * voice/typed input. */
+function HeroOfferChips({ onCall, onBrief }: { onCall: () => void; onBrief: () => void }) {
+  const offer = useHeroOffer((s) => s.pendingOffer);
+  if (!offer) return null;
+  return (
+    <div className="d-flex gap-2 px-3 pb-2">
+      <Button variant="primary" size="sm" onClick={onCall}>
+        Yes, call now
+      </Button>
+      <Button variant="outline" size="sm" onClick={onBrief}>
+        Brief me first
+      </Button>
+    </div>
+  );
+}
+
 export function AssistantSidebar() {
   const open = useAssistant((s) => s.open);
   const setOpen = useAssistant((s) => s.setOpen);
@@ -335,6 +360,9 @@ export function AssistantSidebar() {
   const consumePrompt = useAssistant((s) => s.consumePrompt);
   const focusNonce = useAssistant((s) => s.focusNonce);
   const [draft, setDraft] = useState("");
+  const [brief, setBrief] = useState<{ spec: CallBriefSpecT; name: string; contactId: string } | null>(
+    null,
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
@@ -379,6 +407,44 @@ export function AssistantSidebar() {
       const content = text.trim();
       if (!content || isLoading) return;
       setDraft("");
+
+      // A pending hero offer (§Phase 4A) takes priority over the normal agent
+      // turn: "yes" opens the live call, "brief me first" generates a call
+      // brief, and anything else clears the offer and falls through below.
+      const offer = useHeroOffer.getState().pendingOffer;
+      if (offer) {
+        const intent = matchOfferIntent(content);
+        if (intent) {
+          useHeroOffer.getState().clearOffer();
+          setDraft("");
+          const contact = getContact(offer.contactId);
+          if (contact && intent === "call") {
+            callFlow.open(contact);
+            return;
+          }
+          if (contact && intent === "brief") {
+            void generateCallBrief({
+              data: {
+                candidate: {
+                  name: `${contact.firstName} ${contact.lastName}`.trim(),
+                  role: contact.role,
+                  entity: contact.company,
+                  note: contact.notes ?? "",
+                  phone: contact.phone,
+                },
+                property: null,
+                signal: contact.signal?.detail ?? signalText(contact),
+                firstName: contact.firstName,
+              },
+            }).then((spec) =>
+              setBrief({ spec, name: `${contact.firstName} ${contact.lastName}`.trim(), contactId: contact.id }),
+            );
+            return;
+          }
+        } else {
+          useHeroOffer.getState().clearOffer(); // fall through to the agent
+        }
+      }
 
       if (configuredRef.current === false) {
         const stamp = Date.now();
@@ -569,6 +635,24 @@ export function AssistantSidebar() {
             chronologically. */}
         {recap && <CallRecapCard />}
       </div>
+
+      {/* Call brief (Phase 4A "brief me first") + the hero-offer chips */}
+      {brief && (
+        <div className="px-3 pb-2">
+          <CallBriefCard
+            brief={brief.spec}
+            contactName={brief.name}
+            onCall={() => {
+              const c = getContact(brief.contactId);
+              if (c) {
+                setBrief(null);
+                callFlow.open(c);
+              }
+            }}
+          />
+        </div>
+      )}
+      <HeroOfferChips onCall={() => send("yes")} onBrief={() => send("brief me first")} />
 
       {/* Suggested actions (only before the first message, and not under a recap) */}
       {messages.length === 0 && !recap && (
