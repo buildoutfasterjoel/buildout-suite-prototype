@@ -563,8 +563,8 @@ export function AssistantSidebar() {
         )}
       </div>
 
-      {/* Suggested actions (only before the first message) */}
-      {messages.length === 0 && (
+      {/* Suggested actions (only before the first message, and not under a recap) */}
+      {messages.length === 0 && !recap && (
         <div className="px-3 pb-2 d-flex flex-wrap gap-2">
           {SUGGESTIONS.map((s) => (
             <Button key={s.label} variant="outline" size="sm" onClick={() => setDraft(s.prompt)}>

@@ -81,7 +81,7 @@ export function CallRecapCard() {
       dealSide: "seller",
     });
     setOppOpen(true);
-    router.navigate({ to: `/listings/${deal.id}` as never });
+    router.navigate({ to: "/listings/$listingId", params: { listingId: deal.id } });
   };
 
   const dismiss = () => {

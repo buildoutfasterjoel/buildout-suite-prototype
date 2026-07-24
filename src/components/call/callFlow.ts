@@ -31,6 +31,18 @@ let ticker: ReturnType<typeof setInterval> | null = null;
 let ringLoop: ReturnType<typeof setInterval> | null = null;
 let connectedAt = 0;
 
+/** The owner-persona note is the broker's strategic note only — strip the dated
+ * call-log lines addNote() appends on hang-up so a prior call's recap never
+ * feeds back into the next call's role-play. */
+export function personaNote(notes: string | undefined): string {
+  if (!notes) return "";
+  return notes
+    .split("\n")
+    .filter((l) => !/^\d{4}-\d{2}-\d{2}: Call with /.test(l))
+    .join("\n")
+    .trim();
+}
+
 function later(fn: () => void, ms: number) {
   timers.push(setTimeout(fn, ms));
 }
@@ -127,7 +139,7 @@ export const callFlow = {
       initials: contactInitials(contact),
       firstName: contact.firstName,
       role: contact.role,
-      note: contact.notes ?? "",
+      note: personaNote(contact.notes),
     });
     let n = 5;
     const step = () => {

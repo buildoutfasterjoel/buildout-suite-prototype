@@ -17,7 +17,7 @@ vi.mock("#/ai/generate", () => ({
   })),
 }));
 
-import { callFlow, registerStopForCall } from "./callFlow";
+import { callFlow, registerStopForCall, personaNote } from "./callFlow";
 import { useCallStore } from "./useCallStore";
 import { generateCallTurn, generateCallRecap } from "#/ai/generate";
 import { addNote } from "#/data/actions";
@@ -104,5 +104,59 @@ describe("callFlow", () => {
     expect(addNote).toHaveBeenCalled(); // logging the completed call is unconditional
     expect(useCallStore.getState().recap).toBeNull(); // stale recap dropped, not surfaced
     expect(useCallStore.getState().phase).toBe("calling"); // new call's phase left untouched
+  });
+
+  it("drops an in-flight owner reply if hangUp happens before it resolves (talk-over guard)", async () => {
+    callFlow.open(CONTACT);
+    await vi.advanceTimersByTimeAsync(900 * 5 + 3400 + 10); // countdown + ring → connect
+    await vi.runOnlyPendingTimersAsync();
+    await Promise.resolve(); // flush the opening owner turn seeded by toConnected
+
+    expect(speak).toHaveBeenCalledTimes(1); // opening owner line spoken once
+
+    let resolveTurn: (v: Awaited<ReturnType<typeof generateCallTurn>>) => void = () => {};
+    vi.mocked(generateCallTurn).mockImplementationOnce(
+      () => new Promise((resolve) => { resolveTurn = resolve; }),
+    );
+
+    callFlow.submitLine("Got a sec?"); // owner turn now pending on the deferred above
+
+    callFlow.hangUp(); // hang up BEFORE the in-flight turn resolves — bumps session, resets store
+    expect(useCallStore.getState().phase).toBe("idle");
+    expect(useCallStore.getState().transcript).toHaveLength(0);
+
+    resolveTurn({ ownerReply: "Sure, what's up?", suggestions: [], shouldEnd: false });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // The guard (`mySession !== session || phase !== "connected"`, re-checked after
+    // the await) must drop this turn silently: no extra speak, no appended line.
+    // Without the guard, appendLine/speak would fire against the post-hangup store.
+    expect(speak).toHaveBeenCalledTimes(1); // no 2nd call for the dropped reply
+    expect(useCallStore.getState().transcript).toHaveLength(0); // still empty — not regrown
+    expect(
+      useCallStore.getState().transcript.some((l) => l.text === "Sure, what's up?"),
+    ).toBe(false);
+  });
+});
+
+describe("personaNote", () => {
+  it("returns the broker's strategic prose unchanged when there are no call-log lines", () => {
+    expect(personaNote("Retiring in 2 years, price sensitive.")).toBe(
+      "Retiring in 2 years, price sensitive.",
+    );
+  });
+
+  it("strips addNote()'s dated call-log lines, keeping only the strategic note", () => {
+    const notes =
+      "Retiring in 2 years, price sensitive.\n" +
+      "2026-07-20: Call with Marcus Pinckney — positive. Open to a valuation.\n" +
+      "2026-07-24: Call with Marcus Pinckney — neutral. Asked for more time.";
+    expect(personaNote(notes)).toBe("Retiring in 2 years, price sensitive.");
+  });
+
+  it("returns an empty string for empty or undefined notes", () => {
+    expect(personaNote(undefined)).toBe("");
+    expect(personaNote("")).toBe("");
   });
 });
