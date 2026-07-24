@@ -460,6 +460,10 @@ export function AssistantSidebar() {
   useEffect(() => {
     if (!recap || recap === spokenRecapRef.current) return;
     spokenRecapRef.current = recap;
+    // Scroll the recap into view at the bottom of the flow (regardless of voice).
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    });
     if (!voiceEnabled) return;
     const { message } = composeRecapReport(recap, recapTarget?.name ?? "your contact");
     void voiceEngine.speak(recapSpeechText(message)); // no re-arm: not in conversationMode
@@ -537,7 +541,6 @@ export function AssistantSidebar() {
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-grow-1 overflow-auto p-3 d-flex flex-column gap-2">
-        {recap && <CallRecapCard />}
         {messages.length === 0 && !recap ? (
           <div className="text-muted small">
             Ask about your properties, contacts, and deals — or have me draft an email, build a
@@ -561,6 +564,10 @@ export function AssistantSidebar() {
         {error && (
           <div className="text-danger small">Something went wrong: {error.message}</div>
         )}
+        {/* The hang-up recap is the newest event — render it at the BOTTOM of the
+            flow (after the messages), not the top, so the conversation reads
+            chronologically. */}
+        {recap && <CallRecapCard />}
       </div>
 
       {/* Suggested actions (only before the first message, and not under a recap) */}
