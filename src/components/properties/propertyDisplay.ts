@@ -126,8 +126,24 @@ export function crePhotoUrl(photoId: string, w = 480, h = 280): string {
   return `https://images.unsplash.com/${photoId}?w=${w}&h=${h}&fit=crop&auto=format&q=75`;
 }
 
+/**
+ * Resolves a property/listing id to a hand-pinned photo id (story properties
+ * whose imagery must match their asset class, e.g. Rosa's multifamily
+ * building). Registered by the data store rather than imported from it — this
+ * module is already in the store's import graph via emails.ts, so importing
+ * the store here would create a cycle that breaks store creation.
+ */
+let pinnedPhotoResolver: ((id: string) => string | undefined) | null = null;
+
+export function registerPinnedPhotoResolver(
+  resolve: (id: string) => string | undefined,
+): void {
+  pinnedPhotoResolver = resolve;
+}
+
 /** Deterministic commercial-real-estate photo for a property/deal. */
 export function getPhotoUrl(id: string, w = 480, h = 280): string {
-  const photo = CRE_PHOTO_IDS[hash(id) % CRE_PHOTO_IDS.length];
+  const photo =
+    pinnedPhotoResolver?.(id) ?? CRE_PHOTO_IDS[hash(id) % CRE_PHOTO_IDS.length];
   return crePhotoUrl(photo, w, h);
 }

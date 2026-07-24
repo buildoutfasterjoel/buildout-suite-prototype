@@ -1598,8 +1598,9 @@ interface HeroFixture {
    * A property the hero owns outright with no deal on it yet — generated
    * fresh (so it carries no listings) and named on-story. It becomes the
    * hero's only linked property and shows under "Properties Owned".
+   * `photoId` pins its imagery to a matching asset-class photo.
    */
-  ownedProperty?: { name: string; propertyType: PropertyType }
+  ownedProperty?: { name: string; propertyType: PropertyType; photoId?: string }
   /**
    * Story-specific name for the hero's property + deal (e.g. Earl's
    * "The Thompson Block"). Renames the claimed listing's property and every
@@ -1627,7 +1628,14 @@ const HERO_FIXTURES: HeroFixture[] = [
     openTaskCount: 1,
     deal: null,
     // The corner building she and Miguel bought together — owned, not listed.
-    ownedProperty: { name: 'The Delgado Building', propertyType: 'mixed-use' },
+    // Multifamily so the Cactus underwriting flow's supported-asset-class gate
+    // (see eligibility.ts) naturally applies to her deal; the pinned photo is
+    // the pool's multifamily building so imagery matches the asset class.
+    ownedProperty: {
+      name: 'The Delgado Building',
+      propertyType: 'multifamily',
+      photoId: 'photo-1515263487990-61b07816b324',
+    },
   },
   {
     heroKey: 'earl',
@@ -1781,6 +1789,7 @@ function applyHeroes(
       p.name = h.ownedProperty.name
       p.slug =
         p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + p.id.slice(0, 6)
+      p.photoId = h.ownedProperty.photoId
       // Owned, not on the market — no listing exists for it.
       p.status = 'inactive'
       properties.push(p)
