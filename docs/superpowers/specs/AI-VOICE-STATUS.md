@@ -21,7 +21,7 @@ should read before picking up work.
 | ↳ 4A — Signal + greeting + recap hero-extensions | ✅ Built (smoke-test pending) | `2026-07-24-ai-phase-4a-signal-greeting-recap-extensions-design.md` | `../plans/2026-07-24-ai-phase-4a-signal-greeting-recap-extensions.md` |
 | ↳ 4B — Self-arriving inbound email | ✅ Built (smoke-test pending) | `2026-07-24-ai-phase-4b-self-arriving-inbound-email-design.md` | `../plans/2026-07-24-ai-phase-4b-self-arriving-inbound-email.md` |
 | ↳ 4C — Underwrite + BOV | ✅ Built (smoke-test pending) | `2026-07-24-ai-phase-4c-underwrite-bov-design.md` | `../plans/2026-07-24-ai-phase-4c-underwrite-bov.md` |
-| ↳ 4D — The director (sequences 4A→4B→4C) | ⛔ Not started | — | — |
+| ↳ 4D — The director (reset/replay + loop-closing beat) | 📐 Designed (plan ready) | `2026-07-24-ai-phase-4d-director-reset-replay-design.md` | `../plans/2026-07-24-ai-phase-4d-director-reset-replay.md` |
 
 > Git history on `joel/ai-tools` is the authoritative build record — each task is its own
 > descriptive commit (`git log --oneline`).
