@@ -19,9 +19,14 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { createClientTools } from "#/ai/tools";
-import { aiChat } from "#/ai/relay";
+import { aiChat, aiConfigured } from "#/ai/relay";
+import { buildAssistantContext, serializeContext } from "#/ai/context";
 import { useAssistant } from "#/ai/useAssistant";
 import { DealCardById } from "#/components/deals/DealCard";
+
+/** Shown instead of sending when the server has no Anthropic key configured. */
+const NOT_CONFIGURED_MESSAGE =
+  "The assistant isn't configured — no API key — so I can't run AI actions right now.";
 
 /** Human label for the context chip, derived from the current route. */
 function scopeLabel(pathname: string): string {
@@ -222,22 +227,61 @@ export function AssistantSidebar() {
 
   const fetcher = useCallback(
     ({ messages }: { messages: Array<UIMessage> }, { signal }: { signal: AbortSignal }) =>
-      aiChat({ data: { messages }, signal }),
+      aiChat({ data: { messages, context: serializeContext(buildAssistantContext()) }, signal }),
     [],
   );
 
-  const { messages, sendMessage, isLoading, error, stop } = useChat({ fetcher, tools });
+  const { messages, sendMessage, setMessages, isLoading, error, stop } = useChat({ fetcher, tools });
+
+  // Checked once (and cached) so the panel never hands `useChat` a stream from
+  // an unconfigured server — a missing key is resolved entirely client-side,
+  // before any network call to the agent itself. `null` = "not checked yet",
+  // and an unreachable/erroring check fails open (treated as configured) so a
+  // flaky check doesn't block a working assistant; the normal error banner
+  // covers that path instead.
+  const configuredRef = useRef<boolean | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void aiConfigured()
+      .then((res) => {
+        if (!cancelled) configuredRef.current = res.configured;
+      })
+      .catch(() => {
+        if (!cancelled) configuredRef.current = true;
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const send = useCallback(
     (text: string) => {
       const content = text.trim();
       if (!content || isLoading) return;
       setDraft("");
+
+      if (configuredRef.current === false) {
+        const stamp = Date.now();
+        setMessages([
+          ...messages,
+          { id: `local-${stamp}-user`, role: "user", parts: [{ type: "text", content }] },
+          {
+            id: `local-${stamp}-assistant`,
+            role: "assistant",
+            parts: [{ type: "text", content: NOT_CONFIGURED_MESSAGE }],
+          },
+        ]);
+        requestAnimationFrame(() => {
+          scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+        });
+        return;
+      }
+
       void sendMessage(content).then(() => {
         scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
       });
     },
-    [isLoading, sendMessage],
+    [isLoading, sendMessage, setMessages, messages],
   );
 
   // A prompt queued from another surface (e.g. omni search "Ask AI") is sent as
