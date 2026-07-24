@@ -1877,6 +1877,13 @@ function applyHeroes(
       properties.push(p)
       host.propertyIds = [p.id]
       host.ownedPropertyIds = [p.id]
+      // A contact's address matches the property they own, so the contact
+      // record and its owned building read as one place (e.g. Rosa Delgado's
+      // address is The Delgado Building's).
+      host.street = p.street
+      host.city = p.city
+      host.state = p.state
+      host.zip = p.zip
     }
 
     if (!h.deal) return
