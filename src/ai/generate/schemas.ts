@@ -1,4 +1,4 @@
-import z from "zod";
+import { z } from "zod";
 
 /** §3.1 listing filter. savedView enum matches the requirements doc. */
 export const FilterSpec = z.object({
