@@ -74,6 +74,10 @@ function createVoiceEngine() {
     try {
       if (!res.ok) return speakViaBrowser(text, gen); // 503/502 → fallback
       url = URL.createObjectURL(await res.blob());
+      if (!guard.isCurrent(gen)) {                    // superseded during blob read — drop, avoid leak
+        URL.revokeObjectURL(url);
+        return;
+      }
     } catch {
       return speakViaBrowser(text, gen);
     }
