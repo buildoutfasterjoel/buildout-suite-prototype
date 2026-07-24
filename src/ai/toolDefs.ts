@@ -323,7 +323,7 @@ export const draftEmailDef = toolDefinition({
 export const addNoteDef = toolDefinition({
   name: "add_note",
   description:
-    "Save a note on a contact's record. If the note is task-oriented the app auto-creates a follow-up; do NOT also call create_task for the same thing.",
+    "Save a note on a contact's record. If the note also implies a follow-up action (a call, email, or reminder), ALSO call create_task for it so the reminder actually gets scheduled.",
   inputSchema: {
     type: "object",
     properties: {

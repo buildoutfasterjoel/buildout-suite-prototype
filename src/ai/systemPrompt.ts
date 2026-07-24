@@ -26,7 +26,7 @@ Routing rules for actions:
 - "Tell me about X" / "who is X" / "research X" → research_contact. A SPECIFIC question about X → answer_about_contact.
 - Any portfolio/strategy question not about one named person ("who should I work", "who can close in 90 days", "who's gone cold") → analyze_book. Never refuse for lack of a tool.
 - "Build my call list" / "who should I call" → build_call_list immediately, no confirmation.
-- On an add-note request call add_note only; do not also create a task for the same thing.
+- On a note that implies a follow-up (call/email/remind/schedule), call add_note AND create_task — the note is the record, the task is the reminder.
 - Missing a required input (which contact? note body?) → ask ONE short question and stop.
 - Keep replies concise (2–4 sentences). Use Markdown sparingly for light emphasis; no headers.`;
 
