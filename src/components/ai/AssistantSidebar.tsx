@@ -201,9 +201,16 @@ function MessageBubble({ message }: { message: UIMessage }) {
     .filter((p): p is Extract<typeof p, { type: "text" }> => p.type === "text")
     .map((p) => p.content)
     .join("");
-  const toolCalls = message.parts.filter(
+  const rawToolCalls = message.parts.filter(
     (p): p is Extract<typeof p, { type: "tool-call" }> => p.type === "tool-call",
   );
+  // De-dup rule (§4.3): add_note already auto-creates a follow-up, so if the
+  // same assistant turn also returned a create_task call, drop it — otherwise
+  // the broker would see (and the store would gain) a redundant task.
+  const hasAddNote = rawToolCalls.some((p) => p.name === "add_note");
+  const toolCalls = hasAddNote
+    ? rawToolCalls.filter((p) => p.name !== "create_task")
+    : rawToolCalls;
   const cardCalls = toolCalls.filter((p) => {
     const { deals, contacts } = entitiesOf(p.output);
     return (

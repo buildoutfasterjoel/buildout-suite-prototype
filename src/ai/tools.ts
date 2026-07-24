@@ -25,7 +25,11 @@ import {
   linkContactToDeal,
   createEmailDraft,
   createCallList,
+  addNote,
+  createTask,
 } from "#/data/actions";
+import { parseDueDate } from "#/ai/dueDate";
+import { buildAssistantContext } from "#/ai/context";
 import { emptyDraft } from "#/data/createListing";
 import {
   getClientReportKpis,
@@ -54,6 +58,11 @@ import {
   answerAboutContactDef,
   analyzeBookDef,
   navigateToDef,
+  addNoteDef,
+  createTaskDef,
+  findContactDef,
+  planMyDayDef,
+  startCallDef,
 } from "./toolDefs";
 
 // ── Compact summaries — keep tool results small for the model ────────────────
@@ -105,6 +114,23 @@ export const propertySummary = (p: Property) => ({
   askingPrice: p.askingPrice,
   capRate: p.capRate,
 });
+
+/**
+ * Resolve a plain-English name to a contact: exact full-name match first,
+ * falling back to a substring match. Used by the Phase-1 client tools
+ * (`add_note`, `create_task`, `start_call`) that take a `contact_name`
+ * argument instead of a resolved id.
+ */
+export function resolveContactByName(name: string): Contact | null {
+  const q = name.trim().toLowerCase();
+  if (!q) return null;
+  const contacts = [...useDataStore.getState().contacts.values()];
+  return (
+    contacts.find((c) => `${c.firstName} ${c.lastName}`.trim().toLowerCase() === q) ??
+    contacts.find((c) => `${c.firstName} ${c.lastName}`.toLowerCase().includes(q)) ??
+    null
+  );
+}
 
 /**
  * Build the browser-executed client tools, matched by name to the shared
@@ -363,6 +389,60 @@ export function createClientTools({
       const { question } = args as { question: string };
       const { answer } = await generateStrategy({ data: { book: composeBookSnapshot(), question } });
       return { answer };
+    }),
+
+    addNoteDef.client(async (args) => {
+      const { contact_name, note_text } = args as { contact_name: string; note_text: string };
+      const c = resolveContactByName(contact_name);
+      if (!c) return { error: `No contact named "${contact_name}".` };
+      addNote(c.id, note_text);
+      return { noted: true, contactId: c.id, contactName: `${c.firstName} ${c.lastName}`.trim() };
+    }),
+
+    createTaskDef.client(async (args) => {
+      const { task_title, contact_name, due } = args as {
+        task_title: string;
+        contact_name?: string;
+        due?: string;
+      };
+      const c = contact_name ? resolveContactByName(contact_name) : null;
+      const { task } = createTask({
+        name: task_title,
+        dueDate: due ? parseDueDate(due) : null,
+        contactId: c?.id ?? null,
+        source: "contact",
+      });
+      return {
+        taskId: task.id,
+        title: task.name,
+        due: task.dueDate,
+        contactName: c ? `${c.firstName} ${c.lastName}`.trim() : null,
+      };
+    }),
+
+    findContactDef.client(async (args) => {
+      const { query } = args as { query: string };
+      return { contacts: searchAll(query).contacts.slice(0, 6).map(contactSummary) };
+    }),
+
+    planMyDayDef.client(async () => {
+      const ctx = buildAssistantContext();
+      const headline =
+        ctx.tasks.overdue > 0
+          ? `You have ${ctx.tasks.overdue} overdue task${ctx.tasks.overdue === 1 ? "" : "s"} — clear those first.`
+          : ctx.tasks.dueToday > 0
+            ? `${ctx.tasks.dueToday} task${ctx.tasks.dueToday === 1 ? "" : "s"} due today. Start at the top of your list.`
+            : "Nothing overdue — good time to prospect. Want me to build a call list?";
+      return { headline, action: "Open tasks" };
+    }),
+
+    startCallDef.client(async (args) => {
+      // Phase 1 stub: announce + navigate. Full live-call flow lands in Phase 3.
+      const { contact_name } = args as { contact_name: string };
+      const c = resolveContactByName(contact_name);
+      if (!c) return { started: false, error: `No contact named "${contact_name}".` };
+      navigate(`/backoffice/contacts/${c.id}`);
+      return { started: true, contactId: c.id, note: "Call flow arrives in Phase 3." };
     }),
   ];
 }

@@ -318,6 +318,70 @@ export const draftEmailDef = toolDefinition({
   },
 });
 
+// ── Client actions (Phase 1, no LLM/key needed) ─────────────────────────────
+
+export const addNoteDef = toolDefinition({
+  name: "add_note",
+  description:
+    "Save a note on a contact's record. If the note is task-oriented the app auto-creates a follow-up; do NOT also call create_task for the same thing.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      contact_name: { type: "string" },
+      note_text: { type: "string" },
+    },
+    required: ["contact_name", "note_text"],
+    additionalProperties: false,
+  },
+});
+
+export const createTaskDef = toolDefinition({
+  name: "create_task",
+  description:
+    "Create a follow-up task/reminder. Use for 'remind me to…' / 'follow up …' — including reminders to CALL someone LATER (a live call NOW is start_call). due is natural language ('friday', 'in 3 days').",
+  inputSchema: {
+    type: "object",
+    properties: {
+      task_title: { type: "string" },
+      contact_name: { type: "string" },
+      due: { type: "string" },
+    },
+    required: ["task_title"],
+    additionalProperties: false,
+  },
+});
+
+export const findContactDef = toolDefinition({
+  name: "find_contact",
+  description:
+    "Search the CRM and show a clickable result card for a person. Use when the broker wants to locate someone.",
+  inputSchema: {
+    type: "object",
+    properties: { query: { type: "string" } },
+    required: ["query"],
+    additionalProperties: false,
+  },
+});
+
+export const planMyDayDef = toolDefinition({
+  name: "plan_my_day",
+  description:
+    "Name the broker's single most important next move right now (headline + action) from their live book. Use for 'what should I do' / 'plan my day' / 'what's next'.",
+  inputSchema: { type: "object", properties: {}, additionalProperties: false },
+});
+
+export const startCallDef = toolDefinition({
+  name: "start_call",
+  description:
+    "Start a call with a contact NOW (opens the call flow). A reminder to call LATER is create_task instead.",
+  inputSchema: {
+    type: "object",
+    properties: { contact_name: { type: "string" } },
+    required: ["contact_name"],
+    additionalProperties: false,
+  },
+});
+
 // ── Navigation ───────────────────────────────────────────────────────────────
 
 export const navigateToDef = toolDefinition({
@@ -356,4 +420,9 @@ export const TOOL_DEFS = [
   answerAboutContactDef,
   analyzeBookDef,
   navigateToDef,
+  addNoteDef,
+  createTaskDef,
+  findContactDef,
+  planMyDayDef,
+  startCallDef,
 ];
