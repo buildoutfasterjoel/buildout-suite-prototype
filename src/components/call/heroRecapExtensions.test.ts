@@ -52,6 +52,7 @@ describe("heroRecapExtensions", () => {
     expect(task.type).toBe("tour");
     expect(task.dueDate).toBe("2026-07-30");
     expect(actions.narration).toContain("pipeline");
+    expect(actions.narration).toContain("Thursday"); // spoken narration uses the weekday, not the raw ISO date
   });
 
   it("undo removes the tour task and pulls the deal out of the pipeline", () => {

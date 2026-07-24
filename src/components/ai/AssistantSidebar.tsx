@@ -532,7 +532,9 @@ export function AssistantSidebar() {
     });
     if (!voiceEnabled) return;
     const { message } = composeRecapReport(recap, recapTarget?.name ?? "your contact");
-    void voiceEngine.speak(recapSpeechText(message)); // no re-arm: not in conversationMode
+    const hero = useCallStore.getState().heroActions;
+    const spoken = hero ? `${recapSpeechText(message)} ${hero.narration}` : recapSpeechText(message);
+    void voiceEngine.speak(spoken); // no re-arm: not in conversationMode
   }, [recap, recapTarget, voiceEnabled]);
 
   // Presenter kill-switch: Escape silences Otto instantly and ends conversation.

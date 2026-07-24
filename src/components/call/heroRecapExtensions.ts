@@ -21,10 +21,19 @@ export function isHeroCall(target: CallTarget | null): boolean {
   return !!getContact(target.contactId)?.signal;
 }
 
+/** Derive the weekday name (e.g. "Thursday") from a "YYYY-MM-DD" ISO date string,
+ * deterministically (no timezone drift from `new Date(isoString)` parsing). */
+function weekdayFromIsoDate(isoDate: string): string {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  if (!y || !m || !d) return "";
+  return new Date(y, m - 1, d).toLocaleDateString("en-US", { weekday: "long" });
+}
+
 export function heroNarration(dealName: string, tourDate: string): string {
+  const weekday = weekdayFromIsoDate(tourDate);
   return (
     `I opened a new opportunity on ${dealName}, moved it into your pipeline, ` +
-    `and put a tour on your calendar for ${tourDate}.`
+    `and put ${weekday ? `${weekday}'s` : "a"} tour on your calendar.`
   );
 }
 
