@@ -83,7 +83,10 @@ function ContactDetailPage() {
   const seqRef = useRef(0);
   const addLog = (draft: ComposedDraft) => {
     const seq = seqRef.current++;
-    setLogged((prev) => [{ ...draft, id: `logged-${seq}`, seq }, ...prev]);
+    setLogged((prev) => [
+      { ...draft, id: `logged-${seq}`, seq, createdAt: new Date().toISOString() },
+      ...prev,
+    ]);
   };
   const liveCall = useLiveCall({ contact: detail?.contact ?? null });
 
