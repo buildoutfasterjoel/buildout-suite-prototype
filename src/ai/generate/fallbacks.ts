@@ -5,6 +5,7 @@ import type {
   CallRecapSpecT,
   CallBriefSpecT,
   DraftReplySpecT,
+  BovSpecT,
 } from "./schemas";
 
 /** §3.1 — deterministic filter when the model is unavailable: dumps the raw
@@ -85,5 +86,27 @@ export function draftReplyFallback(firstName: string): DraftReplySpecT {
       `Good speaking with you. I've attached the current rent roll and the T-12 — ` +
       `take a look and let me know what you think the building could trade for. ` +
       `Talk soon, ${firstName}.`,
+  };
+}
+
+/** §4.1 — deterministic BOV narrative when the model is unavailable: grounds
+ * the headline/rationale in the given value range and notes the occupancy
+ * gap only when a mismatch is present. */
+export function bovFallback(
+  valueLow: number,
+  valueHigh: number,
+  mismatch: { isMismatch: boolean; stated: number; actual: number },
+): BovSpecT {
+  const money = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
+  return {
+    headline: `Positioned at ${money(valueLow)}–${money(valueHigh)} on in-place income.`,
+    rationale:
+      `The range reflects trailing net operating income capitalized at market and adjusted ` +
+      `for the asset's condition and submarket. It brackets a defensible clearing price for a ` +
+      `qualified buyer.`,
+    occupancyNote: mismatch.isMismatch
+      ? `Note: marketing shows ${mismatch.stated}% occupancy, but the T-12 reflects ${mismatch.actual}%. ` +
+        `The value is priced on the lower in-place occupancy.`
+      : "",
   };
 }

@@ -15,5 +15,12 @@ export {
   generateCallRecap,
   generateCallBrief,
   generateDraftReply,
+  generateBov,
 } from "./generators";
-export { callTurnFallback, callRecapFallback, callBriefFallback, draftReplyFallback } from "./fallbacks";
+export {
+  callTurnFallback,
+  callRecapFallback,
+  callBriefFallback,
+  draftReplyFallback,
+  bovFallback,
+} from "./fallbacks";

@@ -69,3 +69,10 @@ export const DRAFT_REPLY_PROMPT = `You role-play a commercial-property OWNER rep
 - tone is one of interested | open | decline — pick what fits this owner and message.
 - If the broker asked for documents (e.g. a rent roll or T-12), acknowledge sending them.
 Return only the structured object.`;
+
+/** §4.1 — Broker Opinion of Value. Justify the GIVEN value range; never invent numbers. */
+export const BOV_PROMPT = `You write a broker's opinion of value (BOV) for a commercial property. You are GIVEN a value range, the asking price, NOI, and cap rate — justify that range; do NOT invent different numbers. Rules:
+- headline: a one-line value thesis (e.g. "Positioned at $5.4M–$6.0M on in-place income").
+- rationale: 2-4 sentences grounding the range in NOI / cap rate / asset class / submarket. CRE-native, no fluff.
+- occupancyNote: if a stated-vs-actual occupancy mismatch is present, explain the gap and that the value reflects the LOWER in-place occupancy; if there is no mismatch, return an EMPTY string.
+Return only the structured object.`;

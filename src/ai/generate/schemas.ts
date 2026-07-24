@@ -101,3 +101,11 @@ export const DraftReplySpec = z.object({
   body: z.string(),
 });
 export type DraftReplySpecT = z.infer<typeof DraftReplySpec>;
+
+/** §4.1 — Broker Opinion of Value narrative (numbers come from bovValueRange, not the LLM). */
+export const BovSpec = z.object({
+  headline: z.string(),
+  rationale: z.string(),
+  occupancyNote: z.string(),
+});
+export type BovSpecT = z.infer<typeof BovSpec>;

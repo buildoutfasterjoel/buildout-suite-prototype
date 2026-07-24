@@ -23,6 +23,8 @@ import {
   type CallBriefSpecT,
   DraftReplySpec,
   type DraftReplySpecT,
+  BovSpec,
+  type BovSpecT,
 } from "./schemas";
 import {
   FILTER_PROMPT,
@@ -36,6 +38,7 @@ import {
   CALL_RECAP_PROMPT,
   CALL_BRIEF_PROMPT,
   DRAFT_REPLY_PROMPT,
+  BOV_PROMPT,
 } from "./prompts";
 import {
   filterFallback,
@@ -44,6 +47,7 @@ import {
   callRecapFallback,
   callBriefFallback,
   draftReplyFallback,
+  bovFallback,
 } from "./fallbacks";
 
 /** §3.1 — plain-English listings query → structured `FilterSpec`, applied to
@@ -291,5 +295,28 @@ export const generateDraftReply = createServerFn({ method: "POST" })
       }),
       schema: DraftReplySpec,
       fallback: () => draftReplyFallback(data.firstName),
+    }),
+  );
+
+/** §4.1 — BOV narrative. REASONING model (synthesis over the deal numbers). */
+export const generateBov = createServerFn({ method: "POST" })
+  .validator(
+    (d: {
+      property: { name: string; address: string };
+      valueLow: number;
+      valueHigh: number;
+      askingPrice: number;
+      noi: number;
+      capRate: number;
+      mismatch: { isMismatch: boolean; stated: number; actual: number };
+    }) => d,
+  )
+  .handler(({ data }): Promise<BovSpecT> =>
+    runGenerator({
+      model: AI_MODEL_REASONING,
+      system: BOV_PROMPT,
+      user: JSON.stringify(data),
+      schema: BovSpec,
+      fallback: () => bovFallback(data.valueLow, data.valueHigh, data.mismatch),
     }),
   );
