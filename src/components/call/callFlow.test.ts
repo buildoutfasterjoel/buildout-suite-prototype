@@ -19,7 +19,8 @@ vi.mock("#/ai/generate", () => ({
 
 import { callFlow, registerStopForCall } from "./callFlow";
 import { useCallStore } from "./useCallStore";
-import { generateCallTurn } from "#/ai/generate";
+import { generateCallTurn, generateCallRecap } from "#/ai/generate";
+import { addNote } from "#/data/actions";
 
 const CONTACT = {
   id: "c1", firstName: "Marcus", lastName: "Pinckney", company: "Pinckney Holdings",
@@ -77,5 +78,31 @@ describe("callFlow", () => {
     await callFlow.endCall();
     expect(useCallStore.getState().phase).toBe("idle");
     expect(useCallStore.getState().recap?.sentiment).toBe("positive");
+  });
+
+  it("drops a stale recap if a new call starts before endCall's fetch resolves", async () => {
+    callFlow.open(CONTACT);
+    await vi.advanceTimersByTimeAsync(900 * 5 + 3400 + 10);
+    useCallStore.getState().appendLine("you", "Hi Marcus");
+
+    let resolveRecap: (v: Awaited<ReturnType<typeof generateCallRecap>>) => void = () => {};
+    vi.mocked(generateCallRecap).mockImplementationOnce(
+      () => new Promise((resolve) => { resolveRecap = resolve; }),
+    );
+
+    const endPromise = callFlow.endCall(); // recap fetch now pending on the deferred above
+
+    callFlow.open(CONTACT); // a new call starts before the recap resolves — bumps session
+    expect(useCallStore.getState().phase).toBe("calling");
+
+    resolveRecap({
+      sentiment: "positive", keyPoints: ["Open to a valuation."],
+      tasks: [{ title: "Send comps", due: null }], opportunity: null,
+    });
+    await endPromise;
+
+    expect(addNote).toHaveBeenCalled(); // logging the completed call is unconditional
+    expect(useCallStore.getState().recap).toBeNull(); // stale recap dropped, not surfaced
+    expect(useCallStore.getState().phase).toBe("calling"); // new call's phase left untouched
   });
 });

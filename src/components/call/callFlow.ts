@@ -170,6 +170,7 @@ export const callFlow = {
     const transcript = st.transcript.map((l) => ({ speaker: l.speaker, text: l.text }));
     clearAll();
     session += 1; // invalidate any in-flight owner turn / audio
+    const mySession = session;
     voiceEngine.cancel();
     useCallStore.setState({
       phase: "idle",
@@ -198,10 +199,13 @@ export const callFlow = {
       };
     }
     // Log the call to the contact's record (persists; replaces the old LogCallModal).
+    // Always logged — the call happened — even if a newer call supersedes the UI below.
     addNote(
       target.contactId,
       `Call with ${target.name} — ${recap.sentiment}. ${recap.keyPoints.join(" ")}`.trim(),
     );
+    // A new call/hangup took over during recap generation — don't surface a stale recap.
+    if (mySession !== session) return;
     useCallStore.getState().setRecap(recap);
     useAssistant.getState().setOpen(true); // sidebar renders + speaks the recap
   },
