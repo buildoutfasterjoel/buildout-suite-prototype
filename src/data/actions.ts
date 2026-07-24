@@ -600,6 +600,26 @@ export function updateContact(
 }
 
 /**
+ * Append a timestamped note line to a contact's freeform `notes` and persist.
+ * Used by the AI `add_note` tool and any manual note affordance.
+ */
+export function addNote(contactId: string, text: string): { contact: Contact | null } {
+  const existing = useDataStore.getState().contacts.get(contactId)
+  if (!existing) return { contact: null }
+  const stamp = new Date().toISOString().slice(0, 10)
+  const line = `${stamp}: ${text.trim()}`
+  const notes = existing.notes ? `${existing.notes}\n${line}` : line
+  const contact: Contact = { ...existing, notes }
+  useDataStore.setState((s) => {
+    const contacts = new Map(s.contacts)
+    contacts.set(contactId, contact)
+    return { contacts }
+  })
+  useDataStore.getState().persist()
+  return { contact }
+}
+
+/**
  * Create a lightweight CRM contact — enough to link as a deal party from the
  * create-deal flow when no existing contact matches. Non-essential CRM fields
  * default to blank/neutral values; the broker can enrich later.
