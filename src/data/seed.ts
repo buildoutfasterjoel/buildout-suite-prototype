@@ -751,7 +751,7 @@ function generateComp(propertyId: string, buildingSqFt: number, propertyType: Pr
 // ── Contact generator ─────────────────────────────────────────────────────────
 
 /** Team members a contact can be assigned to — weighted to a single lead broker. */
-const ASSIGNEES = ['J. Whitfield', 'A. Mendez', 'R. Patel', 'S. Kim']
+const ASSIGNEES = ['E. Thompson', 'A. Mendez', 'R. Patel', 'S. Kim']
 
 /** CRE-flavored job titles for the contact's position line. */
 const TITLE_POOL = [

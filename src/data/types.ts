@@ -963,7 +963,7 @@ export interface Contact {
    * links them (deal-linked properties surface there on their own).
    */
   ownedPropertyIds?: string[]
-  /** Team member who owns this relationship, e.g. "J. Whitfield". */
+  /** Team member who owns this relationship, e.g. "E. Thompson". */
   assignedTo: string
   source: ContactSource
   relationship: RelationshipStage

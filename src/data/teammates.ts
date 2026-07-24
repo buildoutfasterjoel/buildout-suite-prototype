@@ -33,10 +33,10 @@ export interface ContactShare {
  */
 export const CURRENT_USER: Teammate = {
   id: "you",
-  name: "John Whitfield",
-  email: "john@buildout.com",
+  name: "Ethan Thompson",
+  email: "ethan.thompson@buildout.com",
   role: "Broker",
-  initials: "JW",
+  initials: "ET",
   avatarUrl: "https://randomuser.me/api/portraits/men/32.jpg",
 };
 

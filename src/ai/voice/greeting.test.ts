@@ -3,7 +3,7 @@ import { composeGreeting } from "./greeting";
 import type { AssistantContext } from "#/ai/context";
 
 const ctx = (over = 0, today = 0): AssistantContext => ({
-  broker: { name: "John Whitfield", role: "Broker" },
+  broker: { name: "Ethan Thompson", role: "Broker" },
   tasks: { overdue: over, dueToday: today },
   pipeline: { openDeals: 0, totalValue: 0 },
   contacts: [],
@@ -12,12 +12,12 @@ const ctx = (over = 0, today = 0): AssistantContext => ({
 describe("composeGreeting", () => {
   it("uses the broker first name and time of day", () => {
     const g = composeGreeting(ctx(0, 3), { now: new Date("2026-07-23T08:00:00") });
-    expect(g).toMatch(/^Morning, John/);
+    expect(g).toMatch(/^Morning, Ethan/);
   });
 
   it("switches to Afternoon and Evening by hour", () => {
-    expect(composeGreeting(ctx(), { now: new Date("2026-07-23T13:00:00") })).toMatch(/^Afternoon, John/);
-    expect(composeGreeting(ctx(), { now: new Date("2026-07-23T20:00:00") })).toMatch(/^Evening, John/);
+    expect(composeGreeting(ctx(), { now: new Date("2026-07-23T13:00:00") })).toMatch(/^Afternoon, Ethan/);
+    expect(composeGreeting(ctx(), { now: new Date("2026-07-23T20:00:00") })).toMatch(/^Evening, Ethan/);
   });
 
   it("states the real open-task count", () => {
