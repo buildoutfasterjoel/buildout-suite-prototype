@@ -51,7 +51,7 @@ export type PropertySubtype =
   | 'Industrial Outdoor Storage'
   | 'Mixed-Use'
 
-export type BuildingClass = 'A' | 'B' | 'C'
+export type BuildingClass = 'A+' | 'A' | 'B' | 'C'
 export type CompType = 'sale' | 'lease'
 export type LeaseType = 'NNN' | 'Gross' | 'MG'
 export type CompSource = 'CoStar' | 'LoopNet' | 'Public Records' | 'MLS' | 'Internal'
@@ -59,6 +59,69 @@ export type ContactRole = 'owner' | 'broker' | 'buyer' | 'tenant' | 'lender'
 
 /** A marketed offering — a deal is either a sale or a lease, never both. */
 export type DealType = 'Sale' | 'Lease'
+
+export type YesNoNA = 'Y' | 'N' | 'NA'
+
+/** One subdivision lot on a Property (PRD §13). */
+export interface Lot {
+  id: string
+  status: PropertyStatus
+  closeDate: string | null
+  buyerReferralSource: string | null
+  lotNumber: string
+  address: string
+  apn: string
+  subtype: PropertySubtype | null
+  salePrice: number | null
+  priceUnits: 'Total' | 'SF' | 'SqM' | 'Acre' | 'Hectare'
+  size: number | null
+  sizeUnits: string
+  description: string
+  zoning: string
+}
+
+/** One condo unit on a Property (PRD §14). */
+export interface Condo {
+  id: string
+  status: PropertyStatus
+  closeDate: string | null
+  addressUnit: string
+  salePrice: number | null
+  priceUnits: 'Total' | 'SF' | 'SqM'
+  hidePrice: boolean
+  hidePriceLabel: string | null
+  size: number | null
+  sizeUnits: 'Sq Ft' | 'Sq Meters'
+  description: string
+}
+
+/** One unit-mix summary row (PRD §18). */
+export interface UnitMixRow {
+  id: string
+  unitType: string
+  bedrooms: number | null
+  bathrooms: number | null
+  count: number | null
+  size: number | null
+  rackRate: number | null
+  rent: number | null
+  minRent: number | null
+  maxRent: number | null
+  marketRent: number | null
+  securityDeposit: number | null
+  description: string
+}
+
+export type VisualMediaType =
+  | 'Interactive Site Plan' | 'Aerial 360 Map' | 'Aerial 360 Rendering'
+  | '360 Rendering' | 'Property Marketing Video' | 'Matterport Tour' | '360 Tour'
+
+/** One visual-media / virtual-tour embed (PRD §24). */
+export interface VisualMediaLink {
+  id: string
+  url: string
+  mediaType: VisualMediaType
+}
 
 export interface Property {
   id: string
@@ -140,6 +203,99 @@ export interface Property {
   units: PropertyUnit[]
   /** Dated in-place financial actuals, newest first; [0] mirrors the flat current fields above. */
   financialRecords: PropertyFinancialRecord[]
+
+  // Listing-form: Location additional
+  country?: string
+  countryNameOverride?: string
+  currency?: string
+  currencyFormat?: string
+  language?: string
+  measurementSystem?: 'Imperial' | 'Metric'
+  hideAddress?: boolean
+  displayAddressAs?: string
+  overrideMapLocation?: boolean
+  market?: string
+  crossStreets?: string
+  township?: string
+  range?: string
+  section?: string
+  sideOfStreet?: string
+  streetParking?: YesNoNA
+  signalIntersection?: YesNoNA
+  roadType?: string
+  marketType?: string
+  nearestHighway?: string
+  nearestAirport?: string
+  // Listing-form: Property additional
+  propertyTypeLabelOverride?: string
+  additionalPropertyTypes?: { type: PropertyType; subtype: PropertySubtype }[]
+  aliases?: string[]
+  lotSizeUnit?: string
+  lotFrontage?: number | null
+  lotDepth?: number | null
+  cornerProperty?: boolean
+  trafficCount?: string
+  siteDescription?: string
+  amenities?: string
+  waterfront?: boolean
+  mlsId?: string
+  thomasGuidePage?: string
+  powerDescription?: string
+  railAccess?: boolean
+  gasPropaneDescription?: string
+  // Listing-form: Building additional
+  avgFloorSize?: number | null
+  ceilingHeight?: number | null
+  minCeilingHeight?: number | null
+  officeSpaceSqFt?: number | null
+  tenancy?: 'Single' | 'Multiple'
+  gradeLevelDoors?: number | null
+  dockHighDoors?: number | null
+  driveInBays?: number | null
+  numberOfCranes?: number | null
+  dockDescription?: string
+  craneDescription?: string
+  sprinklerDescription?: string
+  overheadDoorHeight?: number | null
+  columnSpace?: string
+  grossLeasableArea?: number | null
+  loadFactor?: number | null
+  constructionStatus?: string
+  parkingRatio?: number | null
+  parkingType?: string
+  warehousePct?: number | null
+  condition?: string
+  freightElevator?: boolean
+  numberOfElevators?: number | null
+  centralHvac?: boolean
+  roof?: string
+  freeStanding?: boolean
+  leedCertified?: boolean
+  retailClientele?: string
+  constructionDescription?: string
+  parkingDescription?: string
+  utilitiesDescription?: string
+  loadingDescription?: string
+  // Listing-form: Land
+  numberOfLots?: number | null
+  bestUse?: string
+  irrigation?: YesNoNA
+  irrigationDescription?: string
+  water?: YesNoNA
+  waterDescription?: string
+  telephone?: YesNoNA
+  telephoneDescription?: string
+  cable?: YesNoNA
+  cableDescription?: string
+  sewer?: YesNoNA
+  environmentalIssues?: string
+  topography?: string
+  soilType?: string
+  easementsDescription?: string
+  // Listing-form: repeatable child records
+  lots?: Lot[]
+  condos?: Condo[]
+  unitMix?: UnitMixRow[]
 
   createdAt: string
   updatedAt: string
@@ -485,10 +641,20 @@ export interface RentRollRow {
   tenant: string
   actualRent: number
   marketRent: number
-  rentPerSf: number
+  rentPerSf: number | null
   securityDeposit: number
   leaseStart: string | null
   leaseEnd: string | null
+  suite?: string
+  type?: PropertyType | null
+  beds?: number | null
+  baths?: number | null
+  /** Leasable area for the row — feeds the size/rate/annual auto-fill (PRD §19). */
+  size?: number | null
+  annualRent?: number | null
+  rentEscalations?: { id: string; date: string | null; ratePerSf: number | null }[]
+  comments?: string
+  recoveryType?: string
 }
 
 /**
@@ -565,6 +731,49 @@ export interface SpaceLeaseTerms {
   buyoutAllowance: number | null
   concession: string | null
   netLeaseInvestment: boolean
+  // ── Listing-form additions ───────────────────────────────────────
+  status?: 'Active' | 'Under Contract' | 'Closed' | 'Inactive'
+  closeDate?: string | null
+  spaceType?: PropertySubtype | null
+  spaceTypeLabelOverride?: string
+  tenantName?: string
+  majorTenant?: boolean
+  spaceName?: string
+  suite?: string
+  floor?: number | null
+  zipPlus4?: string
+  leaseRateMode?: 'Flat' | 'Range' | 'Hidden'
+  leaseRateTo?: number | null
+  leaseRateUnitLabelOverride?: string
+  spaceSize?: number | null
+  spaceSizeUnits?: string
+  leaseTypeLabelOverride?: string
+  subleaseExpiration?: string | null
+  ceilingHeight?: number | null
+  // Industrial cluster
+  previousUsage?: string
+  officeSpace?: number | null
+  gradeLevelDoors?: number | null
+  dockHighDoors?: number | null
+  driveInBays?: number | null
+  numberOfCranes?: number | null
+  powerDescription?: string
+  // Additional-fields block
+  warehouseAllotmentPct?: number | null
+  parkingSpaces?: number | null
+  conferenceRooms?: number | null
+  offices?: number | null
+  furnished?: boolean
+  heating?: YesNoNA
+  heatingDescription?: string
+  cooling?: YesNoNA
+  coolingDescription?: string
+  lighting?: YesNoNA
+  lightingDescription?: string
+  hvacTonnage?: string
+  rentConcession?: string
+  leaseTermsText?: string
+  salePrice?: number | null
 }
 
 /** Per-item public/private flags — Active publishes the flagged set (wired in Phase 3/4). */
@@ -602,6 +811,52 @@ export interface DealMarketing {
   locationDescription: string
   /** Per-unit lease terms — one record per marketed `Property.units` shell. */
   spaceLeaseTerms: SpaceLeaseTerms[]
+
+  // ── Listing-form additions ───────────────────────────────────────
+  displayLocationDescriptionForSyndication?: boolean
+  // Sale extras
+  yearsLeftOnLease?: string
+  nnnLeaseExpiration?: string | null
+  saleCommissionPct?: number | null
+  auctionDate?: string | null
+  auctionTime?: string
+  auctionLocation?: string
+  auctionStartingBid?: number | null
+  auctionUrl?: string
+  taxPerUnit?: number | null
+  capitalCosts?: string
+  loanDueDate?: string | null
+  loanDescription?: string
+  taxes?: string
+  taxValueLand?: number | null
+  taxValueImprovements?: number | null
+  taxValuePersonal?: number | null
+  assessedValue?: number | null
+  exchange1031?: YesNoNA
+  considerExchange?: YesNoNA
+  landOwnership?: string
+  landLegalDescription?: string
+  // Lease extras
+  leaseClosingInformation?: string
+  availableSfTerm?: 'SF' | 'RSF'
+  // Marketing visibility
+  saleMarketingChannel?: MarketingChannel
+  leaseMarketingChannel?: MarketingChannel
+  hideFromNonListingBrokers?: boolean
+  // Units toggles
+  includeUnitMix?: boolean
+  syndicateUnitMix?: boolean
+  includeRentRoll?: boolean
+  syndicateRentRoll?: boolean
+  // Buyer (Under Contract)
+  buyerContactId?: string | null
+  referralSource?: string
+  // Visual media + disclaimer/notes
+  visualMedia?: VisualMediaLink[]
+  overrideDisclaimer?: boolean
+  customDisclaimer?: string
+  adminNotes?: string
+  externalId?: string
 }
 
 /** A line item deducted from gross commission before broker splits, e.g. a marketing fee. */

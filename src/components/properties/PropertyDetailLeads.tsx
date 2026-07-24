@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Table } from "@buildoutinc/blueprint-react/ui/Table";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
@@ -10,6 +10,7 @@ import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faMagnifyingGlass,
@@ -19,9 +20,12 @@ import {
   faCircleXmark,
   faCaretDown,
   faAddressBook,
+  faEnvelope,
+  faPhone,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact, Property } from "#/data/types";
 import { getStore } from "#/data/store";
+import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
 import { hash } from "./propertyDisplay";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
 
@@ -56,6 +60,7 @@ const FILTERS: { label: string; options: string[] }[] = [
 type Lead = {
   id: string;
   name: string;
+  initials: string;
   email: string;
   phone: string;
   addedBy: string;
@@ -88,6 +93,7 @@ function toLead(contact: Contact): Lead {
   return {
     id: contact.id,
     name: `${contact.firstName} ${contact.lastName}`,
+    initials: `${contact.firstName[0] ?? ""}${contact.lastName[0] ?? ""}`,
     email: contact.email,
     phone: contact.phone,
     addedBy: ADDED_BY[h % ADDED_BY.length],
@@ -108,7 +114,7 @@ function toLead(contact: Contact): Lead {
   };
 }
 
-const muted = <span className="text-muted">--</span>;
+const muted = <span className="text-muted">—</span>;
 
 /**
  * Blueprint's `.sticky-cell` hardcodes `left: 0`, so freezing more than one left
@@ -119,6 +125,7 @@ const CHECKBOX_COL_W = 44;
 
 /** "Leads" content for the property detail page — contacts interested in this listing. */
 export function PropertyDetailLeads({ property }: { property: Property }) {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -220,6 +227,37 @@ export function PropertyDetailLeads({ property }: { property: Property }) {
           <FontAwesomeIcon icon={faSliders} />
           All Filters
         </Button>
+
+        <div className="ms-auto d-flex align-items-center gap-2">
+          <Tooltip>
+            <Tooltip.Trigger
+              render={
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Email this list"
+                >
+                  <FontAwesomeIcon icon={faEnvelope} />
+                </Button>
+              }
+            />
+            <Tooltip.Content>Email this list</Tooltip.Content>
+          </Tooltip>
+          <Tooltip>
+            <Tooltip.Trigger
+              render={
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Call this list"
+                >
+                  <FontAwesomeIcon icon={faPhone} />
+                </Button>
+              }
+            />
+            <Tooltip.Content>Call this list</Tooltip.Content>
+          </Tooltip>
+        </div>
       </div>
 
       {/* Table */}
@@ -236,7 +274,7 @@ export function PropertyDetailLeads({ property }: { property: Property }) {
           </Empty.Content>
         </Empty>
       ) : (
-        <Table variant="sticky" dense>
+        <Table variant="sticky">
           <Table.Header sticky>
             <Table.Row>
               <Table.Head
@@ -278,7 +316,19 @@ export function PropertyDetailLeads({ property }: { property: Property }) {
           </Table.Header>
           <Table.Body>
             {filtered.map((lead) => (
-              <Table.Row key={lead.id}>
+              <Table.Row
+                key={lead.id}
+                className={`contacts-row${
+                  selected.has(lead.id) ? " table-active" : ""
+                }`}
+                onClick={(e) => {
+                  if (shouldIgnoreRowClick(e)) return;
+                  void navigate({
+                    to: "/backoffice/contacts/$contactId",
+                    params: { contactId: lead.id },
+                  });
+                }}
+              >
                 <Table.Cell
                   sticky
                   style={{
@@ -296,12 +346,20 @@ export function PropertyDetailLeads({ property }: { property: Property }) {
                   </div>
                 </Table.Cell>
                 <Table.Cell sticky style={{ left: CHECKBOX_COL_W }}>
-                  <Link
-                    to="/backoffice/contacts/$contactId"
-                    params={{ contactId: lead.id }}
-                  >
-                    {lead.name}
-                  </Link>
+                  <div className="d-flex align-items-center gap-2">
+                    <Avatar size="lg">
+                      <Avatar.Fallback className="fw-semibold">
+                        {lead.initials}
+                      </Avatar.Fallback>
+                    </Avatar>
+                    <Link
+                      to="/backoffice/contacts/$contactId"
+                      params={{ contactId: lead.id }}
+                      className="row-link fw-semibold text-reset text-decoration-none text-nowrap"
+                    >
+                      {lead.name}
+                    </Link>
+                  </div>
                 </Table.Cell>
                 <Table.Cell>{lead.email}</Table.Cell>
                 <Table.Cell>{lead.phone || muted}</Table.Cell>

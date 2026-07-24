@@ -30,11 +30,15 @@ import type {
   RentRollRow,
   HeroKey,
   PropertyStatus,
+  Lot,
+  Condo,
+  UnitMixRow,
+  VisualMediaLink,
 } from './types'
 import type { CallList } from './contactLists'
 import type { SerializedContactFilters } from '#/components/contacts/contactFilterModel'
 import { reconcileContactDealFields } from './contactStage'
-import { TEAMMATES, type AccessTier, type ContactShare } from './teammates'
+import { CURRENT_USER, TEAMMATES, type AccessTier, type ContactShare } from './teammates'
 
 const SEED = 20240101
 const PROPERTY_COUNT = 50
@@ -1194,14 +1198,30 @@ function generateListings(
     ).toISOString()
     const tasks = generateTasks(status, taskAnchor)
     const nextTask = tasks.find((t) => t.status !== 'complete' && t.date)
-    const messages = Array.from(
-      { length: faker.number.int({ min: 0, max: 2 }) },
-      () => ({
+    const MESSAGE_LINES = [
+      'Sent the OM over to the buyer’s counsel this morning.',
+      'Any update on the estoppel certificates?',
+      'Confirmed the tour for Thursday at 2pm.',
+      'Seller countered at asking minus 3%. Discussing internally.',
+      'Loan commitment letter is in — uploading to Files now.',
+      'Can we get the T-12 refreshed before the call?',
+      'Buyer’s inspection is scheduled for next week.',
+      'Title came back clean, no surprises.',
+      'Pushing the LOI deadline to Friday per their request.',
+      'Great meeting today — momentum is good on this one.',
+    ]
+    const messageAuthors = [CURRENT_USER, ...TEAMMATES]
+    const messageCount = faker.number.int({ min: 2, max: 5 })
+    const messages = Array.from({ length: messageCount }, () => {
+      const author = faker.helpers.arrayElement(messageAuthors)
+      return {
         id: faker.string.uuid(),
-        author: `${faker.person.firstName()} ${faker.person.lastName()}`,
-        text: faker.lorem.sentence(),
+        author: author.name,
+        text: faker.helpers.arrayElement(MESSAGE_LINES),
         timestamp: faker.date.recent({ days: 30 }).toISOString(),
-      }),
+      }
+    }).sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
     )
 
     const voucherStatus = status === 'closed'
@@ -1877,6 +1897,82 @@ export function generateDataset() {
     const count = faker.number.int({ min: 1, max: 5 })
     return Array.from({ length: count }, () => generateComp(p.id, p.buildingSqFt, p.propertyType))
   })
+
+  // Light-touch demo seeding for the new listing-form fields (Task 16). All of
+  // these fields are optional, so the other 49 properties are left untouched —
+  // this is purely demo polish on one property + its first listing.
+  //
+  // Note: these mirror the shape of `emptyLot()`/`emptyCondo()`/`emptyUnitMixRow()`/
+  // `emptyVisualMediaLink()` in `createListing.ts` (with a couple of fields
+  // overridden below) rather than importing those builders, because
+  // `createListing.ts` imports from `store.ts` → `dataStore.ts` → `seed.ts`,
+  // and importing it here would close that cycle and break module init order
+  // (`generateDataset` is invoked from `dataStore.ts` at module load).
+  const demoProperty = properties[0]
+  demoProperty.country = 'United States'
+  demoProperty.measurementSystem = 'Imperial'
+  demoProperty.tenancy = 'Multiple'
+  demoProperty.lots = [
+    {
+      id: faker.string.uuid(),
+      status: 'active',
+      closeDate: null,
+      buyerReferralSource: null,
+      lotNumber: 'Lot 4',
+      address: demoProperty.street,
+      apn: '',
+      subtype: null,
+      salePrice: 185000,
+      priceUnits: 'Total',
+      size: 0.42,
+      sizeUnits: 'Acre',
+      description: 'Level, cleared parcel with utilities stubbed to the lot line.',
+      zoning: '',
+    } satisfies Lot,
+  ]
+  demoProperty.condos = [
+    {
+      id: faker.string.uuid(),
+      status: 'active',
+      closeDate: null,
+      addressUnit: 'Unit 210',
+      salePrice: 425000,
+      priceUnits: 'Total',
+      hidePrice: false,
+      hidePriceLabel: null,
+      size: 1150,
+      sizeUnits: 'Sq Ft',
+      description: 'Corner unit with private entrance and reserved parking.',
+    } satisfies Condo,
+  ]
+  demoProperty.unitMix = [
+    {
+      id: faker.string.uuid(),
+      unitType: '1BR/1BA',
+      bedrooms: 1,
+      bathrooms: 1,
+      count: 12,
+      size: 650,
+      rackRate: null,
+      rent: 1450,
+      minRent: null,
+      maxRent: null,
+      marketRent: 1500,
+      securityDeposit: null,
+      description: 'Renovated units with in-unit laundry.',
+    } satisfies UnitMixRow,
+  ]
+  const demoListing = listings.find((l) => l.propertyId === demoProperty.id)
+  if (demoListing) {
+    demoListing.marketing.visualMedia = [
+      {
+        id: faker.string.uuid(),
+        url: 'https://tours.example.com/matterport/demo-listing',
+        mediaType: 'Matterport Tour',
+      } satisfies VisualMediaLink,
+    ]
+    demoListing.marketing.overrideDisclaimer = false
+  }
 
   return { properties, listings, comps, contacts: finalContacts }
 }

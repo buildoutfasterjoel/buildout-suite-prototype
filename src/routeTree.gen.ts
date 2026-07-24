@@ -34,13 +34,16 @@ import { Route as ShellListingsListingIdIndexRouteImport } from './routes/_shell
 import { Route as ShellBackofficeContactsIndexRouteImport } from './routes/_shell/backoffice/contacts/index'
 import { Route as ShellListingsListingIdWebsiteRouteImport } from './routes/_shell/listings/$listingId/website'
 import { Route as ShellListingsListingIdUnderwritingRouteImport } from './routes/_shell/listings/$listingId/underwriting'
-import { Route as ShellListingsListingIdTransactionRouteImport } from './routes/_shell/listings/$listingId/transaction'
 import { Route as ShellListingsListingIdSpacesRouteImport } from './routes/_shell/listings/$listingId/spaces'
+import { Route as ShellListingsListingIdPlansRouteImport } from './routes/_shell/listings/$listingId/plans'
 import { Route as ShellListingsListingIdOverviewRouteImport } from './routes/_shell/listings/$listingId/overview'
+import { Route as ShellListingsListingIdNotesRouteImport } from './routes/_shell/listings/$listingId/notes'
 import { Route as ShellListingsListingIdMediaRouteImport } from './routes/_shell/listings/$listingId/media'
 import { Route as ShellListingsListingIdLeadsRouteImport } from './routes/_shell/listings/$listingId/leads'
+import { Route as ShellListingsListingIdHistoryRouteImport } from './routes/_shell/listings/$listingId/history'
 import { Route as ShellListingsListingIdGridsRouteImport } from './routes/_shell/listings/$listingId/grids'
 import { Route as ShellListingsListingIdFinancialsRouteImport } from './routes/_shell/listings/$listingId/financials'
+import { Route as ShellListingsListingIdFinancialDocumentsRouteImport } from './routes/_shell/listings/$listingId/financial-documents'
 import { Route as ShellListingsListingIdFilesRouteImport } from './routes/_shell/listings/$listingId/files'
 import { Route as ShellListingsListingIdEmailRouteImport } from './routes/_shell/listings/$listingId/email'
 import { Route as ShellListingsListingIdEditRouteImport } from './routes/_shell/listings/$listingId/edit'
@@ -179,22 +182,28 @@ const ShellListingsListingIdUnderwritingRoute =
     path: '/underwriting',
     getParentRoute: () => ShellListingsListingIdRoute,
   } as any)
-const ShellListingsListingIdTransactionRoute =
-  ShellListingsListingIdTransactionRouteImport.update({
-    id: '/transaction',
-    path: '/transaction',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
 const ShellListingsListingIdSpacesRoute =
   ShellListingsListingIdSpacesRouteImport.update({
     id: '/spaces',
     path: '/spaces',
     getParentRoute: () => ShellListingsListingIdRoute,
   } as any)
+const ShellListingsListingIdPlansRoute =
+  ShellListingsListingIdPlansRouteImport.update({
+    id: '/plans',
+    path: '/plans',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
 const ShellListingsListingIdOverviewRoute =
   ShellListingsListingIdOverviewRouteImport.update({
     id: '/overview',
     path: '/overview',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdNotesRoute =
+  ShellListingsListingIdNotesRouteImport.update({
+    id: '/notes',
+    path: '/notes',
     getParentRoute: () => ShellListingsListingIdRoute,
   } as any)
 const ShellListingsListingIdMediaRoute =
@@ -209,6 +218,12 @@ const ShellListingsListingIdLeadsRoute =
     path: '/leads',
     getParentRoute: () => ShellListingsListingIdRoute,
   } as any)
+const ShellListingsListingIdHistoryRoute =
+  ShellListingsListingIdHistoryRouteImport.update({
+    id: '/history',
+    path: '/history',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
 const ShellListingsListingIdGridsRoute =
   ShellListingsListingIdGridsRouteImport.update({
     id: '/grids',
@@ -219,6 +234,12 @@ const ShellListingsListingIdFinancialsRoute =
   ShellListingsListingIdFinancialsRouteImport.update({
     id: '/financials',
     path: '/financials',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdFinancialDocumentsRoute =
+  ShellListingsListingIdFinancialDocumentsRouteImport.update({
+    id: '/financial-documents',
+    path: '/financial-documents',
     getParentRoute: () => ShellListingsListingIdRoute,
   } as any)
 const ShellListingsListingIdFilesRoute =
@@ -299,13 +320,16 @@ export interface FileRoutesByFullPath {
   '/listings/$listingId/edit': typeof ShellListingsListingIdEditRoute
   '/listings/$listingId/email': typeof ShellListingsListingIdEmailRoute
   '/listings/$listingId/files': typeof ShellListingsListingIdFilesRoute
+  '/listings/$listingId/financial-documents': typeof ShellListingsListingIdFinancialDocumentsRoute
   '/listings/$listingId/financials': typeof ShellListingsListingIdFinancialsRoute
   '/listings/$listingId/grids': typeof ShellListingsListingIdGridsRoute
+  '/listings/$listingId/history': typeof ShellListingsListingIdHistoryRoute
   '/listings/$listingId/leads': typeof ShellListingsListingIdLeadsRoute
   '/listings/$listingId/media': typeof ShellListingsListingIdMediaRoute
+  '/listings/$listingId/notes': typeof ShellListingsListingIdNotesRoute
   '/listings/$listingId/overview': typeof ShellListingsListingIdOverviewRoute
+  '/listings/$listingId/plans': typeof ShellListingsListingIdPlansRoute
   '/listings/$listingId/spaces': typeof ShellListingsListingIdSpacesRoute
-  '/listings/$listingId/transaction': typeof ShellListingsListingIdTransactionRoute
   '/listings/$listingId/underwriting': typeof ShellListingsListingIdUnderwritingRoute
   '/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
   '/backoffice/contacts/': typeof ShellBackofficeContactsIndexRoute
@@ -333,13 +357,16 @@ export interface FileRoutesByTo {
   '/listings/$listingId/edit': typeof ShellListingsListingIdEditRoute
   '/listings/$listingId/email': typeof ShellListingsListingIdEmailRoute
   '/listings/$listingId/files': typeof ShellListingsListingIdFilesRoute
+  '/listings/$listingId/financial-documents': typeof ShellListingsListingIdFinancialDocumentsRoute
   '/listings/$listingId/financials': typeof ShellListingsListingIdFinancialsRoute
   '/listings/$listingId/grids': typeof ShellListingsListingIdGridsRoute
+  '/listings/$listingId/history': typeof ShellListingsListingIdHistoryRoute
   '/listings/$listingId/leads': typeof ShellListingsListingIdLeadsRoute
   '/listings/$listingId/media': typeof ShellListingsListingIdMediaRoute
+  '/listings/$listingId/notes': typeof ShellListingsListingIdNotesRoute
   '/listings/$listingId/overview': typeof ShellListingsListingIdOverviewRoute
+  '/listings/$listingId/plans': typeof ShellListingsListingIdPlansRoute
   '/listings/$listingId/spaces': typeof ShellListingsListingIdSpacesRoute
-  '/listings/$listingId/transaction': typeof ShellListingsListingIdTransactionRoute
   '/listings/$listingId/underwriting': typeof ShellListingsListingIdUnderwritingRoute
   '/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
   '/backoffice/contacts': typeof ShellBackofficeContactsIndexRoute
@@ -376,13 +403,16 @@ export interface FileRoutesById {
   '/_shell/listings/$listingId/edit': typeof ShellListingsListingIdEditRoute
   '/_shell/listings/$listingId/email': typeof ShellListingsListingIdEmailRoute
   '/_shell/listings/$listingId/files': typeof ShellListingsListingIdFilesRoute
+  '/_shell/listings/$listingId/financial-documents': typeof ShellListingsListingIdFinancialDocumentsRoute
   '/_shell/listings/$listingId/financials': typeof ShellListingsListingIdFinancialsRoute
   '/_shell/listings/$listingId/grids': typeof ShellListingsListingIdGridsRoute
+  '/_shell/listings/$listingId/history': typeof ShellListingsListingIdHistoryRoute
   '/_shell/listings/$listingId/leads': typeof ShellListingsListingIdLeadsRoute
   '/_shell/listings/$listingId/media': typeof ShellListingsListingIdMediaRoute
+  '/_shell/listings/$listingId/notes': typeof ShellListingsListingIdNotesRoute
   '/_shell/listings/$listingId/overview': typeof ShellListingsListingIdOverviewRoute
+  '/_shell/listings/$listingId/plans': typeof ShellListingsListingIdPlansRoute
   '/_shell/listings/$listingId/spaces': typeof ShellListingsListingIdSpacesRoute
-  '/_shell/listings/$listingId/transaction': typeof ShellListingsListingIdTransactionRoute
   '/_shell/listings/$listingId/underwriting': typeof ShellListingsListingIdUnderwritingRoute
   '/_shell/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
   '/_shell/backoffice/contacts/': typeof ShellBackofficeContactsIndexRoute
@@ -419,13 +449,16 @@ export interface FileRouteTypes {
     | '/listings/$listingId/edit'
     | '/listings/$listingId/email'
     | '/listings/$listingId/files'
+    | '/listings/$listingId/financial-documents'
     | '/listings/$listingId/financials'
     | '/listings/$listingId/grids'
+    | '/listings/$listingId/history'
     | '/listings/$listingId/leads'
     | '/listings/$listingId/media'
+    | '/listings/$listingId/notes'
     | '/listings/$listingId/overview'
+    | '/listings/$listingId/plans'
     | '/listings/$listingId/spaces'
-    | '/listings/$listingId/transaction'
     | '/listings/$listingId/underwriting'
     | '/listings/$listingId/website'
     | '/backoffice/contacts/'
@@ -453,13 +486,16 @@ export interface FileRouteTypes {
     | '/listings/$listingId/edit'
     | '/listings/$listingId/email'
     | '/listings/$listingId/files'
+    | '/listings/$listingId/financial-documents'
     | '/listings/$listingId/financials'
     | '/listings/$listingId/grids'
+    | '/listings/$listingId/history'
     | '/listings/$listingId/leads'
     | '/listings/$listingId/media'
+    | '/listings/$listingId/notes'
     | '/listings/$listingId/overview'
+    | '/listings/$listingId/plans'
     | '/listings/$listingId/spaces'
-    | '/listings/$listingId/transaction'
     | '/listings/$listingId/underwriting'
     | '/listings/$listingId/website'
     | '/backoffice/contacts'
@@ -495,13 +531,16 @@ export interface FileRouteTypes {
     | '/_shell/listings/$listingId/edit'
     | '/_shell/listings/$listingId/email'
     | '/_shell/listings/$listingId/files'
+    | '/_shell/listings/$listingId/financial-documents'
     | '/_shell/listings/$listingId/financials'
     | '/_shell/listings/$listingId/grids'
+    | '/_shell/listings/$listingId/history'
     | '/_shell/listings/$listingId/leads'
     | '/_shell/listings/$listingId/media'
+    | '/_shell/listings/$listingId/notes'
     | '/_shell/listings/$listingId/overview'
+    | '/_shell/listings/$listingId/plans'
     | '/_shell/listings/$listingId/spaces'
-    | '/_shell/listings/$listingId/transaction'
     | '/_shell/listings/$listingId/underwriting'
     | '/_shell/listings/$listingId/website'
     | '/_shell/backoffice/contacts/'
@@ -691,13 +730,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellListingsListingIdUnderwritingRouteImport
       parentRoute: typeof ShellListingsListingIdRoute
     }
-    '/_shell/listings/$listingId/transaction': {
-      id: '/_shell/listings/$listingId/transaction'
-      path: '/transaction'
-      fullPath: '/listings/$listingId/transaction'
-      preLoaderRoute: typeof ShellListingsListingIdTransactionRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
-    }
     '/_shell/listings/$listingId/spaces': {
       id: '/_shell/listings/$listingId/spaces'
       path: '/spaces'
@@ -705,11 +737,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellListingsListingIdSpacesRouteImport
       parentRoute: typeof ShellListingsListingIdRoute
     }
+    '/_shell/listings/$listingId/plans': {
+      id: '/_shell/listings/$listingId/plans'
+      path: '/plans'
+      fullPath: '/listings/$listingId/plans'
+      preLoaderRoute: typeof ShellListingsListingIdPlansRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
     '/_shell/listings/$listingId/overview': {
       id: '/_shell/listings/$listingId/overview'
       path: '/overview'
       fullPath: '/listings/$listingId/overview'
       preLoaderRoute: typeof ShellListingsListingIdOverviewRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
+    '/_shell/listings/$listingId/notes': {
+      id: '/_shell/listings/$listingId/notes'
+      path: '/notes'
+      fullPath: '/listings/$listingId/notes'
+      preLoaderRoute: typeof ShellListingsListingIdNotesRouteImport
       parentRoute: typeof ShellListingsListingIdRoute
     }
     '/_shell/listings/$listingId/media': {
@@ -726,6 +772,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellListingsListingIdLeadsRouteImport
       parentRoute: typeof ShellListingsListingIdRoute
     }
+    '/_shell/listings/$listingId/history': {
+      id: '/_shell/listings/$listingId/history'
+      path: '/history'
+      fullPath: '/listings/$listingId/history'
+      preLoaderRoute: typeof ShellListingsListingIdHistoryRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
     '/_shell/listings/$listingId/grids': {
       id: '/_shell/listings/$listingId/grids'
       path: '/grids'
@@ -738,6 +791,13 @@ declare module '@tanstack/react-router' {
       path: '/financials'
       fullPath: '/listings/$listingId/financials'
       preLoaderRoute: typeof ShellListingsListingIdFinancialsRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
+    '/_shell/listings/$listingId/financial-documents': {
+      id: '/_shell/listings/$listingId/financial-documents'
+      path: '/financial-documents'
+      fullPath: '/listings/$listingId/financial-documents'
+      preLoaderRoute: typeof ShellListingsListingIdFinancialDocumentsRouteImport
       parentRoute: typeof ShellListingsListingIdRoute
     }
     '/_shell/listings/$listingId/files': {
@@ -859,13 +919,16 @@ interface ShellListingsListingIdRouteChildren {
   ShellListingsListingIdEditRoute: typeof ShellListingsListingIdEditRoute
   ShellListingsListingIdEmailRoute: typeof ShellListingsListingIdEmailRoute
   ShellListingsListingIdFilesRoute: typeof ShellListingsListingIdFilesRoute
+  ShellListingsListingIdFinancialDocumentsRoute: typeof ShellListingsListingIdFinancialDocumentsRoute
   ShellListingsListingIdFinancialsRoute: typeof ShellListingsListingIdFinancialsRoute
   ShellListingsListingIdGridsRoute: typeof ShellListingsListingIdGridsRoute
+  ShellListingsListingIdHistoryRoute: typeof ShellListingsListingIdHistoryRoute
   ShellListingsListingIdLeadsRoute: typeof ShellListingsListingIdLeadsRoute
   ShellListingsListingIdMediaRoute: typeof ShellListingsListingIdMediaRoute
+  ShellListingsListingIdNotesRoute: typeof ShellListingsListingIdNotesRoute
   ShellListingsListingIdOverviewRoute: typeof ShellListingsListingIdOverviewRoute
+  ShellListingsListingIdPlansRoute: typeof ShellListingsListingIdPlansRoute
   ShellListingsListingIdSpacesRoute: typeof ShellListingsListingIdSpacesRoute
-  ShellListingsListingIdTransactionRoute: typeof ShellListingsListingIdTransactionRoute
   ShellListingsListingIdUnderwritingRoute: typeof ShellListingsListingIdUnderwritingRoute
   ShellListingsListingIdWebsiteRoute: typeof ShellListingsListingIdWebsiteRoute
   ShellListingsListingIdIndexRoute: typeof ShellListingsListingIdIndexRoute
@@ -883,15 +946,18 @@ const ShellListingsListingIdRouteChildren: ShellListingsListingIdRouteChildren =
     ShellListingsListingIdEditRoute: ShellListingsListingIdEditRoute,
     ShellListingsListingIdEmailRoute: ShellListingsListingIdEmailRoute,
     ShellListingsListingIdFilesRoute: ShellListingsListingIdFilesRoute,
+    ShellListingsListingIdFinancialDocumentsRoute:
+      ShellListingsListingIdFinancialDocumentsRoute,
     ShellListingsListingIdFinancialsRoute:
       ShellListingsListingIdFinancialsRoute,
     ShellListingsListingIdGridsRoute: ShellListingsListingIdGridsRoute,
+    ShellListingsListingIdHistoryRoute: ShellListingsListingIdHistoryRoute,
     ShellListingsListingIdLeadsRoute: ShellListingsListingIdLeadsRoute,
     ShellListingsListingIdMediaRoute: ShellListingsListingIdMediaRoute,
+    ShellListingsListingIdNotesRoute: ShellListingsListingIdNotesRoute,
     ShellListingsListingIdOverviewRoute: ShellListingsListingIdOverviewRoute,
+    ShellListingsListingIdPlansRoute: ShellListingsListingIdPlansRoute,
     ShellListingsListingIdSpacesRoute: ShellListingsListingIdSpacesRoute,
-    ShellListingsListingIdTransactionRoute:
-      ShellListingsListingIdTransactionRoute,
     ShellListingsListingIdUnderwritingRoute:
       ShellListingsListingIdUnderwritingRoute,
     ShellListingsListingIdWebsiteRoute: ShellListingsListingIdWebsiteRoute,

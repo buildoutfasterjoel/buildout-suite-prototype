@@ -10,7 +10,7 @@ import { PROPERTY_TYPES, TYPE_LABELS } from "#/components/properties/propertyDis
 import { updateProperty } from "#/data/store";
 import { useEditorStore } from "./store";
 
-const BUILDING_CLASSES: BuildingClass[] = ["A", "B", "C"];
+const BUILDING_CLASSES: BuildingClass[] = ["A+", "A", "B", "C"];
 
 /** The subset of `Property` fields the document's dynamic-field system can bind to. */
 type FormState = Pick<
