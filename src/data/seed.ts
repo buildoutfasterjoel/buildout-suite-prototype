@@ -41,8 +41,49 @@ import { reconcileContactDealFields } from './contactStage'
 import { CURRENT_USER, TEAMMATES, type AccessTier, type ContactShare } from './teammates'
 
 const SEED = 20240101
-const PROPERTY_COUNT = 50
+const PROPERTY_COUNT = 20
 const CONTACT_COUNT = 80
+
+/**
+ * The seeded deal pipeline — one deal per property, at an explicit stage, so
+ * the Deals table reads like a real brokerage book rather than a random spread.
+ * ~20 deals weighted toward the top of the funnel: several pitching, a few
+ * active, a couple under contract, and a handful each closed and lost.
+ *
+ * Order and length are load-bearing: `PROPERTY_COUNT` matches this list, each
+ * property is assigned `DEAL_PIPELINE[i]`, and the hero personas (see
+ * `applyHeroes`) claim a deal by stage — Earl→proposal(Sale), Victor→active,
+ * Margaret→under-contract, Patricia→closed — so every hero-required stage/type
+ * must appear here. Deal types are explicit (not random) so Earl always lands
+ * a Sale and the mix stays believable.
+ */
+const DEAL_PIPELINE: { stage: ListingStage; dealType: DealType }[] = [
+  // Pitching — several (Earl claims a Sale here)
+  { stage: 'proposal', dealType: 'Sale' },
+  { stage: 'proposal', dealType: 'Sale' },
+  { stage: 'proposal', dealType: 'Lease' },
+  { stage: 'proposal', dealType: 'Sale' },
+  { stage: 'proposal', dealType: 'Lease' },
+  { stage: 'proposal', dealType: 'Sale' },
+  // Active — a few (Victor claims one)
+  { stage: 'active', dealType: 'Sale' },
+  { stage: 'active', dealType: 'Lease' },
+  { stage: 'active', dealType: 'Sale' },
+  { stage: 'active', dealType: 'Sale' },
+  // Under contract — a couple (Margaret claims one, buy-side)
+  { stage: 'under-contract', dealType: 'Sale' },
+  { stage: 'under-contract', dealType: 'Sale' },
+  // Closed — some (Patricia claims one)
+  { stage: 'closed', dealType: 'Sale' },
+  { stage: 'closed', dealType: 'Lease' },
+  { stage: 'closed', dealType: 'Sale' },
+  { stage: 'closed', dealType: 'Sale' },
+  // Lost — some
+  { stage: 'inactive', dealType: 'Sale' },
+  { stage: 'inactive', dealType: 'Sale' },
+  { stage: 'inactive', dealType: 'Lease' },
+  { stage: 'inactive', dealType: 'Sale' },
+]
 
 /** Human label per property type — kept local so the seed stays display-layer free. */
 const TYPE_LABEL: Record<PropertyType, string> = {
@@ -63,16 +104,6 @@ const STAGE_WEIGHTS = [
   { weight: 22, value: 'under-contract' as const },
   { weight: 16, value: 'closed' as const },
   { weight: 10, value: 'inactive' as const },
-]
-
-const SPACE_LABELS = [
-  'Suite 100',
-  'Suite 200',
-  'Suite 300',
-  'Ground Floor Retail',
-  'Pad A',
-  'Pad B',
-  'Mezzanine',
 ]
 
 // ── Market lookup tables ──────────────────────────────────────────────────────
@@ -944,13 +975,6 @@ function generateContact(allPropertyIds: string[]): Contact {
 
 // ── Listing (+ its 1:1 deal) generator ────────────────────────────────────────
 
-function pickDealType(): DealType {
-  return faker.helpers.weightedArrayElement([
-    { weight: 65, value: 'Sale' as const },
-    { weight: 35, value: 'Lease' as const },
-  ])
-}
-
 const STAGE_CLOSE_PROBABILITY: Record<ListingStage, [number, number]> = {
   proposal: [5, 20],
   active: [25, 55],
@@ -1077,26 +1101,20 @@ function generateListings(
   property: Property,
   propertyContacts: Contact[],
   dealIdRef: { n: number },
+  spec: { stage: ListingStage; dealType: DealType },
 ): Listing[] {
-  const count = faker.helpers.weightedArrayElement([
-    { weight: 60, value: 1 },
-    { weight: 28, value: 2 },
-    { weight: 12, value: 3 },
-  ])
-  const spaceLabels = faker.helpers.arrayElements(SPACE_LABELS, count)
+  // One deal per property — the pipeline shape is controlled by DEAL_PIPELINE,
+  // not random per-property counts (see generateDataset).
+  const count = 1
   const basePricePerSqFt = property.buildingSqFt > 0 ? property.askingPrice / property.buildingSqFt : 0
 
-  return Array.from({ length: count }, (_, i): Listing => {
+  return Array.from({ length: count }, (): Listing => {
     const id = faker.string.uuid()
     const dealId = String(dealIdRef.n++)
-    const availableSqFt = count === 1
-      ? property.buildingSqFt
-      : Math.max(500, Math.round((property.buildingSqFt / count) * faker.number.float({ min: 0.7, max: 1.2, fractionDigits: 2 })))
-    const dealType = pickDealType()
-    const name = count === 1 ? property.name : `${property.name} — ${spaceLabels[i]}`
-    const status: ListingStage = i === 0
-      ? property.status
-      : faker.helpers.weightedArrayElement(STAGE_WEIGHTS)
+    const availableSqFt = property.buildingSqFt
+    const dealType = spec.dealType
+    const name = property.name
+    const status: ListingStage = spec.stage
 
     // Transaction — Lease deals carry no sale headline data (see marketing.spaceLeaseTerms).
     const salePrice = dealType === 'Sale' ? round(availableSqFt * basePricePerSqFt) : 0
@@ -1260,13 +1278,13 @@ function generateListings(
     })
 
     const isLease = dealType !== 'Sale'
-    const marketingUnitId = property.units.length > 0 ? property.units[i % property.units.length].id : null
+    const marketingUnitId = property.units.length > 0 ? property.units[0].id : null
 
     return {
       id,
       propertyId: property.id,
       name,
-      slug: `${property.slug}-${i + 1}`,
+      slug: `${property.slug}-1`,
       status,
       publishedAt,
       dealType,
@@ -1911,10 +1929,15 @@ export function generateDataset() {
     contactsByProperty.set(p.id, linked)
   }
 
+  // One deal per property, at the stage assigned by DEAL_PIPELINE. The property's
+  // own status is aligned to its deal so property cards and the deal read the
+  // same stage (PROPERTY_COUNT matches DEAL_PIPELINE.length).
   const dealIdRef = { n: 100 }
-  const listings = properties.flatMap((p) =>
-    generateListings(p, contactsByProperty.get(p.id) ?? contacts, dealIdRef),
-  )
+  const listings = properties.flatMap((p, i) => {
+    const spec = DEAL_PIPELINE[i % DEAL_PIPELINE.length]
+    p.status = spec.stage
+    return generateListings(p, contactsByProperty.get(p.id) ?? contacts, dealIdRef, spec)
+  })
 
   // Overwrite five generated contacts with the hand-authored hero personas and
   // wire their deals — before reconciliation so derived fields follow.

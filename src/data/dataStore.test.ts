@@ -7,10 +7,11 @@ import * as persistence from './persistence'
 describe('useDataStore', () => {
   it('seeds all four entity maps deterministically on creation', () => {
     const s = useDataStore.getState()
-    // 50 generated + Rosa's story-owned building (see applyHeroes).
-    expect(s.properties.size).toBe(51)
+    // 20 pipeline properties + Rosa's story-owned building (see applyHeroes).
+    expect(s.properties.size).toBe(21)
     expect(s.contacts.size).toBe(80)
-    expect(s.listings.size).toBeGreaterThan(0)
+    // One deal per pipeline property (see DEAL_PIPELINE).
+    expect(s.listings.size).toBe(20)
     expect(s.hydrated).toBe(false)
   })
 
@@ -42,9 +43,9 @@ describe('hydrate / reset', () => {
       tasks: new Map(),
     })
     await useDataStore.getState().reset()
-    expect(useDataStore.getState().properties.size).toBe(51)
+    expect(useDataStore.getState().properties.size).toBe(21)
     const snap = await loadSnapshot()
-    expect(snap?.properties.size).toBe(51)
+    expect(snap?.properties.size).toBe(21)
   })
 
   it('hydrate loads a prior snapshot over the seed', async () => {
