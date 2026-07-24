@@ -27,7 +27,11 @@ describe("getOvernightSignalContact", () => {
     useDataStore.setState({ contacts: new Map() });
   });
   it("finds the heroKey==='marcus' contact", () => {
-    const marcus = baseContact({ id: "m", heroKey: "marcus" });
+    const marcus = baseContact({
+      id: "m",
+      heroKey: "marcus",
+      signal: { kind: "loan-maturity", headline: "a maturing CMBS loan", detail: "d", observedAt: "2026-07-24" },
+    });
     useDataStore.setState({ contacts: new Map([["m", marcus]]) });
     expect(getOvernightSignalContact()?.id).toBe("m");
   });

@@ -11,7 +11,7 @@ export function signalText(contact: Pick<Contact, "signal">): string {
  * Null when the seed hasn't placed one. */
 export function getOvernightSignalContact(): Contact | null {
   for (const c of useDataStore.getState().contacts.values()) {
-    if (c.heroKey === "marcus") return c;
+    if (c.heroKey === "marcus" && c.signal) return c;
   }
   return null;
 }
