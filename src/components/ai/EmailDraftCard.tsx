@@ -54,7 +54,7 @@ export function EmailDraftCard({ draft }: { draft: EmailDraftCardData }) {
           variant="outline"
           size="sm"
           nativeButton={false}
-          render={<Link to="/email/$emailId" params={{ emailId: draft.id }} />}
+          render={<Link to="/email" />}
         >
           <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
           Open in Email
