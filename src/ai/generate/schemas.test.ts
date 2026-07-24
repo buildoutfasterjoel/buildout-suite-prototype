@@ -46,26 +46,36 @@ describe("call schemas", () => {
     expect(r.success).toBe(true);
   });
 
-  it("rejects more than 3 suggestions", () => {
+  // The 2-3 count is enforced by CALL_TURN_PROMPT, not the schema — Anthropic's
+  // strict structured output rejects array size bounds (`maxItems`), so the
+  // schema is intentionally unbounded and accepts any number of suggestions.
+  it("accepts more than 3 suggestions (count is prompt-enforced, not schema-bound)", () => {
     const r = CallTurnSpec.safeParse({
       ownerReply: "ok", suggestions: ["a", "b", "c", "d"], shouldEnd: false,
-    });
-    expect(r.success).toBe(false);
-  });
-
-  it("accepts a valid recap with a null opportunity", () => {
-    const r = CallRecapSpec.safeParse({
-      sentiment: "positive",
-      keyPoints: ["Owner open to a valuation."],
-      tasks: [{ title: "Send comps", due: "2026-07-28" }, { title: "Call back", due: null }],
-      opportunity: null,
     });
     expect(r.success).toBe(true);
   });
 
+  it("accepts a valid recap with an empty (no-deal) opportunity", () => {
+    const r = CallRecapSpec.safeParse({
+      sentiment: "positive",
+      keyPoints: ["Owner open to a valuation."],
+      tasks: [{ title: "Send comps", due: "2026-07-28" }, { title: "Call back", due: null }],
+      opportunity: { name: "", address: "" },
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("rejects a nullable opportunity (must be an object)", () => {
+    const r = CallRecapSpec.safeParse({
+      sentiment: "positive", keyPoints: [], tasks: [], opportunity: null,
+    });
+    expect(r.success).toBe(false);
+  });
+
   it("rejects an out-of-enum sentiment", () => {
     const r = CallRecapSpec.safeParse({
-      sentiment: "curious", keyPoints: [], tasks: [], opportunity: null,
+      sentiment: "curious", keyPoints: [], tasks: [], opportunity: { name: "", address: "" },
     });
     expect(r.success).toBe(false);
   });

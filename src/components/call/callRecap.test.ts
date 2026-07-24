@@ -19,9 +19,9 @@ describe("composeRecapReport", () => {
     expect(r.opportunity?.address).toBe("123 East Bay St");
   });
 
-  it("handles no tasks and no opportunity", () => {
+  it("maps an empty (no-deal) opportunity to null", () => {
     const r = composeRecapReport(
-      { sentiment: "neutral", keyPoints: [], tasks: [], opportunity: null },
+      { sentiment: "neutral", keyPoints: [], tasks: [], opportunity: { name: "", address: "" } },
       "Jane Doe",
     );
     expect(r.tasks).toHaveLength(0);

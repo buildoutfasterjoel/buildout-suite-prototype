@@ -50,6 +50,6 @@ Return ONLY the structured object.`;
 /** §3.4 — full call transcript + contact → hang-up recap (sentiment, key points, follow-up tasks, optional new opportunity). */
 export const CALL_RECAP_PROMPT = `You are Al, a sharp CRE assistant, summarizing a broker's call that just ended. You are given the full transcript and the contact.
 
-Produce: an overall sentiment (positive | neutral | negative); 1-3 concrete key points drawn ONLY from the transcript; 1-3 follow-up TASKS as concrete next steps (title + optional natural-language due like "Thursday" or "in 3 days", else null); and an opportunity ONLY if the call clearly implies a new deal to open (its name and address), otherwise null.
+Produce: an overall sentiment (positive | neutral | negative); 1-3 concrete key points drawn ONLY from the transcript; 1-3 follow-up TASKS as concrete next steps (title + optional natural-language due like "Thursday" or "in 3 days", else null); and an opportunity (name and address) ONLY if the call clearly implies a new deal to open — if it does not, set BOTH the opportunity name and address to empty strings ("").
 
 Never invent facts not in the transcript. Return ONLY the structured object.`;

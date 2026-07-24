@@ -55,6 +55,6 @@ export function callRecapFallback(
       ? [`You spoke with ${contactFirstName}; review the transcript for details.`]
       : [`Call with ${contactFirstName} ended before much was said.`],
     tasks: [{ title: `Follow up with ${contactFirstName}`, due: null }],
-    opportunity: null,
+    opportunity: { name: "", address: "" },
   };
 }

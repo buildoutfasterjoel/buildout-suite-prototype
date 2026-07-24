@@ -13,7 +13,7 @@ vi.mock("#/ai/generate", () => ({
   })),
   generateCallRecap: vi.fn(async () => ({
     sentiment: "positive", keyPoints: ["Open to a valuation."],
-    tasks: [{ title: "Send comps", due: null }], opportunity: null,
+    tasks: [{ title: "Send comps", due: null }], opportunity: { name: "", address: "" },
   })),
 }));
 
@@ -97,7 +97,7 @@ describe("callFlow", () => {
 
     resolveRecap({
       sentiment: "positive", keyPoints: ["Open to a valuation."],
-      tasks: [{ title: "Send comps", due: null }], opportunity: null,
+      tasks: [{ title: "Send comps", due: null }], opportunity: { name: "", address: "" },
     });
     await endPromise;
 

@@ -61,19 +61,27 @@ export type ContactBriefSpecT = z.infer<typeof ContactBriefSpec>;
 export const StrategySpec = z.object({ answer: z.string() });
 export type StrategySpecT = z.infer<typeof StrategySpec>;
 
-/** §3.7 live-call owner turn. */
+/** §3.7 live-call owner turn.
+ * NOTE: `suggestions` is unbounded in the schema — the "2-3" count is enforced
+ * by CALL_TURN_PROMPT. Anthropic's strict structured output rejects array size
+ * bounds (`.max()` → `maxItems`), so we never put them on a generator schema. */
 export const CallTurnSpec = z.object({
   ownerReply: z.string(),
-  suggestions: z.array(z.string()).max(3),
+  suggestions: z.array(z.string()),
   shouldEnd: z.boolean(),
 });
 export type CallTurnSpecT = z.infer<typeof CallTurnSpec>;
 
-/** §3.4 hang-up recap. */
+/** §3.4 hang-up recap.
+ * NOTE: `opportunity` is a REQUIRED object, not a nullable one — Anthropic's
+ * strict structured output rejects a nullable object (it renders as an `anyOf`
+ * whose inner object lacks `additionalProperties: false`). "No opportunity" is
+ * signalled by empty `name`/`address` strings (see CALL_RECAP_PROMPT); the
+ * empty→null mapping lives in `composeRecapReport`. */
 export const CallRecapSpec = z.object({
   sentiment: z.enum(["positive", "neutral", "negative"]),
   keyPoints: z.array(z.string()),
   tasks: z.array(z.object({ title: z.string(), due: z.string().nullable() })),
-  opportunity: z.object({ name: z.string(), address: z.string() }).nullable(),
+  opportunity: z.object({ name: z.string(), address: z.string() }),
 });
 export type CallRecapSpecT = z.infer<typeof CallRecapSpec>;

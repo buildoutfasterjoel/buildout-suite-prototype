@@ -207,7 +207,7 @@ export const callFlow = {
         sentiment: "neutral" as const,
         keyPoints: [`Call with ${target.firstName} ended.`],
         tasks: [{ title: `Follow up with ${target.firstName}`, due: null }],
-        opportunity: null,
+        opportunity: { name: "", address: "" },
       };
     }
     // Log the call to the contact's record (persists; replaces the old LogCallModal).

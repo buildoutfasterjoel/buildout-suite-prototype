@@ -24,7 +24,10 @@ export function composeRecapReport(
   const message =
     `Here's your recap with <strong>${contactName}</strong> — the call felt ` +
     `${SENTIMENT_LABEL[recap.sentiment]}.${points}`;
-  return { message, tasks: recap.tasks, opportunity: recap.opportunity };
+  // `opportunity` is a required object on the spec (Anthropic strict output can't
+  // express a nullable object); empty name/address means "no opportunity" → null.
+  const opportunity = recap.opportunity.name.trim() ? recap.opportunity : null;
+  return { message, tasks: recap.tasks, opportunity };
 }
 
 /** Strip the light HTML for text-to-speech (voiceEngine also strips, but keep the
