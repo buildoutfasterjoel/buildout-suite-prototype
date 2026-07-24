@@ -25,6 +25,7 @@ import { renderLightHtml } from "#/ai/renderLightHtml";
 import { useAssistant } from "#/ai/useAssistant";
 import { DealCardById } from "#/components/deals/DealCard";
 import { EmailDraftCard, type EmailDraftCardData } from "#/components/ai/EmailDraftCard";
+import { formatCurrency } from "#/components/deals/dealDisplay";
 
 /** Shown instead of sending when the server has no Anthropic key configured. */
 const NOT_CONFIGURED_MESSAGE =
@@ -104,6 +105,59 @@ function answerOf(output: unknown): string | null {
   return typeof o.answer === "string" ? o.answer : null;
 }
 
+type MarketingPackageData = {
+  doc: { tagline: string; summary: string; highlights: string[]; callToAction: string };
+  email: { subject: string; to: string[]; body: string; signature: string };
+  financials: { askingPrice: number | null; assetType: string | null };
+};
+
+/** Extract a generated marketing package (§3.4+3.2, `build_marketing_package`)
+ * from a tool-call's output, if present. */
+function marketingPackageOf(output: unknown): MarketingPackageData | null {
+  const o = (output ?? {}) as { package?: unknown };
+  return o.package ? (o.package as MarketingPackageData) : null;
+}
+
+/** A generated marketing flyer (tagline/summary/highlights/CTA + a financial
+ * line) paired with the launch email, rendered from `build_marketing_package`. */
+function MarketingPackageCard({ pkg }: { pkg: MarketingPackageData }) {
+  const { doc, email, financials } = pkg;
+  const hasFinancials = financials.askingPrice != null || financials.assetType;
+  return (
+    <div className="d-flex flex-column gap-2">
+      <div className="border rounded p-3 bg-white d-flex flex-column gap-2">
+        <div className="d-flex align-items-center gap-2">
+          <FontAwesomeIcon icon={faFileLines} className="text-buildout-blue-700" />
+          <span className="fw-semibold small text-uppercase text-muted">Marketing flyer</span>
+        </div>
+        <div className="fw-semibold">{doc.tagline}</div>
+        {doc.summary && <div className="small text-body">{doc.summary}</div>}
+        {doc.highlights.length > 0 && (
+          <ul className="small mb-0 ps-3">
+            {doc.highlights.map((h, i) => (
+              <li key={i}>{h}</li>
+            ))}
+          </ul>
+        )}
+        {hasFinancials && (
+          <div className="d-flex align-items-center gap-2 small">
+            {financials.assetType && (
+              <Badge variant="secondary" appearance="muted">
+                {financials.assetType}
+              </Badge>
+            )}
+            {financials.askingPrice != null && (
+              <span className="fw-semibold">{formatCurrency(financials.askingPrice)}</span>
+            )}
+          </div>
+        )}
+        {doc.callToAction && <div className="small text-muted">{doc.callToAction}</div>}
+      </div>
+      <EmailDraftCard draft={{ id: "marketing-package-email", ...email }} />
+    </div>
+  );
+}
+
 /** A clickable card row (deal or contact) that navigates on click. */
 function ResultCard({
   title,
@@ -147,7 +201,16 @@ function ToolResultCards({ output }: { output: unknown }) {
   const emailDraft = emailDraftOf(output);
   const brief = briefOf(output);
   const answer = answerOf(output);
-  if (deals.length === 0 && contacts.length === 0 && !emailDraft && !brief && !answer) return null;
+  const marketingPackage = marketingPackageOf(output);
+  if (
+    deals.length === 0 &&
+    contacts.length === 0 &&
+    !emailDraft &&
+    !brief &&
+    !answer &&
+    !marketingPackage
+  )
+    return null;
 
   return (
     <div className="d-flex flex-column gap-2">
@@ -166,6 +229,7 @@ function ToolResultCards({ output }: { output: unknown }) {
         />
       ))}
       {emailDraft && <EmailDraftCard draft={emailDraft} />}
+      {marketingPackage && <MarketingPackageCard pkg={marketingPackage} />}
       {brief && (
         <div className="assistant-markdown" style={{ whiteSpace: "pre-wrap" }}>
           {brief}
@@ -211,7 +275,8 @@ function MessageBubble({ message }: { message: UIMessage }) {
       contacts.length > 0 ||
       emailDraftOf(p.output) !== null ||
       briefOf(p.output) !== null ||
-      answerOf(p.output) !== null
+      answerOf(p.output) !== null ||
+      marketingPackageOf(p.output) !== null
     );
   });
   const chipCalls = toolCalls.filter((p) => !cardCalls.includes(p));

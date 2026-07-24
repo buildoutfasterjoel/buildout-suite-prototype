@@ -318,6 +318,24 @@ export const draftEmailDef = toolDefinition({
   },
 });
 
+export const buildMarketingPackageDef = toolDefinition({
+  name: "build_marketing_package",
+  description:
+    "Build a full marketing package for an address: flyer + launch email + a financial summary. REQUIRES an address; if missing, ask for it, then owner and asset type — ONE short question at a time — before calling.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      address: { type: "string" },
+      owner_name: { type: "string" },
+      asset_type: { type: "string" },
+      asking_price: { type: "number" },
+      notes: { type: "string" },
+    },
+    required: ["address"],
+    additionalProperties: false,
+  },
+});
+
 // ── Client actions (Phase 1, no LLM/key needed) ─────────────────────────────
 
 export const addNoteDef = toolDefinition({
@@ -416,6 +434,7 @@ export const TOOL_DEFS = [
   filterListingsDef,
   draftEmailDef,
   buildCallListDef,
+  buildMarketingPackageDef,
   researchContactDef,
   answerAboutContactDef,
   analyzeBookDef,

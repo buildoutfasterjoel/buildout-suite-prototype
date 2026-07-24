@@ -8,6 +8,7 @@ import {
   generateCallList,
   generateContactBrief,
   generateStrategy,
+  generateMarketingDoc,
 } from "#/ai/generate";
 import { composeContactData } from "#/ai/contactData";
 import { composeBookSnapshot } from "#/ai/bookSnapshot";
@@ -54,6 +55,7 @@ import {
   filterListingsDef,
   draftEmailDef,
   buildCallListDef,
+  buildMarketingPackageDef,
   researchContactDef,
   answerAboutContactDef,
   analyzeBookDef,
@@ -360,6 +362,37 @@ export function createClientTools({
             reason: c.reason,
           };
         }),
+      };
+    }),
+
+    buildMarketingPackageDef.client(async (args) => {
+      const { address, owner_name, asset_type, asking_price, notes } = args as {
+        address: string;
+        owner_name?: string;
+        asset_type?: string;
+        asking_price?: number;
+        notes?: string;
+      };
+      const property = {
+        name: address,
+        address,
+        assetType: asset_type,
+        askingPrice: asking_price,
+        owner: owner_name,
+        notes,
+      };
+      const [doc, email] = await Promise.all([
+        generateMarketingDoc({ data: { property, docType: "marketing_flyer" } }),
+        generateEmail({
+          data: { property, intent: `Launch marketing for ${address}`, recipients: [] },
+        }),
+      ]);
+      return {
+        package: {
+          doc,
+          email,
+          financials: { askingPrice: asking_price ?? null, assetType: asset_type ?? null },
+        },
       };
     }),
 
