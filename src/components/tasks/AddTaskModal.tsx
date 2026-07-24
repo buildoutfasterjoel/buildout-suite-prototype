@@ -20,8 +20,12 @@ import {
   faUser,
   faXmark,
 } from "@fortawesome/pro-regular-svg-icons";
-import { CURRENT_USER, TEAMMATES } from "#/data/teammates";
-import { getContactOptions, getDealOptions } from "#/data/store";
+import { CURRENT_USER, TEAMMATES, type Teammate } from "#/data/teammates";
+import {
+  getContactOptions,
+  getContactShares,
+  getDealOptions,
+} from "#/data/store";
 import type { Task } from "#/data/types";
 
 /** The payload emitted on Save — a plain snapshot of the form. */
@@ -63,6 +67,34 @@ const fmtDate = (d: Date) =>
     day: "numeric",
     year: "numeric",
   });
+
+/** Full spelled-out date shown above the due-date quick picks. */
+const fmtDateLong = (d: Date) =>
+  d.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+
+/** Quick due-date choices, as day offsets from today. The 8th slot is Custom. */
+const DUE_QUICK_PICKS = [
+  { label: "Today", days: 0 },
+  { label: "Tomorrow", days: 1 },
+  { label: "2 Days", days: 2 },
+  { label: "3 Days", days: 3 },
+  { label: "1 Week", days: 7 },
+  { label: "2 Weeks", days: 14 },
+  { label: "3 Weeks", days: 21 },
+];
+
+const addDays = (base: Date, n: number) =>
+  new Date(base.getFullYear(), base.getMonth(), base.getDate() + n);
+
+const sameDay = (a: Date, b: Date) =>
+  a.getFullYear() === b.getFullYear() &&
+  a.getMonth() === b.getMonth() &&
+  a.getDate() === b.getDate();
 
 /** Parse a stored ISO `YYYY-MM-DD` into a local Date (no UTC shift), or null. */
 const parseISO = (iso: string | null | undefined): Date | null => {
@@ -117,6 +149,77 @@ function DateField({
         />
       </Popover.Content>
     </Popover>
+  );
+}
+
+/**
+ * Due date as a set of quick-pick buttons (today through 3 weeks out) plus a
+ * Custom option that opens a calendar. Clicking the active pick again clears
+ * the date. A date that matches no preset (edited tasks, calendar picks)
+ * lights up Custom.
+ */
+function DueDateQuickPick({
+  value,
+  onChange,
+}: {
+  value: Date | null;
+  onChange: (d: Date | null) => void;
+}) {
+  const [customOpen, setCustomOpen] = useState(false);
+  const today = new Date();
+  const presetDates = DUE_QUICK_PICKS.map((p) => addDays(today, p.days));
+  const activePreset = value
+    ? presetDates.findIndex((d) => sameDay(d, value))
+    : -1;
+  const customActive = value != null && activePreset === -1;
+
+  return (
+    <div className="d-flex flex-column gap-2">
+      <div className="text-center fw-semibold">
+        {value ? fmtDateLong(value) : <span className="text-muted fw-normal">No due date</span>}
+      </div>
+      <div className="row g-2">
+        {DUE_QUICK_PICKS.map((p, i) => (
+          <div key={p.label} className="col-3">
+            <Button
+              variant={activePreset === i ? "primary" : "outline"}
+              size="sm"
+              className="w-100"
+              onClick={() =>
+                onChange(activePreset === i ? null : presetDates[i])
+              }
+            >
+              {p.label}
+            </Button>
+          </div>
+        ))}
+        <div className="col-3">
+          <Popover open={customOpen} onOpenChange={setCustomOpen}>
+            <Popover.Trigger
+              render={
+                <Button
+                  variant={customActive ? "primary" : "outline"}
+                  size="sm"
+                  className="w-100"
+                />
+              }
+            >
+              Custom
+            </Popover.Trigger>
+            <Popover.Content className="p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={value ?? undefined}
+                onSelect={(d) => {
+                  onChange(d ?? null);
+                  setCustomOpen(false);
+                }}
+              />
+            </Popover.Content>
+          </Popover>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -241,13 +344,6 @@ export function AddTaskModal({
   const isEdit = task != null;
   const contactOptions = useMemo(() => getContactOptions(), []);
   const dealOptions = useMemo(() => getDealOptions(), []);
-  const assignees = useMemo(
-    () => [
-      CURRENT_USER,
-      ...TEAMMATES.filter((t) => t.id !== CURRENT_USER.id),
-    ],
-    [],
-  );
 
   const [name, setName] = useState("");
   const [assigneeId, setAssigneeId] = useState<string>(CURRENT_USER.id);
@@ -261,6 +357,38 @@ export function AddTaskModal({
   const [createFollowUp, setCreateFollowUp] = useState(false);
   const [followUpDate, setFollowUpDate] = useState<Date | null>(null);
   const [requireAttachments, setRequireAttachments] = useState(false);
+
+  // Assignees are scoped to whoever has access to the linked contact — the
+  // owner plus anyone it's shared with. Deal-sourced or unlinked tasks fall
+  // back to the full roster.
+  const assignees = useMemo<Teammate[]>(() => {
+    if (source === "contact" && contactId) {
+      const seen = new Set<string>();
+      const roster: Teammate[] = [];
+      for (const m of [
+        CURRENT_USER,
+        ...getContactShares(contactId).map((s) => s.member),
+      ]) {
+        if (!seen.has(m.id)) {
+          seen.add(m.id);
+          roster.push(m);
+        }
+      }
+      return roster;
+    }
+    return [CURRENT_USER, ...TEAMMATES];
+  }, [source, contactId]);
+  // An owner-only contact has exactly one possible assignee — lock the field.
+  const assigneeLocked =
+    source === "contact" && contactId != null && assignees.length === 1;
+
+  // If the linked contact changes to one the picked assignee can't access,
+  // fall back to the owner (always first in the roster).
+  useEffect(() => {
+    if (!assignees.some((m) => m.id === assigneeId)) {
+      setAssigneeId(CURRENT_USER.id);
+    }
+  }, [assignees, assigneeId]);
 
   // The modal is mounted once globally, so its state survives across opens.
   // On each open, prefill from the task being edited, or reset to create
@@ -409,42 +537,40 @@ export function AddTaskModal({
               </div>
             </div>
 
-            {/* Linked [Source] — full width, follows the chosen Source */}
-            <Field>
-              <PlainLabel>
-                {source === "deal" ? "Linked Deal" : "Linked Contact"}
-              </PlainLabel>
-              {source === "deal" ? (
-                <LookupField
-                  options={dealOptions}
-                  value={dealId}
-                  onChange={setDealId}
-                  icon={faHandshake}
-                  placeholder="Search deals…"
-                />
-              ) : (
-                <LookupField
-                  options={contactOptions}
-                  value={contactId}
-                  onChange={setContactId}
-                  icon={faUser}
-                  placeholder="Search contacts…"
-                />
-              )}
-            </Field>
-
-            {/* Due Date + Assigned To */}
+            {/* Linked [Source] + Assigned To */}
             <div className="row g-3">
               <div className="col-6">
                 <Field>
-                  <PlainLabel>Due Date</PlainLabel>
-                  <DateField value={dueDate} onChange={(d) => setDueDate(d ?? null)} />
+                  <PlainLabel>
+                    {source === "deal" ? "Linked Deal" : "Linked Contact"}
+                  </PlainLabel>
+                  {source === "deal" ? (
+                    <LookupField
+                      options={dealOptions}
+                      value={dealId}
+                      onChange={setDealId}
+                      icon={faHandshake}
+                      placeholder="Search deals…"
+                    />
+                  ) : (
+                    <LookupField
+                      options={contactOptions}
+                      value={contactId}
+                      onChange={setContactId}
+                      icon={faUser}
+                      placeholder="Search contacts…"
+                    />
+                  )}
                 </Field>
               </div>
               <div className="col-6">
                 <Field>
                   <PlainLabel>Assigned To</PlainLabel>
-                  <Select value={assigneeId} onValueChange={(v) => v && setAssigneeId(v)}>
+                  <Select
+                    value={assigneeId}
+                    onValueChange={(v) => v && setAssigneeId(v)}
+                    disabled={assigneeLocked}
+                  >
                     <Select.Trigger className="w-100">
                       <SelectDisplay
                         icon={faUser}
@@ -470,6 +596,12 @@ export function AddTaskModal({
                 </Field>
               </div>
             </div>
+
+            {/* Due Date — quick picks + custom calendar */}
+            <Field>
+              <PlainLabel>Due Date</PlainLabel>
+              <DueDateQuickPick value={dueDate} onChange={setDueDate} />
+            </Field>
 
             <Field>
               <PlainLabel>Notes</PlainLabel>

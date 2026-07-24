@@ -165,13 +165,17 @@ export function ContactOverviewColumn({
 
   // One card per property in "Properties Owned" — group the contact's deals by
   // property so a property with several deals shows a single card, not one per
-  // deal. Order follows first appearance in `deals`.
-  const propertyGroups = Array.from(
-    deals.reduce((map, d) => {
-      map.set(d.propertyId, [...(map.get(d.propertyId) ?? []), d.id]);
-      return map;
-    }, new Map<string, string[]>()),
-  );
+  // deal. Order follows first appearance in `deals`. Owned properties without
+  // a deal (e.g. a building the contact holds but hasn't listed) still get a
+  // card, with no deal chip.
+  const propertyGroupMap = deals.reduce((map, d) => {
+    map.set(d.propertyId, [...(map.get(d.propertyId) ?? []), d.id]);
+    return map;
+  }, new Map<string, string[]>());
+  for (const pid of contact.ownedPropertyIds ?? []) {
+    if (!propertyGroupMap.has(pid)) propertyGroupMap.set(pid, []);
+  }
+  const propertyGroups = Array.from(propertyGroupMap);
 
   return (
     <Card className="panel-card overflow-hidden">
