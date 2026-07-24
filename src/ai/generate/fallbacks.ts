@@ -1,4 +1,11 @@
-import type { FilterSpecT, CallListSpecT, CallTurnSpecT, CallRecapSpecT, CallBriefSpecT } from "./schemas";
+import type {
+  FilterSpecT,
+  CallListSpecT,
+  CallTurnSpecT,
+  CallRecapSpecT,
+  CallBriefSpecT,
+  DraftReplySpecT,
+} from "./schemas";
 
 /** §3.1 — deterministic filter when the model is unavailable: dumps the raw
  * query into search and leaves everything else unset. */
@@ -67,5 +74,16 @@ export function callBriefFallback(signalDetail: string, firstName: string): Call
     leadWith: signalDetail || "Lead with the timing pressure on their asset, not a listing pitch.",
     ask: "Ask for a short conversation this week — no listing talk, just options.",
     voicemail: `${firstName}, quick call about your building — there's a time-sensitive angle worth two minutes. Call me back when you get a sec.`,
+  };
+}
+
+/** §3.6 — deterministic owner reply when the model is unavailable. */
+export function draftReplyFallback(firstName: string): DraftReplySpecT {
+  return {
+    tone: "interested",
+    body:
+      `Good speaking with you. I've attached the current rent roll and the T-12 — ` +
+      `take a look and let me know what you think the building could trade for. ` +
+      `Talk soon, ${firstName}.`,
   };
 }

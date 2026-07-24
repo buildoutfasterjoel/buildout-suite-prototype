@@ -21,6 +21,8 @@ import {
   type CallRecapSpecT,
   CallBriefSpec,
   type CallBriefSpecT,
+  DraftReplySpec,
+  type DraftReplySpecT,
 } from "./schemas";
 import {
   FILTER_PROMPT,
@@ -33,6 +35,7 @@ import {
   CALL_TURN_PROMPT,
   CALL_RECAP_PROMPT,
   CALL_BRIEF_PROMPT,
+  DRAFT_REPLY_PROMPT,
 } from "./prompts";
 import {
   filterFallback,
@@ -40,6 +43,7 @@ import {
   callTurnFallback,
   callRecapFallback,
   callBriefFallback,
+  draftReplyFallback,
 } from "./fallbacks";
 
 /** §3.1 — plain-English listings query → structured `FilterSpec`, applied to
@@ -264,5 +268,28 @@ export const generateCallBrief = createServerFn({ method: "POST" })
       }),
       schema: CallBriefSpec,
       fallback: () => callBriefFallback(data.signal, data.firstName),
+    }),
+  );
+
+/** §3.6 — simulated owner email reply. Default (fast) model. */
+export const generateDraftReply = createServerFn({ method: "POST" })
+  .validator(
+    (d: {
+      original: { subject: string; body: string };
+      candidate: { name: string; role: string; entity: string; note: string; phone: string };
+      property: { name: string; signal: string };
+      firstName: string;
+    }) => d,
+  )
+  .handler(({ data }): Promise<DraftReplySpecT> =>
+    runGenerator({
+      system: DRAFT_REPLY_PROMPT,
+      user: JSON.stringify({
+        original: data.original,
+        candidate: data.candidate,
+        property: data.property,
+      }),
+      schema: DraftReplySpec,
+      fallback: () => draftReplyFallback(data.firstName),
     }),
   );

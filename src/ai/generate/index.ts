@@ -14,5 +14,6 @@ export {
   generateCallTurn,
   generateCallRecap,
   generateCallBrief,
+  generateDraftReply,
 } from "./generators";
-export { callTurnFallback, callRecapFallback, callBriefFallback } from "./fallbacks";
+export { callTurnFallback, callRecapFallback, callBriefFallback, draftReplyFallback } from "./fallbacks";

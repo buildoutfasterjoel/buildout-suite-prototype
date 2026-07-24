@@ -94,3 +94,10 @@ export const CallBriefSpec = z.object({
   voicemail: z.string(),
 });
 export type CallBriefSpecT = z.infer<typeof CallBriefSpec>;
+
+/** §3.6 simulated owner email reply. All-simple → Anthropic strict-output safe. */
+export const DraftReplySpec = z.object({
+  tone: z.enum(["interested", "open", "decline"]),
+  body: z.string(),
+});
+export type DraftReplySpecT = z.infer<typeof DraftReplySpec>;

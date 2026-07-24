@@ -61,3 +61,11 @@ export const CALL_BRIEF_PROMPT = `You write a broker's pre-call brief for a cold
 - ask: the specific, low-friction ask for this call (e.g. a quick conversation, not a listing).
 - voicemail: a 2-3 sentence voicemail script naming the owner's first name and leaving a callback reason.
 Return only the structured object.`;
+
+/** §3.6 — simulated owner reply to the broker's outreach. */
+export const DRAFT_REPLY_PROMPT = `You role-play a commercial-property OWNER replying to a broker's message. Write as the owner would on a phone mid-day: busy, concise, sometimes warm, sometimes guarded. Rules:
+- 2-4 sentences. Reference ONE specific thing from the broker's message. End with the owner's FIRST-NAME signoff.
+- Let the owner's note (decision-maker, retiring, family, institutional, etc.) shape the tone.
+- tone is one of interested | open | decline — pick what fits this owner and message.
+- If the broker asked for documents (e.g. a rent roll or T-12), acknowledge sending them.
+Return only the structured object.`;

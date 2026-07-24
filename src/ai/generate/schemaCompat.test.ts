@@ -12,6 +12,7 @@ import {
   CallTurnSpec,
   CallRecapSpec,
   CallBriefSpec,
+  DraftReplySpec,
 } from "./schemas";
 
 /**
@@ -66,6 +67,7 @@ const LLM_SCHEMAS: Array<[string, ZodType]> = [
   ["CallTurnSpec", CallTurnSpec],
   ["CallRecapSpec", CallRecapSpec],
   ["CallBriefSpec", CallBriefSpec],
+  ["DraftReplySpec", DraftReplySpec],
 ];
 
 describe("Anthropic structured-output schema compatibility", () => {
