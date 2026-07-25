@@ -52,8 +52,6 @@ import { CallBriefCard } from "#/components/call/CallBriefCard";
 import type { CallBriefSpecT } from "#/ai/generate/schemas";
 import { BovCard } from "#/components/call/BovCard";
 import { useBovDraft, bovSummaryText } from "#/components/call/useBovDraft";
-import { HeroDemoCard } from "#/components/call/HeroDemoCard";
-import { useHeroDemo, arcCompleteText, resetHeroDemo } from "#/components/call/heroDemo";
 
 /** Shown instead of sending when the server has no Anthropic key configured. */
 const NOT_CONFIGURED_MESSAGE =
@@ -670,25 +668,6 @@ export function AssistantSidebar() {
     void voiceEngine.speak(bovSummaryText(bovDraft)); // one-way: no re-arm
   }, [bovDraft, voiceEnabled]);
 
-  // Speak the loop-closing completion beat once when the hero arc finishes
-  // (BOV sent, Phase 4D). Also a one-way report — it must NOT enter
-  // conversationMode or re-arm the mic.
-  const arcComplete = useHeroDemo((s) => s.arcComplete);
-  const spokenArcRef = useRef(false);
-  useEffect(() => {
-    if (!arcComplete) {
-      spokenArcRef.current = false;
-      return;
-    }
-    if (spokenArcRef.current) return;
-    spokenArcRef.current = true;
-    requestAnimationFrame(() => {
-      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-    });
-    if (!voiceEnabled) return;
-    void voiceEngine.speak(arcCompleteText()); // one-way: no re-arm
-  }, [arcComplete, voiceEnabled]);
-
   // Presenter kill-switch: Escape silences Otto instantly and ends conversation.
   useHotkey("Escape", () => {
     voiceEngine.cancel();
@@ -791,14 +770,6 @@ export function AssistantSidebar() {
         {/* The BOV draft self-arrives after the underwriting result is ready
             (§Phase 4C) — render it at the bottom of the flow too. */}
         <BovCard />
-        {/* The loop-closing completion beat (§Phase 4D) fires once the BOV is
-            sent — render it after the BOV card, chronologically last. */}
-        <HeroDemoCard
-          onRunAgain={() => {
-            setMessages([]);
-            void resetHeroDemo();
-          }}
-        />
       </div>
 
       {/* Call brief (Phase 4A "brief me first") + the hero-offer chips */}

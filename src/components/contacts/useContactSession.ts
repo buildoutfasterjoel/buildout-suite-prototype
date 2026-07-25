@@ -26,10 +26,6 @@ interface ContactSessionState {
   resolve: (contactId: string, eventId: string) => void;
   setFlag: (contactId: string, flag: string) => void;
   clearFlag: (contactId: string, flag: string) => void;
-  /** Clear simulated events, resolved rows, and story-arc flags (replay reset).
-   * `logged` is also cleared — a full reset is correct here since the caller
-   * (resetHeroDemo) already reseeds the entire dataset. */
-  reset: () => void;
 }
 
 /** Monotonic creation order across the session (drives timeline tiebreaks). */
@@ -90,8 +86,6 @@ export const useContactSession = create<ContactSessionState>((set) => ({
         [contactId]: (s.flags[contactId] ?? []).filter((f) => f !== flag),
       },
     })),
-
-  reset: () => set({ logged: {}, simEvents: {}, resolved: {}, flags: {} }),
 }));
 
 const EMPTY: never[] = [];

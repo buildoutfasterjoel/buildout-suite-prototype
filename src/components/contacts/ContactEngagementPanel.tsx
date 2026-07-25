@@ -38,7 +38,6 @@ import { createRosaProposalDeal } from "#/components/call/rosaDeal";
 import { ROSA_FINANCIAL_DOCS } from "#/components/call/rosaDocs";
 import { startUnderwriting } from "#/components/call/heroInbound";
 import { ROSA_AGREEMENT_EMAIL_ID } from "#/components/call/rosaClosing";
-import { useHeroDemo } from "#/components/call/heroDemo";
 export function ContactEngagementPanel({
   contact,
   deals,
@@ -98,16 +97,14 @@ export function ContactEngagementPanel({
     : undefined;
 
   // The agreement row's Activate action lands the deal at Active; once it does,
-  // the arc is complete (Otto's "run it again" beat) and the row resolves. The
-  // gate can be cancelled, so clicking alone doesn't resolve it — the deal's
-  // real status does.
+  // the row resolves. The gate can be cancelled, so clicking alone doesn't
+  // resolve it — the deal's real status does.
   useEffect(() => {
     if (!ownedProperty) return;
     const activated = deals.some(
       (d) => d.propertyId === ownedProperty.id && d.status === "active",
     );
     if (activated) {
-      useHeroDemo.getState().markArcComplete();
       resolve(ROSA_AGREEMENT_EMAIL_ID);
     }
     // `resolve` is a stable-behaving setState wrapper.
