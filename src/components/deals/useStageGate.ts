@@ -2,6 +2,13 @@ import { create } from "zustand";
 import type { PropertyStatus } from "#/data/types";
 import { getListing } from "#/data/store";
 import { commitStageTransition } from "#/data/actions";
+import {
+  resolveGate,
+  seedGateForm,
+  unsatisfiedRequired,
+  buildTransitionInput,
+  completeSetupGate,
+} from "#/data/stageGates";
 
 /**
  * App-wide open/close state for the stage-gate modal. Both entry points (the
@@ -52,24 +59,59 @@ export function requestStageChange(
 ): void {
   const deal = getListing(dealId);
   if (!deal || deal.status === targetStage) return;
+  const actor = deal.internalBrokers[0]?.name ?? "You";
+
+  // A buy-side deal is not a listing — it moves stages directly, no gate.
   if (deal.dealSide === "buyer") {
-    commitStageTransition({
-      dealId,
-      targetStage,
-      actor: deal.internalBrokers[0]?.name ?? "You",
-    });
+    commitStageTransition({ dealId, targetStage, actor });
     return;
   }
+
+  const config = resolveGate(deal.status, targetStage, deal.dealType);
+
+  // Pure backward confirm (not leaving Active) — nothing to decide, swap directly.
+  if (config.kind === "confirm" && !config.leavesActive) {
+    commitStageTransition({ dealId, targetStage, actor });
+    return;
+  }
+
+  // Forward field gate whose requirements the deal already satisfies — no modal.
+  if (config.kind === "field") {
+    const form = seedGateForm(deal);
+    if (unsatisfiedRequired(config, form).length === 0) {
+      commitStageTransition(
+        buildTransitionInput(config, form, deal.id, actor, deal.dealType),
+      );
+      return;
+    }
+  }
+
+  // Otherwise surface the gate: forward gaps, the dead gate, or backward-out-of-Active.
   useStageGate.getState().openGate(dealId, targetStage);
 }
 
 /**
  * Open the Approve & Publish gate to finish setup on a deal that was created
- * directly in a live stage (Active/Under Contract) and never published. Commits
- * the required info and sets publishedAt without changing the stage.
+ * directly in a live stage (Active/Under Contract) and never published. When the
+ * deal already satisfies every publish requirement, it's published in place with
+ * no modal.
  */
 export function requestSetupCompletion(dealId: string): void {
   const deal = getListing(dealId);
   if (!deal) return;
+  const config = completeSetupGate(deal);
+  const form = seedGateForm(deal);
+  if (unsatisfiedRequired(config, form).length === 0) {
+    commitStageTransition(
+      buildTransitionInput(
+        config,
+        form,
+        deal.id,
+        deal.internalBrokers[0]?.name ?? "You",
+        deal.dealType,
+      ),
+    );
+    return;
+  }
   useStageGate.getState().openGate(dealId, deal.status, "complete");
 }
