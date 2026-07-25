@@ -54,6 +54,7 @@ import { InboundEmailCard } from "#/components/call/InboundEmailCard";
 import { useInboundEmail } from "#/components/call/useInboundEmail";
 import { inboundSummaryText } from "#/components/call/heroInbound";
 import { BovCard } from "#/components/call/BovCard";
+import { ClosingEmailCard } from "#/components/call/ClosingEmailCard";
 import { useBovDraft, bovSummaryText } from "#/components/call/useBovDraft";
 import { HeroDemoCard } from "#/components/call/HeroDemoCard";
 import { useHeroDemo, arcCompleteText, resetHeroDemo } from "#/components/call/heroDemo";
@@ -813,6 +814,9 @@ export function AssistantSidebar() {
         {/* The BOV draft self-arrives after the underwriting result is ready
             (§Phase 4C) — render it at the bottom of the flow too. */}
         <BovCard />
+        {/* Rosa's signed listing agreement self-arrives after the closing beat —
+            render it after the BOV card, chronologically after it. */}
+        <ClosingEmailCard />
         {/* The loop-closing completion beat (§Phase 4D) fires once the BOV is
             sent — render it after the BOV card, chronologically last. */}
         <HeroDemoCard

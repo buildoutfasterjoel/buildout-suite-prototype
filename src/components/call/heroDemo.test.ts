@@ -30,7 +30,7 @@ describe("resetHeroDemo", () => {
     // seed some hero state to prove it all gets cleared
     useHeroOffer.getState().setOffer({ kind: "call", contactId: "m" });
     useInboundEmail.getState().setInbound({
-      dealId: "d", from: "Marcus", subject: "s", body: "b", tone: "interested",
+      dealId: "d", from: "Rosa", subject: "s", body: "b", tone: "interested",
       attachments: [], canUnderwrite: true,
     });
     useBovDraft.setState({ armedDealId: "d", draft: null } as never);
@@ -47,8 +47,8 @@ describe("resetHeroDemo", () => {
     expect(useCallStore.getState().heroActions).toBeNull();
     expect(useHeroDemo.getState().arcComplete).toBe(false);
     expect(useAssistant.getState().greetedThisSession).toBe(false);
-    // re-seeded: Marcus exists again with a signal
-    const marcus = [...useDataStore.getState().contacts.values()].find((c) => c.heroKey === "marcus");
-    expect(marcus?.signal).toBeTruthy();
+    // re-seeded: Rosa exists again with a signal
+    const rosa = [...useDataStore.getState().contacts.values()].find((c) => c.heroKey === "rosa");
+    expect(rosa?.signal).toBeTruthy();
   });
 });

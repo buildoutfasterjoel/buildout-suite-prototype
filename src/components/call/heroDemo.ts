@@ -9,6 +9,8 @@ import { useVoice } from "#/ai/voice/useVoice";
 import { voiceEngine } from "#/ai/voice/voiceEngine";
 import { callFlow } from "#/components/call/callFlow";
 import { heroInbound } from "#/components/call/heroInbound";
+import { rosaClosing } from "#/components/call/rosaClosing";
+import { useClosingEmail } from "#/components/call/useClosingEmail";
 
 interface HeroDemoState {
   arcComplete: boolean;
@@ -25,8 +27,8 @@ export const useHeroDemo = create<HeroDemoState>((set) => ({
 /** Otto's loop-closing line spoken/shown when the arc completes (PRD §3.1). */
 export function arcCompleteText(): string {
   return (
-    "That's the full loop — from an overnight signal on Marcus to a sent BOV, all captured " +
-    "on one record. Want me to run it again?"
+    "That's the full loop — from Rosa's overnight voicemail to a signed listing agreement and " +
+    "an active listing, all captured on one record. Want me to run it again?"
   );
 }
 
@@ -34,11 +36,13 @@ export function arcCompleteText(): string {
  * store, and re-fire the greeting from the top — no page reload. */
 export async function resetHeroDemo(): Promise<void> {
   heroInbound.cancel();
+  rosaClosing.cancel();
   callFlow.hangUp(); // also cancels voice + resets the call store
   voiceEngine.cancel();
   await useDataStore.getState().reset();
   useHeroOffer.getState().clearOffer();
   useInboundEmail.getState().clearInbound();
+  useClosingEmail.getState().clear();
   useBovDraft.getState().clear();
   useCallStore.getState().reset();
   useHeroDemo.getState().clearComplete();
