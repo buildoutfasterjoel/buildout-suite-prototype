@@ -11,7 +11,7 @@ import { createTask, createDeal } from "#/data/actions";
 import { parseDueDate } from "#/ai/dueDate";
 import { useAddTask } from "#/data/useAddTask";
 import { emptyDraft } from "#/data/createListing";
-import { undoHeroActions, weekdayFromIsoDate } from "#/components/call/heroRecapExtensions";
+import { undoHeroActions } from "#/components/call/heroRecapExtensions";
 
 /**
  * "Otto reports" recap card (Phase-3 design §6.1). Renders when useCallStore.recap
@@ -154,8 +154,7 @@ export function CallRecapCard() {
           <div className="small text-muted text-uppercase fw-semibold">What Otto did</div>
           <ul className="mb-0 ps-3">
             <li>Opened opportunity <span className="fw-semibold">{heroActions.dealName}</span></li>
-            <li>Moved it into your pipeline (Active)</li>
-            <li>Scheduled a tour for {weekdayFromIsoDate(heroActions.tourDate)}</li>
+            <li>Added a task to prep the BOV, due {heroActions.followUpDate}</li>
           </ul>
           <div className="d-flex gap-2">
             <Button variant="outline" size="sm" onClick={() => router.navigate({ to: "/listings/$listingId", params: { listingId: heroActions.dealId } })}>

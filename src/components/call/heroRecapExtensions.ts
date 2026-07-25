@@ -1,17 +1,16 @@
 import type { CallTarget } from "./useCallStore";
 import type { CallRecapSpecT } from "#/ai/generate/schemas";
-import { createDeal, createTask, commitStageTransition, updateDealStage, deleteTask } from "#/data/actions";
+import { createDeal, createTask, updateDealStage, deleteTask } from "#/data/actions";
 import { emptyDraft } from "#/data/createListing";
 import { getContact } from "#/data/store";
 import { parseDueDate } from "#/ai/dueDate";
-import { CURRENT_USER } from "#/data/teammates";
 
 export interface HeroActions {
   dealId: string;
   dealName: string;
-  movedToStage: "active";
-  tourTaskId: string;
-  tourDate: string;
+  createdStage: "proposal";
+  followUpTaskId: string;
+  followUpDate: string;
   narration: string;
 }
 
@@ -21,26 +20,17 @@ export function isHeroCall(target: CallTarget | null): boolean {
   return !!getContact(target.contactId)?.signal;
 }
 
-/** Derive the weekday name (e.g. "Thursday") from a "YYYY-MM-DD" ISO date string,
- * deterministically (no timezone drift from `new Date(isoString)` parsing). */
-export function weekdayFromIsoDate(isoDate: string): string {
-  const [y, m, d] = isoDate.split("-").map(Number);
-  if (!y || !m || !d) return "";
-  return new Date(y, m - 1, d).toLocaleDateString("en-US", { weekday: "long" });
-}
-
-export function heroNarration(dealName: string, tourDate: string): string {
-  const weekday = weekdayFromIsoDate(tourDate);
+export function heroNarration(dealName: string): string {
   return (
-    `I opened a new opportunity on ${dealName}, moved it into your pipeline, ` +
-    `and put ${weekday ? `${weekday}'s` : "a"} tour on your calendar.`
+    `I opened a new opportunity on ${dealName} and put a task on your list to prep the BOV.`
   );
 }
 
 /** Auto-execute the hero recap extensions: open the opportunity on the owner's
- * (multifamily) property, advance it proposal→active, and schedule the Thursday
- * tour. Deterministic — runs regardless of API keys. Returns null if the target
- * isn't a hero or its contact/property can't be resolved. */
+ * (multifamily) property at `proposal` (activation is a later closing beat) and
+ * schedule a follow-up task to prep the BOV. Deterministic — runs regardless of
+ * API keys. Returns null if the target isn't a hero or its contact/property
+ * can't be resolved. */
 export function applyHeroRecapExtensions(
   input: { target: CallTarget; recap: CallRecapSpecT },
   opts: { now?: Date } = {},
@@ -53,7 +43,8 @@ export function applyHeroRecapExtensions(
   const dealName = recap.opportunity.name.trim() || target.entity || `${target.firstName}'s deal`;
 
   // 1. Open the opportunity on the owner's existing property (keeps it multifamily
-  //    → underwriting-eligible in Phase 4C).
+  //    → underwriting-eligible in Phase 4C). Stays at proposal — activation is a
+  //    later closing beat, not part of the recap.
   const { deal } = createDeal({
     ...emptyDraft(),
     name: dealName,
@@ -64,22 +55,12 @@ export function applyHeroRecapExtensions(
     dealSide: "seller",
   });
 
-  // 2. Move it into the pipeline (proposal → active), with a real history entry.
-  commitStageTransition({
-    dealId: deal.id,
-    targetStage: "active",
-    actor: CURRENT_USER.name,
-    dealSide: "seller",
-    sellerContactId: contact.id,
-    publish: true,
-  });
-
-  // 3. Schedule the Thursday tour.
-  const tourDate = parseDueDate("thursday", opts.now) ?? "";
+  // 2. Schedule a follow-up task to prep the BOV.
+  const followUpDate = parseDueDate("thursday", opts.now) ?? "";
   const { task } = createTask({
-    name: `Tour ${dealName} with ${target.firstName}`,
-    dueDate: tourDate,
-    type: "tour",
+    name: `Prep the BOV for ${dealName}`,
+    dueDate: followUpDate,
+    type: "deal",
     source: "deal",
     contactId: contact.id,
     dealId: deal.id,
@@ -88,15 +69,15 @@ export function applyHeroRecapExtensions(
   return {
     dealId: deal.id,
     dealName,
-    movedToStage: "active",
-    tourTaskId: task.id,
-    tourDate,
-    narration: heroNarration(dealName, tourDate),
+    createdStage: "proposal",
+    followUpTaskId: task.id,
+    followUpDate,
+    narration: heroNarration(dealName),
   };
 }
 
-/** Reverse the three writes (no hard deal-delete exists → move it off-ladder). */
+/** Reverse the writes (no hard deal-delete exists → move it off-ladder). */
 export function undoHeroActions(actions: HeroActions): void {
-  deleteTask(actions.tourTaskId);
+  deleteTask(actions.followUpTaskId);
   updateDealStage(actions.dealId, "inactive");
 }

@@ -17,49 +17,51 @@ function hydrate() {
 }
 
 const targetFor = (contactId: string, name: string): CallTarget => ({
-  contactId, name, entity: "Pinckney Holdings LLC", phone: "555", initials: "MP",
-  firstName: "Marcus", role: "owner", note: "",
+  contactId, name, entity: "Delgado Properties LLC", phone: "555", initials: "RD",
+  firstName: "Rosa", role: "owner", note: "",
 });
 
 const recap: CallRecapSpecT = {
   sentiment: "positive",
   keyPoints: ["Open to a conversation."],
   tasks: [],
-  opportunity: { name: "Palmetto Court", address: "12 King St" },
+  opportunity: { name: "The Delgado Building", address: "12 King St" },
 };
 
 describe("heroRecapExtensions", () => {
   beforeEach(() => hydrate());
 
   it("isHeroCall is true for the signal owner, false otherwise", () => {
-    const marcus = [...useDataStore.getState().contacts.values()].find((c) => c.heroKey === "marcus")!;
-    const other = [...useDataStore.getState().contacts.values()].find((c) => c.heroKey !== "marcus" && !c.signal)!;
-    expect(isHeroCall(targetFor(marcus.id, marcus.firstName))).toBe(true);
+    const rosa = [...useDataStore.getState().contacts.values()].find((c) => c.heroKey === "rosa")!;
+    const other = [...useDataStore.getState().contacts.values()].find((c) => c.heroKey !== "rosa" && !c.signal)!;
+    expect(isHeroCall(targetFor(rosa.id, rosa.firstName))).toBe(true);
     expect(isHeroCall(targetFor(other.id, other.firstName))).toBe(false);
   });
 
-  it("opens a proposal deal, moves it to active, and schedules the Thursday tour", () => {
-    const marcus = [...useDataStore.getState().contacts.values()].find((c) => c.heroKey === "marcus")!;
+  it("opens the opportunity at proposal and schedules a follow-up (no auto-activate)", () => {
+    const rosa = [...useDataStore.getState().contacts.values()].find((c) => c.heroKey === "rosa")!;
     const actions = applyHeroRecapExtensions(
-      { target: targetFor(marcus.id, marcus.firstName), recap },
+      { target: targetFor(rosa.id, rosa.firstName), recap },
       { now: new Date("2026-07-24T09:00:00") }, // a Friday
     )!;
-    expect(actions.movedToStage).toBe("active");
-    expect(actions.tourDate).toBe("2026-07-30"); // next Thursday
+    expect(actions).not.toBeNull();
+    expect(actions.createdStage).toBe("proposal");
+    expect(actions.followUpDate).toBe("2026-07-30"); // next Thursday
     const deal = useDataStore.getState().listings.get(actions.dealId)!;
-    expect(deal.status).toBe("active");
-    const task = useDataStore.getState().tasks.get(actions.tourTaskId)!;
-    expect(task.type).toBe("tour");
+    expect(deal.status).toBe("proposal"); // NOT "active"
+    const task = useDataStore.getState().tasks.get(actions.followUpTaskId)!;
+    expect(task).toBeTruthy();
     expect(task.dueDate).toBe("2026-07-30");
-    expect(actions.narration).toContain("pipeline");
-    expect(actions.narration).toContain("Thursday"); // spoken narration uses the weekday, not the raw ISO date
+    expect(actions.narration).not.toContain("pipeline");
+    expect(actions.narration).not.toContain("tour");
+    expect(actions.narration).toContain("BOV");
   });
 
-  it("undo removes the tour task and pulls the deal out of the pipeline", () => {
-    const marcus = [...useDataStore.getState().contacts.values()].find((c) => c.heroKey === "marcus")!;
-    const actions = applyHeroRecapExtensions({ target: targetFor(marcus.id, marcus.firstName), recap })!;
+  it("undo removes the follow-up task and pulls the deal out of the pipeline", () => {
+    const rosa = [...useDataStore.getState().contacts.values()].find((c) => c.heroKey === "rosa")!;
+    const actions = applyHeroRecapExtensions({ target: targetFor(rosa.id, rosa.firstName), recap })!;
     undoHeroActions(actions);
-    expect(useDataStore.getState().tasks.get(actions.tourTaskId)).toBeUndefined();
+    expect(useDataStore.getState().tasks.get(actions.followUpTaskId)).toBeUndefined();
     expect(useDataStore.getState().listings.get(actions.dealId)!.status).toBe("inactive");
   });
 });

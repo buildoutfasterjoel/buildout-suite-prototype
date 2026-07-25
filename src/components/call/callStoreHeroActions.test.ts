@@ -3,8 +3,8 @@ import { useCallStore } from "./useCallStore";
 import type { HeroActions } from "./heroRecapExtensions";
 
 const sample: HeroActions = {
-  dealId: "d", dealName: "Palmetto Court", movedToStage: "active",
-  tourTaskId: "t", tourDate: "2026-07-30", narration: "…",
+  dealId: "d", dealName: "The Delgado Building", createdStage: "proposal",
+  followUpTaskId: "t", followUpDate: "2026-07-30", narration: "…",
 };
 
 describe("useCallStore.heroActions", () => {
