@@ -251,12 +251,16 @@ export function CreateDealModal({
   // depth; starts at the default set and is toggled by hand.
   const [checkedDocKeys, setCheckedDocKeys] =
     useState<Set<string>>(defaultDocKeys);
-  // Documents the AI "extracted" from the uploaded files — auto-checked and
-  // badged in step 2. A ref holds the previous picks so removing files peels
-  // back exactly what was auto-added, leaving hand-checked docs intact.
-  const [aiPickedDocKeys, setAiPickedDocKeys] = useState<Set<string>>(
-    () => new Set(),
+  // Documents the AI "extracted" from the uploaded files — derived purely from
+  // the current files so the badges never lag or show a prior session's picks
+  // (this modal is mounted once and only toggles `open`, so stale state would
+  // otherwise survive a close/reopen).
+  const aiPickedDocKeys = useMemo(
+    () => new Set(recommendDocsFromUploads(files)),
+    [files],
   );
+  // Previous picks, so a files change peels back exactly what the AI auto-added,
+  // leaving hand-checked docs intact.
   const prevPicksRef = useRef<Set<string>>(new Set());
   // Free-text filter over the (large) catalog — only narrows the Available list.
   const [docSearch, setDocSearch] = useState("");
@@ -380,26 +384,22 @@ export function CreateDealModal({
     setDocSearch("");
     setFiles([]);
     setDragging(false);
-    setAiPickedDocKeys(new Set());
     prevPicksRef.current = new Set();
   }, [open, contact, property, initialAddress]);
 
-  // When the broker's uploaded files change, refresh the AI's document picks:
-  // add the new recommendations to the checked set and peel back any the AI
-  // had auto-added before that no longer apply.
+  // When the AI's picks change (i.e. the uploaded files changed), fold them into
+  // the checked set: add the new picks, and remove any the AI added before that
+  // no longer apply. Hand-checked docs are never in prevPicksRef, so they survive.
   useEffect(() => {
-    if (!open) return;
-    const recs = recommendDocsFromUploads(files);
-    const recsSet = new Set(recs);
     setCheckedDocKeys((prev) => {
       const next = new Set(prev);
-      for (const k of prevPicksRef.current) if (!recsSet.has(k)) next.delete(k);
-      for (const k of recs) next.add(k);
+      for (const k of prevPicksRef.current)
+        if (!aiPickedDocKeys.has(k)) next.delete(k);
+      for (const k of aiPickedDocKeys) next.add(k);
       return next;
     });
-    prevPicksRef.current = recsSet;
-    setAiPickedDocKeys(recsSet);
-  }, [files, open]);
+    prevPicksRef.current = aiPickedDocKeys;
+  }, [aiPickedDocKeys]);
 
   function addFiles(list: FileList | null) {
     if (!list?.length) return;
