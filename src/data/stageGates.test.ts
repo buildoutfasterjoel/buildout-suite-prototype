@@ -3,8 +3,11 @@ import {
   resolveGate,
   canConfirm,
   buildTransitionInput,
+  unsatisfiedRequired,
+  completeSetupGate,
   type GateFormState,
 } from './stageGates'
+import { useDataStore } from '#/data/dataStore'
 
 const emptyForm: GateFormState = {
   buyerLinked: false,
@@ -17,7 +20,6 @@ const emptyForm: GateFormState = {
   commissionPct: null,
   deadReason: null,
   aiDocsAllReviewed: true,
-  websiteReviewed: false,
   unpublishOnExit: true,
   buyerContactId: null,
   saleTitle: '',
@@ -39,13 +41,12 @@ const readyToPublish: GateFormState = {
   saleDescription: 'Corner lot with drive-thru',
   askingPrice: 1_950_000,
   aiDocsAllReviewed: true,
-  websiteReviewed: true,
   listedOnDate: '2026-07-01',
   listingExpirationDate: '2026-12-31',
 }
 
 describe('resolveGate', () => {
-  it('Pitching → Active is a publishing field gate — listing content + attestations + dates', () => {
+  it('Pitching → Active is a publishing field gate — listing content + doc review + dates', () => {
     const g = resolveGate('proposal', 'active', 'Sale')
     expect(g.kind).toBe('field')
     expect(g.publishes).toBe(true)
@@ -55,11 +56,12 @@ describe('resolveGate', () => {
         'saleDescription',
         'askingPrice',
         'aiDocsReviewed',
-        'websiteReviewed',
         'listedOnDate',
         'listingExpirationDate',
       ]),
     )
+    // Website review is no longer a gate blocker.
+    expect(g.required).not.toContain('websiteReviewed')
     // Seller/Side are captured at creation — the gate must NOT re-require them.
     expect(g.required).not.toContain('sellerLinked')
     expect(g.required).not.toContain('dealSide')
@@ -147,11 +149,6 @@ describe('canConfirm', () => {
     expect(canConfirm(g, { ...readyToPublish, aiDocsAllReviewed: false })).toBe(false)
   })
 
-  it('the website attestation blocks the publish gate when unchecked', () => {
-    const g = resolveGate('proposal', 'active', 'Sale')
-    expect(canConfirm(g, { ...readyToPublish, websiteReviewed: false })).toBe(false)
-  })
-
   it('a missing listing date blocks the publish gate', () => {
     const g = resolveGate('proposal', 'active', 'Sale')
     expect(canConfirm(g, { ...readyToPublish, listingExpirationDate: null })).toBe(false)
@@ -198,5 +195,40 @@ describe('buildTransitionInput', () => {
     expect(input.unpublish).toBe(true)
     expect(input.publish).toBeUndefined()
     expect(input.marketing).toBeUndefined()
+  })
+})
+
+describe('unsatisfiedRequired', () => {
+  it('returns every required field for an empty form', () => {
+    const g = resolveGate('proposal', 'active', 'Sale')
+    // emptyForm defaults aiDocsAllReviewed to true (the "no AI docs to review"
+    // baseline) — override it so nothing in the form is satisfied.
+    expect(
+      unsatisfiedRequired(g, { ...emptyForm, aiDocsAllReviewed: false }).sort(),
+    ).toEqual([...g.required].sort())
+  })
+
+  it('returns [] when the form satisfies every requirement', () => {
+    const g = resolveGate('proposal', 'active', 'Sale')
+    expect(unsatisfiedRequired(g, readyToPublish)).toEqual([])
+  })
+
+  it('returns only the still-missing field', () => {
+    const g = resolveGate('proposal', 'active', 'Sale')
+    expect(unsatisfiedRequired(g, { ...readyToPublish, listingExpirationDate: null })).toEqual([
+      'listingExpirationDate',
+    ])
+  })
+})
+
+describe('completeSetupGate', () => {
+  it('reuses the publish requirements but keeps the deal in its current stage', () => {
+    const deal = [...useDataStore.getState().listings.values()][0]
+    const config = completeSetupGate(deal)
+    expect(config.publishes).toBe(true)
+    expect(config.targetStage).toBe(deal.status)
+    expect(config.fromStage).toBe(deal.status)
+    expect(config.leavesActive).toBe(false)
+    expect(config.required).toEqual(resolveGate('proposal', 'active', deal.dealType).required)
   })
 })

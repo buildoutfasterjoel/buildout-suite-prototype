@@ -20,7 +20,6 @@ export type RequiredField =
   | 'commissionAmount'
   | 'deadReason'
   | 'aiDocsReviewed'
-  | 'websiteReviewed'
   | 'saleTitle'
   | 'saleDescription'
   | 'askingPrice'
@@ -43,8 +42,6 @@ export interface GateFormState {
   deadReason: string | null
   /** True when every AI-generated doc is checked (or there are none). */
   aiDocsAllReviewed: boolean
-  /** Broker attestation that the public listing website has been reviewed. */
-  websiteReviewed: boolean
   /** Backward-out-of-Active only: also pull the listing off-market. Default true. */
   unpublishOnExit: boolean
   /** Contact chosen to link as buyer in this gate (Under Contract), if any. */
@@ -121,7 +118,6 @@ export const REQUIRED_FIELD_LABEL: Record<RequiredField, string> = {
   commissionAmount: 'Commission',
   deadReason: 'Lost reason',
   aiDocsReviewed: 'Document review',
-  websiteReviewed: 'Website review',
   saleTitle: 'Listing title',
   saleDescription: 'Listing description',
   askingPrice: 'Asking price',
@@ -144,7 +140,6 @@ export const EMPTY_GATE_FORM: GateFormState = {
   commissionPct: null,
   deadReason: null,
   aiDocsAllReviewed: true,
-  websiteReviewed: false,
   unpublishOnExit: true,
   buyerContactId: null,
   saleTitle: '',
@@ -222,7 +217,6 @@ export function seedGateForm(deal: Listing): GateFormState {
     leaseTermMonths: space?.leaseTermMonths ?? null,
     leaseCommencementDate: deal.transaction.leaseCommencementDate,
     aiDocsAllReviewed: aiDocs.length === 0,
-    websiteReviewed: false,
   }
 }
 
@@ -281,7 +275,6 @@ export function resolveGate(
             ? (['leaseRate', 'availableSqFt'] as const)
             : (['askingPrice'] as const)),
           'aiDocsReviewed',
-          'websiteReviewed',
           'listedOnDate',
           'listingExpirationDate',
         ],
@@ -312,6 +305,21 @@ export function resolveGate(
   }
 }
 
+/**
+ * The Approve & Publish gate for a deal created directly in a live stage: same
+ * required fields as the publish gate, but pinned to the deal's current stage so
+ * it publishes in place without changing the stage.
+ */
+export function completeSetupGate(deal: Listing): GateConfig {
+  const publishGate = resolveGate('proposal', 'active', deal.dealType)
+  return {
+    ...publishGate,
+    fromStage: deal.status,
+    targetStage: deal.status,
+    leavesActive: false,
+  }
+}
+
 function fieldSatisfied(field: RequiredField, form: GateFormState): boolean {
   switch (field) {
     case 'buyerLinked':
@@ -330,8 +338,6 @@ function fieldSatisfied(field: RequiredField, form: GateFormState): boolean {
       return !!form.deadReason && form.deadReason.trim().length > 0
     case 'aiDocsReviewed':
       return form.aiDocsAllReviewed
-    case 'websiteReviewed':
-      return form.websiteReviewed
     case 'saleTitle':
       return form.saleTitle.trim().length > 0
     case 'saleDescription':
@@ -354,6 +360,14 @@ function fieldSatisfied(field: RequiredField, form: GateFormState): boolean {
 export function canConfirm(config: GateConfig, form: GateFormState): boolean {
   if (config.kind === 'confirm') return true
   return config.required.every((f) => fieldSatisfied(f, form))
+}
+
+/** The required fields a form has NOT yet satisfied — the gaps the gate must surface. */
+export function unsatisfiedRequired(
+  config: GateConfig,
+  form: GateFormState,
+): RequiredField[] {
+  return config.required.filter((f) => !fieldSatisfied(f, form))
 }
 
 export function buildTransitionInput(

@@ -18,7 +18,6 @@ describe('lease gate commit', () => {
       listedOnDate: '2026-08-01',
       listingExpirationDate: '2027-08-01',
       aiDocsAllReviewed: true,
-      websiteReviewed: true,
     }
     const input = buildTransitionInput(config, form, deal.id, 'Tester', 'Lease')
     commitStageTransition(input)
