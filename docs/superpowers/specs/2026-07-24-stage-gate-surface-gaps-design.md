@@ -18,7 +18,7 @@ stages, not force a form.
 
 Surface only the required fields the deal has **not** already satisfied. When
 nothing is missing, skip the modal entirely and move the deal — a true
-drag-and-drop swap, confirmed by the existing toast.
+drag-and-drop swap; the board and stage chips re-render from the store.
 
 ## The rule (one mechanic, applied per gate)
 
@@ -31,8 +31,10 @@ unsatisfied = config.required.filter(f => !fieldSatisfied(f, seededForm))
 - **Render only the unsatisfied fields.** Title, price, listing dates, a linked
   buyer — anything already on the deal collapses away.
 - **When `unsatisfied` is empty on a forward field gate, skip the modal** and
-  commit the transition directly. The existing `commitStageTransition` toast is
-  the confirmation.
+  commit the transition directly. The confirmation is the deal itself moving —
+  the Kanban board re-derives from the store, and stage chips re-render, exactly
+  as they do after a modal commit today. (There is no move toast in the codebase;
+  none is added.)
 
 Validation (`canConfirm`) is unchanged: it still checks *all* required fields.
 Hidden fields are hidden precisely because they're already satisfied, so they
