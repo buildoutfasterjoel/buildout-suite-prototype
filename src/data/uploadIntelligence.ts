@@ -1,5 +1,12 @@
-import { SUGGESTED_DOCUMENTS } from './createListing'
-import type { DealDocument } from './types'
+import { emptySpaceLeaseTerms, SUGGESTED_DOCUMENTS } from './createListing'
+import type {
+  DealDocument,
+  DealMarketing,
+  DealPitchFinancials,
+  DealTransaction,
+  Listing,
+  Property,
+} from './types'
 
 /**
  * The documents Buildout "extracts" from a broker's uploaded files. Uploads in
@@ -30,4 +37,78 @@ export function recommendDocsFromUploads(files: DealDocument[]): string[] {
   }
 
   return SUGGESTED_DOCUMENTS.filter((d) => keys.has(d.key)).map((d) => d.key)
+}
+
+/** The field values that make a deal pass the Approve & Publish gate. */
+export interface PublishReadyPatch {
+  marketing: Partial<DealMarketing>
+  transaction: Partial<DealTransaction>
+  financials: Partial<DealPitchFinancials>
+}
+
+/** Local `YYYY-MM-DD` (no timezone drift), matching the stored date convention. */
+function localISO(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}`
+}
+
+/**
+ * Compute the field values that make `deal` publish-ready — everything the
+ * Approve & Publish gate requires EXCEPT `aiDocsReviewed`, which stays the
+ * broker's one remaining review click. Stands in for the AI reading the
+ * broker's uploaded documents (listing agreement → dates, financials → price).
+ */
+export function buildPublishReadyPatch(
+  deal: Listing,
+  property: Property | undefined,
+): PublishReadyPatch {
+  const now = new Date()
+  const transaction: Partial<DealTransaction> = {
+    listedOnDate: localISO(now),
+    listingExpirationDate: localISO(
+      new Date(now.getFullYear(), now.getMonth() + 6, now.getDate()),
+    ),
+  }
+
+  const address = property
+    ? [property.street, property.city, property.state].filter(Boolean).join(', ') ||
+      property.name
+    : deal.name
+  const sqft =
+    property && property.buildingSqFt > 0
+      ? property.buildingSqFt
+      : deal.marketing.availableSqFt || 10000
+
+  if (deal.dealType === 'Lease') {
+    const unitId = deal.unitId ?? property?.units[0]?.id ?? ''
+    const marketing: Partial<DealMarketing> = {
+      leaseTitle: `${address} — Space for Lease`,
+      leaseDescription: `Well-positioned space available at ${address}. Buildout drafted this listing from your uploaded documents.`,
+      availableSqFt: sqft,
+      spaceLeaseTerms: [
+        {
+          ...emptySpaceLeaseTerms(unitId),
+          leaseRate: 28,
+          leaseRateUnits: 'SF/Yr',
+          leaseTermMonths: 60,
+        },
+      ],
+    }
+    return { marketing, transaction, financials: {} }
+  }
+
+  const askingPrice =
+    property && property.askingPrice > 0
+      ? property.askingPrice
+      : Math.max(500000, sqft * 250)
+  const marketing: Partial<DealMarketing> = {
+    saleTitle: `${address} — For Sale`,
+    saleDescription: `Investment opportunity at ${address}. Buildout drafted this listing from your uploaded documents.`,
+  }
+  const financials: Partial<DealPitchFinancials> = {
+    askingPrice,
+    pricePerSqFt: sqft > 0 ? Math.round((askingPrice / sqft) * 100) / 100 : 0,
+  }
+  return { marketing, transaction, financials }
 }
