@@ -14,8 +14,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faFilter,
   faListUl,
-  faListCheck,
-  faSpinner,
   faCaretDown,
   faMagnifyingGlass,
   faEnvelope,
@@ -27,9 +25,9 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import { getStore } from "#/data/store";
 import { useDataStore } from "#/data/dataStore";
-import { generateCallList } from "#/ai/generate";
-import { contactCallPool } from "#/ai/tools";
-import { notify } from "#/lib/notify";
+import { useCallListView } from "./-useCallListView";
+import { useContactsFilter } from "./-useContactsFilter";
+import type { RelationshipStage } from "#/data/types";
 import {
   addContactsToCallList,
   createCallList,
@@ -126,11 +124,11 @@ function PeoplePage() {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  // "Build call list with AI" — the freshly-created list's id + its ranked
-  // contactId → position map, so the table can show AI rank order instead of
-  // the usual alphabetical sort while that list is active. Cleared the moment
-  // the broker asks for a manual name sort (see `toggleSort` below).
-  const [buildingCallList, setBuildingCallList] = useState(false);
+  // When the assistant's `build_call_list` tool builds an AI call list, it
+  // hands off the new list's id + its ranked contactId → position map (via
+  // `useCallListView`) so the table can show AI rank order instead of the usual
+  // alphabetical sort while that list is active. Cleared the moment the broker
+  // asks for a manual name sort (see `toggleSort` below).
   const [rankedListId, setRankedListId] = useState<string | null>(null);
   const [rankOrder, setRankOrder] = useState<Map<string, number>>(new Map());
 
@@ -308,32 +306,42 @@ function PeoplePage() {
     setSortDir((d) => (d === "asc" ? "desc" : "asc"));
   };
 
-  // Ranks the contacts currently shown (respecting the active list/filters/
-  // search, minus do-not-call contacts — see `contactCallPool`), saves the
-  // ranked order as a new AI call list, and switches the grid to it in that
-  // order.
-  const handleBuildCallListWithAI = async () => {
-    setBuildingCallList(true);
-    try {
-      const pool = contactCallPool(filtered);
-      const ranked = await generateCallList({ data: { contacts: pool } });
-      const { callList } = createCallList({
-        name: "AI call list",
-        contactIds: ranked.calls.map((c) => c.contactId),
-        description: ranked.headline,
-        source: "ai",
-      });
-      setRankOrder(new Map(ranked.calls.map((c, i) => [c.contactId, i])));
-      setRankedListId(callList.id);
-      setView("contacts");
-      setActiveListId(callList.id);
-      setFilters(emptyContactFilters());
-      setSearch("");
-      notify({ title: `Built “${callList.label}”`, description: ranked.headline });
-    } finally {
-      setBuildingCallList(false);
-    }
-  };
+  // The assistant builds AI call lists (the `build_call_list` tool), stashes the
+  // new list + its ranked order in `useCallListView`, and navigates here. Pick
+  // that up: switch to the list and show it in ranked order, clearing any
+  // ad-hoc filters/search so the ranked set isn't silently narrowed. One-shot —
+  // consumed immediately so a later plain visit starts clean.
+  const callListView = useCallListView((s) => s.pending);
+  useEffect(() => {
+    if (!callListView) return;
+    setRankOrder(
+      new Map(callListView.rankedContactIds.map((id, i) => [id, i])),
+    );
+    setRankedListId(callListView.listId);
+    setView("contacts");
+    setActiveListId(callListView.listId);
+    setFilters(emptyContactFilters());
+    setSearch("");
+    useCallListView.getState().clear();
+  }, [callListView]);
+
+  // The assistant's "View in People" summary-card button (shown when a tool
+  // returns more than one contact) stashes a filter in `useContactsFilter` and
+  // navigates here. Apply it to the directory's filter state so the broker
+  // lands on the matching, pre-filtered list. One-shot — consumed immediately.
+  const contactsFilter = useContactsFilter((s) => s.pending);
+  useEffect(() => {
+    if (!contactsFilter) return;
+    const next = emptyContactFilters();
+    if (contactsFilter.relationship)
+      next.relationship = new Set([contactsFilter.relationship as RelationshipStage]);
+    if (contactsFilter.tag) next.tags = new Set([contactsFilter.tag]);
+    setView("contacts");
+    setActiveListId(ALL_CONTACTS_ID);
+    setFilters(next);
+    setSearch(contactsFilter.search ?? "");
+    useContactsFilter.getState().clear();
+  }, [contactsFilter]);
 
   const handleEditDynamic = (input: {
     name: string;
@@ -391,10 +399,10 @@ function PeoplePage() {
       return true;
     });
 
-    // While viewing the list just built by "Build call list with AI", show its
-    // ranked order instead of the usual alphabetical sort (falls through to the
-    // name sort for any contact the ranker didn't return, and once the broker
-    // manually re-sorts by name — see `toggleSort`).
+    // While viewing an AI-built call list (from the assistant's build_call_list
+    // tool), show its ranked order instead of the usual alphabetical sort
+    // (falls through to the name sort for any contact the ranker didn't return,
+    // and once the broker manually re-sorts by name — see `toggleSort`).
     const ranked = activeListId === rankedListId ? rankOrder : null;
     rows.sort((a, b) => {
       if (ranked) {
@@ -643,29 +651,6 @@ function PeoplePage() {
                           ` (${countActiveContactFilters(filters)})`}
                       </Button>
                     ))}
-                  <Tooltip>
-                    <Tooltip.Trigger
-                      render={
-                        <Button
-                          variant="outline"
-                          onClick={handleBuildCallListWithAI}
-                          disabled={buildingCallList || filtered.length === 0}
-                        >
-                          <FontAwesomeIcon
-                            icon={buildingCallList ? faSpinner : faListCheck}
-                            spin={buildingCallList}
-                          />
-                          {buildingCallList
-                            ? "Building…"
-                            : "Build call list with AI"}
-                        </Button>
-                      }
-                    />
-                    <Tooltip.Content>
-                      Rank these contacts and save the order as a new call
-                      list
-                    </Tooltip.Content>
-                  </Tooltip>
                   <span className="text-muted">{filtered.length} contacts</span>
 
                   {/* Email/call actions apply to a specific list — hidden on the

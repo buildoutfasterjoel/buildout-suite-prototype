@@ -13,6 +13,8 @@ import {
 import { composeContactData } from "#/ai/contactData";
 import { composeBookSnapshot } from "#/ai/bookSnapshot";
 import { useListingsFilter } from "#/routes/_shell/listings/-useListingsFilter";
+import { useCallListView } from "#/routes/_shell/backoffice/contacts/-useCallListView";
+import type { ResultNav } from "#/ai/resultNav";
 import {
   searchAll,
   getContactDetailClient,
@@ -96,9 +98,7 @@ const dealSummary = (l: Listing) => {
 /**
  * Build the `generateCallList` contact pool: excludes do-not-call contacts and
  * strips each contact down to the recency/relationship fields the ranker needs.
- * Shared by the `build_call_list` agent tool and the People grid's "Build call
- * list with AI" button (`src/routes/_shell/backoffice/contacts/index.tsx`) so
- * both stay in lockstep on the do-not-call rule.
+ * Used by the `build_call_list` agent tool to feed the ranker.
  */
 export const contactCallPool = (
   contacts: Contact[],
@@ -149,10 +149,33 @@ export function createClientTools({
     searchAllDef.client(async (args) => {
       const { query } = args as { query: string };
       const r = searchAll(query);
+      const navs: ResultNav[] = [];
+      if (r.properties.length)
+        navs.push({
+          entity: "properties",
+          count: r.properties.length,
+          summary: `${r.properties.length} ${r.properties.length === 1 ? "property" : "properties"} matching “${query}”`,
+          listingsFacets: { search: query },
+        });
+      if (r.deals.length)
+        navs.push({
+          entity: "deals",
+          count: r.deals.length,
+          summary: `${r.deals.length} deal${r.deals.length === 1 ? "" : "s"} matching “${query}”`,
+          listingsFacets: { search: query },
+        });
+      if (r.contacts.length)
+        navs.push({
+          entity: "contacts",
+          count: r.contacts.length,
+          summary: `${r.contacts.length} contact${r.contacts.length === 1 ? "" : "s"} matching “${query}”`,
+          contactsFilter: { search: query },
+        });
       return {
         properties: r.properties.slice(0, 8).map(propertySummary),
         deals: r.deals.slice(0, 8).map(dealSummary),
         contacts: r.contacts.slice(0, 8).map(contactSummary),
+        navs,
       };
     }),
 
@@ -165,9 +188,24 @@ export function createClientTools({
       let rows = [...useDataStore.getState().listings.values()];
       if (status) rows = rows.filter((l) => l.status === status);
       if (dealType) rows = rows.filter((l) => l.dealType === dealType);
+      const desc = [status?.replace(/-/g, " "), dealType].filter(Boolean).join(" ");
+      const navs: ResultNav[] = rows.length
+        ? [
+            {
+              entity: "deals",
+              count: rows.length,
+              summary: `${rows.length} ${desc ? `${desc} ` : ""}deal${rows.length === 1 ? "" : "s"}`,
+              listingsFacets: {
+                statuses: status ? [status] : undefined,
+                dealType: dealType as "Sale" | "Lease" | undefined,
+              },
+            },
+          ]
+        : [];
       return {
         total: rows.length,
         deals: rows.slice(0, limit ?? 50).map(dealSummary),
+        navs,
       };
     }),
 
@@ -182,9 +220,21 @@ export function createClientTools({
       if (relationship) rows = rows.filter((c) => c.relationship === relationship);
       if (role) rows = rows.filter((c) => c.role === role);
       if (tag) rows = rows.filter((c) => c.tags.includes(tag));
+      const desc = [relationship, role].filter(Boolean).join(" ");
+      const navs: ResultNav[] = rows.length
+        ? [
+            {
+              entity: "contacts",
+              count: rows.length,
+              summary: `${rows.length} ${desc ? `${desc} ` : ""}contact${rows.length === 1 ? "" : "s"}${tag ? ` tagged ${tag}` : ""}`,
+              contactsFilter: { relationship, tag },
+            },
+          ]
+        : [];
       return {
         total: rows.length,
         contacts: rows.slice(0, limit ?? 50).map(contactSummary),
+        navs,
       };
     }),
 
@@ -283,6 +333,15 @@ export function createClientTools({
         description,
         source: "ai",
       });
+      // Open the new list on the People page in the order it was built (this
+      // tool doesn't rank, so the given contactId order is the display order),
+      // matching build_call_list so any "make me a call list" lands the broker
+      // on the list itself — not just adds it to the sidebar.
+      useCallListView.getState().activate({
+        listId: callList.id,
+        rankedContactIds: contactIds,
+      });
+      navigate("/backoffice/contacts");
       return {
         callList: { id: callList.id, name: callList.label, count: callList.contactIds.length },
       };
@@ -346,23 +405,17 @@ export function createClientTools({
         description: ranked.headline,
         source: "ai",
       });
-      const byId = new Map(
-        [...useDataStore.getState().contacts.values()].map((c) => [c.id, c]),
-      );
+      // Open the freshly-built list on the People page in AI-ranked order — the
+      // same result the old on-page "Build call list with AI" button gave.
+      useCallListView.getState().activate({
+        listId: callList.id,
+        rankedContactIds: ranked.calls.map((c) => c.contactId),
+      });
+      navigate("/backoffice/contacts");
       return {
         callListId: callList.id,
         headline: ranked.headline,
-        contacts: ranked.calls.map((c) => {
-          const ct = byId.get(c.contactId);
-          return {
-            id: c.contactId,
-            name: ct ? `${ct.firstName} ${ct.lastName}`.trim() : c.contactId,
-            relationship: ct?.relationship,
-            company: ct?.company,
-            score: c.score,
-            reason: c.reason,
-          };
-        }),
+        count: ranked.calls.length,
       };
     }),
 

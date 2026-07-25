@@ -200,6 +200,20 @@ function PropertyListings() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterSpec]);
 
+  // Explicit facets pushed by the assistant's result summary cards ("View in
+  // Deals" → concrete stage/deal-type/search). Applied directly to the grid's
+  // facet sets — no `FilterSpec` mapping — so any status can be pre-selected.
+  const filterFacets = useListingsFilter((s) => s.facets);
+  useEffect(() => {
+    if (!filterFacets) return;
+    stage.clear();
+    filterFacets.statuses?.forEach((s) => stage.toggle(s));
+    saleLease.clear();
+    if (filterFacets.dealType) saleLease.toggle(filterFacets.dealType);
+    setSearch(filterFacets.search ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterFacets]);
+
   // Clear the shared AI filter spec when leaving Listings so the next mount
   // starts clean — otherwise a stale spec from an earlier AI filter session
   // would silently re-apply on mount and clobber a fresh `?q=` deep-link
