@@ -99,6 +99,37 @@ describe('Rosa demo reset on hydrate', () => {
     // …while unrelated snapshot edits survive.
     expect(after.contacts.get(otherContact.id)?.notes).toBe('kept edit')
   })
+
+  it('restores Rosa\'s signal and her building\'s occupancy gap even from a stale snapshot', async () => {
+    await useDataStore.getState().reset()
+    const seed = useDataStore.getState()
+    const rosa = [...seed.contacts.values()].find((c) => c.heroKey === 'rosa')!
+    const buildingId = rosa.ownedPropertyIds![0]
+    const freshBuilding = seed.properties.get(buildingId)!
+    // Sanity on the fresh seed: this is the state the reset should restore to.
+    expect(rosa.signal).toBeDefined()
+    expect(freshBuilding.occupancyPct).not.toBe(freshBuilding.financialRecords[0]?.occupancyPct)
+
+    // Simulate a stale snapshot (e.g. predating the signal, or a played demo
+    // that overwrote her building's numbers) where Rosa's signal is gone and
+    // her building's stated/actual occupancy gap has been flattened.
+    const { saveSnapshot } = await import('./persistence')
+    const contacts = new Map(seed.contacts)
+    contacts.set(rosa.id, { ...rosa, signal: undefined })
+    const properties = new Map(seed.properties)
+    properties.set(buildingId, { ...freshBuilding, occupancyPct: 50 })
+    await saveSnapshot({
+      properties, listings: seed.listings, comps: seed.comps, contacts,
+      dealFiles: seed.dealFiles, emails: seed.emails, callLists: seed.callLists,
+      contactShares: seed.contactShares, tasks: seed.tasks,
+    })
+
+    await useDataStore.getState().hydrate()
+
+    const after = useDataStore.getState()
+    expect(after.contacts.get(rosa.id)?.signal).toEqual(rosa.signal)
+    expect(after.properties.get(buildingId)?.occupancyPct).toBe(freshBuilding.occupancyPct)
+  })
 })
 
 describe('persist debounce', () => {
