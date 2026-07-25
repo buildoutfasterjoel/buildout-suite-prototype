@@ -28,7 +28,7 @@ describe("composeGreeting", () => {
   });
 
   it("mentions an overnight signal only when provided", () => {
-    const withSig = composeGreeting(ctx(0, 2), { now: new Date("2026-07-23T08:00:00"), overnightSignal: "a maturing loan on Marcus Pinckney" });
+    const withSig = composeGreeting(ctx(0, 2), { now: new Date("2026-07-23T08:00:00"), overnightSignal: "a maturing loan on Rosa Delgado" });
     expect(withSig).toContain("overnight");
     const without = composeGreeting(ctx(0, 2), { now: new Date("2026-07-23T08:00:00") });
     expect(without).not.toContain("overnight");
@@ -42,14 +42,14 @@ describe("composeGreeting", () => {
 
 describe("buildGreetingWithOffer", () => {
   it("names the overnight signal and arms a call offer when the hero is present", () => {
-    const marcus = {
-      id: "m", firstName: "Marcus", lastName: "Pinckney", role: "owner", propertyIds: [], heroKey: "marcus",
+    const rosa = {
+      id: "r", firstName: "Rosa", lastName: "Delgado", role: "owner", propertyIds: [], heroKey: "rosa",
       signal: { kind: "loan-maturity", headline: "a maturing CMBS loan", detail: "d", observedAt: "2026-07-24" },
     } as unknown as Contact;
-    useDataStore.setState({ contacts: new Map([["m", marcus]]) });
+    useDataStore.setState({ contacts: new Map([["r", rosa]]) });
     const { text, offer } = buildGreetingWithOffer();
     expect(text).toContain("maturing CMBS loan");
-    expect(offer).toEqual({ kind: "call", contactId: "m" });
+    expect(offer).toEqual({ kind: "call", contactId: "r" });
   });
 
   it("has no offer when there is no hero signal", () => {

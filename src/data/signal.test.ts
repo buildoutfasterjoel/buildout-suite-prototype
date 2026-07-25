@@ -5,7 +5,7 @@ import { useDataStore } from "./dataStore";
 
 const baseContact = (over: Partial<Contact>): Contact =>
   ({
-    id: "c1", firstName: "Marcus", lastName: "Pinckney",
+    id: "c1", firstName: "Rosa", lastName: "Delgado",
     propertyIds: [], role: "owner",
     ...over,
   } as unknown as Contact);
@@ -26,14 +26,15 @@ describe("getOvernightSignalContact", () => {
   beforeEach(() => {
     useDataStore.setState({ contacts: new Map() });
   });
-  it("finds the heroKey==='marcus' contact", () => {
-    const marcus = baseContact({
-      id: "m",
-      heroKey: "marcus",
+  it("finds the heroKey==='rosa' contact", () => {
+    const rosa = baseContact({
+      id: "r",
+      heroKey: "rosa",
       signal: { kind: "loan-maturity", headline: "a maturing CMBS loan", detail: "d", observedAt: "2026-07-24" },
     });
-    useDataStore.setState({ contacts: new Map([["m", marcus]]) });
-    expect(getOvernightSignalContact()?.id).toBe("m");
+    useDataStore.setState({ contacts: new Map([["r", rosa]]) });
+    expect(getOvernightSignalContact()?.id).toBe("r");
+    expect(getOvernightSignalContact()?.firstName).toBe("Rosa");
   });
   it("returns null when absent", () => {
     expect(getOvernightSignalContact()).toBeNull();
