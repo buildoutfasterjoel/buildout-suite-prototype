@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "@tanstack/react-router";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import type { Contact, DealSummary } from "#/data/types";
@@ -10,6 +11,7 @@ import {
   todayISO,
   type ComposedActivity,
 } from "#/components/contacts/contactDisplay";
+import { notify } from "#/lib/notify";
 import {
   composedToEvent,
   groupByBucket,
@@ -28,6 +30,15 @@ import {
   selectSimEvents,
   useContactSession,
 } from "#/components/contacts/useContactSession";
+import { useDealSpotlight } from "#/components/contacts/useDealSpotlight";
+import { AiDealProgressModal } from "#/components/deals/AiDealProgressModal";
+import { requestStageChange } from "#/components/deals/useStageGate";
+import { getListingsForProperty, getProperty } from "#/data/store";
+import { createRosaProposalDeal } from "#/components/call/rosaDeal";
+import { ROSA_FINANCIAL_DOCS } from "#/components/call/rosaDocs";
+import { startUnderwriting } from "#/components/call/heroInbound";
+import { ROSA_AGREEMENT_EMAIL_ID } from "#/components/call/rosaClosing";
+import { useHeroDemo } from "#/components/call/heroDemo";
 export function ContactEngagementPanel({
   contact,
   deals,
@@ -42,6 +53,7 @@ export function ContactEngagementPanel({
   onLog: (draft: ComposedDraft) => void;
   onStartCall: (phone: string) => void;
 }) {
+  const router = useRouter();
   const tabTrack = useContactUiPrefs((s) => s.tabTrack);
   const timelineFilter = useContactUiPrefs((s) => s.timelineFilter);
   const [filter, setFilter] = useState<FilterKey>("all");
@@ -84,6 +96,72 @@ export function ContactEngagementPanel({
     },
     [],
   );
+
+  // The AI Start-a-Deal flow: holds the id of the email row it launched from
+  // (null = modal closed) so the row can be resolved once the deal exists.
+  const [aiDealFromEventId, setAiDealFromEventId] = useState<string | null>(
+    null,
+  );
+  // The property the AI deal lands on — the contact's owned building.
+  const ownedProperty = contact.ownedPropertyIds?.[0]
+    ? getProperty(contact.ownedPropertyIds[0])
+    : undefined;
+
+  // The agreement row's Activate action lands the deal at Active; once it does,
+  // the arc is complete (Otto's "run it again" beat) and the row resolves. The
+  // gate can be cancelled, so clicking alone doesn't resolve it — the deal's
+  // real status does.
+  useEffect(() => {
+    if (!ownedProperty) return;
+    const activated = deals.some(
+      (d) => d.propertyId === ownedProperty.id && d.status === "active",
+    );
+    if (activated) {
+      useHeroDemo.getState().markArcComplete();
+      resolve(ROSA_AGREEMENT_EMAIL_ID);
+    }
+    // `resolve` is a stable-behaving setState wrapper.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deals, ownedProperty]);
+
+  /** Open the overview column's Deals section and spotlight one card. */
+  const revealDeal = (dealId: string) => {
+    const prefs = useContactUiPrefs.getState();
+    if (!prefs.overviewSections.includes("deals")) {
+      prefs.setOverviewSections([...prefs.overviewSections, "deals"]);
+    }
+    useDealSpotlight.getState().spotlight(dealId);
+  };
+
+  /** The "AI scanned the docs" payoff: create the deal it was reading toward,
+   * kick the sidebar underwrite/BOV, and land on the listing. */
+  const completeAiDeal = () => {
+    const fromEventId = aiDealFromEventId;
+    setAiDealFromEventId(null);
+    if (!ownedProperty) return;
+    // Replayed-demo guard: if the building already has a deal, don't stack a
+    // duplicate — point at the existing card instead.
+    const existing = getListingsForProperty(ownedProperty.id)[0];
+    if (existing) {
+      notify({
+        title: "Deal already exists",
+        description: `${ownedProperty.name} already has an open deal.`,
+      });
+      revealDeal(existing.id);
+      if (fromEventId) resolve(fromEventId);
+      return;
+    }
+    const { deal } = createRosaProposalDeal(contact, ownedProperty);
+    notify({
+      title: "Deal created",
+      description: `${ownedProperty.name} — Pitching`,
+    });
+    // The email that carried the documents has been acted on.
+    if (fromEventId) resolve(fromEventId);
+    // Kick the sidebar underwrite → BOV, then walk the eye to the new listing.
+    startUnderwriting(deal.id);
+    router.navigate({ to: "/listings/$listingId", params: { listingId: deal.id } });
+  };
 
   // The feed = session-logged compose/call events + simulated inbound events +
   // the synthesized history, with per-event pin overrides applied and deleted
@@ -140,6 +218,18 @@ export function ContactEngagementPanel({
       // "Seen it, no response needed" — clear the row's attention state (greys
       // the icon, removes the action bar) without logging anything.
       resolve(event.id);
+    } else if (id === "Start a Deal") {
+      // Kick off the AI deal flow — the progress modal runs the scan/map/create
+      // theater, then `completeAiDeal` creates the real deal.
+      setAiDealFromEventId(event.id);
+    } else if (id === "Activate Listing") {
+      // Route through the standard stage gate (Approve & Publish). Committing it
+      // moves the deal to Active and reconciles Rosa's contact stage; the row
+      // resolves via the arc-complete effect once the move commits.
+      const deal = ownedProperty
+        ? getListingsForProperty(ownedProperty.id)[0]
+        : undefined;
+      if (deal) requestStageChange(deal.id, "active");
     } else if (id === "View full thread") {
       setThreadOpenId((cur) => (cur === event.id ? null : event.id));
     } else if (id === "Delete") {
@@ -247,6 +337,14 @@ export function ContactEngagementPanel({
           )}
         </div>
       </Card>
+
+      {/* AI Start-a-Deal progress — scan docs → map fields → create deal. */}
+      <AiDealProgressModal
+        open={aiDealFromEventId != null}
+        documents={ROSA_FINANCIAL_DOCS.map((d) => d.name)}
+        dealLabel={`${ownedProperty?.name ?? "New deal"} · Pitching`}
+        onComplete={completeAiDeal}
+      />
     </div>
   );
 }

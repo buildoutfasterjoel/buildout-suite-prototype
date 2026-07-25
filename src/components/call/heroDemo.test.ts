@@ -34,7 +34,7 @@ describe("resetHeroDemo", () => {
       attachments: [], canUnderwrite: true,
     });
     useBovDraft.setState({ armedDealId: "d", draft: null } as never);
-    useCallStore.setState({ heroActions: { dealId: "d" } } as never);
+    useCallStore.setState({ recap: { sentiment: "positive" } } as never);
     useAssistant.getState().setGreeted(true);
     useHeroDemo.getState().markArcComplete();
   });
@@ -44,7 +44,7 @@ describe("resetHeroDemo", () => {
     expect(useHeroOffer.getState().pendingOffer).toBeNull();
     expect(useInboundEmail.getState().inbound).toBeNull();
     expect(useBovDraft.getState().armedDealId).toBeNull();
-    expect(useCallStore.getState().heroActions).toBeNull();
+    expect(useCallStore.getState().recap).toBeNull();
     expect(useHeroDemo.getState().arcComplete).toBe(false);
     expect(useAssistant.getState().greetedThisSession).toBe(false);
     // re-seeded: Rosa exists again with a signal

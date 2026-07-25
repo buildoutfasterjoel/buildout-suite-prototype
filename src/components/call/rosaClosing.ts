@@ -1,10 +1,16 @@
-import { addDealDocument, addDealMessage, getContact, getListing } from "#/data/store";
+import { addDealDocument, getContact, getListing } from "#/data/store";
 import { updateDealTask } from "#/data/actions";
 import { notify } from "#/lib/notify";
+import { playArrivalChime } from "#/lib/chime";
 import { contactFullName } from "#/components/contacts/contactDisplay";
-import { useAssistant } from "#/ai/useAssistant";
-import { useClosingEmail } from "./useClosingEmail";
+import { useContactSession } from "#/components/contacts/useContactSession";
+import { ROSA_SIGNED_AGREEMENT } from "./rosaDocs";
 
+/** The signed-agreement email's timeline-row id. Deterministic so `addSimEvent`
+ * dedupes it and R2's replay-reset can clear it by id. */
+export const ROSA_AGREEMENT_EMAIL_ID = "sim-rosa-signed-agreement-email";
+
+/** Kept for the (now-unrendered) sidebar ClosingEmailCard until R2 removes it. */
 export const SIGNED_AGREEMENT_DOC = {
   name: "The Delgado Building — Listing Agreement (Signed).pdf",
   size: "0.3 MB",
@@ -23,6 +29,13 @@ function clearTimer() {
   }
 }
 
+/**
+ * The arc's closing beat: after the BOV goes out, Rosa returns the signed
+ * listing agreement. The paperwork is real the moment she sends it — the pdf
+ * files onto the deal and the planner's "Upload executed listing agreement"
+ * task completes — and it self-arrives as an actionable row on her contact
+ * timeline carrying an "Activate Listing" action.
+ */
 function onArrive(dealId: string, ownerContactId: string, mySession: number) {
   if (mySession !== session) return;
   const contact = getContact(ownerContactId);
@@ -32,8 +45,8 @@ function onArrive(dealId: string, ownerContactId: string, mySession: number) {
 
   addDealDocument(dealId, {
     id: crypto.randomUUID(),
-    name: SIGNED_AGREEMENT_DOC.name,
-    size: SIGNED_AGREEMENT_DOC.size,
+    name: ROSA_SIGNED_AGREEMENT.name,
+    size: ROSA_SIGNED_AGREEMENT.size,
     uploadedAt: now,
     aiGenerated: false,
   });
@@ -44,11 +57,24 @@ function onArrive(dealId: string, ownerContactId: string, mySession: number) {
     updateDealTask(dealId, task.id, { status: "complete" });
   }
 
-  addDealMessage(dealId, { author: from, text: "Signed listing agreement attached." });
-  notify({ title: "New email from Rosa Delgado", description: "Signed listing agreement attached" });
-
-  useClosingEmail.getState().set({ dealId, from });
-  useAssistant.getState().setOpen(true);
+  const subject = "Signed — the listing agreement";
+  useContactSession.getState().addSimEvent(ownerContactId, {
+    id: ROSA_AGREEMENT_EMAIL_ID,
+    type: "inbound-email",
+    actor: { name: from },
+    direction: "in",
+    timestamp: now,
+    seq: 2_000_001,
+    subject,
+    body:
+      "John — Miguel never signed anything until he trusted the person across the table. I read the BOV twice, and then the agreement twice more. It's signed and attached. Find the operator who'll love this building the way he did. — Rosa",
+    hasAttachment: true,
+    attachments: [{ name: ROSA_SIGNED_AGREEMENT.name, meta: ROSA_SIGNED_AGREEMENT.meta }],
+    actionBar: { primary: "Activate Listing", ghosts: ["Reply"] },
+    source: "user",
+  });
+  playArrivalChime();
+  notify({ title: `New email from ${from}`, description: subject });
 }
 
 export const rosaClosing = {

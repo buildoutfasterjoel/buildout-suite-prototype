@@ -2,14 +2,13 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import "fake-indexeddb/auto";
 import { useDataStore } from "#/data/dataStore";
 import { generateDataset } from "#/data/seed";
-import { useInboundEmail } from "./useInboundEmail";
-
-// The generator is a server fn; mock it to a fixed interested reply.
-vi.mock("#/ai/generate", () => ({
-  generateDraftReply: vi.fn(async () => ({ tone: "interested", body: "Sending the rent roll and T-12. — Rosa" })),
-}));
-
-import { synthesizedOriginal, inboundSummaryText, heroInbound } from "./heroInbound";
+import { useContactSession } from "#/components/contacts/useContactSession";
+import {
+  synthesizedOriginal,
+  inboundSummaryText,
+  heroInbound,
+  ROSA_FINANCIALS_EMAIL_ID,
+} from "./heroInbound";
 
 function hydrate() {
   const ds = generateDataset();
@@ -45,30 +44,32 @@ describe("inboundSummaryText", () => {
 describe("heroInbound arm/onArrive", () => {
   beforeEach(() => {
     hydrate();
-    useInboundEmail.setState({ inbound: null });
+    useContactSession.setState({ logged: {}, simEvents: {}, resolved: {}, flags: {} });
     vi.useFakeTimers();
   });
 
-  it("files two docs + a message + sets the inbound after ~10s", async () => {
+  it("posts the financials email to the owner's contact timeline after ~10s (no deal yet)", async () => {
     const ds = useDataStore.getState();
     const rosa = [...ds.contacts.values()].find((c) => c.heroKey === "rosa")!;
-    const dealId = [...ds.listings.values()][0].id; // any listing to file onto
-    heroInbound.arm(dealId, rosa.id);
+    heroInbound.arm(rosa.id);
     await vi.advanceTimersByTimeAsync(10_500);
-    const deal = useDataStore.getState().listings.get(dealId)!;
-    expect((deal.documents ?? []).filter((d) => d.aiGenerated === false).length).toBeGreaterThanOrEqual(2);
-    expect(deal.messages.length).toBeGreaterThanOrEqual(1);
-    expect(useInboundEmail.getState().inbound?.dealId).toBe(dealId);
-    expect(useInboundEmail.getState().inbound?.canUnderwrite).toBe(true); // Rosa's property is multifamily
+    const events = useContactSession.getState().simEvents[rosa.id] ?? [];
+    const email = events.find((e) => e.id === ROSA_FINANCIALS_EMAIL_ID);
+    expect(email).toBeTruthy();
+    expect(email?.type).toBe("inbound-email");
+    expect(email?.actionBar?.primary).toBe("Start a Deal");
+    expect(email?.attachments?.length).toBe(2); // T-12 + rent roll
+    expect(email?.hasAttachment).toBe(true);
+    // No deal is created at arrival — the deal comes from "Start a Deal".
+    expect(email?.source).toBe("user");
   });
 
   it("cancel() before the timer fires drops the arrival", async () => {
     const ds = useDataStore.getState();
     const rosa = [...ds.contacts.values()].find((c) => c.heroKey === "rosa")!;
-    const dealId = [...ds.listings.values()][0].id;
-    heroInbound.arm(dealId, rosa.id);
+    heroInbound.arm(rosa.id);
     heroInbound.cancel();
     await vi.advanceTimersByTimeAsync(10_500);
-    expect(useInboundEmail.getState().inbound).toBeNull();
+    expect((useContactSession.getState().simEvents[rosa.id] ?? []).length).toBe(0);
   });
 });

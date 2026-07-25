@@ -656,9 +656,7 @@ export function AssistantSidebar() {
     });
     if (!voiceEnabled) return;
     const { message } = composeRecapReport(recap, recapTarget?.name ?? "your contact");
-    const hero = useCallStore.getState().heroActions;
-    const spoken = hero ? `${recapSpeechText(message)} ${hero.narration}` : recapSpeechText(message);
-    void voiceEngine.speak(spoken); // no re-arm: not in conversationMode
+    void voiceEngine.speak(recapSpeechText(message)); // no re-arm: not in conversationMode
   }, [recap, recapTarget, voiceEnabled]);
 
   // Speak the inbound owner-email summary once when it self-arrives (§Phase 4B).

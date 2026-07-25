@@ -17,10 +17,14 @@ vi.mock("#/ai/generate", () => ({
   })),
 }));
 
+import "fake-indexeddb/auto";
 import { callFlow, registerStopForCall, personaNote } from "./callFlow";
 import { useCallStore } from "./useCallStore";
+import { heroInbound } from "./heroInbound";
 import { generateCallTurn, generateCallRecap } from "#/ai/generate";
 import { addNote } from "#/data/actions";
+import { useDataStore } from "#/data/dataStore";
+import { generateDataset } from "#/data/seed";
 
 const CONTACT = {
   id: "c1", firstName: "Marcus", lastName: "Pinckney", company: "Pinckney Holdings",
@@ -78,6 +82,60 @@ describe("callFlow", () => {
     await callFlow.endCall();
     expect(useCallStore.getState().phase).toBe("idle");
     expect(useCallStore.getState().recap?.sentiment).toBe("positive");
+  });
+
+  it("arms the deferred financials email off the CONTACT on a hero call's hang-up", async () => {
+    const ds = generateDataset();
+    useDataStore.setState({
+      properties: new Map(ds.properties.map((p) => [p.id, p])),
+      listings: new Map(ds.listings.map((l) => [l.id, l])),
+      contacts: new Map(ds.contacts.map((c) => [c.id, c])),
+      tasks: new Map(),
+    } as never);
+    const rosa = ds.contacts.find((c) => c.heroKey === "rosa")!;
+    const armSpy = vi.spyOn(heroInbound, "arm").mockImplementation(() => {});
+
+    useCallStore.getState().startTarget({
+      contactId: rosa.id,
+      name: `${rosa.firstName} ${rosa.lastName}`.trim(),
+      entity: rosa.company,
+      phone: rosa.phone,
+      initials: "RD",
+      firstName: rosa.firstName,
+      role: rosa.role,
+      note: "",
+    });
+    await callFlow.endCall();
+
+    expect(armSpy).toHaveBeenCalledWith(rosa.id);
+    armSpy.mockRestore();
+  });
+
+  it("does NOT arm the financials email on a non-hero call's hang-up", async () => {
+    const ds = generateDataset();
+    useDataStore.setState({
+      properties: new Map(ds.properties.map((p) => [p.id, p])),
+      listings: new Map(ds.listings.map((l) => [l.id, l])),
+      contacts: new Map(ds.contacts.map((c) => [c.id, c])),
+      tasks: new Map(),
+    } as never);
+    const plain = ds.contacts.find((c) => c.heroKey !== "rosa" && !c.signal)!;
+    const armSpy = vi.spyOn(heroInbound, "arm").mockImplementation(() => {});
+
+    useCallStore.getState().startTarget({
+      contactId: plain.id,
+      name: `${plain.firstName} ${plain.lastName}`.trim(),
+      entity: plain.company,
+      phone: plain.phone,
+      initials: "XX",
+      firstName: plain.firstName,
+      role: plain.role,
+      note: "",
+    });
+    await callFlow.endCall();
+
+    expect(armSpy).not.toHaveBeenCalled();
+    armSpy.mockRestore();
   });
 
   it("drops a stale recap if a new call starts before endCall's fetch resolves", async () => {

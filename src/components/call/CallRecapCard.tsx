@@ -11,17 +11,6 @@ import { createTask, createDeal } from "#/data/actions";
 import { parseDueDate } from "#/ai/dueDate";
 import { useAddTask } from "#/data/useAddTask";
 import { emptyDraft } from "#/data/createListing";
-import { undoHeroActions } from "#/components/call/heroRecapExtensions";
-
-/**
- * "2026-07-30" -> "Thursday" (timezone-safe: split the parts, don't `new Date(iso)`,
- * which parses as UTC midnight and can roll back a day in local time).
- */
-function weekdayLabel(isoDate: string): string {
-  const [y, m, d] = isoDate.split("-").map(Number);
-  if (!y || !m || !d) return "";
-  return new Date(y, m - 1, d).toLocaleDateString("en-US", { weekday: "long" });
-}
 
 /**
  * "Otto reports" recap card (Phase-3 design §6.1). Renders when useCallStore.recap
@@ -33,8 +22,6 @@ export function CallRecapCard() {
   const target = useCallStore((s) => s.target);
   const clearRecap = useCallStore((s) => s.clearRecap);
   const reset = useCallStore((s) => s.reset);
-  const heroActions = useCallStore((s) => s.heroActions);
-  const clearHeroActions = useCallStore((s) => s.clearHeroActions);
   const router = useRouter();
 
   const contactName = target?.name ?? "your contact";
@@ -99,7 +86,6 @@ export function CallRecapCard() {
 
   const dismiss = () => {
     clearRecap();
-    clearHeroActions();
     reset();
   };
 
@@ -141,7 +127,7 @@ export function CallRecapCard() {
         </div>
       )}
 
-      {report.opportunity && !oppOpen && !heroActions && (
+      {report.opportunity && !oppOpen && (
         <div className="border rounded p-2 d-flex align-items-center gap-2">
           <FontAwesomeIcon icon={faBriefcase} className="text-buildout-blue-700" />
           <div className="flex-grow-1" style={{ minWidth: 0 }}>
@@ -157,28 +143,6 @@ export function CallRecapCard() {
         <Badge variant="secondary" appearance="muted">
           Opportunity opened
         </Badge>
-      )}
-
-      {heroActions && (
-        <div className="border rounded p-2 d-flex flex-column gap-2 bg-light">
-          <div className="small text-muted text-uppercase fw-semibold">What Otto did</div>
-          <ul className="mb-0 ps-3">
-            <li>Opened opportunity <span className="fw-semibold">{heroActions.dealName}</span></li>
-            <li>
-              Added a task to prep the BOV
-              {weekdayLabel(heroActions.followUpDate) &&
-                `, due ${weekdayLabel(heroActions.followUpDate)}`}
-            </li>
-          </ul>
-          <div className="d-flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => router.navigate({ to: "/listings/$listingId", params: { listingId: heroActions.dealId } })}>
-              View deal
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => { undoHeroActions(heroActions); clearHeroActions(); }}>
-              Undo
-            </Button>
-          </div>
-        </div>
       )}
     </div>
   );
