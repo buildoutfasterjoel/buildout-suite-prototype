@@ -2,8 +2,8 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileInvoiceDollar, faTriangleExclamation } from "@fortawesome/pro-regular-svg-icons";
 import { useBovDraft } from "#/components/call/useBovDraft";
-import { useHeroDemo } from "#/components/call/heroDemo";
-import { addDealDocument, addDealActivity } from "#/data/store";
+import { rosaClosing } from "#/components/call/rosaClosing";
+import { addDealDocument, addDealActivity, getListing } from "#/data/store";
 import { CURRENT_USER } from "#/data/teammates";
 
 const money = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
@@ -21,7 +21,7 @@ export function BovCard() {
     const now = new Date().toISOString();
     addDealDocument(draft.dealId, {
       id: crypto.randomUUID(),
-      name: "Palmetto Court — BOV.pdf",
+      name: `${draft.propertyName} — BOV.pdf`,
       uploadedAt: now,
       size: "0.4 MB",
       aiGenerated: true,
@@ -31,7 +31,10 @@ export function BovCard() {
       note: `Sent BOV to Marcus — ${range}`,
       actor: CURRENT_USER.name,
     });
-    useHeroDemo.getState().markArcComplete();
+    const ownerContactId = getListing(draft.dealId)?.sellerContactIds[0];
+    if (ownerContactId) {
+      rosaClosing.arm(draft.dealId, ownerContactId);
+    }
     clear();
   };
 
