@@ -952,7 +952,7 @@ export interface OwnerSignal {
  * hand-written activity arc (see timelineHeroes.ts) instead of the
  * parameterized stage arc — one guaranteed-great contact per lifecycle stage.
  */
-export type HeroKey = 'rosa' | 'earl' | 'victor' | 'margaret' | 'patricia' | 'marcus'
+export type HeroKey = 'rosa' | 'earl' | 'victor' | 'margaret' | 'patricia'
 
 export interface Contact {
   id: string
