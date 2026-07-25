@@ -209,15 +209,8 @@ describe("buildContactTimeline", () => {
 
 describe("hero personas in the seed", () => {
   const { contacts, listings, properties } = generateDataset();
-  // Marcus (Phase 4A) is a hero with a `signal` but intentionally has no
-  // hand-authored `timelineHeroes.ts` arc — his timeline is fed live by the
-  // hero-arc's real writes (out of scope for 4A; see the Phase 4A design doc).
-  // This describe block is specifically about the hand-authored persona
-  // system, so it stays scoped to the original five.
   const heroes = new Map(
-    contacts
-      .filter((c) => c.heroKey && c.heroKey !== "marcus")
-      .map((c) => [c.heroKey!, c]),
+    contacts.filter((c) => c.heroKey).map((c) => [c.heroKey!, c]),
   );
 
   it("pins all five heroes", () => {

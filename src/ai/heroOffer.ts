@@ -15,7 +15,7 @@ export const useHeroOffer = create<HeroOfferState>((set) => ({
 }));
 
 const BRIEF = /\bbrief\b|what'?s the signal|more (?:first|before)|tell me (?:more|about the signal)/i;
-const YES = /\b(yes|yeah|yep|yup|sure|ok(?:ay)?|please|absolutely|definitely)\b|go ahead|do it|let'?s go|call (?:him|her|them|marcus)|make the call/i;
+const YES = /\b(yes|yeah|yep|yup|sure|ok(?:ay)?|please|absolutely|definitely)\b|go ahead|do it|let'?s go|call (?:him|her|them|rosa)|make the call/i;
 const NEG = /\b(?:not|never|no|nope|nah|don'?t|won'?t|can'?t|cannot)\b/i;
 
 /** Classify a broker reply to a pending hero offer. Brief takes precedence over

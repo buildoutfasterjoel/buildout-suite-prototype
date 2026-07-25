@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileInvoiceDollar, faTriangleExclamation } from "@fortawesome/pro-regular-svg-icons";
 import { useBovDraft } from "#/components/call/useBovDraft";
 import { rosaClosing } from "#/components/call/rosaClosing";
-import { addDealDocument, addDealActivity, getListing } from "#/data/store";
+import { addDealDocument, addDealActivity, getListing, getContact } from "#/data/store";
 import { CURRENT_USER } from "#/data/teammates";
 
 const money = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
@@ -26,12 +26,13 @@ export function BovCard() {
       size: "0.4 MB",
       aiGenerated: true,
     });
+    const ownerContactId = getListing(draft.dealId)?.sellerContactIds[0];
+    const owner = ownerContactId ? getContact(ownerContactId) : null;
     addDealActivity(draft.dealId, {
       type: "bov",
-      note: `Sent BOV to Marcus — ${range}`,
+      note: `Sent BOV to ${owner?.firstName ?? "the owner"} — ${range}`,
       actor: CURRENT_USER.name,
     });
-    const ownerContactId = getListing(draft.dealId)?.sellerContactIds[0];
     if (ownerContactId) {
       rosaClosing.arm(draft.dealId, ownerContactId);
     }

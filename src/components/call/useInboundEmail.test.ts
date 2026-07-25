@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { useInboundEmail, type InboundEmail } from "./useInboundEmail";
 
 const sample: InboundEmail = {
-  dealId: "d", from: "Marcus Pinckney", subject: "Re: Following up on our call",
-  body: "…", tone: "interested", attachments: ["Palmetto Court — Rent Roll.xlsx"], canUnderwrite: true,
+  dealId: "d", from: "Rosa Delgado", subject: "Re: Following up on our call",
+  body: "…", tone: "interested", attachments: ["The Delgado Building — Rent Roll.xlsx"], canUnderwrite: true,
 };
 
 describe("useInboundEmail", () => {

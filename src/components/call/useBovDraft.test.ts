@@ -7,7 +7,7 @@ vi.mock("#/ai/generate", () => ({
 import type { Property, UnderwritingResult } from "#/data/types";
 import { useBovDraft, buildBovDraft, bovSummaryText } from "./useBovDraft";
 
-const prop = ({ occupancyPct: 94, name: "Palmetto Court", street: "12 King St", financialRecords: [{ occupancyPct: 78 }] } as unknown) as Property;
+const prop = ({ occupancyPct: 94, name: "Example Plaza", street: "12 King St", financialRecords: [{ occupancyPct: 78 }] } as unknown) as Property;
 const result = ({
   strategy: "value-add", sections: [], inputs: { address: "12 King St", askingPrice: 6_200_000, buildingSqFt: 41_000, capRate: 0.058 },
   metrics: [
@@ -54,6 +54,6 @@ describe("bovSummaryText", () => {
     const d = await buildBovDraft("d1", otherProp, result);
     const s = bovSummaryText(d);
     expect(s).toContain("The Delgado Building");
-    expect(s).not.toContain("Palmetto Court");
+    expect(s).not.toContain("Example Plaza");
   });
 });

@@ -14,7 +14,7 @@ export interface HeroActions {
   narration: string;
 }
 
-/** A hero call = the target owner carries an overnight signal (the arc's Marcus). */
+/** A hero call = the target owner carries an overnight signal (the arc's Rosa). */
 export function isHeroCall(target: CallTarget | null): boolean {
   if (!target) return false;
   return !!getContact(target.contactId)?.signal;
@@ -60,7 +60,7 @@ export function applyHeroRecapExtensions(
   const { task } = createTask({
     name: `Prep the BOV for ${dealName}`,
     dueDate: followUpDate,
-    type: "deal",
+    type: "follow-up",
     source: "deal",
     contactId: contact.id,
     dealId: deal.id,
