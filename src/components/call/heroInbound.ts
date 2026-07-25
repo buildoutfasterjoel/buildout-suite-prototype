@@ -75,7 +75,10 @@ async function onArrive(dealId: string, ownerContactId: string, mySession: numbe
       },
     });
   } catch {
-    res = { tone: "interested" as const, body: `Sending the rent roll and T-12. — ${contact.firstName}` };
+    res = {
+      tone: "interested" as const,
+      body: `Attached are Miguel's full trailing twelve and the current rent roll — see what the building actually does. — ${contact.firstName}`,
+    };
   }
   if (mySession !== session) return; // superseded during the await
 
