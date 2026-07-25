@@ -1,6 +1,10 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import { useDataStore } from "#/data/dataStore";
-import { useStageGate, requestStageChange } from "./useStageGate";
+import {
+  useStageGate,
+  requestStageChange,
+  requestSetupCompletion,
+} from "./useStageGate";
 import type { DealSide, Listing } from "#/data/types";
 
 function findDeal(side: DealSide) {
@@ -95,5 +99,67 @@ describe("requestStageChange", () => {
     const deal = findDeal("seller");
     requestStageChange(deal.id, deal.status);
     expect(useStageGate.getState().open).toBe(false);
+  });
+});
+
+/**
+ * A sell-side Sale deal parked in a live stage (Active) that already satisfies
+ * every Approve & Publish requirement — content, dates, no AI docs to review.
+ */
+function fullyPublishableActive(): Listing {
+  const base = [...useDataStore.getState().listings.values()][0];
+  const deal: Listing = {
+    ...base,
+    dealSide: "seller",
+    dealType: "Sale",
+    status: "active",
+    publishedAt: null,
+    documents: (base.documents ?? []).filter((d) => !d.aiGenerated),
+    marketing: {
+      ...base.marketing,
+      saleTitle: "Prime Retail Pad",
+      saleDescription: "Corner lot with drive-thru",
+    },
+    financials: { ...base.financials, askingPrice: 1_950_000 },
+    transaction: {
+      ...base.transaction,
+      listedOnDate: "2026-07-01",
+      listingExpirationDate: "2026-12-31",
+    },
+  };
+  putDeal(deal);
+  return deal;
+}
+
+describe("requestSetupCompletion", () => {
+  beforeEach(() => useStageGate.getState().close());
+
+  it("publishes in place with no modal when the deal is fully populated", () => {
+    const deal = fullyPublishableActive();
+    requestSetupCompletion(deal.id);
+
+    expect(useStageGate.getState().open).toBe(false);
+    const after = useDataStore.getState().listings.get(deal.id);
+    // Published in place — publishedAt is set, but the stage does not change.
+    expect(after?.publishedAt).toBeTruthy();
+    expect(after?.status).toBe("active");
+  });
+
+  it("opens the Approve & Publish gate when a publish requirement is missing", () => {
+    const deal = fullyPublishableActive();
+    putDeal({
+      ...deal,
+      transaction: {
+        ...deal.transaction,
+        listedOnDate: null,
+        listingExpirationDate: null,
+      },
+    });
+    requestSetupCompletion(deal.id);
+
+    const gate = useStageGate.getState();
+    expect(gate.open).toBe(true);
+    expect(gate.mode).toBe("complete");
+    expect(useDataStore.getState().listings.get(deal.id)?.publishedAt).toBeNull();
   });
 });
