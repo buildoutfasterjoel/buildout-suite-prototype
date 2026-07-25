@@ -6,7 +6,6 @@ import { contactFullName } from "#/components/contacts/contactDisplay";
 import { useContactSession } from "#/components/contacts/useContactSession";
 import { useBovDraft } from "./useBovDraft";
 import { ROSA_FINANCIAL_DOCS } from "./rosaDocs";
-import type { InboundEmail } from "./useInboundEmail";
 
 /** The financials email's timeline-row id. Deterministic so `addSimEvent`
  * dedupes it and R2's replay-reset can clear it by id. */
@@ -17,24 +16,6 @@ const ARRIVAL_MS = 10_000;
 // Monotonic session so a cancel()/re-arm drops a pending arrival.
 let session = 0;
 let timer: ReturnType<typeof setTimeout> | null = null;
-
-/** The broker's post-call follow-up the owner is replying to (no prior email exists —
- * the broker called). Deterministic, drives the draft-reply. */
-export function synthesizedOriginal(firstName: string): { subject: string; body: string } {
-  return {
-    subject: "Following up on our call",
-    body:
-      `Great speaking just now, ${firstName} — when you get a moment, could you send ` +
-      `the current rent roll and the T-12? I'll take a look and come back with a valuation.`,
-  };
-}
-
-/** Otto's spoken one-line summary/offer on arrival (one-way; not the email body). */
-export function inboundSummaryText(inbound: InboundEmail): string {
-  const first = inbound.from.split(" ")[0] || "the owner";
-  const offer = inbound.canUnderwrite ? " Want me to underwrite it?" : "";
-  return `${first} just replied and sent the rent roll and the T-12 — I filed both to the deal.${offer}`;
-}
 
 /** Kick off the existing underwriting generation on the deal (value-add fits an existing
  * multifamily; setting underwriting also keeps the row visible at the Active stage). */

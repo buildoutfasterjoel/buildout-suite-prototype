@@ -10,12 +10,6 @@ import { ROSA_SIGNED_AGREEMENT } from "./rosaDocs";
  * dedupes it and R2's replay-reset can clear it by id. */
 export const ROSA_AGREEMENT_EMAIL_ID = "sim-rosa-signed-agreement-email";
 
-/** Kept for the (now-unrendered) sidebar ClosingEmailCard until R2 removes it. */
-export const SIGNED_AGREEMENT_DOC = {
-  name: "The Delgado Building — Listing Agreement (Signed).pdf",
-  size: "0.3 MB",
-};
-
 export const ARRIVAL_MS = 6_000;
 
 // Monotonic session so a cancel()/re-arm drops a pending arrival.

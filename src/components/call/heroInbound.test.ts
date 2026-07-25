@@ -3,12 +3,7 @@ import "fake-indexeddb/auto";
 import { useDataStore } from "#/data/dataStore";
 import { generateDataset } from "#/data/seed";
 import { useContactSession } from "#/components/contacts/useContactSession";
-import {
-  synthesizedOriginal,
-  inboundSummaryText,
-  heroInbound,
-  ROSA_FINANCIALS_EMAIL_ID,
-} from "./heroInbound";
+import { heroInbound, ROSA_FINANCIALS_EMAIL_ID } from "./heroInbound";
 
 function hydrate() {
   const ds = generateDataset();
@@ -20,26 +15,6 @@ function hydrate() {
   } as never);
   return ds;
 }
-
-describe("synthesizedOriginal", () => {
-  it("asks for the rent roll and T-12 and names the owner", () => {
-    const o = synthesizedOriginal("Rosa");
-    expect(o.body).toContain("Rosa");
-    expect(o.body.toLowerCase()).toContain("rent roll");
-    expect(o.body.toLowerCase()).toContain("t-12");
-  });
-});
-
-describe("inboundSummaryText", () => {
-  it("is a one-line offer that mentions the attachments and underwriting", () => {
-    const s = inboundSummaryText({
-      dealId: "d", from: "Rosa Delgado", subject: "s", body: "b",
-      tone: "interested", attachments: ["Rent Roll", "T-12"], canUnderwrite: true,
-    });
-    expect(s.toLowerCase()).toContain("rosa");
-    expect(s.toLowerCase()).toContain("underwrite");
-  });
-});
 
 describe("heroInbound arm/onArrive", () => {
   beforeEach(() => {

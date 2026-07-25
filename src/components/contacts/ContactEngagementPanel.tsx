@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
@@ -86,16 +86,6 @@ export function ContactEngagementPanel({
         .map((e) => e.id),
     );
   }, [simEvents]);
-
-  // One in-flight arrival timer per mount; effects dedupe on event presence,
-  // so a navigation mid-delay simply reschedules on return.
-  const arrivalTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(
-    () => () => {
-      if (arrivalTimer.current) clearTimeout(arrivalTimer.current);
-    },
-    [],
-  );
 
   // The AI Start-a-Deal flow: holds the id of the email row it launched from
   // (null = modal closed) so the row can be resolved once the deal exists.

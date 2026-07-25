@@ -50,11 +50,7 @@ import { signalText } from "#/data/signal";
 import { generateCallBrief, callBriefFallback } from "#/ai/generate";
 import { CallBriefCard } from "#/components/call/CallBriefCard";
 import type { CallBriefSpecT } from "#/ai/generate/schemas";
-import { InboundEmailCard } from "#/components/call/InboundEmailCard";
-import { useInboundEmail } from "#/components/call/useInboundEmail";
-import { inboundSummaryText } from "#/components/call/heroInbound";
 import { BovCard } from "#/components/call/BovCard";
-import { ClosingEmailCard } from "#/components/call/ClosingEmailCard";
 import { useBovDraft, bovSummaryText } from "#/components/call/useBovDraft";
 import { HeroDemoCard } from "#/components/call/HeroDemoCard";
 import { useHeroDemo, arcCompleteText, resetHeroDemo } from "#/components/call/heroDemo";
@@ -659,20 +655,6 @@ export function AssistantSidebar() {
     void voiceEngine.speak(recapSpeechText(message)); // no re-arm: not in conversationMode
   }, [recap, recapTarget, voiceEnabled]);
 
-  // Speak the inbound owner-email summary once when it self-arrives (§Phase 4B).
-  // Also a one-way report — it must NOT enter conversationMode or re-arm the mic.
-  const inbound = useInboundEmail((s) => s.inbound);
-  const spokenInboundRef = useRef<object | null>(null);
-  useEffect(() => {
-    if (!inbound || inbound === spokenInboundRef.current) return;
-    spokenInboundRef.current = inbound;
-    requestAnimationFrame(() => {
-      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-    });
-    if (!voiceEnabled) return;
-    void voiceEngine.speak(inboundSummaryText(inbound)); // one-way: no re-arm
-  }, [inbound, voiceEnabled]);
-
   // Speak the BOV draft's summary once when it appears (Otto drafts the BOV,
   // §Phase 4C). Also a one-way report — it must NOT enter conversationMode or
   // re-arm the mic.
@@ -779,7 +761,7 @@ export function AssistantSidebar() {
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-grow-1 overflow-auto p-3 d-flex flex-column gap-2">
-        {messages.length === 0 && !recap && !inbound ? (
+        {messages.length === 0 && !recap ? (
           <div className="text-muted small">
             Ask about your properties, contacts, and deals — or have me draft an email, build a
             call list, or move a deal along.
@@ -806,15 +788,9 @@ export function AssistantSidebar() {
             flow (after the messages), not the top, so the conversation reads
             chronologically. */}
         {recap && <CallRecapCard />}
-        {/* The inbound owner email self-arrives after the recap (§Phase 4B) —
-            render it at the bottom of the flow too, chronologically after the recap. */}
-        <InboundEmailCard />
         {/* The BOV draft self-arrives after the underwriting result is ready
             (§Phase 4C) — render it at the bottom of the flow too. */}
         <BovCard />
-        {/* Rosa's signed listing agreement self-arrives after the closing beat —
-            render it after the BOV card, chronologically after it. */}
-        <ClosingEmailCard />
         {/* The loop-closing completion beat (§Phase 4D) fires once the BOV is
             sent — render it after the BOV card, chronologically last. */}
         <HeroDemoCard

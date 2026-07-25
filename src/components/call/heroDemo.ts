@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { useDataStore } from "#/data/dataStore";
 import { useHeroOffer } from "#/ai/heroOffer";
-import { useInboundEmail } from "#/components/call/useInboundEmail";
 import { useBovDraft } from "#/components/call/useBovDraft";
 import { useCallStore } from "#/components/call/useCallStore";
 import { useAssistant } from "#/ai/useAssistant";
@@ -10,7 +9,7 @@ import { voiceEngine } from "#/ai/voice/voiceEngine";
 import { callFlow } from "#/components/call/callFlow";
 import { heroInbound } from "#/components/call/heroInbound";
 import { rosaClosing } from "#/components/call/rosaClosing";
-import { useClosingEmail } from "#/components/call/useClosingEmail";
+import { useContactSession } from "#/components/contacts/useContactSession";
 
 interface HeroDemoState {
   arcComplete: boolean;
@@ -41,8 +40,7 @@ export async function resetHeroDemo(): Promise<void> {
   voiceEngine.cancel();
   await useDataStore.getState().reset();
   useHeroOffer.getState().clearOffer();
-  useInboundEmail.getState().clearInbound();
-  useClosingEmail.getState().clear();
+  useContactSession.getState().reset();
   useBovDraft.getState().clear();
   useCallStore.getState().reset();
   useHeroDemo.getState().clearComplete();
