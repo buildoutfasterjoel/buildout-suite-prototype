@@ -44,6 +44,7 @@ import {
   getContactOptions,
   getOwnersForProperty,
   getProperty,
+  getContact,
   type PropertyOption,
   type ContactOption,
 } from "#/data/store";
@@ -53,6 +54,12 @@ import {
   TYPE_LABELS,
   PROPERTY_STATUSES,
 } from "#/components/properties/propertyDisplay";
+import {
+  contactRoleLabel,
+  contactSearchPlaceholder,
+  buildPropertyGroups,
+  type PropertyGroup,
+} from "./createDealHelpers";
 import { RelationshipPill } from "#/components/contacts/pills";
 import { UnderwritingDepth } from "./UnderwritingDepth";
 import {
@@ -245,17 +252,19 @@ export function CreateDealModal({
     });
   }
 
-  const propertyOptions = useMemo<PropertyOption[]>(() => {
+  const propertyGroups = useMemo<PropertyGroup[]>(() => {
     const all = getPropertyOptions();
-    if (!contact || contact.propertyIds.length === 0) return all;
-    const owned = new Set(contact.propertyIds);
-    // Contact's own properties first (likely the deal's subject), then the rest.
-    return [...all].sort((a, b) => {
-      const ao = owned.has(a.value) ? 0 : 1;
-      const bo = owned.has(b.value) ? 0 : 1;
-      return ao - bo || a.label.localeCompare(b.label);
-    });
-  }, [contact]);
+    // Owned properties are elevated only for the owning side — Seller (Sale) or
+    // Landlord (Lease) — and only once a contact is chosen.
+    const owner =
+      side === "seller" && contactOption
+        ? getContact(contactOption.value)
+        : undefined;
+    const ownerName = owner
+      ? `${owner.firstName} ${owner.lastName}`.trim()
+      : null;
+    return buildPropertyGroups(all, owner?.propertyIds ?? [], ownerName);
+  }, [side, contactOption]);
   const contactOptions = useMemo<ContactOption[]>(getContactOptions, []);
 
   // Resolve the full property record (for its units) from the locked prop or the
@@ -580,7 +589,7 @@ export function CreateDealModal({
                 {!contact && (
                   <div className="col-12 col-md-6">
                     <Field>
-                      <Field.Label>Contact</Field.Label>
+                      <Field.Label>{contactRoleLabel(side, dealType)}</Field.Label>
                       <Combobox
                         items={contactOptions}
                         value={contactOption}
@@ -593,7 +602,10 @@ export function CreateDealModal({
                             <FontAwesomeIcon icon={faUser} />
                           </InputGroup.Addon>
                           <Combobox.Input
-                            placeholder="Search contacts…"
+                            placeholder={contactSearchPlaceholder(
+                              side,
+                              dealType,
+                            )}
                             showClear
                           />
                         </Combobox.InputGroup>
@@ -675,7 +687,7 @@ export function CreateDealModal({
                     <Field>
                       <Field.Label>Property</Field.Label>
                       <Combobox
-                        items={propertyOptions}
+                        items={propertyGroups}
                         value={propertyOption}
                         onValueChange={(v) =>
                           selectProperty(v as PropertyOption | null)
@@ -698,41 +710,52 @@ export function CreateDealModal({
                             typed.
                           </Combobox.Empty>
                           <Combobox.List>
-                            {(item: PropertyOption) => (
-                              <Combobox.Item key={item.value} value={item}>
-                                <span
-                                  className="d-flex gap-2 user-select-none"
-                                  style={{ minWidth: 0 }}
-                                >
-                                  <FontAwesomeIcon
-                                    icon={TYPE_ICONS[item.propertyType]}
-                                    className="text-muted flex-shrink-0 d-inline-block mt-1"
-                                  />
-                                  <span
-                                    className="d-flex flex-column"
-                                    style={{ minWidth: 0 }}
-                                  >
-                                    <span className="d-flex align-items-center gap-2">
-                                      <span className="text-truncate">
-                                        {item.label}
-                                      </span>
-                                      <Badge
-                                        variant="secondary"
-                                        appearance="muted"
-                                        className="flex-shrink-0"
+                            {(group: PropertyGroup) => (
+                              <Combobox.Group key={group.value} items={group.items}>
+                                {group.label && (
+                                  <Combobox.GroupLabel>
+                                    {group.label}
+                                  </Combobox.GroupLabel>
+                                )}
+                                <Combobox.Collection>
+                                  {(item: PropertyOption) => (
+                                    <Combobox.Item key={item.value} value={item}>
+                                      <span
+                                        className="d-flex gap-2 user-select-none"
+                                        style={{ minWidth: 0 }}
                                       >
-                                        {TYPE_LABELS[item.propertyType]}
-                                      </Badge>
-                                    </span>
-                                    <span className="text-muted fs-small text-truncate">
-                                      {item.subtype}
-                                      {item.sizeLabel
-                                        ? ` · ${item.sizeLabel}`
-                                        : ""}
-                                    </span>
-                                  </span>
-                                </span>
-                              </Combobox.Item>
+                                        <FontAwesomeIcon
+                                          icon={TYPE_ICONS[item.propertyType]}
+                                          className="text-muted flex-shrink-0 d-inline-block mt-1"
+                                        />
+                                        <span
+                                          className="d-flex flex-column"
+                                          style={{ minWidth: 0 }}
+                                        >
+                                          <span className="d-flex align-items-center gap-2">
+                                            <span className="text-truncate">
+                                              {item.label}
+                                            </span>
+                                            <Badge
+                                              variant="secondary"
+                                              appearance="muted"
+                                              className="flex-shrink-0"
+                                            >
+                                              {TYPE_LABELS[item.propertyType]}
+                                            </Badge>
+                                          </span>
+                                          <span className="text-muted fs-small text-truncate">
+                                            {item.subtype}
+                                            {item.sizeLabel
+                                              ? ` · ${item.sizeLabel}`
+                                              : ""}
+                                          </span>
+                                        </span>
+                                      </span>
+                                    </Combobox.Item>
+                                  )}
+                                </Combobox.Collection>
+                              </Combobox.Group>
                             )}
                           </Combobox.List>
                         </Combobox.Content>
