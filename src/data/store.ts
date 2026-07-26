@@ -247,6 +247,23 @@ export function getOwnersForProperty(propertyId: string): Contact[] {
   return getContactsForProperty(propertyId).filter((c) => c.role === 'owner')
 }
 
+/**
+ * Leads on a property's deals — its linked CRM contacts minus anyone already
+ * named as the seller on one of those deals. The assigned seller is the
+ * broker's own client, so seeing them listed as an inbound lead reads as a
+ * data bug (and on the client report, shows the client to themselves).
+ * Property-scoped rather than deal-scoped because child space deals share a
+ * property, and a seller on one of them is nobody's lead on the others.
+ */
+export function getLeadsForProperty(propertyId: string): Contact[] {
+  const sellerIds = new Set<string>()
+  for (const l of getStore().listings.values()) {
+    if (l.propertyId !== propertyId) continue
+    for (const id of l.sellerContactIds) sellerIds.add(id)
+  }
+  return getContactsForProperty(propertyId).filter((c) => !sellerIds.has(c.id))
+}
+
 /** Display name for a contact, e.g. "Jane Doe · Acme Holdings". */
 export function contactLabel(c: Contact): string {
   const name = `${c.firstName} ${c.lastName}`.trim()
@@ -295,13 +312,14 @@ export interface ContactOptionGroup {
 /**
  * Buyer/tenant options for the Under Contract gate, grouped so the property's
  * own leads surface first and the rest of the CRM follows — letting the broker
- * either confirm the lead that came in or search the whole book. Empty groups
- * are omitted.
+ * either confirm the lead that came in or search the whole book. The deal's own
+ * seller isn't a lead, so they fall through to the CRM group. Empty groups are
+ * omitted.
  */
 export function getSellerOptionGroups(propertyId: string): ContactOptionGroup[] {
   const byName = (a: ContactOption, b: ContactOption) =>
     a.name.localeCompare(b.name)
-  const linked = propertyId ? getContactsForProperty(propertyId) : []
+  const linked = propertyId ? getLeadsForProperty(propertyId) : []
   const linkedIds = new Set(linked.map((c) => c.id))
   const leads = linked.map(toContactOption).sort(byName)
   const others = [...getStore().contacts.values()]

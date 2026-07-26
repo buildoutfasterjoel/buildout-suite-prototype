@@ -1,5 +1,5 @@
 import { hash } from "#/components/properties/propertyDisplay";
-import { getStore } from "#/data/store";
+import { getLeadsForProperty } from "#/data/store";
 import type { Property } from "#/data/types";
 
 /** Ordered stages shown in the Activity Funnel, top (widest) to bottom (narrowest). */
@@ -34,10 +34,13 @@ export interface ClientReportLead {
   caSigned: boolean;
 }
 
-/** Leads for the report, synthesized from real Contact records tied to this property. */
+/**
+ * Leads for the report, synthesized from real Contact records tied to this
+ * property. The report goes to the seller, so they're excluded — see
+ * {@link getLeadsForProperty}.
+ */
 export function getClientReportLeads(property: Property): ClientReportLead[] {
-  return [...getStore().contacts.values()]
-    .filter((c) => c.propertyIds.includes(property.id))
+  return getLeadsForProperty(property.id)
     .map((contact) => {
       const h = hash(contact.id);
       return {

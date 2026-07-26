@@ -12,7 +12,11 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { Listing } from "#/data/types";
-import { getProperty, updateListingUnderwriting } from "#/data/store";
+import {
+  getLeadsForProperty,
+  getProperty,
+  updateListingUnderwriting,
+} from "#/data/store";
 import { useDataStore } from "#/data/dataStore";
 import { requestStageChange } from "#/components/deals/useStageGate";
 import { UnderwritingSetupModal } from "#/components/deals/underwriting/UnderwritingSetupModal";
@@ -134,11 +138,9 @@ export function ContactDealCard({
   const side = SIDE_DISPLAY[listing.dealSide];
 
   const docsCount = listing.documents?.length ?? 0;
-  // "Leads" = interested parties on the opposite side of the represented one.
-  const leadsCount =
-    listing.dealSide === "seller"
-      ? listing.buyerContactIds.length + listing.otherContactIds.length
-      : listing.sellerContactIds.length + listing.otherContactIds.length;
+  // Counted the same way the Leads tab lists them, so the badge and the page it
+  // opens can't disagree.
+  const leadsCount = getLeadsForProperty(listing.propertyId).length;
   const nextAction = dealNextAction(listing, bovSent);
 
   return (

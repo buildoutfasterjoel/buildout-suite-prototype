@@ -24,7 +24,7 @@ import {
   faPhone,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact, Property } from "#/data/types";
-import { getStore } from "#/data/store";
+import { getLeadsForProperty } from "#/data/store";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
 import { hash } from "./propertyDisplay";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
@@ -129,11 +129,10 @@ export function PropertyDetailLeads({ property }: { property: Property }) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
+  // The deal's assigned seller is the broker's client, not a lead they worked —
+  // getLeadsForProperty keeps them out of the list.
   const leads = useMemo(
-    () =>
-      [...getStore().contacts.values()]
-        .filter((c) => c.propertyIds.includes(property.id))
-        .map(toLead),
+    () => getLeadsForProperty(property.id).map(toLead),
     [property.id],
   );
 

@@ -1103,7 +1103,10 @@ export interface TaskView {
 /** Everything the contact detail page needs, assembled server-side. */
 export interface ContactDetail {
   contact: Contact
+  /** Deals the contact is a named party to (seller/buyer/other). */
   deals: DealSummary[]
+  /** Deals they reach only as a lead — linked to the property, not a party. */
+  leadDeals: DealSummary[]
   openTaskCount: number
   /** The contact's open/overdue tasks, aggregated across their deals. */
   tasks: ContactTask[]
