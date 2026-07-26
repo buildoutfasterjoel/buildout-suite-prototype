@@ -132,6 +132,9 @@ export function PageView({
   // page space sets a pageId-only selection; blocks stop propagation and set
   // their own blockId, which supersedes this page-level state.
   const pageSelected = pageSelection !== null && !pageSelection.blockId;
+  // Full-bleed pages (covers) drop the logo band, page margin, and block gap so
+  // their artwork runs to the paper's edge.
+  const bleed = page.bleed ?? false;
 
   return (
     <div style={{ position: "relative" }}>
@@ -140,7 +143,7 @@ export function PageView({
         style={{ width: PAGE_WIDTH, height: PAGE_HEIGHT }}
         onClick={() => select({ pageId: page.id })}
       >
-        {page.logoSrc && (
+        {!bleed && page.logoSrc && (
           <div className="p-6" style={{ flexShrink: 0 }}>
             <img
               src={page.logoSrc}
@@ -152,7 +155,12 @@ export function PageView({
 
         <div
           className="d-flex flex-column"
-          style={{ gap: 32, padding: 40, flex: "1 0 0", minHeight: 0 }}
+          style={{
+            gap: bleed ? 0 : 32,
+            padding: bleed ? 0 : 40,
+            flex: "1 0 0",
+            minHeight: 0,
+          }}
         >
           <BlockList
             blocks={page.blocks}

@@ -11,7 +11,11 @@ import {
   heroImage,
   valueCell,
 } from "./templates/helpers";
-import { buildFinancialSummaryPage, buildPropertyOverviewPage } from "./templates/designer";
+import {
+  buildCoverPage,
+  buildFinancialSummaryPage,
+  buildPropertyOverviewPage,
+} from "./templates/designer";
 
 /**
  * Spec for a lightweight locked page in the sample proposal: a heading, address,
@@ -92,7 +96,9 @@ export function buildDocumentPages(
   const financialSummary = withPageIdentity(buildFinancialSummaryPage(property), "Financial Summary");
 
   return [
-    buildStubPage(property, { name: "Cover Page", seed: "editor-cover" }),
+    // The real designer cover, not a stub — it's the page the BOV send flow
+    // previews, so the opened document has to lead with the same artwork.
+    buildCoverPage(property),
     buildStubPage(property, { name: "Table of Contents", seed: "editor-toc" }),
     // Once the AI has generated underwriting for this deal, it leads the body —
     // pages scale with the thoroughness the user chose. Empty otherwise.

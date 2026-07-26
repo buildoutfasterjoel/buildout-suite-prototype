@@ -172,6 +172,12 @@ export interface Page {
   locked?: boolean;
   /** Hidden pages stay in the document but are excluded from the exported/rendered output. */
   hidden?: boolean;
+  /**
+   * Full-bleed pages render their blocks edge to edge — no header logo, no page
+   * margin, no gap between blocks. Used by cover pages, whose hero photo and
+   * title band run to the paper's edge.
+   */
+  bleed?: boolean;
   blocks: Block[];
 }
 

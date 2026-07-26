@@ -24,7 +24,7 @@ export interface TemplateDef {
 
 /** All designer templates, in gallery display order. */
 export const TEMPLATES: TemplateDef[] = [
-  { key: "cover", name: "Cover Page", category: "Cover", description: "Full-bleed hero, logo, title, and a deal-stat strip.", build: buildCoverPage },
+  { key: "cover", name: "Cover Page", category: "Cover", description: "Full-bleed hero over a navy title band with address and asset line.", build: buildCoverPage },
   { key: "financialHero", name: "Financial Highlights", category: "Financials", description: "Headline metric callouts above the financial summary.", build: buildFinancialHeroPage },
   { key: "financialSummary", name: "Financial Summary", category: "Financials", description: "Address header with a data-bound financial summary table.", build: buildFinancialSummaryPage },
   { key: "propertyOverview", name: "Property Overview", category: "Property", description: "Magazine-style two-column overview with a highlights table.", build: buildPropertyOverviewPage },
