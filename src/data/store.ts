@@ -266,18 +266,54 @@ export interface ContactOption {
   relationship: RelationshipStage
 }
 
+/** Map a Contact to the rich picker option shape. */
+function toContactOption(c: Contact): ContactOption {
+  return {
+    value: c.id,
+    label: contactLabel(c),
+    name: `${c.firstName} ${c.lastName}`.trim(),
+    company: c.company,
+    title: c.title,
+    relationship: c.relationship,
+  }
+}
+
 /** Rich options over all contacts, for a contact picker. */
 export function getContactOptions(): ContactOption[] {
   return [...getStore().contacts.values()]
-    .map((c) => ({
-      value: c.id,
-      label: contactLabel(c),
-      name: `${c.firstName} ${c.lastName}`.trim(),
-      company: c.company,
-      title: c.title,
-      relationship: c.relationship,
-    }))
+    .map(toContactOption)
     .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/** A named group of contact options — used to section a picker (leads vs. CRM). */
+export interface ContactOptionGroup {
+  value: string
+  label: string
+  items: ContactOption[]
+}
+
+/**
+ * Buyer/tenant options for the Under Contract gate, grouped so the property's
+ * own leads surface first and the rest of the CRM follows — letting the broker
+ * either confirm the lead that came in or search the whole book. Empty groups
+ * are omitted.
+ */
+export function getSellerOptionGroups(propertyId: string): ContactOptionGroup[] {
+  const byName = (a: ContactOption, b: ContactOption) =>
+    a.name.localeCompare(b.name)
+  const linked = propertyId ? getContactsForProperty(propertyId) : []
+  const linkedIds = new Set(linked.map((c) => c.id))
+  const leads = linked.map(toContactOption).sort(byName)
+  const others = [...getStore().contacts.values()]
+    .filter((c) => !linkedIds.has(c.id))
+    .map(toContactOption)
+    .sort(byName)
+  const groups: ContactOptionGroup[] = []
+  if (leads.length > 0)
+    groups.push({ value: 'leads', label: 'Leads on this deal', items: leads })
+  if (others.length > 0)
+    groups.push({ value: 'crm', label: 'All Contacts', items: others })
+  return groups
 }
 
 /** A deal picker option — the deal's id, display name, and side (Sale/Lease). */
