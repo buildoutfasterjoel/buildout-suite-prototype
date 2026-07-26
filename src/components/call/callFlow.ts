@@ -7,7 +7,8 @@ import { generateCallTurn, generateCallRecap } from "#/ai/generate";
 import { useAssistant } from "#/ai/useAssistant";
 import { addNote } from "#/data/actions";
 import { contactFullName, contactInitials } from "#/components/contacts/contactDisplay";
-import { applyHeroRecapExtensions, isHeroCall } from "./heroRecapExtensions";
+import { isHeroCall } from "./heroRecapExtensions";
+import { heroInbound } from "./heroInbound";
 import { signalText } from "#/data/signal";
 
 /**
@@ -222,9 +223,11 @@ export const callFlow = {
     // A new call/hangup took over during recap generation — don't surface a stale recap.
     if (mySession !== session) return;
     useCallStore.getState().setRecap(recap);
+    // Defer the deal: a hero call arms Rosa's financials email off the CONTACT
+    // record. It self-arrives on her timeline with a "Start a Deal" action —
+    // the deal is created there, not at hang-up.
     if (isHeroCall(target)) {
-      const actions = applyHeroRecapExtensions({ target, recap });
-      if (actions) useCallStore.getState().setHeroActions(actions);
+      heroInbound.arm(target.contactId);
     }
     useAssistant.getState().setOpen(true); // sidebar renders + speaks the recap
   },

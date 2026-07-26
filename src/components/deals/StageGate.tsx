@@ -16,21 +16,28 @@ import {
   faRobot,
   faCalendar,
   faSparkle,
+  faUser,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { PropertyStatus } from "#/data/types";
 import {
   getListing,
-  getSellerOptions,
+  getSellerOptionGroups,
   getContact,
   getProperty,
   contactLabel,
+  type ContactOption,
+  type ContactOptionGroup,
 } from "#/data/store";
+import { Combobox } from "@buildoutinc/blueprint-react/ui/Combobox";
+import { RelationshipPill } from "#/components/contacts/pills";
 import {
   resolveGate,
   canConfirm,
   buildTransitionInput,
   seedGateForm,
   signedListingAgreementDoc,
+  unsatisfiedRequired,
+  completeSetupGate,
   EMPTY_GATE_FORM,
   type GateFormState,
 } from "#/data/stageGates";
@@ -120,6 +127,87 @@ function GateDatePicker({
   );
 }
 
+/**
+ * Searchable buyer/tenant picker for the Under Contract gate. Sections the
+ * options into "Leads on this deal" then "CRM contacts" (see
+ * {@link getSellerOptionGroups}) so the broker can confirm the lead that came
+ * in or search the whole book.
+ */
+function ContactGateCombobox({
+  groups,
+  value,
+  onValueChange,
+  placeholder,
+}: {
+  groups: ContactOptionGroup[];
+  value: ContactOption | null;
+  onValueChange: (option: ContactOption | null) => void;
+  placeholder: string;
+}) {
+  return (
+    <Combobox
+      items={groups}
+      value={value}
+      onValueChange={(v) => onValueChange(v as ContactOption | null)}
+    >
+      <Combobox.InputGroup>
+        <InputGroup.Addon>
+          <FontAwesomeIcon icon={faUser} />
+        </InputGroup.Addon>
+        <Combobox.Input placeholder={placeholder} showClear />
+      </Combobox.InputGroup>
+      <Combobox.Content>
+        <Combobox.Empty className="text-muted">
+          No matching contacts
+        </Combobox.Empty>
+        <Combobox.List>
+          {(group: ContactOptionGroup) => (
+            <Combobox.Group key={group.value} items={group.items}>
+              <Combobox.GroupLabel>{group.label}</Combobox.GroupLabel>
+              <Combobox.Collection>
+                {(item: ContactOption) => {
+                  const meta = [item.title, item.company]
+                    .filter(Boolean)
+                    .join(" · ");
+                  return (
+                    <Combobox.Item key={item.value} value={item}>
+                      <span
+                        className="d-flex gap-2 user-select-none"
+                        style={{ minWidth: 0 }}
+                      >
+                        <FontAwesomeIcon
+                          icon={faUser}
+                          className="text-muted flex-shrink-0 d-inline-block mt-1"
+                        />
+                        <span
+                          className="d-flex flex-column"
+                          style={{ minWidth: 0 }}
+                        >
+                          <span className="d-flex align-items-center gap-2">
+                            <span className="text-truncate">{item.name}</span>
+                            <span className="flex-shrink-0">
+                              <RelationshipPill value={item.relationship} />
+                            </span>
+                          </span>
+                          {meta && (
+                            <span className="text-muted fs-small text-truncate">
+                              {meta}
+                            </span>
+                          )}
+                        </span>
+                      </span>
+                    </Combobox.Item>
+                  );
+                }}
+              </Combobox.Collection>
+            </Combobox.Group>
+          )}
+        </Combobox.List>
+      </Combobox.Content>
+    </Combobox>
+  );
+}
+
 export function StageGate({
   dealId,
   targetStage,
@@ -142,17 +230,7 @@ export function StageGate({
   const deal = getListing(dealId);
   const config = useMemo(() => {
     if (!deal) return null;
-    if (completeSetup) {
-      // Reuse the publish gate's fields, but keep the current stage — this only
-      // captures the required info and sets publishedAt.
-      const publishGate = resolveGate("proposal", "active", deal.dealType);
-      return {
-        ...publishGate,
-        fromStage: deal.status,
-        targetStage: deal.status,
-        leavesActive: false,
-      };
-    }
+    if (completeSetup) return completeSetupGate(deal);
     return resolveGate(deal.status, targetStage, deal.dealType);
   }, [deal, targetStage, completeSetup]);
 
@@ -161,6 +239,13 @@ export function StageGate({
     () => (deal ? seedGateForm(deal) : EMPTY_GATE_FORM),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [dealId, open, completeSetup],
+  );
+
+  // Surface only the required fields the deal hasn't already satisfied. Derived
+  // from the initial seeded form so a field stays visible while the user fills it.
+  const visibleFields = useMemo(
+    () => new Set(config ? unsatisfiedRequired(config, initialForm) : []),
+    [config, initialForm],
   );
 
   const [form, setForm] = useState<GateFormState>(initialForm);
@@ -218,7 +303,7 @@ export function StageGate({
           : f.commissionPct,
     }));
 
-  const req = (f: string) => config.required.includes(f as never);
+  const show = (f: string) => visibleFields.has(f as never);
 
   const aiDocs = (deal.documents ?? []).filter((d) => d.aiGenerated);
   const allDocsReviewed =
@@ -244,10 +329,15 @@ export function StageGate({
         .join(", ")
     : deal.name;
 
-  // Buyer options for the Under Contract gate. Also passed to the Select via
-  // `items` so the trigger renders the contact's name (label) rather than the
-  // raw id (value).
-  const buyerOptions = getSellerOptions(deal.propertyId);
+  // Buyer/tenant options for the Under Contract gate, grouped so the deal's own
+  // leads come first, then the rest of the CRM. Rendered in a searchable
+  // Combobox. `findOption` resolves the form's stored id back to its option
+  // object (the value the Combobox tracks).
+  const buyerGroups = getSellerOptionGroups(deal.propertyId);
+  const findOption = (id: string | null | undefined): ContactOption | null =>
+    id
+      ? (buyerGroups.flatMap((g) => g.items).find((o) => o.value === id) ?? null)
+      : null;
 
   const confirmable = canConfirm(config, effectiveForm);
 
@@ -320,26 +410,32 @@ export function StageGate({
 
               {config.publishes && (
                 <>
-                  <Field>
-                    <Field.Label>Listing title</Field.Label>
-                    <Input
-                      value={form.saleTitle}
-                      onChange={(e) => set("saleTitle", e.target.value)}
-                      placeholder="e.g. Prime Retail Pad — Downtown"
-                    />
-                  </Field>
+                  {show("saleTitle") && (
+                    <Field>
+                      <Field.Label>Listing title</Field.Label>
+                      <Input
+                        value={form.saleTitle}
+                        onChange={(e) => set("saleTitle", e.target.value)}
+                        placeholder="e.g. Prime Retail Pad — Downtown"
+                      />
+                    </Field>
+                  )}
 
-                  <Field>
-                    <Field.Label>Listing description</Field.Label>
-                    <Textarea
-                      rows={3}
-                      value={form.saleDescription}
-                      onChange={(e) => set("saleDescription", e.target.value)}
-                      placeholder="Describe the offering for the public listing…"
-                    />
-                  </Field>
+                  {show("saleDescription") && (
+                    <Field>
+                      <Field.Label>Listing description</Field.Label>
+                      <Textarea
+                        rows={3}
+                        value={form.saleDescription}
+                        onChange={(e) =>
+                          set("saleDescription", e.target.value)
+                        }
+                        placeholder="Describe the offering for the public listing…"
+                      />
+                    </Field>
+                  )}
 
-                  {deal.dealType === "Sale" ? (
+                  {show("askingPrice") && deal.dealType === "Sale" && (
                     <Field>
                       <Field.Label>Asking price</Field.Label>
                       <CurrencyInput
@@ -358,61 +454,64 @@ export function StageGate({
                         </a>
                       </Field.Description>
                     </Field>
-                  ) : (
-                    <>
-                      <div className="d-flex gap-2">
-                        <Field className="flex-grow-1">
-                          <Field.Label>Lease rate</Field.Label>
-                          <CurrencyInput
-                            value={form.leaseRate}
-                            onChange={(v) => set("leaseRate", v)}
-                          />
-                        </Field>
-                        <Field style={{ width: 140 }}>
-                          <Field.Label>Units</Field.Label>
-                          <Select
-                            items={LEASE_RATE_UNIT_OPTIONS}
-                            value={form.leaseRateUnits}
-                            onValueChange={(v) =>
+                  )}
+
+                  {(show("leaseRate") || show("availableSqFt")) &&
+                    deal.dealType !== "Sale" && (
+                      <>
+                        <div className="d-flex gap-2">
+                          <Field className="flex-grow-1">
+                            <Field.Label>Lease rate</Field.Label>
+                            <CurrencyInput
+                              value={form.leaseRate}
+                              onChange={(v) => set("leaseRate", v)}
+                            />
+                          </Field>
+                          <Field style={{ width: 140 }}>
+                            <Field.Label>Units</Field.Label>
+                            <Select
+                              items={LEASE_RATE_UNIT_OPTIONS}
+                              value={form.leaseRateUnits}
+                              onValueChange={(v) =>
+                                set(
+                                  "leaseRateUnits",
+                                  v as typeof form.leaseRateUnits,
+                                )
+                              }
+                            >
+                              <Select.Trigger>
+                                <Select.Value />
+                              </Select.Trigger>
+                              <Select.Content>
+                                {LEASE_RATE_UNIT_OPTIONS.map((o) => (
+                                  <Select.Item key={o.value} value={o.value}>
+                                    {o.label}
+                                  </Select.Item>
+                                ))}
+                              </Select.Content>
+                            </Select>
+                          </Field>
+                        </div>
+                        <Field>
+                          <Field.Label>Available SF</Field.Label>
+                          <Input
+                            type="number"
+                            value={form.availableSqFt ?? ""}
+                            onChange={(e) =>
                               set(
-                                "leaseRateUnits",
-                                v as typeof form.leaseRateUnits,
+                                "availableSqFt",
+                                e.target.value ? Number(e.target.value) : null,
                               )
                             }
-                          >
-                            <Select.Trigger>
-                              <Select.Value />
-                            </Select.Trigger>
-                            <Select.Content>
-                              {LEASE_RATE_UNIT_OPTIONS.map((o) => (
-                                <Select.Item key={o.value} value={o.value}>
-                                  {o.label}
-                                </Select.Item>
-                              ))}
-                            </Select.Content>
-                          </Select>
+                            placeholder="e.g. 2400"
+                          />
                         </Field>
-                      </div>
-                      <Field>
-                        <Field.Label>Available SF</Field.Label>
-                        <Input
-                          type="number"
-                          value={form.availableSqFt ?? ""}
-                          onChange={(e) =>
-                            set(
-                              "availableSqFt",
-                              e.target.value ? Number(e.target.value) : null,
-                            )
-                          }
-                          placeholder="e.g. 2400"
-                        />
-                      </Field>
-                    </>
-                  )}
+                      </>
+                    )}
                 </>
               )}
 
-              {config.publishes && aiDocs.length > 0 && (
+              {show("aiDocsReviewed") && aiDocs.length > 0 && (
                 <Field>
                   <Field.Label>
                     <FontAwesomeIcon icon={faRobot} /> Review AI-generated
@@ -453,88 +552,43 @@ export function StageGate({
                 </Field>
               )}
 
-              {config.publishes && (
-                <Field>
-                  <div className="d-flex align-items-center justify-content-between gap-2">
-                    <label className="d-flex align-items-center gap-2 mb-0">
-                      <Checkbox
-                        checked={form.websiteReviewed}
-                        onCheckedChange={(c) =>
-                          set("websiteReviewed", c === true)
-                        }
-                      />
-                      Listing website reviewed
-                    </label>
-                    <a
-                      href={`/listings/${deal.id}/website`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-nowrap"
-                    >
-                      Open website{" "}
-                      <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
-                    </a>
-                  </div>
-                </Field>
-              )}
-
-              {req("buyerLinked") && (
+              {show("buyerLinked") && (
                 <Field>
                   <Field.Label>Buyer</Field.Label>
-                  <Select
-                    items={buyerOptions}
-                    value={form.buyerContactId ?? ""}
-                    onValueChange={(v) => {
-                      set("buyerContactId", v || null);
+                  <ContactGateCombobox
+                    groups={buyerGroups}
+                    value={findOption(form.buyerContactId)}
+                    placeholder="Search a buyer…"
+                    onValueChange={(o) => {
+                      set("buyerContactId", o?.value ?? null);
                       set(
                         "buyerLinked",
-                        !!v || deal.buyerContactIds.length > 0,
+                        !!o || deal.buyerContactIds.length > 0,
                       );
                     }}
-                  >
-                    <Select.Trigger>
-                      <Select.Value placeholder="Select a buyer…" />
-                    </Select.Trigger>
-                    <Select.Content>
-                      {buyerOptions.map((o) => (
-                        <Select.Item key={o.value} value={o.value}>
-                          {o.label}
-                        </Select.Item>
-                      ))}
-                    </Select.Content>
-                  </Select>
+                  />
                 </Field>
               )}
 
-              {req("tenantLinked") && (
+              {show("tenantLinked") && (
                 <Field>
                   <Field.Label>Tenant</Field.Label>
-                  <Select
-                    items={buyerOptions}
-                    value={form.tenantContactId ?? ""}
-                    onValueChange={(v) => {
-                      set("tenantContactId", v || null);
+                  <ContactGateCombobox
+                    groups={buyerGroups}
+                    value={findOption(form.tenantContactId)}
+                    placeholder="Search a tenant…"
+                    onValueChange={(o) => {
+                      set("tenantContactId", o?.value ?? null);
                       set(
                         "tenantLinked",
-                        !!v || deal.tenantContactIds.length > 0,
+                        !!o || deal.tenantContactIds.length > 0,
                       );
                     }}
-                  >
-                    <Select.Trigger>
-                      <Select.Value placeholder="Select a tenant…" />
-                    </Select.Trigger>
-                    <Select.Content>
-                      {buyerOptions.map((o) => (
-                        <Select.Item key={o.value} value={o.value}>
-                          {o.label}
-                        </Select.Item>
-                      ))}
-                    </Select.Content>
-                  </Select>
+                  />
                 </Field>
               )}
 
-              {req("listedOnDate") && (
+              {show("listedOnDate") && (
                 <Field>
                   <Field.Label>Listing Executed</Field.Label>
                   <GateDatePicker
@@ -545,7 +599,7 @@ export function StageGate({
                 </Field>
               )}
 
-              {req("listingExpirationDate") && (
+              {show("listingExpirationDate") && (
                 <Field>
                   <Field.Label>Listing Expires</Field.Label>
                   <GateDatePicker
@@ -557,7 +611,7 @@ export function StageGate({
               )}
 
               {aiDatesFromAgreement &&
-                (req("listedOnDate") || req("listingExpirationDate")) && (
+                (show("listedOnDate") || show("listingExpirationDate")) && (
                   <div className="ai-draft">
                     <FontAwesomeIcon
                       icon={faSparkle}
@@ -568,14 +622,14 @@ export function StageGate({
                   </div>
                 )}
 
-              {req("salePrice") && (
+              {show("salePrice") && (
                 <Field>
                   <Field.Label>Sale Price</Field.Label>
                   <CurrencyInput value={form.salePrice} onChange={setSalePrice} />
                 </Field>
               )}
 
-              {req("commissionAmount") && (
+              {show("commissionAmount") && (
                 <Field>
                   <Field.Label>Gross Commission %</Field.Label>
                   <Input
@@ -590,7 +644,7 @@ export function StageGate({
                 </Field>
               )}
 
-              {req("commissionAmount") && (
+              {show("commissionAmount") && (
                 <Field>
                   <Field.Label>Gross Commission ($)</Field.Label>
                   <CurrencyInput
@@ -600,7 +654,7 @@ export function StageGate({
                 </Field>
               )}
 
-              {req("leaseTermMonths") && (
+              {show("leaseTermMonths") && (
                 <Field>
                   <Field.Label>Lease term (months)</Field.Label>
                   <Input
@@ -617,7 +671,7 @@ export function StageGate({
                 </Field>
               )}
 
-              {req("leaseCommencementDate") && (
+              {show("leaseCommencementDate") && (
                 <Field>
                   <Field.Label>Lease Commencement</Field.Label>
                   <GateDatePicker
@@ -628,7 +682,7 @@ export function StageGate({
                 </Field>
               )}
 
-              {req("closeDate") && (
+              {show("closeDate") && (
                 <Field>
                   <Field.Label>Close Date</Field.Label>
                   <GateDatePicker
@@ -639,7 +693,7 @@ export function StageGate({
                 </Field>
               )}
 
-              {req("deadReason") && (
+              {show("deadReason") && (
                 <Field>
                   <Field.Label>Lost Reason</Field.Label>
                   <Input

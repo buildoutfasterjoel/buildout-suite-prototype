@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { TEMPLATES, buildTemplatePage, buildOnBrandBlankPage } from './templates'
 import { BRAND } from './brand'
+import type { ImageBlock, SectionBlock } from './types'
+import { PAGE_HEIGHT, PAGE_WIDTH } from './types'
 
 describe('TEMPLATES registry', () => {
   it('exposes at least 7 templates, each with unique key + metadata', () => {
@@ -30,9 +32,33 @@ describe('TEMPLATES registry', () => {
   })
 
   it('styles headings with the brand heading font', () => {
-    const cover = buildTemplatePage('cover')
-    const heading = cover.blocks.find((b) => b.type === 'heading') as { style: { fontFamily: string } }
+    const page = buildTemplatePage('financialHero')
+    const heading = page.blocks.find((b) => b.type === 'heading') as { style: { fontFamily: string } }
     expect(heading.style.fontFamily).toBe(BRAND.fonts.heading)
+  })
+
+  // The cover deliberately opts out of the logo + margin every other page
+  // carries: its hero and title band have to reach the paper's edge, matching
+  // the BOV preview shown before sending.
+  it('builds the cover as a full-bleed hero over a navy title band', () => {
+    const cover = buildTemplatePage('cover')
+    expect(cover.bleed).toBe(true)
+    expect(cover.logoSrc).toBeUndefined()
+    expect(cover.blocks[0].type).toBe('image')
+
+    const band = cover.blocks[1] as SectionBlock
+    expect(band.type).toBe('section')
+    expect(band.background).toBe('#1d3a5f')
+    expect(band.blocks.some((b) => b.type === 'heading')).toBe(true)
+  })
+
+  // The hero is sized so the band lands flush on the bottom edge — a hero that
+  // drifts from the page height leaves a white strip under the cover.
+  it('sizes the cover hero to leave exactly the band below it', () => {
+    const cover = buildTemplatePage('cover')
+    const hero = cover.blocks[0] as ImageBlock
+    expect(hero.src).toContain(`w=${PAGE_WIDTH}`)
+    expect(hero.src).toContain(`h=${PAGE_HEIGHT - 203}`)
   })
 })
 

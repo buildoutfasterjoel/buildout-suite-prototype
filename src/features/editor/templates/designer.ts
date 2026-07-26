@@ -7,10 +7,12 @@ import type {
   Page,
   SectionBlock,
   TableBlock,
+  TextBlock,
   TextStyle,
 } from "../types";
-import { getPhotoUrl } from "#/components/properties/propertyDisplay";
-import { DEFAULT_CELL_STYLE, DEFAULT_TEXT_STYLE, uid } from "../blocks/blockFactory";
+import { PAGE_HEIGHT, PAGE_WIDTH } from "../types";
+import { TYPE_LABELS, getPhotoUrl } from "#/components/properties/propertyDisplay";
+import { DEFAULT_TEXT_STYLE, uid } from "../blocks/blockFactory";
 import { BRAND } from "../brand";
 import {
   LOGO_SRC,
@@ -105,32 +107,102 @@ export function buildPropertyOverviewPage(property: Property | undefined): Page 
   };
 }
 
-/** Cover — full-width hero, logo, large serif title, address, deal-stat strip. */
-export function buildCoverPage(property?: Property): Page {
-  const statCell = (key: DynamicKey, format?: Cell["format"]): Cell => ({
-    ...valueCell("—", key, format),
-    style: { ...DEFAULT_CELL_STYLE, fontFamily: BRAND.fonts.heading, fontSize: 18, color: BRAND.palette.primary, align: "center" },
-    align: "center",
-  });
-  const statStrip: TableBlock = {
+/* ── Cover ─────────────────────────────────────────────────────────────── */
+
+/**
+ * The cover's palette and typography mirror the BOV preview a broker sees
+ * before sending (`.bov-cover` in main.scss) — the document they open is the
+ * same artifact they approved, not a lookalike.
+ */
+const COVER_NAVY = "#1d3a5f";
+const COVER_GOLD = "#d3b475";
+const COVER_RULE = "rgba(255, 255, 255, 0.25)";
+/** Band height: 32px padding top and bottom around 139px of stacked line-boxes. */
+const COVER_BAND_HEIGHT = 203;
+
+/** One line of band copy — uppercase and letterspaced, sized to its role. */
+function coverLine(
+  text: string,
+  o: { size: number; tracking: number; leading: number; color: string; bold?: boolean },
+): TextBlock {
+  return {
     id: uid("block"),
-    type: "table",
-    style: { borderWidth: 0, borderStyle: "none", borderColor: null },
-    rows: [
-      [headerCell("Asking Price"), headerCell("Building Size"), headerCell("Cap Rate")],
-      [statCell("askingPrice", "currency"), statCell("buildingSqFt", "text"), statCell("capRate", "percent")],
+    type: "text",
+    text,
+    style: {
+      ...DEFAULT_TEXT_STYLE,
+      fontFamily: BRAND.fonts.body,
+      fontSize: o.size,
+      bold: o.bold ?? false,
+      letterSpacing: o.tracking,
+      lineHeight: o.leading,
+      transform: "uppercase",
+      color: o.color,
+    },
+  };
+}
+
+/** `Multifamily Property | 24,000 SF` — the band's closing line. */
+function coverMetaLine(property?: Property): string {
+  return property
+    ? `${TYPE_LABELS[property.propertyType]} Property | ${property.buildingSqFt.toLocaleString()} SF`
+    : "Commercial Property | 24,000 SF";
+}
+
+/**
+ * Cover — a full-bleed hero photo above a navy band carrying the kicker,
+ * property name, address, rule, and type/size line. The hero is sized so the
+ * band lands flush on the bottom edge of the page; `bleed` drops the header
+ * logo and margins the interior pages carry.
+ */
+export function buildCoverPage(property?: Property): Page {
+  const band: SectionBlock = {
+    id: uid("block"),
+    type: "section",
+    padding: 32,
+    background: COVER_NAVY,
+    blocks: [
+      coverLine("Broker Opinion of Value", {
+        size: 12, tracking: 4.2, leading: 32, color: COVER_GOLD, bold: true,
+      }),
+      {
+        id: uid("block"),
+        type: "heading",
+        text: property?.name ?? "Offering Memorandum",
+        style: {
+          ...DEFAULT_TEXT_STYLE,
+          fontFamily: BRAND.fonts.body,
+          fontSize: 30,
+          bold: true,
+          letterSpacing: 1.2,
+          lineHeight: 40,
+          transform: "uppercase",
+          color: "#ffffff",
+        },
+      },
+      coverLine(addressOf(property), {
+        size: 13, tracking: 2.3, leading: 30, color: "rgba(255, 255, 255, 0.75)",
+      }),
+      { id: uid("block"), type: "divider", thickness: 1, color: COVER_RULE, style: "solid" },
+      coverLine(coverMetaLine(property), {
+        size: 12, tracking: 2.6, leading: 28, color: COVER_GOLD, bold: true,
+      }),
     ],
   };
+
   return {
     id: uid("page"),
     name: "Cover Page",
-    logoSrc: BRAND.logoSrc,
     locked: true,
+    bleed: true,
     blocks: [
-      { id: uid("block"), type: "image", src: getPhotoUrl(property?.id ?? "cover", 736, 340), alt: "Property photo" },
-      brandHeading(property?.name ?? "Offering Memorandum", 40),
-      brandBody(addressOf(property)),
-      statStrip,
+      {
+        id: uid("block"),
+        type: "image",
+        src: getPhotoUrl(property?.id ?? "cover", PAGE_WIDTH, PAGE_HEIGHT - COVER_BAND_HEIGHT),
+        alt: property?.name ?? "Property photo",
+      },
+      band,
     ],
   };
 }

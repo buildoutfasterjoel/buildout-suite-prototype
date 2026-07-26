@@ -19,10 +19,16 @@ import {
   faMicrophone,
   faVolumeHigh,
   faVolumeXmark,
+  faHandshake,
+  faUsers,
+  faBuilding,
 } from "@fortawesome/pro-regular-svg-icons";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { createClientTools } from "#/ai/tools";
+import type { ResultNav } from "#/ai/resultNav";
+import { useListingsFilter } from "#/routes/_shell/listings/-useListingsFilter";
+import { useContactsFilter } from "#/routes/_shell/backoffice/contacts/-useContactsFilter";
 import { aiChat, aiConfigured } from "#/ai/relay";
 import { buildAssistantContext, serializeContext } from "#/ai/context";
 import { renderLightHtml } from "#/ai/renderLightHtml";
@@ -44,13 +50,8 @@ import { signalText } from "#/data/signal";
 import { generateCallBrief, callBriefFallback } from "#/ai/generate";
 import { CallBriefCard } from "#/components/call/CallBriefCard";
 import type { CallBriefSpecT } from "#/ai/generate/schemas";
-import { InboundEmailCard } from "#/components/call/InboundEmailCard";
-import { useInboundEmail } from "#/components/call/useInboundEmail";
-import { inboundSummaryText } from "#/components/call/heroInbound";
 import { BovCard } from "#/components/call/BovCard";
 import { useBovDraft, bovSummaryText } from "#/components/call/useBovDraft";
-import { HeroDemoCard } from "#/components/call/HeroDemoCard";
-import { useHeroDemo, arcCompleteText, resetHeroDemo } from "#/components/call/heroDemo";
 
 /** Shown instead of sending when the server has no Anthropic key configured. */
 const NOT_CONFIGURED_MESSAGE =
@@ -88,6 +89,11 @@ type ContactCardData = {
   company?: string;
   relationship?: string;
 };
+type PropertyCardData = {
+  id: string;
+  address?: string;
+  propertyType?: string;
+};
 
 const RELATIONSHIP_LABELS: Record<string, string> = {
   cold: "Cold",
@@ -102,12 +108,40 @@ const RELATIONSHIP_LABELS: Record<string, string> = {
 function entitiesOf(output: unknown): {
   deals: DealCardData[];
   contacts: ContactCardData[];
+  properties: PropertyCardData[];
 } {
-  const o = (output ?? {}) as { deals?: unknown; contacts?: unknown };
+  const o = (output ?? {}) as { deals?: unknown; contacts?: unknown; properties?: unknown };
   return {
     deals: Array.isArray(o.deals) ? (o.deals as DealCardData[]) : [],
     contacts: Array.isArray(o.contacts) ? (o.contacts as ContactCardData[]) : [],
+    properties: Array.isArray(o.properties) ? (o.properties as PropertyCardData[]) : [],
   };
+}
+
+/** Tool-provided "get there" nav descriptors (see `src/ai/resultNav.ts`). */
+function navsOf(output: unknown): ResultNav[] {
+  const o = (output ?? {}) as { navs?: unknown };
+  return Array.isArray(o.navs) ? (o.navs as ResultNav[]) : [];
+}
+
+/**
+ * Fallback navs for tools that return entity arrays without their own `navs`
+ * (e.g. a contact's deals): a plain count summary whose button just opens the
+ * section page unfiltered.
+ */
+function synthesizeNavs(
+  deals: DealCardData[],
+  contacts: ContactCardData[],
+  properties: PropertyCardData[],
+): ResultNav[] {
+  const out: ResultNav[] = [];
+  if (deals.length)
+    out.push({ entity: "deals", count: deals.length, summary: `${deals.length} deal${deals.length === 1 ? "" : "s"}` });
+  if (contacts.length)
+    out.push({ entity: "contacts", count: contacts.length, summary: `${contacts.length} contact${contacts.length === 1 ? "" : "s"}` });
+  if (properties.length)
+    out.push({ entity: "properties", count: properties.length, summary: `${properties.length} ${properties.length === 1 ? "property" : "properties"}` });
+  return out;
 }
 
 /** Extract a generated email draft from a tool-call's output, if present. */
@@ -219,40 +253,71 @@ function ResultCard({
   );
 }
 
-/** Interactive cards rendered from a tool result's deals/contacts. */
+/** Apply a nav's filter payload to the destination's bridge store, then go. */
+function goToNav(router: ReturnType<typeof useRouter>, nav: ResultNav) {
+  if (nav.entity === "contacts") {
+    useContactsFilter.getState().apply(nav.contactsFilter ?? {});
+    router.navigate({ to: "/backoffice/contacts" as never });
+  } else {
+    // deals and properties both live in the Listings grid.
+    useListingsFilter.getState().applyFacets(nav.listingsFacets ?? {});
+    router.navigate({ to: "/listings" as never });
+  }
+}
+
+/**
+ * Compact summary card shown when a tool returns more than one item — instead
+ * of a flood of cards. Shows the count + a button that lands the broker on the
+ * pre-filtered section page (see `goToNav`).
+ */
+function ResultSummaryCard({ nav, onGo }: { nav: ResultNav; onGo: () => void }) {
+  const icon =
+    nav.entity === "contacts" ? faUsers : nav.entity === "properties" ? faBuilding : faHandshake;
+  const dest = nav.entity === "contacts" ? "View in People" : "View in Deals";
+  return (
+    <button
+      type="button"
+      onClick={onGo}
+      className="btn p-0 border rounded text-start w-100 bg-white"
+    >
+      <div className="d-flex align-items-center gap-2 p-2">
+        <span
+          className="d-inline-flex align-items-center justify-content-center rounded bg-body-tertiary text-buildout-blue-700 flex-shrink-0"
+          style={{ width: 32, height: 32 }}
+        >
+          <FontAwesomeIcon icon={icon} />
+        </span>
+        <div className="flex-grow-1" style={{ minWidth: 0 }}>
+          <div className="fw-semibold text-truncate">{nav.summary}</div>
+          <div className="text-muted small">{dest} →</div>
+        </div>
+        <FontAwesomeIcon icon={faChevronRight} className="text-muted flex-shrink-0" />
+      </div>
+    </button>
+  );
+}
+
+/**
+ * Renders a tool result. A SINGLE entity (one deal / contact / property) shows
+ * its full widget card. TWO OR MORE collapse into a per-category summary card
+ * with a "get there" button, so a large result set doesn't bury the chat. Rich
+ * single-payload results (email draft, brief, marketing package, book answer)
+ * always render in full.
+ */
 function ToolResultCards({ output }: { output: unknown }) {
   const router = useRouter();
-  const { deals, contacts } = entitiesOf(output);
+  const { deals, contacts, properties } = entitiesOf(output);
   const emailDraft = emailDraftOf(output);
   const brief = briefOf(output);
   const answer = answerOf(output);
   const marketingPackage = marketingPackageOf(output);
-  if (
-    deals.length === 0 &&
-    contacts.length === 0 &&
-    !emailDraft &&
-    !brief &&
-    !answer &&
-    !marketingPackage
-  )
-    return null;
+  const hasRich = !!(emailDraft || marketingPackage || brief || answer);
+  const total = deals.length + contacts.length + properties.length;
 
-  return (
-    <div className="d-flex flex-column gap-2">
-      {deals.map((d) => (
-        <DealCardById key={d.id} listingId={d.id} showStatus />
-      ))}
-      {contacts.map((c) => (
-        <ResultCard
-          key={c.id}
-          title={c.name}
-          badge={c.relationship ? RELATIONSHIP_LABELS[c.relationship] ?? c.relationship : undefined}
-          meta={c.company}
-          onOpen={() =>
-            router.navigate({ to: `/backoffice/contacts/${c.id}` as never })
-          }
-        />
-      ))}
+  if (total === 0 && !hasRich) return null;
+
+  const rich = (
+    <>
       {emailDraft && <EmailDraftCard draft={emailDraft} />}
       {marketingPackage && <MarketingPackageCard pkg={marketingPackage} />}
       {brief && (
@@ -266,6 +331,45 @@ function ToolResultCards({ output }: { output: unknown }) {
           dangerouslySetInnerHTML={{ __html: renderLightHtml(answer) }}
         />
       )}
+    </>
+  );
+
+  // Exactly one entity → show its full card.
+  if (total === 1 && !hasRich) {
+    const d = deals[0];
+    const c = contacts[0];
+    const p = properties[0];
+    return (
+      <div className="d-flex flex-column gap-2">
+        {d && <DealCardById listingId={d.id} showStatus />}
+        {c && (
+          <ResultCard
+            title={c.name}
+            badge={c.relationship ? RELATIONSHIP_LABELS[c.relationship] ?? c.relationship : undefined}
+            meta={c.company}
+            onOpen={() => router.navigate({ to: `/backoffice/contacts/${c.id}` as never })}
+          />
+        )}
+        {p && (
+          <ResultCard
+            title={p.address ?? "Property"}
+            badge={p.propertyType}
+            onOpen={() => goToNav(router, { entity: "properties", count: 1, summary: "", listingsFacets: { search: p.address } })}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Two or more → summary cards (tool-provided navs, else synthesized).
+  const navs = navsOf(output);
+  const summaryNavs = navs.length ? navs : synthesizeNavs(deals, contacts, properties);
+  return (
+    <div className="d-flex flex-column gap-2">
+      {summaryNavs.map((nav, i) => (
+        <ResultSummaryCard key={i} nav={nav} onGo={() => goToNav(router, nav)} />
+      ))}
+      {rich}
     </div>
   );
 }
@@ -294,10 +398,12 @@ function MessageBubble({ message }: { message: UIMessage }) {
     (p): p is Extract<typeof p, { type: "tool-call" }> => p.type === "tool-call",
   );
   const cardCalls = toolCalls.filter((p) => {
-    const { deals, contacts } = entitiesOf(p.output);
+    const { deals, contacts, properties } = entitiesOf(p.output);
     return (
       deals.length > 0 ||
       contacts.length > 0 ||
+      properties.length > 0 ||
+      navsOf(p.output).length > 0 ||
       emailDraftOf(p.output) !== null ||
       briefOf(p.output) !== null ||
       answerOf(p.output) !== null ||
@@ -544,24 +650,8 @@ export function AssistantSidebar() {
     });
     if (!voiceEnabled) return;
     const { message } = composeRecapReport(recap, recapTarget?.name ?? "your contact");
-    const hero = useCallStore.getState().heroActions;
-    const spoken = hero ? `${recapSpeechText(message)} ${hero.narration}` : recapSpeechText(message);
-    void voiceEngine.speak(spoken); // no re-arm: not in conversationMode
+    void voiceEngine.speak(recapSpeechText(message)); // no re-arm: not in conversationMode
   }, [recap, recapTarget, voiceEnabled]);
-
-  // Speak the inbound owner-email summary once when it self-arrives (§Phase 4B).
-  // Also a one-way report — it must NOT enter conversationMode or re-arm the mic.
-  const inbound = useInboundEmail((s) => s.inbound);
-  const spokenInboundRef = useRef<object | null>(null);
-  useEffect(() => {
-    if (!inbound || inbound === spokenInboundRef.current) return;
-    spokenInboundRef.current = inbound;
-    requestAnimationFrame(() => {
-      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-    });
-    if (!voiceEnabled) return;
-    void voiceEngine.speak(inboundSummaryText(inbound)); // one-way: no re-arm
-  }, [inbound, voiceEnabled]);
 
   // Speak the BOV draft's summary once when it appears (Otto drafts the BOV,
   // §Phase 4C). Also a one-way report — it must NOT enter conversationMode or
@@ -577,25 +667,6 @@ export function AssistantSidebar() {
     if (!voiceEnabled) return;
     void voiceEngine.speak(bovSummaryText(bovDraft)); // one-way: no re-arm
   }, [bovDraft, voiceEnabled]);
-
-  // Speak the loop-closing completion beat once when the hero arc finishes
-  // (BOV sent, Phase 4D). Also a one-way report — it must NOT enter
-  // conversationMode or re-arm the mic.
-  const arcComplete = useHeroDemo((s) => s.arcComplete);
-  const spokenArcRef = useRef(false);
-  useEffect(() => {
-    if (!arcComplete) {
-      spokenArcRef.current = false;
-      return;
-    }
-    if (spokenArcRef.current) return;
-    spokenArcRef.current = true;
-    requestAnimationFrame(() => {
-      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-    });
-    if (!voiceEnabled) return;
-    void voiceEngine.speak(arcCompleteText()); // one-way: no re-arm
-  }, [arcComplete, voiceEnabled]);
 
   // Presenter kill-switch: Escape silences Otto instantly and ends conversation.
   useHotkey("Escape", () => {
@@ -669,7 +740,7 @@ export function AssistantSidebar() {
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-grow-1 overflow-auto p-3 d-flex flex-column gap-2">
-        {messages.length === 0 && !recap && !inbound ? (
+        {messages.length === 0 && !recap ? (
           <div className="text-muted small">
             Ask about your properties, contacts, and deals — or have me draft an email, build a
             call list, or move a deal along.
@@ -696,20 +767,9 @@ export function AssistantSidebar() {
             flow (after the messages), not the top, so the conversation reads
             chronologically. */}
         {recap && <CallRecapCard />}
-        {/* The inbound owner email self-arrives after the recap (§Phase 4B) —
-            render it at the bottom of the flow too, chronologically after the recap. */}
-        <InboundEmailCard />
         {/* The BOV draft self-arrives after the underwriting result is ready
             (§Phase 4C) — render it at the bottom of the flow too. */}
         <BovCard />
-        {/* The loop-closing completion beat (§Phase 4D) fires once the BOV is
-            sent — render it after the BOV card, chronologically last. */}
-        <HeroDemoCard
-          onRunAgain={() => {
-            setMessages([]);
-            void resetHeroDemo();
-          }}
-        />
       </div>
 
       {/* Call brief (Phase 4A "brief me first") + the hero-offer chips */}

@@ -247,6 +247,23 @@ export function getOwnersForProperty(propertyId: string): Contact[] {
   return getContactsForProperty(propertyId).filter((c) => c.role === 'owner')
 }
 
+/**
+ * Leads on a property's deals — its linked CRM contacts minus anyone already
+ * named as the seller on one of those deals. The assigned seller is the
+ * broker's own client, so seeing them listed as an inbound lead reads as a
+ * data bug (and on the client report, shows the client to themselves).
+ * Property-scoped rather than deal-scoped because child space deals share a
+ * property, and a seller on one of them is nobody's lead on the others.
+ */
+export function getLeadsForProperty(propertyId: string): Contact[] {
+  const sellerIds = new Set<string>()
+  for (const l of getStore().listings.values()) {
+    if (l.propertyId !== propertyId) continue
+    for (const id of l.sellerContactIds) sellerIds.add(id)
+  }
+  return getContactsForProperty(propertyId).filter((c) => !sellerIds.has(c.id))
+}
+
 /** Display name for a contact, e.g. "Jane Doe · Acme Holdings". */
 export function contactLabel(c: Contact): string {
   const name = `${c.firstName} ${c.lastName}`.trim()
@@ -266,18 +283,55 @@ export interface ContactOption {
   relationship: RelationshipStage
 }
 
+/** Map a Contact to the rich picker option shape. */
+function toContactOption(c: Contact): ContactOption {
+  return {
+    value: c.id,
+    label: contactLabel(c),
+    name: `${c.firstName} ${c.lastName}`.trim(),
+    company: c.company,
+    title: c.title,
+    relationship: c.relationship,
+  }
+}
+
 /** Rich options over all contacts, for a contact picker. */
 export function getContactOptions(): ContactOption[] {
   return [...getStore().contacts.values()]
-    .map((c) => ({
-      value: c.id,
-      label: contactLabel(c),
-      name: `${c.firstName} ${c.lastName}`.trim(),
-      company: c.company,
-      title: c.title,
-      relationship: c.relationship,
-    }))
+    .map(toContactOption)
     .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/** A named group of contact options — used to section a picker (leads vs. CRM). */
+export interface ContactOptionGroup {
+  value: string
+  label: string
+  items: ContactOption[]
+}
+
+/**
+ * Buyer/tenant options for the Under Contract gate, grouped so the property's
+ * own leads surface first and the rest of the CRM follows — letting the broker
+ * either confirm the lead that came in or search the whole book. The deal's own
+ * seller isn't a lead, so they fall through to the CRM group. Empty groups are
+ * omitted.
+ */
+export function getSellerOptionGroups(propertyId: string): ContactOptionGroup[] {
+  const byName = (a: ContactOption, b: ContactOption) =>
+    a.name.localeCompare(b.name)
+  const linked = propertyId ? getLeadsForProperty(propertyId) : []
+  const linkedIds = new Set(linked.map((c) => c.id))
+  const leads = linked.map(toContactOption).sort(byName)
+  const others = [...getStore().contacts.values()]
+    .filter((c) => !linkedIds.has(c.id))
+    .map(toContactOption)
+    .sort(byName)
+  const groups: ContactOptionGroup[] = []
+  if (leads.length > 0)
+    groups.push({ value: 'leads', label: 'Leads on this deal', items: leads })
+  if (others.length > 0)
+    groups.push({ value: 'crm', label: 'All Contacts', items: others })
+  return groups
 }
 
 /** A deal picker option — the deal's id, display name, and side (Sale/Lease). */

@@ -1,6 +1,6 @@
 import { useDataStore } from './dataStore'
 import type { Comp, Contact, ContactDetail, ContactTask, DealSummary, Listing, Property, PropertyDetail, PropertyFinancialRecord, PropertyUnit, Task, TaskView } from './types'
-import { getContactsForProperty, getContactShares, getOwnersForProperty } from './store'
+import { getContactsForProperty, getContactShares, getLeadsForProperty, getOwnersForProperty } from './store'
 import { dealStageFromStatus } from './contactStage'
 import { CURRENT_USER, TEAMMATES, type Teammate } from './teammates'
 import { deriveTaskType } from '#/components/contacts/taskDisplay'
@@ -27,6 +27,32 @@ export function listDealsForContact(contactId: string): Listing[] {
       l.buyerContactIds.includes(contactId) ||
       l.otherContactIds.includes(contactId),
   )
+}
+
+/**
+ * Deals a contact reaches as a *lead* rather than a named party — they're on the
+ * deal's Leads list because they're linked to its property. Closes the loop the
+ * other way: a lead opened from a deal's Leads tab shows that deal back on their
+ * record. Deals they're already a party to are omitted (those come from
+ * {@link listDealsForContact}), and the lead test is the same one the Leads tab
+ * runs, so the two sides can never disagree.
+ */
+export function listLeadDealsForContact(contactId: string): Listing[] {
+  const { listings, contacts } = useDataStore.getState()
+  const contact = contacts.get(contactId)
+  if (!contact) return []
+  const partyDealIds = new Set(listDealsForContact(contactId).map((l) => l.id))
+  const leadOn = new Map<string, boolean>()
+  return [...listings.values()].filter((l) => {
+    if (partyDealIds.has(l.id)) return false
+    if (!contact.propertyIds.includes(l.propertyId)) return false
+    let isLead = leadOn.get(l.propertyId)
+    if (isLead === undefined) {
+      isLead = getLeadsForProperty(l.propertyId).some((c) => c.id === contactId)
+      leadOn.set(l.propertyId, isLead)
+    }
+    return isLead
+  })
 }
 
 /**
@@ -69,7 +95,7 @@ export function getContactDetailClient(id: string): ContactDetail | null {
   // detail page: every deal shown here lists this contact back among its parties.
   const listings: Listing[] = listDealsForContact(id)
 
-  const deals: DealSummary[] = listings.map((l) => {
+  const toSummary = (l: Listing): DealSummary => {
     const property = useDataStore.getState().properties.get(l.propertyId)
     return {
       id: l.id,
@@ -83,7 +109,14 @@ export function getContactDetailClient(id: string): ContactDetail | null {
       planDone: l.tasks.filter((t) => t.status === 'complete').length,
       leadName: l.internalBrokers[0]?.name ?? contact.assignedTo,
     }
-  })
+  }
+
+  const deals: DealSummary[] = listings.map(toSummary)
+  // Kept separate from `deals` on purpose: a lead connection is weaker than
+  // being a party, and the consumers that answer "what is this contact working
+  // on" (briefings, timeline arcs, the compose module's deal picker) should
+  // still mean deals they're actually on.
+  const leadDeals: DealSummary[] = listLeadDealsForContact(id).map(toSummary)
 
   // The people who can be assigned a task on this contact = whoever has access
   // (owner + anyone it's shared with). Task assignees are drawn from here so the
@@ -181,7 +214,7 @@ export function getContactDetailClient(id: string): ContactDetail | null {
 
   const openTaskCount = tasks.length
 
-  return { contact, deals, openTaskCount, tasks, completedTasks }
+  return { contact, deals, leadDeals, openTaskCount, tasks, completedTasks }
 }
 
 /** Simple case-insensitive omnisearch over the in-memory world. */

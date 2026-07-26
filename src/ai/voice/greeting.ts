@@ -36,10 +36,10 @@ export function composeGreeting(
 /** The session greeting text plus the offer to arm (call the signal owner).
  * Composed from the live store so it works key-less. */
 export function buildGreetingWithOffer(): { text: string; offer: HeroOffer | null } {
-  const marcus = getOvernightSignalContact();
+  const signalOwner = getOvernightSignalContact();
   const text = composeGreeting(buildAssistantContext(), {
-    overnightSignal: marcus ? signalText(marcus) : undefined,
+    overnightSignal: signalOwner ? signalText(signalOwner) : undefined,
   });
-  const offer: HeroOffer | null = marcus ? { kind: "call", contactId: marcus.id } : null;
+  const offer: HeroOffer | null = signalOwner ? { kind: "call", contactId: signalOwner.id } : null;
   return { text, offer };
 }

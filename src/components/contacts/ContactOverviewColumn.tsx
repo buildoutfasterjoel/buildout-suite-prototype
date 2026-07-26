@@ -93,11 +93,15 @@ function FieldRow({ label, value }: { label: string; value: string }) {
 export function ContactOverviewColumn({
   contact,
   deals,
+  leadDeals,
   shares,
   onOpenShare,
 }: {
   contact: Contact;
+  /** Deals the contact is a named party to. */
   deals: DealSummary[];
+  /** Deals they only appear on as a lead — listed alongside, but not "theirs". */
+  leadDeals: DealSummary[];
   shares: ContactShare[];
   onOpenShare: () => void;
 }) {
@@ -161,8 +165,11 @@ export function ContactOverviewColumn({
     ...new Set([contact.email, ...(contact.emails ?? [])].filter(Boolean)),
   ];
 
-  const activeDeals = deals.filter((d) => !PAST_STATUSES.has(d.status));
-  const pastDeals = deals.filter((d) => PAST_STATUSES.has(d.status));
+  // Everything the contact touches, party deals first — a lead opened from a
+  // deal's Leads tab has to find that deal here, or the trail dead-ends.
+  const connectedDeals = [...deals, ...leadDeals];
+  const activeDeals = connectedDeals.filter((d) => !PAST_STATUSES.has(d.status));
+  const pastDeals = connectedDeals.filter((d) => PAST_STATUSES.has(d.status));
 
   // A just-created deal (AI Start-a-Deal flow) gets a brief spotlight; clear
   // the signal once the animation has played so it doesn't replay on
@@ -178,7 +185,8 @@ export function ContactOverviewColumn({
   // property so a property with several deals shows a single card, not one per
   // deal. Order follows first appearance in `deals`. Owned properties without
   // a deal (e.g. a building the contact holds but hasn't listed) still get a
-  // card, with no deal chip.
+  // card, with no deal chip. Party deals only — being a lead on a property is
+  // not ownership.
   const propertyGroupMap = deals.reduce((map, d) => {
     map.set(d.propertyId, [...(map.get(d.propertyId) ?? []), d.id]);
     return map;
@@ -389,7 +397,7 @@ export function ContactOverviewColumn({
           }
         >
           <div className="d-flex flex-column gap-3">
-            {deals.length === 0 ? (
+            {connectedDeals.length === 0 ? (
               <span className="text-muted fs-small">
                 Deals you link to this contact will show up here.
               </span>

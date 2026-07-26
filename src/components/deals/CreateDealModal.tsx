@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { Alert } from "@buildoutinc/blueprint-react/ui/Alert";
 import { Field } from "@buildoutinc/blueprint-react/ui/Field";
 import { Combobox } from "@buildoutinc/blueprint-react/ui/Combobox";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
@@ -25,6 +26,7 @@ import {
   faCheck,
   faArrowRight,
   faArrowLeft,
+  faWandMagicSparkles,
 } from "@fortawesome/pro-regular-svg-icons";
 import type {
   Contact,
@@ -38,12 +40,18 @@ import {
   SUGGESTED_DOCUMENTS,
   type NewListingDraft,
 } from "#/data/createListing";
-import { createDeal } from "#/data/actions";
+import {
+  createDeal,
+  updateDealMarketing,
+  updateDealTransaction,
+  updateDealFinancials,
+} from "#/data/actions";
 import {
   getPropertyOptions,
   getContactOptions,
   getOwnersForProperty,
   getProperty,
+  getContact,
   type PropertyOption,
   type ContactOption,
 } from "#/data/store";
@@ -53,6 +61,16 @@ import {
   TYPE_LABELS,
   PROPERTY_STATUSES,
 } from "#/components/properties/propertyDisplay";
+import {
+  contactRoleLabel,
+  contactSearchPlaceholder,
+  buildPropertyGroups,
+  type PropertyGroup,
+} from "./createDealHelpers";
+import {
+  recommendDocsFromUploads,
+  buildPublishReadyPatch,
+} from "#/data/uploadIntelligence";
 import { RelationshipPill } from "#/components/contacts/pills";
 import { UnderwritingDepth } from "./UnderwritingDepth";
 import {
@@ -233,6 +251,17 @@ export function CreateDealModal({
   // depth; starts at the default set and is toggled by hand.
   const [checkedDocKeys, setCheckedDocKeys] =
     useState<Set<string>>(defaultDocKeys);
+  // Documents the AI "extracted" from the uploaded files — derived purely from
+  // the current files so the badges never lag or show a prior session's picks
+  // (this modal is mounted once and only toggles `open`, so stale state would
+  // otherwise survive a close/reopen).
+  const aiPickedDocKeys = useMemo(
+    () => new Set(recommendDocsFromUploads(files)),
+    [files],
+  );
+  // Previous picks, so a files change peels back exactly what the AI auto-added,
+  // leaving hand-checked docs intact.
+  const prevPicksRef = useRef<Set<string>>(new Set());
   // Free-text filter over the (large) catalog — only narrows the Available list.
   const [docSearch, setDocSearch] = useState("");
 
@@ -245,17 +274,19 @@ export function CreateDealModal({
     });
   }
 
-  const propertyOptions = useMemo<PropertyOption[]>(() => {
+  const propertyGroups = useMemo<PropertyGroup[]>(() => {
     const all = getPropertyOptions();
-    if (!contact || contact.propertyIds.length === 0) return all;
-    const owned = new Set(contact.propertyIds);
-    // Contact's own properties first (likely the deal's subject), then the rest.
-    return [...all].sort((a, b) => {
-      const ao = owned.has(a.value) ? 0 : 1;
-      const bo = owned.has(b.value) ? 0 : 1;
-      return ao - bo || a.label.localeCompare(b.label);
-    });
-  }, [contact]);
+    // Owned properties are elevated only for the owning side — Seller (Sale) or
+    // Landlord (Lease) — and only once a contact is chosen.
+    const owner =
+      side === "seller" && contactOption
+        ? getContact(contactOption.value)
+        : undefined;
+    const ownerName = owner
+      ? `${owner.firstName} ${owner.lastName}`.trim()
+      : null;
+    return buildPropertyGroups(all, owner?.propertyIds ?? [], ownerName);
+  }, [side, contactOption]);
   const contactOptions = useMemo<ContactOption[]>(getContactOptions, []);
 
   // Resolve the full property record (for its units) from the locked prop or the
@@ -353,7 +384,22 @@ export function CreateDealModal({
     setDocSearch("");
     setFiles([]);
     setDragging(false);
+    prevPicksRef.current = new Set();
   }, [open, contact, property, initialAddress]);
+
+  // When the AI's picks change (i.e. the uploaded files changed), fold them into
+  // the checked set: add the new picks, and remove any the AI added before that
+  // no longer apply. Hand-checked docs are never in prevPicksRef, so they survive.
+  useEffect(() => {
+    setCheckedDocKeys((prev) => {
+      const next = new Set(prev);
+      for (const k of prevPicksRef.current)
+        if (!aiPickedDocKeys.has(k)) next.delete(k);
+      for (const k of aiPickedDocKeys) next.add(k);
+      return next;
+    });
+    prevPicksRef.current = aiPickedDocKeys;
+  }, [aiPickedDocKeys]);
 
   function addFiles(list: FileList | null) {
     if (!list?.length) return;
@@ -460,6 +506,15 @@ export function CreateDealModal({
           : undefined,
     };
     const { deal: listing } = createDeal(draft);
+    // A file upload stands in for the AI reading the broker's documents and
+    // filling the deal out to publish-ready (all but the AI-doc review).
+    if (files.length > 0) {
+      const prop = getProperty(listing.propertyId);
+      const patch = buildPublishReadyPatch(listing, prop);
+      updateDealMarketing(listing.id, patch.marketing);
+      updateDealTransaction(listing.id, patch.transaction);
+      updateDealFinancials(listing.id, patch.financials);
+    }
     onOpenChange(false);
     void navigate({
       to: "/listings/$listingId/overview",
@@ -580,7 +635,7 @@ export function CreateDealModal({
                 {!contact && (
                   <div className="col-12 col-md-6">
                     <Field>
-                      <Field.Label>Contact</Field.Label>
+                      <Field.Label>{contactRoleLabel(side, dealType)}</Field.Label>
                       <Combobox
                         items={contactOptions}
                         value={contactOption}
@@ -593,7 +648,10 @@ export function CreateDealModal({
                             <FontAwesomeIcon icon={faUser} />
                           </InputGroup.Addon>
                           <Combobox.Input
-                            placeholder="Search contacts…"
+                            placeholder={contactSearchPlaceholder(
+                              side,
+                              dealType,
+                            )}
                             showClear
                           />
                         </Combobox.InputGroup>
@@ -675,7 +733,7 @@ export function CreateDealModal({
                     <Field>
                       <Field.Label>Property</Field.Label>
                       <Combobox
-                        items={propertyOptions}
+                        items={propertyGroups}
                         value={propertyOption}
                         onValueChange={(v) =>
                           selectProperty(v as PropertyOption | null)
@@ -698,41 +756,52 @@ export function CreateDealModal({
                             typed.
                           </Combobox.Empty>
                           <Combobox.List>
-                            {(item: PropertyOption) => (
-                              <Combobox.Item key={item.value} value={item}>
-                                <span
-                                  className="d-flex gap-2 user-select-none"
-                                  style={{ minWidth: 0 }}
-                                >
-                                  <FontAwesomeIcon
-                                    icon={TYPE_ICONS[item.propertyType]}
-                                    className="text-muted flex-shrink-0 d-inline-block mt-1"
-                                  />
-                                  <span
-                                    className="d-flex flex-column"
-                                    style={{ minWidth: 0 }}
-                                  >
-                                    <span className="d-flex align-items-center gap-2">
-                                      <span className="text-truncate">
-                                        {item.label}
-                                      </span>
-                                      <Badge
-                                        variant="secondary"
-                                        appearance="muted"
-                                        className="flex-shrink-0"
+                            {(group: PropertyGroup) => (
+                              <Combobox.Group key={group.value} items={group.items}>
+                                {group.label && (
+                                  <Combobox.GroupLabel>
+                                    {group.label}
+                                  </Combobox.GroupLabel>
+                                )}
+                                <Combobox.Collection>
+                                  {(item: PropertyOption) => (
+                                    <Combobox.Item key={item.value} value={item}>
+                                      <span
+                                        className="d-flex gap-2 user-select-none"
+                                        style={{ minWidth: 0 }}
                                       >
-                                        {TYPE_LABELS[item.propertyType]}
-                                      </Badge>
-                                    </span>
-                                    <span className="text-muted fs-small text-truncate">
-                                      {item.subtype}
-                                      {item.sizeLabel
-                                        ? ` · ${item.sizeLabel}`
-                                        : ""}
-                                    </span>
-                                  </span>
-                                </span>
-                              </Combobox.Item>
+                                        <FontAwesomeIcon
+                                          icon={TYPE_ICONS[item.propertyType]}
+                                          className="text-muted flex-shrink-0 d-inline-block mt-1"
+                                        />
+                                        <span
+                                          className="d-flex flex-column"
+                                          style={{ minWidth: 0 }}
+                                        >
+                                          <span className="d-flex align-items-center gap-2">
+                                            <span className="text-truncate">
+                                              {item.label}
+                                            </span>
+                                            <Badge
+                                              variant="secondary"
+                                              appearance="muted"
+                                              className="flex-shrink-0"
+                                            >
+                                              {TYPE_LABELS[item.propertyType]}
+                                            </Badge>
+                                          </span>
+                                          <span className="text-muted fs-small text-truncate">
+                                            {item.subtype}
+                                            {item.sizeLabel
+                                              ? ` · ${item.sizeLabel}`
+                                              : ""}
+                                          </span>
+                                        </span>
+                                      </span>
+                                    </Combobox.Item>
+                                  )}
+                                </Combobox.Collection>
+                              </Combobox.Group>
                             )}
                           </Combobox.List>
                         </Combobox.Content>
@@ -896,6 +965,14 @@ export function CreateDealModal({
                     ))}
                   </div>
                 )}
+
+                {files.length > 0 && (
+                  <Alert severity="info" withIcon className="mt-2">
+                    <Alert.Title>Buildout read your files</Alert.Title>
+                    We pre-filled this deal from your documents — it’s ready to
+                    publish once you review the generated documents.
+                  </Alert>
+                )}
               </Field>
 
               {missingHint && (
@@ -957,9 +1034,20 @@ export function CreateDealModal({
                         <span className="flex-grow-1 text-truncate fs-small">
                           {d.name}
                         </span>
-                        <span className="text-muted fs-small flex-shrink-0">
-                          {d.category}
-                        </span>
+                        {aiPickedDocKeys.has(d.key) ? (
+                          <Badge
+                            variant="secondary"
+                            appearance="muted"
+                            className="flex-shrink-0"
+                          >
+                            <FontAwesomeIcon icon={faWandMagicSparkles} />
+                            From your files
+                          </Badge>
+                        ) : (
+                          <span className="text-muted fs-small flex-shrink-0">
+                            {d.category}
+                          </span>
+                        )}
                       </label>
                     ))}
                     {!underwritingOn && selectedDocs.length === 0 && (
@@ -1042,14 +1130,17 @@ export function CreateDealModal({
                 Cancel
               </Button>
               <Button
-                variant="secondary"
+                variant={files.length > 0 ? "primary" : "secondary"}
                 disabled={!canCreate}
                 onClick={() => handleCreate(false)}
               >
-                Create deal
+                {files.length > 0 && (
+                  <FontAwesomeIcon icon={faWandMagicSparkles} />
+                )}
+                {files.length > 0 ? "Create deal with AI" : "Create deal"}
               </Button>
               <Button
-                variant="primary"
+                variant={files.length > 0 ? "secondary" : "primary"}
                 disabled={!canCreate}
                 onClick={() => setStep(2)}
               >

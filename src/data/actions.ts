@@ -6,7 +6,7 @@ import {
   serializeContactFilters,
   type ContactFilterState,
 } from '#/components/contacts/contactFilterModel'
-import type { Contact, ContactRole, ContactSource, DealHistoryEntry, DealMarketing, DealTask, DealTransaction, Listing, PropertyStatus, Task } from './types'
+import type { Contact, ContactRole, ContactSource, DealHistoryEntry, DealMarketing, DealPitchFinancials, DealTask, DealTransaction, Listing, PropertyStatus, Task } from './types'
 import { CURRENT_USER, TEAMMATES } from './teammates'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
 import { reconcileContactDealFields } from './contactStage'
@@ -182,6 +182,20 @@ export function updateDealTransaction(
     deal: patchListing(dealId, (l) => ({
       ...l,
       transaction: { ...l.transaction, ...patch },
+      updatedAt: new Date().toISOString(),
+    })),
+  }
+}
+
+/** Merge-patch the deal's pitch financials (asking price, price per SF, cap rate, …). */
+export function updateDealFinancials(
+  dealId: string,
+  patch: Partial<DealPitchFinancials>,
+): { deal: Listing | null } {
+  return {
+    deal: patchListing(dealId, (l) => ({
+      ...l,
+      financials: { ...l.financials, ...patch },
       updatedAt: new Date().toISOString(),
     })),
   }

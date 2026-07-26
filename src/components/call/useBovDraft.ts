@@ -6,6 +6,7 @@ import { computeOccupancyMismatch, bovValueRange, type OccupancyMismatch } from 
 
 export interface BovDraft {
   dealId: string;
+  propertyName: string;
   valueLow: number;
   valueHigh: number;
   mismatch: OccupancyMismatch;
@@ -65,7 +66,7 @@ export async function buildBovDraft(
         : "",
     };
   }
-  return { dealId, valueLow: low, valueHigh: high, mismatch, spec };
+  return { dealId, propertyName: property.name, valueLow: low, valueHigh: high, mismatch, spec };
 }
 
 /** Otto's one-line spoken summary on the BOV draft (one-way). */
@@ -74,5 +75,5 @@ export function bovSummaryText(draft: BovDraft): string {
   const flag = draft.mismatch.isMismatch
     ? ` Heads up — the T-12 shows ${draft.mismatch.actual}% occupancy versus ${draft.mismatch.stated}% stated, so I priced on the lower in-place occupancy.`
     : "";
-  return `I've priced Palmetto Court at ${range} and drafted the BOV.${flag} Want me to send it?`;
+  return `I've priced ${draft.propertyName} at ${range} and drafted the BOV.${flag} Want me to send it?`;
 }

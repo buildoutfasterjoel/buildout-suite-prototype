@@ -87,7 +87,7 @@ function ContactDetailPage() {
 
   if (!detail) return <ContactNotFound />;
 
-  const { contact, deals, tasks, completedTasks } = detail;
+  const { contact, deals, leadDeals, tasks, completedTasks } = detail;
 
   return (
     <div
@@ -107,6 +107,7 @@ function ContactDetailPage() {
           <ContactOverviewColumn
             contact={contact}
             deals={deals}
+            leadDeals={leadDeals}
             shares={access.shares}
             onOpenShare={() => setShareOpen(true)}
           />

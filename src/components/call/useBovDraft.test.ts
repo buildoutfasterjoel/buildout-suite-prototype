@@ -7,7 +7,7 @@ vi.mock("#/ai/generate", () => ({
 import type { Property, UnderwritingResult } from "#/data/types";
 import { useBovDraft, buildBovDraft, bovSummaryText } from "./useBovDraft";
 
-const prop = ({ occupancyPct: 94, name: "Palmetto Court", street: "12 King St", financialRecords: [{ occupancyPct: 78 }] } as unknown) as Property;
+const prop = ({ occupancyPct: 94, name: "Example Plaza", street: "12 King St", financialRecords: [{ occupancyPct: 78 }] } as unknown) as Property;
 const result = ({
   strategy: "value-add", sections: [], inputs: { address: "12 King St", askingPrice: 6_200_000, buildingSqFt: 41_000, capRate: 0.058 },
   metrics: [
@@ -34,6 +34,12 @@ describe("buildBovDraft", () => {
     expect(d.valueHigh).toBeGreaterThan(d.valueLow);
     expect(d.spec.headline).toBe("H");
   });
+
+  it("carries the property's own name onto the draft", async () => {
+    const otherProp = ({ ...prop, name: "The Delgado Building" } as unknown) as Property;
+    const d = await buildBovDraft("d1", otherProp, result);
+    expect(d.propertyName).toBe("The Delgado Building");
+  });
 });
 
 describe("bovSummaryText", () => {
@@ -41,5 +47,13 @@ describe("bovSummaryText", () => {
     const d = await buildBovDraft("d1", prop, result);
     const s = bovSummaryText(d);
     expect(s.toLowerCase()).toContain("occupancy");
+  });
+
+  it("names the draft's own property, not a hardcoded one", async () => {
+    const otherProp = ({ ...prop, name: "The Delgado Building" } as unknown) as Property;
+    const d = await buildBovDraft("d1", otherProp, result);
+    const s = bovSummaryText(d);
+    expect(s).toContain("The Delgado Building");
+    expect(s).not.toContain("Example Plaza");
   });
 });

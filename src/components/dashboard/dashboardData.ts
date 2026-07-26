@@ -61,15 +61,15 @@ export interface FocusSignal {
 }
 
 export const FOCUS_SIGNAL: FocusSignal = {
-  id: "marcus-pinckney",
-  thumbnailId: "marcus-pinckney-upper-king",
+  id: "rosa-delgado",
+  thumbnailId: "rosa-delgado-building",
   kicker: "Overnight signal · Insights by Buildout",
-  headline: "Marcus Pinckney · Upper King Boutique Block",
+  headline: "Rosa Delgado · The Delgado Building",
   detail:
-    "$22M CMBS loan matures Q3 '26. He extended once, so this is the listing window. Phone verified yesterday.",
-  potentialTag: "~$20M potential",
-  matchTag: "Matches your search · Upper Peninsula retail, 10K+ SF",
-  primaryCta: "Call Marcus",
+    "A balloon note on her 48-unit building matures soon — she found the loan papers in Miguel's things and left a voicemail asking to understand her options. No ask yet.",
+  potentialTag: "~$6.2M potential",
+  matchTag: "Matches your search · Workforce multifamily, 40+ units",
+  primaryCta: "Call Rosa",
   secondaryCta: "Open record",
 };
 

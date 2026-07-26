@@ -7,11 +7,11 @@ export function signalText(contact: Pick<Contact, "signal">): string {
   return contact.signal?.headline ?? "";
 }
 
-/** The single overnight-signal owner that lights the greeting (the hero, Marcus).
+/** The single overnight-signal owner that lights the greeting (the hero, Rosa).
  * Null when the seed hasn't placed one. */
 export function getOvernightSignalContact(): Contact | null {
   for (const c of useDataStore.getState().contacts.values()) {
-    if (c.heroKey === "marcus" && c.signal) return c;
+    if (c.heroKey === "rosa" && c.signal) return c;
   }
   return null;
 }

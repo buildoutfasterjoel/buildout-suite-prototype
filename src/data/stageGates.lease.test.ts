@@ -6,7 +6,7 @@ describe('resolveGate — lease branch', () => {
     const g = resolveGate('proposal', 'active', 'Lease')
     expect(g.required).toEqual([
       'saleTitle', 'saleDescription', 'leaseRate', 'availableSqFt',
-      'aiDocsReviewed', 'websiteReviewed', 'listedOnDate', 'listingExpirationDate',
+      'aiDocsReviewed', 'listedOnDate', 'listingExpirationDate',
     ])
     expect(g.required).not.toContain('askingPrice')
     expect(g.publishes).toBe(true)

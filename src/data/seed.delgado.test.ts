@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { generateDataset } from "./seed";
 
-describe("Palmetto Court financials + occupancy gap", () => {
+describe("The Delgado Building financials + occupancy gap", () => {
   const { contacts, properties } = generateDataset();
-  const marcus = contacts.find((c) => c.heroKey === "marcus")!;
-  const prop = properties.find((p) => p.id === marcus.propertyIds[0])!;
+  const rosa = contacts.find((c) => c.heroKey === "rosa")!;
+  const prop = properties.find((p) => p.id === rosa.propertyIds[0])!;
 
   it("is a 48-unit multifamily with a stated-vs-actual occupancy gap", () => {
     expect(prop.propertyType).toBe("multifamily");

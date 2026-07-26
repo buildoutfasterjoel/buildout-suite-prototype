@@ -4,8 +4,8 @@ import { faHandshake, faCheck, faSparkle } from "@fortawesome/pro-regular-svg-ic
 import type { DealSummary } from "#/data/types";
 
 /**
- * The building blocks of the "log a call" form, shared by the compose module's
- * Call tab and the post-call LogCallModal so the two stay in lockstep.
+ * The building blocks of the "log a call" form, used by the compose module's
+ * Call tab.
  */
 
 export const CALL_OUTCOMES = ["Connected", "No Answer", "Left Voicemail", "Bad Number"];

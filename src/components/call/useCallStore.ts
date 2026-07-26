@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import type { CallRecapSpecT } from "#/ai/generate/schemas";
-import type { HeroActions } from "./heroRecapExtensions";
 
 export type CallPhase = "idle" | "calling" | "ringing" | "connected";
 
@@ -36,7 +35,6 @@ interface CallState {
   awaitingOwner: boolean;
   shouldEnd: boolean;
   recap: CallRecapSpecT | null;
-  heroActions: HeroActions | null;
   startTarget: (t: CallTarget) => void;
   setPhase: (p: CallPhase) => void;
   setCountdown: (n: number) => void;
@@ -48,8 +46,6 @@ interface CallState {
   setShouldEnd: (b: boolean) => void;
   setRecap: (r: CallRecapSpecT | null) => void;
   clearRecap: () => void;
-  setHeroActions: (a: HeroActions | null) => void;
-  clearHeroActions: () => void;
   reset: () => void;
 }
 
@@ -66,7 +62,6 @@ const IDLE = {
   awaitingOwner: false,
   shouldEnd: false,
   recap: null as CallRecapSpecT | null,
-  heroActions: null as HeroActions | null,
 };
 
 export const useCallStore = create<CallState>((set) => ({
@@ -91,7 +86,5 @@ export const useCallStore = create<CallState>((set) => ({
   setShouldEnd: (shouldEnd) => set({ shouldEnd }),
   setRecap: (recap) => set({ recap }),
   clearRecap: () => set({ recap: null }),
-  setHeroActions: (heroActions) => set({ heroActions }),
-  clearHeroActions: () => set({ heroActions: null }),
   reset: () => set({ ...IDLE }),
 }));
