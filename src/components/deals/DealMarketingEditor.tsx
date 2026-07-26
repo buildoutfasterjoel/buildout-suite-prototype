@@ -15,7 +15,7 @@ import {
 	faFileContract,
 	faChartLine,
 	faHandshake,
-	faBuildingColumns,
+	faSign,
 } from "@fortawesome/pro-regular-svg-icons";
 import type {
 	DealBroker,
@@ -345,7 +345,7 @@ export function DealMarketingEditor({
 			params: { listingId: listing.id },
 		});
 
-	const [tab, setTab] = useState<"deal" | "listing">("deal");
+	const [tab, setTab] = useState<"deal" | "listing">("listing");
 	const [propertyDraft, setPropertyDraft] = useState<Property>(property);
 	const patchProperty = (patch: Partial<Property>) =>
 		setPropertyDraft((p) => ({ ...p, ...patch }));
@@ -443,14 +443,14 @@ export function DealMarketingEditor({
 
 			<Tabs value={tab} onValueChange={(v) => setTab(v as "deal" | "listing")}>
 				<Tabs.List>
-					<Tabs.Tab value="deal" icon={<FontAwesomeIcon icon={faHandshake} />}>
-						Deal
-					</Tabs.Tab>
 					<Tabs.Tab
 						value="listing"
-						icon={<FontAwesomeIcon icon={faBuildingColumns} />}
+						icon={<FontAwesomeIcon icon={faSign} />}
 					>
 						Listing
+					</Tabs.Tab>
+					<Tabs.Tab value="deal" icon={<FontAwesomeIcon icon={faHandshake} />}>
+						Deal
 					</Tabs.Tab>
 				</Tabs.List>
 			</Tabs>
