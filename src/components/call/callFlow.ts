@@ -4,7 +4,6 @@ import { playOneRing, playAnsweredCue } from "./ringtone";
 import { voiceEngine } from "#/ai/voice/voiceEngine";
 import { ownerVoiceFor } from "#/ai/voice/ownerVoice";
 import { generateCallTurn, generateCallRecap } from "#/ai/generate";
-import { useAssistant } from "#/ai/useAssistant";
 import { contactFullName, contactInitials } from "#/components/contacts/contactDisplay";
 import { usePendingCallLog } from "./usePendingCallLog";
 import { composeCallNotes } from "./callNotes";
@@ -159,6 +158,33 @@ export const callFlow = {
     later(step, 900);
   },
 
+  /** Skip the remaining pre-dial countdown and start ringing immediately. */
+  dialNow() {
+    if (useCallStore.getState().phase !== "calling") return;
+    clearAll(); // drop the queued countdown steps; the session id stays valid
+    toRinging();
+  },
+
+  /**
+   * Nobody picked up. Ends the attempt and queues a log so the call is still
+   * recorded — the broker confirms it (with a "No Answer" outcome) in the Log
+   * Call modal, same as a connected call.
+   */
+  noAnswer() {
+    const target = useCallStore.getState().target;
+    clearAll();
+    session += 1;
+    voiceEngine.cancel();
+    useCallStore.getState().reset();
+    if (!target) return;
+    usePendingCallLog.getState().request({
+      contactId: target.contactId,
+      draft: `Called ${target.firstName} — no answer. Try again or follow up by email.`,
+      outcome: "No Answer",
+      armHeroInbound: false,
+    });
+  },
+
   submitLine(text: string) {
     const t = text.trim();
     if (!t) return;
@@ -233,6 +259,7 @@ export const callFlow = {
       }),
       armHeroInbound: isHeroCall(target),
     });
-    useAssistant.getState().setOpen(true); // sidebar renders + speaks the recap
+    // The recap is set on the store, so the sidebar shows it when the broker
+    // opens it — a finished call no longer forces the panel open over their work.
   },
 };

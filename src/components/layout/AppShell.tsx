@@ -13,6 +13,7 @@ import { GlobalLogCallModal } from "#/components/contacts/GlobalLogCallModal";
 import { GlobalNewContactModal } from "#/components/contacts/GlobalNewContactModal";
 import { GlobalAddTaskModal } from "#/components/tasks/GlobalAddTaskModal";
 import { LiveCallBar } from "#/components/call/LiveCallBar";
+import { CallSessionController } from "#/components/call/CallSessionController";
 import { BovWatcher } from "#/components/call/BovWatcher";
 import { useDataStore } from "#/data/dataStore";
 
@@ -30,6 +31,7 @@ export function AppShell() {
         <div className="flex-grow-1 d-flex overflow-hidden">
           <main className="app-shell__main flex-grow-1 overflow-auto">
             {hydrated && <LiveCallBar />}
+            {hydrated && <CallSessionController />}
             {hydrated && <BovWatcher />}
             {hydrated ? (
               <Outlet />

@@ -36,6 +36,7 @@ export function LogCallModal({
   contact,
   deals,
   draft,
+  initialOutcome = "Connected",
   onLog,
 }: {
   open: boolean;
@@ -43,11 +44,13 @@ export function LogCallModal({
   deals: DealSummary[];
   /** The AI-written call summary to stream in as the starting notes. */
   draft: string;
+  /** Outcome chip to start on (e.g. "No Answer" for an unanswered call). */
+  initialOutcome?: string;
   /** Commit the logged call; the caller closes the modal. */
   onLog: (draft: ComposedDraft) => void;
 }) {
   const [notes, setNotes] = useState("");
-  const [outcome, setOutcome] = useState("Connected");
+  const [outcome, setOutcome] = useState(initialOutcome);
   const [relatedDeal, setRelatedDeal] = useState("");
   const [phase, setPhase] = useState<DraftPhase>("done");
 
@@ -73,7 +76,7 @@ export function LogCallModal({
       return;
     }
     setNotes("");
-    setOutcome("Connected");
+    setOutcome(initialOutcome);
     setRelatedDeal("");
 
     const target = draft.trim();

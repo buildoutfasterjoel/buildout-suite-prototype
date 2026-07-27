@@ -9,6 +9,8 @@ export interface PendingCallLog {
   contactId: string;
   /** The AI's summary of the call, streamed into the notes field as a draft. */
   draft: string;
+  /** Outcome chip to pre-select, e.g. "No Answer". Defaults to "Connected". */
+  outcome?: string;
   /**
    * Arm the hero's follow-up inbound (Rosa's financials email) once the log is
    * confirmed, so the story beat follows the logged call rather than hang-up.

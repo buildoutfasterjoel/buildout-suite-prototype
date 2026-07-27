@@ -53,6 +53,7 @@ import {
   ALL_CONTACTS_ID,
   listPredicate,
 } from "#/data/contactLists";
+import { startCallSession } from "#/components/call/useCallSession";
 import { contactFullName } from "#/components/contacts/contactDisplay";
 import {
   useContactListNav,
@@ -678,6 +679,12 @@ function PeoplePage() {
                               variant="outline"
                               size="icon"
                               aria-label="Call this list"
+                              onClick={() =>
+                                startCallSession(
+                                  filtered.map((c) => c.id),
+                                  heading,
+                                )
+                              }
                             >
                               <FontAwesomeIcon icon={faPhone} />
                             </Button>
@@ -698,6 +705,13 @@ function PeoplePage() {
                     onClear={clearSelection}
                     onNewList={() => setShowCreateStaticList(true)}
                     onAddToList={() => setShowAddToList(true)}
+                    onCall={() =>
+                      startCallSession(
+                        // Table order, not click order.
+                        filtered.filter((c) => selected.has(c.id)).map((c) => c.id),
+                        `${selected.size} selected`,
+                      )
+                    }
                     canRemoveFromList={isStaticList}
                     onRemoveFromList={handleRemoveFromList}
                   />
