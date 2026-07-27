@@ -527,6 +527,12 @@ export function deleteDealTask(
 }
 
 export interface NewContactInput {
+  /**
+   * Caller-supplied id. Defaults to a uuid; scripted/replayable records (the
+   * demo's simulated inbound leads) pass a stable one so re-running the beat
+   * is idempotent and a reset can clear them by id.
+   */
+  id?: string
   firstName: string
   lastName: string
   company?: string
@@ -540,6 +546,17 @@ export interface NewContactInput {
   source?: ContactSource
   doNotCall?: boolean
   notes?: string
+  /** Segmentation tags; defaults to none. */
+  tags?: string[]
+  /**
+   * Listings this contact has inquired about. Sets `inquiries` to match, since
+   * the count and the ids have to agree (see `Contact.inquiredListingIds`) —
+   * that pairing is what the People table's Inquiries cell, the Listing
+   * Inquiries filter, and the timeline's inquiry rows all read.
+   */
+  inquiredListingIds?: string[]
+  /** What they wrote and how it reached us, keyed by inquired listing id. */
+  inquiryDetails?: Contact['inquiryDetails']
   /** Primary address (line 1), if captured. */
   street?: string
   city?: string
@@ -666,7 +683,7 @@ export function addNote(contactId: string, text: string): { contact: Contact | n
 export function createContact(input: NewContactInput): { contact: Contact } {
   const now = new Date().toISOString()
   const contact: Contact = {
-    id: crypto.randomUUID(),
+    id: input.id ?? crypto.randomUUID(),
     firstName: input.firstName.trim(),
     lastName: input.lastName.trim(),
     email: input.email ?? '',
@@ -679,7 +696,9 @@ export function createContact(input: NewContactInput): { contact: Contact } {
     relationship: 'cold',
     side: null,
     dealStage: null,
-    inquiries: 0,
+    inquiries: input.inquiredListingIds?.length ?? 0,
+    inquiredListingIds: input.inquiredListingIds,
+    inquiryDetails: input.inquiryDetails,
     phoneStatus: 'unknown',
     doNotCall: input.doNotCall ?? false,
     title: input.title ?? '',
@@ -691,7 +710,7 @@ export function createContact(input: NewContactInput): { contact: Contact } {
     city: input.city?.trim() ?? '',
     state: input.state?.trim() ?? '',
     zip: input.zip?.trim() ?? '',
-    tags: [],
+    tags: input.tags ?? [],
     notes: input.notes?.trim() || undefined,
   }
   useDataStore.setState((s) => {

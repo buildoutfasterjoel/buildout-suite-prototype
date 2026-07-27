@@ -94,6 +94,10 @@ export function ContactDealCard({
   // Reactive so a committed stage transition (via the shared gate) re-renders
   // the card with the new status immediately.
   const listing = useDataStore((s) => s.listings.get(listingId));
+  // Leads are counted off the contacts map, so subscribe to it too — otherwise
+  // leads that land after activation (see rosaLeads.ts) wouldn't surface the
+  // Leads quick link until something else re-rendered the card.
+  useDataStore((s) => s.contacts);
   // Bring the spotlit card into view (the overview column scrolls).
   const cardRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
