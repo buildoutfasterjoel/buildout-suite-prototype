@@ -26,6 +26,7 @@ import {
 import type { Contact, Property } from "#/data/types";
 import { getLeadsForProperty } from "#/data/store";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
+import { startCallSession } from "#/components/call/useCallSession";
 import { hash } from "./propertyDisplay";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
 
@@ -249,6 +250,16 @@ export function PropertyDetailLeads({ property }: { property: Property }) {
                   variant="outline"
                   size="icon"
                   aria-label="Call this list"
+                  onClick={() =>
+                    startCallSession(
+                      // Selected leads if any, otherwise everyone listed.
+                      (selected.size > 0
+                        ? filtered.filter((l) => selected.has(l.id))
+                        : filtered
+                      ).map((l) => l.id),
+                      `${property.name} — Leads`,
+                    )
+                  }
                 >
                   <FontAwesomeIcon icon={faPhone} />
                 </Button>

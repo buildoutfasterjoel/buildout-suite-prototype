@@ -69,6 +69,35 @@ describe("callFlow", () => {
     expect(useCallStore.getState().transcript).toHaveLength(0);
   });
 
+  it("dialNow skips the remaining countdown and starts ringing", async () => {
+    callFlow.open(CONTACT);
+    expect(useCallStore.getState().phase).toBe("calling");
+    expect(useCallStore.getState().countdown).toBe(5);
+    callFlow.dialNow();
+    expect(useCallStore.getState().phase).toBe("ringing");
+    // The dropped countdown steps must not fire and drag it back to 'calling'.
+    await vi.advanceTimersByTimeAsync(900 * 5);
+    expect(useCallStore.getState().phase).not.toBe("calling");
+  });
+
+  it("dialNow is a no-op once past the countdown", async () => {
+    callFlow.open(CONTACT);
+    await vi.advanceTimersByTimeAsync(900 * 5 + 3400 + 10); // → connected
+    expect(useCallStore.getState().phase).toBe("connected");
+    callFlow.dialNow();
+    expect(useCallStore.getState().phase).toBe("connected");
+  });
+
+  it("noAnswer ends the attempt and queues a No Answer log", () => {
+    callFlow.open(CONTACT);
+    callFlow.noAnswer();
+    expect(useCallStore.getState().phase).toBe("idle");
+    const pending = usePendingCallLog.getState().pending;
+    expect(pending).toMatchObject({ contactId: "c1", outcome: "No Answer" });
+    expect(pending?.draft).toMatch(/no answer/i);
+    expect(pending?.armHeroInbound).toBe(false);
+  });
+
   it("hangUp resets the store and cancels audio", () => {
     callFlow.open(CONTACT);
     callFlow.hangUp();

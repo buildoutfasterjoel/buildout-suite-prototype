@@ -2,6 +2,7 @@ import { LogCallModal } from "#/components/contacts/LogCallModal";
 import type { ComposedDraft } from "#/components/contacts/ContactComposeModule";
 import { useContactSession } from "#/components/contacts/useContactSession";
 import { heroInbound } from "#/components/call/heroInbound";
+import { useCallSession } from "#/components/call/useCallSession";
 import { usePendingCallLog } from "#/components/call/usePendingCallLog";
 import { useDataStore } from "#/data/dataStore";
 import { getContactDetailClient } from "#/data/selectors";
@@ -42,6 +43,8 @@ export function GlobalLogCallModal() {
     // story beats stay in order (and can't land behind this modal).
     if (pending.armHeroInbound) heroInbound.arm(contact.id);
     usePendingCallLog.getState().clear();
+    // In a call session, the confirmed log is the cue to dial the next contact.
+    if (useCallSession.getState().active) useCallSession.getState().advance();
   };
 
   return (
@@ -50,6 +53,7 @@ export function GlobalLogCallModal() {
       contact={contact}
       deals={deals}
       draft={pending.draft}
+      initialOutcome={pending.outcome}
       onLog={handleLog}
     />
   );

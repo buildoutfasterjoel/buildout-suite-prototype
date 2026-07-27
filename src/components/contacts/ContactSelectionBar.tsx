@@ -23,14 +23,17 @@ interface ContactSelectionBarProps {
   onClear: () => void;
   onNewList: () => void;
   onAddToList: () => void;
+  /** Start a call session down the selected contacts, in table order. */
+  onCall: () => void;
   /** Only shown while viewing a static list (removes from that list). */
   canRemoveFromList: boolean;
   onRemoveFromList: () => void;
 }
 
 /**
- * Bulk-actions bar shown when contacts are selected in the People table. Only
- * "New List" is wired; the other menu items are visual placeholders for now.
+ * Bulk-actions bar shown when contacts are selected in the People table. New
+ * List, Add to a List, Remove From List and Call are wired; the rest of the
+ * menu items are visual placeholders for now.
  */
 export function ContactSelectionBar({
   selectedCount,
@@ -40,6 +43,7 @@ export function ContactSelectionBar({
   onClear,
   onNewList,
   onAddToList,
+  onCall,
   canRemoveFromList,
   onRemoveFromList,
 }: ContactSelectionBarProps) {
@@ -66,7 +70,7 @@ export function ContactSelectionBar({
           <FontAwesomeIcon icon={faEnvelope} />
           Email
         </Button>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" onClick={onCall}>
           <FontAwesomeIcon icon={faPhone} />
           Call
         </Button>

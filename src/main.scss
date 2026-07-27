@@ -2069,38 +2069,78 @@
   }
 }
 
-.contact-call-bar__panel {
-  margin-top: 0.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-.contact-call-bar__transcript {
-  max-height: 8rem;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.9rem;
-}
-.contact-call-bar__line { display: flex; gap: 0.5rem; }
-.contact-call-bar__line--you { color: rgba(255, 255, 255, 0.95); }
-.contact-call-bar__line--them { color: rgba(255, 255, 255, 0.8); }
-.contact-call-bar__speaker { font-weight: 600; min-width: 3.5rem; }
-.contact-call-bar__hint,
-.contact-call-bar__wrapup { font-size: 0.85rem; opacity: 0.8; font-style: italic; }
-.contact-call-bar__chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.contact-call-bar__chip {
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.35);
+// "Dial now" shortcuts the pre-dial countdown.
+.contact-call-bar__dial {
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.4);
   color: #fff;
   border-radius: 999px;
-  padding: 0.25rem 0.75rem;
+  padding: 0.3rem 0.85rem;
   font-size: 0.85rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   cursor: pointer;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.24);
+  }
 }
-.contact-call-bar__chip:disabled { opacity: 0.5; cursor: default; }
-.contact-call-bar__compose .form-control { max-width: 28rem; }
+
+// ── Call-session bar (dialing a list) ──
+// Sits directly under the live-call bar and owns the run: which call you're on,
+// skipping the current one, and ending the whole session.
+.call-session-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  background: var(--color-storm-grey-800, #2f3949);
+  color: #fff;
+
+  &__count {
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+  &__label {
+    font-size: 0.85rem;
+    opacity: 0.75;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+  }
+  &__btn {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    color: #fff;
+    border-radius: 999px;
+    padding: 0.25rem 0.8rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.22);
+    }
+    &--danger {
+      background: rgba(255, 89, 97, 0.9);
+      border-color: transparent;
+
+      &:hover {
+        background: rgba(255, 89, 97, 1);
+      }
+    }
+  }
+}
 
 // ── Activity timeline ────────────────────────────────────────────────────────
 // Unified TimelineEvent feed. Tones/fills are scoped here so the whole set can

@@ -159,6 +159,33 @@ export const callFlow = {
     later(step, 900);
   },
 
+  /** Skip the remaining pre-dial countdown and start ringing immediately. */
+  dialNow() {
+    if (useCallStore.getState().phase !== "calling") return;
+    clearAll(); // drop the queued countdown steps; the session id stays valid
+    toRinging();
+  },
+
+  /**
+   * Nobody picked up. Ends the attempt and queues a log so the call is still
+   * recorded — the broker confirms it (with a "No Answer" outcome) in the Log
+   * Call modal, same as a connected call.
+   */
+  noAnswer() {
+    const target = useCallStore.getState().target;
+    clearAll();
+    session += 1;
+    voiceEngine.cancel();
+    useCallStore.getState().reset();
+    if (!target) return;
+    usePendingCallLog.getState().request({
+      contactId: target.contactId,
+      draft: `Called ${target.firstName} — no answer. Try again or follow up by email.`,
+      outcome: "No Answer",
+      armHeroInbound: false,
+    });
+  },
+
   submitLine(text: string) {
     const t = text.trim();
     if (!t) return;
