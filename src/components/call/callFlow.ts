@@ -6,7 +6,8 @@ import { ownerVoiceFor } from "#/ai/voice/ownerVoice";
 import { generateCallTurn, generateCallRecap } from "#/ai/generate";
 import { useAssistant } from "#/ai/useAssistant";
 import { addNote } from "#/data/actions";
-import { contactFullName, contactInitials } from "#/components/contacts/contactDisplay";
+import { contactFullName, contactInitials, todayISO } from "#/components/contacts/contactDisplay";
+import { useContactSession } from "#/components/contacts/useContactSession";
 import { isHeroCall } from "./heroRecapExtensions";
 import { heroInbound } from "./heroInbound";
 import { signalText } from "#/data/signal";
@@ -220,6 +221,15 @@ export const callFlow = {
       target.contactId,
       `Call with ${target.name} — ${recap.sentiment}. ${recap.keyPoints.join(" ")}`.trim(),
     );
+    // Also drop a "Logged a call" event on the contact's timeline, so a
+    // completed call still reads as a logged call there (the AI recap is the
+    // summary). Restores the pre-AI behavior the LogCallModal used to give.
+    useContactSession.getState().addLog(target.contactId, {
+      kind: "call",
+      body: recap.keyPoints.join(" ").trim() || `Call with ${target.firstName}.`,
+      date: todayISO(),
+      outcome: "Connected",
+    });
     // A new call/hangup took over during recap generation — don't surface a stale recap.
     if (mySession !== session) return;
     useCallStore.getState().setRecap(recap);
