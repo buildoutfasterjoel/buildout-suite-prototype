@@ -1084,12 +1084,12 @@ export function generateTasks(stage: ListingStage, stageStartedAt: string): Deal
         todo('Set agreed closing date', 45),
       ]
     case 'closed':
+      // Deal execution is finished by the time a deal lands here — the
+      // contract-to-close checklist cleared to get it closed. What's left is
+      // brokerage back-office work against the voucher.
       return [
-        todo('Schedule inspection', 5, null, 'complete'),
-        todo('Order title and escrow', 10, null, 'complete'),
-        todo('Confirm financing and appraisal', 15, null, 'complete'),
-        todo('Review closing disclosures', 40, null, 'complete'),
-        todo('Send final commission statement', 50),
+        todo('Review voucher', 2),
+        todo('Set up pre-split deductions', 5),
       ]
     case 'inactive':
       return [

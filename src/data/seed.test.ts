@@ -45,17 +45,13 @@ describe('generateTasks', () => {
     expect(tasks.filter((t) => t.status === 'complete')).toHaveLength(0)
   })
 
-  it('returns the same closing checklist for closed, mostly complete plus one follow-up', () => {
+  it('returns the brokerage back-office checklist for closed', () => {
     const tasks = generateTasks('closed', START)
     expect(tasks.map((t) => t.label)).toEqual([
-      'Schedule inspection',
-      'Order title and escrow',
-      'Confirm financing and appraisal',
-      'Review closing disclosures',
-      'Send final commission statement',
+      'Review voucher',
+      'Set up pre-split deductions',
     ])
-    expect(tasks.slice(0, 4).every((t) => t.status === 'complete')).toBe(true)
-    expect(tasks[4].status).toBe('open')
+    expect(tasks.every((t) => t.status === 'open')).toBe(true)
   })
 
   it('returns a light checklist for inactive', () => {
