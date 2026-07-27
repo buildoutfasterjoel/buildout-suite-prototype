@@ -8,7 +8,7 @@ import {
   faArrowLeft,
   faArrowRight,
   faFile,
-  faFilePdf,
+  faLink,
   faPaperPlane,
   faSparkle,
   faXmark,
@@ -51,7 +51,7 @@ function draftBovEmail(contact: Contact, property: Property): string {
     return (
       "Rosa,\n\nThank you for trusting me with Miguel's files. I went through the T12 and " +
       "rent roll and put together the quiet first look we talked about — the BOV is " +
-      `attached. Headline: ${low} – ${high}, anchored on the in-place rent roll with ` +
+      `linked below. Headline: ${low} – ${high}, anchored on the in-place rent roll with ` +
       "conservative assumptions and no pressure behind it.\n\nA few things I noticed:\n\n" +
       "1. In-place rents run below the corridor's going rate — upside a buyer pays for, not a problem.\n" +
       "2. The T12 carries a one-time roof repair; setting it aside lifts the valuation meaningfully.\n" +
@@ -62,7 +62,7 @@ function draftBovEmail(contact: Contact, property: Property): string {
   }
   return (
     `${contact.firstName},\n\nThanks for sharing the financials. I ran a first-pass ` +
-    `underwrite and attached the BOV. Headline: ${low} – ${high}, anchored on the ` +
+    `underwrite and linked the BOV below. Headline: ${low} – ${high}, anchored on the ` +
     "in-place numbers with conservative assumptions.\n\nWorth a quick conversation before " +
     "you read it — open this week for a 30-minute walk-through? I'd rather get your read " +
     "before we settle on a price.\n\nJohn"
@@ -117,9 +117,9 @@ function FlowHeader({
 
 /**
  * Step 2 — the assembled BOV's cover page, previewed in place. "Continue to
- * email" advances the wizard. Deliberately no in-flow link to the doc editor:
- * navigating away mid-wizard broke the flow, and the sent email's timeline
- * chip already links to the document afterward.
+ * email" advances the wizard; "Edit document" is a placeholder for the jump to
+ * the doc editor, which stays unwired for now (navigating away mid-wizard broke
+ * the flow). The sent email's timeline chip links to the document afterward.
  */
 function BovPreviewModal({
   open,
@@ -169,10 +169,16 @@ function BovPreviewModal({
           <Button variant="ghost" appearance="muted" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={onContinue}>
-            Continue to email
-            <FontAwesomeIcon icon={faArrowRight} />
-          </Button>
+          <div className="d-flex gap-2">
+            {/* Intentionally inert for now: the jump to the document editor
+                isn't wired up (navigating away mid-wizard broke the flow), so
+                this stands in for that route until it is. */}
+            <Button variant="outline">Edit document</Button>
+            <Button variant="primary" onClick={onContinue}>
+              Continue to email
+              <FontAwesomeIcon icon={faArrowRight} />
+            </Button>
+          </div>
         </Modal.Footer>
       </Modal.Content>
     </Modal>
@@ -180,13 +186,15 @@ function BovPreviewModal({
 }
 
 /**
- * Step 3 — the AI-drafted cover email with the BOV attached. The draft streams
- * in (any keystroke interrupts and hands over); Send is the user's final call.
+ * Step 3 — the AI-drafted cover email, with the BOV shared as a link rather
+ * than a file attachment. The draft streams in (any keystroke interrupts and
+ * hands over); Send is the user's final call.
  */
 function BovEmailModal({
   open,
   contact,
   property,
+  documentName,
   onBack,
   onSend,
   onClose,
@@ -194,6 +202,8 @@ function BovEmailModal({
   open: boolean;
   contact: Contact;
   property: Property;
+  /** The document the underwriting was saved into — the link's label. */
+  documentName: string;
   onBack: () => void;
   onSend: (subject: string, body: string) => void;
   onClose: () => void;
@@ -242,7 +252,6 @@ function BovEmailModal({
     setBody(value.replace(/▍/g, ""));
   };
 
-  const fileName = bovFileName(property);
   const canSend = !drafting && subject.trim().length > 0 && body.trim().length > 0;
 
   return (
@@ -276,13 +285,18 @@ function BovEmailModal({
             rows={12}
           />
 
+          {/* The BOV goes out as a link to the document, not a file — so the
+              owner always reads the current version. */}
           <div className="d-flex align-items-center gap-2">
-            <span className="bov-field-label mb-0">Attached</span>
-            <span className="bov-attachment">
-              <FontAwesomeIcon icon={faFilePdf} />
-              {fileName}
-              <span className="bov-attachment__size">2.4 MB</span>
-            </span>
+            <span className="bov-field-label mb-0">Link</span>
+            <a
+              href="#"
+              onClick={(e) => e.preventDefault()}
+              className="bov-doc-link"
+            >
+              <FontAwesomeIcon icon={faLink} />
+              {documentName}
+            </a>
           </div>
         </Modal.Body>
         <Modal.Footer className="justify-content-between">
@@ -402,11 +416,12 @@ export function ContactBovFlow({
         onClose={flow.close}
       />
 
-      {/* Step 3 — AI-drafted email with the BOV attached. */}
+      {/* Step 3 — AI-drafted email with the BOV linked. */}
       <BovEmailModal
         open={flow.step === "email"}
         contact={contact}
         property={property}
+        documentName={flow.documentName ?? "Broker Opinion of Value"}
         onBack={flow.backToPreview}
         onSend={handleSend}
         onClose={flow.close}
