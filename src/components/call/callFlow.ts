@@ -7,6 +7,8 @@ import { generateCallTurn, generateCallRecap } from "#/ai/generate";
 import { useAssistant } from "#/ai/useAssistant";
 import { contactFullName, contactInitials } from "#/components/contacts/contactDisplay";
 import { usePendingCallLog } from "./usePendingCallLog";
+import { composeCallNotes } from "./callNotes";
+import { getContact } from "#/data/store";
 import { isHeroCall } from "./heroRecapExtensions";
 import { signalText } from "#/data/signal";
 
@@ -224,7 +226,11 @@ export const callFlow = {
     // created from that email's "Start a Deal" action, not at hang-up.
     usePendingCallLog.getState().request({
       contactId: target.contactId,
-      draft: recap.keyPoints.join(" ").trim() || `Call with ${target.firstName}.`,
+      draft: composeCallNotes({
+        recap,
+        firstName: target.firstName,
+        heroKey: getContact(target.contactId)?.heroKey,
+      }),
       armHeroInbound: isHeroCall(target),
     });
     useAssistant.getState().setOpen(true); // sidebar renders + speaks the recap
