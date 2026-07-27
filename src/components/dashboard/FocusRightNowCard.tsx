@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { Card, CardBody } from "@buildoutinc/blueprint-react/ui/Card";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
@@ -13,6 +14,9 @@ import {
 import { getPhotoUrl } from "#/components/properties/propertyDisplay";
 import { generateProspectAssessment } from "#/ai/generate";
 import type { ProspectSpecT } from "#/ai/generate/schemas";
+import { getContactByHeroKey } from "#/data/store";
+import { callFlow } from "#/components/call/callFlow";
+import { notify } from "#/lib/notify";
 import { FOCUS_SIGNAL } from "./dashboardData";
 
 const VERDICT_BADGE_CLASS: Record<ProspectSpecT["verdict"], string> = {
@@ -28,8 +32,36 @@ const VERDICT_LABEL: Record<ProspectSpecT["verdict"], string> = {
 };
 
 export function FocusRightNowCard() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [assessment, setAssessment] = useState<ProspectSpecT | null>(null);
+
+  /** The live contact this signal is about (e.g. Rosa). */
+  const signalContact = () => getContactByHeroKey(FOCUS_SIGNAL.heroKey);
+
+  const openRecord = () => {
+    const c = signalContact();
+    if (!c) return;
+    void navigate({
+      to: "/backoffice/contacts/$contactId",
+      params: { contactId: c.id },
+    });
+  };
+
+  // Start the live call and land on the contact's page so the call bar + arc
+  // play out over their record (calls from the AI do the same — see tools.ts).
+  const callContact = () => {
+    const c = signalContact();
+    if (!c) {
+      notify({ title: "Contact unavailable", description: FOCUS_SIGNAL.headline });
+      return;
+    }
+    callFlow.open(c);
+    void navigate({
+      to: "/backoffice/contacts/$contactId",
+      params: { contactId: c.id },
+    });
+  };
 
   const assess = async () => {
     setLoading(true);
@@ -94,9 +126,12 @@ export function FocusRightNowCard() {
           className="d-flex flex-column gap-2 flex-shrink-0"
           style={{ minWidth: 160 }}
         >
-          {/* Visual-only CTAs — no destination exists for this mock signal. */}
-          <Button variant="primary">{FOCUS_SIGNAL.primaryCta} →</Button>
-          <Button variant="outline">{FOCUS_SIGNAL.secondaryCta}</Button>
+          <Button variant="primary" onClick={callContact}>
+            {FOCUS_SIGNAL.primaryCta} →
+          </Button>
+          <Button variant="outline" onClick={openRecord}>
+            {FOCUS_SIGNAL.secondaryCta}
+          </Button>
         </div>
 
         <div className="w-100 d-flex flex-column gap-2 pt-2 border-top border-purple-heart-300">
