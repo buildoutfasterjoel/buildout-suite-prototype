@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Card, CardBody } from "@buildoutinc/blueprint-react/ui/Card";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
@@ -9,32 +8,15 @@ import {
   faHouse,
   faCircleCheck,
   faPhone,
-  faSpinner,
 } from "@fortawesome/pro-regular-svg-icons";
 import { getPhotoUrl } from "#/components/properties/propertyDisplay";
-import { generateProspectAssessment } from "#/ai/generate";
-import type { ProspectSpecT } from "#/ai/generate/schemas";
 import { getContactByHeroKey } from "#/data/store";
 import { callFlow } from "#/components/call/callFlow";
 import { notify } from "#/lib/notify";
 import { FOCUS_SIGNAL } from "./dashboardData";
 
-const VERDICT_BADGE_CLASS: Record<ProspectSpecT["verdict"], string> = {
-  strong: "text-bg-success",
-  moderate: "text-bg-warning",
-  challenging: "text-bg-secondary",
-};
-
-const VERDICT_LABEL: Record<ProspectSpecT["verdict"], string> = {
-  strong: "Strong call",
-  moderate: "Moderate call",
-  challenging: "Challenging call",
-};
-
 export function FocusRightNowCard() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [assessment, setAssessment] = useState<ProspectSpecT | null>(null);
 
   /** The live contact this signal is about (e.g. Rosa). */
   const signalContact = () => getContactByHeroKey(FOCUS_SIGNAL.heroKey);
@@ -61,26 +43,6 @@ export function FocusRightNowCard() {
       to: "/backoffice/contacts/$contactId",
       params: { contactId: c.id },
     });
-  };
-
-  const assess = async () => {
-    setLoading(true);
-    try {
-      const result = await generateProspectAssessment({
-        data: {
-          property: {
-            name: FOCUS_SIGNAL.headline,
-            signal: FOCUS_SIGNAL.detail,
-            kicker: FOCUS_SIGNAL.kicker,
-            potentialTag: FOCUS_SIGNAL.potentialTag,
-            matchTag: FOCUS_SIGNAL.matchTag,
-          },
-        },
-      });
-      setAssessment(result);
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
@@ -127,35 +89,12 @@ export function FocusRightNowCard() {
           style={{ minWidth: 160 }}
         >
           <Button variant="primary" onClick={callContact}>
-            {FOCUS_SIGNAL.primaryCta} →
+            <FontAwesomeIcon icon={faPhone} />
+            {FOCUS_SIGNAL.primaryCta}
           </Button>
           <Button variant="outline" onClick={openRecord}>
             {FOCUS_SIGNAL.secondaryCta}
           </Button>
-        </div>
-
-        <div className="w-100 d-flex flex-column gap-2 pt-2 border-top border-purple-heart-300">
-          <Button
-            variant="outline"
-            className="align-self-start"
-            onClick={assess}
-            disabled={loading}
-          >
-            <FontAwesomeIcon icon={loading ? faSpinner : faPhone} spin={loading} />
-            {loading ? "Assessing…" : "Is this worth a call?"}
-          </Button>
-
-          {assessment && (
-            <div className="d-flex flex-column gap-1">
-              <div className="d-flex align-items-center gap-2">
-                <Badge className={VERDICT_BADGE_CLASS[assessment.verdict]}>
-                  {VERDICT_LABEL[assessment.verdict]}
-                </Badge>
-                <span className="fw-bold">{assessment.headline}</span>
-              </div>
-              <p className="text-muted mb-0">{assessment.reasoning}</p>
-            </div>
-          )}
         </div>
       </CardBody>
     </Card>
