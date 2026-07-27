@@ -2,6 +2,7 @@ import { LogCallModal } from "#/components/contacts/LogCallModal";
 import type { ComposedDraft } from "#/components/contacts/ContactComposeModule";
 import { useContactSession } from "#/components/contacts/useContactSession";
 import { heroInbound } from "#/components/call/heroInbound";
+import { rosaLoi } from "#/components/call/rosaLoi";
 import { useCallSession } from "#/components/call/useCallSession";
 import { usePendingCallLog } from "#/components/call/usePendingCallLog";
 import { useDataStore } from "#/data/dataStore";
@@ -43,6 +44,9 @@ export function GlobalLogCallModal() {
     // The hero's follow-up email follows the *logged* call, not hang-up, so the
     // story beats stay in order (and can't land behind this modal).
     if (pending.armHeroInbound) heroInbound.arm(contact.id);
+    // Same rule one beat later: the buyer lead's LOI follows his *logged* call,
+    // so it lands after this modal closes. A no-op for every other contact.
+    rosaLoi.maybeArmFor(contact.id);
     usePendingCallLog.getState().clear();
     // In a call session, the confirmed log is the cue to dial the next contact.
     if (useCallSession.getState().active) useCallSession.getState().advance();

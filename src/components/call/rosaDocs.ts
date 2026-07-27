@@ -17,3 +17,10 @@ export const ROSA_SIGNED_AGREEMENT = {
   meta: "PDF · 1.1 MB",
   size: "1.1 MB",
 };
+
+/** The LOI the buyer lead emails in after his call (see rosaLoi.ts). */
+export const DELGADO_LOI = {
+  name: "Delgado Building — Letter of Intent (Trejo Residential).pdf",
+  meta: "PDF · 412 KB",
+  size: "412 KB",
+};
