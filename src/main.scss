@@ -1934,6 +1934,32 @@
     text-align: center;
     font-variant-numeric: tabular-nums;
   }
+  // "Dial now" skips the rest of the countdown. White on the white bar, so it
+  // leans on the border + shadow for definition rather than a fill.
+  .contact-call-bar__dial {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: var(--bp-border-radius, 6px);
+    border: 1px solid var(--color-storm-grey-200, #d5dae2);
+    background: #fff;
+    color: var(--color-storm-grey-900, #22262f);
+    font-size: 13px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    transition: background-color 0.12s ease-in-out;
+
+    svg {
+      color: var(--color-buildout-blue-600, #2350c9);
+    }
+
+    &:hover {
+      background: var(--color-storm-grey-50, #f6f7f9);
+    }
+  }
   .contact-call-bar__cancel {
     height: 32px;
     padding: 0 14px;
@@ -2066,25 +2092,6 @@
   }
   100% {
     box-shadow: 0 0 0 0 rgba(0, 188, 125, 0);
-  }
-}
-
-// "Dial now" shortcuts the pre-dial countdown.
-.contact-call-bar__dial {
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  color: #fff;
-  border-radius: 999px;
-  padding: 0.3rem 0.85rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  cursor: pointer;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.24);
   }
 }
 
