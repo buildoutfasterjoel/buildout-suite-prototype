@@ -15,6 +15,7 @@ import { GlobalAddTaskModal } from "#/components/tasks/GlobalAddTaskModal";
 import { LiveCallBar } from "#/components/call/LiveCallBar";
 import { CallSessionController } from "#/components/call/CallSessionController";
 import { BovWatcher } from "#/components/call/BovWatcher";
+import { RosaLeadsWatcher } from "#/components/call/RosaLeadsWatcher";
 import { useDataStore } from "#/data/dataStore";
 
 export function AppShell() {
@@ -33,6 +34,7 @@ export function AppShell() {
             {hydrated && <LiveCallBar />}
             {hydrated && <CallSessionController />}
             {hydrated && <BovWatcher />}
+            {hydrated && <RosaLeadsWatcher />}
             {hydrated ? (
               <Outlet />
             ) : (

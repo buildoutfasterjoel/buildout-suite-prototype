@@ -55,11 +55,20 @@ export function seedSlice(): DataSlice {
 }
 
 /**
- * Rosa's demo arc (call back → her email → Start a Deal → the BOV wizard) is
- * built to be replayed. On every hydrate — i.e. a hard refresh — her slice of
- * the world resets to the seed: her contact record, any deals on her owned
- * building (the seed ships none, so everything there is demo-created), their
- * files/tasks, and her sharing state. The rest of the world keeps its
+ * Id prefix for contacts a demo beat conjures into the book mid-session — the
+ * inbound leads that land when a listing goes live (see rosaLeads.ts). They're
+ * not in the seed, so `resetRosaDemoState` clears them by prefix on a hard
+ * refresh rather than leaving them behind for the next run.
+ */
+export const SIM_LEAD_ID_PREFIX = 'sim-lead-'
+
+/**
+ * Rosa's demo arc (call back → her email → Start a Deal → the BOV wizard →
+ * activate → call the leads) is built to be replayed. On every hydrate — i.e. a
+ * hard refresh — her slice of the world resets to the seed: her contact record,
+ * any deals on her owned building (the seed ships none, so everything there is
+ * demo-created), their files/tasks, the simulated leads the activation dropped
+ * onto the deal, and her sharing state. The rest of the world keeps its
  * persisted snapshot; Reset Demo remains the full wipe. Ids line up because
  * generation is deterministic and snapshots only load under a matching
  * SEED_VERSION.
@@ -76,6 +85,14 @@ export function resetRosaDemoState(
 
   const contacts = new Map(snapshot.contacts)
   contacts.set(freshRosa.id, freshRosa)
+  // Simulated inbound leads are re-created by the beat that spawned them.
+  const removedContactIds = new Set<string>()
+  for (const id of contacts.keys()) {
+    if (id.startsWith(SIM_LEAD_ID_PREFIX)) {
+      contacts.delete(id)
+      removedContactIds.add(id)
+    }
+  }
 
   const listings = new Map(snapshot.listings)
   const removedDealIds = new Set<string>()
@@ -96,6 +113,7 @@ export function resetRosaDemoState(
   for (const [id, t] of tasks) {
     if (
       t.contactId === freshRosa.id ||
+      (t.contactId != null && removedContactIds.has(t.contactId)) ||
       (t.dealId != null && removedDealIds.has(t.dealId))
     ) {
       tasks.delete(id)
@@ -109,6 +127,7 @@ export function resetRosaDemoState(
   const freshShares = fresh.contactShares.get(freshRosa.id)
   if (freshShares) contactShares.set(freshRosa.id, freshShares)
   else contactShares.delete(freshRosa.id)
+  for (const id of removedContactIds) contactShares.delete(id)
 
   return {
     ...snapshot,

@@ -141,7 +141,16 @@ export function ContactOverviewColumn({
   const showPastDeals = useContactUiPrefs((s) => s.showPastDeals);
   const setShowPastDeals = useContactUiPrefs((s) => s.setShowPastDeals);
   const legacyAccordions = useContactUiPrefs((s) => s.legacyAccordions);
+  // Tag removal is prototype-local, so the list lives in state — but a call
+  // session walks contact to contact on the *same* route, so this component
+  // doesn't remount. Re-seed from the record whenever the contact underneath it
+  // changes, or the previous person's tags stay on screen.
   const [tags, setTags] = useState(contact.tags);
+  const [tagsContactId, setTagsContactId] = useState(contact.id);
+  if (tagsContactId !== contact.id) {
+    setTagsContactId(contact.id);
+    setTags(contact.tags);
+  }
   const [newDealOpen, setNewDealOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [addressLine1] = contactAddressLines(contact);

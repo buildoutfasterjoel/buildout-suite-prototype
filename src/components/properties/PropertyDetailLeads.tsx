@@ -25,6 +25,7 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact, Property } from "#/data/types";
 import { getLeadsForProperty } from "#/data/store";
+import { useDataStore } from "#/data/dataStore";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
 import { startCallSession } from "#/components/call/useCallSession";
 import { hash } from "./propertyDisplay";
@@ -83,14 +84,27 @@ function fmtDate(d: Date): string {
   return `${mm}/${dd}/${d.getFullYear()}`;
 }
 
-/** Synthesize the lead-only columns deterministically from a contact. */
+/** Two days, in ms — the window in which a lead still reads as brand new. */
+const NEW_LEAD_MS = 2 * 86_400_000;
+
+/**
+ * Synthesize the lead-only columns from a contact. The dates and lead status
+ * come off the real record — a lead that just landed has to read as new, not as
+ * one we've had on file for four months — and the rest of the lead-only columns
+ * (access level, referral source, 1031) are deterministic filler off the id.
+ */
 function toLead(contact: Contact): Lead {
   const h = hash(contact.id);
-  const added = new Date(2026, 5, 22);
-  added.setDate(added.getDate() - (h % 120));
-  const updated = new Date(2026, 5, 22);
-  updated.setDate(updated.getDate() - (h % 14));
+  const added = new Date(contact.createdAt);
+  const updated = new Date(
+    contact.lastActivityAt ?? contact.lastContactedAt ?? contact.createdAt,
+  );
   const has1031 = h % 5 === 0;
+  // Never contacted and only just added → New. Otherwise keep the spread of
+  // statuses the table is built to show.
+  const fresh =
+    contact.lastContactedAt == null &&
+    Date.now() - added.getTime() < NEW_LEAD_MS;
   return {
     id: contact.id,
     name: `${contact.firstName} ${contact.lastName}`,
@@ -100,7 +114,7 @@ function toLead(contact: Contact): Lead {
     addedBy: ADDED_BY[h % ADDED_BY.length],
     accessLevel: ACCESS_LEVELS[h % ACCESS_LEVELS.length],
     verified: h % 3 === 0,
-    leadStatus: LEAD_STATUSES[h % LEAD_STATUSES.length],
+    leadStatus: fresh ? "New" : LEAD_STATUSES[h % LEAD_STATUSES.length],
     referralSource: REFERRAL_SOURCES[h % REFERRAL_SOURCES.length],
     company: contact.company,
     role: ROLE_LABELS[contact.role],
@@ -130,11 +144,15 @@ export function PropertyDetailLeads({ property }: { property: Property }) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
+  // Keyed on the contacts map so a lead that lands while this page is open shows
+  // up without a navigation.
+  const contacts = useDataStore((s) => s.contacts);
+
   // The deal's assigned seller is the broker's client, not a lead they worked —
   // getLeadsForProperty keeps them out of the list.
   const leads = useMemo(
     () => getLeadsForProperty(property.id).map(toLead),
-    [property.id],
+    [property.id, contacts],
   );
 
   const filtered = useMemo(() => {
