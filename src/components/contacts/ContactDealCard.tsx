@@ -83,7 +83,10 @@ function dealNextAction(
  *               helps with, so the card stays quiet rather than offering a
  *               link into a finished file.
  *
- * Only one link shows at a time. Returns null when the stage offers none.
+ * Only one link shows at a time, and it shows whatever its count is — a zero is
+ * information too ("nobody's inquired yet"), and a link that appears only once
+ * it's populated makes the card's shape jump around mid-demo. Returns null when
+ * the stage offers no link at all.
  */
 function dealQuickLink(status: Listing["status"]): "documents" | "leads" | null {
   switch (status) {
@@ -167,10 +170,13 @@ export function ContactDealCard({
   const sqft = `${(listing.marketing.availableSqFt ?? 0).toLocaleString()} SF`;
   const side = SIDE_DISPLAY[listing.dealSide];
 
+  // Both counts are taken the same way the page behind the link takes them, so
+  // a badge and the page it opens can't disagree. For documents that means
+  // AI-generated only: `listing.documents` also holds the broker's own uploads,
+  // but those live on the Files page, not Documents (see PropertyDetailDocuments
+  // and DealContextRail, which split the same array the other way).
   const quickLink = dealQuickLink(listing.status);
-  const docsCount = listing.documents?.length ?? 0;
-  // Counted the same way the Leads tab lists them, so the badge and the page it
-  // opens can't disagree.
+  const docsCount = (listing.documents ?? []).filter((d) => d.aiGenerated).length;
   const leadsCount =
     quickLink === "leads" ? getLeadsForProperty(listing.propertyId).length : 0;
   const nextAction = dealNextAction(listing, bovSent);
@@ -287,36 +293,34 @@ export function ContactDealCard({
         )}
       </div>
 
-      {/* The stage's quick link, when the thing it opens isn't empty — a
-          "Documents 0" row is a dead end, not a shortcut. */}
-      {quickLink === "documents" && docsCount > 0 && (
+      {/* The stage's quick link, count and all — see dealQuickLink. */}
+      {quickLink !== null && (
         <div className="border-top d-flex flex-column">
-          <ContactLinkButton
-            icon={faFile}
-            label="Documents"
-            count={docsCount}
-            onClick={() =>
-              void navigate({
-                to: "/listings/$listingId/documents",
-                params: { listingId },
-              })
-            }
-          />
-        </div>
-      )}
-      {quickLink === "leads" && leadsCount > 0 && (
-        <div className="border-top d-flex flex-column">
-          <ContactLinkButton
-            icon={faUserGroup}
-            label="Leads"
-            count={leadsCount}
-            onClick={() =>
-              void navigate({
-                to: "/listings/$listingId/leads",
-                params: { listingId },
-              })
-            }
-          />
+          {quickLink === "documents" ? (
+            <ContactLinkButton
+              icon={faFile}
+              label="Documents"
+              count={docsCount}
+              onClick={() =>
+                void navigate({
+                  to: "/listings/$listingId/documents",
+                  params: { listingId },
+                })
+              }
+            />
+          ) : (
+            <ContactLinkButton
+              icon={faUserGroup}
+              label="Leads"
+              count={leadsCount}
+              onClick={() =>
+                void navigate({
+                  to: "/listings/$listingId/leads",
+                  params: { listingId },
+                })
+              }
+            />
+          )}
         </div>
       )}
 
