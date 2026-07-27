@@ -528,6 +528,9 @@ export function createClientTools({
       const c = resolveContactByName(contact_name);
       if (!c) return { started: false, error: `No contact named "${contact_name}".` };
       callFlow.open(c);
+      // Land the broker on the contact's page so the call bar + arc play out
+      // over their record (mirrors the homepage "Call Rosa" CTA).
+      navigate(`/backoffice/contacts/${c.id}`);
       return { started: true, contactId: c.id };
     }),
   ];

@@ -4,6 +4,7 @@
  * lifecycle (`PropertyStatus`) — it tracks pre-listing relationship stages
  * (seller signal, nurturing, pitching) that have no equivalent on a Listing.
  */
+import type { HeroKey } from "#/data/types";
 
 /** "Today" for the dashboard's mock data — a Monday, matching the reference design. */
 export const DASHBOARD_TODAY = new Date(2026, 6, 6);
@@ -50,6 +51,8 @@ export const FORECAST = {
 
 export interface FocusSignal {
   id: string;
+  /** The hero-persona contact this signal is about — resolves to the live record. */
+  heroKey: HeroKey;
   thumbnailId: string;
   kicker: string;
   headline: string;
@@ -62,6 +65,7 @@ export interface FocusSignal {
 
 export const FOCUS_SIGNAL: FocusSignal = {
   id: "rosa-delgado",
+  heroKey: "rosa",
   thumbnailId: "rosa-delgado-building",
   kicker: "Overnight signal · Insights by Buildout",
   headline: "Rosa Delgado · The Delgado Building",

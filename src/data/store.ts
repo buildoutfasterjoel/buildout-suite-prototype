@@ -11,6 +11,7 @@ import type {
   DealDocument,
   DealMessage,
   DealActivity,
+  HeroKey,
 } from './types'
 import type { Email } from './emails'
 import { useDataStore } from './dataStore'
@@ -233,6 +234,14 @@ export function addDealActivity(
 
 export function getContact(contactId: string): Contact | undefined {
   return getStore().contacts.get(contactId)
+}
+
+/** The (single) hero-persona contact for a given key — e.g. Rosa for 'rosa'. */
+export function getContactByHeroKey(heroKey: HeroKey): Contact | undefined {
+  for (const c of getStore().contacts.values()) {
+    if (c.heroKey === heroKey) return c
+  }
+  return undefined
 }
 
 /** All contacts linked to a property in the CRM. */
