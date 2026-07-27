@@ -998,6 +998,16 @@ export interface Contact {
   lastTouch: string
   /** ISO timestamp of the last real contact, or null if never contacted. */
   lastContactedAt: string | null
+  /**
+   * ISO timestamp of the most recent activity of ANY kind on the record —
+   * including inbound events we didn't initiate, like a missed call or an email
+   * that just landed. Always >= `lastContactedAt`, which tracks only the last
+   * time we actually spoke. Absent means "same as `lastContactedAt`".
+   *
+   * This is what the Last Activity filter and the Last Active column read: a
+   * voicemail from yesterday is activity even if we last talked a week ago.
+   */
+  lastActivityAt?: string | null
   /** Number of open tasks on this contact (0 = none). */
   openTaskCount: number
   street: string

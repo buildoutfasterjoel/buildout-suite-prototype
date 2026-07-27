@@ -617,6 +617,31 @@ export function updateContact(
  * Append a timestamped note line to a contact's freeform `notes` and persist.
  * Used by the AI `add_note` tool and any manual note affordance.
  */
+/**
+ * Stamp a contact's most recent activity — anything that happens on the record,
+ * inbound or outbound (a logged call, an email that arrives). Keeps the Last
+ * Activity filter and column true as the session goes on, without touching
+ * `lastContactedAt`, which only moves when we actually reach them.
+ */
+export function touchContactActivity(
+  contactId: string,
+  at: string = new Date().toISOString(),
+): { contact: Contact | null } {
+  const existing = useDataStore.getState().contacts.get(contactId)
+  if (!existing) return { contact: null }
+  // Never walk activity backwards.
+  const current = existing.lastActivityAt ?? existing.lastContactedAt
+  if (current && Date.parse(current) >= Date.parse(at)) return { contact: existing }
+  const contact: Contact = { ...existing, lastActivityAt: at }
+  useDataStore.setState((s) => {
+    const contacts = new Map(s.contacts)
+    contacts.set(contactId, contact)
+    return { contacts }
+  })
+  useDataStore.getState().persist()
+  return { contact }
+}
+
 export function addNote(contactId: string, text: string): { contact: Contact | null } {
   const existing = useDataStore.getState().contacts.get(contactId)
   if (!existing) return { contact: null }
