@@ -589,7 +589,8 @@ export function AssistantSidebar() {
   );
 
   const voiceEnabled = useVoice((s) => s.voiceEnabled);
-  const setVoiceEnabled = useVoice((s) => s.setVoiceEnabled);
+  const toggleVoice = useVoice((s) => s.toggleVoice);
+  const enableVoiceForMic = useVoice((s) => s.enableVoiceForMic);
   const listening = useVoice((s) => s.listening);
   const setConversationMode = useVoice((s) => s.setConversationMode);
   const speakNextReplyRef = useRef(false);
@@ -716,7 +717,9 @@ export function AssistantSidebar() {
           aria-label={voiceEnabled ? "Turn voice off" : "Turn voice on"}
           onClick={() => {
             const next = !voiceEnabled;
-            setVoiceEnabled(next);
+            // Sticky manual off: toggleVoice records the intent so starting the
+            // mic later won't silently turn voice back on.
+            toggleVoice(next);
             if (!next) {
               voiceEngine.cancel();
               setConversationMode(false);
@@ -827,6 +830,9 @@ export function AssistantSidebar() {
               voiceEngine.cancel();
               setConversationMode(false);
             } else {
+              // Starting the mic turns voice on so Otto talks back — unless the
+              // user deliberately muted it (then stay silent, STT only).
+              enableVoiceForMic();
               setConversationMode(true);
               startHandsFree();
             }
