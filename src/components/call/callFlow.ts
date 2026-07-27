@@ -4,7 +4,6 @@ import { playOneRing, playAnsweredCue } from "./ringtone";
 import { voiceEngine } from "#/ai/voice/voiceEngine";
 import { ownerVoiceFor } from "#/ai/voice/ownerVoice";
 import { generateCallTurn, generateCallRecap } from "#/ai/generate";
-import { useAssistant } from "#/ai/useAssistant";
 import { contactFullName, contactInitials } from "#/components/contacts/contactDisplay";
 import { usePendingCallLog } from "./usePendingCallLog";
 import { composeCallNotes } from "./callNotes";
@@ -260,6 +259,7 @@ export const callFlow = {
       }),
       armHeroInbound: isHeroCall(target),
     });
-    useAssistant.getState().setOpen(true); // sidebar renders + speaks the recap
+    // The recap is set on the store, so the sidebar shows it when the broker
+    // opens it — a finished call no longer forces the panel open over their work.
   },
 };
