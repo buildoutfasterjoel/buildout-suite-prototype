@@ -73,14 +73,40 @@ function dealNextAction(
 }
 
 /**
+ * Which quick link the card offers, by stage — the one thing the broker would
+ * open next on a deal at that point in its life:
+ *
+ *   Pitching  → Documents. Winning the business is a paperwork story (the
+ *               owner's financials in, the BOV going out).
+ *   Active     → Leads. It's in market; the work is the buyers answering.
+ *   UC/Closed/Lost → nothing. The deal has moved past what a card shortcut
+ *               helps with, so the card stays quiet rather than offering a
+ *               link into a finished file.
+ *
+ * Only one link shows at a time. Returns null when the stage offers none.
+ */
+function dealQuickLink(status: Listing["status"]): "documents" | "leads" | null {
+  switch (status) {
+    case "proposal":
+      return "documents";
+    case "active":
+      return "leads";
+    case "under-contract":
+    case "closed":
+    case "inactive":
+      return null;
+  }
+}
+
+/**
  * A contact's linked deal, rendered per the Figma structure:
  * 1. high-level info (thumbnail, name, projected rev · sqft · started date),
  * 2. meta chips (stage chip, side, property type),
- * 3. conditionally-visible quick links (Documents, Leads — shown when present),
+ * 3. a conditionally-visible quick link (Documents or Leads — see dealQuickLink),
  * 4. a conditionally-visible AI next action (e.g. "Build Underwriting").
  *
  * The whole card navigates to the deal on a plain click; interactive controls
- * (stage chip, ⋮ menu, quick links, AI action) are excluded via the shared guard.
+ * (stage chip, ⋮ menu, quick link, AI action) are excluded via the shared guard.
  */
 export function ContactDealCard({
   listingId,
@@ -141,10 +167,12 @@ export function ContactDealCard({
   const sqft = `${(listing.marketing.availableSqFt ?? 0).toLocaleString()} SF`;
   const side = SIDE_DISPLAY[listing.dealSide];
 
+  const quickLink = dealQuickLink(listing.status);
   const docsCount = listing.documents?.length ?? 0;
   // Counted the same way the Leads tab lists them, so the badge and the page it
   // opens can't disagree.
-  const leadsCount = getLeadsForProperty(listing.propertyId).length;
+  const leadsCount =
+    quickLink === "leads" ? getLeadsForProperty(listing.propertyId).length : 0;
   const nextAction = dealNextAction(listing, bovSent);
 
   return (
@@ -259,35 +287,36 @@ export function ContactDealCard({
         )}
       </div>
 
-      {/* Conditionally-visible quick links */}
-      {(docsCount > 0 || leadsCount > 0) && (
+      {/* The stage's quick link, when the thing it opens isn't empty — a
+          "Documents 0" row is a dead end, not a shortcut. */}
+      {quickLink === "documents" && docsCount > 0 && (
         <div className="border-top d-flex flex-column">
-          {docsCount > 0 && (
-            <ContactLinkButton
-              icon={faFile}
-              label="Documents"
-              count={docsCount}
-              onClick={() =>
-                void navigate({
-                  to: "/listings/$listingId/documents",
-                  params: { listingId },
-                })
-              }
-            />
-          )}
-          {leadsCount > 0 && (
-            <ContactLinkButton
-              icon={faUserGroup}
-              label="Leads"
-              count={leadsCount}
-              onClick={() =>
-                void navigate({
-                  to: "/listings/$listingId/leads",
-                  params: { listingId },
-                })
-              }
-            />
-          )}
+          <ContactLinkButton
+            icon={faFile}
+            label="Documents"
+            count={docsCount}
+            onClick={() =>
+              void navigate({
+                to: "/listings/$listingId/documents",
+                params: { listingId },
+              })
+            }
+          />
+        </div>
+      )}
+      {quickLink === "leads" && leadsCount > 0 && (
+        <div className="border-top d-flex flex-column">
+          <ContactLinkButton
+            icon={faUserGroup}
+            label="Leads"
+            count={leadsCount}
+            onClick={() =>
+              void navigate({
+                to: "/listings/$listingId/leads",
+                params: { listingId },
+              })
+            }
+          />
         </div>
       )}
 
