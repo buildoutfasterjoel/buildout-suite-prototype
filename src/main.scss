@@ -1634,6 +1634,36 @@
   color: var(--color-storm-grey-700, #424e62);
 }
 
+// Read-only view of the email body, shown until the broker clicks in to edit.
+// Borrows .form-control for the border/typography so swapping to the real
+// textarea doesn't shift the layout; `pre-wrap` keeps the draft's line breaks
+// and lets its URLs render as actual links.
+.bov-body-preview {
+  white-space: pre-wrap;
+  min-height: 17rem;
+  max-height: 17rem;
+  overflow-y: auto;
+  cursor: text;
+
+  a {
+    color: var(--color-buildout-blue-600, #2350c9);
+    text-decoration: underline;
+
+    &:hover {
+      color: var(--color-buildout-blue-700, #1c3fa0);
+    }
+  }
+
+  // The edit affordance sits over the top-right corner, out of the text flow.
+  & + .bov-body-preview__edit {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    color: var(--color-storm-grey-600, #506079);
+    background: rgba(255, 255, 255, 0.92);
+  }
+}
+
 @keyframes ai-draft-pulse {
   0%,
   100% {

@@ -9,6 +9,7 @@ import {
   faArrowRight,
   faFile,
   faPaperPlane,
+  faPencil,
   faSparkle,
   faXmark,
 } from "@fortawesome/pro-regular-svg-icons";
@@ -196,10 +197,41 @@ function BovPreviewModal({
   );
 }
 
+/** Matches the URLs the draft embeds, for the read-only body preview. */
+const URL_SPLIT = /(https?:\/\/[^\s]+)/g;
+const IS_URL = /^https?:\/\//;
+
 /**
- * Step 3 — the AI-drafted cover email, with the BOV shared as a link rather
- * than a file attachment. The draft streams in (any keystroke interrupts and
- * hands over); Send is the user's final call.
+ * The body text with its URLs rendered as styled links. Used by the read-only
+ * preview only — a plain textarea can't style its contents, so the compose box
+ * shows this until the broker clicks in to edit.
+ */
+function bodyWithLinks(text: string) {
+  return text.split(URL_SPLIT).map((part, i) =>
+    IS_URL.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        // Inert on purpose: the shared-document route isn't wired up, and a
+        // real navigation would abandon the wizard mid-send.
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    ),
+  );
+}
+
+/**
+ * Step 3 — the AI-drafted cover email, with the BOV shared as a link in the
+ * body rather than a file attachment. The draft streams into a read-only
+ * preview (so the link renders as a link); clicking it hands over to a
+ * textarea for editing. Send is the user's final call.
  */
 function BovEmailModal({
   open,
@@ -219,6 +251,8 @@ function BovEmailModal({
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [drafting, setDrafting] = useState(false);
+  // The body shows as a styled read-only preview until the broker edits it.
+  const [editing, setEditing] = useState(false);
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const stopDrafting = () => {
@@ -236,6 +270,7 @@ function BovEmailModal({
     }
     setSubject(`${property.name}, preliminary valuation`);
     setBody("");
+    setEditing(false);
     setDrafting(true);
     const target = draftBovEmail(contact, property);
     let i = 0;
@@ -258,6 +293,16 @@ function BovEmailModal({
       setDrafting(false);
     }
     setBody(value.replace(/▍/g, ""));
+  };
+
+  /** Clicking the preview hands over to the textarea — and interrupts the
+   * stream if it's still writing, the way typing used to. */
+  const startEditing = () => {
+    if (drafting) {
+      stopDrafting();
+      setDrafting(false);
+    }
+    setEditing(true);
   };
 
   const canSend = !drafting && subject.trim().length > 0 && body.trim().length > 0;
@@ -287,11 +332,45 @@ function BovEmailModal({
             <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
           </div>
 
-          <Textarea
-            value={drafting ? `${body}▍` : body}
-            onChange={(e) => handleBodyChange(e.target.value)}
-            rows={12}
-          />
+          {editing ? (
+            <Textarea
+              value={body}
+              onChange={(e) => handleBodyChange(e.target.value)}
+              onBlur={() => setEditing(false)}
+              rows={12}
+              autoFocus
+            />
+          ) : (
+            <div className="position-relative">
+              <div
+                className="form-control bov-body-preview"
+                role="textbox"
+                tabIndex={0}
+                aria-label="Email body — click to edit"
+                onClick={startEditing}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    startEditing();
+                  }
+                }}
+              >
+                {bodyWithLinks(body)}
+                {drafting && "▍"}
+              </div>
+              {!drafting && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="bov-body-preview__edit"
+                  onClick={startEditing}
+                >
+                  <FontAwesomeIcon icon={faPencil} />
+                  Edit
+                </Button>
+              )}
+            </div>
+          )}
 
         </Modal.Body>
         <Modal.Footer className="justify-content-between">
