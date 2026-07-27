@@ -3,7 +3,7 @@ import { Alert } from "@buildoutinc/blueprint-react/ui/Alert";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTriangleExclamation } from "@fortawesome/pro-duotone-svg-icons";
-import { getStore } from "#/data/store";
+import { useDataStore } from "#/data/dataStore";
 import { publishReadiness, REQUIRED_FIELD_LABEL } from "#/data/stageGates";
 import { requestSetupCompletion } from "#/components/deals/useStageGate";
 import { TodayPlanner } from "#/components/deals/TodayPlanner";
@@ -55,8 +55,10 @@ function SetupIncompleteBanner({ listing }: { listing: Listing }) {
 
 function OverviewRoute() {
   const { listingId } = Route.useParams();
-  const store = getStore();
-  const listing = store.listings.get(listingId);
+  // Reactive selector (not getStore()) so a stage move — which replaces the
+  // listing object with a new stage, task list, and published marker — re-renders
+  // the banner and planner immediately. Same convention as $listingId.tsx.
+  const listing = useDataStore((s) => s.listings.get(listingId));
   if (!listing) return null;
   return (
     <div>

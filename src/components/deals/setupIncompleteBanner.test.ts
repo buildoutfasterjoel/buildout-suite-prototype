@@ -2,9 +2,15 @@ import { describe, it, expect, beforeEach } from "vitest";
 import "fake-indexeddb/auto";
 import { useDataStore } from "#/data/dataStore";
 import { generateDataset } from "#/data/seed";
-import { publishReadiness } from "#/data/stageGates";
+import {
+  publishReadiness,
+  resolveGate,
+  seedGateForm,
+  buildTransitionInput,
+  completeSetupGate,
+} from "#/data/stageGates";
 import { requestStageChange } from "#/components/deals/useStageGate";
-import { createDeal } from "#/data/actions";
+import { createDeal, commitStageTransition } from "#/data/actions";
 import { emptyDraft } from "#/data/createListing";
 import { createRosaProposalDeal } from "#/components/call/rosaDeal";
 
@@ -99,5 +105,114 @@ describe("Setup incomplete banner across a deal's stage moves", () => {
     expect(deal.status).toBe("active");
     expect(deal.publishedAt).toBeNull();
     expect(bannerShows(deal.id)).toBe(true);
+  });
+
+  // The reported bug: the Active -> Under Contract gate reports `leavesActive`,
+  // and EMPTY_GATE_FORM defaults unpublishOnExit to true, so the forward move
+  // was unpublishing the listing — wiping publishedAt and re-arming the banner
+  // on a deal that had already been published.
+  it("keeps a published deal published when it advances out of Active", () => {
+    const { rosa, property } = rosaAndBuilding();
+    const { deal } = createRosaProposalDeal(rosa, property);
+    const buyer = [...useDataStore.getState().contacts.values()].find(
+      (c) => c.id !== rosa.id,
+    )!;
+
+    // Clear the publish gate the way the Approve & Publish modal does.
+    const before = useDataStore.getState().listings.get(deal.id)!;
+    const publishGate = resolveGate("proposal", "active", before.dealType);
+    commitStageTransition(
+      buildTransitionInput(
+        publishGate,
+        { ...seedGateForm(before), aiDocsAllReviewed: true },
+        deal.id,
+        "You",
+        before.dealType,
+      ),
+    );
+    const active = useDataStore.getState().listings.get(deal.id)!;
+    expect(active.status).toBe("active");
+    expect(active.publishedAt).not.toBeNull();
+
+    readyForUnderContract(deal.id, buyer.id);
+    requestStageChange(deal.id, "under-contract");
+
+    const underContract = useDataStore.getState().listings.get(deal.id)!;
+    expect(underContract.status).toBe("under-contract");
+    expect(underContract.publishedAt).toBe(active.publishedAt);
+    expect(bannerShows(deal.id)).toBe(false);
+  });
+
+  // Backward out of Active is the case the unpublish option exists for.
+  it("still offers the unpublish option moving backward out of Active", () => {
+    expect(resolveGate("active", "proposal", "Sale").leavesActive).toBe(true);
+    expect(resolveGate("active", "inactive", "Sale").leavesActive).toBe(true);
+    expect(resolveGate("active", "under-contract", "Sale").leavesActive).toBe(false);
+    expect(resolveGate("active", "closed", "Sale").leavesActive).toBe(false);
+  });
+});
+
+describe("planner tasks follow the deal's stage", () => {
+  beforeEach(hydrate);
+
+  it("swaps in the new stage's checklist on a stage change", () => {
+    const { rosa, property } = rosaAndBuilding();
+    const { deal } = createRosaProposalDeal(rosa, property);
+    const buyer = [...useDataStore.getState().contacts.values()].find(
+      (c) => c.id !== rosa.id,
+    )!;
+
+    // Created at proposal, so it carries the proposal plan.
+    expect(deal.tasks.map((t) => t.label)).toContain(
+      "Upload executed listing agreement",
+    );
+
+    readyForUnderContract(deal.id, buyer.id);
+    requestStageChange(deal.id, "under-contract");
+
+    const moved = useDataStore.getState().listings.get(deal.id)!;
+    expect(moved.tasks.map((t) => t.label)).toEqual([
+      "Execute purchase agreement (PSA)",
+      "Collect earnest money",
+      "Complete due diligence",
+      "Finalize buyer financing",
+      "Clear closing contingencies",
+      "Prepare closing documents",
+      "Set agreed closing date",
+    ]);
+    // Leftover proposal work doesn't follow the deal forward.
+    expect(moved.tasks.map((t) => t.label)).not.toContain(
+      "Upload executed listing agreement",
+    );
+  });
+
+  it("keeps the existing checklist when publishing in place", () => {
+    const { property } = rosaAndBuilding();
+    const { deal } = createDeal({
+      ...emptyDraft(),
+      name: "Publish In Place",
+      propertyId: property.id,
+      propertyType: property.propertyType,
+      dealType: "Sale",
+      dealSide: "seller",
+      initialStage: "active",
+    });
+    const originalIds = deal.tasks.map((t) => t.id);
+
+    // requestSetupCompletion commits with targetStage === the current stage.
+    const config = completeSetupGate(deal);
+    commitStageTransition(
+      buildTransitionInput(
+        config,
+        { ...seedGateForm(deal), aiDocsAllReviewed: true },
+        deal.id,
+        "You",
+        deal.dealType,
+      ),
+    );
+
+    const published = useDataStore.getState().listings.get(deal.id)!;
+    expect(published.publishedAt).not.toBeNull();
+    expect(published.tasks.map((t) => t.id)).toEqual(originalIds);
   });
 });

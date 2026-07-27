@@ -239,17 +239,27 @@ export function resolveGate(
   target: PropertyStatus,
   dealType: DealType,
 ): GateConfig {
-  const base = { fromStage: from, targetStage: target, leavesActive: from === 'active' }
   const isLease = dealType === 'Lease'
+  const fi = LADDER.indexOf(from) // -1 when reopening from Lost
+  const ti = LADDER.indexOf(target) // -1 for Lost, which isn't on the ladder
+  const forward = fi === -1 || ti > fi
+
+  // `leavesActive` drives the "also unpublish this listing" option, which clears
+  // publishedAt. Only offer it when the deal is genuinely coming off market:
+  // moving backward out of Active, or to Lost. Forward progress out of Active
+  // (→ Under Contract) must NOT unpublish — publishedAt doubles as the marker
+  // that the deal cleared Approve & Publish, and clearing it makes an advanced
+  // deal look unconfigured (see the Setup incomplete banner in overview.tsx).
+  const base = {
+    fromStage: from,
+    targetStage: target,
+    leavesActive: from === 'active' && !forward,
+  }
 
   // Terminal: any stage → Lost.
   if (target === 'inactive') {
     return { ...base, kind: 'dead', title: 'Mark deal as Lost', required: ['deadReason', 'closeDate'], publishes: false }
   }
-
-  const fi = LADDER.indexOf(from) // -1 when reopening from Lost
-  const ti = LADDER.indexOf(target)
-  const forward = fi === -1 || ti > fi
 
   if (!forward) {
     // Backward move — confirmation only.
