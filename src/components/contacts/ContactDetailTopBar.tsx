@@ -11,7 +11,6 @@ import {
 import type { Contact } from "#/data/types";
 import { contactFullName } from "#/components/contacts/contactDisplay";
 import { useContactListNav } from "#/components/contacts/useContactListNav";
-import { ContactBriefButton } from "#/components/contacts/ContactBriefButton";
 
 /**
  * Prev/next pager with an "N of M" index, mirroring the source list the contact
@@ -122,8 +121,6 @@ export function ContactDetailTopBar({ contact }: { contact: Contact }) {
           </Breadcrumb.List>
         </Breadcrumb>
       </div>
-
-      <ContactBriefButton contact={contact} />
     </div>
   );
 }
