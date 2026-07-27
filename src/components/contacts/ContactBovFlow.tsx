@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
@@ -10,6 +11,7 @@ import {
   faFile,
   faPaperPlane,
   faPencil,
+  faPenToSquare,
   faSparkle,
   faXmark,
 } from "@fortawesome/pro-regular-svg-icons";
@@ -129,20 +131,23 @@ function FlowHeader({
 
 /**
  * Step 2 — the assembled BOV's cover page, previewed in place. "Continue to
- * email" advances the wizard; "Edit document" is a placeholder for the jump to
- * the doc editor, which stays unwired for now (navigating away mid-wizard broke
- * the flow). The sent email's timeline chip links to the document afterward.
+ * email" advances the wizard and stays the primary path; "Edit document" is the
+ * escape hatch into the doc editor. Editing ends the wizard rather than
+ * suspending it — navigating away with the flow still open left the modal
+ * stacked over the editor.
  */
 function BovPreviewModal({
   open,
   property,
   documentName,
+  onEdit,
   onContinue,
   onClose,
 }: {
   open: boolean;
   property: Property;
   documentName: string;
+  onEdit: () => void;
   onContinue: () => void;
   onClose: () => void;
 }) {
@@ -182,10 +187,10 @@ function BovPreviewModal({
             Cancel
           </Button>
           <div className="d-flex gap-2">
-            {/* Intentionally inert for now: the jump to the document editor
-                isn't wired up (navigating away mid-wizard broke the flow), so
-                this stands in for that route until it is. */}
-            <Button variant="outline">Edit document</Button>
+            <Button variant="outline" onClick={onEdit}>
+              <FontAwesomeIcon icon={faPenToSquare} />
+              Edit document
+            </Button>
             <Button variant="primary" onClick={onContinue}>
               Continue to email
               <FontAwesomeIcon icon={faArrowRight} />
@@ -407,12 +412,25 @@ export function ContactBovFlow({
   onLog: (draft: ComposedDraft) => void;
 }) {
   const flow = useBovFlow();
+  const navigate = useNavigate();
   const listing = useDataStore((s) =>
     flow.listingId ? s.listings.get(flow.listingId) : undefined,
   );
   if (!listing) return null;
   const property = getProperty(listing.propertyId);
   if (!property) return null;
+
+  // Open the assembled BOV in the doc editor, scrolled to the underwriting the
+  // placement step just inserted. Closes the wizard first so the modal isn't
+  // left stacked over the editor.
+  const handleEdit = () => {
+    flow.close();
+    navigate({
+      to: "/editor/$listingId",
+      params: { listingId: listing.id },
+      search: { focus: "underwriting" },
+    });
+  };
 
   const handleSend = (subject: string, body: string) => {
     onLog({
@@ -486,6 +504,7 @@ export function ContactBovFlow({
         open={flow.step === "preview"}
         property={property}
         documentName={flow.documentName ?? "Broker Opinion of Value"}
+        onEdit={handleEdit}
         onContinue={flow.toEmail}
         onClose={flow.close}
       />

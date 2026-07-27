@@ -31,28 +31,27 @@ describe('generateTasks', () => {
     ])
   })
 
-  it('returns an open closing checklist for under-contract', () => {
+  it('returns the contract-to-close checklist for under-contract, all open', () => {
     const tasks = generateTasks('under-contract', START)
     expect(tasks.map((t) => t.label)).toEqual([
-      'Schedule inspection',
-      'Order title and escrow',
-      'Confirm financing and appraisal',
-      'Review closing disclosures',
+      'Execute purchase agreement (PSA)',
+      'Collect earnest money',
+      'Complete due diligence',
+      'Finalize buyer financing',
+      'Clear closing contingencies',
+      'Prepare closing documents',
+      'Set agreed closing date',
     ])
-    expect(tasks.filter((t) => t.status === 'complete')).toHaveLength(1)
+    expect(tasks.filter((t) => t.status === 'complete')).toHaveLength(0)
   })
 
-  it('returns the same closing checklist for closed, mostly complete plus one follow-up', () => {
+  it('returns the brokerage back-office checklist for closed', () => {
     const tasks = generateTasks('closed', START)
     expect(tasks.map((t) => t.label)).toEqual([
-      'Schedule inspection',
-      'Order title and escrow',
-      'Confirm financing and appraisal',
-      'Review closing disclosures',
-      'Send final commission statement',
+      'Review voucher',
+      'Set up pre-split deductions',
     ])
-    expect(tasks.slice(0, 4).every((t) => t.status === 'complete')).toBe(true)
-    expect(tasks[4].status).toBe('open')
+    expect(tasks.every((t) => t.status === 'open')).toBe(true)
   })
 
   it('returns a light checklist for inactive', () => {

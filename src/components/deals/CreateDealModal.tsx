@@ -28,6 +28,7 @@ import {
   faArrowLeft,
   faWandMagicSparkles,
 } from "@fortawesome/pro-regular-svg-icons";
+import { faCircleInfo } from "@fortawesome/pro-duotone-svg-icons";
 import type {
   Contact,
   DealSide,
@@ -968,6 +969,7 @@ export function CreateDealModal({
 
                 {files.length > 0 && (
                   <Alert severity="info" withIcon className="mt-2">
+                    <FontAwesomeIcon icon={faCircleInfo} />
                     <Alert.Title>Buildout read your files</Alert.Title>
                     We pre-filled this deal from your documents — it’s ready to
                     publish once you review the generated documents.

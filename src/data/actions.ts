@@ -95,7 +95,19 @@ export function commitStageTransition(input: StageTransitionInput): { deal: List
           ? [...l.buyerContactIds, input.buyerContactId]
           : l.buyerContactIds
 
-      const publishedAt = input.publish ? now : input.unpublish ? null : l.publishedAt
+      // A deal advancing into Under Contract or Closed has necessarily been a
+      // live listing — you can't be under contract on something that never
+      // published. Those gates carry `publishes: false` (they ask for buyer +
+      // price, not listing content), so backfill the marker here. Without it an
+      // advanced deal still looks like it skipped Approve & Publish, which is
+      // what the "Setup incomplete" banner keys off (see overview.tsx).
+      const advancedLive =
+        input.targetStage === 'under-contract' || input.targetStage === 'closed'
+      const publishedAt = input.publish
+        ? now
+        : input.unpublish
+          ? null
+          : (l.publishedAt ?? (advancedLive ? now : null))
 
       // Fold lease-gate scalars into the marketed space's terms + marketing.
       const hasLeaseTerms =

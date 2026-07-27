@@ -1072,19 +1072,24 @@ export function generateTasks(stage: ListingStage, stageStartedAt: string): Deal
         todo('Confirm due diligence dates', 30),
       ]
     case 'under-contract':
+      // The contract-to-close checklist: every item is work that has to clear
+      // before the deal can move to Closed, so they all start open.
       return [
-        todo('Schedule inspection', 5, null, 'complete'),
-        todo('Order title and escrow', 10),
-        todo('Confirm financing and appraisal', 15),
-        todo('Review closing disclosures', 40, '5 days before target closing'),
+        todo('Execute purchase agreement (PSA)', 2),
+        todo('Collect earnest money', 5),
+        todo('Complete due diligence', 21),
+        todo('Finalize buyer financing', 30),
+        todo('Clear closing contingencies', 35),
+        todo('Prepare closing documents', 40),
+        todo('Set agreed closing date', 45),
       ]
     case 'closed':
+      // Deal execution is finished by the time a deal lands here — the
+      // contract-to-close checklist cleared to get it closed. What's left is
+      // brokerage back-office work against the voucher.
       return [
-        todo('Schedule inspection', 5, null, 'complete'),
-        todo('Order title and escrow', 10, null, 'complete'),
-        todo('Confirm financing and appraisal', 15, null, 'complete'),
-        todo('Review closing disclosures', 40, null, 'complete'),
-        todo('Send final commission statement', 50),
+        todo('Review voucher', 2),
+        todo('Set up pre-split deductions', 5),
       ]
     case 'inactive':
       return [

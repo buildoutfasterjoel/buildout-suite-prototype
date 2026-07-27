@@ -178,23 +178,24 @@ export function TaskMarker({
   );
 }
 
+/**
+ * A stage bookend on the timeline. Deliberately date-free: the projected dates
+ * these markers used to show (listing expiry, target closing) were derived from
+ * fixed offsets, so they read as commitments the deal hadn't actually made. The
+ * tasks between the two markers are what gates the move to the next stage.
+ */
 function Milestone({
   label,
-  date,
   spine,
   accent,
 }: {
   label: string;
-  date: string | null;
   spine: SpinePosition;
   accent: string;
 }) {
   return (
     <PlannerRow marker={<MilestoneMarker accent={accent} />} spine={spine}>
       <div className="fw-semibold">{label}</div>
-      <div className="fw-semibold fs-small" style={{ color: accent }}>
-        {formatPlannerDate(date)}
-      </div>
     </PlannerRow>
   );
 }
@@ -270,7 +271,6 @@ function Planner({ listing }: { listing: Listing }) {
       <div>
         <Milestone
           label={STAGE_START_LABEL[listing.status]}
-          date={start}
           spine="start"
           accent={accent}
         />
@@ -280,14 +280,7 @@ function Planner({ listing }: { listing: Listing }) {
         {tasks.map((t) => (
           <TaskRow key={t.id} task={t} onToggle={() => toggle(t.id)} />
         ))}
-        {end && (
-          <Milestone
-            label={end.label}
-            date={end.date}
-            spine="end"
-            accent={accent}
-          />
-        )}
+        {end && <Milestone label={end.label} spine="end" accent={accent} />}
       </div>
     </div>
   );
