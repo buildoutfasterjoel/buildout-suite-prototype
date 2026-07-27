@@ -30,18 +30,9 @@ import {
   useContactSession,
 } from "#/components/contacts/useContactSession";
 import { useDealSpotlight } from "#/components/contacts/useDealSpotlight";
-import { useBovFlow } from "#/components/contacts/useBovFlow";
 import { AiDealProgressModal } from "#/components/deals/AiDealProgressModal";
 import { requestStageChange } from "#/components/deals/useStageGate";
-import {
-  defaultSelectionFor,
-  underwritingFromSelection,
-} from "#/components/deals/underwriting/strategies";
-import {
-  getListingsForProperty,
-  getProperty,
-  updateListingUnderwriting,
-} from "#/data/store";
+import { getListingsForProperty, getProperty } from "#/data/store";
 import { createRosaProposalDeal } from "#/components/call/rosaDeal";
 import { ROSA_FINANCIAL_DOCS } from "#/components/call/rosaDocs";
 import { ROSA_AGREEMENT_EMAIL_ID } from "#/components/call/rosaClosing";
@@ -126,28 +117,18 @@ export function ContactEngagementPanel({
     useDealSpotlight.getState().spotlight(dealId);
   };
 
-  /** The "AI scanned the docs" payoff: create the deal it was reading toward,
-   * then run the underwriting/BOV wizard in a modal right here on the contact
-   * page — no navigation away. */
-  const runBovWizard = (dealId: string) => {
-    // Value-Add fits Rosa's owned, in-place multifamily building; kick the
-    // Cactus run at that strategy's full depth. Writing the record 'generating'
-    // first keeps the deal page's planner row in sync with the modal.
-    const strategy = "value-add" as const;
-    const selection = defaultSelectionFor(strategy);
-    updateListingUnderwriting(dealId, {
-      ...underwritingFromSelection(strategy, selection),
-      status: "generating",
-    });
-    useBovFlow.getState().start(dealId, strategy, [...selection]);
-  };
-
+  /**
+   * The "AI scanned the docs" payoff: create the deal it was reading toward and
+   * surface its card — nothing more. The underwriting is the broker's next
+   * move, taken from the card's "Build Underwriting" button (which opens the
+   * Cactus strategy/depth setup, then the BOV wizard) rather than auto-starting.
+   */
   const completeAiDeal = () => {
     const fromEventId = aiDealFromEventId;
     setAiDealFromEventId(null);
     if (!ownedProperty) return;
     // Replayed-demo guard: if the building already has a deal, don't stack a
-    // duplicate — point at the existing card and re-run the wizard on it.
+    // duplicate — point at the existing card instead.
     const existing = getListingsForProperty(ownedProperty.id)[0];
     if (existing) {
       notify({
@@ -156,7 +137,6 @@ export function ContactEngagementPanel({
       });
       revealDeal(existing.id);
       if (fromEventId) resolve(fromEventId);
-      runBovWizard(existing.id);
       return;
     }
     const { deal } = createRosaProposalDeal(contact, ownedProperty);
@@ -166,10 +146,7 @@ export function ContactEngagementPanel({
     });
     // The email that carried the documents has been acted on.
     if (fromEventId) resolve(fromEventId);
-    // Surface the new card, then run the underwrite → BOV wizard in the modal,
-    // staying on the contact page (the PR-86 flow, not a jump to the listing).
     revealDeal(deal.id);
-    runBovWizard(deal.id);
   };
 
   // The feed = session-logged compose/call events + simulated inbound events +

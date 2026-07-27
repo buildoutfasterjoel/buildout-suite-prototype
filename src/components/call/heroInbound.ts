@@ -11,7 +11,9 @@ import { ROSA_FINANCIAL_DOCS } from "./rosaDocs";
  * dedupes it and R2's replay-reset can clear it by id. */
 export const ROSA_FINANCIALS_EMAIL_ID = "sim-rosa-financials-email";
 
-const ARRIVAL_MS = 10_000;
+/** Delay from the call being logged to the email landing — long enough to read
+ * as "she just sent it", short enough not to stall the demo. */
+const ARRIVAL_MS = 6_000;
 
 // Monotonic session so a cancel()/re-arm drops a pending arrival.
 let session = 0;
@@ -67,8 +69,9 @@ function onArrive(contactId: string, mySession: number) {
 }
 
 export const heroInbound = {
-  /** Schedule the ~10s self-arrival of Rosa's financials email onto her contact
-   * timeline. Bumps session so a prior pending arrival is dropped. */
+  /** Schedule the self-arrival of Rosa's financials email onto her contact
+   * timeline (armed once the call is logged — see GlobalLogCallModal). Bumps
+   * session so a prior pending arrival is dropped. */
   arm(contactId: string) {
     clearTimer();
     session += 1;

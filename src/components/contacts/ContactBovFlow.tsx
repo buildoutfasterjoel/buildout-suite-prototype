@@ -8,8 +8,8 @@ import {
   faArrowLeft,
   faArrowRight,
   faFile,
-  faFilePdf,
   faPaperPlane,
+  faPencil,
   faSparkle,
   faXmark,
 } from "@fortawesome/pro-regular-svg-icons";
@@ -40,19 +40,31 @@ function bovFileName(property: Property): string {
 const fmtM = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
 
 /**
+ * The shareable link to the deal's BOV document. The owner reads it in place —
+ * always the current version — rather than a pdf snapshot going stale in their
+ * inbox. Built off the property slug so it's stable per building.
+ */
+function bovDocUrl(property: Property): string {
+  return `https://app.buildout.com/documents/${property.slug}-bov`;
+}
+
+/**
  * The AI-drafted cover email for the BOV. Rosa gets her story-specific draft;
- * other contacts get a plausible one built from the deal's numbers. The real
+ * other contacts get a plausible one built from the deal's numbers. The BOV
+ * link sits in the body, where a link in an email actually belongs. The real
  * product would draft from the underwrite output and the broker's notes.
  */
 function draftBovEmail(contact: Contact, property: Property): string {
   const low = fmtM(property.askingPrice * 0.97);
   const high = fmtM(property.askingPrice * 1.05);
+  const link = bovDocUrl(property);
   if (contact.heroKey === "rosa") {
     return (
       "Rosa,\n\nThank you for trusting me with Miguel's files. I went through the T12 and " +
-      "rent roll and put together the quiet first look we talked about — the BOV is " +
-      `attached. Headline: ${low} – ${high}, anchored on the in-place rent roll with ` +
-      "conservative assumptions and no pressure behind it.\n\nA few things I noticed:\n\n" +
+      "rent roll and put together the quiet first look we talked about. Headline: " +
+      `${low} – ${high}, anchored on the in-place rent roll with conservative assumptions ` +
+      "and no pressure behind it.\n\nHere's the full BOV:\n" +
+      `${link}\n\nA few things I noticed:\n\n` +
       "1. In-place rents run below the corridor's going rate — upside a buyer pays for, not a problem.\n" +
       "2. The T12 carries a one-time roof repair; setting it aside lifts the valuation meaningfully.\n" +
       "3. The ground-floor tenants are steady — an operator buyer would see exactly what Miguel built.\n\n" +
@@ -62,10 +74,10 @@ function draftBovEmail(contact: Contact, property: Property): string {
   }
   return (
     `${contact.firstName},\n\nThanks for sharing the financials. I ran a first-pass ` +
-    `underwrite and attached the BOV. Headline: ${low} – ${high}, anchored on the ` +
-    "in-place numbers with conservative assumptions.\n\nWorth a quick conversation before " +
-    "you read it — open this week for a 30-minute walk-through? I'd rather get your read " +
-    "before we settle on a price.\n\nJohn"
+    `underwrite — headline: ${low} – ${high}, anchored on the in-place numbers with ` +
+    "conservative assumptions.\n\nHere's the full BOV:\n" +
+    `${link}\n\nWorth a quick conversation before you read it — open this week for a ` +
+    "30-minute walk-through? I'd rather get your read before we settle on a price.\n\nJohn"
   );
 }
 
@@ -117,9 +129,9 @@ function FlowHeader({
 
 /**
  * Step 2 — the assembled BOV's cover page, previewed in place. "Continue to
- * email" advances the wizard. Deliberately no in-flow link to the doc editor:
- * navigating away mid-wizard broke the flow, and the sent email's timeline
- * chip already links to the document afterward.
+ * email" advances the wizard; "Edit document" is a placeholder for the jump to
+ * the doc editor, which stays unwired for now (navigating away mid-wizard broke
+ * the flow). The sent email's timeline chip links to the document afterward.
  */
 function BovPreviewModal({
   open,
@@ -169,19 +181,57 @@ function BovPreviewModal({
           <Button variant="ghost" appearance="muted" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={onContinue}>
-            Continue to email
-            <FontAwesomeIcon icon={faArrowRight} />
-          </Button>
+          <div className="d-flex gap-2">
+            {/* Intentionally inert for now: the jump to the document editor
+                isn't wired up (navigating away mid-wizard broke the flow), so
+                this stands in for that route until it is. */}
+            <Button variant="outline">Edit document</Button>
+            <Button variant="primary" onClick={onContinue}>
+              Continue to email
+              <FontAwesomeIcon icon={faArrowRight} />
+            </Button>
+          </div>
         </Modal.Footer>
       </Modal.Content>
     </Modal>
   );
 }
 
+/** Matches the URLs the draft embeds, for the read-only body preview. */
+const URL_SPLIT = /(https?:\/\/[^\s]+)/g;
+const IS_URL = /^https?:\/\//;
+
 /**
- * Step 3 — the AI-drafted cover email with the BOV attached. The draft streams
- * in (any keystroke interrupts and hands over); Send is the user's final call.
+ * The body text with its URLs rendered as styled links. Used by the read-only
+ * preview only — a plain textarea can't style its contents, so the compose box
+ * shows this until the broker clicks in to edit.
+ */
+function bodyWithLinks(text: string) {
+  return text.split(URL_SPLIT).map((part, i) =>
+    IS_URL.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        // Inert on purpose: the shared-document route isn't wired up, and a
+        // real navigation would abandon the wizard mid-send.
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    ),
+  );
+}
+
+/**
+ * Step 3 — the AI-drafted cover email, with the BOV shared as a link in the
+ * body rather than a file attachment. The draft streams into a read-only
+ * preview (so the link renders as a link); clicking it hands over to a
+ * textarea for editing. Send is the user's final call.
  */
 function BovEmailModal({
   open,
@@ -201,6 +251,8 @@ function BovEmailModal({
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [drafting, setDrafting] = useState(false);
+  // The body shows as a styled read-only preview until the broker edits it.
+  const [editing, setEditing] = useState(false);
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const stopDrafting = () => {
@@ -218,6 +270,7 @@ function BovEmailModal({
     }
     setSubject(`${property.name}, preliminary valuation`);
     setBody("");
+    setEditing(false);
     setDrafting(true);
     const target = draftBovEmail(contact, property);
     let i = 0;
@@ -242,7 +295,16 @@ function BovEmailModal({
     setBody(value.replace(/▍/g, ""));
   };
 
-  const fileName = bovFileName(property);
+  /** Clicking the preview hands over to the textarea — and interrupts the
+   * stream if it's still writing, the way typing used to. */
+  const startEditing = () => {
+    if (drafting) {
+      stopDrafting();
+      setDrafting(false);
+    }
+    setEditing(true);
+  };
+
   const canSend = !drafting && subject.trim().length > 0 && body.trim().length > 0;
 
   return (
@@ -270,20 +332,46 @@ function BovEmailModal({
             <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
           </div>
 
-          <Textarea
-            value={drafting ? `${body}▍` : body}
-            onChange={(e) => handleBodyChange(e.target.value)}
-            rows={12}
-          />
+          {editing ? (
+            <Textarea
+              value={body}
+              onChange={(e) => handleBodyChange(e.target.value)}
+              onBlur={() => setEditing(false)}
+              rows={12}
+              autoFocus
+            />
+          ) : (
+            <div className="position-relative">
+              <div
+                className="form-control bov-body-preview"
+                role="textbox"
+                tabIndex={0}
+                aria-label="Email body — click to edit"
+                onClick={startEditing}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    startEditing();
+                  }
+                }}
+              >
+                {bodyWithLinks(body)}
+                {drafting && "▍"}
+              </div>
+              {!drafting && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="bov-body-preview__edit"
+                  onClick={startEditing}
+                >
+                  <FontAwesomeIcon icon={faPencil} />
+                  Edit
+                </Button>
+              )}
+            </div>
+          )}
 
-          <div className="d-flex align-items-center gap-2">
-            <span className="bov-field-label mb-0">Attached</span>
-            <span className="bov-attachment">
-              <FontAwesomeIcon icon={faFilePdf} />
-              {fileName}
-              <span className="bov-attachment__size">2.4 MB</span>
-            </span>
-          </div>
         </Modal.Body>
         <Modal.Footer className="justify-content-between">
           <Button variant="outline" onClick={onBack}>
@@ -402,7 +490,7 @@ export function ContactBovFlow({
         onClose={flow.close}
       />
 
-      {/* Step 3 — AI-drafted email with the BOV attached. */}
+      {/* Step 3 — AI-drafted email carrying the BOV link in its body. */}
       <BovEmailModal
         open={flow.step === "email"}
         contact={contact}

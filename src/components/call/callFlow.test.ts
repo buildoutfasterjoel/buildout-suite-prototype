@@ -21,6 +21,7 @@ import "fake-indexeddb/auto";
 import { callFlow, registerStopForCall, personaNote } from "./callFlow";
 import { useCallStore } from "./useCallStore";
 import { heroInbound } from "./heroInbound";
+import { usePendingCallLog } from "./usePendingCallLog";
 import { generateCallTurn, generateCallRecap } from "#/ai/generate";
 import { addNote } from "#/data/actions";
 import { useDataStore } from "#/data/dataStore";
@@ -36,6 +37,7 @@ describe("callFlow", () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     useCallStore.getState().reset();
+    usePendingCallLog.getState().clear();
     registerStopForCall(null);
   });
 
@@ -84,7 +86,7 @@ describe("callFlow", () => {
     expect(useCallStore.getState().recap?.sentiment).toBe("positive");
   });
 
-  it("arms the deferred financials email off the CONTACT on a hero call's hang-up", async () => {
+  it("queues the log with the hero flag, deferring the financials email to the confirm", async () => {
     const ds = generateDataset();
     useDataStore.setState({
       properties: new Map(ds.properties.map((p) => [p.id, p])),
@@ -107,11 +109,18 @@ describe("callFlow", () => {
     });
     await callFlow.endCall();
 
-    expect(armSpy).toHaveBeenCalledWith(rosa.id);
+    // Nothing is armed or written at hang-up: the pending log carries the hero
+    // flag, and confirming it (GlobalLogCallModal) is what arms the email.
+    expect(armSpy).not.toHaveBeenCalled();
+    expect(addNote).not.toHaveBeenCalled();
+    expect(usePendingCallLog.getState().pending).toMatchObject({
+      contactId: rosa.id,
+      armHeroInbound: true,
+    });
     armSpy.mockRestore();
   });
 
-  it("does NOT arm the financials email on a non-hero call's hang-up", async () => {
+  it("queues a non-hero call's log without the financials-email flag", async () => {
     const ds = generateDataset();
     useDataStore.setState({
       properties: new Map(ds.properties.map((p) => [p.id, p])),
@@ -135,6 +144,10 @@ describe("callFlow", () => {
     await callFlow.endCall();
 
     expect(armSpy).not.toHaveBeenCalled();
+    expect(usePendingCallLog.getState().pending).toMatchObject({
+      contactId: plain.id,
+      armHeroInbound: false,
+    });
     armSpy.mockRestore();
   });
 
@@ -159,7 +172,8 @@ describe("callFlow", () => {
     });
     await endPromise;
 
-    expect(addNote).toHaveBeenCalled(); // logging the completed call is unconditional
+    expect(addNote).not.toHaveBeenCalled(); // nothing is written until the log is confirmed
+    expect(usePendingCallLog.getState().pending).toBeNull(); // no blocking modal for a stale call
     expect(useCallStore.getState().recap).toBeNull(); // stale recap dropped, not surfaced
     expect(useCallStore.getState().phase).toBe("calling"); // new call's phase left untouched
   });

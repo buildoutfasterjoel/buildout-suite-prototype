@@ -9,6 +9,7 @@ import { OmniSearch } from "#/components/search/OmniSearch";
 import { useOmniSearch } from "#/components/search/useOmniSearch";
 import { GlobalCreateDealModal } from "#/components/deals/GlobalCreateDealModal";
 import { GlobalStageGateModal } from "#/components/deals/GlobalStageGateModal";
+import { GlobalLogCallModal } from "#/components/contacts/GlobalLogCallModal";
 import { GlobalNewContactModal } from "#/components/contacts/GlobalNewContactModal";
 import { GlobalAddTaskModal } from "#/components/tasks/GlobalAddTaskModal";
 import { LiveCallBar } from "#/components/call/LiveCallBar";
@@ -43,6 +44,7 @@ export function AppShell() {
         {hydrated && <OmniSearch />}
         {hydrated && <GlobalCreateDealModal />}
         {hydrated && <GlobalStageGateModal />}
+        {hydrated && <GlobalLogCallModal />}
         {hydrated && <GlobalNewContactModal />}
         {hydrated && <GlobalAddTaskModal />}
       </div>

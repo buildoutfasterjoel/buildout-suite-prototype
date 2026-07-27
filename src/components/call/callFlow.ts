@@ -5,11 +5,11 @@ import { voiceEngine } from "#/ai/voice/voiceEngine";
 import { ownerVoiceFor } from "#/ai/voice/ownerVoice";
 import { generateCallTurn, generateCallRecap } from "#/ai/generate";
 import { useAssistant } from "#/ai/useAssistant";
-import { addNote } from "#/data/actions";
-import { contactFullName, contactInitials, todayISO } from "#/components/contacts/contactDisplay";
-import { useContactSession } from "#/components/contacts/useContactSession";
+import { contactFullName, contactInitials } from "#/components/contacts/contactDisplay";
+import { usePendingCallLog } from "./usePendingCallLog";
+import { composeCallNotes } from "./callNotes";
+import { getContact } from "#/data/store";
 import { isHeroCall } from "./heroRecapExtensions";
-import { heroInbound } from "./heroInbound";
 import { signalText } from "#/data/signal";
 
 /**
@@ -36,8 +36,8 @@ let ringLoop: ReturnType<typeof setInterval> | null = null;
 let connectedAt = 0;
 
 /** The owner-persona note is the broker's strategic note only — strip the dated
- * call-log lines addNote() appends on hang-up so a prior call's recap never
- * feeds back into the next call's role-play. */
+ * call-log lines addNote() appends when a call is logged, so a prior call's
+ * recap never feeds back into the next call's role-play. */
 export function personaNote(notes: string | undefined): string {
   if (!notes) return "";
   return notes
@@ -215,30 +215,24 @@ export const callFlow = {
         opportunity: { name: "", address: "" },
       };
     }
-    // Log the call to the contact's record (persists; replaces the old LogCallModal).
-    // Always logged — the call happened — even if a newer call supersedes the UI below.
-    addNote(
-      target.contactId,
-      `Call with ${target.name} — ${recap.sentiment}. ${recap.keyPoints.join(" ")}`.trim(),
-    );
-    // Also drop a "Logged a call" event on the contact's timeline, so a
-    // completed call still reads as a logged call there (the AI recap is the
-    // summary). Restores the pre-AI behavior the LogCallModal used to give.
-    useContactSession.getState().addLog(target.contactId, {
-      kind: "call",
-      body: recap.keyPoints.join(" ").trim() || `Call with ${target.firstName}.`,
-      date: todayISO(),
-      outcome: "Connected",
-    });
-    // A new call/hangup took over during recap generation — don't surface a stale recap.
+    // A new call/hangup took over during recap generation — don't surface a
+    // stale recap, and don't pop a (blocking) log modal for a superseded call.
     if (mySession !== session) return;
     useCallStore.getState().setRecap(recap);
-    // Defer the deal: a hero call arms Rosa's financials email off the CONTACT
-    // record. It self-arrives on her timeline with a "Start a Deal" action —
-    // the deal is created there, not at hang-up.
-    if (isHeroCall(target)) {
-      heroInbound.arm(target.contactId);
-    }
+    // Nothing is written to the CRM here: queue the log with the AI's summary
+    // and let the broker confirm it in the Log Call modal (see
+    // GlobalLogCallModal). That confirm is also what arms the hero's follow-up
+    // email, so Rosa's financials arrive after the call is logged — the deal is
+    // created from that email's "Start a Deal" action, not at hang-up.
+    usePendingCallLog.getState().request({
+      contactId: target.contactId,
+      draft: composeCallNotes({
+        recap,
+        firstName: target.firstName,
+        heroKey: getContact(target.contactId)?.heroKey,
+      }),
+      armHeroInbound: isHeroCall(target),
+    });
     useAssistant.getState().setOpen(true); // sidebar renders + speaks the recap
   },
 };
