@@ -27,6 +27,7 @@ import {
   contactInitials,
 } from "#/components/contacts/contactDisplay";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
+import { lastActivityOf } from "#/components/contacts/contactFilterModel";
 import { activeDealCountsByContact } from "#/data/selectors";
 import { useDataStore } from "#/data/dataStore";
 
@@ -242,12 +243,16 @@ const CONTACT_COLUMNS: ContactColumn[] = [
     id: "lastActive",
     label: "Last Active",
     defaultVisible: false,
-    render: (c) =>
-      c.lastContactedAt ? (
-        <span className="text-nowrap">{formatDateTime(c.lastContactedAt)}</span>
+    // Latest activity of any kind, matching the Last Activity filter — an
+    // inbound voicemail counts, not just the last time we spoke.
+    render: (c) => {
+      const at = lastActivityOf(c);
+      return at ? (
+        <span className="text-nowrap">{formatDateTime(at)}</span>
       ) : (
         <span className="text-muted">Never</span>
-      ),
+      );
+    },
   },
   {
     id: "createdOn",

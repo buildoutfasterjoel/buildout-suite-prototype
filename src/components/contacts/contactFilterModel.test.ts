@@ -4,6 +4,7 @@ import {
   deserializeContactFilters,
   emptyContactFilters,
   filtersEqual,
+  lastActivityOf,
   matchesContactFilters,
   serializeContactFilters,
   type ContactFilterState,
@@ -32,6 +33,46 @@ function contact(over: Partial<Contact> = {}): Contact {
 function filters(over: Partial<ContactFilterState> = {}): ContactFilterState {
   return { ...emptyContactFilters(), ...over };
 }
+
+describe("last-activity filter", () => {
+  const daysAgo = (n: number) =>
+    new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString();
+
+  it("matches on inbound activity newer than the last contact (Rosa's case)", () => {
+    // Last spoke 8 days ago, but her voicemail landed yesterday.
+    const c = contact({
+      lastContactedAt: daysAgo(8),
+      lastActivityAt: daysAgo(1),
+    });
+    expect(matchesContactFilters(c, filters({ lastActivity: "7d" }))).toBe(true);
+  });
+
+  it("still excludes a contact whose activity really is older", () => {
+    const c = contact({ lastContactedAt: daysAgo(8), lastActivityAt: daysAgo(8) });
+    expect(matchesContactFilters(c, filters({ lastActivity: "7d" }))).toBe(false);
+    expect(matchesContactFilters(c, filters({ lastActivity: "30d" }))).toBe(true);
+  });
+
+  it("falls back to lastContactedAt when no activity is recorded", () => {
+    const c = contact({ lastContactedAt: daysAgo(2) });
+    expect(c.lastActivityAt).toBeUndefined();
+    expect(matchesContactFilters(c, filters({ lastActivity: "7d" }))).toBe(true);
+  });
+
+  it("'Never Contacted' stays about conversations, not activity", () => {
+    // An inbound voicemail from someone we've never spoken to: still un-contacted.
+    const c = contact({ lastContactedAt: null, lastActivityAt: daysAgo(1) });
+    expect(matchesContactFilters(c, filters({ lastActivity: "never" }))).toBe(true);
+    // ...and it does count as recent activity for the date buckets.
+    expect(matchesContactFilters(c, filters({ lastActivity: "7d" }))).toBe(true);
+  });
+
+  it("lastActivityOf prefers activity, then last contact, else null", () => {
+    expect(lastActivityOf({ lastContactedAt: "a", lastActivityAt: "b" })).toBe("b");
+    expect(lastActivityOf({ lastContactedAt: "a" })).toBe("a");
+    expect(lastActivityOf({ lastContactedAt: null })).toBeNull();
+  });
+});
 
 describe("listing-inquiries filter", () => {
   const inquirer = contact({

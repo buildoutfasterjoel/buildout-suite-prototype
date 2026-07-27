@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { generateTasks, generateDataset } from './seed'
+import { buildContactTimeline } from '#/components/contacts/timelineArcs'
+import { matchesContactFilters, emptyContactFilters } from '#/components/contacts/contactFilterModel'
 
 const START = '2026-01-01T00:00:00.000Z'
 
@@ -147,5 +149,31 @@ describe('unit sale history seed', () => {
       }
     }
     expect(sawSome).toBe(true) // at least some units carry a sale history
+  })
+})
+
+describe('lastActivityAt', () => {
+  it("matches each hero's newest timeline beat, so the Last Activity filter is true", () => {
+    // The fixtures pin lastActivityDaysAgo by hand (the arcs are hand-authored),
+    // so this walks the real timeline and fails loudly if the two ever drift.
+    const { contacts } = generateDataset()
+    for (const c of contacts.filter((x) => x.heroKey)) {
+      const newest = buildContactTimeline(c, [])
+        .map((e) => Date.parse(e.timestamp))
+        .sort((a, b) => b - a)[0]
+      const activityAt = Date.parse(c.lastActivityAt ?? c.lastContactedAt!)
+      // Same day — the fixture is day-granular, the arc carries a time of day.
+      expect(Math.abs(newest - activityAt)).toBeLessThan(36 * 60 * 60 * 1000)
+    }
+  })
+
+  it("puts Rosa's inbound voicemail inside the past-7-days bucket", () => {
+    const { contacts } = generateDataset()
+    const rosa = contacts.find((c) => c.heroKey === 'rosa')!
+    // We last spoke 8 days ago — outside the bucket…
+    const contactedAge = Date.now() - Date.parse(rosa.lastContactedAt!)
+    expect(contactedAge).toBeGreaterThan(7 * 86_400_000)
+    // …but her voicemail yesterday is what the filter reads.
+    expect(matchesContactFilters(rosa, { ...emptyContactFilters(), lastActivity: '7d' })).toBe(true)
   })
 })

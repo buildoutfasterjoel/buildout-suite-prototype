@@ -6,7 +6,7 @@ import { useCallSession } from "#/components/call/useCallSession";
 import { usePendingCallLog } from "#/components/call/usePendingCallLog";
 import { useDataStore } from "#/data/dataStore";
 import { getContactDetailClient } from "#/data/selectors";
-import { addNote } from "#/data/actions";
+import { addNote, touchContactActivity } from "#/data/actions";
 import { notify } from "#/lib/notify";
 
 /**
@@ -38,6 +38,7 @@ export function GlobalLogCallModal() {
         summary ? ` ${summary}` : ""
       }`,
     );
+    touchContactActivity(contact.id);
     notify({ title: "Call logged", description: contact.firstName });
     // The hero's follow-up email follows the *logged* call, not hang-up, so the
     // story beats stay in order (and can't land behind this modal).

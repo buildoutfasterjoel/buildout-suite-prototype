@@ -27,9 +27,12 @@ import { TYPE_LABELS } from "#/components/properties/propertyDisplay";
 export const ALL = "all";
 
 /**
- * Last-activity buckets, matched against a contact's real `lastContactedAt`
- * date. "within" buckets require a contact date within N days; "over" buckets
- * require it older than N days; `never` matches contacts never contacted.
+ * Last-activity buckets, matched against a contact's most recent activity of any
+ * kind (`lastActivityAt`, falling back to `lastContactedAt`) — so an inbound
+ * voicemail from yesterday counts even if we last spoke a week ago. "within"
+ * buckets require activity within N days; "over" buckets require it older than
+ * N days. `never` is the exception: it reads `lastContactedAt`, because the
+ * option means "never contacted", not "no activity on file".
  */
 export type LastActivityKey =
   | "any"
@@ -54,15 +57,29 @@ export const LAST_ACTIVITY_OPTIONS: { key: LastActivityKey; label: string }[] = 
 
 const DAY = 24 * 60 * 60 * 1000;
 
-/** Whether a contact's last-contact date satisfies a last-activity bucket. */
+/**
+ * A contact's most recent activity: `lastActivityAt` when the record carries one
+ * (inbound events included), otherwise the last time we contacted them. Shared
+ * by the Last Activity filter and the Last Active column so the two agree.
+ */
+export function lastActivityOf(
+  c: Pick<Contact, "lastContactedAt" | "lastActivityAt">,
+): string | null {
+  return c.lastActivityAt ?? c.lastContactedAt;
+}
+
+/** Whether a contact's latest activity satisfies a last-activity bucket. */
 function matchesLastActivity(
-  lastContactedAt: string | null,
+  c: Pick<Contact, "lastContactedAt" | "lastActivityAt">,
   key: LastActivityKey,
 ): boolean {
   if (key === "any") return true;
-  if (key === "never") return lastContactedAt === null;
-  if (lastContactedAt === null) return false; // date buckets need a real date
-  const age = Date.now() - Date.parse(lastContactedAt);
+  // "Never Contacted" is about conversations, not activity: an inbound voicemail
+  // from someone we've never spoken to leaves them un-contacted.
+  if (key === "never") return c.lastContactedAt === null;
+  const activityAt = lastActivityOf(c);
+  if (activityAt === null) return false; // date buckets need a real date
+  const age = Date.now() - Date.parse(activityAt);
   switch (key) {
     case "7d":
       return age <= 7 * DAY;
@@ -184,7 +201,7 @@ export function matchesContactFilters(
 
   if (f.excludeDoNotCall && c.doNotCall) return false;
 
-  if (!matchesLastActivity(c.lastContactedAt, f.lastActivity)) return false;
+  if (!matchesLastActivity(c, f.lastActivity)) return false;
 
   if (f.openTasks === "has" && c.openTaskCount <= 0) return false;
   if (f.openTasks === "none" && c.openTaskCount > 0) return false;

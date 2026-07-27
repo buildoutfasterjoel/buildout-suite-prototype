@@ -1609,6 +1609,13 @@ interface HeroFixture {
   /** Days ago the contact entered the book / was last really touched. */
   createdDaysAgo: number
   lastContactedDaysAgo: number
+  /**
+   * Days ago of the hero's newest timeline beat, when it's more recent than the
+   * last contact — e.g. Rosa's inbound voicemail yesterday vs. the call we made
+   * eight days ago. Feeds `lastActivityAt`; defaults to `lastContactedDaysAgo`.
+   * Keep in step with the arc in timelineHeroes.ts (pinned by seed.test.ts).
+   */
+  lastActivityDaysAgo?: number
   lastTouch: string
   openTaskCount: number
   /** The deal the hero's arc runs on — null for the no-deal-yet stages. */
@@ -1647,6 +1654,9 @@ const HERO_FIXTURES: HeroFixture[] = [
       'Lost her husband last year — the building was their first joint investment. Slow play: no ask until she asks.',
     createdDaysAgo: 160,
     lastContactedDaysAgo: 8,
+    // Her missed call + voicemail landed yesterday — that's the newest activity,
+    // even though the last time we actually spoke was eight days ago.
+    lastActivityDaysAgo: 1,
     lastTouch: 'Logged a call',
     openTaskCount: 1,
     deal: null,
@@ -1683,6 +1693,7 @@ const HERO_FIXTURES: HeroFixture[] = [
       'Owned the storefront since 1979. Will only list with a broker who commits to a preservation-minded buyer.',
     createdDaysAgo: 40,
     lastContactedDaysAgo: 2,
+    lastActivityDaysAgo: 1,
     lastTouch: 'Logged a call',
     openTaskCount: 1,
     deal: { status: 'proposal', side: 'seller', dealType: 'Sale' },
@@ -1702,6 +1713,7 @@ const HERO_FIXTURES: HeroFixture[] = [
       'Numbers guy, not a story guy. Signed-lease pro formas only; report interest in writing.',
     createdDaysAgo: 120,
     lastContactedDaysAgo: 1,
+    lastActivityDaysAgo: 0,
     lastTouch: 'Logged a call',
     openTaskCount: 1,
     deal: { status: 'active', side: 'seller' },
@@ -1720,6 +1732,7 @@ const HERO_FIXTURES: HeroFixture[] = [
       'Out-of-state heir on a 1031 clock. Never tours in person — proxy video, same day. Her CPA re-runs every number.',
     createdDaysAgo: 100,
     lastContactedDaysAgo: 2,
+    lastActivityDaysAgo: 1,
     lastTouch: 'Logged a call',
     openTaskCount: 1,
     deal: { status: 'under-contract', side: 'buyer' },
@@ -1738,6 +1751,7 @@ const HERO_FIXTURES: HeroFixture[] = [
       'Institutional, data-driven, board approves the final buyer. Closed at value — next asset teed up for next year.',
     createdDaysAgo: 210,
     lastContactedDaysAgo: 5,
+    lastActivityDaysAgo: 2,
     lastTouch: 'Logged a call',
     openTaskCount: 0,
     deal: { status: 'closed', side: 'seller' },
@@ -1795,6 +1809,7 @@ function applyHeroes(
       notes: h.notes,
       createdAt: daysAgoIso(h.createdDaysAgo),
       lastContactedAt: daysAgoIso(h.lastContactedDaysAgo),
+      lastActivityAt: daysAgoIso(h.lastActivityDaysAgo ?? h.lastContactedDaysAgo),
       lastTouch: h.lastTouch,
       openTaskCount: h.openTaskCount,
       inquiries: 0,

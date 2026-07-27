@@ -1,4 +1,5 @@
 import { getContact, updateListingUnderwriting } from "#/data/store";
+import { touchContactActivity } from "#/data/actions";
 import { notify } from "#/lib/notify";
 import { playArrivalChime } from "#/lib/chime";
 import { underwritingFromSelection, defaultSelectionFor } from "#/components/deals/underwriting/strategies";
@@ -64,6 +65,7 @@ function onArrive(contactId: string, mySession: number) {
     actionBar: { primary: "Start a Deal", ghosts: ["Reply"] },
     source: "user",
   });
+  touchContactActivity(contactId);
   playArrivalChime();
   notify({ title: `New email from ${from}`, description: subject });
 }
