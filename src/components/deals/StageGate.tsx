@@ -243,10 +243,19 @@ export function StageGate({
 
   // Surface only the required fields the deal hasn't already satisfied. Derived
   // from the initial seeded form so a field stays visible while the user fills it.
-  const visibleFields = useMemo(
-    () => new Set(config ? unsatisfiedRequired(config, initialForm) : []),
-    [config, initialForm],
-  );
+  //
+  // Exception: the agreed price on the Under Contract gate. A deal is created
+  // with `transaction.salePrice` seeded from the listing price, so it always
+  // reads as satisfied and would never render — silently treating the asking
+  // price as what the buyer agreed to. Force it visible so the broker confirms
+  // or replaces it with the real number.
+  const visibleFields = useMemo(() => {
+    const fields = new Set(config ? unsatisfiedRequired(config, initialForm) : []);
+    if (config?.targetStage === "under-contract" && config.required.includes("salePrice")) {
+      fields.add("salePrice");
+    }
+    return fields;
+  }, [config, initialForm]);
 
   const [form, setForm] = useState<GateFormState>(initialForm);
   const [reviewedDocIds, setReviewedDocIds] = useState<Set<string>>(new Set());
@@ -624,8 +633,12 @@ export function StageGate({
 
               {show("salePrice") && (
                 <Field>
-                  <Field.Label>Sale Price</Field.Label>
+                  <Field.Label>Agreed Price</Field.Label>
                   <CurrencyInput value={form.salePrice} onChange={setSalePrice} />
+                  <div className="form-text">
+                    Prefilled with the listing price — change it to the price the
+                    buyer agreed to. Commission recalculates from this figure.
+                  </div>
                 </Field>
               )}
 
