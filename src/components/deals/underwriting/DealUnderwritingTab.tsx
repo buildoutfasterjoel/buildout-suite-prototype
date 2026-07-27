@@ -19,6 +19,7 @@ import { notify } from "#/lib/notify";
 import { UnderwritingDepth } from "../UnderwritingDepth";
 import { UnderwritingProgress } from "./UnderwritingProgress";
 import { UnderwritingPlacementModal } from "./UnderwritingPlacementModal";
+import { SensitivityPlayground } from "./SensitivityPlayground";
 import { computeOccupancyMismatch, type OccupancyMismatch } from "./occupancyMismatch";
 import {
   defaultSelectionFor,
@@ -261,6 +262,9 @@ function UnderwritingBreakdown({
           ))}
         </div>
       </div>
+
+      {/* What-if surface — recalculates off NOI, never writes back. */}
+      <SensitivityPlayground result={result} />
 
       {/* Breakdown tables — one per selected check. */}
       {result.sections.map((s) => (

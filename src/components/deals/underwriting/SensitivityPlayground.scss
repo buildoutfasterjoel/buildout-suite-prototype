@@ -1,0 +1,98 @@
+// Sensitivity playground — accent-blue what-if panel on the underwriting tab.
+// Colors come from the Blueprint palette tokens (same convention as main.scss).
+@use "@buildoutinc/blueprint-tokens/scss/colors" as colors;
+
+.sensitivity {
+  // Solid-track slider: accent up to the thumb (via the --fill custom property
+  // set inline from the current value), grey after.
+  &__slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 20px;
+    margin: 0;
+    background: transparent;
+    cursor: pointer;
+
+    @mixin track {
+      height: 6px;
+      border-radius: 3px;
+      background: linear-gradient(
+        to right,
+        #{colors.$buildout-blue-800} 0,
+        #{colors.$buildout-blue-800} var(--fill, 50%),
+        #{colors.$storm-grey-200} var(--fill, 50%),
+        #{colors.$storm-grey-200} 100%
+      );
+    }
+
+    &::-webkit-slider-runnable-track {
+      @include track;
+    }
+    &::-moz-range-track {
+      @include track;
+    }
+
+    @mixin thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: colors.$buildout-blue-800;
+      border: 2px solid #fff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+      cursor: pointer;
+    }
+
+    &::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      margin-top: -6px; // center the 18px thumb on the 6px track
+      @include thumb;
+    }
+    &::-moz-range-thumb {
+      @include thumb;
+    }
+
+    &:focus-visible {
+      outline: none;
+    }
+    &:focus-visible::-webkit-slider-thumb {
+      box-shadow: 0 0 0 3px colors.$buildout-blue-200;
+    }
+    &:focus-visible::-moz-range-thumb {
+      box-shadow: 0 0 0 3px colors.$buildout-blue-200;
+    }
+  }
+
+  // The live result — a deep accent slab so the number reads as the payoff of
+  // the two controls beside it.
+  &__panel {
+    padding: 14px 18px;
+    border-radius: var(--bp-border-radius-lg, 8px);
+    background: linear-gradient(
+      100deg,
+      #{colors.$buildout-blue-800} 0%,
+      #{colors.$buildout-blue-900} 100%
+    );
+    color: #fff;
+  }
+
+  // Size/weight come from Blueprint's type utilities; only the on-dark color
+  // needs overriding here.
+  &__panel-label {
+    color: rgba(255, 255, 255, 0.82);
+  }
+
+  &__panel-value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+    margin: 2px 0 4px;
+  }
+
+  &__panel-note {
+    color: rgba(255, 255, 255, 0.78);
+  }
+}
