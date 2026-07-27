@@ -1,4 +1,5 @@
 import type { Contact, DealSummary } from "#/data/types";
+import { getListing } from "#/data/store";
 import type { TimelineEvent } from "#/components/contacts/timeline";
 import {
   assoc,
@@ -45,10 +46,20 @@ export function buildContactTimeline(
   deals: DealSummary[],
 ): TimelineEvent[] {
   const ctx = makeCtx(c, deals);
+  // Hero arcs are hand-authored end to end — they carry their own inquiry beats
+  // when the story calls for one.
   const hero = heroTimeline(ctx);
   if (hero) return hero;
 
-  switch (c.relationship) {
+  const arc = arcFor(ctx);
+  // Appended after the arc so these rows get the higher `seq`, which puts an
+  // inquiry above the same-instant "Contact created" row on a lead who is in
+  // the book *because* they inquired.
+  return [...arc, ...inquiryBeats(ctx, arc)];
+}
+
+function arcFor(ctx: ArcCtx): TimelineEvent[] {
+  switch (ctx.c.relationship) {
     case "cold":
       return coldArc(ctx);
     case "nurturing":
@@ -56,12 +67,95 @@ export function buildContactTimeline(
     case "pitching":
       return pitchingArc(ctx);
     case "client":
-      return c.dealStage === "under_contract"
+      return ctx.c.dealStage === "under_contract"
         ? underContractArc(ctx)
         : activeClientArc(ctx);
     case "past_client":
       return pastClientArc(ctx);
   }
+}
+
+// ── Listing inquiries ────────────────────────────────────────────────────────
+
+/** What an inquiry came in through — shown inline with the headline. */
+const INQUIRY_CHANNELS = ["LoopNet", "Buildout site", "Crexi", "Brochure link"];
+
+/**
+ * Fallback for what they asked for, when the record carries no `inquiryDetails`
+ * for that listing. Varies per contact via the id-seeded PRNG.
+ */
+const INQUIRY_ASKS = [
+  "Requested the offering memorandum and current availability.",
+  "Asked for the offering memorandum, rent roll, and a call this week.",
+  "Wants pricing guidance and whether the seller will look at an early offer.",
+  "Requested the full package and asked what the seller needs to see.",
+  "Asked for the OM and whether a tour is possible in the next few days.",
+];
+
+/**
+ * One row per listing the contact has inquired about (`Contact.inquiries` /
+ * `inquiredListingIds` — the same pairing the People table's Inquiries cell and
+ * the Listing Inquiries filter read). Each row associates the listing, so the
+ * timeline links straight through to that deal.
+ *
+ * A contact carrying `inquiryDetails` for the listing shows their actual words
+ * and channel; everyone else gets synthesized copy from the pools above.
+ *
+ * `alreadyAuthored` is the arc's own events: the pitching and buy-side search
+ * arcs open on an inquiry about the contact's *own* deal, so a listing covered
+ * there is skipped rather than shown twice.
+ */
+function inquiryBeats(ctx: ArcCtx, alreadyAuthored: TimelineEvent[]): TimelineEvent[] {
+  const listingIds = ctx.c.inquiredListingIds ?? [];
+  if (listingIds.length === 0) return [];
+
+  const covered = new Set(
+    alreadyAuthored
+      .filter((e) => e.type === "inquiry")
+      .flatMap((e) => (e.associations ?? []).map((a) => a.id)),
+  );
+
+  // Draw a starting point per contact, then step through the pools by row.
+  // Drawing per row would let one contact's two inquiries collide on the same
+  // copy, which reads as a bug when they sit next to each other in the feed.
+  const askFrom = Math.floor(ctx.rng() * INQUIRY_ASKS.length);
+  const channelFrom = Math.floor(ctx.rng() * INQUIRY_CHANNELS.length);
+
+  const createdDays = daysSince(ctx.c.createdAt);
+  const out: TimelineEvent[] = [];
+  listingIds.forEach((listingId, i) => {
+    if (covered.has(listingId)) return;
+    const listing = getListing(listingId);
+    if (!listing) return;
+    // An open inquiry is live interest, so date it recently — but never before
+    // the record itself existed, which is what pins a just-landed lead's
+    // inquiry to the moment they came in.
+    const days = Math.min(createdDays, 10 + i * 7);
+    const detail = ctx.c.inquiryDetails?.[listingId];
+    const over = {
+      direction: "in" as const,
+      title: `Inquired about ${listing.name}`,
+      body: detail?.message ?? INQUIRY_ASKS[(askFrom + i) % INQUIRY_ASKS.length],
+      sourceTag:
+        detail?.channel ??
+        INQUIRY_CHANNELS[(channelFrom + i) % INQUIRY_CHANNELS.length],
+      associations: [
+        { type: "deal" as const, label: listing.name, id: listing.id },
+      ],
+      source: "api" as const,
+    };
+    out.push(
+      mk(
+        ctx,
+        "inquiry",
+        days,
+        // Same-day: land it on the record's own timestamp rather than the
+        // arc's bucketed hour, which could otherwise read as pre-creation.
+        days === 0 ? { ...over, timestamp: ctx.c.createdAt } : over,
+      ),
+    );
+  });
+  return out;
 }
 
 // ── Date scaffolding ─────────────────────────────────────────────────────────

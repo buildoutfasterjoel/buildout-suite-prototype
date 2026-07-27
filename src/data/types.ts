@@ -988,6 +988,13 @@ export interface Contact {
    * the length matches {@link inquiries}. Drives the Listing Inquiries filter.
    */
   inquiredListingIds?: string[]
+  /**
+   * The inquiry itself — what they wrote and how it reached us — keyed by the
+   * listing id from {@link inquiredListingIds}. Optional and sparse: an inquiry
+   * with no entry here gets synthesized copy on the timeline, so only records
+   * whose exact words matter (the demo's inbound leads) need to carry it.
+   */
+  inquiryDetails?: Record<string, { message: string; channel?: string }>
   phoneStatus: PhoneStatus
   doNotCall: boolean
   /** Job title / position, e.g. "Managing Member". */

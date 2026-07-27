@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import "fake-indexeddb/auto";
 import type { Contact, DealSummary, RelationshipStage } from "#/data/types";
 import { generateDataset } from "#/data/seed";
+import { useDataStore } from "#/data/dataStore";
 import { buildContactTimeline } from "#/components/contacts/timelineArcs";
 import {
   needsAttention,
@@ -204,6 +206,139 @@ describe("buildContactTimeline", () => {
       .sort((a, b) => b - a)[0];
     const drift = Math.abs(newest - new Date(c.lastContactedAt!).getTime());
     expect(drift).toBeLessThanOrEqual(2 * DAY_MS);
+  });
+});
+
+describe("listing inquiries as timeline rows", () => {
+  /** Put one real listing in the store — inquiry rows resolve names from it. */
+  function withListing(): { id: string; name: string } {
+    const ds = generateDataset();
+    useDataStore.setState({
+      properties: new Map(ds.properties.map((p) => [p.id, p])),
+      listings: new Map(ds.listings.map((l) => [l.id, l])),
+      contacts: new Map(ds.contacts.map((c) => [c.id, c])),
+    } as never);
+    const l = ds.listings[0];
+    return { id: l.id, name: l.name };
+  }
+
+  it("emits one inquiry row per inquired listing, linked to that listing", () => {
+    const listing = withListing();
+    const events = buildContactTimeline(
+      fakeContact({ inquiries: 1, inquiredListingIds: [listing.id] }),
+      [],
+    );
+    const inquiries = events.filter((e) => e.type === "inquiry");
+    expect(inquiries).toHaveLength(1);
+    expect(inquiries[0].title).toBe(`Inquired about ${listing.name}`);
+    // The link the timeline renders through to the deal.
+    expect(inquiries[0].associations?.[0]?.id).toBe(listing.id);
+    expect(inquiries[0].direction).toBe("in");
+    expect(needsAttention(inquiries[0])).toBe(true);
+  });
+
+  it("skips listings the arc already opened on, so no row shows twice", () => {
+    const listing = withListing();
+    // A buy-side pitching arc authors its own inquiry about `deals[0]`.
+    const deal: DealSummary = { ...fakeDeal, id: listing.id, name: listing.name };
+    const events = buildContactTimeline(
+      fakeContact({
+        relationship: "pitching",
+        side: "buyer",
+        dealStage: "pitching",
+        inquiries: 1,
+        inquiredListingIds: [listing.id],
+      }),
+      [deal],
+    );
+    expect(events.filter((e) => e.type === "inquiry")).toHaveLength(1);
+  });
+
+  it("shows the contact's own words and channel when the record carries them", () => {
+    const listing = withListing();
+    const events = buildContactTimeline(
+      fakeContact({
+        inquiries: 1,
+        inquiredListingIds: [listing.id],
+        inquiryDetails: {
+          [listing.id]: { message: "Send the T-12.", channel: "LoopNet" },
+        },
+      }),
+      [],
+    );
+    const inquiry = events.find((e) => e.type === "inquiry")!;
+    expect(inquiry.body).toBe("Send the T-12.");
+    expect(inquiry.sourceTag).toBe("LoopNet");
+  });
+
+  it("falls back to synthesized copy for inquiries the record doesn't detail", () => {
+    const ds = generateDataset();
+    useDataStore.setState({
+      properties: new Map(ds.properties.map((p) => [p.id, p])),
+      listings: new Map(ds.listings.map((l) => [l.id, l])),
+      contacts: new Map(ds.contacts.map((c) => [c.id, c])),
+    } as never);
+    const [a, b] = ds.listings.slice(0, 2).map((l) => l.id);
+    const events = buildContactTimeline(
+      fakeContact({
+        inquiries: 2,
+        inquiredListingIds: [a, b],
+        // Only the first is detailed.
+        inquiryDetails: { [a]: { message: "Mine.", channel: "Crexi" } },
+      }),
+      [],
+    );
+    const rows = events.filter((e) => e.type === "inquiry");
+    expect(rows).toHaveLength(2);
+    expect(rows[0].body).toBe("Mine.");
+    expect(rows[1].body).not.toBe("Mine.");
+    expect(rows[1].body).toBeTruthy();
+  });
+
+  it("gives a contact's own inquiries distinct copy — two identical rows read as a bug", () => {
+    const ds = generateDataset();
+    useDataStore.setState({
+      properties: new Map(ds.properties.map((p) => [p.id, p])),
+      listings: new Map(ds.listings.map((l) => [l.id, l])),
+      contacts: new Map(ds.contacts.map((c) => [c.id, c])),
+    } as never);
+    const ids = ds.listings.slice(0, 3).map((l) => l.id);
+    // Every contact id, so no single PRNG seed can hide a collision.
+    for (const id of ["c-1", "c-2", "c-3", "c-4", "c-5", "c-6", "c-7"]) {
+      const rows = buildContactTimeline(
+        fakeContact({ id, inquiries: 3, inquiredListingIds: ids }),
+        [],
+      ).filter((e) => e.type === "inquiry");
+      expect(rows).toHaveLength(3);
+      expect(new Set(rows.map((r) => r.body)).size).toBe(3);
+      expect(new Set(rows.map((r) => r.sourceTag)).size).toBe(3);
+    }
+  });
+
+  it("ignores inquiries pointing at a listing that no longer exists", () => {
+    withListing();
+    const events = buildContactTimeline(
+      fakeContact({ inquiries: 1, inquiredListingIds: ["gone-listing"] }),
+      [],
+    );
+    expect(events.some((e) => e.type === "inquiry")).toBe(false);
+  });
+
+  it("pins a just-added lead's inquiry to the moment they came in, above the created row", () => {
+    const listing = withListing();
+    const createdAt = new Date().toISOString();
+    const c = fakeContact({
+      createdAt,
+      lastContactedAt: null,
+      inquiries: 1,
+      inquiredListingIds: [listing.id],
+    });
+    const events = buildContactTimeline(c, []);
+    const inquiry = events.find((e) => e.type === "inquiry")!;
+    const created = events.find((e) => e.type === "created")!;
+    expect(inquiry.timestamp).toBe(createdAt);
+    // Same instant — the newer `seq` is what floats the inquiry to the top.
+    expect(inquiry.seq).toBeGreaterThan(created.seq);
   });
 });
 
