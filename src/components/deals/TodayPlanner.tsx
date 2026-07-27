@@ -323,7 +323,10 @@ export function TodayPlanner({ listing }: { listing: Listing }) {
         <h2 className="fs-large fw-semibold mb-0 flex-grow-1">Planner</h2>
         <HeaderActions listing={listing} />
       </div>
-      <Planner listing={listing} />
+      {/* Keyed on the stage so entering a new one remounts the planner against
+          that stage's freshly-swapped checklist, rather than holding the old
+          list in `Planner`'s local toggle state. */}
+      <Planner listing={listing} key={listing.status} />
     </div>
   );
 }

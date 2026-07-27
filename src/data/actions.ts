@@ -10,6 +10,7 @@ import type { Contact, ContactRole, ContactSource, DealHistoryEntry, DealMarketi
 import { CURRENT_USER, TEAMMATES } from './teammates'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
 import { reconcileContactDealFields } from './contactStage'
+import { generateTasks } from './seed'
 import { notify } from '#/lib/notify'
 
 let _callListSeq = 0
@@ -135,6 +136,18 @@ export function commitStageTransition(input: StageTransitionInput): { deal: List
           ? [...l.tenantContactIds, input.tenantContactId]
           : l.tenantContactIds
 
+      // Entering a new stage swaps the planner over to that stage's checklist.
+      // Advancing implies the outgoing stage's work is done, so its leftovers
+      // don't follow the deal — the planner keeps showing only what's live now,
+      // which is the per-stage curation `generateTasks` exists to provide.
+      // Guarded on a real stage change: publishing in place (requestSetupCompletion
+      // commits with targetStage === current status) must keep the broker's list.
+      const stageChanged = input.targetStage !== l.status
+      const tasks = stageChanged ? generateTasks(input.targetStage, now) : l.tasks
+      const nextCriticalDate = stageChanged
+        ? (tasks.find((t) => t.status !== 'complete' && t.date)?.date ?? null)
+        : l.transaction.nextCriticalDate
+
       return {
         ...l,
         status: input.targetStage,
@@ -143,7 +156,8 @@ export function commitStageTransition(input: StageTransitionInput): { deal: List
         buyerContactIds,
         tenantContactIds,
         publishedAt,
-        transaction: { ...l.transaction, ...input.transaction },
+        tasks,
+        transaction: { ...l.transaction, nextCriticalDate, ...input.transaction },
         marketing,
         financials: input.financials ? { ...l.financials, ...input.financials } : l.financials,
         history: [...l.history, historyEntry],
