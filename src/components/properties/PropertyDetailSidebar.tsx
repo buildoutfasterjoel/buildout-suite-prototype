@@ -48,7 +48,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Activity", href: "activities", icon: faBolt },
       { label: "History", href: "history", icon: faClockRotateLeft },
       { label: "Spaces", href: "spaces", icon: faVectorSquare },
-      { label: "Data", href: "files", icon: faHardDrive },
+      { label: "Files", href: "files", icon: faHardDrive },
       { label: "Underwriting", href: "underwriting", icon: faCalculator },
     ],
   },
