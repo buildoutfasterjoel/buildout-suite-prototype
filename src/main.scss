@@ -1634,39 +1634,6 @@
   color: var(--color-storm-grey-700, #424e62);
 }
 
-.bov-attachment {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  border: 1px solid #f0dfb2;
-  border-radius: 6px;
-  background: #fdf8ec;
-  font-size: 13px;
-  font-weight: 600;
-  color: #8a6d1f;
-
-  &__size {
-    font-weight: 400;
-    color: #a98f4b;
-  }
-}
-
-// The BOV shared as a link in the send-email step (rather than a file chip).
-.bov-doc-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--color-buildout-blue-600, #2350c9);
-  text-decoration: underline;
-
-  &:hover {
-    color: var(--color-buildout-blue-700, #1c3fa0);
-  }
-}
-
 @keyframes ai-draft-pulse {
   0%,
   100% {

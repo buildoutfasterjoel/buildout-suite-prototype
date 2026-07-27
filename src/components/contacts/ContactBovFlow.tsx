@@ -8,7 +8,6 @@ import {
   faArrowLeft,
   faArrowRight,
   faFile,
-  faLink,
   faPaperPlane,
   faSparkle,
   faXmark,
@@ -40,19 +39,31 @@ function bovFileName(property: Property): string {
 const fmtM = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
 
 /**
+ * The shareable link to the deal's BOV document. The owner reads it in place —
+ * always the current version — rather than a pdf snapshot going stale in their
+ * inbox. Built off the property slug so it's stable per building.
+ */
+function bovDocUrl(property: Property): string {
+  return `https://app.buildout.com/documents/${property.slug}-bov`;
+}
+
+/**
  * The AI-drafted cover email for the BOV. Rosa gets her story-specific draft;
- * other contacts get a plausible one built from the deal's numbers. The real
+ * other contacts get a plausible one built from the deal's numbers. The BOV
+ * link sits in the body, where a link in an email actually belongs. The real
  * product would draft from the underwrite output and the broker's notes.
  */
 function draftBovEmail(contact: Contact, property: Property): string {
   const low = fmtM(property.askingPrice * 0.97);
   const high = fmtM(property.askingPrice * 1.05);
+  const link = bovDocUrl(property);
   if (contact.heroKey === "rosa") {
     return (
       "Rosa,\n\nThank you for trusting me with Miguel's files. I went through the T12 and " +
-      "rent roll and put together the quiet first look we talked about — the BOV is " +
-      `linked below. Headline: ${low} – ${high}, anchored on the in-place rent roll with ` +
-      "conservative assumptions and no pressure behind it.\n\nA few things I noticed:\n\n" +
+      "rent roll and put together the quiet first look we talked about. Headline: " +
+      `${low} – ${high}, anchored on the in-place rent roll with conservative assumptions ` +
+      "and no pressure behind it.\n\nHere's the full BOV:\n" +
+      `${link}\n\nA few things I noticed:\n\n` +
       "1. In-place rents run below the corridor's going rate — upside a buyer pays for, not a problem.\n" +
       "2. The T12 carries a one-time roof repair; setting it aside lifts the valuation meaningfully.\n" +
       "3. The ground-floor tenants are steady — an operator buyer would see exactly what Miguel built.\n\n" +
@@ -62,10 +73,10 @@ function draftBovEmail(contact: Contact, property: Property): string {
   }
   return (
     `${contact.firstName},\n\nThanks for sharing the financials. I ran a first-pass ` +
-    `underwrite and linked the BOV below. Headline: ${low} – ${high}, anchored on the ` +
-    "in-place numbers with conservative assumptions.\n\nWorth a quick conversation before " +
-    "you read it — open this week for a 30-minute walk-through? I'd rather get your read " +
-    "before we settle on a price.\n\nJohn"
+    `underwrite — headline: ${low} – ${high}, anchored on the in-place numbers with ` +
+    "conservative assumptions.\n\nHere's the full BOV:\n" +
+    `${link}\n\nWorth a quick conversation before you read it — open this week for a ` +
+    "30-minute walk-through? I'd rather get your read before we settle on a price.\n\nJohn"
   );
 }
 
@@ -194,7 +205,6 @@ function BovEmailModal({
   open,
   contact,
   property,
-  documentName,
   onBack,
   onSend,
   onClose,
@@ -202,8 +212,6 @@ function BovEmailModal({
   open: boolean;
   contact: Contact;
   property: Property;
-  /** The document the underwriting was saved into — the link's label. */
-  documentName: string;
   onBack: () => void;
   onSend: (subject: string, body: string) => void;
   onClose: () => void;
@@ -285,19 +293,6 @@ function BovEmailModal({
             rows={12}
           />
 
-          {/* The BOV goes out as a link to the document, not a file — so the
-              owner always reads the current version. */}
-          <div className="d-flex align-items-center gap-2">
-            <span className="bov-field-label mb-0">Link</span>
-            <a
-              href="#"
-              onClick={(e) => e.preventDefault()}
-              className="bov-doc-link"
-            >
-              <FontAwesomeIcon icon={faLink} />
-              {documentName}
-            </a>
-          </div>
         </Modal.Body>
         <Modal.Footer className="justify-content-between">
           <Button variant="outline" onClick={onBack}>
@@ -416,12 +411,11 @@ export function ContactBovFlow({
         onClose={flow.close}
       />
 
-      {/* Step 3 — AI-drafted email with the BOV linked. */}
+      {/* Step 3 — AI-drafted email carrying the BOV link in its body. */}
       <BovEmailModal
         open={flow.step === "email"}
         contact={contact}
         property={property}
-        documentName={flow.documentName ?? "Broker Opinion of Value"}
         onBack={flow.backToPreview}
         onSend={handleSend}
         onClose={flow.close}
