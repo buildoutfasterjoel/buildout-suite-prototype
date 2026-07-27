@@ -8,6 +8,7 @@ import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Alert } from "@buildoutinc/blueprint-react/ui/Alert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faWandMagicSparkles, faCalculator, faFileLines } from "@fortawesome/pro-regular-svg-icons";
+import { faTriangleExclamation } from "@fortawesome/pro-duotone-svg-icons";
 import type { Listing, UnderwritingResult, UnderwritingResultSection } from "#/data/types";
 import { useDataStore } from "#/data/dataStore";
 import {
@@ -244,6 +245,7 @@ function UnderwritingBreakdown({
 
       {mismatch?.isMismatch && (
         <Alert severity="warning" withIcon>
+          <FontAwesomeIcon icon={faTriangleExclamation} />
           <Alert.Title>Occupancy mismatch</Alert.Title>
           Priced on stated {mismatch.stated}% occupancy; the T-12 actuals show{" "}
           {mismatch.actual}% — the valuation may be overstated at the asking price.

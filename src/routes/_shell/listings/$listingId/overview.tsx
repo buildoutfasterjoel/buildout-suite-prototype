@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Alert } from "@buildoutinc/blueprint-react/ui/Alert";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faTriangleExclamation } from "@fortawesome/pro-duotone-svg-icons";
 import { getStore } from "#/data/store";
 import { publishReadiness, REQUIRED_FIELD_LABEL } from "#/data/stageGates";
 import { requestSetupCompletion } from "#/components/deals/useStageGate";
@@ -31,6 +33,7 @@ function SetupIncompleteBanner({ listing }: { listing: Listing }) {
 
   return (
     <Alert severity="warning" withIcon className="m-3 mb-0">
+      <FontAwesomeIcon icon={faTriangleExclamation} />
       <Alert.Title>Setup incomplete</Alert.Title>
       <div className="d-flex flex-column align-items-start gap-2">
         <span>

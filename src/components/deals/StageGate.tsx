@@ -18,6 +18,7 @@ import {
   faSparkle,
   faUser,
 } from "@fortawesome/pro-regular-svg-icons";
+import { faNote } from "@fortawesome/pro-duotone-svg-icons";
 import type { PropertyStatus } from "#/data/types";
 import {
   getListing,
@@ -719,6 +720,9 @@ export function StageGate({
 
               {config.targetStage === "closed" && (
                 <Alert severity="info" withIcon>
+                  {/* `withIcon` only reserves the gutter (see the theme's
+                      .alert-icon rule) — the icon has to be a direct child. */}
+                  <FontAwesomeIcon icon={faNote} />
                   <Alert.Title>
                     Economics carried from Under Contract
                   </Alert.Title>
