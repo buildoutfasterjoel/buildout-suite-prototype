@@ -1479,68 +1479,27 @@ export function seedCallLists(): CallList[] {
     filters: SerializedContactFilters
   }[] = [
     {
-      id: 'seed-cold-prospects-revive',
-      label: 'Cold Prospects to Revive',
+      id: 'seed-past-clients-no-touch',
+      label: 'Past Clients - No Recent Touch',
       description:
-        "Owners I haven't talked to in 3+ months with nothing scheduled. Time to reach back out before they forget about me.",
-      color: '#3f86f2',
-      createdOn: '2024-05-01',
+        "Everyone I've closed with who I haven't talked to in 3+ months. Good for portfolio check-ins and staying top of mind for the next deal.",
+      color: '#00b8d8',
+      createdOn: '2024-05-08',
       filters: listFilters({
-        relationship: ['cold'],
+        relationship: ['past_client'],
         lastActivity: 'over90',
-        openTasks: 'none',
       }),
     },
     {
-      id: 'seed-active-buyers-no-touch',
-      label: 'Active Buyers - No Recent Touch',
+      id: 'seed-listing-leads-never-contacted',
+      label: 'Listing Leads - Never Contacted',
       description:
-        "My active buyers I haven't checked in with in 1–3 months. Need to follow up before they go cold or buy somewhere else.",
-      color: '#00bc7d',
-      createdOn: '2024-05-14',
-      filters: listFilters({
-        side: ['buyer'],
-        relationship: ['nurturing', 'client'],
-        lastActivity: '30to90',
-        openTasks: 'none',
-      }),
-    },
-    {
-      id: 'seed-pitching-needs-follow-up',
-      label: 'Pitching - Needs Follow-Up',
-      description:
-        "Sellers I'm actively pitching with no next step on the calendar. These are slipping through the cracks - gotta follow up before momentum dies.",
-      color: '#9f55f7',
-      createdOn: '2024-06-02',
-      filters: listFilters({
-        relationship: ['pitching'],
-        openTasks: 'none',
-      }),
-    },
-    {
-      id: 'seed-never-touched-first-outreach',
-      label: 'Never Touched - Needs First Outreach',
-      description:
-        "Contacts in my book I've never actually reached out to. These came in from public records or imports and just sat there.",
+        "Buyers who inquired on one of my listings and have never been called. The freshest interest in the book — and the fastest thing to lose.",
       color: '#fd9a00',
       createdOn: '2024-06-18',
       filters: listFilters({
-        source: ['Public records', 'Manual entry'],
         lastActivity: 'never',
-        relationship: ['cold'],
-      }),
-    },
-    {
-      id: 'seed-past-seller-clients-no-touch',
-      label: 'Past Seller Clients - No Recent Touch',
-      description:
-        "Sellers I've closed with who I haven't talked to in 3+ months. Good for portfolio check-ins and staying top of mind for the next deal.",
-      color: '#00b8d8',
-      createdOn: '2024-06-30',
-      filters: listFilters({
-        relationship: ['past_client'],
-        side: ['seller'],
-        lastActivity: 'over90',
+        listingInquiries: 'any',
       }),
     },
   ]
@@ -1557,29 +1516,19 @@ export function seedCallLists(): CallList[] {
     color: d.color,
   }))
 
-  // Empty static lists — placeholders the user curates by hand.
+  // Empty static list — a placeholder the user curates by hand. No filter rule
+  // to write: "A-List" is the broker's own judgment, not a query.
   const staticLists: CallList[] = [
     {
       id: 'seed-a-list-owners',
       label: 'A-List Owners',
       description:
         'My best owner relationships. People with real portfolios who I expect to do business with again.',
-      createdOn: '2024-05-08',
-      contactIds: [],
-      source: 'user',
-      type: 'static',
-      color: '#ff2630',
-    },
-    {
-      id: 'seed-referral-sources',
-      label: 'Referral Sources',
-      description:
-        'My attorneys, lenders, property managers, and other professionals who send me business. Not buyers or sellers themselves, just the people in my network who open doors.',
       createdOn: '2024-05-22',
       contactIds: [],
       source: 'user',
       type: 'static',
-      color: '#ffd346',
+      color: '#ff2630',
     },
   ]
 
