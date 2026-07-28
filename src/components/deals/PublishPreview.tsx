@@ -98,20 +98,39 @@ export function PublishPreview({
       <div className="border rounded p-3 bg-body-tertiary">
         <div className="fw-semibold mb-2 d-flex align-items-center gap-2">
           <FontAwesomeIcon icon={faImages} className="text-muted" />
-          Photos
+          Media
           <span className="text-muted fw-normal fs-small">
             {model.photos.length}
           </span>
         </div>
         <div className="d-flex gap-2 overflow-x-auto">
           {model.photos.map((src, i) => (
-            <img
+            /* `listingGallery` leads with the deal's hero photo, so index 0 is
+               the image already shown on the deal card — flag it as primary. */
+            <div
               key={src}
-              src={src}
-              alt={`${deal.name} listing photo ${i + 1}`}
-              className="rounded border flex-shrink-0"
-              style={{ width: 108, height: 72, objectFit: "cover" }}
-            />
+              className="position-relative flex-shrink-0"
+              style={{ width: 108, height: 72 }}
+            >
+              <img
+                src={src}
+                alt={
+                  i === 0
+                    ? `${deal.name} primary listing photo`
+                    : `${deal.name} listing photo ${i + 1}`
+                }
+                className="rounded border w-100 h-100"
+                style={{ objectFit: "cover" }}
+              />
+              {i === 0 && (
+                <Badge
+                  variant="primary"
+                  className="position-absolute top-0 start-0 m-1 fs-xs"
+                >
+                  Primary
+                </Badge>
+              )}
+            </div>
           ))}
         </div>
       </div>
