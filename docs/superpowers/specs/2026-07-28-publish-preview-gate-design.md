@@ -32,6 +32,9 @@ publishing transitions only:
 - **Kept:** the gate does not render a wall of pre-filled inputs. The preview
   shows values as *content*, not as form fields.
 - **Reversed for `config.publishes`:** "when nothing is missing, skip the modal."
+  This reversal is deliberate and is the user feedback that prompted this spec —
+  the zero-click publish is what brokers reported as the problem, not a
+  regression to guard against.
   A publish always opens the preview. The zero-click swap was the right call for
   Under Contract and Closed, where the transition is bookkeeping; it is the wrong
   call for the transition that makes a listing public.
@@ -206,7 +209,7 @@ removed for the same reason as the publish gate's.
 | `src/components/deals/StageGate.tsx` | Delegate to `PublishPreview` when `config.publishes`; new footer for that path. Other gates untouched. |
 | `src/components/deals/useStageGate.ts` | Always open for publishing gates; add `pendingPublishDealId`. |
 | `src/components/deals/DealMarketingEditor.tsx` | Render `PublishReviewBanner`. |
-| `src/components/deals/setupIncompleteBanner.test.ts` | Update expectations (see below). |
+| `src/components/deals/useStageGate.test.ts` | Update the satisfied-publish-gate expectation (see below). |
 
 ## Testing
 
@@ -221,10 +224,15 @@ New `publishPreview.test.ts`:
 - Documents pass through, and an empty document list is represented rather than
   dropped.
 
-Updated `setupIncompleteBanner.test.ts`: it drives `requestStageChange` directly
-and currently asserts the silent-commit path for satisfied publish gates. Those
-assertions change to expect the gate to open. The assertions are updated to match
-the new behavior, not weakened or deleted.
+Updated `useStageGate.test.ts`: the case
+`"publishes in place with no modal when the deal is fully populated"` (line 137)
+asserts exactly the silent-commit path this spec removes. It is rewritten to
+expect the preview to open, and to assert the deal is *not* yet published — the
+behavior change, asserted directly rather than weakened or deleted.
+
+`setupIncompleteBanner.test.ts` is **not** affected: it drives
+`commitStageTransition` / `buildTransitionInput` directly and only routes
+`requestStageChange` to the Under Contract gate, which this spec doesn't touch.
 
 Existing `stageGates.test.ts` and `stageGates.lease.test.ts` must pass unchanged —
 the gate rules and commit path don't move.
