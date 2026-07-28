@@ -147,3 +147,26 @@ export function getPhotoUrl(id: string, w = 480, h = 280): string {
     pinnedPhotoResolver?.(id) ?? CRE_PHOTO_IDS[hash(id) % CRE_PHOTO_IDS.length];
   return crePhotoUrl(photo, w, h);
 }
+
+/**
+ * A deterministic photo gallery for a listing. Photos aren't modeled on
+ * `Listing`, so this derives one from the curated CRE pool: it starts at the
+ * deal's own hero photo (so the gallery agrees with the thumbnail shown on
+ * cards, including pinned story properties) and walks the pool from there.
+ */
+export function listingGallery(
+  id: string,
+  count = 5,
+  w = 480,
+  h = 280,
+): string[] {
+  const hero = pinnedPhotoResolver?.(id) ?? CRE_PHOTO_IDS[hash(id) % CRE_PHOTO_IDS.length];
+  const start = CRE_PHOTO_IDS.indexOf(hero);
+  // A pinned photo may live outside the pool — keep it first, then fill.
+  const rest = CRE_PHOTO_IDS.filter((p) => p !== hero);
+  const ordered =
+    start === -1
+      ? [hero, ...rest]
+      : [hero, ...rest.slice(start), ...rest.slice(0, start)];
+  return ordered.slice(0, Math.min(count, ordered.length)).map((p) => crePhotoUrl(p, w, h));
+}

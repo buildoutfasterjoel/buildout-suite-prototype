@@ -1,31 +1,42 @@
-import { Button } from "@buildoutinc/blueprint-react/ui/Button";
-import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faImages, faUpload } from "@fortawesome/pro-regular-svg-icons";
+import { faUpload } from "@fortawesome/pro-regular-svg-icons";
+import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import type { Listing } from "#/data/types";
+import { listingGallery } from "#/components/properties/propertyDisplay";
 import { ListingPageHeader } from "./ListingPageHeader";
 
-/** Media library placeholder for a listing — photo/video uploads aren't modeled yet. */
-export function ListingMedia({ listing: _listing }: { listing: Listing }) {
+/**
+ * Media library for a listing. Uploads aren't modeled yet — the gallery is
+ * derived from the listing id (see `listingGallery`) so it matches the photos
+ * shown on the deal card and in the publish preview.
+ */
+export function ListingMedia({ listing }: { listing: Listing }) {
+  const photos = listingGallery(listing.id, 8, 480, 280);
+
   return (
     <div className="d-flex flex-column gap-4 p-4">
-      <ListingPageHeader title="Media" />
-
-      <Empty className="py-8">
-        <Empty.Media>
-          <FontAwesomeIcon icon={faImages} aria-label="No media" />
-        </Empty.Media>
-        <Empty.Content>
-          <Empty.Title>No media uploaded yet</Empty.Title>
-          Photos and videos for this listing will show up here.
-        </Empty.Content>
-        <Empty.Actions>
-          <Button variant="primary">
+      <ListingPageHeader
+        title="Media"
+        actions={
+          <Button variant="outline">
             <FontAwesomeIcon icon={faUpload} />
             Upload Media
           </Button>
-        </Empty.Actions>
-      </Empty>
+        }
+      />
+
+      <div className="row g-3">
+        {photos.map((src) => (
+          <div key={src} className="col-6 col-md-4 col-xl-3">
+            <img
+              src={src}
+              alt=""
+              className="w-100 rounded border"
+              style={{ aspectRatio: "4 / 3", objectFit: "cover" }}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
