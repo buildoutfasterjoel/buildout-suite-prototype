@@ -389,6 +389,45 @@ describe("hero personas in the seed", () => {
     }
   });
 
+  // Victor's offer-strategy thread is the app's reference example of a deep
+  // email thread, so its shape is pinned: a shallow two-message thread here
+  // would quietly remove the only place the component gets exercised properly.
+  it("gives Victor a deep, multi-turn email thread", () => {
+    const victor = heroes.get("victor")!;
+    const events = buildContactTimeline(victor, []);
+    const convo = events.find((e) => e.type === "conversation")!;
+    const thread = convo.thread!;
+
+    expect(thread.messages.length).toBeGreaterThanOrEqual(5);
+    // The toggle label reads off `count`, so it has to match what it opens.
+    expect(thread.count).toBe(thread.messages.length);
+
+    // Both directions, and at least one same-sender pair — the two shapes a
+    // two-message thread can't produce.
+    const dirs = thread.messages.map((m) => m.direction);
+    expect(new Set(dirs).size).toBe(2);
+    expect(dirs.some((d, i) => i > 0 && d === dirs[i - 1])).toBe(true);
+
+    // Oldest first, and the preview reflects the newest message.
+    const times = thread.messages.map((m) => new Date(m.timestamp).getTime());
+    expect([...times].sort((a, b) => a - b)).toEqual(times);
+    const newest = thread.messages.at(-1)!;
+    expect(thread.latestBody).toBe(newest.body);
+    expect(thread.latestSender).toBe(newest.sender);
+    // Ends inbound, which is what holds the row in "awaiting a reply".
+    expect(newest.direction).toBe("in");
+    expect(needsAttention(convo)).toBe(true);
+
+    // Every message also exists as its own row, so the Emails filter and the
+    // expanded thread agree.
+    const members = events.filter(
+      (e) => e.threadId === convo.threadId && e.type !== "conversation",
+    );
+    expect(members.map((e) => e.messageId).sort()).toEqual(
+      thread.messages.map((m) => m.id).sort(),
+    );
+  });
+
   it("gives every hero at least one recent needs-attention row", () => {
     for (const [key, hero] of heroes) {
       const attention = buildContactTimeline(hero, []).filter(
