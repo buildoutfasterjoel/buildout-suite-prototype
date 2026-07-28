@@ -571,7 +571,11 @@ export function StageGate({
         </Modal.Body>
 
         <Modal.Footer>
-          {config.publishes ? (
+          {/* Cancel aborts the move outright and stays put; "Back to editing"
+              keeps the publish intent alive and sends the broker to the editor.
+              Both are needed — they mean different things. */}
+          <Modal.Close render={<Button variant="ghost">Cancel</Button>} />
+          {config.publishes && (
             <Button
               variant="outline"
               onClick={() => {
@@ -585,8 +589,6 @@ export function StageGate({
             >
               Back to editing
             </Button>
-          ) : (
-            <Modal.Close render={<Button variant="ghost">Cancel</Button>} />
           )}
           <Button variant="primary" disabled={!confirmable} onClick={commit}>
             {config.publishes ? "Approve & Publish" : "Confirm"}

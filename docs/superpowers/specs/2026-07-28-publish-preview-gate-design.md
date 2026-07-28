@@ -171,7 +171,13 @@ Rendered inside the existing `Modal.Body` when `config.publishes`.
 |---|---|
 | **Back to editing** (outline) | Close modal, set `pendingPublishDealId`, navigate to `/listings/$listingId/edit`. Deal stays in Pitching. |
 | **Approve & Publish** (primary) | Disabled until `canConfirm`. Commits via the unchanged `buildTransitionInput` → `commitStageTransition` path. Clears the flag. |
-| **Modal X** | Plain cancel. No navigation, no flag, board unchanged. |
+| **Cancel** (ghost) | Aborts the move. No navigation, no flag, board unchanged. |
+| **Modal X** | Same as Cancel. |
+
+Cancel and "Back to editing" both leave the modal but mean different things —
+abort the move vs. keep the publish intent and go fix something — so the publish
+footer carries both. Relying on the X alone for abort was a mistake in the
+original draft of this spec: an X reads as "dismiss", not "don't move this deal".
 
 ## Return path
 
