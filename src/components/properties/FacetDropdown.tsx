@@ -1,5 +1,5 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown } from "@fortawesome/pro-regular-svg-icons";
+import { faCaretDown } from "@fortawesome/pro-regular-svg-icons";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
@@ -31,7 +31,9 @@ export function FacetDropdown({
           >
             {facet.title}
             {count > 0 && <Badge variant="primary">{count}</Badge>}
-            <FontAwesomeIcon icon={faChevronDown} className="fs-small" />
+            {/* caret-down at default size — matches Blueprint's Select.Trigger,
+                so the facet dropdowns read the same as Sort By beside them. */}
+            <FontAwesomeIcon icon={faCaretDown} />
           </Button>
         }
       />
