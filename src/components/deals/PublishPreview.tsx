@@ -3,10 +3,20 @@ import { Alert } from "@buildoutinc/blueprint-react/ui/Alert";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFile, faImages, faSparkle } from "@fortawesome/pro-regular-svg-icons";
+import {
+  faArrowUpRightFromSquare,
+  faFile,
+  faImages,
+  faSparkle,
+} from "@fortawesome/pro-regular-svg-icons";
 import { faTriangleExclamation } from "@fortawesome/pro-duotone-svg-icons";
 import type { Listing, Property } from "#/data/types";
-import type { GateFormState } from "#/data/stageGates";
+import {
+  REQUIRED_FIELD_LABEL,
+  unsatisfiedRequired,
+  type GateConfig,
+  type GateFormState,
+} from "#/data/stageGates";
 import { buildPublishPreview, type PreviewRow } from "#/data/publishPreview";
 
 function Row({ row }: { row: PreviewRow }) {
@@ -38,6 +48,7 @@ function Row({ row }: { row: PreviewRow }) {
 export function PublishPreview({
   deal,
   property,
+  config,
   form,
   reviewedDocIds,
   onToggleReviewed,
@@ -45,27 +56,29 @@ export function PublishPreview({
 }: {
   deal: Listing;
   property: Property | undefined;
+  config: GateConfig;
   form: GateFormState;
   reviewedDocIds: Set<string>;
   onToggleReviewed: (docId: string, reviewed: boolean) => void;
   dateFields: ReactNode;
 }) {
   const model = buildPublishPreview(deal, property, form);
-  const gaps = model.sections.flatMap((s) =>
-    s.rows.filter((r) => r.status === "missing"),
-  );
+  // Every gating requirement, not just the ones with a row in `model.sections` —
+  // `aiDocsReviewed` and the two listing dates gate `canConfirm` too, but have no
+  // row of their own.
+  const gapLabels = unsatisfiedRequired(config, form).map((f) => REQUIRED_FIELD_LABEL[f]);
 
   return (
     <div className="d-flex flex-column gap-3">
-      {gaps.length > 0 && (
+      {gapLabels.length > 0 && (
         <Alert severity="warning" withIcon>
           {/* `withIcon` only reserves the gutter — the icon must be a direct child. */}
           <FontAwesomeIcon icon={faTriangleExclamation} />
           <Alert.Title>
-            {gaps.length} {gaps.length === 1 ? "item needs" : "items need"} attention
-            before this goes live
+            {gapLabels.length} {gapLabels.length === 1 ? "item needs" : "items need"}{" "}
+            attention before this goes live
           </Alert.Title>
-          {gaps.map((g) => g.label).join(", ")}
+          {gapLabels.join(", ")}
         </Alert>
       )}
 
@@ -80,6 +93,8 @@ export function PublishPreview({
         </div>
       ))}
 
+      {dateFields}
+
       <div className="border rounded p-3 bg-body-tertiary">
         <div className="fw-semibold mb-2 d-flex align-items-center gap-2">
           <FontAwesomeIcon icon={faImages} className="text-muted" />
@@ -89,11 +104,11 @@ export function PublishPreview({
           </span>
         </div>
         <div className="d-flex gap-2 overflow-x-auto">
-          {model.photos.map((src) => (
+          {model.photos.map((src, i) => (
             <img
               key={src}
               src={src}
-              alt=""
+              alt={`${deal.name} listing photo ${i + 1}`}
               className="rounded border flex-shrink-0"
               style={{ width: 108, height: 72, objectFit: "cover" }}
             />
@@ -112,21 +127,33 @@ export function PublishPreview({
           <div className="d-flex flex-column gap-2">
             {model.documents.map((doc) =>
               doc.aiGenerated ? (
-                <label
+                <div
                   key={doc.id}
-                  className="d-flex align-items-center gap-2 mb-0"
-                  style={{ cursor: "pointer" }}
+                  className="d-flex align-items-center justify-content-between gap-2"
                 >
-                  <Checkbox
-                    checked={reviewedDocIds.has(doc.id)}
-                    onCheckedChange={(c) => onToggleReviewed(doc.id, c === true)}
-                  />
-                  <span className="flex-grow-1">{doc.name}</span>
-                  <Badge variant="secondary">
-                    <FontAwesomeIcon icon={faSparkle} />
-                    Review
-                  </Badge>
-                </label>
+                  <label
+                    className="d-flex align-items-center gap-2 mb-0"
+                    style={{ cursor: "pointer" }}
+                  >
+                    <Checkbox
+                      checked={reviewedDocIds.has(doc.id)}
+                      onCheckedChange={(c) => onToggleReviewed(doc.id, c === true)}
+                    />
+                    <span className="flex-grow-1">{doc.name}</span>
+                    <Badge variant="secondary">
+                      <FontAwesomeIcon icon={faSparkle} />
+                      Review
+                    </Badge>
+                  </label>
+                  <a
+                    href={`/listings/${deal.id}/documents`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-nowrap"
+                  >
+                    Open <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+                  </a>
+                </div>
               ) : (
                 <div key={doc.id} className="d-flex align-items-center gap-2">
                   <span className="flex-grow-1">{doc.name}</span>
@@ -136,8 +163,6 @@ export function PublishPreview({
           </div>
         )}
       </div>
-
-      {dateFields}
     </div>
   );
 }

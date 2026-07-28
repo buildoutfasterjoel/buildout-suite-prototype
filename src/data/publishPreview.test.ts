@@ -118,6 +118,34 @@ describe("buildPublishPreview", () => {
     expect(row(deal, "Asking price")?.status).toBe("missing");
   });
 
+  it("flags a missing lease rate", () => {
+    const lease = dealStub({
+      dealType: "Lease",
+      marketing: {
+        ...dealStub().marketing,
+        leaseTitle: "Suite 200",
+        leaseDescription: "Second floor suite",
+        availableSqFt: 2400,
+        spaceLeaseTerms: [{ leaseRate: 0, leaseRateUnits: "SF/Yr" }],
+      },
+    } as Partial<Listing>);
+    expect(row(lease, "Lease rate")?.status).toBe("missing");
+  });
+
+  it("flags a missing available SF", () => {
+    const lease = dealStub({
+      dealType: "Lease",
+      marketing: {
+        ...dealStub().marketing,
+        leaseTitle: "Suite 200",
+        leaseDescription: "Second floor suite",
+        availableSqFt: 0,
+        spaceLeaseTerms: [{ leaseRate: 28, leaseRateUnits: "SF/Yr" }],
+      },
+    } as Partial<Listing>);
+    expect(row(lease, "Available SF")?.status).toBe("missing");
+  });
+
   it("carries the derived photo gallery", () => {
     expect(build(dealStub()).photos).toHaveLength(5);
   });

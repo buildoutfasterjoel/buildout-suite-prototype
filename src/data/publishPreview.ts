@@ -75,8 +75,8 @@ export function buildPublishPreview(
   }
 
   const contentRows: PreviewRow[] = [
-    gatedRow('saleTitle', form, form.saleTitle || null, 'Listing title'),
-    gatedRow('saleDescription', form, form.saleDescription || null, 'Listing description'),
+    gatedRow('saleTitle', form, form.saleTitle || null),
+    gatedRow('saleDescription', form, form.saleDescription || null),
   ]
 
   if (isLease) {
@@ -85,17 +85,15 @@ export function buildPublishPreview(
         'leaseRate',
         form,
         form.leaseRate == null ? null : `$${form.leaseRate.toLocaleString()} ${form.leaseRateUnits}`,
-        'Lease rate',
       ),
       gatedRow(
         'availableSqFt',
         form,
         form.availableSqFt == null ? null : `${form.availableSqFt.toLocaleString()} SF`,
-        'Available SF',
       ),
     )
   } else {
-    contentRows.push(gatedRow('askingPrice', form, money(form.askingPrice), 'Asking price'))
+    contentRows.push(gatedRow('askingPrice', form, money(form.askingPrice)))
   }
 
   contentRows.push(infoRow('Property use', deal.marketing.propertyUse ?? null))

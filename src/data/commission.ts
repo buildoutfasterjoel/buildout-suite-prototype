@@ -40,9 +40,13 @@ export interface CommissionForecast {
  *
  * "Brokerage" is the full deal gross commission. "You" is what the primary
  * internal broker (treated as the logged-in user) actually takes home: their
- * gross commission — already net of the deal's pre-split deductions — times
- * their personal split with the house. Same formula the Financials tab uses for
- * "Broker Split $", so the two agree per deal.
+ * `grossCommission` (this broker's own share of the deal's commission, as
+ * stored on the deal — not guaranteed to be net of every deduction) times
+ * their personal split with the house. Similar to the "Broker Split $"
+ * calculation on the Financials tab, but the two can diverge when a deal's
+ * broker has no `personalSplitPct` set: the Financials tab falls back to 0%,
+ * while this falls back to {@link DEFAULT_PERSONAL_SPLIT_PCT} so the pipeline
+ * forecast still reads as a plausible take-home instead of zero.
  */
 export function commissionForecast(deals: Listing[]): CommissionForecast {
   return deals.reduce<CommissionForecast>(

@@ -10,13 +10,7 @@ import { Popover } from "@buildoutinc/blueprint-react/ui/Popover";
 import { Calendar } from "@buildoutinc/blueprint-react/ui/Calendar";
 import { Alert } from "@buildoutinc/blueprint-react/ui/Alert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faArrowUpRightFromSquare,
-  faRobot,
-  faCalendar,
-  faSparkle,
-  faUser,
-} from "@fortawesome/pro-regular-svg-icons";
+import { faCalendar, faSparkle, faUser } from "@fortawesome/pro-regular-svg-icons";
 import { faNote } from "@fortawesome/pro-duotone-svg-icons";
 import type { PropertyStatus } from "#/data/types";
 import {
@@ -253,6 +247,7 @@ export function StageGate({
 
   const [form, setForm] = useState<GateFormState>(initialForm);
   const [reviewedDocIds, setReviewedDocIds] = useState<Set<string>>(new Set());
+  const navigate = useNavigate();
   // Re-seed when the modal (re)opens for a different deal/target — the accepted
   // React "reset state during render when a key changes" pattern. All hooks are
   // declared above this point, so this stays before the early return.
@@ -263,8 +258,6 @@ export function StageGate({
     setReviewedDocIds(new Set());
     setSeededKey(key);
   }
-
-  const navigate = useNavigate();
 
   if (!deal || !config) return null;
 
@@ -421,6 +414,7 @@ export function StageGate({
                 <PublishPreview
                   deal={deal}
                   property={summaryProperty}
+                  config={config}
                   form={effectiveForm}
                   reviewedDocIds={reviewedDocIds}
                   onToggleReviewed={(docId, reviewed) =>
@@ -434,47 +428,6 @@ export function StageGate({
                   dateFields={listingDateFields}
                 />
               ) : null}
-
-              {!config.publishes && show("aiDocsReviewed") && aiDocs.length > 0 && (
-                <Field>
-                  <Field.Label>
-                    <FontAwesomeIcon icon={faRobot} /> Review AI-generated
-                    documents
-                  </Field.Label>
-                  <div className="d-flex flex-column gap-2 border rounded p-2">
-                    {aiDocs.map((d) => (
-                      <div
-                        key={d.id}
-                        className="d-flex align-items-center justify-content-between gap-2"
-                      >
-                        <label className="d-flex align-items-center gap-2 mb-0">
-                          <Checkbox
-                            checked={reviewedDocIds.has(d.id)}
-                            onCheckedChange={(c) =>
-                              setReviewedDocIds((prev) => {
-                                const next = new Set(prev);
-                                if (c === true) next.add(d.id);
-                                else next.delete(d.id);
-                                return next;
-                              })
-                            }
-                          />
-                          {d.name}
-                        </label>
-                        <a
-                          href={`/listings/${deal.id}/documents`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-nowrap"
-                        >
-                          Open{" "}
-                          <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                </Field>
-              )}
 
               {show("buyerLinked") && (
                 <Field>
@@ -511,41 +464,6 @@ export function StageGate({
                   />
                 </Field>
               )}
-
-              {!config.publishes && show("listedOnDate") && (
-                <Field>
-                  <Field.Label>Listing Executed</Field.Label>
-                  <GateDatePicker
-                    value={form.listedOnDate}
-                    onChange={(v) => set("listedOnDate", v)}
-                    placeholder="Pick a date"
-                  />
-                </Field>
-              )}
-
-              {!config.publishes && show("listingExpirationDate") && (
-                <Field>
-                  <Field.Label>Listing Expires</Field.Label>
-                  <GateDatePicker
-                    value={form.listingExpirationDate}
-                    onChange={(v) => set("listingExpirationDate", v)}
-                    placeholder="Pick a date"
-                  />
-                </Field>
-              )}
-
-              {!config.publishes &&
-                aiDatesFromAgreement &&
-                (show("listedOnDate") || show("listingExpirationDate")) && (
-                  <div className="ai-draft">
-                    <FontAwesomeIcon
-                      icon={faSparkle}
-                      className="ai-draft__icon"
-                    />
-                    AI pulled the executed and expiration dates from{" "}
-                    {agreementDoc.name} — review before publishing.
-                  </div>
-                )}
 
               {show("salePrice") && (
                 <Field>
