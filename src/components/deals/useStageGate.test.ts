@@ -134,15 +134,18 @@ function fullyPublishableActive(): Listing {
 describe("requestSetupCompletion", () => {
   beforeEach(() => useStageGate.getState().close());
 
-  it("publishes in place with no modal when the deal is fully populated", () => {
+  it("opens the preview even when the deal is fully populated", () => {
+    // Publishing always gets a review moment — this is the behavior change from
+    // the 2026-07-28 publish-preview spec, reversing the earlier zero-click swap.
     const deal = fullyPublishableActive();
     requestSetupCompletion(deal.id);
 
-    expect(useStageGate.getState().open).toBe(false);
-    const after = useDataStore.getState().listings.get(deal.id);
-    // Published in place — publishedAt is set, but the stage does not change.
-    expect(after?.publishedAt).toBeTruthy();
-    expect(after?.status).toBe("active");
+    const gate = useStageGate.getState();
+    expect(gate.open).toBe(true);
+    expect(gate.mode).toBe("complete");
+    // Nothing is published until the broker approves in the preview.
+    expect(useDataStore.getState().listings.get(deal.id)?.publishedAt).toBeNull();
+    expect(useDataStore.getState().listings.get(deal.id)?.status).toBe("active");
   });
 
   it("opens the Approve & Publish gate when a publish requirement is missing", () => {
@@ -161,5 +164,86 @@ describe("requestSetupCompletion", () => {
     expect(gate.open).toBe(true);
     expect(gate.mode).toBe("complete");
     expect(useDataStore.getState().listings.get(deal.id)?.publishedAt).toBeNull();
+  });
+});
+
+/** A sell-side Sale deal in Pitching that satisfies every publish requirement. */
+function fullyPublishableProposal(): Listing {
+  const base = [...useDataStore.getState().listings.values()][0];
+  const deal: Listing = {
+    ...base,
+    dealSide: "seller",
+    dealType: "Sale",
+    status: "proposal",
+    publishedAt: null,
+    documents: (base.documents ?? []).filter((d) => !d.aiGenerated),
+    marketing: {
+      ...base.marketing,
+      saleTitle: "Prime Retail Pad",
+      saleDescription: "Corner lot with drive-thru",
+    },
+    financials: { ...base.financials, askingPrice: 1_950_000 },
+    transaction: {
+      ...base.transaction,
+      listedOnDate: "2026-07-01",
+      listingExpirationDate: "2026-12-31",
+    },
+  };
+  putDeal(deal);
+  return deal;
+}
+
+describe("publish transitions always open the preview", () => {
+  beforeEach(() => useStageGate.getState().close());
+
+  it("opens the gate for Pitching -> Active even with no gaps", () => {
+    const deal = fullyPublishableProposal();
+    requestStageChange(deal.id, "active");
+
+    expect(useStageGate.getState().open).toBe(true);
+    expect(useStageGate.getState().targetStage).toBe("active");
+    expect(useDataStore.getState().listings.get(deal.id)?.status).toBe("proposal");
+  });
+
+  it("still commits a buy-side move to Active with no gate", () => {
+    const base = [...useDataStore.getState().listings.values()][0];
+    putDeal({ ...base, dealSide: "buyer", status: "proposal" } as Listing);
+    requestStageChange(base.id, "active");
+
+    expect(useStageGate.getState().open).toBe(false);
+    expect(useDataStore.getState().listings.get(base.id)?.status).toBe("active");
+  });
+
+  it("still commits a non-publishing forward move with no gaps", () => {
+    const deal = sellSideUnderContract("2026-08-01");
+    requestStageChange(deal.id, "closed");
+
+    expect(useStageGate.getState().open).toBe(false);
+    expect(useDataStore.getState().listings.get(deal.id)?.status).toBe("closed");
+  });
+});
+
+describe("pendingPublishDealId", () => {
+  beforeEach(() => useStageGate.getState().close());
+
+  it("starts null", () => {
+    expect(useStageGate.getState().pendingPublishDealId).toBeNull();
+  });
+
+  it("records the deal the broker bailed out of", () => {
+    useStageGate.getState().setPendingPublish("deal-9");
+    expect(useStageGate.getState().pendingPublishDealId).toBe("deal-9");
+  });
+
+  it("clears on demand", () => {
+    useStageGate.getState().setPendingPublish("deal-9");
+    useStageGate.getState().clearPendingPublish();
+    expect(useStageGate.getState().pendingPublishDealId).toBeNull();
+  });
+
+  it("survives close() so the editor banner still shows", () => {
+    useStageGate.getState().setPendingPublish("deal-9");
+    useStageGate.getState().close();
+    expect(useStageGate.getState().pendingPublishDealId).toBe("deal-9");
   });
 });
