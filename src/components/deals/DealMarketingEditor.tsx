@@ -5,6 +5,7 @@ import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { Field } from "@buildoutinc/blueprint-react/ui/Field";
 import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
+import { Alert } from "@buildoutinc/blueprint-react/ui/Alert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
 	faArrowUp,
@@ -17,6 +18,7 @@ import {
 	faHandshake,
 	faSign,
 } from "@fortawesome/pro-regular-svg-icons";
+import { faRocketLaunch } from "@fortawesome/pro-duotone-svg-icons";
 import type {
 	DealBroker,
 	DealPitchFinancials,
@@ -56,6 +58,11 @@ import {
 	Col,
 } from "#/components/listings/edit/fieldWidgets";
 import { ListingFormEditor } from "#/components/listings/edit/ListingFormEditor";
+import {
+	useStageGate,
+	requestStageChange,
+	requestSetupCompletion,
+} from "#/components/deals/useStageGate";
 
 // ── Read-only computed-field display formatting ─────────────────────────────
 /** Rounded, comma-formatted currency-ish figure; blank (not "0") when null. */
@@ -345,6 +352,9 @@ export function DealMarketingEditor({
 			params: { listingId: listing.id },
 		});
 
+	const pendingPublishDealId = useStageGate((s) => s.pendingPublishDealId);
+	const showPublishBanner = pendingPublishDealId === listing.id;
+
 	const [tab, setTab] = useState<"deal" | "listing">("listing");
 	const [propertyDraft, setPropertyDraft] = useState<Property>(property);
 	const patchProperty = (patch: Partial<Property>) =>
@@ -425,7 +435,13 @@ export function DealMarketingEditor({
 
 	const actions = (
 		<>
-			<Button variant="ghost" onClick={back}>
+			<Button
+				variant="ghost"
+				onClick={() => {
+					useStageGate.getState().clearPendingPublish();
+					back();
+				}}
+			>
 				Cancel
 			</Button>
 			<Button variant="primary" onClick={save}>
@@ -436,6 +452,31 @@ export function DealMarketingEditor({
 
 	return (
 		<div className="d-flex flex-column gap-6 p-4">
+			{showPublishBanner && (
+				<Alert severity="info" withIcon>
+					{/* `withIcon` only reserves the gutter — the icon must be a direct child. */}
+					<FontAwesomeIcon icon={faRocketLaunch} />
+					<Alert.Title>Finish up, then publish</Alert.Title>
+					<div className="d-flex align-items-center justify-content-between gap-3">
+						<span>
+							You stepped out of the publish review to make changes. Save them,
+							then head back to publish.
+						</span>
+						<Button
+							variant="primary"
+							size="sm"
+							className="flex-shrink-0"
+							onClick={() =>
+								listing.status === "proposal"
+									? requestStageChange(listing.id, "active")
+									: requestSetupCompletion(listing.id)
+							}
+						>
+							Review &amp; publish
+						</Button>
+					</div>
+				</Alert>
+			)}
 			<div className="d-flex align-items-center justify-content-between gap-3">
 				<h2 className="fs-6 mb-0 fw-semibold">Edit Listing</h2>
 				<div className="d-flex align-items-center gap-2">{actions}</div>
