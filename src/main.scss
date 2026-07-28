@@ -2834,7 +2834,9 @@
   padding-left: 12px;
   border-left: 2px solid var(--color-storm-grey-100, #eceef2);
 
-  &__msg {
+  // One bubble per sender run — consecutive messages from the same person stack
+  // inside it rather than repeating the attribution.
+  &__group {
     padding: 8px 10px;
     border-radius: 8px;
     background: var(--color-storm-grey-50, #f6f7f9);
@@ -2843,23 +2845,31 @@
       background: #eef3fe;
     }
   }
-  &__msg-head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 8px;
+  &__group-head {
     font-size: 12px;
     color: var(--color-storm-grey-900, #22262f);
   }
-  &__msg-time {
-    color: var(--color-storm-grey-600, #506079);
-    font-weight: 400;
+  &__msg {
+    // A follow-up inside the same run gets a hairline instead of a second name,
+    // so the messages stay countable without re-announcing the sender.
+    & + & {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid var(--color-storm-grey-200, #dfe3ea);
+    }
   }
   &__msg-body {
     margin: 2px 0 0;
     font-size: 13px;
     color: var(--color-storm-grey-700, #424e62);
     line-height: 1.5;
+  }
+  &__msg-time {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--color-storm-grey-600, #506079);
+    font-weight: 400;
   }
 }
 

@@ -538,6 +538,49 @@ export function exactTime(iso: string): string {
   });
 }
 
+/**
+ * Compact exact timestamp for a message inside a thread, e.g. "Jul 6, 9:05 AM".
+ * A thread can span weeks, so a relative label ("3w ago") collapses messages
+ * minutes apart into the same string and loses the pacing entirely; the full
+ * {@link exactTime} (with weekday and year) rides along as the tooltip.
+ */
+export function shortDateTime(iso: string): string {
+  return new Date(iso).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+/** A run of consecutive messages from one sender. */
+export interface ThreadMessageGroup {
+  sender: string;
+  direction: "out" | "in";
+  messages: TimelineThreadMessage[];
+}
+
+/**
+ * Collapse runs of consecutive messages from the same sender into one group, so
+ * a follow-up ("one more thing, ten minutes later") reads as a continuation
+ * rather than a second exchange. Order is preserved — pass messages in the order
+ * they'll be displayed, since adjacency is what's being grouped.
+ */
+export function groupThreadMessages(
+  messages: TimelineThreadMessage[],
+): ThreadMessageGroup[] {
+  const groups: ThreadMessageGroup[] = [];
+  for (const m of messages) {
+    const open = groups.at(-1);
+    if (open && open.direction === m.direction && open.sender === m.sender) {
+      open.messages.push(m);
+    } else {
+      groups.push({ sender: m.sender, direction: m.direction, messages: [m] });
+    }
+  }
+  return groups;
+}
+
 export function durationLabel(secs: number): string {
   const m = Math.floor(secs / 60);
   const s = (secs % 60).toString().padStart(2, "0");
