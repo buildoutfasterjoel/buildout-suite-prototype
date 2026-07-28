@@ -30,7 +30,7 @@ export function ListingMedia({ listing }: { listing: Listing }) {
           <div key={src} className="col-6 col-md-4 col-xl-3">
             <img
               src={src}
-              alt=""
+              alt="Listing photo"
               className="w-100 rounded border"
               style={{ aspectRatio: "4 / 3", objectFit: "cover" }}
             />
