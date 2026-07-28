@@ -37,10 +37,13 @@ function ToggleRow({
 }
 
 /**
- * A single floating paintbrush button, docked in the lower-left of the contact
- * detail page. Opens a popover menu holding the prototype's design-comparison
- * switches (accordion style, tab track, timeline filter) so they stay tucked
- * away rather than cluttering the corner. Prototype-only affordance.
+ * A single floating paintbrush button, docked in the lower-left. Opens a popover
+ * menu holding the prototype's design-comparison switches (accordion style, tab
+ * track, timeline filter, deal cards) so they stay tucked away rather than
+ * cluttering the corner. Prototype-only affordance.
+ *
+ * Mounted on both the contact detail page and the Pipeline board — the deal-card
+ * switch applies to both surfaces, so it has to be reachable from either.
  */
 export function ContactDesignToggles() {
   const legacyAccordions = useContactUiPrefs((s) => s.legacyAccordions);
@@ -49,6 +52,8 @@ export function ContactDesignToggles() {
   const setTabTrack = useContactUiPrefs((s) => s.setTabTrack);
   const timelineFilter = useContactUiPrefs((s) => s.timelineFilter);
   const setTimelineFilter = useContactUiPrefs((s) => s.setTimelineFilter);
+  const dealCards = useContactUiPrefs((s) => s.dealCards);
+  const setDealCards = useContactUiPrefs((s) => s.setDealCards);
 
   return (
     <Popover>
@@ -92,6 +97,13 @@ export function ContactDesignToggles() {
             value={timelineFilter === "dropdown" ? "Dropdown" : "Tabs"}
             checked={timelineFilter === "dropdown"}
             onCheckedChange={(c) => setTimelineFilter(c ? "dropdown" : "tabs")}
+          />
+          <Separator />
+          <ToggleRow
+            title="Deal cards"
+            value={dealCards === "new" ? "New" : "Current"}
+            checked={dealCards === "new"}
+            onCheckedChange={(c) => setDealCards(c ? "new" : "current")}
           />
         </Popover.Body>
       </Popover.Content>

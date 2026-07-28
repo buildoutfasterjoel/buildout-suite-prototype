@@ -28,6 +28,8 @@ import { ContactHeroAccessAvatars } from "#/components/contacts/ContactHeroAcces
 import type { ContactShare } from "#/data/teammates";
 import { ContactDealCard } from "#/components/contacts/ContactDealCard";
 import { ContactPropertyCard } from "#/components/contacts/ContactPropertyCard";
+import { NewContactDealCard } from "#/components/contacts/NewContactDealCard";
+import { NewContactPropertyCard } from "#/components/contacts/NewContactPropertyCard";
 import { ContactLinkButton } from "#/components/contacts/ContactLinkButton";
 import { EditContactModal } from "#/components/contacts/EditContactModal";
 import { CreateDealModal } from "#/components/deals/CreateDealModal";
@@ -141,6 +143,9 @@ export function ContactOverviewColumn({
   const showPastDeals = useContactUiPrefs((s) => s.showPastDeals);
   const setShowPastDeals = useContactUiPrefs((s) => s.setShowPastDeals);
   const legacyAccordions = useContactUiPrefs((s) => s.legacyAccordions);
+  // Design-comparison switch (see ContactDesignToggles) — flips the deal and
+  // property cards between the shipped look and the redesigned deal-tile.
+  const newCards = useContactUiPrefs((s) => s.dealCards) === "new";
   // Tag removal is prototype-local, so the list lives in state — but a call
   // session walks contact to contact on the *same* route, so this component
   // doesn't remount. Re-seed from the record whenever the contact underneath it
@@ -412,13 +417,22 @@ export function ContactOverviewColumn({
               </span>
             ) : (
               <>
-                {activeDeals.map((d) => (
-                  <ContactDealCard
-                    key={d.id}
-                    listingId={d.id}
-                    highlight={d.id === spotlightDealId}
-                  />
-                ))}
+                {activeDeals.map((d) =>
+                  newCards ? (
+                    <NewContactDealCard
+                      key={d.id}
+                      listingId={d.id}
+                      contact={contact}
+                      highlight={d.id === spotlightDealId}
+                    />
+                  ) : (
+                    <ContactDealCard
+                      key={d.id}
+                      listingId={d.id}
+                      highlight={d.id === spotlightDealId}
+                    />
+                  ),
+                )}
                 {pastDeals.length > 0 && (
                   <Button
                     variant="ghost"
@@ -433,9 +447,17 @@ export function ContactOverviewColumn({
                   </Button>
                 )}
                 {showPastDeals &&
-                  pastDeals.map((d) => (
-                    <ContactDealCard key={d.id} listingId={d.id} />
-                  ))}
+                  pastDeals.map((d) =>
+                    newCards ? (
+                      <NewContactDealCard
+                        key={d.id}
+                        listingId={d.id}
+                        contact={contact}
+                      />
+                    ) : (
+                      <ContactDealCard key={d.id} listingId={d.id} />
+                    ),
+                  )}
               </>
             )}
           </div>
@@ -460,13 +482,22 @@ export function ContactOverviewColumn({
             {propertyGroups.length === 0 ? (
               <span className="text-muted fs-small">None on file.</span>
             ) : (
-              propertyGroups.map(([propertyId, listingIds]) => (
-                <ContactPropertyCard
-                  key={propertyId}
-                  propertyId={propertyId}
-                  listingIds={listingIds}
-                />
-              ))
+              propertyGroups.map(([propertyId, listingIds]) =>
+                newCards ? (
+                  <NewContactPropertyCard
+                    key={propertyId}
+                    propertyId={propertyId}
+                    listingIds={listingIds}
+                    contactName={contactFullName(contact)}
+                  />
+                ) : (
+                  <ContactPropertyCard
+                    key={propertyId}
+                    propertyId={propertyId}
+                    listingIds={listingIds}
+                  />
+                ),
+              )
             )}
           </div>
         </ContactSection>

@@ -391,6 +391,227 @@
     0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
+// ── Redesigned deal / property card ("deal-tile" in Figma) ──
+// Every measurement here is transcribed from the Figma frames rather than
+// approximated, because the card is dense enough that a 1px drift shows: 12px
+// card padding, 12px between the body and the CTA, 8px between the body's rows,
+// 4px inside the title/meta stack, and 20px-tall badges with 4px padding.
+.deal-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--color-storm-grey-200, #d5dae2);
+  border-radius: 8px; // card/border-radius-card
+  background: var(--bs-card-bg, #fff);
+  cursor: pointer;
+  box-shadow:
+    0 1px 2px -1px rgba(0, 0, 0, 0.1),
+    0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.15s ease;
+
+  &:hover {
+    box-shadow:
+      0 2px 4px -2px rgba(0, 0, 0, 0.1),
+      0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  &__main {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+  &__top {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+  }
+  // Min-width:0 on the flex child is what lets the title truncate instead of
+  // pushing the photo out of the card.
+  &__headings {
+    display: flex;
+    flex: 1 0 0;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+  &__title-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    min-width: 0;
+  }
+  &__type-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    font-size: 14px;
+    color: var(--color-storm-grey-950, #22262f);
+  }
+  &__title {
+    flex: 1 0 0;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 17px; // font/size/large
+    font-weight: 600;
+    line-height: 19px;
+    color: var(--color-storm-grey-950, #22262f);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  &__meta {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+    font-size: 14px;
+    line-height: 19px;
+    white-space: nowrap;
+    color: var(--color-storm-grey-950, #22262f);
+  }
+  &__meta-sep {
+    color: var(--color-storm-grey-500, #62748e);
+  }
+  // A property's facts line is muted throughout — unlike a deal's meta, where
+  // the two figures are the point and only the separator recedes.
+  &__meta--muted {
+    color: var(--color-storm-grey-500, #62748e);
+    white-space: normal;
+  }
+  &__photo {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    object-fit: cover;
+    pointer-events: none;
+  }
+
+  // The badge row bottom-aligns so the gross sits on the badges' baseline even
+  // when they wrap to a second line.
+  &__badges {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+  }
+  &__badges-main {
+    display: flex;
+    flex: 1 0 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  &__badge {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 20px;
+    padding: 4px;
+    border-radius: 6px; // border/radius-md
+    font-size: 12px; // font/size/small
+    font-weight: 600;
+    line-height: 13px;
+    white-space: nowrap;
+  }
+  &__badge-icon {
+    font-size: 10px; // font/size/x-small
+  }
+  // The property card's "Deal" badge: outlined rather than filled, because it's
+  // a link out, not a state.
+  &__badge--outline {
+    border: 1px solid var(--color-storm-grey-200, #d5dae2);
+    background: transparent;
+    color: var(--color-storm-grey-800, #333a47); // badge/muted/outline/color
+
+    &:hover {
+      background: var(--color-storm-grey-50, #f6f7f9);
+    }
+  }
+  &__divider {
+    flex-shrink: 0;
+    width: 1px;
+    height: 20px;
+    background: var(--color-storm-grey-200, #d5dae2);
+  }
+  &__gross {
+    flex-shrink: 0;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 19px;
+    white-space: nowrap;
+    color: var(--color-storm-grey-950, #22262f);
+  }
+
+  // Outlined stage chip: neutral border, stage color carried only by the dot.
+  &__stage-chip {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 20px;
+    padding: 4px;
+    border: 1px solid var(--color-storm-grey-200, #d5dae2);
+    border-radius: 6px;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 13px;
+    white-space: nowrap;
+    color: var(--color-storm-grey-950, #22262f);
+  }
+  &__stage-dot {
+    font-size: 14px;
+  }
+  &__stage-caret {
+    font-size: 12px;
+  }
+
+  // Full-width outline button, Blueprint's outline-button ink.
+  &__cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    height: 28px;
+    padding: 4px 12px;
+    border: 1px solid var(--color-storm-grey-200, #d5dae2);
+    border-radius: 6px;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 19px;
+    color: var(--color-purple-heart-950, #360764);
+
+    &:hover {
+      background: var(--color-storm-grey-50, #f6f7f9);
+    }
+  }
+
+  // Board variant: no photo, relationship badge, stage chip or CTA — and the
+  // title steps down to body size, since the column header carries the context.
+  &--board {
+    gap: 0;
+
+    .deal-tile__title {
+      font-size: 14px;
+    }
+  }
+
+  // The property card is a single row with no CTA, so it needs no outer gap.
+  &--property {
+    gap: 0;
+  }
+}
+
 // Brief spotlight on a just-created deal card (AI Start-a-Deal flow): a purple
 // ring + tint that fades back to the card's resting style, played once.
 .contact-deal-card--spotlight {
