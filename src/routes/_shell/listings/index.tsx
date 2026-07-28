@@ -351,8 +351,9 @@ function PropertyListings() {
   const total = listings.length;
 
   // Commission forecast: each deal's commission discounted by its close
-  // probability (Closed = 100%, Lost ≈ 0%), split between the logged-in broker
-  // ("you") and the whole firm ("brokerage"), over the visible deals. Umbrella
+  // probability (Closed = 100%, Lost ≈ 0%), over the visible deals. "Brokerage"
+  // is the firm's gross; "You" is the logged-in broker's take-home after their
+  // split with the house (see commissionForecast). Umbrella
   // (parent) deals are excluded — their child space listings are the real deals
   // and already carry their own commission. `version` is a dep because
   // `isUmbrella` reads child relationships live.

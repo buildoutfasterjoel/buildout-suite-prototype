@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { Listing } from "./types";
-import { commissionAmountFromPct, commissionPctFromAmount, commissionForecast } from "./commission";
+import {
+  commissionAmountFromPct,
+  commissionPctFromAmount,
+  commissionForecast,
+  DEFAULT_PERSONAL_SPLIT_PCT,
+} from "./commission";
 
 describe("commissionAmountFromPct", () => {
   it("computes whole-dollar commission from a rate", () => {
@@ -39,10 +44,12 @@ function dealStub(
   commissionAmount: number,
   closeProbability: number,
   grossCommission: number | undefined,
+  personalSplitPct?: number,
 ): Listing {
   return {
     transaction: { commissionAmount, closeProbability },
-    internalBrokers: grossCommission == null ? [] : [{ grossCommission }],
+    internalBrokers:
+      grossCommission == null ? [] : [{ grossCommission, personalSplitPct }],
   } as unknown as Listing;
 }
 
@@ -51,22 +58,36 @@ describe("commissionForecast", () => {
     expect(commissionForecast([])).toEqual({ you: 0, brokerage: 0 });
   });
 
-  it("weights a single deal by close probability", () => {
-    // brokerage = 100000 * 0.5 = 50000; you = 60000 * 0.5 = 30000
-    expect(commissionForecast([dealStub(100_000, 50, 60_000)])).toEqual({
-      you: 30_000,
+  it("weights a single deal by close probability and the broker's split", () => {
+    // brokerage = 100000 * 0.5 = 50000; you = 60000 * 0.5 * 0.5 = 15000
+    expect(commissionForecast([dealStub(100_000, 50, 60_000, 50)])).toEqual({
+      you: 15_000,
       brokerage: 50_000,
     });
   });
 
   it("sums weighted figures across multiple deals", () => {
     const deals = [
-      dealStub(100_000, 50, 60_000), // brokerage 50000, you 30000
-      dealStub(200_000, 100, 80_000), // brokerage 200000, you 80000
+      dealStub(100_000, 50, 60_000, 50), // brokerage 50000, you 15000
+      dealStub(200_000, 100, 80_000, 25), // brokerage 200000, you 20000
     ];
     expect(commissionForecast(deals)).toEqual({
-      you: 110_000,
+      you: 35_000,
       brokerage: 250_000,
+    });
+  });
+
+  it("falls back to the default house split when the broker has none", () => {
+    expect(commissionForecast([dealStub(100_000, 100, 60_000)])).toEqual({
+      you: 60_000 * (DEFAULT_PERSONAL_SPLIT_PCT / 100),
+      brokerage: 100_000,
+    });
+  });
+
+  it("takes home nothing on a 0% split", () => {
+    expect(commissionForecast([dealStub(100_000, 100, 60_000, 0)])).toEqual({
+      you: 0,
+      brokerage: 100_000,
     });
   });
 

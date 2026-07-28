@@ -127,6 +127,7 @@ import {
   getContact,
   contactLabel,
 } from './store'
+import { DEFAULT_PERSONAL_SPLIT_PCT } from './commission'
 
 /**
  * The editable subset of a listing the New Listing modal collects — just the
@@ -283,6 +284,9 @@ function currentUserBroker(commissionAmount: number): DealBroker {
     side: 'internal',
     commissionSplitPct: 100,
     grossCommission: commissionAmount,
+    commissionPlan: 'No Plan',
+    // The broker/house split — feeds the "You" figure in the commission forecast.
+    personalSplitPct: DEFAULT_PERSONAL_SPLIT_PCT,
   }
 }
 
