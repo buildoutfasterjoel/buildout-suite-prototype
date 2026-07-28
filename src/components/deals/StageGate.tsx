@@ -334,22 +334,25 @@ export function StageGate({
   // AI-extracted values a broker should confirm at the publish moment.
   const listingDateFields = (
     <div className="d-flex flex-column gap-3">
-      <Field>
-        <Field.Label>Listing Executed</Field.Label>
-        <GateDatePicker
-          value={form.listedOnDate}
-          onChange={(v) => set("listedOnDate", v)}
-          placeholder="Pick a date"
-        />
-      </Field>
-      <Field>
-        <Field.Label>Listing Expires</Field.Label>
-        <GateDatePicker
-          value={form.listingExpirationDate}
-          onChange={(v) => set("listingExpirationDate", v)}
-          placeholder="Pick a date"
-        />
-      </Field>
+      {/* The two dates read as a pair (a term), so they sit side by side. */}
+      <div className="d-flex gap-2">
+        <Field className="flex-grow-1" style={{ minWidth: 0 }}>
+          <Field.Label>Listing Executed</Field.Label>
+          <GateDatePicker
+            value={form.listedOnDate}
+            onChange={(v) => set("listedOnDate", v)}
+            placeholder="Pick a date"
+          />
+        </Field>
+        <Field className="flex-grow-1" style={{ minWidth: 0 }}>
+          <Field.Label>Listing Expires</Field.Label>
+          <GateDatePicker
+            value={form.listingExpirationDate}
+            onChange={(v) => set("listingExpirationDate", v)}
+            placeholder="Pick a date"
+          />
+        </Field>
+      </div>
       {aiDatesFromAgreement && (
         <div className="ai-draft">
           <FontAwesomeIcon icon={faSparkle} className="ai-draft__icon" />
