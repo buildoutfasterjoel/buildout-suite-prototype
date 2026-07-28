@@ -265,11 +265,100 @@ function earl(ctx: ArcCtx): TimelineEvent[] {
 // own comp sale two blocks away. Signed-leases-only pro forma, quiet launch,
 // and now the first offers are landing.
 
+/**
+ * Victor's offer-strategy thread, oldest message first.
+ *
+ * This is the app's reference example of a deep email thread, so it's built to
+ * exercise the real shape rather than the minimum: several turns, both
+ * directions, and a same-sender pair (message 5 is Victor firing off a second
+ * thought minutes after the first). The thread ends on an inbound message,
+ * which is what keeps the row in its "awaiting a reply" attention state — and
+ * it lands before the day-1 call, where he finally signs off.
+ *
+ * `attach` marks a message that carried a file; `openedMeta` is the read-receipt
+ * detail on an outbound row.
+ */
+const VICTOR_THREAD: {
+  day: number;
+  hour: number;
+  min: number;
+  direction: "out" | "in";
+  body: string;
+  attach?: boolean;
+  openedMeta?: string;
+}[] = [
+  {
+    day: 22,
+    hour: 9,
+    min: 5,
+    direction: "out",
+    attach: true,
+    openedMeta: "12m after send",
+    body: "Victor — first written offer is in at 97% of ask, all cash, 30-day close, from one of the vetted buyers we toured. A second group is drafting now. My rec: counter at ask and let the second offer flush out. Terms attached.",
+  },
+  {
+    day: 21,
+    hour: 7,
+    min: 40,
+    direction: "in",
+    body: "Read it twice. Counter at ask — we have the leverage and the second buyer knows it. But I want the fallback math on paper before we send: what does day 60 look like if both walk? Send me that and it's a go.",
+  },
+  {
+    day: 20,
+    hour: 16,
+    min: 25,
+    direction: "out",
+    attach: true,
+    openedMeta: "4m after send",
+    body: "Fallback math attached — day 60 with both parties gone. Carry is $41k/month, we'd re-launch broad in mid-September into a thinner buyer pool, and my honest read is we land 93–95% of ask on that path. Countering at ask risks about two points to protect four.",
+  },
+  {
+    day: 19,
+    hour: 8,
+    min: 12,
+    direction: "in",
+    body: "Model's structurally right. One correction: you used 6.1% on the refi and my last two quotes came in at 6.45%. Re-run it — if the day-60 number still clears 93% I'm comfortable.",
+  },
+  {
+    day: 19,
+    hour: 8,
+    min: 31,
+    direction: "in",
+    body: "Also — hold the counter until the second group's draft is actually in my hands. I'm not bidding against a buyer who hasn't put anything in writing yet.",
+  },
+  {
+    day: 17,
+    hour: 11,
+    min: 50,
+    direction: "out",
+    attach: true,
+    openedMeta: "1h after send",
+    body: "Re-run at 6.45% attached — day 60 comes in at 93.4%, so the case holds. And agreed on sequencing: the counter sits until their draft is in writing. I'll tell their broker we're reviewing, nothing more.",
+  },
+  {
+    day: 14,
+    hour: 7,
+    min: 15,
+    direction: "in",
+    body: "Good. That's the number I needed to see. Send the counter at ask the moment their draft lands — I'll sign off on our next call, but don't wait on me to get it drafted.",
+  },
+];
+
 function victor(ctx: ArcCtx): TimelineEvent[] {
   const dealName = ctx.deal?.name ?? "the property";
   const threadId = `thr-${ctx.c.id}`;
-  const mOut = `Victor — first written offer is in at 97% of ask, all cash, 30-day close, from one of the vetted buyers we toured. A second group is drafting now. My rec: counter at ask and let the second offer flush out. Terms attached.`;
-  const mIn = `Read it twice. Counter at ask — we have the leverage and the second buyer knows it. But I want the fallback math on paper before we send: what does day 60 look like if both walk? Send me that and it's a go.`;
+  const subject = `${dealName}: offer strategy`;
+  // One source for the thread and its member rows, so the "View full thread (N)"
+  // count and the individual emails under the Emails filter can't drift apart.
+  const messages = VICTOR_THREAD.map((m, i) => ({
+    id: `${threadId}-m${i + 1}`,
+    direction: m.direction,
+    sender: m.direction === "out" ? OWNER.name : ctx.ref.name,
+    timestamp: ctx.at(m.day, m.hour, m.min),
+    body: m.body,
+  }));
+  const latest = messages[messages.length - 1];
+  const newest = VICTOR_THREAD[VICTOR_THREAD.length - 1];
   return [
     // Fresh heat on top of the thread — a numbers guy, annoyed, wanting a call.
     mk(ctx, "inbound-email", 0, {
@@ -297,54 +386,43 @@ function victor(ctx: ArcCtx): TimelineEvent[] {
       ],
       associations: assoc(ctx.deal),
     }),
-    mk(ctx, "conversation", 16, {
-      subject: `${dealName}: offer strategy`,
+    // The collapsed thread row, dated to its newest message so it sorts where
+    // the conversation actually stands.
+    mk(ctx, "conversation", newest.day, {
+      subject,
       thread: {
-        count: 2,
-        latestSender: ctx.ref.name,
-        latestBody: mIn,
-        messages: [
-          {
-            id: `${threadId}-m1`,
-            direction: "out",
-            sender: OWNER.name,
-            timestamp: ctx.at(18, 9, 5),
-            body: mOut,
-          },
-          {
-            id: `${threadId}-m2`,
-            direction: "in",
-            sender: ctx.ref.name,
-            timestamp: ctx.at(16, 7, 40),
-            body: mIn,
-          },
-        ],
+        count: messages.length,
+        latestSender: latest.sender,
+        latestBody: latest.body,
+        messages,
       },
       threadId,
       associations: assoc(ctx.deal),
     }),
-    mk(ctx, "email", 18, {
-      direction: "out",
-      subject: `${dealName}: offer strategy`,
-      body: mOut,
-      badges: [
-        { label: "Sent", tone: "sent" },
-        { label: "Opened", tone: "open", meta: "12m after send" },
-      ],
-      threadId,
-      messageId: `${threadId}-m1`,
-      hasAttachment: true,
-      associations: assoc(ctx.deal),
-    }),
-    mk(ctx, "inbound-email", 16, {
-      direction: "in",
-      subject: `Re: ${dealName}: offer strategy`,
-      body: mIn,
-      badges: [{ label: "New", tone: "reply" }],
-      threadId,
-      messageId: `${threadId}-m2`,
-      inReplyTo: `${threadId}-m1`,
-    }),
+    // Each message also as its own row. Hidden under the "All" filter (the
+    // conversation row stands in for them) and shown under "Emails".
+    ...VICTOR_THREAD.map((m, i) =>
+      mk(ctx, m.direction === "out" ? "email" : "inbound-email", m.day, {
+        direction: m.direction,
+        subject: i === 0 ? subject : `Re: ${subject}`,
+        body: m.body,
+        badges:
+          m.direction === "out"
+            ? [
+                { label: "Sent", tone: "sent" as const },
+                { label: "Opened", tone: "open" as const, meta: m.openedMeta },
+              ]
+            : // Only the newest inbound is still unread; the rest are history.
+              i === VICTOR_THREAD.length - 1
+              ? [{ label: "New", tone: "reply" as const }]
+              : undefined,
+        threadId,
+        messageId: messages[i].id,
+        inReplyTo: i > 0 ? messages[i - 1].id : undefined,
+        hasAttachment: m.attach,
+        associations: m.direction === "out" ? assoc(ctx.deal) : undefined,
+      }),
+    ),
     mk(ctx, "task", 20, {
       title: "Completed task",
       body: "Assemble the diligence data room — leases, T12, service contracts",
