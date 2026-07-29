@@ -13,6 +13,10 @@ export type InquiryKind = "docs" | "form";
 
 export interface InquiryFacts {
   kind: InquiryKind;
+  /** How the inquiry reads on a badge — phrased as what they did. */
+  label: string;
+  /** Longer form for the badge's tooltip. */
+  tooltip: string;
   /** Only meaningful for `docs` — a contact form needs no signature. */
   caSigned: boolean;
   channel: string;
@@ -32,10 +36,20 @@ export interface InquiryFacts {
 export function inquiryFacts(contact: Contact, listingId: string): InquiryFacts {
   const detail = contact.inquiryDetails?.[listingId];
   const h = hash(`${contact.id}:${listingId}`);
+  // A written message means they filled in the contact form; otherwise split
+  // the synthesized inquiries between the two registration paths.
+  const kind: InquiryKind = detail?.message
+    ? "form"
+    : h % 2 === 0
+      ? "docs"
+      : "form";
   return {
-    // A written message means they filled in the contact form; otherwise split
-    // the synthesized inquiries between the two registration paths.
-    kind: detail?.message ? "form" : h % 2 === 0 ? "docs" : "form",
+    kind,
+    label: kind === "docs" ? "Requested Documents" : "Completed a Form",
+    tooltip:
+      kind === "docs"
+        ? "Requested access to this listing's secure documents"
+        : "Completed the listing's contact form",
     caSigned: h % 4 !== 0,
     channel: detail?.channel ?? CHANNELS[h % CHANNELS.length],
     message: detail?.message ?? null,

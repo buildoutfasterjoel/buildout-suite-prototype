@@ -1,17 +1,12 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faEnvelope,
-  faFileContract,
-  faUserGroup,
-} from "@fortawesome/pro-regular-svg-icons";
+import { faEnvelope, faFileContract } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact } from "#/data/types";
 import { useDataStore } from "#/data/dataStore";
 import { getPhotoUrl } from "#/components/properties/propertyDisplay";
 import { contactFullName } from "#/components/contacts/contactDisplay";
 import { inquiryFacts } from "#/components/contacts/inquiryFacts";
-import { ContactLinkButton } from "#/components/contacts/ContactLinkButton";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
 
 function medDate(iso: string): string {
@@ -37,10 +32,10 @@ function medDate(iso: string): string {
  *    requests, the CA status — the strongest action cue on the card,
  * 4. the contact's own message, when they wrote one.
  *
- * A plain click anywhere navigates to the listing's Leads tab pre-searched to
- * this contact — that row is where the broker acts on an inquiry (grants
- * access, updates CA/lead status), so the card's primary action lands there
- * rather than dead-ending on the listing overview.
+ * One click path: the whole card navigates to the listing's Leads tab
+ * pre-searched to this contact — seeing the inquiry in context is the only
+ * reason to click from here. The listing name is the exception, linking to the
+ * deal page.
  */
 export function ContactInquiryCard({
   listingId,
@@ -55,7 +50,10 @@ export function ContactInquiryCard({
 
   // Shared with the new-style card so one contact × listing reads the same in
   // either treatment.
-  const { kind, caSigned, channel, message } = inquiryFacts(contact, listingId);
+  const { kind, label, caSigned, channel, message } = inquiryFacts(
+    contact,
+    listingId,
+  );
 
   const openLeadsRow = () =>
     void navigate({
@@ -119,7 +117,7 @@ export function ContactInquiryCard({
           }}
         >
           <FontAwesomeIcon icon={kind === "docs" ? faFileContract : faEnvelope} />
-          {kind === "docs" ? "Document Request" : "Contact Form"}
+          {label}
         </Badge>
         {kind === "docs" && (
           <Badge
@@ -151,14 +149,6 @@ export function ContactInquiryCard({
         </div>
       )}
 
-      {/* Same destination as the row click, spelled out for discoverability. */}
-      <div className="border-top d-flex flex-column">
-        <ContactLinkButton
-          icon={faUserGroup}
-          label="View in Deal Leads"
-          onClick={openLeadsRow}
-        />
-      </div>
     </div>
   );
 }

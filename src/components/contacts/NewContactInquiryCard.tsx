@@ -1,11 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faEnvelope,
-  faFileContract,
-  faUserGroup,
-} from "@fortawesome/pro-regular-svg-icons";
+import { faEnvelope, faFileContract } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact } from "#/data/types";
 import { useDataStore } from "#/data/dataStore";
 import { getProperty } from "#/data/store";
@@ -16,11 +12,7 @@ import {
 } from "#/components/properties/propertyDisplay";
 import { contactFullName } from "#/components/contacts/contactDisplay";
 import { inquiryFacts } from "#/components/contacts/inquiryFacts";
-import { CardBadge, BadgeDivider } from "#/components/deals/DealCardBadges";
-import {
-  relationshipBadge,
-  relationshipTooltip,
-} from "#/components/deals/newCardTokens";
+import { CardBadge } from "#/components/deals/DealCardBadges";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
 
 function medDate(iso: string): string {
@@ -37,13 +29,13 @@ function medDate(iso: string): string {
  * signals (stage chip, side, transaction value, gross) that would read as an
  * active business agreement. An inquiry is a cold contact raising a hand.
  *
- * Badge row mirrors the deal card's shape: the inquiry's own facts lead, then the
- * divider carries the relationship badge — which here is always the filled
- * "Inquired" pill, the one badge in the set that means "not yours yet".
+ * The badge row carries the inquiry's own facts only — what they did, and
+ * whether the CA is signed. No relationship badge, because every card in this
+ * section is an inquiry by definition.
  *
- * A plain click goes to the listing's Leads tab pre-searched to this contact,
- * because that row is where the broker acts on an inquiry (grants access,
- * updates CA/lead status); the listing name links to the deal page instead.
+ * One click path: the whole card goes to the listing's Leads tab pre-searched to
+ * this contact, since seeing their inquiry in context is the only reason to click
+ * from here. The listing name is the one exception, linking to the deal page.
  */
 export function NewContactInquiryCard({
   listingId,
@@ -57,8 +49,10 @@ export function NewContactInquiryCard({
   if (!listing) return null;
 
   const property = getProperty(listing.propertyId);
-  const { kind, caSigned, channel, message } = inquiryFacts(contact, listingId);
-  const inquired = relationshipBadge("inquired");
+  const { kind, label, tooltip, caSigned, channel, message } = inquiryFacts(
+    contact,
+    listingId,
+  );
   const inquiredOn = medDate(contact.createdAt);
 
   const openLeadsRow = () =>
@@ -126,17 +120,15 @@ export function NewContactInquiryCard({
           </div>
         </div>
 
+        {/* No relationship badge here: every card in this section is an inquiry,
+            and the type badge plus the date already say so. */}
         <div className="deal-tile__badges-main">
           <CardBadge
             icon={kind === "docs" ? faFileContract : faEnvelope}
-            label={kind === "docs" ? "Document Request" : "Contact Form"}
+            label={label}
             bg="#eceef2"
             color="#22262f"
-            tooltip={
-              kind === "docs"
-                ? "Requested access to secure documents"
-                : "Completed the listing's contact form"
-            }
+            tooltip={tooltip}
           />
           {/* Only a document request needs a signature, so the CA badge rides
               with that path alone. */}
@@ -152,20 +144,6 @@ export function NewContactInquiryCard({
               }
             />
           )}
-          <span className="deal-tile__rel-group">
-            <BadgeDivider />
-            <CardBadge
-              icon={inquired.icon}
-              label={inquired.label}
-              bg={inquired.bg}
-              color={inquired.color}
-              tooltip={relationshipTooltip(
-                "inquired",
-                contactFullName(contact),
-                inquiredOn,
-              )}
-            />
-          </span>
         </div>
 
         {/* Their own words — often the only qualifying detail on a cold contact. */}
@@ -175,18 +153,6 @@ export function NewContactInquiryCard({
           </p>
         )}
       </div>
-
-      <button
-        type="button"
-        className="deal-tile__cta"
-        onClick={(e) => {
-          e.stopPropagation();
-          openLeadsRow();
-        }}
-      >
-        <FontAwesomeIcon icon={faUserGroup} />
-        View in Deal Leads
-      </button>
     </div>
   );
 }
