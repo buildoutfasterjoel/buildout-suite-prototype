@@ -39,12 +39,7 @@ import {
   SUGGESTED_DOCUMENTS,
   type NewListingDraft,
 } from "#/data/createListing";
-import {
-  createDeal,
-  updateDealMarketing,
-  updateDealTransaction,
-  updateDealFinancials,
-} from "#/data/actions";
+import { createDeal } from "#/data/actions";
 import {
   getPropertyOptions,
   getContactOptions,
@@ -66,10 +61,8 @@ import {
   buildPropertyGroups,
   type PropertyGroup,
 } from "./createDealHelpers";
-import {
-  recommendDocsFromUploads,
-  buildPublishReadyPatch,
-} from "#/data/uploadIntelligence";
+import { recommendDocsFromUploads } from "#/data/uploadIntelligence";
+import { startIngestionState } from "#/data/ingestion";
 import { RelationshipPill } from "#/components/contacts/pills";
 import { UnderwritingDepth } from "./UnderwritingDepth";
 import {
@@ -503,17 +496,12 @@ export function CreateDealModal({
         withDocuments && underwritingOn && underwritingEligible
           ? underwritingFromSelection(underwritingStrategy, underwritingSel)
           : undefined,
+      // Attached files kick off a background ingestion run — the IngestionWatcher
+      // advances it and commits what it finds. Nothing is filled synchronously.
+      ingestion:
+        files.length > 0 ? startIngestionState(files.map((f) => f.name)) : undefined,
     };
     const { deal: listing } = createDeal(draft);
-    // A file upload stands in for the AI reading the broker's documents and
-    // filling the deal out to publish-ready (all but the AI-doc review).
-    if (files.length > 0) {
-      const prop = getProperty(listing.propertyId);
-      const patch = buildPublishReadyPatch(listing, prop);
-      updateDealMarketing(listing.id, patch.marketing);
-      updateDealTransaction(listing.id, patch.transaction);
-      updateDealFinancials(listing.id, patch.financials);
-    }
     onOpenChange(false);
     void navigate({
       to: "/listings/$listingId/overview",

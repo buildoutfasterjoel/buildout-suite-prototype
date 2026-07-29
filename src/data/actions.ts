@@ -6,12 +6,23 @@ import {
   serializeContactFilters,
   type ContactFilterState,
 } from '#/components/contacts/contactFilterModel'
-import type { Contact, ContactRole, ContactSource, DealHistoryEntry, DealMarketing, DealPitchFinancials, DealTask, DealTransaction, Listing, PropertyStatus, Task } from './types'
+import type { Contact, ContactRole, ContactSource, DealHistoryEntry, DealIngestion, DealMarketing, DealPitchFinancials, DealTask, DealTransaction, IngestionFieldKey, Listing, PropertyStatus, Task } from './types'
 import { CURRENT_USER, TEAMMATES } from './teammates'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
 import { reconcileContactDealFields } from './contactStage'
 import { generateTasks } from './seed'
 import { notify } from '#/lib/notify'
+import {
+  advanceStage,
+  allResolved,
+  countFilledFields,
+  deriveConflicts,
+  ingestionPatch,
+  resolveConflict,
+  resolvedPropertyPatch,
+  startIngestionState,
+} from './ingestion'
+import { getProperty, updateProperty } from './store'
 
 let _callListSeq = 0
 
@@ -224,6 +235,102 @@ export function updateDealFinancials(
       financials: { ...l.financials, ...patch },
       updatedAt: new Date().toISOString(),
     })),
+  }
+}
+
+/** Start a background document-ingestion run on a deal. */
+export function startIngestion(dealId: string, documents: string[]): { deal: Listing | null } {
+  return {
+    deal: patchListing(dealId, (l) => ({
+      ...l,
+      ingestion: startIngestionState(documents),
+      updatedAt: new Date().toISOString(),
+    })),
+  }
+}
+
+/** Advance the run to its next stage. No-op when there is no processing run. */
+export function advanceIngestion(dealId: string): { deal: Listing | null } {
+  return {
+    deal: patchListing(dealId, (l) =>
+      l.ingestion && l.ingestion.status === 'processing'
+        ? { ...l, ingestion: advanceStage(l.ingestion), updatedAt: new Date().toISOString() }
+        : l,
+    ),
+  }
+}
+
+/**
+ * Land the run: commit the non-conflicting field values, attach the conflicts the
+ * broker has to arbitrate, and settle on `needs-review` or `complete`. The
+ * disputed fields are deliberately NOT written — that is what blocks publishing.
+ */
+export function finishIngestion(dealId: string): { deal: Listing | null } {
+  const listing = useDataStore.getState().listings.get(dealId)
+  if (!listing?.ingestion || listing.ingestion.status !== 'processing') {
+    return { deal: listing ?? null }
+  }
+  const property = getProperty(listing.propertyId)
+  const conflicts = deriveConflicts(listing, property)
+  const settled: DealIngestion = { ...listing.ingestion, conflicts }
+  const patch = ingestionPatch(listing, property, settled)
+
+  updateDealMarketing(dealId, patch.marketing)
+  updateDealTransaction(dealId, patch.transaction)
+  updateDealFinancials(dealId, patch.financials)
+
+  return {
+    deal: patchListing(dealId, (l) => ({
+      ...l,
+      ingestion: {
+        ...settled,
+        filledCount: countFilledFields(patch),
+        status: conflicts.length > 0 ? 'needs-review' : 'complete',
+      },
+      updatedAt: new Date().toISOString(),
+    })),
+  }
+}
+
+/**
+ * Record the broker's pick for one conflict and commit its value. Occupancy is a
+ * Property field, so it writes through `updateProperty`. Once every conflict is
+ * settled the run flips to `complete`.
+ */
+export function resolveIngestionConflict(
+  dealId: string,
+  fieldKey: IngestionFieldKey,
+  side: 'doc' | 'current',
+): { deal: Listing | null } {
+  const listing = useDataStore.getState().listings.get(dealId)
+  if (!listing?.ingestion) return { deal: listing ?? null }
+
+  const next = resolveConflict(listing.ingestion, fieldKey, side)
+  const property = getProperty(listing.propertyId)
+  const patch = ingestionPatch(listing, property, next)
+
+  updateDealFinancials(dealId, patch.financials)
+  const propPatch = resolvedPropertyPatch(next)
+  if (propPatch.occupancyPct !== undefined && listing.propertyId) {
+    updateProperty(listing.propertyId, propPatch)
+  }
+
+  return {
+    deal: patchListing(dealId, (l) => ({
+      ...l,
+      ingestion: { ...next, status: allResolved(next) ? 'complete' : 'needs-review' },
+      updatedAt: new Date().toISOString(),
+    })),
+  }
+}
+
+/** Clear the run off the deal — the banner's dismiss on the clean path. */
+export function dismissIngestion(dealId: string): { deal: Listing | null } {
+  return {
+    deal: patchListing(dealId, (l) => {
+      const { ingestion: _ingestion, ...rest } = l
+      return { ...rest, updatedAt: new Date().toISOString() } as Listing
+    }),
   }
 }
 

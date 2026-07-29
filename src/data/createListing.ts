@@ -8,6 +8,7 @@ import type {
   DealSide,
   DealBroker,
   DealDocument,
+  DealIngestion,
   DealTask,
   DealUnderwriting,
   SpaceLeaseTerms,
@@ -177,6 +178,8 @@ export interface NewListingDraft {
   suggestedDocuments?: DealDocument[]
   /** The underwriting scope chosen at creation. */
   underwriting?: DealUnderwriting
+  /** A document-ingestion run to start with the deal (create-with-AI). */
+  ingestion?: DealIngestion
 }
 
 /** A candidate document Buildout suggests when a deal is created. */
@@ -593,6 +596,7 @@ export function createProposalListing(draft: NewListingDraft): Listing {
     underwriting: draft.underwriting
       ? { ...draft.underwriting, status: draft.underwriting.status ?? 'generating' }
       : undefined,
+    ingestion: draft.ingestion,
     financials: {
       askingPrice: draft.listingPrice,
       askingPriceUnits: 'total',

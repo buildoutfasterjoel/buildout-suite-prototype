@@ -192,3 +192,150 @@ describe('countFilledFields', () => {
     expect(n).toBe(4)
   })
 })
+
+// ── Store actions ───────────────────────────────────────────────────────────
+import 'fake-indexeddb/auto'
+import { beforeEach } from 'vitest'
+import { useDataStore } from './dataStore'
+import { generateDataset } from './seed'
+import { publishReadiness } from './stageGates'
+import { emptyDraft } from './createListing'
+import {
+  createDeal,
+  finishIngestion,
+  resolveIngestionConflict,
+  advanceIngestion,
+  dismissIngestion,
+} from './actions'
+
+function hydrate() {
+  const ds = generateDataset()
+  useDataStore.setState({
+    properties: new Map(ds.properties.map((p) => [p.id, p])),
+    listings: new Map(ds.listings.map((l) => [l.id, l])),
+    contacts: new Map(ds.contacts.map((c) => [c.id, c])),
+    tasks: new Map(),
+  } as never)
+}
+
+/** A Sale deal created the way the modal creates one with files attached. */
+function createDealWithFiles() {
+  const property = [...useDataStore.getState().properties.values()][0]
+  const { deal } = createDeal({
+    ...emptyDraft(),
+    dealType: 'Sale',
+    dealSide: 'seller',
+    propertyId: property.id,
+    initialStage: 'proposal',
+    documents: [
+      { id: 'f1', name: 'T-12.pdf', uploadedAt: new Date().toISOString() },
+      { id: 'f2', name: 'Rent Roll.xlsx', uploadedAt: new Date().toISOString() },
+    ],
+    ingestion: startIngestionState(['T-12.pdf', 'Rent Roll.xlsx']),
+  })
+  return deal
+}
+
+function current(dealId: string) {
+  return useDataStore.getState().listings.get(dealId)!
+}
+
+describe('ingestion actions', () => {
+  beforeEach(hydrate)
+
+  it('creates the deal already processing at stage 0', () => {
+    const deal = createDealWithFiles()
+    expect(current(deal.id).ingestion?.status).toBe('processing')
+    expect(current(deal.id).ingestion?.stage).toBe(0)
+  })
+
+  it('advanceIngestion walks the stages and is a no-op once finished', () => {
+    const deal = createDealWithFiles()
+    advanceIngestion(deal.id)
+    expect(current(deal.id).ingestion?.stage).toBe(1)
+    finishIngestion(deal.id)
+    const stageAfterFinish = current(deal.id).ingestion?.stage
+    advanceIngestion(deal.id)
+    expect(current(deal.id).ingestion?.stage).toBe(stageAfterFinish)
+  })
+
+  it('finishIngestion lands needs-review with conflicts and a filled count', () => {
+    const deal = createDealWithFiles()
+    finishIngestion(deal.id)
+    const ing = current(deal.id).ingestion!
+    expect(ing.status).toBe('needs-review')
+    expect(ing.conflicts).toHaveLength(3)
+    expect(ing.filledCount).toBeGreaterThan(0)
+  })
+
+  it('withholds the disputed asking price so the deal is not publish-ready', () => {
+    const deal = createDealWithFiles()
+    finishIngestion(deal.id)
+    expect(publishReadiness(current(deal.id)).missing).toContain('askingPrice')
+  })
+
+  it('fills the non-disputed gate fields even while conflicts are open', () => {
+    const deal = createDealWithFiles()
+    finishIngestion(deal.id)
+    const missing = publishReadiness(current(deal.id)).missing
+    expect(missing).not.toContain('saleTitle')
+    expect(missing).not.toContain('saleDescription')
+    expect(missing).not.toContain('listedOnDate')
+  })
+
+  it('resolveIngestionConflict writes the picked value', () => {
+    const deal = createDealWithFiles()
+    finishIngestion(deal.id)
+    const priceConflict = current(deal.id).ingestion!.conflicts.find(
+      (c) => c.fieldKey === 'askingPrice',
+    )!
+
+    resolveIngestionConflict(deal.id, 'askingPrice', 'doc')
+    expect(current(deal.id).financials.askingPrice).toBe(priceConflict.docRaw)
+    expect(current(deal.id).ingestion?.status).toBe('needs-review')
+  })
+
+  it('writes an occupancy pick through to the property record', () => {
+    const deal = createDealWithFiles()
+    finishIngestion(deal.id)
+    const occConflict = current(deal.id).ingestion!.conflicts.find(
+      (c) => c.fieldKey === 'occupancyPct',
+    )!
+
+    resolveIngestionConflict(deal.id, 'occupancyPct', 'doc')
+    const property = useDataStore.getState().properties.get(current(deal.id).propertyId)!
+    expect(property.occupancyPct).toBe(occConflict.docRaw)
+  })
+
+  it('flips to complete on the last resolution, leaving only the doc review outstanding', () => {
+    const deal = createDealWithFiles()
+    finishIngestion(deal.id)
+    resolveIngestionConflict(deal.id, 'askingPrice', 'doc')
+    resolveIngestionConflict(deal.id, 'noi', 'current')
+    resolveIngestionConflict(deal.id, 'occupancyPct', 'doc')
+
+    expect(current(deal.id).ingestion?.status).toBe('complete')
+    expect(publishReadiness(current(deal.id)).missing).toEqual(['aiDocsReviewed'])
+  })
+
+  it('dismissIngestion clears the run off the deal', () => {
+    const deal = createDealWithFiles()
+    finishIngestion(deal.id)
+    dismissIngestion(deal.id)
+    expect(current(deal.id).ingestion).toBeUndefined()
+  })
+
+  it('leaves a deal created without files alone', () => {
+    const property = [...useDataStore.getState().properties.values()][0]
+    const { deal } = createDeal({
+      ...emptyDraft(),
+      dealType: 'Sale',
+      dealSide: 'seller',
+      propertyId: property.id,
+      initialStage: 'proposal',
+    })
+    expect(current(deal.id).ingestion).toBeUndefined()
+    finishIngestion(deal.id)
+    expect(current(deal.id).ingestion).toBeUndefined()
+  })
+})
