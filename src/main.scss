@@ -1766,10 +1766,29 @@
 }
 
 // Ingestion conflict arbitration — a warning ring on the field plus the
-// doc-vs-record row beneath it. Tokens only, no hardcoded palette.
+// doc-vs-record row beneath it. Design tokens only, no hardcoded palette.
+// NOTE: Blueprint's theme emits its custom properties under the `--bp-*` prefix,
+// NOT Bootstrap's default `--bs-*`. A `var(--bs-warning)` here silently resolves
+// to nothing and the declaration is dropped, so every token below is `--bp-*`.
 .ingestion-conflict__input {
-  border-color: var(--bs-warning);
-  box-shadow: 0 0 0 1px var(--bs-warning);
+  border-color: var(--bp-warning);
+  box-shadow: 0 0 0 1px var(--bp-warning);
+
+  // This file is unlayered, so its declarations outrank the theme's
+  // `.form-control:focus` inside `@layer components` — cascade layers lose to
+  // unlayered CSS at any specificity. Without an explicit focus state the
+  // resting warning ring above therefore sits on top of the theme's focus ring
+  // and swallows it, and Bootstrap's `outline: 0` leaves nothing behind, so a
+  // keyboard user tabbing into a disputed field would see no change at all.
+  // Restore a real outline: it draws outside the border box, cannot be
+  // overpainted by the warning box-shadow, and reads as clearly distinct from
+  // the resting state while the warning border stays put.
+  &:focus {
+    border-color: var(--bp-warning);
+    box-shadow: 0 0 0 1px var(--bp-warning);
+    outline: 2px solid var(--bp-primary);
+    outline-offset: 2px;
+  }
 }
 
 .ingestion-conflict__row {
@@ -1780,17 +1799,19 @@
   flex-wrap: wrap;
   margin-top: 0.5rem;
   padding: 0.5rem 0.75rem;
-  border: 1px solid var(--bs-border-color);
+  border: 1px solid var(--bp-border-color);
   border-radius: 6px;
 }
 
 // Tab count badge. Blueprint's Badge has no `warning` variant, so tint an
-// `outline` badge through the same custom properties the theme uses. Declared
-// after the theme import, so it wins at equal specificity over `.badge-outline`
-// (which sets `border-color` directly, hence the direct declaration here).
+// `outline` badge through the theme's own badge custom properties. Unlayered, so
+// it wins over `.badge-outline` in `@layer components` regardless of order or
+// specificity — but `.badge-outline` sets `border-color` as a plain declaration
+// rather than through a custom property, hence the direct override here.
 .ingestion-conflict__badge {
-  --bs-badge-color: var(--bs-warning);
-  border-color: var(--bs-warning);
+  --bp-badge-bg: var(--bp-warning-bg-subtle);
+  --bp-badge-color: var(--bp-warning-text-emphasis);
+  border-color: var(--bp-warning-border-subtle);
 }
 
 // ── BOV flow (contact page): stepper, cover preview, email chrome ──

@@ -29,6 +29,11 @@ function saleDeal(overrides: Partial<Listing> = {}): Listing {
   } as unknown as Listing
 }
 
+/** The same deal as a Lease — its editor has no Financials section. */
+function leaseDeal(overrides: Partial<Listing> = {}): Listing {
+  return saleDeal({ dealType: 'Lease', ...overrides })
+}
+
 function property(overrides: Partial<Property> = {}): Property {
   return {
     id: 'prop-1',
@@ -95,15 +100,46 @@ describe('deriveConflicts', () => {
   })
 
   it('gives every conflict a non-empty value and differing sides', () => {
-    for (const prop of [property(), undefined]) {
-      for (const c of deriveConflicts(saleDeal(), prop)) {
-        expect(c.docValue).not.toBe('')
-        expect(c.currentValue).not.toBe('')
-        expect(c.docRaw).not.toBe(c.currentRaw)
-        expect(c.label.length).toBeGreaterThan(0)
-        expect(c.docSource.length).toBeGreaterThan(0)
+    for (const deal of [saleDeal(), leaseDeal()]) {
+      for (const prop of [property(), undefined]) {
+        const conflicts = deriveConflicts(deal, prop)
+        expect(conflicts.length).toBeGreaterThan(0)
+        for (const c of conflicts) {
+          expect(c.docValue).not.toBe('')
+          expect(c.currentValue).not.toBe('')
+          expect(c.docRaw).not.toBe(c.currentRaw)
+          expect(c.label.length).toBeGreaterThan(0)
+          expect(c.docSource.length).toBeGreaterThan(0)
+        }
       }
     }
+  })
+
+  it('keeps all three for a Sale, in askingPrice → noi → occupancyPct order', () => {
+    for (const prop of [property(), undefined]) {
+      expect(deriveConflicts(saleDeal(), prop).map((c) => c.fieldKey)).toEqual([
+        'askingPrice',
+        'noi',
+        'occupancyPct',
+      ])
+    }
+  })
+
+  it('derives occupancy only for a Lease — its editor hides Financials, so an asking-price or NOI conflict would be unresolvable', () => {
+    for (const prop of [property(), undefined]) {
+      const conflicts = deriveConflicts(leaseDeal(), prop)
+      expect(conflicts.map((c) => c.fieldKey)).toEqual(['occupancyPct'])
+    }
+  })
+
+  it('lets a Lease run reach all-resolved from the one field it can edit', () => {
+    let ing = {
+      ...startIngestionState(['Rent Roll.xlsx']),
+      conflicts: deriveConflicts(leaseDeal(), property()),
+    }
+    expect(unresolvedCount(ing)).toBe(1)
+    ing = resolveConflict(ing, 'occupancyPct', 'doc')
+    expect(allResolved(ing)).toBe(true)
   })
 })
 
@@ -218,12 +254,12 @@ function hydrate() {
   } as never)
 }
 
-/** A Sale deal created the way the modal creates one with files attached. */
-function createDealWithFiles() {
+/** A deal created the way the modal creates one with files attached. */
+function createDealWithFiles(dealType: Listing['dealType'] = 'Sale') {
   const property = [...useDataStore.getState().properties.values()][0]
   const { deal } = createDeal({
     ...emptyDraft(),
-    dealType: 'Sale',
+    dealType,
     dealSide: 'seller',
     propertyId: property.id,
     initialStage: 'proposal',
@@ -316,6 +352,21 @@ describe('ingestion actions', () => {
 
     expect(current(deal.id).ingestion?.status).toBe('complete')
     expect(publishReadiness(current(deal.id)).missing).toEqual(['aiDocsReviewed'])
+  })
+
+  it('raises only the resolvable occupancy conflict on a Lease', () => {
+    const deal = createDealWithFiles('Lease')
+    finishIngestion(deal.id)
+    const ing = current(deal.id).ingestion!
+    expect(ing.status).toBe('needs-review')
+    expect(ing.conflicts.map((c) => c.fieldKey)).toEqual(['occupancyPct'])
+  })
+
+  it('lets a Lease run reach complete, so its banner is never stuck', () => {
+    const deal = createDealWithFiles('Lease')
+    finishIngestion(deal.id)
+    resolveIngestionConflict(deal.id, 'occupancyPct', 'doc')
+    expect(current(deal.id).ingestion?.status).toBe('complete')
   })
 
   it('dismissIngestion clears the run off the deal', () => {
