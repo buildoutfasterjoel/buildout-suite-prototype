@@ -67,16 +67,20 @@ export interface SyndicationChannel {
   lastUpdatedAt: string | null;
   /** Days until the channel drops the listing. Direct channels only. */
   expiresInDays: number | null;
-  /** Deep link into the channel's admin console. Direct channels only. */
-  adminUrl: string | null;
 }
 
 /** Deterministic per-listing syndication status. */
 export interface ListingSyndication {
   /** Empty array means no channels are configured for this listing at all. */
   channels: SyndicationChannel[];
-  /** Issues limiting syndication reach, e.g. missing syndicatable photos. */
+  /** Media problems affecting syndication, worst first. */
   blockingIssues: string[];
+  /**
+   * True when at least one issue makes networks reject the listing outright
+   * rather than merely reducing its reach — the difference between "fewer
+   * leads" and "this will not publish at all".
+   */
+  blocksSyndication: boolean;
 }
 
 /** The listing fields syndication needs — a full `Listing` satisfies this. */
@@ -87,8 +91,19 @@ export type SyndicationListing = Pick<
 
 const DAY_MS = 86_400_000;
 
+/**
+ * Reach problem: the listing still syndicates, it just performs worse. Copy is
+ * verbatim from the live product.
+ */
 const PHOTO_ISSUE =
   "Properties without syndicatable photos are not accepted by all partners and generate fewer leads. Check the appropriate boxes in the Media forms for any syndicatable photos you own.";
+
+/**
+ * Rejection problem: several networks require a primary photo and refuse the
+ * listing without one, so the push fails rather than publishing degraded.
+ */
+const PRIMARY_MEDIA_ISSUE =
+  "No photo is set as primary. Several networks require one and will reject this listing outright — syndication fails rather than publishing without it. Set a primary photo in the Media forms.";
 
 /**
  * A timestamp `days` and `minutes` after the listing went live. Returns null
@@ -119,7 +134,7 @@ export function getListingSyndication(
   const h = hash(listing.id);
 
   if (h % 6 === 0) {
-    return { channels: [], blockingIssues: [] };
+    return { channels: [], blockingIssues: [], blocksSyndication: false };
   }
 
   const anchor = listing.publishedAt
@@ -155,7 +170,6 @@ export function getListingSyndication(
           ? afterPublish(anchor, updateDelay, minutes)
           : null,
         expiresInDays: null,
-        adminUrl: null,
       };
     }
 
@@ -197,16 +211,28 @@ export function getListingSyndication(
         publishedAt && state !== "off"
           ? 1 + ((h >>> (i + 20)) % 210)
           : null,
-      adminUrl:
-        state === "not-available"
-          ? null
-          : `https://admin.buildout.com/syndication/${def.id}/${listing.slug}`,
     };
   });
 
-  const blockingIssues = h % 4 === 0 ? [PHOTO_ISSUE] : [];
+  // Each issue gets its own prefix-salted hash rather than a slice of `h`.
+  // Two reasons, both learned the hard way:
+  //   - `h % 3` and `h % 4` share factors with the `h % 6` empty-roster branch
+  //     above, so the two issues could never co-occur at all.
+  //   - `hash` multiplies by 31 per character, so late characters only reach the
+  //     low bits. Ids sharing a prefix (`listing-1`, `listing-2`, …) have nearly
+  //     identical high bits, making `h >>> 24` a near-constant. Salting as a
+  //     prefix keeps the varying part of the id in the low bits where it counts.
+  //
+  // Rejection first: a broker who reads one line should read the one that stops
+  // the listing publishing, not the one that costs it leads.
+  const blocksSyndication = hash(`primary-media:${listing.id}`) % 3 === 0;
+  const blockingIssues: string[] = [];
+  if (blocksSyndication) blockingIssues.push(PRIMARY_MEDIA_ISSUE);
+  if (hash(`syndicatable-photos:${listing.id}`) % 4 === 0) {
+    blockingIssues.push(PHOTO_ISSUE);
+  }
 
-  return { channels, blockingIssues };
+  return { channels, blockingIssues, blocksSyndication };
 }
 
 /**

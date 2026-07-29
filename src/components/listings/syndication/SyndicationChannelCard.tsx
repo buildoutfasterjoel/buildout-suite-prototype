@@ -112,9 +112,6 @@ export function SyndicationChannelCard({
       {!unavailable && (
         <div className="d-flex flex-wrap gap-3 fs-small mt-1">
           <ChannelLink href={websiteUrl}>{websiteLabel}</ChannelLink>
-          {channel.adminUrl && (
-            <ChannelLink href={channel.adminUrl}>Admin Dash</ChannelLink>
-          )}
         </div>
       )}
     </div>

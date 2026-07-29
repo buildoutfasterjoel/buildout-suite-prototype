@@ -14,7 +14,6 @@ function channel(over: Partial<SyndicationChannel> = {}): SyndicationChannel {
     publishedAt: '2026-07-22T12:00:00.000Z',
     lastUpdatedAt: '2026-07-22T14:21:00.000Z',
     expiresInDays: 177,
-    adminUrl: 'https://admin.buildout.com/syndication/commercialedge-network/oak-street-plaza',
     ...over,
   }
 }
@@ -105,14 +104,14 @@ describe('channelMetaSegments — direct', () => {
 
   it('explains an unavailable channel instead of showing empty dates', () => {
     expect(
-      texts(channel({ state: 'not-available', active: false, publishedAt: null, lastUpdatedAt: null, expiresInDays: null, adminUrl: null })),
+      texts(channel({ state: 'not-available', active: false, publishedAt: null, lastUpdatedAt: null, expiresInDays: null })),
     ).toEqual(['No connection configured for this account'])
   })
 })
 
 describe('channelMetaSegments — email', () => {
   const email = (over: Partial<SyndicationChannel> = {}) =>
-    channel({ id: 'loopnet', name: 'LoopNet', delivery: 'email', state: 'update-sent', expiresInDays: null, adminUrl: null, ...over })
+    channel({ id: 'loopnet', name: 'LoopNet', delivery: 'email', state: 'update-sent', expiresInDays: null, ...over })
 
   it('reports the last send and refuses to imply the posting is confirmed', () => {
     expect(texts(email())).toEqual([

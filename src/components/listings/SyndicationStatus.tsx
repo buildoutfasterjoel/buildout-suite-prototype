@@ -43,7 +43,7 @@ export function SyndicationStatus({ listing }: { listing: Listing }) {
   // new `listing.publishedAt`, and the channel list must track it instead of
   // going stale. Only the user's own toggles are kept in state; they're
   // reapplied on top of the fresh base list below.
-  const { channels: baseChannels, blockingIssues } =
+  const { channels: baseChannels, blockingIssues, blocksSyndication } =
     getListingSyndication(listing);
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
   const channels = baseChannels.map((c) =>
@@ -137,12 +137,22 @@ export function SyndicationStatus({ listing }: { listing: Listing }) {
             {blockingIssues.length > 0 && (
               <Alert severity="warning" withIcon>
                 <FontAwesomeIcon icon={faTriangleExclamation} />
-                <Alert.Title>Photos limit your reach</Alert.Title>
-                <ul className="mb-0 ps-3">
-                  {blockingIssues.map((issue) => (
-                    <li key={issue}>{issue}</li>
-                  ))}
-                </ul>
+                <Alert.Title>
+                  {blocksSyndication
+                    ? "Media issues will block syndication"
+                    : "Photos limit your reach"}
+                </Alert.Title>
+                {/* A lone issue reads as a sentence, the way the live product
+                    shows it; bullets only earn their keep once there are two. */}
+                {blockingIssues.length === 1 ? (
+                  blockingIssues[0]
+                ) : (
+                  <ul className="mb-0 ps-3">
+                    {blockingIssues.map((issue) => (
+                      <li key={issue}>{issue}</li>
+                    ))}
+                  </ul>
+                )}
               </Alert>
             )}
 

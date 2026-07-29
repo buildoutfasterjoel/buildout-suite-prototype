@@ -114,13 +114,10 @@ describe('invariants', () => {
     }
   })
 
-  it('never gives an email channel an expiration or admin console', () => {
+  it('never gives an email channel an expiration', () => {
     for (const l of populatedListings()) {
       for (const c of getListingSyndication(l).channels) {
-        if (c.delivery === 'email') {
-          expect(c.expiresInDays).toBeNull()
-          expect(c.adminUrl).toBeNull()
-        }
+        if (c.delivery === 'email') expect(c.expiresInDays).toBeNull()
       }
     }
   })
@@ -141,13 +138,45 @@ describe('invariants', () => {
     }
   })
 
-  it('builds admin URLs on a Buildout host, scoped to the listing slug', () => {
+  it('never exposes an admin console link', () => {
+    // Admin dashboards are internal-only, so no channel may carry one.
     for (const l of populatedListings()) {
       for (const c of getListingSyndication(l).channels) {
-        if (c.adminUrl) {
-          expect(c.adminUrl).toBe(`https://admin.buildout.com/syndication/${c.id}/${l.slug}`)
-        }
+        expect(c).not.toHaveProperty('adminUrl')
       }
+    }
+  })
+
+  it('flags blocksSyndication exactly when the primary-photo issue is present', () => {
+    for (const l of populatedListings()) {
+      const { blockingIssues, blocksSyndication } = getListingSyndication(l)
+      const hasPrimaryIssue = blockingIssues.some((i) => i.includes('set as primary'))
+      expect(blocksSyndication).toBe(hasPrimaryIssue)
+    }
+  })
+
+  it('leads with the rejection issue, not the reach issue', () => {
+    const both = populatedListings().filter(
+      (l) => getListingSyndication(l).blockingIssues.length === 2,
+    )
+    // A listing carrying both must exist, or this asserts nothing.
+    expect(both.length).toBeGreaterThan(0)
+    for (const l of both) {
+      expect(getListingSyndication(l).blockingIssues[0]).toContain('set as primary')
+    }
+  })
+
+  it('reports no issues and no block when no channels are configured', () => {
+    // hash % 6 === 0 short-circuits before issues are rolled.
+    const empty = Array.from({ length: 200 }, (_, i) => listingFor(`listing-${i}`)).filter(
+      (l) => getListingSyndication(l).channels.length === 0,
+    )
+    expect(empty.length).toBeGreaterThan(0)
+    for (const l of empty) {
+      expect(getListingSyndication(l)).toMatchObject({
+        blockingIssues: [],
+        blocksSyndication: false,
+      })
     }
   })
 
@@ -175,7 +204,6 @@ describe('withChannelActive', () => {
       publishedAt: '2026-07-22T12:00:00.000Z',
       lastUpdatedAt: '2026-07-22T14:21:00.000Z',
       expiresInDays: 177,
-      adminUrl: 'https://admin.buildout.com/syndication/commercialedge-network/oak-street-plaza',
       ...over,
     }
   }
@@ -193,7 +221,7 @@ describe('withChannelActive', () => {
   })
 
   it('turning a previously-off email channel on lands on "send-pending"', () => {
-    const email = direct({ delivery: 'email', state: 'off', active: false, expiresInDays: null, adminUrl: null })
+    const email = direct({ delivery: 'email', state: 'off', active: false, expiresInDays: null })
     expect(withChannelActive(email, true)).toMatchObject({ active: true, state: 'send-pending' })
   })
 
