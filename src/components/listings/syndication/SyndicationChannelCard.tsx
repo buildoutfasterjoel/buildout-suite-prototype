@@ -2,10 +2,7 @@ import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Switch } from "@buildoutinc/blueprint-react/ui/Switch";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faArrowUpRightFromSquare,
-  faCircleExclamation,
-} from "@fortawesome/pro-regular-svg-icons";
+import { faArrowUpRightFromSquare } from "@fortawesome/pro-regular-svg-icons";
 import type { SyndicationChannel } from "#/data/listingSyndication";
 import { channelBadge, channelMetaSegments } from "./syndicationDisplay";
 
@@ -52,29 +49,29 @@ export function SyndicationChannelCard({
           style={{ minWidth: 0 }}
         >
           <span className="fw-semibold text-truncate">{channel.name}</span>
-          <Badge variant="secondary" appearance="muted">
-            <FontAwesomeIcon icon={badge.icon} style={{ color: badge.color }} />
-            {badge.label}
-          </Badge>
-          {channel.state === "needs-attention" && (
+          {badge.explanation ? (
             <Tooltip>
               <Tooltip.Trigger
                 render={
-                  <span
-                    className="text-warning"
-                    tabIndex={0}
-                    role="button"
-                    aria-label="Why this connection needs attention"
-                  >
-                    <FontAwesomeIcon icon={faCircleExclamation} />
-                  </span>
+                  <Badge variant="secondary" appearance="muted" tabIndex={0}>
+                    <FontAwesomeIcon
+                      icon={badge.icon}
+                      style={{ color: badge.color }}
+                    />
+                    {badge.label}
+                  </Badge>
                 }
               />
-              <Tooltip.Content side="top">
-                This connection needs attention before it can syndicate
-                reliably.
-              </Tooltip.Content>
+              <Tooltip.Content side="top">{badge.explanation}</Tooltip.Content>
             </Tooltip>
+          ) : (
+            <Badge variant="secondary" appearance="muted">
+              <FontAwesomeIcon
+                icon={badge.icon}
+                style={{ color: badge.color }}
+              />
+              {badge.label}
+            </Badge>
           )}
         </div>
         <Switch

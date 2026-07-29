@@ -17,6 +17,12 @@ export interface ChannelBadge {
   /** CSS color for the icon only — badge text keeps its inherited color. */
   color: string;
   label: string;
+  /**
+   * Why the state is what it is, when the label alone leaves a broker without
+   * a next step. The card makes the whole badge the tooltip trigger, so a
+   * state carrying this must not also grow a second icon to hang it on.
+   */
+  explanation?: string;
 }
 
 /**
@@ -43,6 +49,8 @@ const BADGES: Record<SyndicationChannelState, ChannelBadge> = {
     icon: faCircleExclamation,
     color: "var(--bp-warning)",
     label: "Needs attention",
+    explanation:
+      "This connection needs attention before it can syndicate reliably.",
   },
   off: { icon: faCircleMinus, color: "var(--stage-inactive)", label: "Off" },
   "not-available": {

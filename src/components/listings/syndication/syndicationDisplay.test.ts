@@ -47,6 +47,18 @@ describe('channelBadge', () => {
       color: 'var(--bp-warning)',
     })
   })
+
+  it('explains needs-attention, since the label alone gives no next step', () => {
+    expect(channelBadge('needs-attention').explanation).toBe(
+      'This connection needs attention before it can syndicate reliably.',
+    )
+  })
+
+  it('leaves self-explanatory states without an explanation', () => {
+    for (const state of ['updated', 'pending', 'off', 'not-available', 'update-sent', 'send-pending'] as const) {
+      expect(channelBadge(state).explanation).toBeUndefined()
+    }
+  })
 })
 
 describe('channelMetaSegments — direct', () => {
