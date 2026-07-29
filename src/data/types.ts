@@ -994,7 +994,18 @@ export interface Contact {
    * with no entry here gets synthesized copy on the timeline, so only records
    * whose exact words matter (the demo's inbound leads) need to carry it.
    */
-  inquiryDetails?: Record<string, { message: string; channel?: string }>
+  inquiryDetails?: Record<
+    string,
+    {
+      /** Their own words, when the inquiry carried any. */
+      message?: string
+      /** Which syndication site or form it arrived through. */
+      channel?: string
+      /** ISO date the inquiry landed. Per-inquiry, so a contact's several
+       *  inquiries don't all read as having happened the same day. */
+      date?: string
+    }
+  >
   phoneStatus: PhoneStatus
   doNotCall: boolean
   /** Job title / position, e.g. "Managing Member". */

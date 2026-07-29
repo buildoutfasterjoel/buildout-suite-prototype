@@ -12,7 +12,11 @@ import {
   formatPrice,
 } from "#/components/properties/propertyDisplay";
 import { CardBadge, BadgeDivider } from "#/components/deals/DealCardBadges";
-import { LINKED_DEAL_ICON, relationshipBadge } from "#/components/deals/newCardTokens";
+import {
+  LINKED_DEAL_ICON,
+  propertyAddress,
+  relationshipBadge,
+} from "#/components/deals/newCardTokens";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
 
 /**
@@ -112,9 +116,16 @@ export function NewContactPropertyCard({
                 {TYPE_LABELS[property.propertyType]}
               </Tooltip.Content>
             </Tooltip>
-            <span className="deal-tile__title" title={property.name}>
-              {property.name}
-            </span>
+            <Tooltip>
+              <Tooltip.Trigger
+                render={
+                  <span className="deal-tile__title">{property.name}</span>
+                }
+              />
+              <Tooltip.Content>
+                {propertyAddress(property) ?? property.name}
+              </Tooltip.Content>
+            </Tooltip>
           </div>
           <span className="deal-tile__meta deal-tile__meta--muted">{meta}</span>
         </div>

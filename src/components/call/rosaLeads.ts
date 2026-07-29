@@ -136,7 +136,9 @@ export function seedDelgadoLeads(propertyId: string): Contact[] {
       role: "buyer",
       propertyIds: [propertyId],
       inquiredListingIds: deal ? [deal.id] : undefined,
-      inquiryDetails: deal ? { [deal.id]: fixture.inquiry } : undefined,
+      inquiryDetails: deal
+        ? { [deal.id]: { ...fixture.inquiry, date: new Date().toISOString() } }
+        : undefined,
       source: fixture.source,
       notes: fixture.notes,
       tags: fixture.tags,

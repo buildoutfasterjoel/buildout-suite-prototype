@@ -1985,6 +1985,21 @@ export function generateDataset() {
   )
   const finalContacts = contacts.map((c) => reconciled.get(c.id) ?? c)
 
+  // Syndication sources and a pool of things a lead actually writes when they
+  // reach out on a marketed listing — short, specific, and mostly asking for
+  // the numbers or a tour. Kept blunt on purpose: real inquiries are.
+  const INQUIRY_CHANNELS = ['Buildout site', 'LoopNet', 'Crexi', 'Brochure link']
+  const INQUIRY_MESSAGES = [
+    'Interested in the offering memorandum and current rent roll. We buy in this submarket and can close quickly.',
+    'Is this still available? Looking for something in this size range for a 1031 that closes in the next 60 days.',
+    'Please send the OM. What are the seller\'s expectations on price, and is there any flexibility on timing?',
+    'My client is expanding and needs space in this corridor. Can we schedule a walkthrough this week?',
+    'Requesting document access. We are an owner-operator with four assets nearby and pay all cash.',
+    'What are the actual T-12 numbers versus what is marketed? Occupancy is the thing I need to understand.',
+    'Saw this on the site. Are you taking backup offers, and what does the current debt look like?',
+    'Interested but the asking price looks ahead of the comps I have. Happy to talk if the seller is realistic.',
+  ]
+
   // Give every open inquiry a concrete listing behind it, so the Listing
   // Inquiries filter has real data. Searchers inquire about actively marketed
   // listings; one distinct listing per inquiry keeps the count honest.
@@ -1997,6 +2012,24 @@ export function generateDataset() {
         marketedListingIds,
         Math.min(c.inquiries, marketedListingIds.length),
       )
+      // Each inquiry gets its own date and channel — a contact with two
+      // inquiries didn't make them both on the same afternoon. Roughly half
+      // carry the note they typed, so the book has real examples of a lead's
+      // own words without having to run a demo arc first.
+      const details: NonNullable<Contact['inquiryDetails']> = {}
+      for (const listingId of c.inquiredListingIds) {
+        const wroteSomething = faker.datatype.boolean(0.55)
+        details[listingId] = {
+          channel: faker.helpers.arrayElement(INQUIRY_CHANNELS),
+          date: faker.date
+            .recent({ days: 75, refDate: new Date() })
+            .toISOString(),
+          ...(wroteSomething
+            ? { message: faker.helpers.arrayElement(INQUIRY_MESSAGES) }
+            : {}),
+        }
+      }
+      c.inquiryDetails = details
     }
   }
 

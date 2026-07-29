@@ -50,7 +50,7 @@ export function ContactInquiryCard({
 
   // Shared with the new-style card so one contact × listing reads the same in
   // either treatment.
-  const { kind, label, caSigned, channel, message } = inquiryFacts(
+  const { kind, label, caSigned, channel, date, message } = inquiryFacts(
     contact,
     listingId,
   );
@@ -97,7 +97,7 @@ export function ContactInquiryCard({
             className="text-muted text-truncate"
             style={{ fontSize: 14, lineHeight: "19px" }}
           >
-            {channel} · Inquired {medDate(contact.createdAt)}
+            {channel} · Inquired {medDate(date)}
           </div>
         </div>
       </div>

@@ -74,7 +74,9 @@ export const useContactUiPrefs = create<ContactUiPrefs>((set) => ({
   legacyAccordions: true,
   tabTrack: "system",
   timelineFilter: "dropdown",
-  dealCards: "current",
+  // The redesigned cards are the default now; flip the switch to compare
+  // against the shipped look.
+  dealCards: "new",
 
   setOverviewSections: (overviewSections) => set({ overviewSections }),
   setShowDetails: (showDetails) => set({ showDetails }),

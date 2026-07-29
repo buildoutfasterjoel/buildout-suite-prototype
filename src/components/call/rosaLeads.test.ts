@@ -85,7 +85,7 @@ describe("seedDelgadoLeads", () => {
       const detail = lead.inquiryDetails?.[dealId];
       expect(detail?.message).toBeTruthy();
       expect(detail?.channel).toBeTruthy();
-      messages.add(detail!.message);
+      messages.add(detail!.message!);
     }
     // Tailored, not shared — three leads, three distinct inquiries.
     expect(messages.size).toBe(3);

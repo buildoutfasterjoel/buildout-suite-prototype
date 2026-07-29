@@ -76,6 +76,7 @@ export type FilterKey =
   | "emails"
   | "meetings"
   | "tours"
+  | "inquiries"
   | "attachments"
   | "activity"
   | "marketing";
@@ -309,7 +310,7 @@ export const TYPE_CONFIG: Record<TimelineEventType, TypeConfig> = {
     icon: faCircleQuestion,
     tone: "blue",
     filled: false,
-    filter: "activity",
+    filter: "inquiries",
     defaultTitle: "Property inquiry",
     actionBar: { primary: "Respond", ghosts: [] },
     overflow: ["Send listing", "Create task"],
@@ -408,6 +409,7 @@ export const FILTER_TABS: { key: FilterKey; label: string }[] = [
   { key: "emails", label: "Emails" },
   { key: "meetings", label: "Meetings" },
   { key: "tours", label: "Tours" },
+  { key: "inquiries", label: "Inquiries" },
 ];
 
 /**

@@ -17,6 +17,7 @@ import {
   relationshipBadge,
   relationshipTooltip,
   sideBadge,
+  propertyAddress,
   type DealRelationship,
 } from "#/components/deals/newCardTokens";
 
@@ -121,9 +122,16 @@ export function NewDealCard({
                   <Tooltip.Content>{typeLabel}</Tooltip.Content>
                 </Tooltip>
               )}
-              <span className="deal-tile__title" title={listing.name}>
-                {listing.name}
-              </span>
+              <Tooltip>
+                <Tooltip.Trigger
+                  render={
+                    <span className="deal-tile__title">{listing.name}</span>
+                  }
+                />
+                <Tooltip.Content>
+                  {propertyAddress(property) ?? listing.name}
+                </Tooltip.Content>
+              </Tooltip>
             </div>
             <div className="deal-tile__meta">
               <Tooltip>

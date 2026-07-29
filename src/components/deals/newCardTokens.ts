@@ -5,7 +5,14 @@ import {
   faDollarSign,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import type { Contact, DealSide, DealType, Listing, PropertyStatus } from "#/data/types";
+import type {
+  Contact,
+  DealSide,
+  DealType,
+  Listing,
+  Property,
+  PropertyStatus,
+} from "#/data/types";
 
 /**
  * Palettes for the redesigned deal / property cards (Figma "deal-tile" set).
@@ -156,4 +163,17 @@ export function relationshipTooltip(
         ? `${name} inquired on ${inquiredOn}`
         : `${name} inquired on this listing`;
   }
+}
+
+/**
+ * The property's street address, for the card title's tooltip. Card titles are
+ * deal or property *names* ("The Delgado Building"), which don't say where the
+ * thing is — the address is the one fact a broker needs to place it.
+ */
+export function propertyAddress(property: Property | undefined): string | null {
+  if (!property) return null;
+  const line = [property.street, property.city, property.state]
+    .filter(Boolean)
+    .join(", ");
+  return line ? [line, property.zip].filter(Boolean).join(" ") : null;
 }

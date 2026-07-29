@@ -13,6 +13,7 @@ import {
 import { contactFullName } from "#/components/contacts/contactDisplay";
 import { inquiryFacts } from "#/components/contacts/inquiryFacts";
 import { CardBadge } from "#/components/deals/DealCardBadges";
+import { propertyAddress } from "#/components/deals/newCardTokens";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
 
 function medDate(iso: string): string {
@@ -49,11 +50,11 @@ export function NewContactInquiryCard({
   if (!listing) return null;
 
   const property = getProperty(listing.propertyId);
-  const { kind, label, tooltip, caSigned, channel, message } = inquiryFacts(
+  const { kind, label, tooltip, caSigned, channel, date, message } = inquiryFacts(
     contact,
     listingId,
   );
-  const inquiredOn = medDate(contact.createdAt);
+  const inquiredOn = medDate(date);
 
   const openLeadsRow = () =>
     void navigate({
@@ -95,14 +96,22 @@ export function NewContactInquiryCard({
                   </Tooltip.Content>
                 </Tooltip>
               )}
-              <Link
-                to="/listings/$listingId"
-                params={{ listingId }}
-                className="deal-tile__title text-reset text-decoration-none"
-                title={listing.name}
-              >
-                {listing.name}
-              </Link>
+              <Tooltip>
+                <Tooltip.Trigger
+                  render={
+                    <Link
+                      to="/listings/$listingId"
+                      params={{ listingId }}
+                      className="deal-tile__title text-reset text-decoration-none"
+                    >
+                      {listing.name}
+                    </Link>
+                  }
+                />
+                <Tooltip.Content>
+                  {propertyAddress(property) ?? listing.name}
+                </Tooltip.Content>
+              </Tooltip>
             </div>
             {/* Two unlabeled facts with tooltips, same as the deal card's meta —
                 the word "Inquired" lives on the badge below, not here twice. */}
