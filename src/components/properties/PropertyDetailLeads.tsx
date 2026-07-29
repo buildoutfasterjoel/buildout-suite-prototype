@@ -139,9 +139,16 @@ const muted = <span className="text-muted">—</span>;
 const CHECKBOX_COL_W = 44;
 
 /** "Leads" content for the property detail page — contacts interested in this listing. */
-export function PropertyDetailLeads({ property }: { property: Property }) {
+export function PropertyDetailLeads({
+  property,
+  initialSearch,
+}: {
+  property: Property;
+  /** Pre-fill the name search (deep link from a contact's inquiry card). */
+  initialSearch?: string;
+}) {
   const navigate = useNavigate();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialSearch ?? "");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // Keyed on the contacts map so a lead that lands while this page is open shows

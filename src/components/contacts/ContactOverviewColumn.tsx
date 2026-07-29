@@ -27,6 +27,8 @@ import { ContactChip } from "#/components/contacts/ContactChip";
 import { ContactHeroAccessAvatars } from "#/components/contacts/ContactHeroAccessAvatars";
 import type { ContactShare } from "#/data/teammates";
 import { ContactDealCard } from "#/components/contacts/ContactDealCard";
+import { ContactInquiryCard } from "#/components/contacts/ContactInquiryCard";
+import { NewContactInquiryCard } from "#/components/contacts/NewContactInquiryCard";
 import { ContactPropertyCard } from "#/components/contacts/ContactPropertyCard";
 import { NewContactDealCard } from "#/components/contacts/NewContactDealCard";
 import { NewContactPropertyCard } from "#/components/contacts/NewContactPropertyCard";
@@ -179,11 +181,24 @@ export function ContactOverviewColumn({
     ...new Set([contact.email, ...(contact.emails ?? [])].filter(Boolean)),
   ];
 
-  // Everything the contact touches, party deals first — a lead opened from a
-  // deal's Leads tab has to find that deal here, or the trail dead-ends.
-  const connectedDeals = [...deals, ...leadDeals];
-  const activeDeals = connectedDeals.filter((d) => !PAST_STATUSES.has(d.status));
-  const pastDeals = connectedDeals.filter((d) => PAST_STATUSES.has(d.status));
+  // Deals shows only deals the contact is a named party to — a lead connection
+  // is not a business agreement, so lead-only listings render as inquiry cards
+  // in Listing Inquiries instead (a lead opened from a deal's Leads tab finds
+  // that deal there). They graduate to a deal card only once they're set as a
+  // party, e.g. named the buyer when the deal moves to under contract.
+  const activeDeals = deals.filter((d) => !PAST_STATUSES.has(d.status));
+  const pastDeals = deals.filter((d) => PAST_STATUSES.has(d.status));
+
+  // Listings this contact has raised a hand on: every open inquiry plus any
+  // listing whose Leads tab they appear on, deduped. Listings they've since
+  // become a party to drop out — the deal card supersedes the inquiry card.
+  const partyDealIds = new Set(deals.map((d) => d.id));
+  const inquiryListingIds = [
+    ...new Set([
+      ...(contact.inquiredListingIds ?? []),
+      ...leadDeals.map((d) => d.id),
+    ]),
+  ].filter((id) => !partyDealIds.has(id));
 
   // A just-created deal (AI Start-a-Deal flow) gets a brief spotlight; clear
   // the signal once the animation has played so it doesn't replay on
@@ -411,7 +426,7 @@ export function ContactOverviewColumn({
           }
         >
           <div className="d-flex flex-column gap-3">
-            {connectedDeals.length === 0 ? (
+            {deals.length === 0 ? (
               <span className="text-muted fs-small">
                 Deals you link to this contact will show up here.
               </span>
@@ -459,6 +474,36 @@ export function ContactOverviewColumn({
                     ),
                   )}
               </>
+            )}
+          </div>
+        </ContactSection>
+
+        <ContactSection
+          value="inquiries"
+          label="Listing Inquiries"
+          count={inquiryListingIds.length}
+        >
+          <div className="d-flex flex-column gap-3">
+            {inquiryListingIds.length === 0 ? (
+              <span className="text-muted fs-small">
+                Listings this contact inquires about will show up here.
+              </span>
+            ) : (
+              inquiryListingIds.map((listingId) =>
+                newCards ? (
+                  <NewContactInquiryCard
+                    key={listingId}
+                    listingId={listingId}
+                    contact={contact}
+                  />
+                ) : (
+                  <ContactInquiryCard
+                    key={listingId}
+                    listingId={listingId}
+                    contact={contact}
+                  />
+                ),
+              )
             )}
           </div>
         </ContactSection>
