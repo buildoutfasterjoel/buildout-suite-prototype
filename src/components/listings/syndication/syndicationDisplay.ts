@@ -21,10 +21,12 @@ export interface ChannelBadge {
 
 /**
  * Blueprint's Badge has no semantic success/warning variant, so the chrome
- * stays neutral and a colored icon carries the meaning. In-flight states use
- * the Seagull `--channel-info` token rather than `--bp-primary`: primary is the
- * action color the card's links and switch already use, and a state badge
- * wearing it would read as clickable.
+ * stays neutral and a colored icon carries the meaning. Three weights only:
+ * success for a confirmed push, warning for something needing the broker,
+ * grey for everything with nothing to act on. A direct push still in flight
+ * uses `--channel-info` rather than `--bp-primary` — primary is the action
+ * color the card's links and switch already use, and a state badge wearing it
+ * would read as clickable.
  */
 const BADGES: Record<SyndicationChannelState, ChannelBadge> = {
   updated: {
@@ -54,9 +56,11 @@ const BADGES: Record<SyndicationChannelState, ChannelBadge> = {
     color: "var(--stage-inactive)",
     label: "Update sent",
   },
+  // Grey like `update-sent`: the two email states differ in what has happened,
+  // not in how much they can be trusted. Neither is a confirmation.
   "send-pending": {
     icon: faEnvelope,
-    color: "var(--channel-info)",
+    color: "var(--stage-inactive)",
     label: "Send queued",
   },
 };

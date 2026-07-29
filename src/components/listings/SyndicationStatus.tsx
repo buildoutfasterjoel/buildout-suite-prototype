@@ -27,8 +27,8 @@ const AFFILIATION_DISCLAIMER =
   "Buildout has no financial, legal, commercial, or partnership affiliation with CoStar Group, Inc., LoopNet, or Crexi, Inc. No association or relationship between these companies should be implied or inferred. Buildout assists customers in sending email updates to these unaffiliated channels when listings are added, updated, or removed.";
 
 const GROUPS: { delivery: SyndicationDelivery; label: string }[] = [
-  { delivery: "direct", label: "Direct connections" },
-  { delivery: "email", label: "Email updates" },
+  { delivery: "direct", label: "Direct Connections" },
+  { delivery: "email", label: "Email Updates" },
 ];
 
 /**
@@ -168,7 +168,11 @@ export function SyndicationStatus({ listing }: { listing: Listing }) {
                     key={group.delivery}
                     label={group.label}
                     channels={groupChannels}
-                    informational={group.delivery === "email"}
+                    disclaimer={
+                      group.delivery === "email"
+                        ? AFFILIATION_DISCLAIMER
+                        : undefined
+                    }
                     websiteUrl={websiteUrl}
                     websiteLabel={websiteLabel}
                     onToggle={toggle}
@@ -199,15 +203,14 @@ export function SyndicationStatus({ listing }: { listing: Listing }) {
 }
 
 /**
- * One delivery-method group. The email group renders on an informational
- * surface with its affiliation disclaimer inside, so the note is visually
- * scoped to the channels it actually names. Deliberately not an Alert:
- * nothing is wrong with these channels.
+ * One delivery-method group. A group that carries a `disclaimer` renders it
+ * below its own cards, so the note stays scoped to the channels it names
+ * rather than sitting unattributed at the foot of the modal.
  */
 function SyndicationGroup({
   label,
   channels,
-  informational,
+  disclaimer,
   websiteUrl,
   websiteLabel,
   onToggle,
@@ -215,7 +218,7 @@ function SyndicationGroup({
 }: {
   label: string;
   channels: SyndicationChannel[];
-  informational: boolean;
+  disclaimer?: string;
   websiteUrl: string;
   websiteLabel: string;
   onToggle: (id: string, active: boolean) => void;
@@ -229,38 +232,10 @@ function SyndicationGroup({
   const activeCount = eligible.filter((c) => c.active).length;
   const allActive = eligible.length > 0 && eligible.every((c) => c.active);
 
-  const body = (
-    <div className="d-flex flex-column gap-2">
-      {channels.map((channel) => (
-        <SyndicationChannelCard
-          key={channel.id}
-          channel={channel}
-          websiteUrl={websiteUrl}
-          websiteLabel={websiteLabel}
-          onToggle={(active) => onToggle(channel.id, active)}
-        />
-      ))}
-      {informational && (
-        <p
-          className="d-flex gap-2 fs-small text-muted mb-0 mt-1"
-          style={{ maxWidth: "62ch" }}
-        >
-          <FontAwesomeIcon
-            icon={faCircleInfo}
-            style={{ color: "var(--channel-info-strong)", marginTop: "0.2em" }}
-          />
-          <span>{AFFILIATION_DISCLAIMER}</span>
-        </p>
-      )}
-    </div>
-  );
-
   return (
     <div className="d-flex flex-column gap-2">
       <div className="d-flex align-items-center justify-content-between gap-3 pb-2 border-bottom">
-        <span className="text-uppercase fw-medium fs-small text-muted">
-          {label}
-        </span>
+        <span className="fw-medium">{label}</span>
         <div className="d-flex align-items-center gap-2">
           <span className="fs-small text-muted">
             {activeCount} of {eligible.length} active
@@ -273,18 +248,23 @@ function SyndicationGroup({
           />
         </div>
       </div>
-      {informational ? (
-        <div
-          className="rounded p-3"
-          style={{
-            background: "var(--channel-info-surface)",
-            border: "1px solid var(--channel-info-border)",
-          }}
+      {channels.map((channel) => (
+        <SyndicationChannelCard
+          key={channel.id}
+          channel={channel}
+          websiteUrl={websiteUrl}
+          websiteLabel={websiteLabel}
+          onToggle={(active) => onToggle(channel.id, active)}
+        />
+      ))}
+      {disclaimer && (
+        <p
+          className="d-flex gap-2 fs-small text-muted mb-0 mt-1"
+          style={{ maxWidth: "62ch" }}
         >
-          {body}
-        </div>
-      ) : (
-        body
+          <FontAwesomeIcon icon={faCircleInfo} style={{ marginTop: "0.2em" }} />
+          <span>{disclaimer}</span>
+        </p>
       )}
     </div>
   );

@@ -27,16 +27,18 @@ describe('channelBadge', () => {
     expect(channelBadge('updated')).toMatchObject({ label: 'Updated', color: 'var(--bp-success)' })
   })
 
-  it('uses the informational token for in-flight states, not brand primary', () => {
+  it('uses the informational token for an in-flight direct push, not brand primary', () => {
     expect(channelBadge('pending').color).toBe('var(--channel-info)')
-    expect(channelBadge('send-pending').color).toBe('var(--channel-info)')
   })
 
-  it('never dresses a completed email send as a confirmation', () => {
-    const sent = channelBadge('update-sent')
-    expect(sent.label).toBe('Update sent')
-    expect(sent.color).toBe('var(--stage-inactive)')
-    expect(sent.color).not.toBe('var(--bp-success)')
+  it('never dresses either email state as a confirmation', () => {
+    for (const state of ['update-sent', 'send-pending'] as const) {
+      const badge = channelBadge(state)
+      expect(badge.color).toBe('var(--stage-inactive)')
+      expect(badge.color).not.toBe('var(--bp-success)')
+    }
+    expect(channelBadge('update-sent').label).toBe('Update sent')
+    expect(channelBadge('send-pending').label).toBe('Send queued')
   })
 
   it('flags a broken connection with warning', () => {
