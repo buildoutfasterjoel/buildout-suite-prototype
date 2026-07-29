@@ -206,7 +206,9 @@ Placing the affiliation note with the channels it names, instead of at the botto
 
 ### Unchanged
 
-Modal stays `size="lg" scrollable centered` — three-line cards need height, not width, and the body already scrolls. The trigger button, tooltip, header copy, Close, and Send Rep Email footer action all stay as they are. The header widget's `Published · syndicating to n/m` label needs no change; it just counts a larger roster.
+Modal stays `size="lg" scrollable centered` — three-line cards need height, not width, and the body already scrolls. The trigger button, tooltip, `Modal.Title`, Close, and Send Rep Email footer action all stay as they are. The header widget's `Published · syndicating to n/m` label needs no change; it just counts a larger roster.
+
+One exception: `Modal.Description` currently reads *"Where this listing's data is pushed to other listing sites via API."* That is only true of the direct group — an email to CoStar is not an API push — so it becomes *"Where this listing reaches other listing sites, and when it last did."*
 
 ---
 
