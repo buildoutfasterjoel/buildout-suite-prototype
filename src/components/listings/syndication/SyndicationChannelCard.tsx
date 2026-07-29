@@ -60,7 +60,12 @@ export function SyndicationChannelCard({
             <Tooltip>
               <Tooltip.Trigger
                 render={
-                  <span className="text-warning">
+                  <span
+                    className="text-warning"
+                    tabIndex={0}
+                    role="button"
+                    aria-label="Why this connection needs attention"
+                  >
                     <FontAwesomeIcon icon={faCircleExclamation} />
                   </span>
                 }
