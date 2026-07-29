@@ -48,6 +48,7 @@ export function BuildingSection({
 						label="Occupancy %"
 						value={property.occupancyPct}
 						onChange={(v) => patchProperty({ occupancyPct: v ?? 0 })}
+						fieldKey="occupancyPct"
 					/>
 				</Col>
 				<Col>

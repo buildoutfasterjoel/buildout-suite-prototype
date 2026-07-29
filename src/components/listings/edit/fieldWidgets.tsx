@@ -13,8 +13,10 @@ import {
   faPlus,
   faTrashCan,
   faCalendar,
+  faTriangleExclamation,
 } from "@fortawesome/pro-regular-svg-icons";
-import type { YesNoNA } from "#/data/types";
+import { useIngestionConflict } from "#/components/deals/ingestionConflictContext";
+import type { IngestionFieldKey, YesNoNA } from "#/data/types";
 
 // ── Small field wrappers ─────────────────────────────────────────────────────
 export function TextField({
@@ -63,21 +65,71 @@ export function NumberField({
   label,
   value,
   onChange,
+  fieldKey,
 }: {
   label: string;
   value: number | null;
   onChange: (v: number | null) => void;
+  /** When set and an unresolved ingestion conflict exists for it, the field
+   * renders the doc-vs-record arbitration row beneath the input. */
+  fieldKey?: IngestionFieldKey;
 }) {
+  const { conflict, resolve } = useIngestionConflict(fieldKey);
   return (
     <Field>
-      <Field.Label>{label}</Field.Label>
+      <Field.Label className="d-flex align-items-center gap-2">
+        {label}
+        {conflict && (
+          <FontAwesomeIcon
+            icon={faTriangleExclamation}
+            className="text-warning"
+          />
+        )}
+      </Field.Label>
       <Input
         type="number"
+        className={conflict ? "ingestion-conflict__input" : undefined}
         value={value ?? ""}
         onChange={(e) =>
           onChange(e.target.value === "" ? null : Number(e.target.value))
         }
       />
+      {conflict && (
+        <div className="ingestion-conflict__row">
+          <div className="d-flex flex-column">
+            <span className="fs-small">
+              <span className="fw-semibold">{conflict.docValue}</span>
+              <span className="text-muted"> from {conflict.docSource}</span>
+            </span>
+            <span className="fs-small">
+              <span className="fw-semibold">{conflict.currentValue}</span>
+              <span className="text-muted"> from {conflict.currentSource}</span>
+            </span>
+          </div>
+          <div className="d-flex gap-2 flex-shrink-0">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                onChange(conflict.docRaw);
+                resolve("doc");
+              }}
+            >
+              Use {conflict.docValue}
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                onChange(conflict.currentRaw);
+                resolve("current");
+              }}
+            >
+              Keep {conflict.currentValue}
+            </Button>
+          </div>
+        </div>
+      )}
     </Field>
   );
 }

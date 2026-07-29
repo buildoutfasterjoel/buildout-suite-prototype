@@ -6,6 +6,7 @@ import { Field } from "@buildoutinc/blueprint-react/ui/Field";
 import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
 import { Alert } from "@buildoutinc/blueprint-react/ui/Alert";
+import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
 	faArrowUp,
@@ -27,11 +28,12 @@ import type {
 	ExpenseLineItem,
 	FinancialScenario,
 	IncomeLineItem,
+	IngestionFieldKey,
 	Listing,
 	Property,
 	PropertyStatus,
 } from "#/data/types";
-import { updateDeal } from "#/data/actions";
+import { resolveIngestionConflict, updateDeal } from "#/data/actions";
 import { updateProperty } from "#/data/store";
 import {
 	commissionAmountFromPct,
@@ -63,6 +65,10 @@ import {
 	requestStageChange,
 	requestSetupCompletion,
 } from "#/components/deals/useStageGate";
+import {
+	IngestionConflictProvider,
+	countConflictsFor,
+} from "#/components/deals/ingestionConflictContext";
 
 // ── Read-only computed-field display formatting ─────────────────────────────
 /** Rounded, comma-formatted currency-ish figure; blank (not "0") when null. */
@@ -331,6 +337,21 @@ function ScenarioEditor({
 	);
 }
 
+/** Which editor tab each ingestion-conflict field lives on. */
+const CONFLICT_TAB: Record<IngestionFieldKey, "deal" | "listing"> = {
+	askingPrice: "deal",
+	noi: "deal",
+	occupancyPct: "listing",
+};
+
+/** The conflict field keys on a given tab — read off {@link CONFLICT_TAB} so tab
+ * membership is stated exactly once, for both the badges and the initial tab. */
+function conflictKeysOn(tab: "deal" | "listing"): IngestionFieldKey[] {
+	return (Object.keys(CONFLICT_TAB) as IngestionFieldKey[]).filter(
+		(k) => CONFLICT_TAB[k] === tab,
+	);
+}
+
 /**
  * Two-tab edit shell (Deal + Listing) for a listing. Holds ONE shared working
  * copy in local state — the deal fields plus a `propertyDraft` — behind a single
@@ -341,9 +362,12 @@ function ScenarioEditor({
 export function DealMarketingEditor({
 	listing,
 	property,
+	review,
 }: {
 	listing: Listing;
 	property: Property;
+	/** When "ingestion", open on the first conflicting field's tab. */
+	review?: "ingestion";
 }) {
 	const navigate = useNavigate();
 	const back = () =>
@@ -355,7 +379,22 @@ export function DealMarketingEditor({
 	const pendingPublishDealId = useStageGate((s) => s.pendingPublishDealId);
 	const showPublishBanner = pendingPublishDealId === listing.id;
 
-	const [tab, setTab] = useState<"deal" | "listing">("listing");
+	const conflicts = listing.ingestion?.conflicts ?? [];
+	const dealTabConflicts = countConflictsFor(conflicts, conflictKeysOn("deal"));
+	const listingTabConflicts = countConflictsFor(
+		conflicts,
+		conflictKeysOn("listing"),
+	);
+	// In review mode, open on the tab holding the first unresolved conflict so the
+	// broker doesn't have to hunt across tabs for it. Initial state only — the
+	// broker's own tab clicks must stick as the conflicts get resolved.
+	const firstUnresolved = conflicts.find((c) => !c.resolution);
+	const initialTab =
+		review === "ingestion" && firstUnresolved
+			? CONFLICT_TAB[firstUnresolved.fieldKey]
+			: "listing";
+
+	const [tab, setTab] = useState<"deal" | "listing">(initialTab);
 	const [propertyDraft, setPropertyDraft] = useState<Property>(property);
 	const patchProperty = (patch: Partial<Property>) =>
 		setPropertyDraft((p) => ({ ...p, ...patch }));
@@ -450,7 +489,7 @@ export function DealMarketingEditor({
 		</>
 	);
 
-	return (
+	const body = (
 		<div className="d-flex flex-column gap-6 p-4">
 			{showPublishBanner && (
 				<Alert severity="info" withIcon>
@@ -489,9 +528,19 @@ export function DealMarketingEditor({
 						icon={<FontAwesomeIcon icon={faSign} />}
 					>
 						Listing
+						{listingTabConflicts > 0 && (
+							<Badge variant="outline" className="ingestion-conflict__badge">
+								{listingTabConflicts}
+							</Badge>
+						)}
 					</Tabs.Tab>
 					<Tabs.Tab value="deal" icon={<FontAwesomeIcon icon={faHandshake} />}>
 						Deal
+						{dealTabConflicts > 0 && (
+							<Badge variant="outline" className="ingestion-conflict__badge">
+								{dealTabConflicts}
+							</Badge>
+						)}
 					</Tabs.Tab>
 				</Tabs.List>
 			</Tabs>
@@ -612,6 +661,7 @@ export function DealMarketingEditor({
 										label="Asking Price"
 										value={financials.askingPrice}
 										onChange={(v) => patchFinancials({ askingPrice: v ?? 0 })}
+										fieldKey="askingPrice"
 									/>
 								</Col>
 								<Col>
@@ -626,6 +676,7 @@ export function DealMarketingEditor({
 										label="NOI"
 										value={financials.noi}
 										onChange={(v) => patchFinancials({ noi: v ?? 0 })}
+										fieldKey="noi"
 									/>
 								</Col>
 								<Col>
@@ -797,5 +848,16 @@ export function DealMarketingEditor({
 				{actions}
 			</div>
 		</div>
+	);
+
+	return (
+		<IngestionConflictProvider
+			conflicts={conflicts}
+			onResolve={(fieldKey, side) =>
+				resolveIngestionConflict(listing.id, fieldKey, side)
+			}
+		>
+			{body}
+		</IngestionConflictProvider>
 	);
 }

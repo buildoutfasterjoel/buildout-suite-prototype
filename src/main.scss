@@ -1765,6 +1765,34 @@
   }
 }
 
+// Ingestion conflict arbitration — a warning ring on the field plus the
+// doc-vs-record row beneath it. Tokens only, no hardcoded palette.
+.ingestion-conflict__input {
+  border-color: var(--bs-warning);
+  box-shadow: 0 0 0 1px var(--bs-warning);
+}
+
+.ingestion-conflict__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 6px;
+}
+
+// Tab count badge. Blueprint's Badge has no `warning` variant, so tint an
+// `outline` badge through the same custom properties the theme uses. Declared
+// after the theme import, so it wins at equal specificity over `.badge-outline`
+// (which sets `border-color` directly, hence the direct declaration here).
+.ingestion-conflict__badge {
+  --bs-badge-color: var(--bs-warning);
+  border-color: var(--bs-warning);
+}
+
 // ── BOV flow (contact page): stepper, cover preview, email chrome ──
 .bov-stepper {
   display: inline-flex;
