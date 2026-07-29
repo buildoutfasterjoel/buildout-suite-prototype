@@ -46,26 +46,34 @@ export const LINKED_DEAL_ICON: Record<PropertyStatus, string> = {
  */
 const SIDE_PALETTE: Record<
   DealSide,
-  { bg: string; color: string; icon: IconDefinition; Sale: string; Lease: string }
+  {
+    bg: string;
+    color: string;
+    icon: IconDefinition;
+    Sale: { label: string; tooltip: string };
+    Lease: { label: string; tooltip: string };
+  }
 > = {
   seller: {
     bg: "#cefaff", // seagull/100
     color: "#063346", // seagull/950
     icon: faSignHanging,
-    Sale: "Seller",
-    Lease: "Landlord",
+    Sale: { label: "Seller", tooltip: "Seller rep - take property to market" },
+    Lease: { label: "Landlord", tooltip: "Landlord rep - lease space to tenants" },
   },
   buyer: {
     bg: "#cdfee5", // mountain-meadow/100
     color: "#003024", // mountain-meadow/950
     icon: faDollarSign,
-    Sale: "Buyer",
-    Lease: "Tenant",
+    Sale: { label: "Buyer", tooltip: "Buyer rep - find a property to buy" },
+    Lease: { label: "Tenant", tooltip: "Tenant rep - find space to lease" },
   },
 };
 
 export interface SideBadgeSpec {
   label: string;
+  /** Spells out what representing this side actually means on this deal type. */
+  tooltip: string;
   bg: string;
   color: string;
   icon: IconDefinition;
@@ -73,7 +81,13 @@ export interface SideBadgeSpec {
 
 export function sideBadge(side: DealSide, dealType: DealType): SideBadgeSpec {
   const p = SIDE_PALETTE[side];
-  return { label: p[dealType], bg: p.bg, color: p.color, icon: p.icon };
+  return {
+    label: p[dealType].label,
+    tooltip: p[dealType].tooltip,
+    bg: p.bg,
+    color: p.color,
+    icon: p.icon,
+  };
 }
 
 /**

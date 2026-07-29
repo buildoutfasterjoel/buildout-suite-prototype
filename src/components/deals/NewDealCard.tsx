@@ -79,13 +79,25 @@ export function NewDealCard({
   const typeLabel = property ? TYPE_LABELS[property.propertyType] : "";
   const side = sideBadge(listing.dealSide, listing.dealType);
   const critical = shortDate(listing.transaction.nextCriticalDate);
+  // The critical date is the next open task's due date, so name that milestone —
+  // "Aug 4" alone doesn't say what happens on Aug 4.
+  const criticalTask = listing.tasks.find(
+    (t) => t.status !== "complete" && t.date,
+  );
   // The deal-level commission the brokerage earns. The Financials tab splits it
   // per broker; the card shows the whole number.
   const gross = listing.transaction.commissionAmount;
   const rel = relationship ? relationshipBadge(relationship) : null;
+  // A lost deal recedes: grey fill, no lift — it's history sitting in the
+  // pipeline, not something to act on.
+  const lost = listing.status === "inactive";
 
   return (
-    <div className={`deal-tile${board ? " deal-tile--board" : ""}`}>
+    <div
+      className={`deal-tile${board ? " deal-tile--board" : ""}${
+        lost ? " deal-tile--lost bg-storm-grey-100" : ""
+      }`}
+    >
       <div className="deal-tile__main">
         <div className="deal-tile__top">
           <div className="deal-tile__headings">
@@ -118,7 +130,11 @@ export function NewDealCard({
                   <span className="deal-tile__meta-sep">•</span>
                   <Tooltip>
                     <Tooltip.Trigger render={<span>{critical}</span>} />
-                    <Tooltip.Content>Next critical date</Tooltip.Content>
+                    <Tooltip.Content>
+                      {criticalTask
+                        ? `Next critical date · ${criticalTask.label}`
+                        : "Next critical date"}
+                    </Tooltip.Content>
                   </Tooltip>
                 </>
               )}
@@ -156,6 +172,7 @@ export function NewDealCard({
               label={side.label}
               bg={side.bg}
               color={side.color}
+              tooltip={side.tooltip}
             />
             {!board && onStageChange && (
               <NewDealStageChip value={listing.status} onChange={onStageChange} />
