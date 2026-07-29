@@ -1,19 +1,8 @@
 import type { Contact } from "#/data/types";
-import { hash } from "#/components/properties/propertyDisplay";
+import { hash, oneIn, pickFor } from "#/components/properties/propertyDisplay";
 
 /** Where a synthesized inquiry came in from — the demo's syndication mix. */
 const CHANNELS = ["Buildout site", "LoopNet", "Crexi", "Brochure link"] as const;
-
-/**
- * Spread a `hash()` value before taking it modulo a small pool. `hash` uses
- * base 31, and 31 ≡ 1 (mod 3), so `hash(s) % 3` degenerates into the string's
- * character-sum mod 3 — near-identical keys (same contact id, different listing
- * uuid) then land on the same bucket over and over. One xorshift mixes the high
- * bits down so the pick actually varies.
- */
-function spread(h: number, len: number): number {
-  return ((h ^ (h >>> 13)) >>> 0) % len;
-}
 
 /**
  * The two ways a lead registers themselves against a marketed listing. A
@@ -48,12 +37,16 @@ export interface InquiryFacts {
  */
 export function inquiryFacts(contact: Contact, listingId: string): InquiryFacts {
   const detail = contact.inquiryDetails?.[listingId];
-  const h = hash(`${contact.id}:${listingId}`);
+  const pair = `${contact.id}:${listingId}`;
+  const h = hash(pair);
   // A written message means they filled in the contact form; otherwise split
-  // the synthesized inquiries between the two registration paths.
+  // the synthesized inquiries between the two registration paths. Each
+  // synthesized field carries its own salt so they vary independently — off one
+  // shared hash, `h % 4` was a subset of `h % 2`, so no unsigned CA ever landed
+  // on a `form` inquiry.
   const kind: InquiryKind = detail?.message
     ? "form"
-    : h % 2 === 0
+    : oneIn(2, pair, "kind")
       ? "docs"
       : "form";
   return {
@@ -63,8 +56,8 @@ export function inquiryFacts(contact: Contact, listingId: string): InquiryFacts 
       kind === "docs"
         ? "Requested access to this listing's secure documents"
         : "Completed the listing's contact form",
-    caSigned: h % 4 !== 0,
-    channel: detail?.channel ?? CHANNELS[spread(h, CHANNELS.length)],
+    caSigned: !oneIn(4, pair, "ca-signed"),
+    channel: detail?.channel ?? pickFor(CHANNELS, pair, "channel"),
     // The record's own date when it has one. The fallback varies by listing so a
     // contact's several inquiries don't stack on one day, and never predates the
     // contact — you can't inquire before you're in the book.

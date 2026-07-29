@@ -1,5 +1,11 @@
-import { hash } from "#/components/properties/propertyDisplay";
+import {
+  hash,
+  oneIn,
+  pickFor,
+  spread,
+} from "#/components/properties/propertyDisplay";
 import { getLeadsForProperty } from "#/data/store";
+import { leadStatusFor } from "#/data/leadFacts";
 import type { Property } from "#/data/types";
 
 /** Ordered stages shown in the Activity Funnel, top (widest) to bottom (narrowest). */
@@ -21,8 +27,6 @@ export interface FunnelStageMetric {
   count: number;
 }
 
-const LEAD_STATUSES = ["No Status", "New", "Engaged", "Contacted", "Qualified"];
-
 export interface ClientReportLead {
   id: string;
   company: string;
@@ -42,15 +46,17 @@ export interface ClientReportLead {
 export function getClientReportLeads(property: Property): ClientReportLead[] {
   return getLeadsForProperty(property.id)
     .map((contact) => {
-      const h = hash(contact.id);
+      // One salt per column. Taken off a single `h = hash(contact.id)` these
+      // moved together — `h % 8` fixes `h % 4`, so CA Signed landed on exactly
+      // the "Emails Sent" and "Viewed CA" rows.
       return {
         id: contact.id,
         company: contact.company || "—",
         name: `${contact.firstName} ${contact.lastName}`,
-        leadStatus: LEAD_STATUSES[h % LEAD_STATUSES.length],
-        pageViews: 1 + (h % 60),
-        lastAction: FUNNEL_STAGES[h % FUNNEL_STAGES.length],
-        caSigned: h % 4 === 0,
+        leadStatus: leadStatusFor(contact.id),
+        pageViews: 1 + spread(hash(`${contact.id}#page-views`), 60),
+        lastAction: pickFor(FUNNEL_STAGES, contact.id, "last-action"),
+        caSigned: oneIn(4, contact.id, "ca-signed"),
       };
     });
 }
