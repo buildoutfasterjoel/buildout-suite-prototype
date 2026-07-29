@@ -7,7 +7,6 @@ import {
   seedGateForm,
   unsatisfiedRequired,
   buildTransitionInput,
-  completeSetupGate,
 } from "#/data/stageGates";
 
 /**
@@ -28,11 +27,18 @@ interface StageGateState {
   dealId: string | null;
   targetStage: PropertyStatus | null;
   mode: GateMode;
+  /**
+   * The deal a broker bailed out of publishing to go edit. Survives `close()`
+   * so the marketing editor can offer a way back into the preview.
+   */
+  pendingPublishDealId: string | null;
   openGate: (
     dealId: string,
     targetStage: PropertyStatus,
     mode?: GateMode,
   ) => void;
+  setPendingPublish: (dealId: string) => void;
+  clearPendingPublish: () => void;
   close: () => void;
 }
 
@@ -41,8 +47,13 @@ export const useStageGate = create<StageGateState>((set) => ({
   dealId: null,
   targetStage: null,
   mode: "transition",
+  pendingPublishDealId: null,
   openGate: (dealId, targetStage, mode = "transition") =>
     set({ open: true, dealId, targetStage, mode }),
+  setPendingPublish: (dealId) => set({ pendingPublishDealId: dealId }),
+  clearPendingPublish: () => set({ pendingPublishDealId: null }),
+  // `pendingPublishDealId` intentionally survives close — the editor banner
+  // depends on it after the modal is dismissed.
   close: () =>
     set({ open: false, dealId: null, targetStage: null, mode: "transition" }),
 }));
@@ -75,8 +86,10 @@ export function requestStageChange(
     return;
   }
 
-  // Forward field gate whose requirements the deal already satisfies — no modal.
-  if (config.kind === "field") {
+  // A publishing transition ALWAYS opens the gate, gaps or not: the preview of
+  // the listing about to go live is the point, not a fallback for missing data.
+  // Non-publishing forward gates keep the zero-click swap.
+  if (config.kind === "field" && !config.publishes) {
     const form = seedGateForm(deal);
     if (unsatisfiedRequired(config, form).length === 0) {
       commitStageTransition(
@@ -92,26 +105,11 @@ export function requestStageChange(
 
 /**
  * Open the Approve & Publish gate to finish setup on a deal that was created
- * directly in a live stage (Active/Under Contract) and never published. When the
- * deal already satisfies every publish requirement, it's published in place with
- * no modal.
+ * directly in a live stage (Active/Under Contract) and never published. Always
+ * opens the preview — publishing never skips the gate, gaps or not.
  */
 export function requestSetupCompletion(dealId: string): void {
   const deal = getListing(dealId);
   if (!deal) return;
-  const config = completeSetupGate(deal);
-  const form = seedGateForm(deal);
-  if (unsatisfiedRequired(config, form).length === 0) {
-    commitStageTransition(
-      buildTransitionInput(
-        config,
-        form,
-        deal.id,
-        deal.internalBrokers[0]?.name ?? "You",
-        deal.dealType,
-      ),
-    );
-    return;
-  }
   useStageGate.getState().openGate(dealId, deal.status, "complete");
 }

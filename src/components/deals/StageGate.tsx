@@ -1,31 +1,22 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Field } from "@buildoutinc/blueprint-react/ui/Field";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
-import { Textarea } from "@buildoutinc/blueprint-react/ui/Textarea";
-import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Popover } from "@buildoutinc/blueprint-react/ui/Popover";
 import { Calendar } from "@buildoutinc/blueprint-react/ui/Calendar";
 import { Alert } from "@buildoutinc/blueprint-react/ui/Alert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faArrowUpRightFromSquare,
-  faRobot,
-  faCalendar,
-  faSparkle,
-  faUser,
-} from "@fortawesome/pro-regular-svg-icons";
+import { faCalendar, faSparkle, faUser } from "@fortawesome/pro-regular-svg-icons";
 import { faNote } from "@fortawesome/pro-duotone-svg-icons";
 import type { PropertyStatus } from "#/data/types";
 import {
   getListing,
   getSellerOptionGroups,
-  getContact,
   getProperty,
-  contactLabel,
   type ContactOption,
   type ContactOptionGroup,
 } from "#/data/store";
@@ -43,6 +34,8 @@ import {
   type GateFormState,
 } from "#/data/stageGates";
 import { commitStageTransition } from "#/data/actions";
+import { useStageGate } from "#/components/deals/useStageGate";
+import { PublishPreview } from "#/components/deals/PublishPreview";
 import { STATUS_LABELS } from "#/components/properties/propertyDisplay";
 import { CurrencyInput } from "#/components/common/CurrencyInput";
 import {
@@ -55,12 +48,6 @@ const DATE_FORMAT: Intl.DateTimeFormatOptions = {
   month: "short",
   day: "numeric",
 };
-
-const LEASE_RATE_UNIT_OPTIONS = [
-  { value: "SF/Yr", label: "SF/Yr" },
-  { value: "SF/Mo", label: "SF/Mo" },
-  { value: "Monthly", label: "Monthly" },
-] as const;
 
 /** Format a stored date value (ISO string or `yyyy-mm-dd`) as a local Date. */
 function parseDate(value: string | null): Date | undefined {
@@ -260,6 +247,7 @@ export function StageGate({
 
   const [form, setForm] = useState<GateFormState>(initialForm);
   const [reviewedDocIds, setReviewedDocIds] = useState<Set<string>>(new Set());
+  const navigate = useNavigate();
   // Re-seed when the modal (re)opens for a different deal/target — the accepted
   // React "reset state during render when a key changes" pattern. All hooks are
   // declared above this point, so this stays before the early return.
@@ -326,18 +314,9 @@ export function StageGate({
     aiDocsAllReviewed: allDocsReviewed,
   };
 
-  // Publish-gate read-only summary — Seller/Side/Property are already on the
-  // deal from creation, so the gate shows them rather than re-collecting them.
-  const seller = deal.sellerContactIds[0]
-    ? getContact(deal.sellerContactIds[0])
-    : undefined;
-  const sellerName = seller ? contactLabel(seller) : null;
+  // The publish gate's read-only Seller/Side/Property summary now lives inside
+  // PublishPreview, which needs the deal's property.
   const summaryProperty = getProperty(deal.propertyId);
-  const propertyAddress = summaryProperty
-    ? [summaryProperty.street, summaryProperty.city, summaryProperty.state]
-        .filter(Boolean)
-        .join(", ")
-    : deal.name;
 
   // Buyer/tenant options for the Under Contract gate, grouped so the deal's own
   // leads come first, then the rest of the CRM. Rendered in a searchable
@@ -351,6 +330,39 @@ export function StageGate({
 
   const confirmable = canConfirm(config, effectiveForm);
 
+  // The publish preview keeps the two listing dates interactive — they're the
+  // AI-extracted values a broker should confirm at the publish moment.
+  const listingDateFields = (
+    <div className="d-flex flex-column gap-3">
+      {/* The two dates read as a pair (a term), so they sit side by side. */}
+      <div className="d-flex gap-2">
+        <Field className="flex-grow-1" style={{ minWidth: 0 }}>
+          <Field.Label>Listing Executed</Field.Label>
+          <GateDatePicker
+            value={form.listedOnDate}
+            onChange={(v) => set("listedOnDate", v)}
+            placeholder="Pick a date"
+          />
+        </Field>
+        <Field className="flex-grow-1" style={{ minWidth: 0 }}>
+          <Field.Label>Listing Expires</Field.Label>
+          <GateDatePicker
+            value={form.listingExpirationDate}
+            onChange={(v) => set("listingExpirationDate", v)}
+            placeholder="Pick a date"
+          />
+        </Field>
+      </div>
+      {aiDatesFromAgreement && (
+        <div className="ai-draft">
+          <FontAwesomeIcon icon={faSparkle} className="ai-draft__icon" />
+          AI pulled the executed and expiration dates from {agreementDoc.name} —
+          review before publishing.
+        </div>
+      )}
+    </div>
+  );
+
   const commit = () => {
     const input = buildTransitionInput(
       config,
@@ -361,6 +373,7 @@ export function StageGate({
     );
     // commitStageTransition emits the move/publish toast centrally.
     commitStageTransition(input);
+    useStageGate.getState().clearPendingPublish();
     onOpenChange(false);
     onCommitted?.();
   };
@@ -400,167 +413,24 @@ export function StageGate({
 
           {(config.kind === "field" || config.kind === "dead") && (
             <>
-              {config.publishes && (
-                <div className="border rounded p-3 bg-body-tertiary">
-                  <div className="fw-semibold mb-2">
-                    You're publishing this listing
-                  </div>
-                  <dl className="row g-0 mb-0">
-                    <dt className="col-4 fw-normal text-muted">Seller</dt>
-                    <dd className="col-8 mb-1">{sellerName ?? "—"}</dd>
-                    <dt className="col-4 fw-normal text-muted">Side</dt>
-                    <dd className="col-8 mb-1">
-                      {deal.dealSide === "seller" ? "Sell-side" : "Buy-side"}
-                    </dd>
-                    <dt className="col-4 fw-normal text-muted">Property</dt>
-                    <dd className="col-8 mb-0">{propertyAddress}</dd>
-                  </dl>
-                </div>
-              )}
-
-              {config.publishes && (
-                <>
-                  {show("saleTitle") && (
-                    <Field>
-                      <Field.Label>Listing title</Field.Label>
-                      <Input
-                        value={form.saleTitle}
-                        onChange={(e) => set("saleTitle", e.target.value)}
-                        placeholder="e.g. Prime Retail Pad — Downtown"
-                      />
-                    </Field>
-                  )}
-
-                  {show("saleDescription") && (
-                    <Field>
-                      <Field.Label>Listing description</Field.Label>
-                      <Textarea
-                        rows={3}
-                        value={form.saleDescription}
-                        onChange={(e) =>
-                          set("saleDescription", e.target.value)
-                        }
-                        placeholder="Describe the offering for the public listing…"
-                      />
-                    </Field>
-                  )}
-
-                  {show("askingPrice") && deal.dealType === "Sale" && (
-                    <Field>
-                      <Field.Label>Asking price</Field.Label>
-                      <CurrencyInput
-                        value={form.askingPrice}
-                        onChange={(v) => set("askingPrice", v)}
-                      />
-                      <Field.Description>
-                        Editing here updates the listing.{" "}
-                        <a
-                          href={`/listings/${deal.id}/edit`}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Open full marketing editor{" "}
-                          <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
-                        </a>
-                      </Field.Description>
-                    </Field>
-                  )}
-
-                  {(show("leaseRate") || show("availableSqFt")) &&
-                    deal.dealType !== "Sale" && (
-                      <>
-                        <div className="d-flex gap-2">
-                          <Field className="flex-grow-1">
-                            <Field.Label>Lease rate</Field.Label>
-                            <CurrencyInput
-                              value={form.leaseRate}
-                              onChange={(v) => set("leaseRate", v)}
-                            />
-                          </Field>
-                          <Field style={{ width: 140 }}>
-                            <Field.Label>Units</Field.Label>
-                            <Select
-                              items={LEASE_RATE_UNIT_OPTIONS}
-                              value={form.leaseRateUnits}
-                              onValueChange={(v) =>
-                                set(
-                                  "leaseRateUnits",
-                                  v as typeof form.leaseRateUnits,
-                                )
-                              }
-                            >
-                              <Select.Trigger>
-                                <Select.Value />
-                              </Select.Trigger>
-                              <Select.Content>
-                                {LEASE_RATE_UNIT_OPTIONS.map((o) => (
-                                  <Select.Item key={o.value} value={o.value}>
-                                    {o.label}
-                                  </Select.Item>
-                                ))}
-                              </Select.Content>
-                            </Select>
-                          </Field>
-                        </div>
-                        <Field>
-                          <Field.Label>Available SF</Field.Label>
-                          <Input
-                            type="number"
-                            value={form.availableSqFt ?? ""}
-                            onChange={(e) =>
-                              set(
-                                "availableSqFt",
-                                e.target.value ? Number(e.target.value) : null,
-                              )
-                            }
-                            placeholder="e.g. 2400"
-                          />
-                        </Field>
-                      </>
-                    )}
-                </>
-              )}
-
-              {show("aiDocsReviewed") && aiDocs.length > 0 && (
-                <Field>
-                  <Field.Label>
-                    <FontAwesomeIcon icon={faRobot} /> Review AI-generated
-                    documents
-                  </Field.Label>
-                  <div className="d-flex flex-column gap-2 border rounded p-2">
-                    {aiDocs.map((d) => (
-                      <div
-                        key={d.id}
-                        className="d-flex align-items-center justify-content-between gap-2"
-                      >
-                        <label className="d-flex align-items-center gap-2 mb-0">
-                          <Checkbox
-                            checked={reviewedDocIds.has(d.id)}
-                            onCheckedChange={(c) =>
-                              setReviewedDocIds((prev) => {
-                                const next = new Set(prev);
-                                if (c === true) next.add(d.id);
-                                else next.delete(d.id);
-                                return next;
-                              })
-                            }
-                          />
-                          {d.name}
-                        </label>
-                        <a
-                          href={`/listings/${deal.id}/documents`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-nowrap"
-                        >
-                          Open{" "}
-                          <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                </Field>
-              )}
+              {config.publishes ? (
+                <PublishPreview
+                  deal={deal}
+                  property={summaryProperty}
+                  config={config}
+                  form={effectiveForm}
+                  reviewedDocIds={reviewedDocIds}
+                  onToggleReviewed={(docId, reviewed) =>
+                    setReviewedDocIds((prev) => {
+                      const next = new Set(prev);
+                      if (reviewed) next.add(docId);
+                      else next.delete(docId);
+                      return next;
+                    })
+                  }
+                  dateFields={listingDateFields}
+                />
+              ) : null}
 
               {show("buyerLinked") && (
                 <Field>
@@ -597,40 +467,6 @@ export function StageGate({
                   />
                 </Field>
               )}
-
-              {show("listedOnDate") && (
-                <Field>
-                  <Field.Label>Listing Executed</Field.Label>
-                  <GateDatePicker
-                    value={form.listedOnDate}
-                    onChange={(v) => set("listedOnDate", v)}
-                    placeholder="Pick a date"
-                  />
-                </Field>
-              )}
-
-              {show("listingExpirationDate") && (
-                <Field>
-                  <Field.Label>Listing Expires</Field.Label>
-                  <GateDatePicker
-                    value={form.listingExpirationDate}
-                    onChange={(v) => set("listingExpirationDate", v)}
-                    placeholder="Pick a date"
-                  />
-                </Field>
-              )}
-
-              {aiDatesFromAgreement &&
-                (show("listedOnDate") || show("listingExpirationDate")) && (
-                  <div className="ai-draft">
-                    <FontAwesomeIcon
-                      icon={faSparkle}
-                      className="ai-draft__icon"
-                    />
-                    AI pulled the executed and expiration dates from{" "}
-                    {agreementDoc.name} — review before publishing.
-                  </div>
-                )}
 
               {show("salePrice") && (
                 <Field>
@@ -735,7 +571,25 @@ export function StageGate({
         </Modal.Body>
 
         <Modal.Footer>
+          {/* Cancel aborts the move outright and stays put; "Back to editing"
+              keeps the publish intent alive and sends the broker to the editor.
+              Both are needed — they mean different things. */}
           <Modal.Close render={<Button variant="ghost">Cancel</Button>} />
+          {config.publishes && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                useStageGate.getState().setPendingPublish(deal.id);
+                onOpenChange(false);
+                navigate({
+                  to: "/listings/$listingId/edit",
+                  params: { listingId: deal.id },
+                });
+              }}
+            >
+              Back to editing
+            </Button>
+          )}
           <Button variant="primary" disabled={!confirmable} onClick={commit}>
             {config.publishes ? "Approve & Publish" : "Confirm"}
           </Button>

@@ -40,6 +40,7 @@ import type { CallList } from './contactLists'
 import type { SerializedContactFilters } from '#/components/contacts/contactFilterModel'
 import { reconcileContactDealFields } from './contactStage'
 import { CURRENT_USER, TEAMMATES, type AccessTier, type ContactShare } from './teammates'
+import { DEFAULT_PERSONAL_SPLIT_PCT } from './commission'
 
 const SEED = 20240101
 const PROPERTY_COUNT = 20
@@ -995,7 +996,9 @@ function generateBroker(side: 'internal' | 'outside', commissionAmount: number):
     commissionSplitPct: splitPct,
     grossCommission: Math.round(commissionAmount * (splitPct / 100)),
     commissionPlan: side === 'internal' ? 'No Plan' : undefined,
-    personalSplitPct: side === 'internal' ? faker.helpers.arrayElement([45, 55, 60, 70]) : undefined,
+    // Flat house split for internal brokers — the pipeline commission forecast
+    // reads this, so a single rate keeps "You" predictable across the demo.
+    personalSplitPct: side === 'internal' ? DEFAULT_PERSONAL_SPLIT_PCT : undefined,
   }
 }
 

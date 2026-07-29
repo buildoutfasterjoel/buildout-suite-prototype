@@ -17,6 +17,11 @@
   // Deal side accents — distinct from the stage palette above.
   --side-seller: #{colors.$buildout-blue-600};
   --side-buyer: #{colors.$mountain-meadow-600};
+
+  // Informational accent — Seagull, deliberately not the brand primary the
+  // cards' own links and switches already own. Marks a channel state that is
+  // in flight: nothing to act on, but not yet confirmed either.
+  --channel-info: #{colors.$seagull-600};
 }
 
 // AI assistant markdown: tighten default block spacing so rendered paragraphs,
