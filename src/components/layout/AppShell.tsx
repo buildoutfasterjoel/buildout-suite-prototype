@@ -16,6 +16,7 @@ import { LiveCallBar } from "#/components/call/LiveCallBar";
 import { CallSessionController } from "#/components/call/CallSessionController";
 import { BovWatcher } from "#/components/call/BovWatcher";
 import { RosaLeadsWatcher } from "#/components/call/RosaLeadsWatcher";
+import { IngestionWatcher } from "#/components/deals/IngestionWatcher";
 import { useDataStore } from "#/data/dataStore";
 
 export function AppShell() {
@@ -35,6 +36,7 @@ export function AppShell() {
             {hydrated && <CallSessionController />}
             {hydrated && <BovWatcher />}
             {hydrated && <RosaLeadsWatcher />}
+            {hydrated && <IngestionWatcher />}
             {hydrated ? (
               <Outlet />
             ) : (
