@@ -760,7 +760,7 @@ export function channelMetaSegments(channel: SyndicationChannel): MetaSegment[] 
 - [ ] **Step 5: Run the test to verify it passes**
 
 Run: `bun --bun run test src/components/listings/syndication/syndicationDisplay.test.ts`
-Expected: PASS, all 17 tests.
+Expected: PASS, all 16 tests (4 badge + 8 direct + 4 email).
 
 The timestamp assertions use `stringContaining('07/22/2026')` precisely because the time-of-day and zone abbreviation depend on the runner's timezone — do not tighten them to exact strings.
 
