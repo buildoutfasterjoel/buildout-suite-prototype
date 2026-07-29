@@ -10,6 +10,7 @@ import {
   TYPE_LABELS,
   STATUS_LABELS,
   formatPrice,
+  getPhotoUrl,
 } from "#/components/properties/propertyDisplay";
 import { CardBadge, BadgeDivider } from "#/components/deals/DealCardBadges";
 import { LINKED_DEAL_ICON, relationshipBadge } from "#/components/deals/newCardTokens";
@@ -95,25 +96,34 @@ export function NewContactPropertyCard({
       }}
     >
       <div className="deal-tile__main">
-        <div className="deal-tile__headings">
-          <div className="deal-tile__title-row">
-            <Tooltip>
-              <Tooltip.Trigger
-                render={
-                  <span className="deal-tile__type-icon">
-                    <FontAwesomeIcon icon={TYPE_ICONS[property.propertyType]} />
-                  </span>
-                }
-              />
-              <Tooltip.Content>
-                {TYPE_LABELS[property.propertyType]}
-              </Tooltip.Content>
-            </Tooltip>
-            <span className="deal-tile__title" title={property.name}>
-              {property.name}
-            </span>
+        <div className="deal-tile__top">
+          <img
+            src={getPhotoUrl(property.id)}
+            alt=""
+            className="deal-tile__photo"
+          />
+          <div className="deal-tile__headings">
+            <div className="deal-tile__title-row">
+              <Tooltip>
+                <Tooltip.Trigger
+                  render={
+                    <span className="deal-tile__type-icon">
+                      <FontAwesomeIcon
+                        icon={TYPE_ICONS[property.propertyType]}
+                      />
+                    </span>
+                  }
+                />
+                <Tooltip.Content>
+                  {TYPE_LABELS[property.propertyType]}
+                </Tooltip.Content>
+              </Tooltip>
+              <span className="deal-tile__title" title={property.name}>
+                {property.name}
+              </span>
+            </div>
+            <span className="deal-tile__meta deal-tile__meta--muted">{meta}</span>
           </div>
-          <span className="deal-tile__meta deal-tile__meta--muted">{meta}</span>
         </div>
 
         <div className="deal-tile__badges-main">
@@ -124,29 +134,33 @@ export function NewContactPropertyCard({
             color={owner.color}
             tooltip={`${contactName} owns the property`}
           />
-          {(multiple || single) && <BadgeDivider />}
-          {multiple
-            ? dealBadge(
-                "Multiple Deals",
-                LINKED_DEAL_ICON.inactive,
-                `See all ${listings.length} deals on ${property.name}`,
-                () =>
-                  void navigate({
-                    to: "/listings",
-                    search: { q: property.street },
-                  }),
-              )
-            : single &&
-              dealBadge(
-                "Deal",
-                LINKED_DEAL_ICON[single.status],
-                `Open the ${STATUS_LABELS[single.status]} deal`,
-                () =>
-                  void navigate({
-                    to: "/listings/$listingId",
-                    params: { listingId: single.id },
-                  }),
-              )}
+          {(multiple || single) && (
+            <span className="deal-tile__rel-group">
+              <BadgeDivider />
+              {multiple
+                ? dealBadge(
+                    "Multiple Deals",
+                    LINKED_DEAL_ICON.inactive,
+                    `See all ${listings.length} deals on ${property.name}`,
+                    () =>
+                      void navigate({
+                        to: "/listings",
+                        search: { q: property.street },
+                      }),
+                  )
+                : single &&
+                  dealBadge(
+                    "Deal",
+                    LINKED_DEAL_ICON[single.status],
+                    `Open the ${STATUS_LABELS[single.status]} deal`,
+                    () =>
+                      void navigate({
+                        to: "/listings/$listingId",
+                        params: { listingId: single.id },
+                      }),
+                  )}
+            </span>
+          )}
         </div>
       </div>
     </div>
