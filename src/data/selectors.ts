@@ -4,6 +4,7 @@ import { getContactsForProperty, getContactShares, getLeadsForProperty, getOwner
 import { dealStageFromStatus } from './contactStage'
 import { CURRENT_USER, TEAMMATES, type Teammate } from './teammates'
 import { deriveTaskType } from '#/components/contacts/taskDisplay'
+import { hash, spread } from '#/components/properties/propertyDisplay'
 
 /** All contacts attached to a deal (seller + buyer + other), deduped. */
 export function listContactsForDeal(dealId: string): Contact[] {
@@ -139,13 +140,8 @@ export function getContactDetailClient(id: string): ContactDetail | null {
   // for an owner-only contact there's just one possible assignee, so it's noise.
   const isShared = accessRoster.length > 1
   // Stable hash so a given task always maps to the same roster member.
-  const hash = (s: string) => {
-    let h = 0
-    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
-    return h
-  }
   const assigneeFromAccess = (key: string) =>
-    accessRoster[hash(key) % accessRoster.length]
+    accessRoster[spread(hash(key), accessRoster.length)]
   const FULL_ROSTER = [CURRENT_USER, ...TEAMMATES]
 
   // All the contact's tasks across their deals, each paired with its deal so the

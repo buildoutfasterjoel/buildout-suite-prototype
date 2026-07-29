@@ -25,10 +25,11 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact, Property } from "#/data/types";
 import { getLeadsForProperty } from "#/data/store";
+import { LEAD_STATUSES, leadStatusFor } from "#/data/leadFacts";
 import { useDataStore } from "#/data/dataStore";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
 import { startCallSession } from "#/components/call/useCallSession";
-import { hash } from "./propertyDisplay";
+import { oneIn, pickFor } from "./propertyDisplay";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
 
 const ACCESS_LEVELS = ["Low", "Medium", "High"] as const;
@@ -39,7 +40,6 @@ const REFERRAL_SOURCES = [
   "Referral",
   "Syndication",
 ];
-const LEAD_STATUSES = ["No Status", "New", "Engaged", "Contacted", "Qualified"];
 const ADDED_BY = ["AE", "MK", "JL", "RS", "TC", "DP"];
 
 const ROLE_LABELS: Record<Contact["role"], string> = {
@@ -92,14 +92,18 @@ const NEW_LEAD_MS = 2 * 86_400_000;
  * come off the real record — a lead that just landed has to read as new, not as
  * one we've had on file for four months — and the rest of the lead-only columns
  * (access level, referral source, 1031) are deterministic filler off the id.
+ *
+ * Each filler column gets its own field salt via `pickFor`/`oneIn`: derived off
+ * one shared `hash(contact.id)` these columns moved in lockstep, so the table
+ * showed Verified on exactly the "Low" access rows and one referral source per
+ * lead status.
  */
 function toLead(contact: Contact): Lead {
-  const h = hash(contact.id);
   const added = new Date(contact.createdAt);
   const updated = new Date(
     contact.lastActivityAt ?? contact.lastContactedAt ?? contact.createdAt,
   );
-  const has1031 = h % 5 === 0;
+  const has1031 = oneIn(5, contact.id, "1031-exchange");
   // Never contacted and only just added → New. Otherwise keep the spread of
   // statuses the table is built to show.
   const fresh =
@@ -111,11 +115,11 @@ function toLead(contact: Contact): Lead {
     initials: `${contact.firstName[0] ?? ""}${contact.lastName[0] ?? ""}`,
     email: contact.email,
     phone: contact.phone,
-    addedBy: ADDED_BY[h % ADDED_BY.length],
-    accessLevel: ACCESS_LEVELS[h % ACCESS_LEVELS.length],
-    verified: h % 3 === 0,
-    leadStatus: fresh ? "New" : LEAD_STATUSES[h % LEAD_STATUSES.length],
-    referralSource: REFERRAL_SOURCES[h % REFERRAL_SOURCES.length],
+    addedBy: pickFor(ADDED_BY, contact.id, "added-by"),
+    accessLevel: pickFor(ACCESS_LEVELS, contact.id, "access-level"),
+    verified: oneIn(3, contact.id, "verified"),
+    leadStatus: fresh ? "New" : leadStatusFor(contact.id),
+    referralSource: pickFor(REFERRAL_SOURCES, contact.id, "referral-source"),
     company: contact.company,
     role: ROLE_LABELS[contact.role],
     dateAdded: fmtDate(added),

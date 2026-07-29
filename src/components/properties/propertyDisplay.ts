@@ -93,6 +93,40 @@ export function hash(s: string): number {
   return h;
 }
 
+/**
+ * Mix `hash()`'s high bits down before taking a small modulo. `hash` is base
+ * 31, and 31 ≡ 1 (mod n) for n = 2, 3, 5, 6, 10, 15, 30 — so for a key short
+ * enough not to overflow 32 bits, `hash(s) % n` is exactly the string's
+ * character sum mod n, and charsum-equal keys (anagrams, transposed digits)
+ * always collide. One xorshift removes that dependence. Long keys like a uuid
+ * wrap often enough to spread on their own; this makes the pick safe either way.
+ */
+export function spread(h: number, len: number): number {
+  return ((h ^ (h >>> 13)) >>> 0) % len;
+}
+
+/**
+ * Deterministic pick from a small pool, keyed on an id **plus a field name**.
+ *
+ * The field salt is the point. Several columns derived from one `hash(id)` are
+ * collinear rather than independent: two pools of the same length always pick
+ * the same index, `h % 3 === 0` is true on exactly the rows where a 3-entry
+ * pool picks its first entry, and a longer pool fixes the shorter ones it
+ * shares a factor with (`h % 6` determines `h % 3` and `h % 2`). A table filled
+ * that way reads as if the values were copied across each row — which is how
+ * this surfaced on the Leads tab, where Verified appeared on exactly the rows
+ * whose access level was "Low". Salting per field gives each column its own
+ * independent hash.
+ */
+export function pickFor<T>(pool: readonly T[], id: string, field: string): T {
+  return pool[spread(hash(`${id}#${field}`), pool.length)];
+}
+
+/** Deterministic 1-in-`n` flag for one field — the boolean sibling of {@link pickFor}. */
+export function oneIn(n: number, id: string, field: string): boolean {
+  return spread(hash(`${id}#${field}`), n) === 0;
+}
+
 /** Deterministic 5-digit reference id shown on cards and the detail header. */
 export function getRefId(id: string): number {
   return 10000 + (hash(id) % 90000);
