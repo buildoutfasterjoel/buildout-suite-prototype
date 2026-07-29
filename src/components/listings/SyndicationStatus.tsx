@@ -258,10 +258,7 @@ function SyndicationGroup({
         />
       ))}
       {disclaimer && (
-        <p
-          className="d-flex gap-2 fs-small text-muted mb-0 mt-1"
-          style={{ maxWidth: "62ch" }}
-        >
+        <p className="d-flex gap-2 fs-small text-muted mb-0 mt-1">
           <FontAwesomeIcon icon={faCircleInfo} style={{ marginTop: "0.2em" }} />
           <span>{disclaimer}</span>
         </p>
