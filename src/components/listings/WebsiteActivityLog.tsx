@@ -14,6 +14,7 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing } from "#/data/types";
 import { getListingWebsiteActivity } from "#/data/listingWebsiteActivity";
+import { SYNDICATION_NETWORK_NAMES } from "#/data/listingSyndication";
 import { Section } from "./listingWidgets";
 
 const EVENT_TYPE_OPTIONS = [
@@ -22,17 +23,14 @@ const EVENT_TYPE_OPTIONS = [
   "Document Downloaded",
   "Contact Clicked",
 ];
+// Mirrors the SOURCES pool in listingWebsiteActivity.ts so this dropdown never
+// drifts from the channel roster the table can actually show.
 const SOURCE_OPTIONS = [
   "Direct",
   "Organic Search",
   "Email Campaign",
   "Referral",
-  "LoopNet",
-  "Crexi",
-  "CoStar",
-  "Ten-X",
-  "Brevitas",
-  "RCM1",
+  ...SYNDICATION_NETWORK_NAMES,
 ];
 const DEVICE_OPTIONS = ["Desktop", "Mobile", "Tablet"];
 
