@@ -16,6 +16,7 @@ import { faTriangleExclamation } from "@fortawesome/pro-duotone-svg-icons";
 import type { Listing } from "#/data/types";
 import {
   getListingSyndication,
+  withChannelActive,
   type SyndicationChannel,
   type SyndicationDelivery,
 } from "#/data/listingSyndication";
@@ -25,14 +26,9 @@ import { SyndicationChannelCard } from "./syndication/SyndicationChannelCard";
 const AFFILIATION_DISCLAIMER =
   "Buildout has no financial, legal, commercial, or partnership affiliation with CoStar Group, Inc., LoopNet, or Crexi, Inc. No association or relationship between these companies should be implied or inferred. Buildout assists customers in sending email updates to these unaffiliated channels when listings are added, updated, or removed.";
 
-const GROUPS: {
-  delivery: SyndicationDelivery;
-  label: string;
-  /** How this group's "n of m" count reads — these channels behave differently. */
-  verb: string;
-}[] = [
-  { delivery: "direct", label: "Direct connections", verb: "syndicating" },
-  { delivery: "email", label: "Email updates", verb: "sending" },
+const GROUPS: { delivery: SyndicationDelivery; label: string }[] = [
+  { delivery: "direct", label: "Direct connections" },
+  { delivery: "email", label: "Email updates" },
 ];
 
 /**
@@ -41,9 +37,18 @@ const GROUPS: {
  * that qualify each group.
  */
 export function SyndicationStatus({ listing }: { listing: Listing }) {
-  const { channels: initialChannels, blockingIssues } =
+  // Recomputed from `listing` on every render (deterministic, so identical
+  // input always yields identical output) rather than frozen at mount — a
+  // publish/unpublish elsewhere in the app re-renders this component with a
+  // new `listing.publishedAt`, and the channel list must track it instead of
+  // going stale. Only the user's own toggles are kept in state; they're
+  // reapplied on top of the fresh base list below.
+  const { channels: baseChannels, blockingIssues } =
     getListingSyndication(listing);
-  const [channels, setChannels] = useState(initialChannels);
+  const [overrides, setOverrides] = useState<Record<string, boolean>>({});
+  const channels = baseChannels.map((c) =>
+    c.id in overrides ? withChannelActive(c, overrides[c.id]) : c,
+  );
   const rep = listing.internalBrokers[0];
   const websiteUrl = getListingWebsiteSettings(listing).websiteUrl;
   const websiteLabel =
@@ -74,19 +79,19 @@ export function SyndicationStatus({ listing }: { listing: Listing }) {
         : "var(--stage-active)";
 
   const toggle = (id: string, active: boolean) => {
-    setChannels((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, active } : c)),
-    );
+    setOverrides((prev) => ({ ...prev, [id]: active }));
   };
 
   const toggleGroup = (delivery: SyndicationDelivery, active: boolean) => {
-    setChannels((prev) =>
-      prev.map((c) =>
-        c.delivery !== delivery || c.state === "not-available"
-          ? c
-          : { ...c, active },
-      ),
-    );
+    setOverrides((prev) => {
+      const next = { ...prev };
+      for (const c of baseChannels) {
+        if (c.delivery === delivery && c.state !== "not-available") {
+          next[c.id] = active;
+        }
+      }
+      return next;
+    });
   };
 
   return (
@@ -162,7 +167,6 @@ export function SyndicationStatus({ listing }: { listing: Listing }) {
                   <SyndicationGroup
                     key={group.delivery}
                     label={group.label}
-                    verb={group.verb}
                     channels={groupChannels}
                     informational={group.delivery === "email"}
                     websiteUrl={websiteUrl}
@@ -202,7 +206,6 @@ export function SyndicationStatus({ listing }: { listing: Listing }) {
  */
 function SyndicationGroup({
   label,
-  verb,
   channels,
   informational,
   websiteUrl,
@@ -211,7 +214,6 @@ function SyndicationGroup({
   onToggleAll,
 }: {
   label: string;
-  verb: string;
   channels: SyndicationChannel[];
   informational: boolean;
   websiteUrl: string;
@@ -219,8 +221,12 @@ function SyndicationGroup({
   onToggle: (id: string, active: boolean) => void;
   onToggleAll: (active: boolean) => void;
 }) {
+  // "Not available" channels have no connection to turn on, so they don't
+  // belong in either half of an "n of m" count — a count that includes them
+  // could never reach its own denominator, and the master switch (which also
+  // skips them) would show "on" beside a total it can't produce.
   const eligible = channels.filter((c) => c.state !== "not-available");
-  const activeCount = channels.filter((c) => c.active).length;
+  const activeCount = eligible.filter((c) => c.active).length;
   const allActive = eligible.length > 0 && eligible.every((c) => c.active);
 
   const body = (
@@ -257,7 +263,7 @@ function SyndicationGroup({
         </span>
         <div className="d-flex align-items-center gap-2">
           <span className="fs-small text-muted">
-            {activeCount} of {channels.length} {verb}
+            {activeCount} of {eligible.length} active
           </span>
           <Switch
             checked={allActive}

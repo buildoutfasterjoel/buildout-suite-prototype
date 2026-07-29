@@ -89,9 +89,25 @@ export function SyndicationChannelCard({
         {segments.map((segment, i) => (
           <span key={segment.text}>
             {i > 0 && <span className="mx-1">·</span>}
-            <span className={segment.tone === "warning" ? "text-warning" : undefined}>
-              {segment.text}
-            </span>
+            {segment.info ? (
+              <Tooltip>
+                <Tooltip.Trigger
+                  render={
+                    <span
+                      className={segment.tone === "warning" ? "text-warning" : undefined}
+                      tabIndex={0}
+                    >
+                      {segment.text}
+                    </span>
+                  }
+                />
+                <Tooltip.Content side="top">{segment.info}</Tooltip.Content>
+              </Tooltip>
+            ) : (
+              <span className={segment.tone === "warning" ? "text-warning" : undefined}>
+                {segment.text}
+              </span>
+            )}
           </span>
         ))}
       </div>

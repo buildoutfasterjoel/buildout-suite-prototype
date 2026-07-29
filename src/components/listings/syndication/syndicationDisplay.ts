@@ -70,7 +70,18 @@ export interface MetaSegment {
   text: string;
   /** "warning" renders in `text-warning`; muted is the default. */
   tone?: "warning";
+  /** Extra context the card renders as a tooltip on this segment. */
+  info?: string;
 }
+
+/**
+ * Why an email channel's "Posting not confirmed" is worded that way, not
+ * "not confirmed yet" or similar — Buildout only ever emails these channels
+ * on the broker's behalf, so the channel (not Buildout) controls whether and
+ * when the listing actually appears.
+ */
+const POSTING_NOT_CONFIRMED_INFO =
+  "Buildout emails this channel on the broker's behalf, so the channel controls whether and when the listing appears.";
 
 /** An expiration this close deserves to be noticed, not just counted. */
 const EXPIRING_SOON_DAYS = 30;
@@ -122,7 +133,7 @@ export function channelMetaSegments(channel: SyndicationChannel): MetaSegment[] 
           ? `Last sent ${formatChannelTimestamp(channel.lastUpdatedAt)}`
           : "No updates sent",
       },
-      { text: "Posting not confirmed" },
+      { text: "Posting not confirmed", info: POSTING_NOT_CONFIRMED_INFO },
     ];
   }
 

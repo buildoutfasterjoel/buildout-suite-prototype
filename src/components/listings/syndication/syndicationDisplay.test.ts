@@ -107,6 +107,13 @@ describe('channelMetaSegments — email', () => {
     ])
   })
 
+  it('carries an info tooltip explaining why the posting is unconfirmed', () => {
+    const segs = channelMetaSegments(email())
+    const notConfirmed = segs.find((s) => s.text === 'Posting not confirmed')
+    expect(notConfirmed?.info).toBeTruthy()
+    expect(notConfirmed?.info).toMatch(/broker's behalf/)
+  })
+
   it('reports a queued send', () => {
     expect(texts(email({ state: 'send-pending' }))).toEqual(['Update queued to send'])
   })
