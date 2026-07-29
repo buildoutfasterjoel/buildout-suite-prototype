@@ -29,6 +29,7 @@ import type { ContactShare } from "#/data/teammates";
 import { ContactDealCard } from "#/components/contacts/ContactDealCard";
 import { ContactInquiryCard } from "#/components/contacts/ContactInquiryCard";
 import { NewContactInquiryCard } from "#/components/contacts/NewContactInquiryCard";
+import { inquiryFacts } from "#/components/contacts/inquiryFacts";
 import { ContactPropertyCard } from "#/components/contacts/ContactPropertyCard";
 import { NewContactDealCard } from "#/components/contacts/NewContactDealCard";
 import { NewContactPropertyCard } from "#/components/contacts/NewContactPropertyCard";
@@ -198,7 +199,15 @@ export function ContactOverviewColumn({
       ...(contact.inquiredListingIds ?? []),
       ...leadDeals.map((d) => d.id),
     ]),
-  ].filter((id) => !partyDealIds.has(id));
+  ]
+    .filter((id) => !partyDealIds.has(id))
+    // Newest inquiry first — the freshest interest is the one worth working, and
+    // it's what the broker is looking for when they open the section.
+    .sort(
+      (a, b) =>
+        new Date(inquiryFacts(contact, b).date).getTime() -
+        new Date(inquiryFacts(contact, a).date).getTime(),
+    );
 
   // A just-created deal (AI Start-a-Deal flow) gets a brief spotlight; clear
   // the signal once the animation has played so it doesn't replay on

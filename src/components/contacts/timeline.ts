@@ -425,6 +425,9 @@ export const FILTER_ICON: Partial<Record<FilterKey, IconDefinition>> = {
   emails: faEnvelope,
   meetings: faCalendar,
   tours: faBinoculars,
+  // Same glyph the inquiry rows carry, so the filter and the rows it selects
+  // read as the same thing.
+  inquiries: faCircleQuestion,
 };
 
 export function matchesFilter(event: TimelineEvent, key: FilterKey): boolean {
