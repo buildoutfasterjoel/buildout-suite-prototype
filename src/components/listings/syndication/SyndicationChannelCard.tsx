@@ -51,7 +51,7 @@ export function SyndicationChannelCard({
           className="d-flex align-items-center gap-2"
           style={{ minWidth: 0 }}
         >
-          <span className="fw-medium text-truncate">{channel.name}</span>
+          <span className="fw-semibold text-truncate">{channel.name}</span>
           <Badge variant="secondary" appearance="muted">
             <FontAwesomeIcon icon={badge.icon} style={{ color: badge.color }} />
             {badge.label}
