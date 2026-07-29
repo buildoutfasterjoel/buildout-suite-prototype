@@ -218,9 +218,13 @@ Modal stays `size="lg" scrollable centered` — three-line cards need height, no
 | `src/data/listingSyndication.ts` | Rewrite: delivery-aware roster, per-channel state and dates, anchored generation |
 | `src/data/listingSyndication.test.ts` | New: determinism plus the four generator invariants |
 | `src/components/listings/SyndicationStatus.tsx` | Header widget, modal shell, groups, disclaimers |
-| `src/components/listings/syndication/SyndicationChannelCard.tsx` | New: one card and its badge |
+| `src/components/listings/syndication/SyndicationChannelCard.tsx` | New: one card's markup |
+| `src/components/listings/syndication/syndicationDisplay.ts` | New: pure badge descriptors, timestamp formatter, and meta-line segments |
+| `src/components/listings/syndication/syndicationDisplay.test.ts` | New: meta-line branching per state and delivery |
 
 `SyndicationStatus.tsx` is 234 lines today and would roughly double if the card stayed inline, so the card and its badge move out. The modal file then reads as layout and the card file as one channel's presentation.
+
+The badge/meta-line branching lives in `syndicationDisplay.ts` rather than inside the card's JSX. That branching — off vs. never-published, the four email variants, the expiration threshold — is the part most likely to be wrong, and this project's test setup covers pure `.ts` logic only (there is no `test` block in `vite.config.ts` and no `.test.tsx` files). Keeping it out of JSX is what makes it testable at all.
 
 ## Verification
 
