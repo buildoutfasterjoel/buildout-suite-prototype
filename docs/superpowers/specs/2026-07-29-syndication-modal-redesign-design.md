@@ -109,17 +109,34 @@ Blueprint's `Badge` ships only `variant="primary|secondary|outline"` × `appeara
 
 Blueprint sets Bootstrap's `$prefix` to `bp-` (`blueprint-theme/scss/bridge/_vars.scss`), so the theme colors are available as `--bp-success`, `--bp-warning`, `--bp-primary`, etc. Two constraints worth recording: the theme map has **no `info` color** (only primary, secondary, success, warning, destructive, accent, muted), and `--stage-active` is `$buildout-blue-500` — blue, not green — so it is the wrong token for a confirmation check.
 
+Informational states use **Seagull** (`$seagull-*`, hue ~216–227 — cyan-leaning, distinct from buildout-blue's ~259) rather than `--bp-primary`. Primary is the brand action color used by the card's own links and switch; a state badge wearing it would read as clickable.
+
 | State | Icon | Icon color | Label |
 | --- | --- | --- | --- |
 | `updated` | `faCircleCheck` | `--bp-success` | Updated |
-| `pending` | `faArrowsRotate` | `--bp-primary` | Pending |
+| `pending` | `faArrowsRotate` | `--channel-info` | Pending |
 | `needs-attention` | `faCircleExclamation` | `--bp-warning` | Needs attention |
 | `off` | `faCircleMinus` | `--stage-inactive` | Off |
 | `not-available` | `faCircleMinus` | `--stage-inactive` | Not available |
 | `update-sent` | `faEnvelope` | `--stage-inactive` | Update sent |
-| `send-pending` | `faEnvelope` | `--bp-primary` | Send queued |
+| `send-pending` | `faEnvelope` | `--channel-info` | Send queued |
+
+`update-sent` stays grey while `send-pending` is Seagull: a queued send is in flight and informational, but a completed send is not a confirmation and must not borrow the weight of one.
+
+Only the **icon** is tinted; badge text keeps its inherited color. That keeps `seagull-600` (oklch 61% lightness) doing non-text duty, where its contrast on the neutral badge is adequate.
 
 The header widget's own status dot keeps its current `--stage-active` / `--bp-warning` / `--stage-inactive` treatment — it summarizes the listing, not a channel, and is out of scope.
+
+### New tokens — `src/main.scss`
+
+Defined alongside the existing `--stage-*` / `--side-*` block (`src/main.scss:11-19`), which already maps SCSS tokens to local semantic vars. This is preferred over inlining `var(--color-seagull-600, #hex)` at the call site, since it names the role rather than the color:
+
+```scss
+--channel-info: #{colors.$seagull-600};          // informational icon
+--channel-info-surface: #{colors.$seagull-50};   // email group panel
+--channel-info-border: #{colors.$seagull-200};   // email group border
+--channel-info-strong: #{colors.$seagull-700};   // disclaimer info icon
+```
 
 `update-sent` is deliberately **not** green. Green reads as confirmation, and nothing about an outbound email is confirmed.
 
@@ -155,14 +172,37 @@ Two sections, `direct` then `email`. Each group header row carries an uppercase 
 
 A group with no channels is omitted entirely. When *both* are empty the existing `Empty` state renders as it does today.
 
+### The email group's surface
+
+The direct group renders plain on the modal background. The email group and its disclaimer are wrapped in one informational panel — `--channel-info-surface` background, `1px solid --channel-info-border`, rounded, padded — so the two delivery methods are distinguishable before a word is read:
+
+```
+EMAIL UPDATES                                  2 of 4 sending
+┌─ --channel-info-surface · --channel-info-border ──────────┐
+│ ╭───────────────────────────────────────────────────────╮ │
+│ │ LoopNet            [✉ Update sent]           ──●  On  │ │
+│ │ Last sent 07/22/2026 12:21 PM PDT · Not confirmed     │ │
+│ │ ↗ Sale Website                                        │ │
+│ ╰───────────────────────────────────────────────────────╯ │
+│ ⓘ Buildout has no financial, legal, commercial, or        │
+│   partnership affiliation with CoStar Group, Inc., …      │
+└───────────────────────────────────────────────────────────┘
+```
+
+Cards stay white inside the panel so they still read as cards. The disclaimer gains a `faCircleInfo` icon in `--channel-info-strong`.
+
+This is deliberately *not* an `Alert`: nothing is wrong with these channels, and warning chrome would misreport a normal configuration. The tint's job is to scope the disclaimer visually to the channels it names — which is the reason the groups were split at all.
+
 ### Disclaimers
 
 Each sits with the content it qualifies:
 
 1. **Top alert** — the photo warning, still driven by the existing `blockingIssues` array. The framing softens from "Syndication is blocked" to the screenshot's advisory tone, because missing photos reduce reach rather than halting syndication: *"Properties without syndicatable photos are not accepted by all partners and generate fewer leads. Check the appropriate boxes in the Media forms for any syndicatable photos you own."* Stays `severity="warning"` with a `pro-duotone` icon per the project Alert rule.
-2. **Under the email group** — the affiliation note, `fst-italic fs-small text-muted`: *"Buildout has no financial, legal, commercial, or partnership affiliation with CoStar Group, Inc., LoopNet, or Crexi, Inc. No association or relationship between these companies should be implied or inferred. Buildout assists customers in sending email updates to these unaffiliated channels when listings are added, updated, or removed."*
+2. **Inside the email group's panel**, below its cards — the affiliation note, `fs-small text-muted` with a `faCircleInfo` icon in `--channel-info-strong`: *"Buildout has no financial, legal, commercial, or partnership affiliation with CoStar Group, Inc., LoopNet, or Crexi, Inc. No association or relationship between these companies should be implied or inferred. Buildout assists customers in sending email updates to these unaffiliated channels when listings are added, updated, or removed."*
 
-Placing the affiliation note directly under the channels it names, instead of at the bottom of the modal, is the whole reason the two-group split earns its complexity.
+   The screenshot sets this in italics; here it sits on a tinted panel with an icon, which already separates it from the cards, so italics would only cost legibility at small size.
+
+Placing the affiliation note with the channels it names, instead of at the bottom of the modal, is the whole reason the two-group split earns its complexity.
 
 ### Unchanged
 
@@ -174,6 +214,7 @@ Modal stays `size="lg" scrollable centered` — three-line cards need height, no
 
 | File | Change |
 | --- | --- |
+| `src/main.scss` | Add the four `--channel-info-*` Seagull tokens to the existing semantic-var block |
 | `src/data/listingSyndication.ts` | Rewrite: delivery-aware roster, per-channel state and dates, anchored generation |
 | `src/data/listingSyndication.test.ts` | New: determinism plus the four generator invariants |
 | `src/components/listings/SyndicationStatus.tsx` | Header widget, modal shell, groups, disclaimers |
