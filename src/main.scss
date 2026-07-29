@@ -454,7 +454,7 @@
     flex: 1 0 0;
     min-width: 0;
     overflow: hidden;
-    font-size: 17px; // font/size/large
+    font-size: 14px; // font/size/body
     font-weight: 600;
     line-height: 19px;
     color: var(--color-storm-grey-950, #22262f);
@@ -481,8 +481,8 @@
   }
   &__photo {
     flex-shrink: 0;
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     border-radius: 6px;
     object-fit: cover;
     pointer-events: none;
@@ -539,6 +539,15 @@
     height: 20px;
     background: var(--color-storm-grey-200, #d5dae2);
   }
+  // Divider + relationship badge as one unit, so the rule never strands itself
+  // at the end of a line away from the badge it separates.
+  &__rel-group {
+    display: inline-flex;
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+  }
   &__gross {
     flex-shrink: 0;
     font-size: 14px;
@@ -560,7 +569,7 @@
     border: 1px solid var(--color-storm-grey-200, #d5dae2);
     border-radius: 6px;
     background: transparent;
-    font-size: 14px;
+    font-size: 12px; // font/size/small — matches the badges beside it
     font-weight: 600;
     line-height: 13px;
     white-space: nowrap;
@@ -599,10 +608,6 @@
   // title steps down to body size, since the column header carries the context.
   &--board {
     gap: 0;
-
-    .deal-tile__title {
-      font-size: 14px;
-    }
   }
 
   // The property card is a single row with no CTA, so it needs no outer gap.

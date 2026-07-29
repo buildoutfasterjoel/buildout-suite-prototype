@@ -100,6 +100,13 @@ export function NewDealCard({
     >
       <div className="deal-tile__main">
         <div className="deal-tile__top">
+          {!board && (
+            <img
+              src={getPhotoUrl(listing.id)}
+              alt=""
+              className="deal-tile__photo"
+            />
+          )}
           <div className="deal-tile__headings">
             <div className="deal-tile__title-row">
               {typeIcon && (
@@ -140,19 +147,26 @@ export function NewDealCard({
               )}
             </div>
           </div>
-          {!board && (
-            <img
-              src={getPhotoUrl(listing.id)}
-              alt=""
-              className="deal-tile__photo"
-            />
-          )}
         </div>
 
         <div className="deal-tile__badges">
           <div className="deal-tile__badges-main">
+            {!board && onStageChange && (
+              <NewDealStageChip value={listing.status} onChange={onStageChange} />
+            )}
+            <CardBadge
+              icon={side.icon}
+              label={side.label}
+              bg={side.bg}
+              color={side.color}
+              tooltip={side.tooltip}
+            />
+            {/* The divider belongs to the relationship badge, not to the row —
+                kept in one nowrap group so a wrap carries the rule down with it
+                and it still reads as a separation from the badges above. */}
             {rel && relationship && (
-              <>
+              <span className="deal-tile__rel-group">
+                <BadgeDivider />
                 <CardBadge
                   icon={rel.icon}
                   label={rel.label}
@@ -164,18 +178,7 @@ export function NewDealCard({
                     inquiredOn ?? null,
                   )}
                 />
-                <BadgeDivider />
-              </>
-            )}
-            <CardBadge
-              icon={side.icon}
-              label={side.label}
-              bg={side.bg}
-              color={side.color}
-              tooltip={side.tooltip}
-            />
-            {!board && onStageChange && (
-              <NewDealStageChip value={listing.status} onChange={onStageChange} />
+              </span>
             )}
             {board && shareCount != null && shareCount > 1 && (
               <CardBadge
