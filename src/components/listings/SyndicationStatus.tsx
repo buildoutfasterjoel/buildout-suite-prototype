@@ -235,7 +235,7 @@ function SyndicationGroup({
   return (
     <div className="d-flex flex-column gap-2">
       <div className="d-flex align-items-center justify-content-between gap-3 pb-2 border-bottom">
-        <span className="fs-large fw-medium">{label}</span>
+        <span className="fs-large fw-semibold">{label}</span>
         <div className="d-flex align-items-center gap-2">
           <span className="fs-small text-muted">
             {activeCount} of {eligible.length} active
