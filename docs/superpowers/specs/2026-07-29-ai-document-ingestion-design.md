@@ -79,7 +79,7 @@ export interface IngestionConflict {
   resolution?: 'doc' | 'current'
 }
 
-export type IngestionFieldKey = 'askingPrice' | 'availableSqFt' | 'occupancyPct'
+export type IngestionFieldKey = 'askingPrice' | 'noi' | 'occupancyPct'
 ```
 
 ### Conflict fields
@@ -88,17 +88,25 @@ Three fields, chosen because a T-12 and a rent roll would plausibly disagree wit
 exactly these, and because whichever deal type is in play, at least one of them is gate-required —
 so an unresolved conflict has real consequences instead of being decoration.
 
-| Field | Doc side | Record side | Lives on | Gate-required |
+| Field | Doc side | Record side | Editor location | Gate-required |
 | --- | --- | --- | --- | --- |
-| Asking price | T-12-derived value | `financials.askingPrice` | Deal tab | Sale only |
-| Available / building SF | Rent roll total | `property.buildingSqFt` | Listing tab | Lease only |
-| Occupancy | Rent roll occupancy | `property.occupancyPct` | Listing tab | Never |
+| Asking price | T-12-derived value | `financials.askingPrice` | Deal tab → Financials | Sale only |
+| NOI | T-12 net operating income | `financials.noi` | Deal tab → Financials | Never |
+| Occupancy | Rent roll occupancy | `property.occupancyPct` | Listing tab → Building | Never |
 
-Per `resolveGate('proposal', 'active', dealType)`, a Sale publish gate requires `askingPrice` while
-a Lease requires `leaseRate` + `availableSqFt`. Occupancy is required by neither — it is an
-informational conflict that still has to be confirmed to clear the banner, but does not on its own
-block publishing. This means every deal type has at least one publish-blocking conflict: asking
-price for a Sale, available SF for a Lease.
+Every one of these is genuinely editable in the form today, which is a hard requirement — a
+conflict the broker cannot resolve where it lives would be a dead end. `marketing.availableSqFt` was
+considered and rejected for exactly that reason: it is gate-required for a Lease but is not exposed
+anywhere in the edit form.
+
+Per `resolveGate('proposal', 'active', dealType)`, a Sale publish gate requires `askingPrice`;
+NOI and occupancy are required by neither deal type.
+
+**Known limitation:** publish-blocking therefore applies to **Sale** deals only — the flow the
+create-deal modal defaults to and the one this demo drives. On a Lease, whose gate requires
+`leaseRate` + `availableSqFt`, none of the three conflicts are gate-required, so they are
+informational and the deal can publish with them unresolved. We are accepting that rather than
+inventing a synthetic requirement or surfacing a new field just to make Lease blocking.
 
 Every conflict is two-sided by construction. When the deal has no property record behind it (a
 typed-in address), the two sides are **doc vs doc** — the rent roll and the T-12 disagreeing with
@@ -171,9 +179,9 @@ From T-12.pdf: $8,400,000   [Use this]  [Keep current]
 - `DealMarketingEditor` provides the context when the route carries `?review=ingestion`.
 - When the last conflict resolves, ingestion flips to `complete`.
 
-**Conflicts span both editor tabs.** Asking price sits on the Deal tab; SF and occupancy are on the
-Listing tab, inside `ListingFormEditor` → `BuildingSection`. Review mode therefore cannot simply
-scroll to one field:
+**Conflicts span both editor tabs.** Asking price and NOI sit on the Deal tab's Financials section;
+occupancy is on the Listing tab, inside `ListingFormEditor` → `BuildingSection`. Review mode
+therefore cannot simply scroll to one field:
 
 - Each tab label carries a count badge for its unresolved conflicts, so nothing is hidden behind an
   unselected tab.
@@ -189,14 +197,13 @@ Deliberately **not** a new concept. The rule falls out of the existing gate:
   `buildPublishReadyPatch` call in `CreateDealModal.handleCreate` is removed.
 - A clean run writes every gate-required field, leaving the deal in the same end state it reaches
   today — one `aiDocsReviewed` click from publishing — just ~5s later.
-- A conflicting run does not write the disputed fields. The gate-required one among them
-  (`askingPrice` for a Sale, `availableSqFt` for a Lease) is therefore missing, so
-  `publishReadiness` reports it and the Approve & Publish gate blocks on its own.
+- A conflicting run does not write the disputed fields. On a Sale, `askingPrice` is therefore
+  missing, so `publishReadiness` reports it and the Approve & Publish gate blocks on its own.
 - Resolving the conflicts writes the values, and the gate clears. No bespoke blocking logic.
 
-The occupancy conflict is the honest exception: it is not gate-required, so leaving it unresolved
-does not block publishing. It still shows in the banner count and the tab badge. We are not adding
-a synthetic requirement to make it blocking.
+NOI and occupancy are not gate-required, so leaving them unresolved does not block publishing. They
+still show in the banner count and the tab badge. We are not adding synthetic requirements to make
+them blocking — see the Lease limitation above.
 
 ## Testing
 
@@ -211,7 +218,6 @@ a synthetic requirement to make it blocking.
 - `allResolved` is false until every conflict has a resolution.
 - A Sale with all conflicts resolved passes `publishReadiness` except for `aiDocsReviewed`; a Sale
   with an unresolved asking-price conflict reports `askingPrice` missing.
-- A Lease with an unresolved SF conflict reports `availableSqFt` missing.
 
 The banner, watcher, and timer choreography stay untested — presentational theater, consistent
 with how `AiDealProgressModal` and `UnderwritingProgress` are treated.
@@ -232,6 +238,6 @@ with how `AiDealProgressModal` and `UnderwritingProgress` are treated.
 | `src/routes/_shell/listings/$listingId/overview.tsx` | Render the banner; suppress setup banner while processing |
 | `src/routes/_shell/listings/$listingId/edit.tsx` | Read the `review` search param |
 | `src/components/deals/DealMarketingEditor.tsx` | Provide the conflict context; tab badges; select + scroll to first conflict |
-| `src/components/listings/edit/sections/BuildingSection.tsx` | Pass `fieldKey` on SF + occupancy |
+| `src/components/listings/edit/sections/BuildingSection.tsx` | Pass `fieldKey` on occupancy |
 | `src/components/listings/edit/fieldWidgets.tsx` | Optional `fieldKey`; render the arbitration row |
 | `src/main.scss` | Conflict-field ring styling |
