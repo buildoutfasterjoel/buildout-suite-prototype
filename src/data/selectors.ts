@@ -45,7 +45,10 @@ export function listLeadDealsForContact(contactId: string): Listing[] {
   const leadOn = new Map<string, boolean>()
   return [...listings.values()].filter((l) => {
     if (partyDealIds.has(l.id)) return false
-    if (!contact.propertyIds.includes(l.propertyId)) return false
+    // No `propertyIds` pre-filter: a contact can be a lead by inquiry alone (see
+    // getLeadsForProperty), and short-circuiting on the CRM link would drop those
+    // deals here while the Leads tab still listed the contact — breaking the
+    // round trip this selector exists to close.
     let isLead = leadOn.get(l.propertyId)
     if (isLead === undefined) {
       isLead = getLeadsForProperty(l.propertyId).some((c) => c.id === contactId)

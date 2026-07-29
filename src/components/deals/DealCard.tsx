@@ -14,6 +14,8 @@ import {
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { Listing, Contact, DealSide } from "#/data/types";
 import { getContact, getListing, getProperty } from "#/data/store";
+import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
+import { NewDealCard } from "./NewDealCard";
 import { isUmbrella, spacesStageBreakdown } from "#/data/leaseSpaces";
 import { DealStageBadge } from "./DealStageBadge";
 import { dealHeadlineLabel } from "./dealDisplay";
@@ -296,6 +298,38 @@ export function DealCardById({
 }
 
 /** Draggable, click-through deal card for a board column. */
+/**
+ * How many people have this deal on their plate. Deal-level sharing isn't a
+ * modeled concept, so this counts the distinct people actually attached to the
+ * work — the internal brokers plus whoever the planner tasks are assigned to.
+ * The card hides the badge at one, so a solo deal stays clean.
+ */
+function dealAccessCount(listing: Listing): number {
+  const people = new Set<string>();
+  for (const b of listing.internalBrokers) people.add(b.name);
+  for (const t of listing.tasks) {
+    if (t.assigneeInitials.trim()) people.add(t.assigneeInitials.trim());
+  }
+  return people.size;
+}
+
+/**
+ * The board's card body, behind the design-comparison switch: the shipped
+ * `DealCardView` or the redesigned board-variant tile. Kept here (rather than in
+ * the column) so the drag overlay and the column render the same thing.
+ */
+function BoardDealCard({ listing }: { listing: Listing }) {
+  const newCards = useContactUiPrefs((s) => s.dealCards) === "new";
+  if (!newCards) return <DealCardView listing={listing} />;
+  return (
+    <NewDealCard
+      listing={listing}
+      variant="board"
+      shareCount={dealAccessCount(listing)}
+    />
+  );
+}
+
 export function DealCard({ listing }: { listing: Listing }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: listing.id,
@@ -319,7 +353,7 @@ export function DealCard({ listing }: { listing: Listing }) {
         params={{ listingId: listing.id }}
         className="text-decoration-none text-reset d-block"
       >
-        <DealCardView listing={listing} />
+        <BoardDealCard listing={listing} />
       </Link>
     </div>
   );

@@ -257,20 +257,39 @@ export function getOwnersForProperty(propertyId: string): Contact[] {
 }
 
 /**
- * Leads on a property's deals — its linked CRM contacts minus anyone already
- * named as the seller on one of those deals. The assigned seller is the
- * broker's own client, so seeing them listed as an inbound lead reads as a
- * data bug (and on the client report, shows the client to themselves).
+ * Leads on a property's deals — anyone connected to it who isn't the seller.
+ *
+ * Two ways in, because there are two ways a lead actually arises:
+ * - a CRM link to the property (`Contact.propertyIds`), i.e. someone the broker
+ *   added or the seed wired up, and
+ * - an inquiry on one of the property's listings (`Contact.inquiredListingIds`) —
+ *   raising a hand on a marketed listing, by requesting secure documents or
+ *   completing a contact form, *is* how a cold contact becomes a lead, so it has
+ *   to land them on this list. Without this the contact page can show an inquiry
+ *   for a listing whose Leads tab doesn't know about them.
+ *
+ * Anyone named as the seller on one of the property's deals is filtered out: the
+ * assigned seller is the broker's own client, so listing them as an inbound lead
+ * reads as a data bug (and on the client report, shows the client to themselves).
  * Property-scoped rather than deal-scoped because child space deals share a
  * property, and a seller on one of them is nobody's lead on the others.
  */
 export function getLeadsForProperty(propertyId: string): Contact[] {
   const sellerIds = new Set<string>()
+  const listingIds = new Set<string>()
   for (const l of getStore().listings.values()) {
     if (l.propertyId !== propertyId) continue
+    listingIds.add(l.id)
     for (const id of l.sellerContactIds) sellerIds.add(id)
   }
-  return getContactsForProperty(propertyId).filter((c) => !sellerIds.has(c.id))
+  const linked = getContactsForProperty(propertyId)
+  const seen = new Set(linked.map((c) => c.id))
+  const inquirers = [...getStore().contacts.values()].filter(
+    (c) =>
+      !seen.has(c.id) &&
+      (c.inquiredListingIds ?? []).some((id) => listingIds.has(id)),
+  )
+  return [...linked, ...inquirers].filter((c) => !sellerIds.has(c.id))
 }
 
 /** Display name for a contact, e.g. "Jane Doe · Acme Holdings". */

@@ -27,7 +27,12 @@ import { ContactChip } from "#/components/contacts/ContactChip";
 import { ContactHeroAccessAvatars } from "#/components/contacts/ContactHeroAccessAvatars";
 import type { ContactShare } from "#/data/teammates";
 import { ContactDealCard } from "#/components/contacts/ContactDealCard";
+import { ContactInquiryCard } from "#/components/contacts/ContactInquiryCard";
+import { NewContactInquiryCard } from "#/components/contacts/NewContactInquiryCard";
+import { inquiryFacts } from "#/components/contacts/inquiryFacts";
 import { ContactPropertyCard } from "#/components/contacts/ContactPropertyCard";
+import { NewContactDealCard } from "#/components/contacts/NewContactDealCard";
+import { NewContactPropertyCard } from "#/components/contacts/NewContactPropertyCard";
 import { ContactLinkButton } from "#/components/contacts/ContactLinkButton";
 import { EditContactModal } from "#/components/contacts/EditContactModal";
 import { CreateDealModal } from "#/components/deals/CreateDealModal";
@@ -141,6 +146,9 @@ export function ContactOverviewColumn({
   const showPastDeals = useContactUiPrefs((s) => s.showPastDeals);
   const setShowPastDeals = useContactUiPrefs((s) => s.setShowPastDeals);
   const legacyAccordions = useContactUiPrefs((s) => s.legacyAccordions);
+  // Design-comparison switch (see ContactDesignToggles) — flips the deal and
+  // property cards between the shipped look and the redesigned deal-tile.
+  const newCards = useContactUiPrefs((s) => s.dealCards) === "new";
   // Tag removal is prototype-local, so the list lives in state — but a call
   // session walks contact to contact on the *same* route, so this component
   // doesn't remount. Re-seed from the record whenever the contact underneath it
@@ -174,11 +182,32 @@ export function ContactOverviewColumn({
     ...new Set([contact.email, ...(contact.emails ?? [])].filter(Boolean)),
   ];
 
-  // Everything the contact touches, party deals first — a lead opened from a
-  // deal's Leads tab has to find that deal here, or the trail dead-ends.
-  const connectedDeals = [...deals, ...leadDeals];
-  const activeDeals = connectedDeals.filter((d) => !PAST_STATUSES.has(d.status));
-  const pastDeals = connectedDeals.filter((d) => PAST_STATUSES.has(d.status));
+  // Deals shows only deals the contact is a named party to — a lead connection
+  // is not a business agreement, so lead-only listings render as inquiry cards
+  // in Listing Inquiries instead (a lead opened from a deal's Leads tab finds
+  // that deal there). They graduate to a deal card only once they're set as a
+  // party, e.g. named the buyer when the deal moves to under contract.
+  const activeDeals = deals.filter((d) => !PAST_STATUSES.has(d.status));
+  const pastDeals = deals.filter((d) => PAST_STATUSES.has(d.status));
+
+  // Listings this contact has raised a hand on: every open inquiry plus any
+  // listing whose Leads tab they appear on, deduped. Listings they've since
+  // become a party to drop out — the deal card supersedes the inquiry card.
+  const partyDealIds = new Set(deals.map((d) => d.id));
+  const inquiryListingIds = [
+    ...new Set([
+      ...(contact.inquiredListingIds ?? []),
+      ...leadDeals.map((d) => d.id),
+    ]),
+  ]
+    .filter((id) => !partyDealIds.has(id))
+    // Newest inquiry first — the freshest interest is the one worth working, and
+    // it's what the broker is looking for when they open the section.
+    .sort(
+      (a, b) =>
+        new Date(inquiryFacts(contact, b).date).getTime() -
+        new Date(inquiryFacts(contact, a).date).getTime(),
+    );
 
   // A just-created deal (AI Start-a-Deal flow) gets a brief spotlight; clear
   // the signal once the animation has played so it doesn't replay on
@@ -406,19 +435,28 @@ export function ContactOverviewColumn({
           }
         >
           <div className="d-flex flex-column gap-3">
-            {connectedDeals.length === 0 ? (
+            {deals.length === 0 ? (
               <span className="text-muted fs-small">
                 Deals you link to this contact will show up here.
               </span>
             ) : (
               <>
-                {activeDeals.map((d) => (
-                  <ContactDealCard
-                    key={d.id}
-                    listingId={d.id}
-                    highlight={d.id === spotlightDealId}
-                  />
-                ))}
+                {activeDeals.map((d) =>
+                  newCards ? (
+                    <NewContactDealCard
+                      key={d.id}
+                      listingId={d.id}
+                      contact={contact}
+                      highlight={d.id === spotlightDealId}
+                    />
+                  ) : (
+                    <ContactDealCard
+                      key={d.id}
+                      listingId={d.id}
+                      highlight={d.id === spotlightDealId}
+                    />
+                  ),
+                )}
                 {pastDeals.length > 0 && (
                   <Button
                     variant="ghost"
@@ -433,10 +471,48 @@ export function ContactOverviewColumn({
                   </Button>
                 )}
                 {showPastDeals &&
-                  pastDeals.map((d) => (
-                    <ContactDealCard key={d.id} listingId={d.id} />
-                  ))}
+                  pastDeals.map((d) =>
+                    newCards ? (
+                      <NewContactDealCard
+                        key={d.id}
+                        listingId={d.id}
+                        contact={contact}
+                      />
+                    ) : (
+                      <ContactDealCard key={d.id} listingId={d.id} />
+                    ),
+                  )}
               </>
+            )}
+          </div>
+        </ContactSection>
+
+        <ContactSection
+          value="inquiries"
+          label="Listing Inquiries"
+          count={inquiryListingIds.length}
+        >
+          <div className="d-flex flex-column gap-3">
+            {inquiryListingIds.length === 0 ? (
+              <span className="text-muted fs-small">
+                Listings this contact inquires about will show up here.
+              </span>
+            ) : (
+              inquiryListingIds.map((listingId) =>
+                newCards ? (
+                  <NewContactInquiryCard
+                    key={listingId}
+                    listingId={listingId}
+                    contact={contact}
+                  />
+                ) : (
+                  <ContactInquiryCard
+                    key={listingId}
+                    listingId={listingId}
+                    contact={contact}
+                  />
+                ),
+              )
             )}
           </div>
         </ContactSection>
@@ -460,13 +536,22 @@ export function ContactOverviewColumn({
             {propertyGroups.length === 0 ? (
               <span className="text-muted fs-small">None on file.</span>
             ) : (
-              propertyGroups.map(([propertyId, listingIds]) => (
-                <ContactPropertyCard
-                  key={propertyId}
-                  propertyId={propertyId}
-                  listingIds={listingIds}
-                />
-              ))
+              propertyGroups.map(([propertyId, listingIds]) =>
+                newCards ? (
+                  <NewContactPropertyCard
+                    key={propertyId}
+                    propertyId={propertyId}
+                    listingIds={listingIds}
+                    contactName={contactFullName(contact)}
+                  />
+                ) : (
+                  <ContactPropertyCard
+                    key={propertyId}
+                    propertyId={propertyId}
+                    listingIds={listingIds}
+                  />
+                ),
+              )
             )}
           </div>
         </ContactSection>

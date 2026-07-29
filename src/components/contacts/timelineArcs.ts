@@ -130,8 +130,12 @@ function inquiryBeats(ctx: ArcCtx, alreadyAuthored: TimelineEvent[]): TimelineEv
     // An open inquiry is live interest, so date it recently — but never before
     // the record itself existed, which is what pins a just-landed lead's
     // inquiry to the moment they came in.
-    const days = Math.min(createdDays, 10 + i * 7);
     const detail = ctx.c.inquiryDetails?.[listingId];
+    // The record's own date when it has one; otherwise stagger so a contact's
+    // several inquiries don't land on the same day, never before the record.
+    const days = detail?.date
+      ? daysSince(detail.date)
+      : Math.min(createdDays, 10 + i * 7);
     const over = {
       direction: "in" as const,
       title: `Inquired about ${listing.name}`,

@@ -39,6 +39,12 @@ interface ContactUiPrefs {
    * type Select + a "Needs Reply" checkbox; "tabs" uses the original pill track.
    */
   timelineFilter: "dropdown" | "tabs";
+  /**
+   * Design-comparison toggle for the deal + property cards on the contact
+   * detail page and the Pipeline board: "current" keeps the shipped cards,
+   * "new" renders the redesigned deal-tile treatment.
+   */
+  dealCards: "current" | "new";
 
   setOverviewSections: (sections: string[]) => void;
   setShowDetails: (open: boolean) => void;
@@ -49,6 +55,8 @@ interface ContactUiPrefs {
   setLegacyAccordions: (legacy: boolean) => void;
   setTabTrack: (track: "system" | "ghost") => void;
   setTimelineFilter: (style: "dropdown" | "tabs") => void;
+  /** Flips the deal/property cards between the shipped and redesigned looks. */
+  setDealCards: (style: "current" | "new") => void;
 }
 
 export const useContactUiPrefs = create<ContactUiPrefs>((set) => ({
@@ -66,6 +74,9 @@ export const useContactUiPrefs = create<ContactUiPrefs>((set) => ({
   legacyAccordions: true,
   tabTrack: "system",
   timelineFilter: "dropdown",
+  // The redesigned cards are the default now; flip the switch to compare
+  // against the shipped look.
+  dealCards: "new",
 
   setOverviewSections: (overviewSections) => set({ overviewSections }),
   setShowDetails: (showDetails) => set({ showDetails }),
@@ -76,4 +87,5 @@ export const useContactUiPrefs = create<ContactUiPrefs>((set) => ({
   setLegacyAccordions: (legacyAccordions) => set({ legacyAccordions }),
   setTabTrack: (tabTrack) => set({ tabTrack }),
   setTimelineFilter: (timelineFilter) => set({ timelineFilter }),
+  setDealCards: (dealCards) => set({ dealCards }),
 }));

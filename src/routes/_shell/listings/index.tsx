@@ -23,6 +23,7 @@ import { useDataStore } from "#/data/dataStore";
 import { useCreateDeal } from "#/data/useCreateDeal";
 import type { Listing, PropertyStatus, DealSide } from "#/data/types";
 import { DealBoard } from "#/components/deals/DealBoard";
+import { ContactDesignToggles } from "#/components/contacts/ContactDesignToggles";
 import { requestStageChange } from "#/components/deals/useStageGate";
 import type { Facet } from "#/components/properties/PropertyFilters";
 import { PropertyFilters } from "#/components/properties/PropertyFilters";
@@ -622,6 +623,9 @@ function PropertyListings() {
           </Card>
         </div>
       )}
+      {/* Prototype design switches — the deal-card comparison applies to the
+          board here as well as the contact page, so it's reachable from both. */}
+      <ContactDesignToggles />
     </div>
   );
 }
