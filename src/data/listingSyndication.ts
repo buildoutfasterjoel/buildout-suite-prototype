@@ -93,7 +93,9 @@ const PHOTO_ISSUE =
 /**
  * A timestamp `days` and `minutes` after the listing went live. Returns null
  * when the listing was never published — a channel cannot have received a
- * listing that does not exist yet.
+ * listing that does not exist yet. Clamped to now: the offset is a
+ * deterministic hash roll, not a real event, so it must never land in the
+ * future relative to the person viewing it.
  */
 function afterPublish(
   anchor: number | null,
@@ -101,7 +103,8 @@ function afterPublish(
   minutes: number,
 ): string | null {
   if (anchor == null) return null;
-  return new Date(anchor + days * DAY_MS + minutes * 60_000).toISOString();
+  const raw = anchor + days * DAY_MS + minutes * 60_000;
+  return new Date(Math.min(raw, Date.now())).toISOString();
 }
 
 /**
@@ -133,11 +136,14 @@ export function getListingSyndication(
     const minutes = ((h >>> (i + 11)) % 96) * 15;
 
     if (def.delivery === "email") {
-      const state: EmailChannelState = !wantsActive
+      let state: EmailChannelState = !wantsActive
         ? "off"
         : roll === 0
           ? "send-pending"
           : "update-sent";
+      // A listing that was never published can't have a confirmed-looking send
+      // behind it — there is nothing to have sent yet.
+      if (anchor == null && state === "update-sent") state = "send-pending";
       // An "off" channel may still have history from before it was paused.
       const everSent = state !== "off" || ((h >>> (i + 16)) & 1) === 1;
       return {
@@ -153,7 +159,7 @@ export function getListingSyndication(
       };
     }
 
-    const state: DirectChannelState =
+    let state: DirectChannelState =
       roll === 0
         ? "not-available"
         : !wantsActive
@@ -163,6 +169,14 @@ export function getListingSyndication(
             : roll === 2
               ? "pending"
               : "updated";
+    // A listing that was never published can't have a live push, a confirmed
+    // push, or a broken push behind it — nothing has been attempted yet.
+    if (
+      anchor == null &&
+      (state === "updated" || state === "pending" || state === "needs-attention")
+    ) {
+      state = "pending";
+    }
     const active = state !== "not-available" && wantsActive;
     const everPublished =
       state !== "not-available" &&
@@ -177,8 +191,12 @@ export function getListingSyndication(
       lastUpdatedAt: everPublished
         ? afterPublish(anchor, updateDelay, minutes)
         : null,
-      // Nothing to expire until the listing actually reached the channel.
-      expiresInDays: publishedAt ? 1 + ((h >>> (i + 20)) % 210) : null,
+      // Nothing to expire until the listing has reached the channel, and a
+      // paused channel has no live listing on the other end to expire.
+      expiresInDays:
+        publishedAt && state !== "off"
+          ? 1 + ((h >>> (i + 20)) % 210)
+          : null,
       adminUrl:
         state === "not-available"
           ? null
@@ -189,4 +207,35 @@ export function getListingSyndication(
   const blockingIssues = h % 4 === 0 ? [PHOTO_ISSUE] : [];
 
   return { channels, blockingIssues };
+}
+
+/**
+ * Applies a user's on/off toggle to a channel, deriving the `state` that goes
+ * with it so the badge and meta line never contradict the switch.
+ *
+ * - `not-available` has no connection to toggle; the switch is disabled and
+ *   this is a no-op.
+ * - `needs-attention` stays broken either way — flipping the switch doesn't
+ *   fix or introduce a connection problem, it only changes whether the
+ *   (still-broken) channel is asked to syndicate.
+ * - Everything else reads honestly as "queued, not confirmed" the moment it's
+ *   turned on: `pending` for a direct channel, `send-pending` for email.
+ *   Turning it off is always `off`.
+ *
+ * This is the single place state is derived from a toggle — callers should
+ * never re-implement this branching inline.
+ */
+export function withChannelActive(
+  channel: SyndicationChannel,
+  active: boolean,
+): SyndicationChannel {
+  if (channel.state === "not-available") return channel;
+  if (channel.state === "needs-attention") return { ...channel, active };
+
+  const state: SyndicationChannelState = active
+    ? channel.delivery === "email"
+      ? "send-pending"
+      : "pending"
+    : "off";
+  return { ...channel, active, state };
 }

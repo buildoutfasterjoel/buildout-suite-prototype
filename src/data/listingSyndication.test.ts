@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import {
   getListingSyndication,
+  withChannelActive,
   SYNDICATION_NETWORK_NAMES,
+  type SyndicationChannel,
   type SyndicationListing,
 } from './listingSyndication'
 
@@ -64,6 +66,44 @@ describe('invariants', () => {
     }
   })
 
+  it('never claims a confirmed posting for a listing that was never published', () => {
+    for (let i = 0; i < 200; i++) {
+      const { channels } = getListingSyndication(listingFor(`unpublished-${i}`, null))
+      for (const c of channels) {
+        expect(c.state).not.toBe('updated')
+        expect(c.state).not.toBe('update-sent')
+      }
+    }
+  })
+
+  it('never dates a channel in the future', () => {
+    // publishedAt right at "now", the same anchor commitStageTransition writes
+    // on publish — the case most likely to overshoot without a clamp. Checked
+    // against a `Date.now()` taken *after* generation so the assertion's own
+    // bound can only be later than (never earlier than) whatever the
+    // generator clamped against — no flakiness from the clock ticking between
+    // the two calls.
+    for (let i = 0; i < 200; i++) {
+      const l = listingFor(`fresh-${i}`, new Date().toISOString())
+      const { channels } = getListingSyndication(l)
+      const checkedAt = Date.now()
+      for (const c of channels) {
+        if (c.publishedAt) expect(new Date(c.publishedAt).getTime()).toBeLessThanOrEqual(checkedAt)
+        if (c.lastUpdatedAt) expect(new Date(c.lastUpdatedAt).getTime()).toBeLessThanOrEqual(checkedAt)
+      }
+    }
+  })
+
+  it('never gives a paused direct channel an expiration to render', () => {
+    for (const l of populatedListings()) {
+      for (const c of getListingSyndication(l).channels) {
+        if (c.delivery === 'direct' && c.state === 'off') {
+          expect(c.expiresInDays).toBeNull()
+        }
+      }
+    }
+  })
+
   it('never gives an email channel a connection-health state', () => {
     for (const l of populatedListings()) {
       for (const c of getListingSyndication(l).channels) {
@@ -121,5 +161,50 @@ describe('invariants', () => {
     for (const state of ['updated', 'pending', 'needs-attention', 'off', 'not-available']) {
       expect(seen).toContain(state)
     }
+  })
+})
+
+describe('withChannelActive', () => {
+  function direct(over: Partial<SyndicationChannel> = {}): SyndicationChannel {
+    return {
+      id: 'commercialedge-network',
+      name: 'CommercialEdge Network',
+      delivery: 'direct',
+      state: 'updated',
+      active: true,
+      publishedAt: '2026-07-22T12:00:00.000Z',
+      lastUpdatedAt: '2026-07-22T14:21:00.000Z',
+      expiresInDays: 177,
+      adminUrl: 'https://admin.buildout.com/syndication/commercialedge-network/oak-street-plaza',
+      ...over,
+    }
+  }
+
+  it('turning a channel off always lands on the "off" state', () => {
+    expect(withChannelActive(direct({ state: 'updated' }), false)).toMatchObject({ active: false, state: 'off' })
+    expect(withChannelActive(direct({ state: 'pending' }), false)).toMatchObject({ active: false, state: 'off' })
+  })
+
+  it('turning a previously-off direct channel on lands on "pending", not "updated"', () => {
+    expect(withChannelActive(direct({ state: 'off', active: false }), true)).toMatchObject({
+      active: true,
+      state: 'pending',
+    })
+  })
+
+  it('turning a previously-off email channel on lands on "send-pending"', () => {
+    const email = direct({ delivery: 'email', state: 'off', active: false, expiresInDays: null, adminUrl: null })
+    expect(withChannelActive(email, true)).toMatchObject({ active: true, state: 'send-pending' })
+  })
+
+  it('leaves a broken connection broken no matter which way the switch flips', () => {
+    const broken = direct({ state: 'needs-attention', active: true })
+    expect(withChannelActive(broken, false)).toMatchObject({ active: false, state: 'needs-attention' })
+    expect(withChannelActive(broken, true)).toMatchObject({ active: true, state: 'needs-attention' })
+  })
+
+  it('is a no-op on a channel with no connection to toggle', () => {
+    const unavailable = direct({ state: 'not-available', active: false })
+    expect(withChannelActive(unavailable, true)).toEqual(unavailable)
   })
 })
