@@ -39,6 +39,22 @@ export function SyndicationChannelCard({
   const segments = channelMetaSegments(channel);
   const unavailable = channel.state === "not-available";
 
+  // The badge is a status readout, not content — nothing here is worth
+  // selecting, and an I-beam over it reads as "this text is the point".
+  // Focusable only when it carries an explanation, since that makes it the
+  // tooltip's trigger.
+  const statusBadge = (
+    <Badge
+      variant="secondary"
+      appearance="muted"
+      className="user-select-none"
+      tabIndex={badge.explanation ? 0 : undefined}
+    >
+      <FontAwesomeIcon icon={badge.icon} style={{ color: badge.color }} />
+      {badge.label}
+    </Badge>
+  );
+
   return (
     <div
       className={`border rounded bg-body px-3 py-2${unavailable ? " opacity-75" : ""}`}
@@ -51,27 +67,11 @@ export function SyndicationChannelCard({
           <span className="fw-semibold text-truncate">{channel.name}</span>
           {badge.explanation ? (
             <Tooltip>
-              <Tooltip.Trigger
-                render={
-                  <Badge variant="secondary" appearance="muted" tabIndex={0}>
-                    <FontAwesomeIcon
-                      icon={badge.icon}
-                      style={{ color: badge.color }}
-                    />
-                    {badge.label}
-                  </Badge>
-                }
-              />
+              <Tooltip.Trigger render={statusBadge} />
               <Tooltip.Content side="top">{badge.explanation}</Tooltip.Content>
             </Tooltip>
           ) : (
-            <Badge variant="secondary" appearance="muted">
-              <FontAwesomeIcon
-                icon={badge.icon}
-                style={{ color: badge.color }}
-              />
-              {badge.label}
-            </Badge>
+            statusBadge
           )}
         </div>
         <Switch
