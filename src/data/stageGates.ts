@@ -330,7 +330,7 @@ export function completeSetupGate(deal: Listing): GateConfig {
   }
 }
 
-function fieldSatisfied(field: RequiredField, form: GateFormState): boolean {
+export function fieldSatisfied(field: RequiredField, form: GateFormState): boolean {
   switch (field) {
     case 'buyerLinked':
       return form.buyerLinked

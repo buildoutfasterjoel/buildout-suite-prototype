@@ -141,9 +141,41 @@ export function registerPinnedPhotoResolver(
   pinnedPhotoResolver = resolve;
 }
 
+/**
+ * Resolve the hero photo for a property/listing. This is the single source of
+ * truth for which photo appears first — both in card thumbnails (getPhotoUrl)
+ * and in the gallery (listingGallery). By centralizing it, we guarantee the
+ * gallery's first photo always matches the thumbnail, even if hero selection
+ * logic changes (e.g., additional fallback tiers, hash algorithm tweaks).
+ */
+function heroPhotoId(id: string): string {
+  return pinnedPhotoResolver?.(id) ?? CRE_PHOTO_IDS[hash(id) % CRE_PHOTO_IDS.length];
+}
+
 /** Deterministic commercial-real-estate photo for a property/deal. */
 export function getPhotoUrl(id: string, w = 480, h = 280): string {
-  const photo =
-    pinnedPhotoResolver?.(id) ?? CRE_PHOTO_IDS[hash(id) % CRE_PHOTO_IDS.length];
-  return crePhotoUrl(photo, w, h);
+  return crePhotoUrl(heroPhotoId(id), w, h);
+}
+
+/**
+ * A deterministic photo gallery for a listing. Photos aren't modeled on
+ * `Listing`, so this derives one from the curated CRE pool: it starts at the
+ * deal's own hero photo (so the gallery agrees with the thumbnail shown on
+ * cards, including pinned story properties) and walks the pool from there.
+ */
+export function listingGallery(
+  id: string,
+  count = 5,
+  w = 480,
+  h = 280,
+): string[] {
+  const hero = heroPhotoId(id);
+  const start = CRE_PHOTO_IDS.indexOf(hero);
+  // A pinned photo may live outside the pool — keep it first, then fill.
+  const rest = CRE_PHOTO_IDS.filter((p) => p !== hero);
+  const ordered =
+    start === -1
+      ? [hero, ...rest]
+      : [hero, ...rest.slice(start), ...rest.slice(0, start)];
+  return ordered.slice(0, Math.min(count, ordered.length)).map((p) => crePhotoUrl(p, w, h));
 }
