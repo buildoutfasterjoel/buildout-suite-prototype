@@ -10,7 +10,6 @@ import {
   TYPE_LABELS,
   STATUS_LABELS,
   formatPrice,
-  getPhotoUrl,
 } from "#/components/properties/propertyDisplay";
 import { CardBadge, BadgeDivider } from "#/components/deals/DealCardBadges";
 import { LINKED_DEAL_ICON, relationshipBadge } from "#/components/deals/newCardTokens";
@@ -96,71 +95,67 @@ export function NewContactPropertyCard({
       }}
     >
       <div className="deal-tile__main">
-        <div className="deal-tile__top">
-          <img
-            src={getPhotoUrl(property.id)}
-            alt=""
-            className="deal-tile__photo"
-          />
-          <div className="deal-tile__headings">
-            <div className="deal-tile__title-row">
-              <Tooltip>
-                <Tooltip.Trigger
-                  render={
-                    <span className="deal-tile__type-icon">
-                      <FontAwesomeIcon
-                        icon={TYPE_ICONS[property.propertyType]}
-                      />
-                    </span>
-                  }
-                />
-                <Tooltip.Content>
-                  {TYPE_LABELS[property.propertyType]}
-                </Tooltip.Content>
-              </Tooltip>
-              <span className="deal-tile__title" title={property.name}>
-                {property.name}
-              </span>
-            </div>
-            <span className="deal-tile__meta deal-tile__meta--muted">{meta}</span>
+        {/* No thumbnail here on purpose: with one, a property card and a deal
+            card for the same building read as twins in the overview column. The
+            missing image is the fastest "this is a property, not a deal" cue. */}
+        <div className="deal-tile__headings">
+          <div className="deal-tile__title-row">
+            <Tooltip>
+              <Tooltip.Trigger
+                render={
+                  <span className="deal-tile__type-icon">
+                    <FontAwesomeIcon icon={TYPE_ICONS[property.propertyType]} />
+                  </span>
+                }
+              />
+              <Tooltip.Content>
+                {TYPE_LABELS[property.propertyType]}
+              </Tooltip.Content>
+            </Tooltip>
+            <span className="deal-tile__title" title={property.name}>
+              {property.name}
+            </span>
           </div>
+          <span className="deal-tile__meta deal-tile__meta--muted">{meta}</span>
         </div>
 
+        {/* Same order as the deal card: the deal link leads, then the divider
+            carries the relationship badge (grouped, so a wrap keeps them
+            together). With no deal on the property there's nothing to separate,
+            so the divider drops out. */}
         <div className="deal-tile__badges-main">
-          <CardBadge
-            icon={owner.icon}
-            label={owner.label}
-            bg={owner.bg}
-            color={owner.color}
-            tooltip={`${contactName} owns the property`}
-          />
-          {(multiple || single) && (
-            <span className="deal-tile__rel-group">
-              <BadgeDivider />
-              {multiple
-                ? dealBadge(
-                    "Multiple Deals",
-                    LINKED_DEAL_ICON.inactive,
-                    `See all ${listings.length} deals on ${property.name}`,
-                    () =>
-                      void navigate({
-                        to: "/listings",
-                        search: { q: property.street },
-                      }),
-                  )
-                : single &&
-                  dealBadge(
-                    "Deal",
-                    LINKED_DEAL_ICON[single.status],
-                    `Open the ${STATUS_LABELS[single.status]} deal`,
-                    () =>
-                      void navigate({
-                        to: "/listings/$listingId",
-                        params: { listingId: single.id },
-                      }),
-                  )}
-            </span>
-          )}
+          {multiple
+            ? dealBadge(
+                "Multiple Deals",
+                LINKED_DEAL_ICON.inactive,
+                `See all ${listings.length} deals on ${property.name}`,
+                () =>
+                  void navigate({
+                    to: "/listings",
+                    search: { q: property.street },
+                  }),
+              )
+            : single &&
+              dealBadge(
+                "Deal",
+                LINKED_DEAL_ICON[single.status],
+                `Open the ${STATUS_LABELS[single.status]} deal`,
+                () =>
+                  void navigate({
+                    to: "/listings/$listingId",
+                    params: { listingId: single.id },
+                  }),
+              )}
+          <span className="deal-tile__rel-group">
+            {(multiple || single) && <BadgeDivider />}
+            <CardBadge
+              icon={owner.icon}
+              label={owner.label}
+              bg={owner.bg}
+              color={owner.color}
+              tooltip={`${contactName} owns the property`}
+            />
+          </span>
         </div>
       </div>
     </div>
