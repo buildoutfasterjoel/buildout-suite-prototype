@@ -213,15 +213,36 @@ describe('resolveConflict / allResolved / unresolvedCount', () => {
 })
 
 describe('ingestionPatch', () => {
-  it('omits an unresolved asking-price conflict from the financials patch', () => {
+  it('commits the on-record value for an unresolved conflict, never an empty field', () => {
     const deal = saleDeal()
     const ing = { ...startIngestionState(['T-12.pdf']), conflicts: deriveConflicts(deal, property()) }
+    const priceConflict = ing.conflicts.find((c) => c.fieldKey === 'askingPrice')!
+    const noiConflict = ing.conflicts.find((c) => c.fieldKey === 'noi')!
     const patch = ingestionPatch(deal, property(), ing)
-    expect(patch.financials.askingPrice).toBeUndefined()
-    expect(patch.financials.noi).toBeUndefined()
+
+    // The editor shows the figure the broker would be KEEPING — a bare 0 beside
+    // the document's competing number read as a bug. Publish stays blocked via
+    // seedGateForm, not by leaving the field empty (see the gate test below).
+    expect(patch.financials.askingPrice).toBe(priceConflict.currentRaw)
+    expect(patch.financials.noi).toBe(noiConflict.currentRaw)
+    // Price/SF tracks whichever figure is committed.
+    expect(patch.financials.pricePerSqFt).toBeGreaterThan(0)
     // Non-conflicting fields still land.
     expect(patch.marketing.saleTitle).toBeTruthy()
     expect(patch.transaction.listedOnDate).toBeTruthy()
+  })
+
+  it('never leaves a conflicted field at zero for any conflict set', () => {
+    for (const deal of [saleDeal(), leaseDeal()]) {
+      const ing = { ...startIngestionState(['T-12.pdf']), conflicts: deriveConflicts(deal, property()) }
+      const patch = ingestionPatch(deal, property(), ing)
+      for (const c of ing.conflicts) {
+        if (c.fieldKey === 'askingPrice') expect(patch.financials.askingPrice).toBeGreaterThan(0)
+        if (c.fieldKey === 'noi') expect(patch.financials.noi).toBeGreaterThan(0)
+        if (c.fieldKey === 'occupancyPct')
+          expect(resolvedPropertyPatch(ing).occupancyPct).toBeGreaterThan(0)
+      }
+    }
   })
 
   it('includes a resolved conflict using the picked side value', () => {
@@ -277,8 +298,16 @@ describe('ingestionPatch', () => {
     expect(perSqFt).toBeGreaterThan(0)
   })
 
-  it('leaves the property patch empty while occupancy is unresolved', () => {
+  it('writes back the on-record occupancy while it is unresolved', () => {
     const ing = { ...startIngestionState(['T-12.pdf']), conflicts: deriveConflicts(saleDeal(), property()) }
+    const occ = ing.conflicts.find((c) => c.fieldKey === 'occupancyPct')!
+    // A no-op value-wise, but it keeps the occupancy field showing what the
+    // broker would be keeping rather than falling to an empty/zero state.
+    expect(resolvedPropertyPatch(ing).occupancyPct).toBe(occ.currentRaw)
+  })
+
+  it('returns an empty property patch when there is no occupancy conflict', () => {
+    const ing = { ...startIngestionState(['T-12.pdf']), conflicts: [] }
     expect(resolvedPropertyPatch(ing).occupancyPct).toBeUndefined()
   })
 })
@@ -299,8 +328,41 @@ describe('countFilledFields', () => {
       transaction: {},
       financials: { askingPrice: 1 },
     }
-    expect(countCommittedFields(patch, {})).toBe(2)
-    expect(countCommittedFields(patch, { occupancyPct: 88 })).toBe(3)
+    const settled = startIngestionState(['T-12.pdf'])
+    expect(countCommittedFields(patch, {}, settled)).toBe(2)
+    expect(countCommittedFields(patch, { occupancyPct: 88 }, settled)).toBe(3)
+  })
+
+  it('countCommittedFields discounts conflicts the broker has not settled', () => {
+    // A realistic patch: five written fields with three conflicts outstanding.
+    const patch = {
+      marketing: { saleTitle: 'x', saleDescription: 'y' },
+      transaction: { listedOnDate: '2026-07-29' },
+      financials: { askingPrice: 1, noi: 2 },
+    }
+    let ing = {
+      ...startIngestionState(['T-12.pdf']),
+      conflicts: deriveConflicts(saleDeal(), property()),
+    }
+    expect(countCommittedFields(patch, { occupancyPct: 88 }, ing)).toBe(6 - 3)
+
+    ing = resolveConflict(ing, 'askingPrice', 'doc')
+    expect(countCommittedFields(patch, { occupancyPct: 88 }, ing)).toBe(6 - 2)
+
+    ing = resolveConflict(ing, 'noi', 'current')
+    ing = resolveConflict(ing, 'occupancyPct', 'doc')
+    expect(countCommittedFields(patch, { occupancyPct: 88 }, ing)).toBe(6)
+  })
+
+  it('never reports a negative count', () => {
+    const ing = {
+      ...startIngestionState(['T-12.pdf']),
+      conflicts: deriveConflicts(saleDeal(), property()),
+    }
+    // Three open conflicts against a patch that wrote nothing.
+    expect(
+      countCommittedFields({ marketing: {}, transaction: {}, financials: {} }, {}, ing),
+    ).toBe(0)
   })
 })
 
@@ -379,10 +441,25 @@ describe('ingestion actions', () => {
     expect(ing.filledCount).toBeGreaterThan(0)
   })
 
-  it('withholds the disputed asking price so the deal is not publish-ready', () => {
+  it('blocks publish on a disputed asking price even though the field holds a value', () => {
     const deal = createDealWithFiles()
     finishIngestion(deal.id)
+    // The field is populated — the broker sees the on-record figure, not a 0 —
+    // and the gate STILL blocks, because a value they haven't confirmed isn't a
+    // satisfied requirement. This is the seedGateForm override, and it's the only
+    // thing keeping an unconfirmed conflict from publishing.
+    expect(current(deal.id).financials.askingPrice).toBeGreaterThan(0)
     expect(publishReadiness(current(deal.id)).missing).toContain('askingPrice')
+  })
+
+  it('clears the publish block once the asking price is confirmed either way', () => {
+    for (const side of ['doc', 'current'] as const) {
+      hydrate()
+      const deal = createDealWithFiles()
+      finishIngestion(deal.id)
+      resolveIngestionConflict(deal.id, 'askingPrice', side)
+      expect(publishReadiness(current(deal.id)).missing).not.toContain('askingPrice')
+    }
   })
 
   it('fills the non-disputed gate fields even while conflicts are open', () => {
@@ -439,8 +516,23 @@ describe('ingestion actions', () => {
 
     resolveIngestionConflict(deal.id, 'noi', 'current')
     resolveIngestionConflict(deal.id, 'occupancyPct', 'doc')
-    // The three resolved fields plus the price per SF derived from the price.
-    expect(current(deal.id).ingestion!.filledCount).toBe(atFinish + 4)
+    // One per conflict settled. The conflicted fields already carry the on-record
+    // value at finish, so what grows is the count of *confirmed* fields, not the
+    // count of fields holding a number.
+    expect(current(deal.id).ingestion!.filledCount).toBe(atFinish + 3)
+  })
+
+  it('does not count an unconfirmed conflict as a field the documents filled', () => {
+    const deal = createDealWithFiles()
+    finishIngestion(deal.id)
+    const ing = current(deal.id).ingestion!
+    // Three conflicts are outstanding, so the banner's count must sit three below
+    // the number of fields actually holding a value.
+    expect(ing.conflicts.filter((c) => !c.resolution)).toHaveLength(3)
+    expect(current(deal.id).financials.askingPrice).toBeGreaterThan(0)
+    resolveIngestionConflict(deal.id, 'askingPrice', 'current')
+    // Keeping the on-record value changes no number, but it IS a confirmation.
+    expect(current(deal.id).ingestion!.filledCount).toBe(ing.filledCount + 1)
   })
 
   it('carries price per SF along with a resolved asking price', () => {

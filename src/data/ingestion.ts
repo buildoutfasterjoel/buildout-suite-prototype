@@ -155,9 +155,13 @@ export function allResolved(ing: DealIngestion): boolean {
   return unresolvedCount(ing) === 0
 }
 
-/** The value a resolved conflict commits — the side the broker picked. */
-function resolvedRaw(c: IngestionConflict): number | undefined {
-  if (!c.resolution) return undefined
+/**
+ * The value a conflict commits. Once resolved that's the side the broker picked;
+ * while unresolved it's the value already on record — the deal keeps reading
+ * what it knows, and the document's figure stays an offer the broker can take.
+ * (Publish stays blocked via `seedGateForm`, not by leaving the field empty.)
+ */
+function committedRaw(c: IngestionConflict): number {
   return c.resolution === 'doc' ? c.docRaw : c.currentRaw
 }
 
@@ -170,9 +174,11 @@ function conflictFor(
 
 /**
  * The deal-side field values to commit: everything `buildPublishReadyPatch`
- * produces, minus any field still in conflict, plus resolved conflicts at the
- * picked value. Withholding a gate-required field (asking price on a Sale) is
- * what makes an unresolved conflict block publishing — no separate gate logic.
+ * produces, with each conflicted field set to its committed value — the picked
+ * side once resolved, the on-record value until then. A conflicted field is
+ * never left empty, so the editor shows the figure the broker would be keeping
+ * rather than a bare 0. Publish blocking lives in `seedGateForm`, which treats
+ * an unresolved asking-price conflict as an unmet requirement.
  */
 export function ingestionPatch(
   deal: Listing,
@@ -184,34 +190,28 @@ export function ingestionPatch(
 
   const price = conflictFor(ing, 'askingPrice')
   if (price) {
-    const raw = resolvedRaw(price)
-    if (raw === undefined) {
-      delete financials.askingPrice
-      delete financials.pricePerSqFt
-    } else {
-      financials.askingPrice = raw
-      // Price/SF is derived from the asking price, so a resolution has to carry
-      // it along — otherwise the deal shows the resolved price beside a Price/SF
-      // computed from the figure the broker just rejected.
-      financials.pricePerSqFt = pricePerSqFtFor(raw, draftSqFt(deal, property))
-    }
+    const raw = committedRaw(price)
+    financials.askingPrice = raw
+    // Price/SF is derived from the asking price, so it has to track whichever
+    // figure is committed — otherwise the deal shows one price beside a Price/SF
+    // computed from the other.
+    financials.pricePerSqFt = pricePerSqFtFor(raw, draftSqFt(deal, property))
   }
 
   const noi = conflictFor(ing, 'noi')
-  if (noi) {
-    const raw = resolvedRaw(noi)
-    if (raw === undefined) delete financials.noi
-    else financials.noi = raw
-  }
+  if (noi) financials.noi = committedRaw(noi)
 
   return { marketing: base.marketing, transaction: base.transaction, financials }
 }
 
-/** Property-side values to commit — occupancy is a Property field, not a deal one. */
+/**
+ * Property-side values to commit — occupancy is a Property field, not a deal one.
+ * Unresolved, this writes back the value already on record (a no-op), which keeps
+ * the occupancy field showing what the broker would be keeping.
+ */
 export function resolvedPropertyPatch(ing: DealIngestion): { occupancyPct?: number } {
   const occ = conflictFor(ing, 'occupancyPct')
-  const raw = occ ? resolvedRaw(occ) : undefined
-  return raw === undefined ? {} : { occupancyPct: raw }
+  return occ ? { occupancyPct: committedRaw(occ) } : {}
 }
 
 /** How many fields a patch actually sets — the banner's "filled N fields" count. */
@@ -224,16 +224,22 @@ export function countFilledFields(patch: PublishReadyPatch): number {
 }
 
 /**
- * Every field the run has committed: the deal-side patch plus any property-side
- * value a resolution wrote. Recomputed on each resolution (not frozen at commit)
- * so the banner's count keeps matching the record as conflicts get settled.
+ * Every field the run has actually settled: the deal-side patch plus any
+ * property-side value, MINUS the conflicts still awaiting the broker. A
+ * conflicted field holds the on-record value until it's confirmed, so counting it
+ * would have the banner claim the documents filled something they didn't.
+ * Recomputed on each resolution (not frozen at commit) so the count climbs as
+ * the broker settles them.
  */
 export function countCommittedFields(
   patch: PublishReadyPatch,
   propertyPatch: { occupancyPct?: number },
+  ing: DealIngestion,
 ): number {
-  return (
+  const written =
     countFilledFields(patch) +
     Object.values(propertyPatch).filter((v) => v !== undefined).length
-  )
+  // Clamped: a partial patch with more open conflicts than written fields would
+  // otherwise put a negative number in the banner copy.
+  return Math.max(0, written - unresolvedCount(ing))
 }

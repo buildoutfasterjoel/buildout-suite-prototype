@@ -272,7 +272,7 @@ export function finishIngestion(dealId: string): { deal: Listing | null } {
       ...l,
       ingestion: {
         ...settled,
-        filledCount: countCommittedFields(patch, resolvedPropertyPatch(settled)),
+        filledCount: countCommittedFields(patch, resolvedPropertyPatch(settled), settled),
         status: conflicts.length > 0 ? 'needs-review' : 'complete',
       },
       updatedAt: new Date().toISOString(),
@@ -312,7 +312,7 @@ export function resolveIngestionConflict(
       ...l,
       ingestion: {
         ...next,
-        filledCount: countCommittedFields(patch, propPatch),
+        filledCount: countCommittedFields(patch, propPatch, next),
         status: allResolved(next) ? 'complete' : 'needs-review',
       },
       updatedAt: new Date().toISOString(),

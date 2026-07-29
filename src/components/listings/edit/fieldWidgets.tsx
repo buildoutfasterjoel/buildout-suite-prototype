@@ -102,16 +102,14 @@ export function NumberField({
           className="ingestion-conflict__row"
           id={conflictRowId(conflict.fieldKey)}
         >
-          <div className="d-flex flex-column">
-            <span className="fs-small">
-              <span className="fw-semibold">{conflict.docValue}</span>
-              <span className="text-muted"> from {conflict.docSource}</span>
-            </span>
-            <span className="fs-small">
-              <span className="fw-semibold">{conflict.currentValue}</span>
-              <span className="text-muted"> from {conflict.currentSource}</span>
-            </span>
-          </div>
+          {/* The field itself already shows the value on record — the value the
+              broker would be keeping — so this row names only the alternative the
+              documents propose. Showing both here (beside an input holding one of
+              them) read as a bug. */}
+          <span className="fs-small">
+            <span className="text-muted">{conflict.docSource} says </span>
+            <span className="fw-semibold">{conflict.docValue}</span>
+          </span>
           <div className="d-flex gap-2 flex-shrink-0">
             <Button
               variant="primary"
