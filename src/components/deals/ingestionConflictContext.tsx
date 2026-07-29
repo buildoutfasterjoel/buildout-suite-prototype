@@ -42,6 +42,14 @@ export function useIngestionConflict(fieldKey: IngestionFieldKey | undefined) {
   };
 }
 
+/**
+ * DOM id of a field's arbitration row. The row only renders while the conflict is
+ * unresolved, which makes it the scroll target review mode aims at.
+ */
+export function conflictRowId(fieldKey: IngestionFieldKey): string {
+  return `ingestion-conflict-${fieldKey}`;
+}
+
 /** How many unresolved conflicts fall on a given set of field keys — for tab badges. */
 export function countConflictsFor(
   conflicts: IngestionConflict[],

@@ -15,7 +15,10 @@ import {
   faCalendar,
   faTriangleExclamation,
 } from "@fortawesome/pro-regular-svg-icons";
-import { useIngestionConflict } from "#/components/deals/ingestionConflictContext";
+import {
+  conflictRowId,
+  useIngestionConflict,
+} from "#/components/deals/ingestionConflictContext";
 import type { IngestionFieldKey, YesNoNA } from "#/data/types";
 
 // ── Small field wrappers ─────────────────────────────────────────────────────
@@ -95,7 +98,10 @@ export function NumberField({
         }
       />
       {conflict && (
-        <div className="ingestion-conflict__row">
+        <div
+          className="ingestion-conflict__row"
+          id={conflictRowId(conflict.fieldKey)}
+        >
           <div className="d-flex flex-column">
             <span className="fs-small">
               <span className="fw-semibold">{conflict.docValue}</span>

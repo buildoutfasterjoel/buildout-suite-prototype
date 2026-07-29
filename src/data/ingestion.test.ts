@@ -4,6 +4,7 @@ import {
   INGESTION_STAGES,
   advanceStage,
   allResolved,
+  countCommittedFields,
   countFilledFields,
   deriveConflicts,
   ingestionPatch,
@@ -32,6 +33,20 @@ function saleDeal(overrides: Partial<Listing> = {}): Listing {
 /** The same deal as a Lease — its editor has no Financials section. */
 function leaseDeal(overrides: Partial<Listing> = {}): Listing {
   return saleDeal({ dealType: 'Lease', ...overrides })
+}
+
+/**
+ * A brand-new deal typed in from an address: nothing on record yet. Paired with
+ * {@link stubProperty}, this is what the app actually hands `deriveConflicts` on
+ * the doc-vs-doc path — `property` is never `undefined` in the running app.
+ */
+function typedInDeal(overrides: Partial<Listing> = {}): Listing {
+  return saleDeal({ financials: { askingPrice: 0, noi: 0 }, ...overrides } as Partial<Listing>)
+}
+
+/** The zeroed stub `createProposalListing` inserts for a typed-in address. */
+function stubProperty(overrides: Partial<Property> = {}): Property {
+  return property({ askingPrice: 0, occupancyPct: 0, buildingSqFt: 0, ...overrides })
 }
 
 function property(overrides: Partial<Property> = {}): Property {
@@ -91,17 +106,40 @@ describe('deriveConflicts', () => {
     }
   })
 
-  it('derives doc-vs-doc conflicts when there is no property record', () => {
-    const conflicts = deriveConflicts(saleDeal(), undefined)
+  it('derives doc-vs-doc conflicts against the zeroed stub property a typed-in address gets', () => {
+    // The app always has a property object — a stub with no price/occupancy on it
+    // must NOT get fabricated figures credited to the "Property record".
+    const conflicts = deriveConflicts(typedInDeal(), stubProperty())
     expect(conflicts).toHaveLength(3)
     for (const c of conflicts) {
       expect(c.currentSource).not.toBe('Property record')
+      expect(c.currentSource).toMatch(/\.(pdf|xlsx)$/)
+      expect(c.docSource).not.toBe(c.currentSource)
+    }
+  })
+
+  it('mixes framings per field: record price is doc-vs-record while an empty occupancy is doc-vs-doc', () => {
+    const conflicts = deriveConflicts(saleDeal(), stubProperty({ askingPrice: 6_500_000 }))
+    const by = (k: string) => conflicts.find((c) => c.fieldKey === k)!
+    expect(by('askingPrice').currentSource).toBe('Property record')
+    expect(by('askingPrice').currentRaw).toBe(6_500_000)
+    expect(by('noi').currentSource).toBe('Property record')
+    expect(by('occupancyPct').currentSource).not.toBe('Property record')
+  })
+
+  it('keeps both sides valued and differing even for tiny record figures', () => {
+    const deal = saleDeal({ financials: { askingPrice: 40_000, noi: 100 } } as Partial<Listing>)
+    const conflicts = deriveConflicts(deal, stubProperty({ occupancyPct: 1 }))
+    for (const c of conflicts) {
+      expect(c.docRaw).not.toBe(c.currentRaw)
+      expect(c.docRaw).toBeGreaterThan(0)
+      expect(c.currentRaw).toBeGreaterThan(0)
     }
   })
 
   it('gives every conflict a non-empty value and differing sides', () => {
-    for (const deal of [saleDeal(), leaseDeal()]) {
-      for (const prop of [property(), undefined]) {
+    for (const deal of [saleDeal(), leaseDeal(), typedInDeal()]) {
+      for (const prop of [property(), stubProperty(), undefined]) {
         const conflicts = deriveConflicts(deal, prop)
         expect(conflicts.length).toBeGreaterThan(0)
         for (const c of conflicts) {
@@ -116,7 +154,7 @@ describe('deriveConflicts', () => {
   })
 
   it('keeps all three for a Sale, in askingPrice → noi → occupancyPct order', () => {
-    for (const prop of [property(), undefined]) {
+    for (const prop of [property(), stubProperty(), undefined]) {
       expect(deriveConflicts(saleDeal(), prop).map((c) => c.fieldKey)).toEqual([
         'askingPrice',
         'noi',
@@ -126,7 +164,7 @@ describe('deriveConflicts', () => {
   })
 
   it('derives occupancy only for a Lease — its editor hides Financials, so an asking-price or NOI conflict would be unresolvable', () => {
-    for (const prop of [property(), undefined]) {
+    for (const prop of [property(), stubProperty(), undefined]) {
       const conflicts = deriveConflicts(leaseDeal(), prop)
       expect(conflicts.map((c) => c.fieldKey)).toEqual(['occupancyPct'])
     }
@@ -212,6 +250,33 @@ describe('ingestionPatch', () => {
     expect(resolvedPropertyPatch(ing).occupancyPct).toBeDefined()
   })
 
+  it('recomputes price per SF from the resolved asking price', () => {
+    const deal = saleDeal()
+    const prop = property()
+    let ing = { ...startIngestionState(['T-12.pdf']), conflicts: deriveConflicts(deal, prop) }
+    const priceConflict = ing.conflicts.find((c) => c.fieldKey === 'askingPrice')!
+
+    ing = resolveConflict(ing, 'askingPrice', 'doc')
+    const patch = ingestionPatch(deal, prop, ing)
+    expect(patch.financials.pricePerSqFt).toBe(
+      Math.round((priceConflict.docRaw / prop.buildingSqFt) * 100) / 100,
+    )
+    // Not the figure derived from the price the broker just rejected.
+    expect(patch.financials.pricePerSqFt).not.toBe(
+      Math.round((priceConflict.currentRaw / prop.buildingSqFt) * 100) / 100,
+    )
+  })
+
+  it('never emits a non-finite price per SF, even off a zeroed stub property', () => {
+    const deal = typedInDeal()
+    const prop = stubProperty()
+    let ing = { ...startIngestionState(['T-12.pdf']), conflicts: deriveConflicts(deal, prop) }
+    ing = resolveConflict(ing, 'askingPrice', 'doc')
+    const perSqFt = ingestionPatch(deal, prop, ing).financials.pricePerSqFt!
+    expect(Number.isFinite(perSqFt)).toBe(true)
+    expect(perSqFt).toBeGreaterThan(0)
+  })
+
   it('leaves the property patch empty while occupancy is unresolved', () => {
     const ing = { ...startIngestionState(['T-12.pdf']), conflicts: deriveConflicts(saleDeal(), property()) }
     expect(resolvedPropertyPatch(ing).occupancyPct).toBeUndefined()
@@ -226,6 +291,16 @@ describe('countFilledFields', () => {
       financials: { askingPrice: 1 },
     })
     expect(n).toBe(4)
+  })
+
+  it('countCommittedFields adds the property-side values a resolution wrote', () => {
+    const patch = {
+      marketing: { saleTitle: 'x' },
+      transaction: {},
+      financials: { askingPrice: 1 },
+    }
+    expect(countCommittedFields(patch, {})).toBe(2)
+    expect(countCommittedFields(patch, { occupancyPct: 88 })).toBe(3)
   })
 })
 
@@ -352,6 +427,30 @@ describe('ingestion actions', () => {
 
     expect(current(deal.id).ingestion?.status).toBe('complete')
     expect(publishReadiness(current(deal.id)).missing).toEqual(['aiDocsReviewed'])
+  })
+
+  it('grows the filled count as conflicts are resolved, so the banner stays true', () => {
+    const deal = createDealWithFiles()
+    finishIngestion(deal.id)
+    const atFinish = current(deal.id).ingestion!.filledCount
+
+    resolveIngestionConflict(deal.id, 'askingPrice', 'doc')
+    expect(current(deal.id).ingestion!.filledCount).toBeGreaterThan(atFinish)
+
+    resolveIngestionConflict(deal.id, 'noi', 'current')
+    resolveIngestionConflict(deal.id, 'occupancyPct', 'doc')
+    // The three resolved fields plus the price per SF derived from the price.
+    expect(current(deal.id).ingestion!.filledCount).toBe(atFinish + 4)
+  })
+
+  it('carries price per SF along with a resolved asking price', () => {
+    const deal = createDealWithFiles()
+    finishIngestion(deal.id)
+    const before = current(deal.id).financials.pricePerSqFt
+    resolveIngestionConflict(deal.id, 'askingPrice', 'doc')
+    const after = current(deal.id)
+    expect(after.financials.pricePerSqFt).not.toBe(before)
+    expect(after.financials.pricePerSqFt).toBeGreaterThan(0)
   })
 
   it('raises only the resolvable occupancy conflict on a Lease', () => {

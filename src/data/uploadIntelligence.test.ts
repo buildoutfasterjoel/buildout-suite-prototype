@@ -5,7 +5,7 @@ import { createDeal, updateDealFinancials, updateDealMarketing, updateDealTransa
 import { emptyDraft } from './createListing'
 import { getListing, getProperty } from './store'
 import { publishReadiness } from './stageGates'
-import { buildPublishReadyPatch } from './uploadIntelligence'
+import { buildPublishReadyPatch, pricePerSqFtFor } from './uploadIntelligence'
 
 function doc(name: string): DealDocument {
   return { id: name, name, uploadedAt: '2026-07-24T00:00:00.000Z' }
@@ -46,6 +46,16 @@ describe('recommendDocsFromUploads', () => {
       doc('Signed Listing Agreement.pdf'),
     ])
     expect(result).toEqual(['om', 'bov', 'rent-roll', 'listing-agreement'])
+  })
+})
+
+describe('pricePerSqFtFor', () => {
+  it('rounds to two decimals', () => {
+    expect(pricePerSqFtFor(1_000_000, 3_000)).toBe(333.33)
+  })
+
+  it('returns 0 instead of dividing by an unknown size', () => {
+    expect(pricePerSqFtFor(1_000_000, 0)).toBe(0)
   })
 })
 

@@ -5,7 +5,12 @@ import type {
   Listing,
   Property,
 } from './types'
-import { buildPublishReadyPatch, type PublishReadyPatch } from './uploadIntelligence'
+import {
+  buildPublishReadyPatch,
+  draftSqFt,
+  type PublishReadyPatch,
+  pricePerSqFtFor,
+} from './uploadIntelligence'
 
 /** The three stages the banner walks through while a run is processing. */
 export const INGESTION_STAGES = [
@@ -37,10 +42,20 @@ const percent = (n: number) => `${Math.round(n)}%`
 
 /**
  * The faked extraction: derive the two-sided conflicts a T-12 and rent roll
- * would plausibly raise. When a property record exists the comparison is
- * doc-vs-record; without one (a typed-in address) it is doc-vs-doc — the rent
- * roll disagreeing with the T-12 — so both sides always carry a value and
- * whichever the broker picks leaves the field populated.
+ * would plausibly raise.
+ *
+ * The framing is decided **per field**, on whether the record actually carries a
+ * value for it — NOT on whether a property object exists. A deal created from a
+ * typed-in address still gets a stub property (`createProposalListing`), and that
+ * stub has a zeroed asking price and occupancy; crediting a fabricated figure to
+ * the "Property record" would be a lie about data that isn't there. So:
+ *
+ * - record has a value → doc-vs-record, current side labelled "Property record"
+ * - record is empty → doc-vs-doc (the rent roll disagreeing with the T-12), each
+ *   side labelled with the document it came from
+ *
+ * Either way both sides always carry a value and the two differ, so whichever
+ * the broker picks leaves the field populated.
  *
  * A Sale raises all three (asking price, NOI, occupancy). A **Lease** raises
  * occupancy only: the editor hides its Financials section on a Lease, so an
@@ -53,20 +68,29 @@ export function deriveConflicts(
   deal: Listing,
   property: Property | undefined,
 ): IngestionConflict[] {
-  const recordPrice = property && property.askingPrice > 0 ? property.askingPrice : deal.financials.askingPrice
-  const basePrice = recordPrice > 0 ? recordPrice : 7_900_000
-  const recordNoi = deal.financials.noi > 0 ? deal.financials.noi : 520_000
-  const recordOcc = property && property.occupancyPct > 0 ? property.occupancyPct : 96
+  const recordPrice =
+    property && property.askingPrice > 0 ? property.askingPrice : deal.financials.askingPrice
+  const hasPriceOnRecord = recordPrice > 0
+  const basePrice = hasPriceOnRecord ? recordPrice : 7_900_000
+
+  const hasNoiOnRecord = deal.financials.noi > 0
+  const recordNoi = hasNoiOnRecord ? deal.financials.noi : 520_000
+
+  const hasOccOnRecord = property !== undefined && property.occupancyPct > 0
+  const recordOcc = hasOccOnRecord ? property.occupancyPct : 96
 
   // The documents read higher on price/NOI and lower on occupancy — the classic
-  // "the T-12 doesn't support the pitch" shape.
-  const docPrice = Math.round((basePrice * 1.063) / 10_000) * 10_000
-  const docNoi = Math.round((recordNoi * 1.085) / 1_000) * 1_000
-  const docOcc = Math.max(1, recordOcc - 8)
+  // "the T-12 doesn't support the pitch" shape. Each is floored (or, for
+  // occupancy, flipped) away from the current figure so a small record value
+  // can't round onto it: `docRaw !== currentRaw` is an invariant the arbitration
+  // row depends on.
+  const docPrice = Math.max(Math.round((basePrice * 1.063) / 10_000) * 10_000, basePrice + 10_000)
+  const docNoi = Math.max(Math.round((recordNoi * 1.085) / 1_000) * 1_000, recordNoi + 1_000)
+  const docOcc = recordOcc > 9 ? recordOcc - 8 : recordOcc + 8
 
-  const hasRecord = property !== undefined
-  const currentSource = hasRecord ? 'Property record' : 'Rent Roll.xlsx'
-  const priceCurrentSource = hasRecord ? 'Property record' : 'Listing Agreement.pdf'
+  const priceCurrentSource = hasPriceOnRecord ? 'Property record' : 'Listing Agreement.pdf'
+  const noiCurrentSource = hasNoiOnRecord ? 'Property record' : 'Rent Roll.xlsx'
+  const occCurrentSource = hasOccOnRecord ? 'Property record' : 'T-12.pdf'
 
   // Same predicate the editor gates its Financials section on.
   const isSale = deal.dealType !== 'Lease'
@@ -88,7 +112,7 @@ export function deriveConflicts(
       docValue: money(docNoi),
       currentValue: money(recordNoi),
       docSource: 'T-12.pdf',
-      currentSource,
+      currentSource: noiCurrentSource,
       docRaw: docNoi,
       currentRaw: recordNoi,
     },
@@ -102,7 +126,7 @@ export function deriveConflicts(
       docValue: percent(docOcc),
       currentValue: percent(recordOcc),
       docSource: 'Rent Roll.xlsx',
-      currentSource: hasRecord ? 'Property record' : 'T-12.pdf',
+      currentSource: occCurrentSource,
       docRaw: docOcc,
       currentRaw: recordOcc,
     },
@@ -166,6 +190,10 @@ export function ingestionPatch(
       delete financials.pricePerSqFt
     } else {
       financials.askingPrice = raw
+      // Price/SF is derived from the asking price, so a resolution has to carry
+      // it along — otherwise the deal shows the resolved price beside a Price/SF
+      // computed from the figure the broker just rejected.
+      financials.pricePerSqFt = pricePerSqFtFor(raw, draftSqFt(deal, property))
     }
   }
 
@@ -192,5 +220,20 @@ export function countFilledFields(patch: PublishReadyPatch): number {
   return sections.reduce(
     (n, section) => n + Object.values(section).filter((v) => v !== undefined).length,
     0,
+  )
+}
+
+/**
+ * Every field the run has committed: the deal-side patch plus any property-side
+ * value a resolution wrote. Recomputed on each resolution (not frozen at commit)
+ * so the banner's count keeps matching the record as conflicts get settled.
+ */
+export function countCommittedFields(
+  patch: PublishReadyPatch,
+  propertyPatch: { occupancyPct?: number },
+): number {
+  return (
+    countFilledFields(patch) +
+    Object.values(propertyPatch).filter((v) => v !== undefined).length
   )
 }

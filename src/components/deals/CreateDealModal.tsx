@@ -632,7 +632,7 @@ export function CreateDealModal({
                   }}
                   className="border border-2 border-dashed rounded d-flex flex-column align-items-center justify-content-center text-center gap-1 p-4"
                   style={{
-                    borderColor: dragging ? "var(--bs-primary)" : undefined,
+                    borderColor: dragging ? "var(--bp-primary)" : undefined,
                     cursor: "pointer",
                   }}
                 >

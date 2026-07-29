@@ -15,12 +15,11 @@ import { notify } from '#/lib/notify'
 import {
   advanceStage,
   allResolved,
-  countFilledFields,
+  countCommittedFields,
   deriveConflicts,
   ingestionPatch,
   resolveConflict,
   resolvedPropertyPatch,
-  startIngestionState,
 } from './ingestion'
 import { getProperty, updateProperty } from './store'
 
@@ -238,17 +237,6 @@ export function updateDealFinancials(
   }
 }
 
-/** Start a background document-ingestion run on a deal. */
-export function startIngestion(dealId: string, documents: string[]): { deal: Listing | null } {
-  return {
-    deal: patchListing(dealId, (l) => ({
-      ...l,
-      ingestion: startIngestionState(documents),
-      updatedAt: new Date().toISOString(),
-    })),
-  }
-}
-
 /** Advance the run to its next stage. No-op when there is no processing run. */
 export function advanceIngestion(dealId: string): { deal: Listing | null } {
   return {
@@ -284,7 +272,7 @@ export function finishIngestion(dealId: string): { deal: Listing | null } {
       ...l,
       ingestion: {
         ...settled,
-        filledCount: countFilledFields(patch),
+        filledCount: countCommittedFields(patch, resolvedPropertyPatch(settled)),
         status: conflicts.length > 0 ? 'needs-review' : 'complete',
       },
       updatedAt: new Date().toISOString(),
@@ -296,6 +284,10 @@ export function finishIngestion(dealId: string): { deal: Listing | null } {
  * Record the broker's pick for one conflict and commit its value. Occupancy is a
  * Property field, so it writes through `updateProperty`. Once every conflict is
  * settled the run flips to `complete`.
+ *
+ * `filledCount` is recomputed here, not carried over: a resolution writes another
+ * field, and a count frozen at commit time would leave the banner understating
+ * what is actually on the deal.
  */
 export function resolveIngestionConflict(
   dealId: string,
@@ -318,7 +310,11 @@ export function resolveIngestionConflict(
   return {
     deal: patchListing(dealId, (l) => ({
       ...l,
-      ingestion: { ...next, status: allResolved(next) ? 'complete' : 'needs-review' },
+      ingestion: {
+        ...next,
+        filledCount: countCommittedFields(patch, propPatch),
+        status: allResolved(next) ? 'complete' : 'needs-review',
+      },
       updatedAt: new Date().toISOString(),
     })),
   }

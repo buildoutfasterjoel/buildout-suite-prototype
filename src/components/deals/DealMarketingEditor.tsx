@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
@@ -67,6 +67,7 @@ import {
 } from "#/components/deals/useStageGate";
 import {
 	IngestionConflictProvider,
+	conflictRowId,
 	countConflictsFor,
 } from "#/components/deals/ingestionConflictContext";
 
@@ -78,6 +79,25 @@ function formatCalcAmount(v: number | null): string {
 /** Percentage with 2 decimals; blank (not "0.00") when null. */
 function formatCalcPercent(v: number | null): string {
 	return v == null ? "" : `${v.toFixed(2)}%`;
+}
+
+/**
+ * Merge store-side changes into a working-copy draft without stomping what the
+ * broker has typed: a key is taken from `next` only when the store actually moved
+ * it (`next !== base`) AND the draft still sits at its mount value
+ * (`draft === base`). Identity comparison suffices — every write in this app
+ * spreads a new object rather than mutating in place.
+ */
+function reseedDraft<T extends object>(draft: T, base: T, next: T): T {
+	let changed = false;
+	const merged = { ...draft };
+	for (const key of Object.keys(next) as (keyof T)[]) {
+		if (next[key] !== base[key] && draft[key] === base[key]) {
+			merged[key] = next[key];
+			changed = true;
+		}
+	}
+	return changed ? merged : draft;
 }
 
 // ── Broker rows ──────────────────────────────────────────────────────────────
@@ -417,6 +437,43 @@ export function DealMarketingEditor({
 	);
 	const [marketing, setMarketing] = useState(listing.marketing);
 	const [internalNotes, setInternalNotes] = useState(listing.internalNotes);
+
+	// An ingestion run commits a few seconds after the deal is created, so it can
+	// land while the broker is already sitting in this form. `finishIngestion`
+	// writes marketing / transaction / financials straight to the store — values
+	// these drafts snapshotted at mount — so saving would silently revert them.
+	// Re-seed on that ONE status transition out of `processing` (not on every store
+	// change, which would fight the broker's typing), and even then only for keys
+	// left untouched since mount.
+	const ingestionStatus = listing.ingestion?.status;
+	const previousIngestionStatus = useRef(ingestionStatus);
+	const mountedListing = useRef(listing);
+	useEffect(() => {
+		const previous = previousIngestionStatus.current;
+		previousIngestionStatus.current = ingestionStatus;
+		if (previous !== "processing" || ingestionStatus === "processing") return;
+		const base = mountedListing.current;
+		setMarketing((d) => reseedDraft(d, base.marketing, listing.marketing));
+		setTransaction((d) =>
+			reseedDraft(d, base.transaction, listing.transaction),
+		);
+		setFinancials((d) => reseedDraft(d, base.financials, listing.financials));
+	}, [ingestionStatus, listing]);
+
+	// Review mode: bring the first disputed field into view inside its tab, so the
+	// broker isn't left staring at the top of the form. Mount only — held in a ref
+	// so re-renders as conflicts resolve can't re-fire it and yank the page around
+	// mid-edit. Effects don't run during SSR; the `document` guard covers the rest.
+	const scrollTarget = useRef(
+		review === "ingestion" && firstUnresolved ? firstUnresolved.fieldKey : null,
+	);
+	useEffect(() => {
+		const fieldKey = scrollTarget.current;
+		if (!fieldKey || typeof document === "undefined") return;
+		document
+			.getElementById(conflictRowId(fieldKey))
+			?.scrollIntoView({ behavior: "smooth", block: "center" });
+	}, []);
 
 	const isSale = dealType !== "Lease";
 
