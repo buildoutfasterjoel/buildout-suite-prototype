@@ -241,6 +241,25 @@ function NavbarGroupMenuItem({ className, render, inset, ...props }, forwardedRe
 `if (isMobile)`, so the number of hooks this component runs depends on the
 viewport. That violates the Rules of Hooks.
 
+**Why nothing flagged it.** `tsc` cannot: Rules of Hooks is a call-order
+property, not a type property, so `useRender(...)` is just a function returning
+`ReactElement` as far as the compiler is concerned. And the lint rule that would
+catch it doesn't appear to run — the published `blueprint-react` package has only
+`build`/`dev`/`clean` scripts, devDependencies of `tsdown` + `typescript`, and no
+ESLint or Biome config. Worth confirming against the monorepo root; if no
+`eslint-plugin-react-hooks` is wired up anywhere, that's arguably the more
+valuable fix, since this class of bug is invisible without it.
+
+**Anticipating the Base UI precedent.** Base UI calls `useMergedRefs`
+conditionally in this very file and suppresses the rule for it
+(`useRenderElement.js:63-69`), with a "SAFETY: ... switching between them at
+runtime is safe" comment. That justification does **not** extend to this case,
+and the difference is the whole point: Base UI keeps the hook *count* constant —
+every branch consumes exactly one slot, gated on `typeof document`, which never
+changes within a process. `GroupMenuItem` goes from one slot to zero depending on
+`isMobile`, which changes at runtime. Swapping equal-count hooks is defensible;
+changing the count is the violation.
+
 **Why it doesn't currently crash:** when `isMobile` flips, `NavbarGroup` swaps
 `Collapsible` for `DropdownMenu` at the same position in the tree (`:227-247`).
 Those are different component types, so React unmounts the subtree and mounts a
@@ -278,8 +297,12 @@ item 1, so the pattern doesn't propagate.
 
 **Acceptance criteria**
 - [ ] No hook is called inside a conditional in `Navbar`.
-- [ ] `react-hooks/rules-of-hooks` passes on `src/components/Navbar/index.tsx`.
 - [ ] `GroupMenuItem` renders identically in both branches, before and after.
+- [ ] `eslint-plugin-react-hooks` (or Biome's equivalent
+      `correctness/useHookAtTopLevel`) runs in CI for `blueprint-react`, and
+      `src/components/Navbar/index.tsx` passes it. If adopting the linter surfaces
+      other pre-existing violations, split those into a follow-up rather than
+      expanding this item.
 
 ---
 
