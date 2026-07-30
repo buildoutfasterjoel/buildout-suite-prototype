@@ -88,16 +88,27 @@ type ViewMode = "board" | "grid" | "map";
 const VIEW_STORAGE_KEY = "deals:view";
 const VIEW_MODES: ViewMode[] = ["board", "grid", "map"];
 
-// Deal-side labels speak the lease vocabulary (Landlord/Tenant) when the
-// Sale/Lease filter is narrowed to Lease, and the sale vocabulary
-// (Seller/Buyer) otherwise.
+// Deal-side labels follow whatever the Sale/Lease filter has narrowed to: the
+// sale vocabulary (Seller/Buyer) for Sale, the lease one (Landlord/Tenant) for
+// Lease, and both pairs when the filter spans them — an unnarrowed board lists
+// deals of both kinds, so naming only one side's vocabulary would misdescribe
+// half of what the button filters.
 function sideOptions(
-  leaseOnly: boolean,
+  saleLease: ReadonlySet<string>,
 ): { value: DealSide | "all"; label: string }[] {
+  const narrowed = saleLease.size === 1;
+  const leaseOnly = narrowed && saleLease.has("Lease");
+  const saleOnly = narrowed && saleLease.has("Sale");
   return [
     { value: "all", label: "All" },
-    { value: "seller", label: leaseOnly ? "Landlord" : "Seller" },
-    { value: "buyer", label: leaseOnly ? "Tenant" : "Buyer" },
+    {
+      value: "seller",
+      label: leaseOnly ? "Landlord" : saleOnly ? "Seller" : "Seller/Landlord",
+    },
+    {
+      value: "buyer",
+      label: leaseOnly ? "Tenant" : saleOnly ? "Buyer" : "Buyer/Tenant",
+    },
   ];
 }
 
@@ -522,9 +533,7 @@ function PropertyListings() {
             <Card.Body className="flex-grow-1 overflow-hidden d-flex flex-column gap-3">
               <div className="d-flex align-items-baseline justify-content-between gap-3">
                 <ButtonGroup aria-label="Deal side">
-                  {sideOptions(
-                    saleLease.set.size === 1 && saleLease.set.has("Lease"),
-                  ).map((opt) => (
+                  {sideOptions(saleLease.set).map((opt) => (
                     <Button
                       key={opt.value}
                       variant="outline"
