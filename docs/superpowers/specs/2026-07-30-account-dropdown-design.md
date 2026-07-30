@@ -67,16 +67,27 @@ pass; gap 9 while reviewing the shipped code):
 5. **No account-menu pattern.** No `GroupMenuItem` icon/label/description
    sub-parts and no header slot, so the identity card is bespoke markup styled
    against `.dropdown-*` internals.
-6. **`GroupMenu` hardcodes `minWidth: var(--anchor-width)`** off the 28px avatar
-   with no width prop, so the ~280px card needs an inline style or class.
-7. **Two different "mobile" breakpoints disagree.** `useNavbar()`'s `isMobile`
-   comes from Blueprint's JS media-query hook for `expand="lg"`
-   (`@buildoutinc/blueprint-react/src/hooks/use-mobile.ts:5`), which fires at
-   **1024px**, not Bootstrap's `lg` CSS breakpoint of 992px. Between 992px and
-   1024px, `isMobile` is `true` (so this component renders its flat-row
-   fallback) while Bootstrap's own `.navbar-expand-lg` CSS still considers the
-   viewport desktop-width. There is no single source of truth for "mobile" to
-   query against.
+6. **`GroupMenu`'s prop spread clobbers its own `minWidth`.** It sets
+   `style={{ ...props.style, minWidth: 'var(--anchor-width)' }}`
+   (`Navbar/index.tsx:316`) and then spreads `{...props}` on the next line —
+   but `style` is never destructured out of `props` (`:281-289`), so the spread
+   overwrites the computed style wholesale and the `...props.style` merge is dead
+   code. A consumer who passes `style` silently loses the anchor-width floor;
+   pass nothing and it applies. Either way there's no width prop, so the ~280px
+   card is sized by a class on a child element.
+7. **The JS and CSS breakpoint scales are from different design systems.**
+   `useNavbar()`'s `isMobile` comes from Blueprint's JS `BREAKPOINTS`
+   (`hooks/use-mobile.ts:3-9`) = `{sm 640, md 768, lg 1024, xl 1280, xxl 1536}`
+   — Tailwind's scale. The theme extends Bootstrap, whose `$grid-breakpoints`
+   are `{sm 576, md 768, lg 992, xl 1200, xxl 1400}`. Only `md` coincides, so for
+   every other `expand` value the JS fork flips at a different width than the
+   matching `.navbar-expand-*` CSS. At `expand="lg"` that's a 992–1024px band
+   where `isMobile` is `true` (this component renders its flat-row fallback)
+   while the CSS still lays out as desktop. Separately, `useMobileBreakpoint`
+   registers `matchMedia("(max-width: Npx)")` — which matches *at* N — but its
+   handler sets `innerWidth < N` (`use-mobile.ts:20-25`), so at exactly N the
+   query fires and resolves to `false`: the listener and the predicate disagree
+   on the boundary.
 8. **`DropdownMenu.SubContent` doesn't inherit the `.navbar-dropdown` class.**
    `SubContent` delegates to the same `DropdownMenuContent` as the top-level
    popup but without forwarding `.navbar-dropdown` (`DropdownMenu/index.tsx:179`),
