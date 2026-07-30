@@ -1,102 +1,40 @@
 # Blueprint tickets — Navbar dropdown composition
 
-Three tickets, ready to file. Findings are against
+Two tickets, ready to file. Findings are against
 `@buildoutinc/blueprint-react@1.3.0` and `@buildoutinc/blueprint-theme`, with
 line citations to the installed package sources. Discovered while building an
 account dropdown (identity header + grouped links + persona submenu) in
 suite-prototype.
 
-**All three are Medium priority. Nothing here is blocking anyone today.**
+**Both are Medium priority. Nothing here is blocking anyone today.**
 Blueprint's `Navbar` has no production consumers — shipping applications use the
 existing hand-written HTML/CSS navbar. suite-prototype is currently its only
 consumer, and it renders correctly. Treat these as fix-before-adoption: the work
 to do before the component is picked up more widely, not a live incident.
 
-Ordering, since the board has no epics: **BP-A before BP-C item 1** (submenu
-parts need a mobile branch that doesn't throw). **BP-B item 1 before BP-C item 2**
-(the menu separator needs the divider token). Otherwise independent — link them
+Ordering, since the board has no epics: **BP-A item 1 before BP-B item 3** (the
+menu separator needs the divider token fixed first). Otherwise independent — link
 as *relates to* if useful.
 
----
-
-# BP-A — Navbar mobile branch drops `Menu.Root`, crashing menu parts
-
-**Type:** Bug
-**Component:** blueprint-react / Navbar
-**Affects version:** 1.3.0
-**Priority:** Medium
-
-## Impact
-
-Latent, not observed. The only consumer today (suite-prototype) renders without
-errors specifically because it forks on `useNavbar().isMobile` and substitutes
-flat rows below the breakpoint — a workaround written after hitting this. Any
-consumer that composes a `GroupMenu` from `DropdownMenu` parts without that fork
-will throw at render once the viewport narrows.
-
-## Description
-
-`Navbar.Group` renders a `DropdownMenu` (Base UI `Menu.Root`) on desktop but a
-`Collapsible` below `expand` (`src/components/Navbar/index.tsx:227-247`).
-`Navbar.GroupMenu` likewise swaps `DropdownMenuContent` for `CollapsibleContent`
-(`:293-306`). Of the menu parts, only `GroupMenuItem` forks to handle the mobile
-branch (`:334-350`).
-
-Every other Base UI menu part placed inside a `GroupMenu` therefore loses its
-required `Menu.Root` ancestor once the viewport is below `expand`, and throws or
-silently no-ops: `DropdownMenu.GroupLabel`, `RadioGroup`, `RadioItem`,
-`CheckboxItem`, `Sub`, `SubTrigger`, `SubContent`.
-
-`DropdownMenu.Separator` is the sole exception, and only incidentally — it is a
-bare `<hr>` with no Base UI context dependency
-(`src/components/DropdownMenu/index.tsx:198-205`).
-
-## Steps to reproduce
-
-1. Render a `Navbar` with `expand="lg"`.
-2. Inside a `Navbar.Group` → `Navbar.GroupMenu`, place a
-   `DropdownMenu.RadioGroup` containing two `DropdownMenu.RadioItem`s.
-3. Narrow the viewport below 1024px and open the group.
-
-**Expected:** the radio group renders, or the part is documented as desktop-only.
-**Actual:** Base UI context error — the part has no `Menu.Root`.
-
-## Proposed fix
-
-Fork the remaining menu parts the way `GroupMenuItem` already does — delegate to
-the `DropdownMenu` part on desktop, render plain markup inside the `Collapsible`
-on mobile:
-
-```
-Navbar.GroupMenuLabel
-Navbar.GroupMenuRadioGroup
-Navbar.GroupMenuRadioItem
-Navbar.GroupMenuCheckboxItem
-```
-
-Where a mobile analogue is genuinely impossible, document the part as
-desktop-only and export the `useNavbar().isMobile` fork as the sanctioned
-pattern — consumers are writing that branch by hand today.
-
-## Acceptance criteria
-
-- [ ] Every `DropdownMenu` part usable inside `GroupMenu` on desktop either has a
-      mobile-safe `Navbar.*` equivalent or is documented as desktop-only.
-- [ ] Rendering each below `expand` produces no console error and no crash.
-- [ ] Automated coverage for at least one context-dependent part in both branches.
+On the mobile branch: `Navbar.Group` rendering a `Collapsible` below `expand`
+instead of a `Menu` is deliberate architecture, and the per-part mobile fork in
+`GroupMenuItem` (`Navbar/index.tsx:332-360`) is the pattern working as designed.
+Nothing in either ticket asks for that to change. BP-B item 1 asks for the
+pattern to be *completed* — `GroupMenuItem` is currently the only part that has
+a mobile fork.
 
 ---
 
-# BP-B — Navbar dropdown silently drops tokens and props
+# BP-A — Navbar dropdown silently drops tokens and props
 
 **Type:** Bug
 **Component:** blueprint-react / Navbar, blueprint-theme / navbar
 **Affects version:** 1.3.0
 **Priority:** Medium
 
-Five independent defects, each small and independently fixable. Common thread:
+Six independent defects, each small and independently fixable. Common thread:
 something is accepted or implied and then quietly discarded — no errors are
-raised, the output is just wrong or the input ignored. Four of the five are
+raised, the output is just wrong or the input ignored. Four of the six are
 one-line changes.
 
 ## Item 1 — `.navbar-dropdown` doesn't re-token its divider color
@@ -283,9 +221,69 @@ trigger makes it meaningless.
 - [ ] Passing no `style` preserves today's anchor-width behavior.
 - [ ] The mobile branch (`:301`) handles `style` consistently.
 
+## Item 6 — `NavbarGroupMenuItem` calls a hook conditionally
+
+```tsx
+function NavbarGroupMenuItem({ className, render, inset, ...props }, forwardedRef) {
+  const { isMobile } = useNavbar();
+
+  if (isMobile) {
+    return useRender({ defaultTagName: 'button', /* ... */ });   // :335
+  }
+
+  return <DropdownMenuItem /* ... */ />;
+}
+```
+
+`src/components/Navbar/index.tsx:326-362`. `useRender` is a hook — it calls
+`useRenderElement` → `useRenderElementProps` → `useMergedRefs`
+(`@base-ui/react/internals/useRenderElement.js:41-72`) — and it is called inside
+`if (isMobile)`, so the number of hooks this component runs depends on the
+viewport. That violates the Rules of Hooks.
+
+**Why it doesn't currently crash:** when `isMobile` flips, `NavbarGroup` swaps
+`Collapsible` for `DropdownMenu` at the same position in the tree (`:227-247`).
+Those are different component types, so React unmounts the subtree and mounts a
+fresh one — every `NavbarGroupMenuItem` instance is new, and each one's hook
+order is internally consistent for its whole lifetime. The violation is masked by
+an unrelated component's branching.
+
+That makes it fragile rather than broken: it will trip
+`react-hooks/rules-of-hooks` in any consumer or CI that runs the lint rule, and
+it becomes a live "Rendered more hooks than during the previous render" crash the
+moment `NavbarGroup` is refactored to keep one wrapper type across both branches
+— which is a natural way to implement BP-B item 1.
+
+**Fix** — call the hook unconditionally and branch on its result:
+
+```tsx
+const { isMobile } = useNavbar();
+const mobileElement = useRender({
+  defaultTagName: 'button',
+  ref: forwardedRef,
+  props: mergeProps<'button'>(
+    { className: cn('navbar-dropdown-menu-item dropdown-item', className) },
+    props as useRender.ComponentProps<'button'>,
+  ),
+  render: render as useRender.ComponentProps<'button'>['render'],
+  state: { slot: 'navbar-group-menu-item' },
+});
+
+if (isMobile) return mobileElement;
+return <DropdownMenuItem /* ... */ />;
+```
+
+Apply the same shape to any other part that gains a mobile fork under BP-B
+item 1, so the pattern doesn't propagate.
+
+**Acceptance criteria**
+- [ ] No hook is called inside a conditional in `Navbar`.
+- [ ] `react-hooks/rules-of-hooks` passes on `src/components/Navbar/index.tsx`.
+- [ ] `GroupMenuItem` renders identically in both branches, before and after.
+
 ---
 
-# BP-C — Navbar needs first-class menu composition parts
+# BP-B — Navbar needs first-class menu composition parts
 
 **Type:** Enhancement / Story
 **Component:** blueprint-react / Navbar
@@ -298,7 +296,52 @@ item must be assembled from `ui/DropdownMenu` and hand-restyled. Building a
 standard account menu took four separate workarounds. These are the parts that
 should exist.
 
-## Item 1 — No submenu parts, and `Navbar.Group` can't be nested to fake one
+## Item 1 — `GroupMenuItem` is the only part with a mobile fork
+
+`Navbar.GroupMenuItem` renders a `<button class="navbar-dropdown-menu-item
+dropdown-item">` inside the `Collapsible` on mobile and a `DropdownMenuItem` on
+desktop (`src/components/Navbar/index.tsx:326-362`). That per-part fork is the
+right pattern — `Navbar.Group` deliberately renders a `Collapsible` below
+`expand` rather than a menu, and each part is responsible for having a form that
+works in both. **No change requested there.**
+
+The problem is that `GroupMenuItem` is the *only* part that implements it. There
+is no `Navbar.GroupMenuLabel`, `GroupMenuRadioGroup`, `GroupMenuRadioItem`, or
+`GroupMenuCheckboxItem`. A consumer who needs any of those inside a navbar menu
+has no Navbar-level part to reach for, and the only alternative — importing
+`DropdownMenu.RadioGroup` and friends — cannot work in the mobile branch, because
+those are Base UI `Menu` primitives and there is no `Menu.Root` inside a
+`Collapsible`. They throw at render once the viewport narrows.
+
+So the consumer's options today are: hand-write a `useNavbar().isMobile` fork
+around every such part (what suite-prototype's persona switcher does), or don't
+use the part. Neither is a library-quality answer.
+
+**Proposed API** — complete the pattern `GroupMenuItem` already establishes:
+
+```
+Navbar.GroupMenuLabel
+Navbar.GroupMenuRadioGroup
+Navbar.GroupMenuRadioItem
+Navbar.GroupMenuCheckboxItem
+```
+
+each delegating to the `DropdownMenu` part on desktop and rendering the
+equivalent plain markup inside the `Collapsible` on mobile. Where a mobile
+analogue genuinely doesn't exist, document the part as desktop-only and publish
+the `isMobile` fork as the sanctioned pattern, so consumers aren't inventing it.
+
+Note BP-A item 6 when implementing: `GroupMenuItem`'s existing fork calls a hook
+inside a conditional. Don't copy that shape into the new parts.
+
+**Acceptance criteria**
+- [ ] Every `DropdownMenu` part usable inside `GroupMenu` on desktop either has a
+      mobile-safe `Navbar.*` equivalent or is documented as desktop-only.
+- [ ] A label, radio group, and checkbox item each render in both branches with no
+      consumer-side `isMobile` branching.
+- [ ] Automated coverage for at least one such part in both branches.
+
+## Item 2 — No submenu parts, and `Navbar.Group` can't be nested to fake one
 
 `Navbar.GroupMenu` is already the correctly-surfaced dropdown, so nesting a
 second `Navbar.Group` inside one looks like it should yield a correctly-surfaced
@@ -331,7 +374,7 @@ Navbar.GroupSubmenuTrigger → wraps DropdownMenu.SubTrigger, styled .dropdown-i
 Navbar.GroupSubmenuMenu    → wraps DropdownMenu.SubContent + navbar surface
 ```
 
-Once BP-B item 2 lands, `GroupSubmenuMenu` needs no explicit surface class. On
+Once BP-A item 2 lands, `GroupSubmenuMenu` needs no explicit surface class. On
 mobile these should fork to a nested `Collapsible` rather than throwing — see
 BP-A.
 
@@ -344,7 +387,7 @@ BP-A.
       open while the child is open, one Escape closes only the child.
 - [ ] Works, or degrades documentedly, below `expand`.
 
-## Item 2 — No menu-level separator, label, or header
+## Item 3 — No menu-level separator, label, or header
 
 There is no `Navbar.GroupMenuSeparator`, `GroupMenuLabel`, or `GroupMenuHeader`,
 so consumers mix component families inside a Navbar subtree. For separators, the
@@ -354,7 +397,7 @@ hand-tuning:
 | | color | vertical margin |
 |---|---|---|
 | `Navbar.Separator orientation="horizontal"` | correct — `--bp-separator-color` = `$navbar-divider-color` | none |
-| `DropdownMenu.Separator` | wrong on this surface (BP-B item 1) | correct — `--bp-dropdown-divider-margin-y` |
+| `DropdownMenu.Separator` | wrong on this surface (BP-A item 1) | correct — `--bp-dropdown-divider-margin-y` |
 
 `Navbar.Separator` does accept `orientation="horizontal"` despite defaulting to
 vertical (`src/components/Navbar/index.tsx:364-374`) — that works; it simply
@@ -371,7 +414,7 @@ the light surface).
 - [ ] A group label is legible on the navbar surface with no consumer CSS.
 - [ ] Both render in the mobile branch.
 
-## Item 3 — No account/user-menu pattern
+## Item 4 — No account/user-menu pattern
 
 `GroupMenuItem` has no icon, label, or description sub-parts, and `GroupMenu` has
 no header slot. An identity header (avatar + name + email + role) is therefore
@@ -396,7 +439,7 @@ composed from these, rather than each consumer re-deriving it.
       traversal.
 - [ ] A worked account-menu example lands in the docs.
 
-## Item 4 — `GroupTrigger` force-injects a caret with no opt-out
+## Item 5 — `GroupTrigger` force-injects a caret with no opt-out
 
 `NavbarGroupTrigger` always appends a `faCaretDown` (desktop) or `faCaretRight`
 (mobile) inside a `NavbarItemLinkIcon`
