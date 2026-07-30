@@ -128,7 +128,7 @@ import {
   getContact,
   contactLabel,
 } from './store'
-import { DEFAULT_PERSONAL_SPLIT_PCT } from './commission'
+import { DEFAULT_PERSONAL_SPLIT_PCT, closeProbabilityForStage } from './commission'
 
 /**
  * The editable subset of a listing the New Listing modal collects — just the
@@ -634,7 +634,7 @@ export function createProposalListing(draft: NewListingDraft): Listing {
           : 0,
       commissionPct: draft.commissionPct,
       commissionAmount,
-      closeProbability: 0,
+      closeProbability: closeProbabilityForStage(draft.initialStage),
       contractExecutedDate: null,
       closeDate: null,
       listedOnDate: null,

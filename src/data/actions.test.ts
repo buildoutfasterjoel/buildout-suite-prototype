@@ -17,6 +17,7 @@ import {
   updateDealTransaction,
 } from './actions'
 import { emptyDraft } from './createListing'
+import { closeProbabilityForStage, commissionForecast } from './commission'
 import { publishReadiness } from './stageGates'
 import { getContactDetailClient, listContactsForDeal } from './selectors'
 import { TEAMMATES } from './teammates'
@@ -193,6 +194,69 @@ describe('actions', () => {
     } finally {
       setNotifier(null)
     }
+  })
+
+  it('a deal is created already weighted for its starting stage', () => {
+    const { deal } = createDeal({ ...emptyDraft(), name: 'Weighted', address: '1 Weight Way' })
+    // A brand-new deal used to sit at 0%, contributing nothing to the forecast
+    // no matter which stage it started in.
+    expect(deal.transaction.closeProbability).toBe(closeProbabilityForStage(deal.status))
+  })
+
+  it('commitStageTransition raises the close probability as a deal advances', () => {
+    const { deal } = createDeal({ ...emptyDraft(), name: 'Ladder', address: '2 Ladder Ln' })
+    const start = deal.transaction.closeProbability
+
+    const { deal: active } = commitStageTransition({
+      dealId: deal.id, targetStage: 'active', actor: 'Jane', publish: true,
+    })
+    const { deal: uc } = commitStageTransition({
+      dealId: deal.id, targetStage: 'under-contract', actor: 'Jane',
+    })
+    const { deal: closed } = commitStageTransition({
+      dealId: deal.id, targetStage: 'closed', actor: 'Jane',
+    })
+
+    expect(active!.transaction.closeProbability).toBeGreaterThan(start)
+    expect(uc!.transaction.closeProbability).toBeGreaterThan(active!.transaction.closeProbability)
+    expect(closed!.transaction.closeProbability).toBe(100)
+  })
+
+  it('the commission forecast grows as the same deal crosses the board', () => {
+    const { deal } = createDeal({ ...emptyDraft(), name: 'Forecast', address: '3 Forecast Ct' })
+    // Give it a commission to weight; without one every stage forecasts 0.
+    updateDealTransaction(deal.id, { commissionAmount: 100_000 })
+    const at = () => commissionForecast([useDataStore.getState().listings.get(deal.id)!]).brokerage
+
+    const pitching = at()
+    commitStageTransition({ dealId: deal.id, targetStage: 'active', actor: 'Jane', publish: true })
+    const active = at()
+    commitStageTransition({ dealId: deal.id, targetStage: 'under-contract', actor: 'Jane' })
+    const underContract = at()
+    commitStageTransition({ dealId: deal.id, targetStage: 'closed', actor: 'Jane' })
+
+    expect(active).toBeGreaterThan(pitching)
+    expect(underContract).toBeGreaterThan(active)
+    // A closed deal's commission counts in full.
+    expect(at()).toBe(100_000)
+  })
+
+  it('a lost deal drops out of the forecast entirely', () => {
+    const { deal } = createDeal({ ...emptyDraft(), name: 'Lost', address: '4 Lost Rd' })
+    updateDealTransaction(deal.id, { commissionAmount: 100_000 })
+    commitStageTransition({ dealId: deal.id, targetStage: 'active', actor: 'Jane', publish: true })
+    commitStageTransition({ dealId: deal.id, targetStage: 'inactive', actor: 'Jane' })
+    const lost = useDataStore.getState().listings.get(deal.id)!
+    expect(lost.transaction.closeProbability).toBe(0)
+    expect(commissionForecast([lost])).toEqual({ you: 0, brokerage: 0 })
+  })
+
+  it('updateDealStage re-weights on the ungated path too', () => {
+    const { deal } = createDeal({ ...emptyDraft(), name: 'Ungated', address: '5 Ungated Way' })
+    const { deal: moved } = updateDealStage(deal.id, 'under-contract')
+    expect(moved?.transaction.closeProbability).toBe(
+      closeProbabilityForStage('under-contract'),
+    )
   })
 
   it('updateDealTransaction merges into transaction without dropping sibling fields', () => {

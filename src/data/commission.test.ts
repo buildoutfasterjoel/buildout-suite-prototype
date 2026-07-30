@@ -4,7 +4,10 @@ import {
   commissionAmountFromPct,
   commissionPctFromAmount,
   commissionForecast,
+  closeProbabilityForStage,
+  nextCloseProbability,
   DEFAULT_PERSONAL_SPLIT_PCT,
+  STAGE_CLOSE_PROBABILITY,
 } from "./commission";
 
 describe("commissionAmountFromPct", () => {
@@ -96,5 +99,81 @@ describe("commissionForecast", () => {
       you: 0,
       brokerage: 100_000,
     });
+  });
+});
+
+describe("closeProbabilityForStage", () => {
+  it("rises monotonically as a deal advances", () => {
+    const ladder = [
+      closeProbabilityForStage("proposal"),
+      closeProbabilityForStage("active"),
+      closeProbabilityForStage("under-contract"),
+      closeProbabilityForStage("closed"),
+    ];
+    // This ordering is the whole feature: a deal nearer to closing is worth
+    // more of its commission in the forecast.
+    expect(ladder).toEqual([...ladder].sort((a, b) => a - b));
+    expect(new Set(ladder).size).toBe(ladder.length);
+  });
+
+  it("is certain at Closed and worthless at Lost", () => {
+    expect(closeProbabilityForStage("closed")).toBe(100);
+    expect(closeProbabilityForStage("inactive")).toBe(0);
+  });
+
+  it("sits inside its stage's range", () => {
+    for (const [stage, [low, high]] of Object.entries(STAGE_CLOSE_PROBABILITY)) {
+      const p = closeProbabilityForStage(stage as keyof typeof STAGE_CLOSE_PROBABILITY);
+      expect(p).toBeGreaterThanOrEqual(low);
+      expect(p).toBeLessThanOrEqual(high);
+    }
+  });
+});
+
+describe("nextCloseProbability", () => {
+  it("raises the odds on every forward step", () => {
+    const pitching = closeProbabilityForStage("proposal");
+    const toActive = nextCloseProbability("proposal", "active", pitching);
+    const toUnderContract = nextCloseProbability("active", "under-contract", toActive);
+    const toClosed = nextCloseProbability("under-contract", "closed", toUnderContract);
+
+    expect(toActive).toBeGreaterThan(pitching);
+    expect(toUnderContract).toBeGreaterThan(toActive);
+    expect(toClosed).toBeGreaterThan(toUnderContract);
+    expect(toClosed).toBe(100);
+  });
+
+  it("keeps a broker's higher estimate when advancing", () => {
+    // Hand-raised to 95% on an Active deal: Under Contract's baseline is lower,
+    // and advancing must never knock the odds down.
+    expect(nextCloseProbability("active", "under-contract", 95)).toBe(95);
+  });
+
+  it("re-baselines to the stage when moving backwards", () => {
+    expect(nextCloseProbability("under-contract", "active", 95)).toBe(
+      closeProbabilityForStage("active"),
+    );
+  });
+
+  it("is absolute at the terminal stages regardless of prior optimism", () => {
+    expect(nextCloseProbability("active", "inactive", 95)).toBe(0);
+    expect(nextCloseProbability("proposal", "closed", 5)).toBe(100);
+  });
+
+  it("weights the same commission higher as the deal advances", () => {
+    const commissionAmount = 100_000;
+    const forecastAt = (p: number) =>
+      commissionForecast([dealStub(commissionAmount, p, 60_000, 50)]).brokerage;
+
+    const pitching = forecastAt(closeProbabilityForStage("proposal"));
+    const active = forecastAt(closeProbabilityForStage("active"));
+    const underContract = forecastAt(closeProbabilityForStage("under-contract"));
+    const closed = forecastAt(closeProbabilityForStage("closed"));
+
+    expect(active).toBeGreaterThan(pitching);
+    expect(underContract).toBeGreaterThan(active);
+    expect(closed).toBeGreaterThan(underContract);
+    // A closed deal contributes its commission in full.
+    expect(closed).toBe(commissionAmount);
   });
 });

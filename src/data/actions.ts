@@ -11,6 +11,7 @@ import { CURRENT_USER, TEAMMATES } from './teammates'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
 import { reconcileContactDealFields } from './contactStage'
 import { generateTasks } from './seed'
+import { nextCloseProbability } from './commission'
 import { notify } from '#/lib/notify'
 import {
   advanceStage,
@@ -76,7 +77,22 @@ export function updateDealStage(
   dealId: string,
   status: PropertyStatus,
 ): { deal: Listing | null } {
-  return { deal: patchListing(dealId, (l) => ({ ...l, status, updatedAt: new Date().toISOString() })) }
+  return {
+    deal: patchListing(dealId, (l) => ({
+      ...l,
+      status,
+      // Keep the forecast weighting in step with the stage on this path too —
+      // see commitStageTransition for the gated one.
+      transaction: {
+        ...l.transaction,
+        closeProbability:
+          status === l.status
+            ? l.transaction.closeProbability
+            : nextCloseProbability(l.status, status, l.transaction.closeProbability),
+      },
+      updatedAt: new Date().toISOString(),
+    })),
+  }
 }
 
 /**
@@ -167,7 +183,21 @@ export function commitStageTransition(input: StageTransitionInput): { deal: List
         tenantContactIds,
         publishedAt,
         tasks,
-        transaction: { ...l.transaction, nextCriticalDate, ...input.transaction },
+        transaction: {
+          ...l.transaction,
+          nextCriticalDate,
+          // Crossing into a new stage re-weights the deal: the forecast discounts
+          // each commission by this, so the same deal is worth more the closer it
+          // gets to closing (and all of it once Closed).
+          closeProbability: stageChanged
+            ? nextCloseProbability(
+                l.status,
+                input.targetStage,
+                l.transaction.closeProbability,
+              )
+            : l.transaction.closeProbability,
+          ...input.transaction,
+        },
         marketing,
         financials: input.financials ? { ...l.financials, ...input.financials } : l.financials,
         history: [...l.history, historyEntry],

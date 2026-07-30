@@ -40,7 +40,7 @@ import type { CallList } from './contactLists'
 import type { SerializedContactFilters } from '#/components/contacts/contactFilterModel'
 import { reconcileContactDealFields } from './contactStage'
 import { CURRENT_USER, TEAMMATES, type AccessTier, type ContactShare } from './teammates'
-import { DEFAULT_PERSONAL_SPLIT_PCT } from './commission'
+import { DEFAULT_PERSONAL_SPLIT_PCT, STAGE_CLOSE_PROBABILITY } from './commission'
 
 const SEED = 20240101
 const PROPERTY_COUNT = 20
@@ -976,14 +976,6 @@ function generateContact(allPropertyIds: string[]): Contact {
 }
 
 // ── Listing (+ its 1:1 deal) generator ────────────────────────────────────────
-
-const STAGE_CLOSE_PROBABILITY: Record<ListingStage, [number, number]> = {
-  proposal: [5, 20],
-  active: [25, 55],
-  'under-contract': [65, 90],
-  closed: [100, 100],
-  inactive: [0, 15],
-}
 
 function generateBroker(side: 'internal' | 'outside', commissionAmount: number): DealBroker {
   const splitPct = side === 'internal' ? 100 : faker.helpers.arrayElement([40, 50, 60])
