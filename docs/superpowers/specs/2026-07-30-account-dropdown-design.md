@@ -28,9 +28,10 @@ only by a `border-top` utility.
 ## Blueprint capability assessment
 
 `Navbar.GroupMenu` forwards arbitrary children into Base UI's `Menu.Popup`, so
-the three-zone layout composes on desktop with no Blueprint change. Six gaps
+the three-zone layout composes on desktop with no Blueprint change. Eight gaps
 came out of reading `blueprint-react/src/components/Navbar/index.tsx`,
-`DropdownMenu/index.tsx`, and `blueprint-theme/scss/components/navbar/`:
+`DropdownMenu/index.tsx`, and `blueprint-theme/scss/components/navbar/`
+(gaps 7 and 8 surfaced during the final review pass):
 
 1. **No menu-level parts on `Navbar`.** `Navbar.Separator` is the vertical navbar
    rule (`.separator.navbar-separator`), not a dropdown divider. There is no
@@ -56,9 +57,23 @@ came out of reading `blueprint-react/src/components/Navbar/index.tsx`,
    against `.dropdown-*` internals.
 6. **`GroupMenu` hardcodes `minWidth: var(--anchor-width)`** off the 28px avatar
    with no width prop, so the ~280px card needs an inline style or class.
+7. **Two different "mobile" breakpoints disagree.** `useNavbar()`'s `isMobile`
+   comes from Blueprint's JS media-query hook for `expand="lg"`
+   (`@buildoutinc/blueprint-react/src/hooks/use-mobile.ts:5`), which fires at
+   **1024px**, not Bootstrap's `lg` CSS breakpoint of 992px. Between 992px and
+   1024px, `isMobile` is `true` (so this component renders its flat-row
+   fallback) while Bootstrap's own `.navbar-expand-lg` CSS still considers the
+   viewport desktop-width. There is no single source of truth for "mobile" to
+   query against.
+8. **`DropdownMenu.SubContent` doesn't inherit the navbar theme class.**
+   `SubContent` delegates to the same `DropdownMenuContent` as the top-level
+   popup but without forwarding `.navbar-dropdown` (`DropdownMenu/index.tsx:179`),
+   so a submenu opened from inside a themed navbar dropdown renders on the
+   light default surface unless the consumer re-applies the class by hand, as
+   this implementation does on `SubContent` in Zone 3.
 
-These become a Blueprint ticket, tracked separately. Gaps 2, 3, and 4 are worked
-around in this implementation.
+These become a Blueprint ticket, tracked separately. Gaps 2, 3, 4, 7, and 8 are
+worked around in this implementation.
 
 ## Design
 

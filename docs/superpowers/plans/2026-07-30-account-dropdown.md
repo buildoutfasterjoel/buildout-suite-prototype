@@ -205,7 +205,8 @@ export function identityLine(persona: Persona, company?: string): string {
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `bun --bun run test -- accountMenu`
-Expected: PASS — 8 tests.
+Expected: PASS — 9 tests (10 after the inherited-object-key case added in the
+final review pass, item 1 of `final-findings.md`).
 
 - [ ] **Step 5: Add the company field to the current user**
 
@@ -523,10 +524,10 @@ Automated checks cannot see the rendered menu. After Task 3, run `bun --bun run 
 2. Identity card: 40px avatar, name in near-white, email and "Principal · Buildout" in the dimmer blue — no grey text.
 3. Both dividers are dark navy, not light grey.
 4. "Profile settings" and "Company settings" hover and close the menu, but do not navigate.
-5. "Viewing as: Principal" opens a submenu on the **same dark surface**, with a check on the active persona. Picking Marketing closes the menu, and reopening shows "Viewing as: Marketing" and "Marketing · Buildout".
+5. "Viewing as: Principal" opens a submenu on the **same dark surface**, with a check on the active persona. Picking Marketing does **not** close the menu — Base UI's `Menu.RadioItem` defaults `closeOnClick` to `false` (unlike `Menu.Item`, which defaults to `true`) — and instead the identity line's third row updates in place, live, to "Marketing · Buildout" while the menu stays open.
 6. The persona survives a page reload.
 7. "Prototype index" navigates to `/`.
 8. "Reset demo" wipes and reloads, as before.
-9. Narrow the window below 992px: the menu becomes inline, and the three personas appear as flat rows with the active one emphasized — no console error.
+9. Narrow the window below 1024px — Blueprint's JS breakpoint for `expand="lg"` (`@buildoutinc/blueprint-react/src/hooks/use-mobile.ts:5`), not Bootstrap's 992px CSS breakpoint: the menu becomes inline, and the three personas appear as flat rows with the active one emphasized — no console error. Between 992px and 1024px, expect the JS to report mobile while the CSS breakpoint still says desktop.
 
 Report anything off rather than adjusting unrelated visual design.
