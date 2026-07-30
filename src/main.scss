@@ -3356,6 +3356,27 @@
   }
 }
 
+// ── Account dropdown ────────────────────────────────────────────────────────
+// The navbar dropdown is portaled to <body>, so these rules sit at top level
+// rather than inside .global-navbar.
+.navbar-dropdown {
+  // Blueprint's .navbar-dropdown re-tokens the dropdown's bg, color, and border
+  // for the dark navy surface but not the divider, which otherwise falls back to
+  // the light-theme grey. Matches $navbar-divider-color.
+  --bs-dropdown-divider-bg: #{colors.$buildout-blue-900};
+}
+
+// Identity card: the inert header above the first divider.
+.account-menu__card {
+  padding: map-get($spacers, 3);
+  min-width: 280px;
+}
+
+.account-menu__identity {
+  // Lets the email and persona lines truncate instead of widening the menu.
+  min-width: 0;
+}
+
 // ── Tasks page (grouped view) ───────────────────────────────────────────────
 // Each section is a bordered rounded card wrapping a Blueprint Accordion, so
 // the collapse chevron matches the Contact Details accordions (default chevron
