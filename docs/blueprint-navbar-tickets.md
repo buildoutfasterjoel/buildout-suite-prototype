@@ -1,20 +1,26 @@
 # Blueprint tickets — Navbar dropdown composition
 
-Two tickets, ready to file. Findings are against
-`@buildoutinc/blueprint-react@1.3.0` and `@buildoutinc/blueprint-theme`, with
-line citations to the installed package sources. Discovered while building an
+Three tickets, ready to file — one bug, one enhancement, one spike. Findings are
+against `@buildoutinc/blueprint-react@1.3.0` and `@buildoutinc/blueprint-theme`,
+with line citations to the installed package sources. Discovered while building an
 account dropdown (identity header + grouped links + persona submenu) in
 suite-prototype.
 
-**Both are Medium priority. Nothing here is blocking anyone today.**
+**All three are Medium priority. Nothing here is blocking anyone today.**
 Blueprint's `Navbar` has no production consumers — shipping applications use the
 existing hand-written HTML/CSS navbar. suite-prototype is currently its only
 consumer, and it renders correctly. Treat these as fix-before-adoption: the work
 to do before the component is picked up more widely, not a live incident.
 
-Ordering, since the board has no epics: **BP-A item 1 before BP-B item 3** (the
-menu separator needs the divider token fixed first). Otherwise independent — link
-as *relates to* if useful.
+Ordering, since the board has no epics:
+
+- **BP-A item 1 before BP-B item 3** — the menu separator needs the divider token
+  fixed first.
+- **SPIKE before BP-B item 1** — completing the mobile forks means writing more
+  parts in the shape the spike is evaluating; better to know whether that shape
+  needs changing first.
+
+Otherwise independent — link as *relates to* if useful.
 
 On the mobile branch: `Navbar.Group` rendering a `Collapsible` below `expand`
 instead of a `Menu` is deliberate architecture, and the per-part mobile fork in
@@ -32,9 +38,9 @@ a mobile fork.
 **Affects version:** 1.3.0
 **Priority:** Medium
 
-Six independent defects, each small and independently fixable. Common thread:
+Five independent defects, each small and independently fixable. Common thread:
 something is accepted or implied and then quietly discarded — no errors are
-raised, the output is just wrong or the input ignored. Four of the six are
+raised, the output is just wrong or the input ignored. Four of the five are
 one-line changes.
 
 ## Item 1 — `.navbar-dropdown` doesn't re-token its divider color
@@ -221,89 +227,6 @@ trigger makes it meaningless.
 - [ ] Passing no `style` preserves today's anchor-width behavior.
 - [ ] The mobile branch (`:301`) handles `style` consistently.
 
-## Item 6 — `NavbarGroupMenuItem` calls a hook conditionally
-
-```tsx
-function NavbarGroupMenuItem({ className, render, inset, ...props }, forwardedRef) {
-  const { isMobile } = useNavbar();
-
-  if (isMobile) {
-    return useRender({ defaultTagName: 'button', /* ... */ });   // :335
-  }
-
-  return <DropdownMenuItem /* ... */ />;
-}
-```
-
-`src/components/Navbar/index.tsx:326-362`. `useRender` is a hook — it calls
-`useRenderElement` → `useRenderElementProps` → `useMergedRefs`
-(`@base-ui/react/internals/useRenderElement.js:41-72`) — and it is called inside
-`if (isMobile)`, so the number of hooks this component runs depends on the
-viewport. That violates the Rules of Hooks.
-
-**Why nothing flagged it.** `tsc` cannot: Rules of Hooks is a call-order
-property, not a type property, so `useRender(...)` is just a function returning
-`ReactElement` as far as the compiler is concerned. And the lint rule that would
-catch it doesn't appear to run — the published `blueprint-react` package has only
-`build`/`dev`/`clean` scripts, devDependencies of `tsdown` + `typescript`, and no
-ESLint or Biome config. Worth confirming against the monorepo root; if no
-`eslint-plugin-react-hooks` is wired up anywhere, that's arguably the more
-valuable fix, since this class of bug is invisible without it.
-
-**Anticipating the Base UI precedent.** Base UI calls `useMergedRefs`
-conditionally in this very file and suppresses the rule for it
-(`useRenderElement.js:63-69`), with a "SAFETY: ... switching between them at
-runtime is safe" comment. That justification does **not** extend to this case,
-and the difference is the whole point: Base UI keeps the hook *count* constant —
-every branch consumes exactly one slot, gated on `typeof document`, which never
-changes within a process. `GroupMenuItem` goes from one slot to zero depending on
-`isMobile`, which changes at runtime. Swapping equal-count hooks is defensible;
-changing the count is the violation.
-
-**Why it doesn't currently crash:** when `isMobile` flips, `NavbarGroup` swaps
-`Collapsible` for `DropdownMenu` at the same position in the tree (`:227-247`).
-Those are different component types, so React unmounts the subtree and mounts a
-fresh one — every `NavbarGroupMenuItem` instance is new, and each one's hook
-order is internally consistent for its whole lifetime. The violation is masked by
-an unrelated component's branching.
-
-That makes it fragile rather than broken: it will trip
-`react-hooks/rules-of-hooks` in any consumer or CI that runs the lint rule, and
-it becomes a live "Rendered more hooks than during the previous render" crash the
-moment `NavbarGroup` is refactored to keep one wrapper type across both branches
-— which is a natural way to implement BP-B item 1.
-
-**Fix** — call the hook unconditionally and branch on its result:
-
-```tsx
-const { isMobile } = useNavbar();
-const mobileElement = useRender({
-  defaultTagName: 'button',
-  ref: forwardedRef,
-  props: mergeProps<'button'>(
-    { className: cn('navbar-dropdown-menu-item dropdown-item', className) },
-    props as useRender.ComponentProps<'button'>,
-  ),
-  render: render as useRender.ComponentProps<'button'>['render'],
-  state: { slot: 'navbar-group-menu-item' },
-});
-
-if (isMobile) return mobileElement;
-return <DropdownMenuItem /* ... */ />;
-```
-
-Apply the same shape to any other part that gains a mobile fork under BP-B
-item 1, so the pattern doesn't propagate.
-
-**Acceptance criteria**
-- [ ] No hook is called inside a conditional in `Navbar`.
-- [ ] `GroupMenuItem` renders identically in both branches, before and after.
-- [ ] `eslint-plugin-react-hooks` (or Biome's equivalent
-      `correctness/useHookAtTopLevel`) runs in CI for `blueprint-react`, and
-      `src/components/Navbar/index.tsx` passes it. If adopting the linter surfaces
-      other pre-existing violations, split those into a follow-up rather than
-      expanding this item.
-
 ---
 
 # BP-B — Navbar needs first-class menu composition parts
@@ -354,8 +277,9 @@ equivalent plain markup inside the `Collapsible` on mobile. Where a mobile
 analogue genuinely doesn't exist, document the part as desktop-only and publish
 the `isMobile` fork as the sanctioned pattern, so consumers aren't inventing it.
 
-Note BP-A item 6 when implementing: `GroupMenuItem`'s existing fork calls a hook
-inside a conditional. Don't copy that shape into the new parts.
+See the SPIKE ticket before implementing: `GroupMenuItem`'s existing mobile fork
+calls `useRender` inside a conditional, and the new parts should not copy that
+shape.
 
 **Acceptance criteria**
 - [ ] Every `DropdownMenu` part usable inside `GroupMenu` on desktop either has a
@@ -481,3 +405,103 @@ must hide it in CSS:
 - [ ] The caret can be suppressed by prop, with no CSS.
 - [ ] Default behavior unchanged for existing consumers.
 - [ ] Applies to both branches.
+
+---
+
+# SPIKE — Rules of Hooks coverage in blueprint-react, and the `useRender` fork pattern
+
+**Type:** Spike
+**Component:** blueprint-react
+**Priority:** Medium
+**Suggested timebox:** half a day
+
+## Why this is a spike and not a bug
+
+A concrete violation exists — `NavbarGroupMenuItem` calls `useRender` inside
+`if (isMobile)` (`src/components/Navbar/index.tsx:326-362`) — but three things
+have to be established before anyone knows what the right fix is, and how much
+of the library it touches:
+
+1. whether any linter is wired up to catch this class of bug at all,
+2. how many other components share the pattern,
+3. whether the pattern is actually unsafe in each case, or safe-but-unlinted the
+   way Base UI's own use of it is.
+
+Filing it as a bug invites a one-line fix to one component while leaving the
+class of bug undetectable. Filing it as a spike produces the follow-up tickets
+with the right scope.
+
+## Background
+
+`useRender` is a hook: it calls `useRenderElement` → `useRenderElementProps` →
+`useMergedRefs` (`@base-ui/react/internals/useRenderElement.js:41-78`). In
+`NavbarGroupMenuItem` it is called only on the mobile branch, so the component's
+hook count depends on the viewport — one slot when `isMobile`, zero otherwise.
+
+It does not currently crash, because flipping `isMobile` makes `NavbarGroup` swap
+`Collapsible` for `DropdownMenu` at the same tree position (`:227-247`). Those are
+different component types, so React unmounts and remounts the subtree, giving
+fresh item instances whose hook order is internally consistent. The violation is
+masked by an unrelated component's branching — not by anything
+`NavbarGroupMenuItem` does.
+
+Nothing flagged it because `tsc` cannot (hook call order is not a type property)
+and the published package carries no ESLint or Biome config — scripts are
+`build`/`dev`/`clean`, devDependencies are `tsdown` + `typescript`.
+
+Note the precedent a reviewer will find: Base UI calls `useMergedRefs`
+conditionally in that same file and suppresses the rule with a `SAFETY:` comment
+(`useRenderElement.js:63-69`). Their argument is that all branches consume
+exactly one hook slot and the condition (`typeof document`) never changes within a
+process — the count is constant. That reasoning does not cover a count that
+changes with the viewport, but it does mean "conditional `useRender`" is not
+automatically a defect. Each site needs judging on whether the count is stable.
+
+## Questions to answer
+
+- [ ] Is `eslint-plugin-react-hooks` (or Biome `correctness/useHookAtTopLevel`)
+      configured anywhere in the Blueprint monorepo — root, package, or CI? The
+      published package suggests no, but that is not conclusive.
+- [ ] If not: which linter should the repo adopt, and does turning the rule on
+      produce a clean baseline or a backlog?
+- [ ] How many components call `useRender` — or any `use*` — inside a conditional
+      or early return? (`rg -n 'use[A-Z]' src/components` and inspect, or just run
+      the rule once it's available.)
+- [ ] For each site found: does the hook count stay constant across branches
+      (Base-UI-safe) or vary (a real violation)?
+- [ ] For each real violation: is it masked by a remount the way
+      `NavbarGroupMenuItem` is, or is it live?
+
+## Deliverables
+
+- [ ] A short written finding: linter status, the list of `useRender`-in-condition
+      sites, and a safe/unsafe verdict per site with reasoning.
+- [ ] A recommendation on adopting the lint rule, including whether it can land
+      clean or needs a suppression baseline.
+- [ ] Follow-up tickets sized from the findings — one for the linter adoption, one
+      per genuinely unsafe site (or one covering them all if the fix is uniform).
+
+## Reference: the fix shape for `NavbarGroupMenuItem`
+
+If the spike concludes the site is unsafe, hoisting the call is sufficient — no
+behavior change:
+
+```tsx
+const { isMobile } = useNavbar();
+const mobileElement = useRender({
+  defaultTagName: 'button',
+  ref: forwardedRef,
+  props: mergeProps<'button'>(
+    { className: cn('navbar-dropdown-menu-item dropdown-item', className) },
+    props as useRender.ComponentProps<'button'>,
+  ),
+  render: render as useRender.ComponentProps<'button'>['render'],
+  state: { slot: 'navbar-group-menu-item' },
+});
+
+if (isMobile) return mobileElement;
+return <DropdownMenuItem /* ... */ />;
+```
+
+Whatever shape is chosen should be applied to any new part added under BP-B item
+1, so the pattern doesn't propagate as the mobile forks are completed.
