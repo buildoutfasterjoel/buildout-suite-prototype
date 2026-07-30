@@ -67,13 +67,15 @@ function OverviewRoute() {
   if (!listing) return null;
   return (
     <div>
-      <IngestionBanner listing={listing} />
       <SetupIncompleteBanner listing={listing} />
       <div className="d-flex align-items-stretch">
         <div className="flex-grow-1 d-flex flex-column" style={{ minWidth: 0 }}>
           <div className="px-4 py-3">
             <ListingPageHeader title="Overview" />
           </div>
+          {/* Inside the overview column, under its title — so it doesn't run
+              across the top of the page above the context rail. */}
+          <IngestionBanner listing={listing} />
           <TodayPlanner listing={listing} />
         </div>
         <div

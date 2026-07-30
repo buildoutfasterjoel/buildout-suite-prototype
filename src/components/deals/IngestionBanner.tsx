@@ -13,9 +13,18 @@ import { dismissIngestion } from "#/data/actions";
 import type { Listing } from "#/data/types";
 
 /**
- * The document-ingestion banner, above the planner on the deal overview. A pure
- * reader of `listing.ingestion` — the IngestionWatcher in the AppShell owns the
- * run, so this stays correct whether the broker watched it or came back later.
+ * Aligns the banner with the overview column's own gutter (the page header uses
+ * `px-4`, the planner `p-4`) so it reads as part of that panel rather than a
+ * full-width bar across the top of the page. Vertical spacing comes from the
+ * header's and planner's padding, so there is none of its own.
+ */
+const BANNER_CLASS = "mx-4";
+
+/**
+ * The document-ingestion banner, sitting under the Overview title inside the
+ * overview column. A pure reader of `listing.ingestion` — the IngestionWatcher in
+ * the AppShell owns the run, so this stays correct whether the broker watched it
+ * or came back later.
  */
 export function IngestionBanner({ listing }: { listing: Listing }) {
   const ingestion = listing.ingestion;
@@ -24,7 +33,7 @@ export function IngestionBanner({ listing }: { listing: Listing }) {
   if (ingestion.status === "processing") {
     const stage = INGESTION_STAGES[ingestion.stage];
     return (
-      <Alert severity="info" withIcon className="m-3 mb-0">
+      <Alert severity="info" withIcon className={BANNER_CLASS}>
         <FontAwesomeIcon icon={faCircleInfo} />
         <Alert.Title className="d-flex align-items-center gap-2">
           <FontAwesomeIcon icon={faSpinnerThird} spin />
@@ -43,7 +52,7 @@ export function IngestionBanner({ listing }: { listing: Listing }) {
   if (ingestion.status === "needs-review") {
     const remaining = unresolvedCount(ingestion);
     return (
-      <Alert severity="warning" withIcon className="m-3 mb-0">
+      <Alert severity="warning" withIcon className={BANNER_CLASS}>
         <FontAwesomeIcon icon={faTriangleExclamation} />
         <Alert.Title>
           {remaining} {remaining === 1 ? "field needs" : "fields need"} your
@@ -77,7 +86,7 @@ export function IngestionBanner({ listing }: { listing: Listing }) {
     // The icon stays a direct child — the theme absolutely positions it via
     // `.alert-icon > svg`. Dismiss sits to the right of the copy rather than
     // stacked under it, which keeps this success state one row shorter.
-    <Alert severity="success" withIcon className="m-3 mb-0">
+    <Alert severity="success" withIcon className={BANNER_CLASS}>
       <FontAwesomeIcon icon={faCircleCheck} />
       <div className="d-flex align-items-center justify-content-between gap-3">
         <div>
