@@ -91,9 +91,14 @@ pulls a grey into an all-blue surface. There is no `text-accent-subtle` utility.
 ### Zone 2 — product settings
 
 `DropdownMenu.Separator`, then two `Navbar.GroupMenuItem`s: `faGear` → Profile
-settings, `faBuildings` → Company settings. Both `href="#"` with
-`preventDefault`, matching how Notifications already dead-ends at
-`GlobalNavbar.tsx:267`.
+settings, `faBuildings` → Company settings. Both are plain menu items with no
+`href` — `GroupMenuItem` types its `render` prop against a `<div>`
+(`@base-ui/react/menu/item/MenuItem.d.ts:20`), unlike the anchor-typed
+`Navbar.ItemLink` used for Notifications at `GlobalNavbar.tsx:267`, so
+`render={<a href="#" />}` would not type-check. Base UI still supplies
+`role="menuitem"`, keyboard activation, and `closeOnClick`, so the items behave
+correctly while there is no destination. This is gap 1 biting in practice: there
+is no navbar-native menu-link part.
 
 ### Zone 3 — prototype
 
