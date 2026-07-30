@@ -33,11 +33,18 @@ came out of reading `blueprint-react/src/components/Navbar/index.tsx`,
 `DropdownMenu/index.tsx`, and `blueprint-theme/scss/components/navbar/`
 (gaps 7 and 8 surfaced during the final review pass):
 
-1. **No menu-level parts on `Navbar`.** `Navbar.Separator` is the vertical navbar
-   rule (`.separator.navbar-separator`), not a dropdown divider. There is no
-   `Navbar.GroupMenuSeparator`, `GroupMenuLabel`, or `GroupMenuHeader`, so a
-   consumer must reach into `ui/DropdownMenu` and mix component families inside a
-   Navbar subtree.
+1. **No menu-level parts on `Navbar`.** There is no `Navbar.GroupMenuSeparator`,
+   `GroupMenuLabel`, or `GroupMenuHeader`, so a consumer must reach into
+   `ui/DropdownMenu` and mix component families inside a Navbar subtree. The
+   sharper version of the complaint is that the two available separators each
+   solve half the problem: `Navbar.Separator` binds
+   `--bp-separator-color` to `$navbar-divider-color` (correct color, and it
+   accepts `orientation="horizontal"` despite defaulting to vertical —
+   `Navbar/index.tsx:364`) but carries no vertical margin, while
+   `DropdownMenu.Separator` has menu-appropriate `--bp-dropdown-divider-margin-y`
+   but a colour the navbar surface never re-tokens (gap 3). Neither is a themed
+   horizontal rule for a dark dropdown; every consumer hand-tunes one axis or
+   the other.
 2. **The mobile branch breaks composition.** Below `expand`, `Navbar.Group`
    becomes a `Collapsible` and `GroupMenu` becomes `CollapsibleContent`. Only
    `GroupMenuItem` forks for mobile (`Navbar/index.tsx:332`). Any Base UI menu
