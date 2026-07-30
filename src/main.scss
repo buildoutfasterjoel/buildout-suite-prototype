@@ -3362,8 +3362,9 @@
 .navbar-dropdown {
   // Blueprint's .navbar-dropdown re-tokens the dropdown's bg, color, and border
   // for the dark navy surface but not the divider, which otherwise falls back to
-  // the light-theme grey. Matches $navbar-divider-color.
-  --bs-dropdown-divider-bg: #{colors.$buildout-blue-900};
+  // a near-white grey. Matches $navbar-divider-color, so these read as the same
+  // subtle rules the sidebar uses. Note the `bp-` prefix (see line ~1771).
+  --bp-dropdown-divider-bg: #{colors.$buildout-blue-900};
 }
 
 // Identity card: the inert header above the first divider.
