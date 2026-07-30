@@ -34,6 +34,12 @@
 | `src/components/layout/GlobalNavbar.tsx` | **Modify.** Delete the inline account block and its now-dead state/handlers/imports; render `<AccountMenu />`. |
 | `src/main.scss` | **Modify.** Divider token fix and identity-card layout, both at top level (the dropdown is portaled to `body`, so it is **not** inside `.global-navbar`). |
 
+> **Renamed during execution:** `accountMenu.ts` / `accountMenu.test.ts` shipped as
+> **`personas.ts` / `personas.test.ts`**. The planned name differed from
+> `AccountMenu.tsx` only by case, and on a case-insensitive filesystem both `tsc`
+> and rollup resolved the import to the wrong file (a real `MISSING_EXPORT` build
+> failure). The task text below still uses the original names.
+
 ---
 
 ## Task 1: Persona model and current-user company
@@ -521,7 +527,7 @@ git commit -m "style(nav): theme the account dropdown surface and identity card"
 Automated checks cannot see the rendered menu. After Task 3, run `bun --bun run dev` and confirm at `http://localhost:3000`:
 
 1. The avatar in the navbar footer opens a menu with no stray caret.
-2. Identity card: 40px avatar, name in near-white, email and "Principal · Buildout" in the dimmer blue — no grey text.
+2. Identity card: 40px avatar, name in near-white, email and "Broker · Buildout" in the dimmer blue — no grey text. (Broker, not Principal: the default persona tracks `CURRENT_USER.role`.)
 3. Both dividers are dark navy, not light grey.
 4. "Profile settings" and "Company settings" hover and close the menu, but do not navigate.
 5. "Viewing as: Principal" opens a submenu on the **same dark surface**, with a check on the active persona. Picking Marketing does **not** close the menu — Base UI's `Menu.RadioItem` defaults `closeOnClick` to `false` (unlike `Menu.Item`, which defaults to `true`) — and instead the identity line's third row updates in place, live, to "Marketing · Buildout" while the menu stays open.
