@@ -7,9 +7,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowsRotate,
   faBuildings,
-  faGear,
-  faList,
+  faRectanglesMixed,
   faUser,
+  faUserGear,
 } from "@fortawesome/pro-regular-svg-icons";
 import { useDataStore } from "#/data/dataStore";
 import { CURRENT_USER } from "#/data/teammates";
@@ -59,7 +59,10 @@ export function AccountMenu() {
         >
           <Navbar.ItemLinkIcon>
             <Avatar style={{ width: 28, height: 28 }}>
-              <Avatar.Image src={CURRENT_USER.avatarUrl} alt={CURRENT_USER.name} />
+              <Avatar.Image
+                src={CURRENT_USER.avatarUrl}
+                alt={CURRENT_USER.name}
+              />
               <Avatar.Fallback>{CURRENT_USER.initials}</Avatar.Fallback>
             </Avatar>
           </Navbar.ItemLinkIcon>
@@ -74,7 +77,9 @@ export function AccountMenu() {
               <Avatar.Fallback>{CURRENT_USER.initials}</Avatar.Fallback>
             </Avatar>
             <div className="account-menu__identity">
-              <div className="fw-semibold text-truncate">{CURRENT_USER.name}</div>
+              <div className="fw-semibold text-truncate">
+                {CURRENT_USER.name}
+              </div>
               <div className="small text-truncate text-buildout-blue-200">
                 {CURRENT_USER.email}
               </div>
@@ -86,9 +91,9 @@ export function AccountMenu() {
 
           {/* Zone 2 — real product settings. Both are placeholders until the
               settings screens exist, so they close the menu and go nowhere. */}
-          <DropdownMenu.Separator />
+          <Navbar.Separator orientation="horizontal" className="my-1" />
           <Navbar.GroupMenuItem className="d-flex align-items-center gap-2">
-            <FontAwesomeIcon icon={faGear} />
+            <FontAwesomeIcon icon={faUserGear} />
             Profile settings
           </Navbar.GroupMenuItem>
           <Navbar.GroupMenuItem className="d-flex align-items-center gap-2">
@@ -97,7 +102,7 @@ export function AccountMenu() {
           </Navbar.GroupMenuItem>
 
           {/* Zone 3 — prototype scaffolding. */}
-          <DropdownMenu.Separator />
+          <Navbar.Separator orientation="horizontal" className="my-1" />
           {isMobile ? (
             // Base UI's submenu and radio parts have no Menu.Root in Navbar's
             // collapsible branch, so mobile gets flat rows instead.
@@ -134,7 +139,7 @@ export function AccountMenu() {
             className="d-flex align-items-center gap-2"
             onClick={() => navigate({ to: "/" })}
           >
-            <FontAwesomeIcon icon={faList} />
+            <FontAwesomeIcon icon={faRectanglesMixed} />
             Prototype index
           </Navbar.GroupMenuItem>
           <Navbar.GroupMenuItem

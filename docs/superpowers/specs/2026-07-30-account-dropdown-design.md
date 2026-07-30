@@ -28,10 +28,11 @@ only by a `border-top` utility.
 ## Blueprint capability assessment
 
 `Navbar.GroupMenu` forwards arbitrary children into Base UI's `Menu.Popup`, so
-the three-zone layout composes on desktop with no Blueprint change. Eight gaps
+the three-zone layout composes on desktop with no Blueprint change. Nine gaps
 came out of reading `blueprint-react/src/components/Navbar/index.tsx`,
-`DropdownMenu/index.tsx`, and `blueprint-theme/scss/components/navbar/`
-(gaps 7 and 8 surfaced during the final review pass):
+`DropdownMenu/index.tsx`, `blueprint-theme/scss/components/navbar/`, and
+Base UI's `menu/` internals (gaps 7 and 8 surfaced during the final review
+pass; gap 9 while reviewing the shipped code):
 
 1. **No menu-level parts on `Navbar`.** There is no `Navbar.GroupMenuSeparator`,
    `GroupMenuLabel`, or `GroupMenuHeader`, so a consumer must reach into
@@ -84,8 +85,35 @@ came out of reading `blueprint-react/src/components/Navbar/index.tsx`,
    re-applies the class by hand, as this implementation does on `SubContent` in
    Zone 3.
 
-These become a Blueprint ticket, tracked separately. Gaps 2, 3, 4, 7, and 8 are
-worked around in this implementation.
+9. **`Navbar.Group` has no submenu equivalent, and can't be nested to fake one.**
+   This is the sharpest gap, because `Navbar.GroupMenu` is *already* the
+   correctly-surfaced dropdown — so nesting a second `Navbar.Group` inside one
+   looks like it should give a correctly-surfaced submenu for free. It doesn't.
+   `Navbar.Group` renders a plain `DropdownMenu` (= Base UI `Menu.Root`,
+   `Navbar/index.tsx:242`), and Base UI establishes the parent/child link *only*
+   when `isSubmenu` is set, which comes solely from `MenuSubmenuRootContext`
+   (`menu/root/MenuRoot.js:57-62`) — a context only `Menu.SubmenuRoot` provides
+   (`menu/submenu-root/MenuSubmenuRoot.js:26-35`). A nested `Menu.Root` is
+   therefore a second *independent* menu, not a submenu:
+   - `parent.type` stays `undefined`, so the nested menu takes `modal` semantics
+     (`MenuRoot.js:129`). Base UI's own "modal is not supported on nested menus"
+     warning is suppressed in exactly this case, because it only fires when
+     `parent.type` *is* defined (`MenuRoot.js:118`).
+   - With no parent store link, the parent doesn't know the child is open, and
+     the child's popup portals outside the parent's DOM — so the parent's
+     outside-press dismissal treats interactions in the child as outside.
+   - `Navbar.GroupTrigger` renders `.nav-link` (min-height `$spacers` 8), not
+     `.dropdown-item`, so it reads as a navbar link sitting inside a menu.
+   - `NavbarGroup` destructures only `children` (`Navbar/index.tsx:215`), so it
+     silently drops `className` — the `<li class="nav-item dropdown">` it emits
+     can't be restyled by the consumer either.
+
+   What's actually needed: `Navbar.GroupSubmenu` / `GroupSubmenuTrigger` /
+   `GroupSubmenuMenu` wrapping `DropdownMenu.Sub` / `SubTrigger` / `SubContent`
+   and forwarding `.navbar-dropdown` — i.e. what Zone 3 does by hand today.
+
+These become a Blueprint ticket, tracked separately. Gaps 2, 3, 4, 7, 8, and 9
+are worked around in this implementation.
 
 ## Design
 
