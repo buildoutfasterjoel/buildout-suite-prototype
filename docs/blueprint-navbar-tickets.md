@@ -6,9 +6,16 @@ line citations to the installed package sources. Discovered while building an
 account dropdown (identity header + grouped links + persona submenu) in
 suite-prototype.
 
-Suggested link graph: **BP-A blocks BP-C item 1** (the submenu parts need a
-mobile branch that doesn't crash). **BP-B item 1 blocks BP-C item 2** (the menu
-separator needs the divider token fixed). Otherwise independent.
+**All three are Medium priority. Nothing here is blocking anyone today.**
+Blueprint's `Navbar` has no production consumers — shipping applications use the
+existing hand-written HTML/CSS navbar. suite-prototype is currently its only
+consumer, and it renders correctly. Treat these as fix-before-adoption: the work
+to do before the component is picked up more widely, not a live incident.
+
+Ordering, since the board has no epics: **BP-A before BP-C item 1** (submenu
+parts need a mobile branch that doesn't throw). **BP-B item 1 before BP-C item 2**
+(the menu separator needs the divider token). Otherwise independent — link them
+as *relates to* if useful.
 
 ---
 
@@ -17,7 +24,15 @@ separator needs the divider token fixed). Otherwise independent.
 **Type:** Bug
 **Component:** blueprint-react / Navbar
 **Affects version:** 1.3.0
-**Severity:** High — throws at render
+**Priority:** Medium
+
+## Impact
+
+Latent, not observed. The only consumer today (suite-prototype) renders without
+errors specifically because it forks on `useNavbar().isMobile` and substitutes
+flat rows below the breakpoint — a workaround written after hitting this. Any
+consumer that composes a `GroupMenu` from `DropdownMenu` parts without that fork
+will throw at render once the viewport narrows.
 
 ## Description
 
@@ -77,10 +92,12 @@ pattern — consumers are writing that branch by hand today.
 **Type:** Bug
 **Component:** blueprint-react / Navbar, blueprint-theme / navbar
 **Affects version:** 1.3.0
-**Severity:** Medium — no errors; wrong output
+**Priority:** Medium
 
 Five independent defects, each small and independently fixable. Common thread:
-something is accepted or implied and then quietly discarded.
+something is accepted or implied and then quietly discarded — no errors are
+raised, the output is just wrong or the input ignored. Four of the five are
+one-line changes.
 
 ## Item 1 — `.navbar-dropdown` doesn't re-token its divider color
 
@@ -273,6 +290,7 @@ trigger makes it meaningless.
 **Type:** Enhancement / Story
 **Component:** blueprint-react / Navbar
 **Affects version:** 1.3.0
+**Priority:** Medium
 
 `Navbar.GroupMenu` forwards arbitrary children into Base UI's `Menu.Popup`, so a
 rich navbar menu is possible today — but every structural element beyond a flat
