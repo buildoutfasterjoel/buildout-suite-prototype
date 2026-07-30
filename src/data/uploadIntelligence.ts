@@ -54,6 +54,21 @@ function localISO(d: Date): string {
 }
 
 /**
+ * The square footage the drafted figures are computed against: the property
+ * record's building size, else the deal's available SF, else a stand-in.
+ */
+export function draftSqFt(deal: Listing, property: Property | undefined): number {
+  return property && property.buildingSqFt > 0
+    ? property.buildingSqFt
+    : deal.marketing.availableSqFt || 10000
+}
+
+/** Price per SF to two decimals, 0 when the size is unknown. */
+export function pricePerSqFtFor(askingPrice: number, sqft: number): number {
+  return sqft > 0 ? Math.round((askingPrice / sqft) * 100) / 100 : 0
+}
+
+/**
  * Compute the field values that make `deal` publish-ready — everything the
  * Approve & Publish gate requires EXCEPT `aiDocsReviewed`, which stays the
  * broker's one remaining review click. Stands in for the AI reading the
@@ -75,10 +90,7 @@ export function buildPublishReadyPatch(
     ? [property.street, property.city, property.state].filter(Boolean).join(', ') ||
       property.name
     : deal.name
-  const sqft =
-    property && property.buildingSqFt > 0
-      ? property.buildingSqFt
-      : deal.marketing.availableSqFt || 10000
+  const sqft = draftSqFt(deal, property)
 
   if (deal.dealType === 'Lease') {
     const unitId = deal.unitId ?? property?.units[0]?.id ?? ''
@@ -108,7 +120,7 @@ export function buildPublishReadyPatch(
   }
   const financials: Partial<DealPitchFinancials> = {
     askingPrice,
-    pricePerSqFt: sqft > 0 ? Math.round((askingPrice / sqft) * 100) / 100 : 0,
+    pricePerSqFt: pricePerSqFtFor(askingPrice, sqft),
   }
   return { marketing, transaction, financials }
 }

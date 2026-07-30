@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
@@ -6,6 +6,7 @@ import { Field } from "@buildoutinc/blueprint-react/ui/Field";
 import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
 import { Alert } from "@buildoutinc/blueprint-react/ui/Alert";
+import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
 	faArrowUp,
@@ -27,11 +28,12 @@ import type {
 	ExpenseLineItem,
 	FinancialScenario,
 	IncomeLineItem,
+	IngestionFieldKey,
 	Listing,
 	Property,
 	PropertyStatus,
 } from "#/data/types";
-import { updateDeal } from "#/data/actions";
+import { resolveIngestionConflict, updateDeal } from "#/data/actions";
 import { updateProperty } from "#/data/store";
 import {
 	commissionAmountFromPct,
@@ -63,6 +65,11 @@ import {
 	requestStageChange,
 	requestSetupCompletion,
 } from "#/components/deals/useStageGate";
+import {
+	IngestionConflictProvider,
+	conflictRowId,
+	countConflictsFor,
+} from "#/components/deals/ingestionConflictContext";
 
 // ── Read-only computed-field display formatting ─────────────────────────────
 /** Rounded, comma-formatted currency-ish figure; blank (not "0") when null. */
@@ -72,6 +79,25 @@ function formatCalcAmount(v: number | null): string {
 /** Percentage with 2 decimals; blank (not "0.00") when null. */
 function formatCalcPercent(v: number | null): string {
 	return v == null ? "" : `${v.toFixed(2)}%`;
+}
+
+/**
+ * Merge store-side changes into a working-copy draft without stomping what the
+ * broker has typed: a key is taken from `next` only when the store actually moved
+ * it (`next !== base`) AND the draft still sits at its mount value
+ * (`draft === base`). Identity comparison suffices — every write in this app
+ * spreads a new object rather than mutating in place.
+ */
+function reseedDraft<T extends object>(draft: T, base: T, next: T): T {
+	let changed = false;
+	const merged = { ...draft };
+	for (const key of Object.keys(next) as (keyof T)[]) {
+		if (next[key] !== base[key] && draft[key] === base[key]) {
+			merged[key] = next[key];
+			changed = true;
+		}
+	}
+	return changed ? merged : draft;
 }
 
 // ── Broker rows ──────────────────────────────────────────────────────────────
@@ -331,6 +357,21 @@ function ScenarioEditor({
 	);
 }
 
+/** Which editor tab each ingestion-conflict field lives on. */
+const CONFLICT_TAB: Record<IngestionFieldKey, "deal" | "listing"> = {
+	askingPrice: "deal",
+	noi: "deal",
+	occupancyPct: "listing",
+};
+
+/** The conflict field keys on a given tab — read off {@link CONFLICT_TAB} so tab
+ * membership is stated exactly once, for both the badges and the initial tab. */
+function conflictKeysOn(tab: "deal" | "listing"): IngestionFieldKey[] {
+	return (Object.keys(CONFLICT_TAB) as IngestionFieldKey[]).filter(
+		(k) => CONFLICT_TAB[k] === tab,
+	);
+}
+
 /**
  * Two-tab edit shell (Deal + Listing) for a listing. Holds ONE shared working
  * copy in local state — the deal fields plus a `propertyDraft` — behind a single
@@ -341,9 +382,12 @@ function ScenarioEditor({
 export function DealMarketingEditor({
 	listing,
 	property,
+	review,
 }: {
 	listing: Listing;
 	property: Property;
+	/** When "ingestion", open on the first conflicting field's tab. */
+	review?: "ingestion";
 }) {
 	const navigate = useNavigate();
 	const back = () =>
@@ -355,7 +399,22 @@ export function DealMarketingEditor({
 	const pendingPublishDealId = useStageGate((s) => s.pendingPublishDealId);
 	const showPublishBanner = pendingPublishDealId === listing.id;
 
-	const [tab, setTab] = useState<"deal" | "listing">("listing");
+	const conflicts = listing.ingestion?.conflicts ?? [];
+	const dealTabConflicts = countConflictsFor(conflicts, conflictKeysOn("deal"));
+	const listingTabConflicts = countConflictsFor(
+		conflicts,
+		conflictKeysOn("listing"),
+	);
+	// In review mode, open on the tab holding the first unresolved conflict so the
+	// broker doesn't have to hunt across tabs for it. Initial state only — the
+	// broker's own tab clicks must stick as the conflicts get resolved.
+	const firstUnresolved = conflicts.find((c) => !c.resolution);
+	const initialTab =
+		review === "ingestion" && firstUnresolved
+			? CONFLICT_TAB[firstUnresolved.fieldKey]
+			: "listing";
+
+	const [tab, setTab] = useState<"deal" | "listing">(initialTab);
 	const [propertyDraft, setPropertyDraft] = useState<Property>(property);
 	const patchProperty = (patch: Partial<Property>) =>
 		setPropertyDraft((p) => ({ ...p, ...patch }));
@@ -378,6 +437,43 @@ export function DealMarketingEditor({
 	);
 	const [marketing, setMarketing] = useState(listing.marketing);
 	const [internalNotes, setInternalNotes] = useState(listing.internalNotes);
+
+	// An ingestion run commits a few seconds after the deal is created, so it can
+	// land while the broker is already sitting in this form. `finishIngestion`
+	// writes marketing / transaction / financials straight to the store — values
+	// these drafts snapshotted at mount — so saving would silently revert them.
+	// Re-seed on that ONE status transition out of `processing` (not on every store
+	// change, which would fight the broker's typing), and even then only for keys
+	// left untouched since mount.
+	const ingestionStatus = listing.ingestion?.status;
+	const previousIngestionStatus = useRef(ingestionStatus);
+	const mountedListing = useRef(listing);
+	useEffect(() => {
+		const previous = previousIngestionStatus.current;
+		previousIngestionStatus.current = ingestionStatus;
+		if (previous !== "processing" || ingestionStatus === "processing") return;
+		const base = mountedListing.current;
+		setMarketing((d) => reseedDraft(d, base.marketing, listing.marketing));
+		setTransaction((d) =>
+			reseedDraft(d, base.transaction, listing.transaction),
+		);
+		setFinancials((d) => reseedDraft(d, base.financials, listing.financials));
+	}, [ingestionStatus, listing]);
+
+	// Review mode: bring the first disputed field into view inside its tab, so the
+	// broker isn't left staring at the top of the form. Mount only — held in a ref
+	// so re-renders as conflicts resolve can't re-fire it and yank the page around
+	// mid-edit. Effects don't run during SSR; the `document` guard covers the rest.
+	const scrollTarget = useRef(
+		review === "ingestion" && firstUnresolved ? firstUnresolved.fieldKey : null,
+	);
+	useEffect(() => {
+		const fieldKey = scrollTarget.current;
+		if (!fieldKey || typeof document === "undefined") return;
+		document
+			.getElementById(conflictRowId(fieldKey))
+			?.scrollIntoView({ behavior: "smooth", block: "center" });
+	}, []);
 
 	const isSale = dealType !== "Lease";
 
@@ -450,7 +546,7 @@ export function DealMarketingEditor({
 		</>
 	);
 
-	return (
+	const body = (
 		<div className="d-flex flex-column gap-6 p-4">
 			{showPublishBanner && (
 				<Alert severity="info" withIcon>
@@ -489,9 +585,19 @@ export function DealMarketingEditor({
 						icon={<FontAwesomeIcon icon={faSign} />}
 					>
 						Listing
+						{listingTabConflicts > 0 && (
+							<Badge variant="outline" className="ingestion-conflict__badge">
+								{listingTabConflicts}
+							</Badge>
+						)}
 					</Tabs.Tab>
 					<Tabs.Tab value="deal" icon={<FontAwesomeIcon icon={faHandshake} />}>
 						Deal
+						{dealTabConflicts > 0 && (
+							<Badge variant="outline" className="ingestion-conflict__badge">
+								{dealTabConflicts}
+							</Badge>
+						)}
 					</Tabs.Tab>
 				</Tabs.List>
 			</Tabs>
@@ -612,6 +718,7 @@ export function DealMarketingEditor({
 										label="Asking Price"
 										value={financials.askingPrice}
 										onChange={(v) => patchFinancials({ askingPrice: v ?? 0 })}
+										fieldKey="askingPrice"
 									/>
 								</Col>
 								<Col>
@@ -626,6 +733,7 @@ export function DealMarketingEditor({
 										label="NOI"
 										value={financials.noi}
 										onChange={(v) => patchFinancials({ noi: v ?? 0 })}
+										fieldKey="noi"
 									/>
 								</Col>
 								<Col>
@@ -797,5 +905,16 @@ export function DealMarketingEditor({
 				{actions}
 			</div>
 		</div>
+	);
+
+	return (
+		<IngestionConflictProvider
+			conflicts={conflicts}
+			onResolve={(fieldKey, side) =>
+				resolveIngestionConflict(listing.id, fieldKey, side)
+			}
+		>
+			{body}
+		</IngestionConflictProvider>
 	);
 }

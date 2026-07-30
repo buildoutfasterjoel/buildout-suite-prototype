@@ -413,6 +413,9 @@ export interface Listing {
   /** The underwriting scope chosen at deal creation — a heads-up of what's coming. */
   underwriting?: DealUnderwriting
 
+  /** An AI document-ingestion run started at deal creation. Absent means no run. */
+  ingestion?: DealIngestion
+
   /** Broker-only notes on this engagement — never published. */
   internalNotes: string
 
@@ -454,6 +457,45 @@ export interface DealUnderwriting {
   result?: UnderwritingResult
   /** ISO timestamp of the last generation. Stamped by the store/UI layer, never the pure builder. */
   generatedAt?: string
+}
+
+/** Which editable field an ingestion conflict lands on. */
+export type IngestionFieldKey = 'askingPrice' | 'noi' | 'occupancyPct'
+
+/**
+ * One value the ingestion run could not settle on its own. Always two-sided:
+ * `docValue` vs `currentValue`. Unresolved conflicts are NOT written to the deal,
+ * so a gate-required one (asking price on a Sale) genuinely blocks publishing.
+ */
+export interface IngestionConflict {
+  fieldKey: IngestionFieldKey
+  label: string
+  /** Display-formatted value from the documents (e.g. "$8,400,000"). */
+  docValue: string
+  /** Display-formatted value on the record today. */
+  currentValue: string
+  /** Where each side came from, e.g. "T-12.pdf" / "Property record". */
+  docSource: string
+  currentSource: string
+  /** The raw numbers to write when a side is picked. */
+  docRaw: number
+  currentRaw: number
+  /** Set once the broker picks a side. */
+  resolution?: 'doc' | 'current'
+}
+
+/** An AI document-ingestion run on a deal. */
+export interface DealIngestion {
+  status: 'processing' | 'needs-review' | 'complete'
+  /** File names being read — shown in the banner while processing. */
+  documents: string[]
+  /** Which stage the run is on: 0 scanning, 1 extracting, 2 filling. */
+  stage: 0 | 1 | 2
+  /** How many fields were filled without disagreement. Shown on completion. */
+  filledCount: number
+  /** Values needing broker arbitration. Empty on the clean path. */
+  conflicts: IngestionConflict[]
+  startedAt: string
 }
 
 /** A single addressable metric — the unit a future dynamic field references. */

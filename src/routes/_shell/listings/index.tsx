@@ -88,18 +88,14 @@ type ViewMode = "board" | "grid" | "map";
 const VIEW_STORAGE_KEY = "deals:view";
 const VIEW_MODES: ViewMode[] = ["board", "grid", "map"];
 
-// Deal-side labels speak the lease vocabulary (Landlord/Tenant) when the
-// Sale/Lease filter is narrowed to Lease, and the sale vocabulary
-// (Seller/Buyer) otherwise.
-function sideOptions(
-  leaseOnly: boolean,
-): { value: DealSide | "all"; label: string }[] {
-  return [
-    { value: "all", label: "All" },
-    { value: "seller", label: leaseOnly ? "Landlord" : "Seller" },
-    { value: "buyer", label: leaseOnly ? "Tenant" : "Buyer" },
-  ];
-}
+// Deal side reads as a filter rather than a view toggle, so it can spell out both
+// vocabularies at once. A button group implied side was a primary axis of the
+// board and left "Seller" looking wrong whenever an unfiltered board also
+// returned landlords; as a facet the full name fits and the ambiguity disappears.
+const SIDE_OPTIONS: { value: DealSide; label: string }[] = [
+  { value: "seller", label: "Seller / Landlord" },
+  { value: "buyer", label: "Buyer / Tenant" },
+];
 
 // `FilterSpec.assetClass` (Task 1's schema) speaks display-style asset-class
 // names; the grid's Property Type facet is keyed by the lowercase
@@ -148,7 +144,6 @@ function PropertyListings() {
   const { q } = Route.useSearch();
   const [search, setSearch] = useState(q ?? "");
   const [sortBy, setSortBy] = useState<SortBy>("default");
-  const [side, setSide] = useState<DealSide | "all">("all");
   const [view, setView] = useState<ViewMode>("grid");
   const isListings = view === "grid" || view === "map";
 
@@ -177,6 +172,7 @@ function PropertyListings() {
 
   const type = useToggleSet<string>();
   const saleLease = useToggleSet<string>();
+  const dealSide = useToggleSet<string>();
   const expiration = useToggleSet<string>();
   const stage = useToggleSet<PropertyStatus>();
 
@@ -246,6 +242,15 @@ function PropertyListings() {
         clear: saleLease.clear,
       },
       {
+        id: "dealSide",
+        title: "Deal Side",
+        options: SIDE_OPTIONS,
+        getValue: (l: Listing) => l.dealSide,
+        selected: dealSide.set,
+        toggle: dealSide.toggle,
+        clear: dealSide.clear,
+      },
+      {
         id: "expiration",
         title: "Expiration",
         options: EXPIRATION_OPTIONS.map((e) => ({ value: e, label: e })),
@@ -255,7 +260,7 @@ function PropertyListings() {
         clear: expiration.clear,
       },
     ],
-    [expiration, saleLease, type],
+    [dealSide, expiration, saleLease, type],
   );
 
   // Stage/deal-status facet — only surfaced in the Listings sidebar since the
@@ -307,7 +312,6 @@ function PropertyListings() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return listings.filter((l) => {
-      if (side !== "all" && l.dealSide !== side) return false;
       for (const facet of sidebarFacets) {
         if (facet.selected.size && !facet.selected.has(facet.getValue(l)))
           return false;
@@ -320,7 +324,7 @@ function PropertyListings() {
       }
       return true;
     });
-  }, [listings, sidebarFacets, search, side]);
+  }, [listings, sidebarFacets, search]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -376,13 +380,35 @@ function PropertyListings() {
               {filtered.length !== total && ` of ${total}`}
             </span>
           </div>
-          <Button
-            variant="primary"
-            onClick={() => useCreateDeal.getState().openFor()}
-          >
-            <FontAwesomeIcon icon={faCirclePlus} />
-            New Deal
-          </Button>
+          {/* Commission forecast sits with the page summary rather than inside the
+              board: it reflects the filtered set, which every view shares. */}
+          <div className="d-flex align-items-center gap-3">
+            <span
+              className="text-muted fs-xs text-uppercase"
+              style={{ letterSpacing: "0.04em" }}
+            >
+              Commission forecast
+            </span>
+            <div className="d-flex align-items-baseline gap-2">
+              <span className="fw-bold fs-5">{formatPrice(commission.you)}</span>
+              <span className="text-muted fs-xs">You</span>
+            </div>
+            <Separator orientation="vertical" style={{ height: "1.5rem" }} />
+            <div className="d-flex align-items-baseline gap-2">
+              <span className="fw-bold fs-5">
+                {formatPrice(commission.brokerage)}
+              </span>
+              <span className="text-muted fs-xs">Brokerage</span>
+            </div>
+            <Separator orientation="vertical" style={{ height: "1.5rem" }} />
+            <Button
+              variant="primary"
+              onClick={() => useCreateDeal.getState().openFor()}
+            >
+              <FontAwesomeIcon icon={faCirclePlus} />
+              New Deal
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -520,45 +546,6 @@ function PropertyListings() {
         <div className="container flex-grow-1 overflow-hidden d-flex flex-column pb-3">
           <Card className="flex-grow-1 overflow-hidden d-flex flex-column">
             <Card.Body className="flex-grow-1 overflow-hidden d-flex flex-column gap-3">
-              <div className="d-flex align-items-baseline justify-content-between gap-3">
-                <ButtonGroup aria-label="Deal side">
-                  {sideOptions(
-                    saleLease.set.size === 1 && saleLease.set.has("Lease"),
-                  ).map((opt) => (
-                    <Button
-                      key={opt.value}
-                      variant="outline"
-                      className={` border-storm-grey-300 ${side === opt.value ? "active" : ""}`}
-                      onClick={() => setSide(opt.value)}
-                      aria-pressed={side === opt.value}
-                      appearance="muted"
-                    >
-                      {opt.label}
-                    </Button>
-                  ))}
-                </ButtonGroup>
-                <div className="d-flex align-items-center gap-3">
-                  <span
-                    className="text-muted fs-xs text-uppercase"
-                    style={{ letterSpacing: "0.04em" }}
-                  >
-                    Commission forecast
-                  </span>
-                  <div className="d-flex align-items-baseline gap-2">
-                    <span className="fw-bold fs-5">
-                      {formatPrice(commission.you)}
-                    </span>
-                    <span className="text-muted fs-xs">You</span>
-                  </div>
-                  <Separator orientation="vertical" style={{ height: "1.5rem" }} />
-                  <div className="d-flex align-items-baseline gap-2">
-                    <span className="fw-bold fs-5">
-                      {formatPrice(commission.brokerage)}
-                    </span>
-                    <span className="text-muted fs-xs">Brokerage</span>
-                  </div>
-                </div>
-              </div>
               <div className="flex-grow-1 overflow-hidden">
                 <DealBoard listings={boardListings} onRestage={onRestage} />
               </div>

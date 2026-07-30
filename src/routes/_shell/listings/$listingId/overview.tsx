@@ -6,6 +6,7 @@ import { faTriangleExclamation } from "@fortawesome/pro-duotone-svg-icons";
 import { useDataStore } from "#/data/dataStore";
 import { publishReadiness, REQUIRED_FIELD_LABEL } from "#/data/stageGates";
 import { requestSetupCompletion } from "#/components/deals/useStageGate";
+import { IngestionBanner } from "#/components/deals/IngestionBanner";
 import { TodayPlanner } from "#/components/deals/TodayPlanner";
 import { DealContextRail } from "#/components/deals/DealContextRail";
 import type { Listing } from "#/data/types";
@@ -21,6 +22,10 @@ export const Route = createFileRoute("/_shell/listings/$listingId/overview")({
  * required info and unpublished. Warn and offer to finish setup in place.
  */
 function SetupIncompleteBanner({ listing }: { listing: Listing }) {
+  // While documents are still being read, the missing fields are about to be
+  // filled — the ingestion banner is the accurate status. Don't stack both.
+  if (listing.ingestion?.status === "processing") return null;
+
   const needsSetup =
     listing.dealSide === "seller" &&
     listing.status !== "proposal" &&
@@ -68,6 +73,9 @@ function OverviewRoute() {
           <div className="px-4 py-3">
             <ListingPageHeader title="Overview" />
           </div>
+          {/* Inside the overview column, under its title — so it doesn't run
+              across the top of the page above the context rail. */}
+          <IngestionBanner listing={listing} />
           <TodayPlanner listing={listing} />
         </div>
         <div

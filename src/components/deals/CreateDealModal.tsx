@@ -2,7 +2,6 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
-import { Alert } from "@buildoutinc/blueprint-react/ui/Alert";
 import { Field } from "@buildoutinc/blueprint-react/ui/Field";
 import { Combobox } from "@buildoutinc/blueprint-react/ui/Combobox";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
@@ -28,7 +27,6 @@ import {
   faArrowLeft,
   faWandMagicSparkles,
 } from "@fortawesome/pro-regular-svg-icons";
-import { faCircleInfo } from "@fortawesome/pro-duotone-svg-icons";
 import type {
   Contact,
   DealSide,
@@ -41,12 +39,7 @@ import {
   SUGGESTED_DOCUMENTS,
   type NewListingDraft,
 } from "#/data/createListing";
-import {
-  createDeal,
-  updateDealMarketing,
-  updateDealTransaction,
-  updateDealFinancials,
-} from "#/data/actions";
+import { createDeal } from "#/data/actions";
 import {
   getPropertyOptions,
   getContactOptions,
@@ -68,10 +61,8 @@ import {
   buildPropertyGroups,
   type PropertyGroup,
 } from "./createDealHelpers";
-import {
-  recommendDocsFromUploads,
-  buildPublishReadyPatch,
-} from "#/data/uploadIntelligence";
+import { recommendDocsFromUploads } from "#/data/uploadIntelligence";
+import { startIngestionState } from "#/data/ingestion";
 import { RelationshipPill } from "#/components/contacts/pills";
 import { UnderwritingDepth } from "./UnderwritingDepth";
 import {
@@ -505,17 +496,12 @@ export function CreateDealModal({
         withDocuments && underwritingOn && underwritingEligible
           ? underwritingFromSelection(underwritingStrategy, underwritingSel)
           : undefined,
+      // Attached files kick off a background ingestion run — the IngestionWatcher
+      // advances it and commits what it finds. Nothing is filled synchronously.
+      ingestion:
+        files.length > 0 ? startIngestionState(files.map((f) => f.name)) : undefined,
     };
     const { deal: listing } = createDeal(draft);
-    // A file upload stands in for the AI reading the broker's documents and
-    // filling the deal out to publish-ready (all but the AI-doc review).
-    if (files.length > 0) {
-      const prop = getProperty(listing.propertyId);
-      const patch = buildPublishReadyPatch(listing, prop);
-      updateDealMarketing(listing.id, patch.marketing);
-      updateDealTransaction(listing.id, patch.transaction);
-      updateDealFinancials(listing.id, patch.financials);
-    }
     onOpenChange(false);
     void navigate({
       to: "/listings/$listingId/overview",
@@ -601,6 +587,100 @@ export function CreateDealModal({
                     );
                   })}
                 </div>
+              </Field>
+
+              {/* Add your own files — sits right after the side so the broker can
+              hand Buildout their documents before filling anything in by hand. */}
+              <Field>
+                <Field.Label className="d-flex align-items-center gap-2">
+                  Add your own files
+                  <span className="text-primary fw-normal">Optional</span>
+                </Field.Label>
+                <Field.Description>
+                  Add OMs, financials, or notes to help inform this deal.
+                </Field.Description>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept={ACCEPTED}
+                  className="d-none"
+                  onChange={(e) => {
+                    addFiles(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => fileInputRef.current?.click()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      fileInputRef.current?.click();
+                    }
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragging(true);
+                  }}
+                  onDragLeave={() => setDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragging(false);
+                    addFiles(e.dataTransfer.files);
+                  }}
+                  className="border border-2 border-dashed rounded d-flex flex-column align-items-center justify-content-center text-center gap-1 p-4"
+                  style={{
+                    borderColor: dragging ? "var(--bp-primary)" : undefined,
+                    cursor: "pointer",
+                  }}
+                >
+                  <FontAwesomeIcon
+                    icon={faCloudArrowUp}
+                    className="text-muted fs-4"
+                    aria-hidden
+                  />
+                  <span>
+                    Drop files here or{" "}
+                    <span className="text-primary">click to upload</span>
+                  </span>
+                  <span className="text-muted fs-small">
+                    PDF, Word, Excel, or PowerPoint · up to {MAX_FILES} files
+                  </span>
+                </div>
+
+                {files.length > 0 && (
+                  <div className="d-flex flex-column gap-2 mt-2">
+                    {files.map((f) => (
+                      <div
+                        key={f.id}
+                        className="d-flex align-items-center gap-2 border rounded px-3 py-2"
+                      >
+                        <FontAwesomeIcon
+                          icon={faFileLines}
+                          className="text-muted"
+                        />
+                        <span className="flex-grow-1 text-truncate fs-small">
+                          {f.name}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`Remove ${f.name}`}
+                          onClick={() =>
+                            setFiles((prev) =>
+                              prev.filter((x) => x.id !== f.id),
+                            )
+                          }
+                        >
+                          <FontAwesomeIcon icon={faXmark} />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
               </Field>
 
               {/* Stage — most deals start in Pitching, but a broker can start one
@@ -876,110 +956,10 @@ export function CreateDealModal({
                 </Field>
               )}
 
-              {/* Add your own files */}
-              <Field>
-                <Field.Label className="d-flex align-items-center gap-2">
-                  Add your own files
-                  <span className="text-primary fw-normal">Optional</span>
-                </Field.Label>
-                <Field.Description>
-                  Add OMs, financials, or notes to help inform this deal.
-                </Field.Description>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept={ACCEPTED}
-                  className="d-none"
-                  onChange={(e) => {
-                    addFiles(e.target.files);
-                    e.target.value = "";
-                  }}
-                />
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => fileInputRef.current?.click()}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      fileInputRef.current?.click();
-                    }
-                  }}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setDragging(true);
-                  }}
-                  onDragLeave={() => setDragging(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setDragging(false);
-                    addFiles(e.dataTransfer.files);
-                  }}
-                  className="border border-2 border-dashed rounded d-flex flex-column align-items-center justify-content-center text-center gap-1 p-4"
-                  style={{
-                    borderColor: dragging ? "var(--bs-primary)" : undefined,
-                    cursor: "pointer",
-                  }}
-                >
-                  <FontAwesomeIcon
-                    icon={faCloudArrowUp}
-                    className="text-muted fs-4"
-                    aria-hidden
-                  />
-                  <span>
-                    Drop files here or{" "}
-                    <span className="text-primary">click to upload</span>
-                  </span>
-                  <span className="text-muted fs-small">
-                    PDF, Word, Excel, or PowerPoint · up to {MAX_FILES} files
-                  </span>
-                </div>
-
-                {files.length > 0 && (
-                  <div className="d-flex flex-column gap-2 mt-2">
-                    {files.map((f) => (
-                      <div
-                        key={f.id}
-                        className="d-flex align-items-center gap-2 border rounded px-3 py-2"
-                      >
-                        <FontAwesomeIcon
-                          icon={faFileLines}
-                          className="text-muted"
-                        />
-                        <span className="flex-grow-1 text-truncate fs-small">
-                          {f.name}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={`Remove ${f.name}`}
-                          onClick={() =>
-                            setFiles((prev) =>
-                              prev.filter((x) => x.id !== f.id),
-                            )
-                          }
-                        >
-                          <FontAwesomeIcon icon={faXmark} />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {files.length > 0 && (
-                  <Alert severity="info" withIcon className="mt-2">
-                    <FontAwesomeIcon icon={faCircleInfo} />
-                    <Alert.Title>Buildout read your files</Alert.Title>
-                    We pre-filled this deal from your documents — it’s ready to
-                    publish once you review the generated documents.
-                  </Alert>
-                )}
-              </Field>
-
               {missingHint && (
                 <p className="text-muted fs-small mb-0">{missingHint}</p>
               )}
+
             </>
           )}
 

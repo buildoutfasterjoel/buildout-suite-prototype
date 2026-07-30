@@ -12,6 +12,7 @@ import {
 import { requestStageChange } from "#/components/deals/useStageGate";
 import { createDeal, commitStageTransition } from "#/data/actions";
 import { emptyDraft } from "#/data/createListing";
+import { startIngestionState } from "#/data/ingestion";
 import { createRosaProposalDeal } from "#/components/call/rosaDeal";
 
 function hydrate() {
@@ -27,6 +28,8 @@ function hydrate() {
 /** Mirrors SetupIncompleteBanner's own condition in overview.tsx. */
 function bannerShows(dealId: string): boolean {
   const l = useDataStore.getState().listings.get(dealId)!;
+  if (l.ingestion?.status === "processing") return false;
+
   const needsSetup =
     l.dealSide === "seller" &&
     l.status !== "proposal" &&
@@ -105,6 +108,39 @@ describe("Setup incomplete banner across a deal's stage moves", () => {
     expect(deal.status).toBe("active");
     expect(deal.publishedAt).toBeNull();
     expect(bannerShows(deal.id)).toBe(true);
+  });
+
+  // A live-stage deal with a document-ingestion run in progress would otherwise
+  // qualify for this banner too (missing fields, unpublished) — but the
+  // ingestion banner is the accurate status while a run is processing, and the
+  // two shouldn't stack for the ~5s the run takes.
+  it("stays hidden while a document-ingestion run is processing, even with missing fields", () => {
+    const { property } = rosaAndBuilding();
+    const { deal } = createDeal({
+      ...emptyDraft(),
+      name: "Ingesting Deal",
+      propertyId: property.id,
+      propertyType: property.propertyType,
+      dealType: "Sale",
+      dealSide: "seller",
+      initialStage: "active",
+    });
+
+    expect(deal.status).toBe("active");
+    expect(deal.publishedAt).toBeNull();
+    expect(bannerShows(deal.id)).toBe(true); // sanity: would warn without ingestion
+
+    useDataStore.setState((s) => {
+      const listings = new Map(s.listings);
+      const l = listings.get(deal.id)!;
+      listings.set(deal.id, {
+        ...l,
+        ingestion: startIngestionState(["T-12.pdf", "Rent Roll.xlsx"]),
+      });
+      return { listings } as never;
+    });
+
+    expect(bannerShows(deal.id)).toBe(false);
   });
 
   // The reported bug: the Active -> Under Contract gate reports `leavesActive`,

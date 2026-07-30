@@ -13,8 +13,13 @@ import {
   faPlus,
   faTrashCan,
   faCalendar,
+  faTriangleExclamation,
 } from "@fortawesome/pro-regular-svg-icons";
-import type { YesNoNA } from "#/data/types";
+import {
+  conflictRowId,
+  useIngestionConflict,
+} from "#/components/deals/ingestionConflictContext";
+import type { IngestionFieldKey, YesNoNA } from "#/data/types";
 
 // ── Small field wrappers ─────────────────────────────────────────────────────
 export function TextField({
@@ -63,21 +68,72 @@ export function NumberField({
   label,
   value,
   onChange,
+  fieldKey,
 }: {
   label: string;
   value: number | null;
   onChange: (v: number | null) => void;
+  /** When set and an unresolved ingestion conflict exists for it, the field
+   * renders the doc-vs-record arbitration row beneath the input. */
+  fieldKey?: IngestionFieldKey;
 }) {
+  const { conflict, resolve } = useIngestionConflict(fieldKey);
   return (
     <Field>
-      <Field.Label>{label}</Field.Label>
+      <Field.Label className="d-flex align-items-center gap-2">
+        {label}
+        {conflict && (
+          <FontAwesomeIcon
+            icon={faTriangleExclamation}
+            className="text-warning"
+          />
+        )}
+      </Field.Label>
       <Input
         type="number"
+        className={conflict ? "ingestion-conflict__input" : undefined}
         value={value ?? ""}
         onChange={(e) =>
           onChange(e.target.value === "" ? null : Number(e.target.value))
         }
       />
+      {conflict && (
+        <div
+          className="ingestion-conflict__row"
+          id={conflictRowId(conflict.fieldKey)}
+        >
+          {/* The field itself already shows the value on record — the value the
+              broker would be keeping — so this row names only the alternative the
+              documents propose. Showing both here (beside an input holding one of
+              them) read as a bug. */}
+          <span className="fs-small">
+            <span className="text-muted">{conflict.docSource} says </span>
+            <span className="fw-semibold">{conflict.docValue}</span>
+          </span>
+          <div className="d-flex gap-2 flex-shrink-0">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                onChange(conflict.docRaw);
+                resolve("doc");
+              }}
+            >
+              Use {conflict.docValue}
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                onChange(conflict.currentRaw);
+                resolve("current");
+              }}
+            >
+              Keep {conflict.currentValue}
+            </Button>
+          </div>
+        </div>
+      )}
     </Field>
   );
 }

@@ -4,6 +4,7 @@ import type {
   DealSide,
   DealTransaction,
   DealType,
+  IngestionFieldKey,
   LeaseRateUnits,
   Listing,
   PropertyStatus,
@@ -177,6 +178,13 @@ function localISO(d: Date): string {
   return `${d.getFullYear()}-${m}-${day}`
 }
 
+/** True when the deal has a document-ingestion conflict on `fieldKey` the broker hasn't settled. */
+function hasUnresolvedConflict(deal: Listing, fieldKey: IngestionFieldKey): boolean {
+  return (deal.ingestion?.conflicts ?? []).some(
+    (c) => c.fieldKey === fieldKey && !c.resolution,
+  )
+}
+
 export function seedGateForm(deal: Listing): GateFormState {
   const aiDocs = (deal.documents ?? []).filter((d) => d.aiGenerated)
   const isLease = deal.dealType === 'Lease'
@@ -210,7 +218,13 @@ export function seedGateForm(deal: Listing): GateFormState {
     // Title/description: lease deals read the lease copy, sale deals the sale copy.
     saleTitle: isLease ? deal.marketing.leaseTitle : deal.marketing.saleTitle,
     saleDescription: isLease ? deal.marketing.leaseDescription : deal.marketing.saleDescription,
-    askingPrice: deal.financials.askingPrice || null,
+    // An unresolved document conflict on the asking price reads as unmet, even
+    // though the field holds the on-record figure. The stored value is what the
+    // broker would be KEEPING, not a number they've confirmed — so the deal
+    // can't publish until they take the document's figure or keep this one.
+    askingPrice: hasUnresolvedConflict(deal, 'askingPrice')
+      ? null
+      : deal.financials.askingPrice || null,
     leaseRate: space?.leaseRate ?? null,
     leaseRateUnits: space?.leaseRateUnits ?? 'SF/Yr',
     availableSqFt: deal.marketing.availableSqFt || null,

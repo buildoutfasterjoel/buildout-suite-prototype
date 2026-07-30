@@ -8,6 +8,7 @@ import type {
   DealSide,
   DealBroker,
   DealDocument,
+  DealIngestion,
   DealTask,
   DealUnderwriting,
   SpaceLeaseTerms,
@@ -127,7 +128,7 @@ import {
   getContact,
   contactLabel,
 } from './store'
-import { DEFAULT_PERSONAL_SPLIT_PCT } from './commission'
+import { DEFAULT_PERSONAL_SPLIT_PCT, closeProbabilityForStage } from './commission'
 
 /**
  * The editable subset of a listing the New Listing modal collects — just the
@@ -177,6 +178,8 @@ export interface NewListingDraft {
   suggestedDocuments?: DealDocument[]
   /** The underwriting scope chosen at creation. */
   underwriting?: DealUnderwriting
+  /** A document-ingestion run to start with the deal (create-with-AI). */
+  ingestion?: DealIngestion
 }
 
 /** A candidate document Buildout suggests when a deal is created. */
@@ -593,6 +596,7 @@ export function createProposalListing(draft: NewListingDraft): Listing {
     underwriting: draft.underwriting
       ? { ...draft.underwriting, status: draft.underwriting.status ?? 'generating' }
       : undefined,
+    ingestion: draft.ingestion,
     financials: {
       askingPrice: draft.listingPrice,
       askingPriceUnits: 'total',
@@ -630,7 +634,7 @@ export function createProposalListing(draft: NewListingDraft): Listing {
           : 0,
       commissionPct: draft.commissionPct,
       commissionAmount,
-      closeProbability: 0,
+      closeProbability: closeProbabilityForStage(draft.initialStage),
       contractExecutedDate: null,
       closeDate: null,
       listedOnDate: null,
