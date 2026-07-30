@@ -112,8 +112,14 @@ pass; gap 9 while reviewing the shipped code):
    `GroupSubmenuMenu` wrapping `DropdownMenu.Sub` / `SubTrigger` / `SubContent`
    and forwarding `.navbar-dropdown` — i.e. what Zone 3 does by hand today.
 
-These become a Blueprint ticket, tracked separately. Gaps 2, 3, 4, 7, 8, and 9
-are worked around in this implementation.
+These become a Blueprint ticket, tracked separately.
+
+Worked around in this implementation: gaps 2, 4, 7, 8, and 9. Gap 3 is
+*avoided* rather than worked around — the menu uses `Navbar.Separator`, which
+already carries the right color, instead of `DropdownMenu.Separator` plus a
+custom `--bp-dropdown-divider-bg` override. The bug in `.navbar-dropdown`
+remains, and will bite the next consumer who reaches for the dropdown's own
+separator. Gaps 1, 5, and 6 are absorbed as bespoke markup and utility classes.
 
 ## Design
 
