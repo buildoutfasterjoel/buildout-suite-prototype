@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faFileContract } from "@fortawesome/pro-regular-svg-icons";
@@ -34,9 +34,10 @@ function medDate(iso: string): string {
  * whether the CA is signed. No relationship badge, because every card in this
  * section is an inquiry by definition.
  *
- * One click path: the whole card goes to the listing's Leads tab pre-searched to
- * this contact, since seeing their inquiry in context is the only reason to click
- * from here. The listing name is the one exception, linking to the deal page.
+ * One click path, no exceptions: anywhere on the card goes to the listing's Leads
+ * tab pre-searched to this contact. Seeing the inquiry in context is the only
+ * reason to click from here — the title used to link to the deal's planner, which
+ * is a page an inquiry gives you no business being on.
  */
 export function NewContactInquiryCard({
   listingId,
@@ -99,13 +100,7 @@ export function NewContactInquiryCard({
               <Tooltip>
                 <Tooltip.Trigger
                   render={
-                    <Link
-                      to="/listings/$listingId"
-                      params={{ listingId }}
-                      className="deal-tile__title text-reset text-decoration-none"
-                    >
-                      {listing.name}
-                    </Link>
+                    <span className="deal-tile__title">{listing.name}</span>
                   }
                 />
                 <Tooltip.Content>

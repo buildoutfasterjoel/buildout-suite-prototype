@@ -315,10 +315,11 @@ function dealAccessCount(listing: Listing): number {
 
 /**
  * The board's card body, behind the design-comparison switch: the shipped
- * `DealCardView` or the redesigned board-variant tile. Kept here (rather than in
- * the column) so the drag overlay and the column render the same thing.
+ * `DealCardView` or the redesigned board-variant tile. Exported so the
+ * DragOverlay renders it too — a card that changed design the moment you picked
+ * it up was the tell that the overlay had its own copy.
  */
-function BoardDealCard({ listing }: { listing: Listing }) {
+export function BoardDealCard({ listing }: { listing: Listing }) {
   const newCards = useContactUiPrefs((s) => s.dealCards) === "new";
   if (!newCards) return <DealCardView listing={listing} />;
   return (

@@ -12,7 +12,7 @@ import {
 import type { Listing, PropertyStatus } from "#/data/types";
 import { PROPERTY_STATUSES } from "../properties/propertyDisplay";
 import { DealBoardColumn } from "./DealBoardColumn";
-import { DealCardView } from "./DealCard";
+import { BoardDealCard } from "./DealCard";
 
 export function DealBoard({
   listings,
@@ -75,7 +75,7 @@ export function DealBoard({
       <DragOverlay dropAnimation={null}>
         {active ? (
           <div style={{ width: 240, cursor: "grabbing" }}>
-            <DealCardView listing={active} />
+            <BoardDealCard listing={active} />
           </div>
         ) : null}
       </DragOverlay>
