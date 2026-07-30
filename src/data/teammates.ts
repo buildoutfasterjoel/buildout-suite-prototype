@@ -19,6 +19,8 @@ export interface Teammate {
   initials: string;
   /** Profile photo URL. Absent for a couple of members so the fallback still shows. */
   avatarUrl?: string;
+  /** Employer, shown on the account dropdown's identity card. Only set for the current user. */
+  company?: string;
 }
 
 /** A teammate granted access to a contact at a specific tier. */
@@ -36,6 +38,7 @@ export const CURRENT_USER: Teammate = {
   name: "Ethan Thompson",
   email: "ethan.thompson@buildout.com",
   role: "Broker",
+  company: "Buildout",
   initials: "ET",
   avatarUrl: "https://randomuser.me/api/portraits/men/32.jpg",
 };
