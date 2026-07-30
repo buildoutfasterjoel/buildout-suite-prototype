@@ -25,7 +25,7 @@ import { OmniSparkleIcon } from "#/components/search/OmniSparkleIcon";
 import { useCreateDeal } from "#/data/useCreateDeal";
 import { useNewContact } from "#/data/useNewContact";
 import { useAddTask } from "#/data/useAddTask";
-import { AccountMenu } from "./AccountMenu.tsx";
+import { AccountMenu } from "./AccountMenu";
 
 /** Platform-aware shortcut hint, e.g. "⌘K" on macOS, "Ctrl K" elsewhere. */
 const SEARCH_HINT = formatForDisplay("Mod+K");

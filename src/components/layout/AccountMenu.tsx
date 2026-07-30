@@ -20,7 +20,7 @@ import {
   readPersona,
   writePersona,
   type Persona,
-} from "./accountMenu";
+} from "./personas";
 
 /**
  * The account dropdown in the navbar footer.

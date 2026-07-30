@@ -6,7 +6,7 @@ import {
   readPersona,
   writePersona,
   type PersonaStore,
-} from "./accountMenu";
+} from "./personas";
 
 /** Map-backed stand-in for localStorage — Vitest runs in the node env. */
 function fakeStore(initial?: Record<string, string>): PersonaStore {
