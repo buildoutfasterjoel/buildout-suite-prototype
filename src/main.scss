@@ -3361,9 +3361,10 @@
 // rather than inside .global-navbar.
 .navbar-dropdown {
   // Blueprint's .navbar-dropdown re-tokens the dropdown's bg, color, and border
-  // for the dark navy surface but not the divider, which otherwise falls back to
-  // a near-white grey. Matches $navbar-divider-color, so these read as the same
-  // subtle rules the sidebar uses. Note the `bp-` prefix (see line ~1771).
+  // to the navbar's surface but not the divider, which keeps the base dropdown's
+  // near-white value. Set to $navbar-divider-color — the same value
+  // .navbar-separator already uses, so rules read consistently across the navbar
+  // and its dropdowns. Note the `bp-` prefix (see line ~1771).
   --bp-dropdown-divider-bg: #{colors.$buildout-blue-900};
 }
 

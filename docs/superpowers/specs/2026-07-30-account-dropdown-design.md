@@ -37,26 +37,30 @@ came out of reading `blueprint-react/src/components/Navbar/index.tsx`,
    `GroupMenuLabel`, or `GroupMenuHeader`, so a consumer must reach into
    `ui/DropdownMenu` and mix component families inside a Navbar subtree. The
    sharper version of the complaint is that the two available separators each
-   solve half the problem: `Navbar.Separator` binds
-   `--bp-separator-color` to `$navbar-divider-color` (correct color, and it
-   accepts `orientation="horizontal"` despite defaulting to vertical —
-   `Navbar/index.tsx:364`) but carries no vertical margin, while
-   `DropdownMenu.Separator` has menu-appropriate `--bp-dropdown-divider-margin-y`
-   but a colour the navbar surface never re-tokens (gap 3). Neither is a themed
-   horizontal rule for a dark dropdown; every consumer hand-tunes one axis or
-   the other.
+   solve half the problem: `Navbar.Separator` already binds
+   `--bp-separator-color` to `$navbar-divider-color`, i.e. it is correct for the
+   navbar's own surface, and it accepts `orientation="horizontal"` despite
+   defaulting to vertical (`Navbar/index.tsx:364`) — but it carries no vertical
+   margin. `DropdownMenu.Separator` has menu-appropriate
+   `--bp-dropdown-divider-margin-y` but a color the navbar's dropdown never
+   re-tokens (gap 3). So a horizontal rule inside a navbar dropdown always means
+   hand-tuning one axis or the other.
 2. **The mobile branch breaks composition.** Below `expand`, `Navbar.Group`
    becomes a `Collapsible` and `GroupMenu` becomes `CollapsibleContent`. Only
    `GroupMenuItem` forks for mobile (`Navbar/index.tsx:332`). Any Base UI menu
    part dropped in — `GroupLabel`, `RadioGroup`/`RadioItem`, `CheckboxItem`,
    `Sub*` — has no `Menu.Root` context there and throws or no-ops.
    `DropdownMenu.Separator` survives only because it is a bare `<hr>`.
-3. **Divider is mis-themed in the navbar dropdown.** `.navbar-dropdown`
-   re-tokens `--bs-dropdown-bg`, `-color`, and `-border-color`
-   (`navbar/_index.scss:116`) but not `--bs-dropdown-divider-bg`, so a
-   `dropdown-divider` renders in the light-theme color on the dark surface.
-   `.dropdown-inline` (mobile) also zeroes padding and border, so a header card
-   gets no container styling.
+3. **The navbar family is internally inconsistent about its own divider color.**
+   Blueprint has no light/dark theme modes — the navbar simply has a dark surface
+   as part of its own design, and `$navbar-divider-color` is the value that goes
+   with it. `.navbar-separator` already binds to that value. But
+   `.navbar-dropdown` re-tokens `--bp-dropdown-bg`, `-color`, and
+   `-border-color` (`navbar/_index.scss:116`) and stops there, so
+   `--bp-dropdown-divider-bg` keeps the base dropdown's near-white
+   `oklch(94.87% …)`. The navbar's own separator knows what color a rule on this
+   surface should be; its dropdown's divider doesn't. `.dropdown-inline` (mobile)
+   also zeroes padding and border, so a header card gets no container styling.
 4. **`GroupTrigger` force-injects a caret** (`faCaretDown`, `Navbar/index.tsx:273`)
    with no opt-out. This repo already hides it in CSS at `src/main.scss:3342`.
 5. **No account-menu pattern.** No `GroupMenuItem` icon/label/description
@@ -72,12 +76,13 @@ came out of reading `blueprint-react/src/components/Navbar/index.tsx`,
    fallback) while Bootstrap's own `.navbar-expand-lg` CSS still considers the
    viewport desktop-width. There is no single source of truth for "mobile" to
    query against.
-8. **`DropdownMenu.SubContent` doesn't inherit the navbar theme class.**
+8. **`DropdownMenu.SubContent` doesn't inherit the `.navbar-dropdown` class.**
    `SubContent` delegates to the same `DropdownMenuContent` as the top-level
    popup but without forwarding `.navbar-dropdown` (`DropdownMenu/index.tsx:179`),
-   so a submenu opened from inside a themed navbar dropdown renders on the
-   light default surface unless the consumer re-applies the class by hand, as
-   this implementation does on `SubContent` in Zone 3.
+   so a submenu opened from inside a navbar dropdown falls back to the base
+   dropdown's light surface — beside its own dark parent — unless the consumer
+   re-applies the class by hand, as this implementation does on `SubContent` in
+   Zone 3.
 
 These become a Blueprint ticket, tracked separately. Gaps 2, 3, 4, 7, and 8 are
 worked around in this implementation.

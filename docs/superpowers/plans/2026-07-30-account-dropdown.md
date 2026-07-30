@@ -489,9 +489,10 @@ Insert into `src/main.scss` between line 3357 (`}`, closing `.global-navbar`) an
 // rather than inside .global-navbar.
 .navbar-dropdown {
   // Blueprint's .navbar-dropdown re-tokens the dropdown's bg, color, and border
-  // for the dark navy surface but not the divider, which otherwise falls back to
-  // the light-theme grey. Matches $navbar-divider-color.
-  --bs-dropdown-divider-bg: #{colors.$buildout-blue-900};
+  // to the navbar's surface but not the divider, which keeps the base dropdown's
+  // near-white value. Set to $navbar-divider-color — the same value
+  // .navbar-separator already uses.
+  --bp-dropdown-divider-bg: #{colors.$buildout-blue-900};
 }
 
 // Identity card: the inert header above the first divider.
