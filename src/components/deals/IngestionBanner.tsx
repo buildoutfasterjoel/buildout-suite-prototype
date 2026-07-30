@@ -74,17 +74,25 @@ export function IngestionBanner({ listing }: { listing: Listing }) {
   }
 
   return (
+    // The icon stays a direct child — the theme absolutely positions it via
+    // `.alert-icon > svg`. Dismiss sits to the right of the copy rather than
+    // stacked under it, which keeps this success state one row shorter.
     <Alert severity="success" withIcon className="m-3 mb-0">
       <FontAwesomeIcon icon={faCircleCheck} />
-      <Alert.Title>Buildout filled {ingestion.filledCount} fields</Alert.Title>
-      <div className="d-flex flex-column align-items-start gap-2">
-        <span>
-          Everything we found in your documents is on the deal. It&rsquo;s ready
-          to publish once you review the generated documents.
-        </span>
+      <div className="d-flex align-items-center justify-content-between gap-3">
+        <div>
+          <Alert.Title>
+            Buildout filled {ingestion.filledCount} fields
+          </Alert.Title>
+          <span>
+            Everything we found in your documents is on the deal. It&rsquo;s
+            ready to publish once you review the generated documents.
+          </span>
+        </div>
         <Button
           variant="ghost"
           size="sm"
+          className="flex-shrink-0"
           onClick={() => dismissIngestion(listing.id)}
         >
           Dismiss
