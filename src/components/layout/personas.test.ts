@@ -28,20 +28,24 @@ describe("persona labels", () => {
 });
 
 describe("readPersona", () => {
-  it("defaults to principal when nothing is stored", () => {
-    expect(readPersona(fakeStore())).toBe("principal");
+  it("defaults to broker when nothing is stored", () => {
+    expect(readPersona(fakeStore())).toBe("broker");
   });
 
   it("returns the stored persona", () => {
     expect(readPersona(fakeStore({ dev_role: "marketing" }))).toBe("marketing");
   });
 
-  it("falls back to principal when the stored value is not a persona", () => {
-    expect(readPersona(fakeStore({ dev_role: "wizard" }))).toBe("principal");
+  it("falls back to broker when the stored value is not a persona", () => {
+    expect(readPersona(fakeStore({ dev_role: "wizard" }))).toBe("broker");
   });
 
-  it("falls back to principal when there is no store (SSR)", () => {
-    expect(readPersona(null)).toBe("principal");
+  it("falls back to broker when the stored value is an inherited object key", () => {
+    expect(readPersona(fakeStore({ dev_role: "toString" }))).toBe("broker");
+  });
+
+  it("falls back to broker when there is no store (SSR)", () => {
+    expect(readPersona(null)).toBe("broker");
   });
 });
 

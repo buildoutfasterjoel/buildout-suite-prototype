@@ -26,7 +26,10 @@ export const PERSONA_LABELS: Record<Persona, string> = {
 export type PersonaStore = Pick<Storage, "getItem" | "setItem">;
 
 const STORAGE_KEY = "dev_role";
-const DEFAULT_PERSONA: Persona = "principal";
+// Tracks CURRENT_USER.role in src/data/teammates.ts ("Broker"), so the
+// identity card's default line doesn't contradict every other rendering of
+// CURRENT_USER.role on a fresh demo.
+const DEFAULT_PERSONA: Persona = "broker";
 
 /** localStorage when there is a document, null during SSR. */
 function browserStore(): PersonaStore | null {
@@ -34,10 +37,10 @@ function browserStore(): PersonaStore | null {
 }
 
 function isPersona(value: string | null): value is Persona {
-  return value !== null && value in PERSONA_LABELS;
+  return value !== null && PERSONA_ORDER.includes(value as Persona);
 }
 
-/** The persisted persona, or Principal when absent, unrecognized, or on the server. */
+/** The persisted persona, or Broker when absent, unrecognized, or on the server. */
 export function readPersona(
   store: PersonaStore | null = browserStore(),
 ): Persona {

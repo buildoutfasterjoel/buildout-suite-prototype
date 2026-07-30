@@ -3369,7 +3369,8 @@
 // Identity card: the inert header above the first divider.
 .account-menu__card {
   padding: map-get($spacers, 3);
-  min-width: 280px;
+  width: 280px;
+  max-width: 100%;
 }
 
 .account-menu__identity {

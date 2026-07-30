@@ -50,16 +50,13 @@ export function AccountMenu() {
     }
   }
 
-  const personaRows = PERSONA_ORDER.map((p) => (
-    <DropdownMenu.RadioItem key={p} value={p}>
-      {PERSONA_LABELS[p]}
-    </DropdownMenu.RadioItem>
-  ));
-
   return (
     <Navbar.Nav className="ms-2">
       <Navbar.Group>
-        <Navbar.GroupTrigger className="navbar-user-trigger" aria-label="Account">
+        <Navbar.GroupTrigger
+          className="navbar-user-trigger"
+          aria-label={`Account: ${CURRENT_USER.name}`}
+        >
           <Navbar.ItemLinkIcon>
             <Avatar style={{ width: 28, height: 28 }}>
               <Avatar.Image src={CURRENT_USER.avatarUrl} alt={CURRENT_USER.name} />
@@ -124,7 +121,11 @@ export function AccountMenu() {
                   value={persona}
                   onValueChange={(value) => changePersona(value as Persona)}
                 >
-                  {personaRows}
+                  {PERSONA_ORDER.map((p) => (
+                    <DropdownMenu.RadioItem key={p} value={p}>
+                      {PERSONA_LABELS[p]}
+                    </DropdownMenu.RadioItem>
+                  ))}
                 </DropdownMenu.RadioGroup>
               </DropdownMenu.SubContent>
             </DropdownMenu.Sub>
