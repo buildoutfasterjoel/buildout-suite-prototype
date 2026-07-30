@@ -75,19 +75,27 @@ pass; gap 9 while reviewing the shipped code):
    code. A consumer who passes `style` silently loses the anchor-width floor;
    pass nothing and it applies. Either way there's no width prop, so the ~280px
    card is sized by a class on a child element.
-7. **The JS and CSS breakpoint scales are from different design systems.**
-   `useNavbar()`'s `isMobile` comes from Blueprint's JS `BREAKPOINTS`
-   (`hooks/use-mobile.ts:3-9`) = `{sm 640, md 768, lg 1024, xl 1280, xxl 1536}`
-   — Tailwind's scale. The theme extends Bootstrap, whose `$grid-breakpoints`
-   are `{sm 576, md 768, lg 992, xl 1200, xxl 1400}`. Only `md` coincides, so for
-   every other `expand` value the JS fork flips at a different width than the
-   matching `.navbar-expand-*` CSS. At `expand="lg"` that's a 992–1024px band
-   where `isMobile` is `true` (this component renders its flat-row fallback)
-   while the CSS still lays out as desktop. Separately, `useMobileBreakpoint`
-   registers `matchMedia("(max-width: Npx)")` — which matches *at* N — but its
-   handler sets `innerWidth < N` (`use-mobile.ts:20-25`), so at exactly N the
-   query fires and resolves to `false`: the listener and the predicate disagree
-   on the boundary.
+7. **`useMobileBreakpoint` can miss the transition it exists to detect.** The
+   *values* are fine: the theme's `$grid-breakpoints` is built from Blueprint's
+   own tokens (`bridge/_vars.scss:124-131` → `$breakpoints-sm: 40rem` …
+   `$breakpoints-2xl: 96rem`), which equal the JS `BREAKPOINTS` map
+   (`hooks/use-mobile.ts:3-9`) at the default 16px root — 640/768/1024/1280/1536.
+   Bootstrap's own defaults never apply. The defect is in the hook's mechanism:
+
+   ```ts
+   const mediaQuery = window.matchMedia(`(max-width: ${breakpoint}px)`); // matches ≤ 1024
+   const onChange = () => setIsMobile(window.innerWidth < breakpoint);   // true  ≤ 1023
+   ```
+
+   `change` fires only when the query's match state flips — crossing 1024↔1025 —
+   but the predicate flips at 1023↔1024. Once the viewport is at or below 1024
+   no further events fire, so shrinking 1024 → 900 never re-runs the handler and
+   `isMobile` keeps whatever it computed at the crossing. Whether the navbar ever
+   switches to its mobile branch depends on the `innerWidth` the browser happened
+   to report at that one event — at 900px wide it can stay in desktop mode
+   indefinitely. Also worth noting: the CSS breakpoints are declared in `rem` and
+   the JS ones in `px`, so a user who raises their browser's default font size
+   moves the CSS boundary while the JS boundary stays put.
 8. **`DropdownMenu.SubContent` doesn't inherit the `.navbar-dropdown` class.**
    `SubContent` delegates to the same `DropdownMenuContent` as the top-level
    popup but without forwarding `.navbar-dropdown` (`DropdownMenu/index.tsx:179`),

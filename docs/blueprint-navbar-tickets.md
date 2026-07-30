@@ -24,6 +24,12 @@ All line citations are against the installed package sources
   spread-order bug that silently discards the component's own `minWidth`
   whenever a consumer passes `style`. It moved from the enhancement to the
   **bug** ticket as item 6, and the spec was corrected to match.
+- The spec's gap 7 originally claimed the JS and CSS breakpoint scales came from
+  different design systems (Tailwind's vs Bootstrap's). **That was wrong** — the
+  theme overrides `$grid-breakpoints` from Blueprint's own tokens, and the values
+  match the JS map exactly. Item 4 below is the corrected, narrower finding: a
+  listener/predicate off-by-one in `useMobileBreakpoint` that can strand
+  `isMobile` at `false`. Do not file the "two scales" version.
 
 So: **bug ticket = 6 items** (spec gaps 2, 3, 8, 7, 6 + the `className` drop),
 **enhancement ticket = 4 items** (spec gaps 9, 1, 5, 4).
@@ -127,38 +133,67 @@ mirrors would also work. Either way the consumer shouldn't restate it.
 - [ ] An explicit `className` on `SubContent` still wins.
 - [ ] Submenus outside a navbar are unchanged.
 
-## Item 4 — JS and CSS breakpoint scales come from different design systems
+## Item 4 — `useMobileBreakpoint` can miss the transition it exists to detect
 
-`BREAKPOINTS` in `hooks/use-mobile.ts:3-9` is `{sm 640, md 768, lg 1024,
-xl 1280, xxl 1536}` — **Tailwind's** scale. The theme extends Bootstrap, whose
-`$grid-breakpoints` are `{sm 576, md 768, lg 992, xl 1200, xxl 1400}`. Only `md`
-coincides. `NavbarRoot` picks its JS breakpoint from that map
-(`Navbar/index.tsx:77-78`) while the emitted `.navbar-expand-*` class uses
-Bootstrap's, so for every `expand` value except `md` the JS fork flips at a
-different viewport width than the CSS layout it is supposed to match.
+**Not a values problem.** The theme's `$grid-breakpoints` is built from
+Blueprint's own tokens (`bridge/_vars.scss:124-131` → `$breakpoints-sm: 40rem` …
+`$breakpoints-2xl: 96rem`) and equals the JS `BREAKPOINTS` map
+(`hooks/use-mobile.ts:3-9`) at a 16px root: 640/768/1024/1280/1536. Bootstrap's
+defaults are fully overridden and never apply. The bug is the hook's mechanism.
 
-At `expand="lg"` that's a 992–1024px band where `useNavbar().isMobile` is `true`
-— consumers render mobile fallbacks — while `.navbar-expand-lg` still lays out as
-desktop.
+```ts
+const mediaQuery = window.matchMedia(`(max-width: ${breakpoint}px)`); // matches ≤ 1024
+const onChange = () => { setIsMobile(window.innerWidth < breakpoint); }; // true ≤ 1023
+mediaQuery.addEventListener('change', onChange);
+```
 
-Separately, `useMobileBreakpoint` registers
-`matchMedia("(max-width: ${breakpoint}px)")`, which matches **at** the
-breakpoint, but its handler and initial state both compute
-`window.innerWidth < breakpoint` (`use-mobile.ts:12-25`). At exactly `N` the
-media query fires and the predicate resolves `false` — listener and predicate
-disagree on the boundary.
+`use-mobile.ts:19-27`. The listener's boundary (1024↔1025) and the predicate's
+boundary (1023↔1024) are off by one, and there is no `resize` listener — only
+this one media-query subscription. So:
 
-**Proposed fix:** source `BREAKPOINTS` from the theme's `$grid-breakpoints`
-(exported as CSS custom properties or generated into TS) so there is one scale;
-and align the query with the predicate — either `(max-width: ${n - 0.02}px)`
-with `<`, or `(min-width: ${n}px)` inverted.
+- Shrinking 1025 → 1024 fires `change`; the handler computes
+  `1024 < 1024` → `false`.
+- Shrinking further, 1024 → 900, does **not** fire `change` — the query still
+  matches — so the handler never re-runs and `isMobile` stays `false`.
+
+The navbar can therefore sit in its desktop branch at 900px wide. Which value
+sticks depends on the `innerWidth` the browser reported at that single crossing
+event, so it reproduces inconsistently — coalesced resizes that jump past 1024
+happen to set it correctly, slow drags do not.
+
+**Repro:** load at ≥1025px, slowly drag the window narrower to ~900px.
+**Expected:** `isMobile` becomes `true`; the navbar collapses.
+**Actual:** frequently stays `false`. Reloading at 900px is correct, because the
+`useState` initializer computes the predicate directly — only the resize path is
+broken.
+
+**Proposed fix** — one source of truth for the boundary, using Bootstrap's own
+`0.02px` subtraction convention so the query edge matches the CSS edge:
+
+```ts
+const query = window.matchMedia(`(max-width: ${breakpoint - 0.02}px)`);
+const onChange = () => setIsMobile(query.matches);
+query.addEventListener('change', onChange);
+onChange();
+```
+
+Reading `query.matches` rather than re-measuring `innerWidth` makes it
+impossible for the two to drift again.
+
+**Secondary:** the CSS breakpoints are authored in `rem` and the JS ones in `px`.
+Media-query `rem` resolves against the browser's default font size, so a user who
+raises it moves the CSS boundary while the JS boundary stays at a fixed pixel
+value. Deriving the JS map from the tokens (or expressing the query in `rem`)
+would close that.
 
 **Acceptance criteria**
-- [ ] `BREAKPOINTS` values equal Bootstrap's `$grid-breakpoints`, or are derived
-      from them rather than hardcoded.
-- [ ] For each `expand` value, `isMobile` flips at the same width as the
-      corresponding `.navbar-expand-*` CSS.
-- [ ] At exactly the breakpoint width, `isMobile` and the CSS agree.
+- [ ] Slowly resizing from above the breakpoint to well below it flips `isMobile`
+      exactly once, at the breakpoint.
+- [ ] `isMobile` is `true` for every width below the breakpoint, regardless of
+      how the viewport got there.
+- [ ] The JS boundary and the corresponding `.navbar-expand-*` CSS boundary agree
+      at the exact breakpoint width.
+- [ ] A test covers the resize path, not just the initial mount.
 
 ## Item 5 — `NavbarGroup` accepts `className` and silently ignores it
 
