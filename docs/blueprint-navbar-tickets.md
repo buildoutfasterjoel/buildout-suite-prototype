@@ -33,15 +33,27 @@ a mobile fork.
 
 # BP-A — Navbar dropdown silently drops tokens and props
 
-**Type:** Bug
-**Component:** blueprint-react / Navbar, blueprint-theme / navbar
-**Affects version:** 1.3.0
-**Priority:** Medium
+| Field | Value |
+|---|---|
+| Type | Bug |
+| Component | Blueprint |
+| Dev Team | Blueprint |
+| Priority | Medium |
+| Bug-SLA | SEV-4 |
+| Allocation | Bug |
+| Story Points | 2 |
+| Discovery Phase | Development |
+| Source | Product QA |
+| Affects version | `blueprint-react@1.3.0`, `blueprint-theme` |
 
 Five independent defects, each small and independently fixable. Common thread:
 something is accepted or implied and then quietly discarded — no errors are
 raised, the output is just wrong or the input ignored. Four of the five are
 one-line changes.
+
+If this is split into one ticket per item, the points are 1 each except item 3
+(`useMobileBreakpoint`), which is a 2 — it needs a test for the resize path, and
+the `rem`/`px` sub-question may widen it.
 
 ## Item 1 — `.navbar-dropdown` doesn't re-token its divider color
 
@@ -231,16 +243,30 @@ trigger makes it meaningless.
 
 # BP-B — Navbar needs first-class menu composition parts
 
-**Type:** Enhancement / Story
-**Component:** blueprint-react / Navbar
-**Affects version:** 1.3.0
-**Priority:** Medium
+| Field | Value |
+|---|---|
+| Type | Story |
+| Component | Blueprint |
+| Dev Team | Blueprint |
+| Priority | Medium |
+| Allocation | Maintenance & Tech Debt |
+| Story Points | 3 |
+| Discovery Phase | Development |
+| Source | Product QA |
+| Affects version | `blueprint-react@1.3.0` |
 
 `Navbar.GroupMenu` forwards arbitrary children into Base UI's `Menu.Popup`, so a
 rich navbar menu is possible today — but every structural element beyond a flat
 item must be assembled from `ui/DropdownMenu` and hand-restyled. Building a
 standard account menu took four separate workarounds. These are the parts that
 should exist.
+
+**On the estimate:** unlike BP-A, this is not a set of small fixes. It adds public
+API surface — new exported parts, each needing a desktop form, a mobile form, and
+correct keyboard semantics — so it carries design and documentation cost, and the
+decisions are hard to reverse once consumers depend on the names. Strongly
+consider splitting it: items 1 and 2 are a 3 each on their own, items 3–5 are 1
+each. As a single ticket it is a 3 that will feel bigger than the number.
 
 ## Item 1 — `GroupMenuItem` is the only part with a mobile fork
 
@@ -410,10 +436,21 @@ must hide it in CSS:
 
 # SPIKE — Rules of Hooks coverage in blueprint-react, and the `useRender` fork pattern
 
-**Type:** Spike
-**Component:** blueprint-react
-**Priority:** Medium
-**Suggested timebox:** half a day
+| Field | Value |
+|---|---|
+| Type | Spike |
+| Component | Blueprint |
+| Dev Team | Blueprint |
+| Priority | Medium |
+| Allocation | Maintenance & Tech Debt |
+| Story Points | 1 |
+| Discovery Phase | Development |
+| Source | Product QA |
+| Suggested timebox | Half a day |
+
+The point value covers the investigation and the written finding only. Any fix
+work is scoped by the follow-up tickets this spike produces — if adopting the lint
+rule turns up a backlog of pre-existing violations, that becomes its own estimate.
 
 ## Why this is a spike and not a bug
 
