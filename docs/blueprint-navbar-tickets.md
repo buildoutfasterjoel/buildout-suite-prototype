@@ -1,10 +1,24 @@
 # Blueprint tickets — Navbar dropdown composition
 
-Three tickets, ready to file — one bug, one enhancement, one spike. Findings are
+**Filed 2026-07-30 in BSD (Buildout Software Development):**
+
+| Was | Key | Type | Points |
+|---|---|---|---|
+| BP-A | [BSD-37364](https://buildout.atlassian.net/browse/BSD-37364) | Bug, SEV-4 | 2 |
+| BP-B | [BSD-37365](https://buildout.atlassian.net/browse/BSD-37365) | Story | 3 |
+| SPIKE | [BSD-37366](https://buildout.atlassian.net/browse/BSD-37366) | Task | 1 |
+
+Three tickets — one bug, one enhancement, one spike. Findings are
 against `@buildoutinc/blueprint-react@1.3.0` and `@buildoutinc/blueprint-theme`,
 with line citations to the installed package sources. Discovered while building an
 account dropdown (identity header + grouped links + persona submenu) in
 suite-prototype.
+
+Notes from filing: BSD has no Spike issue type, so the spike is a **Task** with a
+`SPIKE:` summary prefix. `Discovery Phase` and `Source` are on the Bug screen only,
+so they are set on BSD-37364 alone. The Allocation option is named
+**"Tech Debt & Maintenance"**. Cross-references inside the ticket bodies use the
+real BSD keys rather than the BP-A/BP-B placeholders.
 
 **All three are Medium priority. Nothing here is blocking anyone today.**
 Blueprint's `Navbar` has no production consumers — shipping applications use the
