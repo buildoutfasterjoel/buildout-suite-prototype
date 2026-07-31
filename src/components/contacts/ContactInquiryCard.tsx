@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faFileContract } from "@fortawesome/pro-regular-svg-icons";
@@ -32,10 +32,9 @@ function medDate(iso: string): string {
  *    requests, the CA status — the strongest action cue on the card,
  * 4. the contact's own message, when they wrote one.
  *
- * One click path: the whole card navigates to the listing's Leads tab
- * pre-searched to this contact — seeing the inquiry in context is the only
- * reason to click from here. The listing name is the exception, linking to the
- * deal page.
+ * One click path, no exceptions: anywhere on the card navigates to the listing's
+ * Leads tab pre-searched to this contact. Seeing the inquiry in context is the
+ * only reason to click from here.
  */
 export function ContactInquiryCard({
   listingId,
@@ -70,8 +69,8 @@ export function ContactInquiryCard({
         openLeadsRow();
       }}
     >
-      {/* Listing identity — the name is a real link to the deal page, excluded
-          from the row click via the shared guard (it's an <a>). */}
+      {/* Listing identity. The name is plain text, not a link — the card has one
+          destination. */}
       <div className="d-flex align-items-center gap-3">
         <img
           src={getPhotoUrl(listing.id)}
@@ -85,13 +84,7 @@ export function ContactInquiryCard({
             style={{ fontSize: 17, lineHeight: "26px" }}
             title={listing.name}
           >
-            <Link
-              to="/listings/$listingId"
-              params={{ listingId }}
-              className="text-reset text-decoration-none"
-            >
-              {listing.name}
-            </Link>
+            {listing.name}
           </div>
           <div
             className="text-muted text-truncate"
