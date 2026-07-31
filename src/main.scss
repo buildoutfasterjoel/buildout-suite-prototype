@@ -202,6 +202,30 @@
   }
 }
 
+// Grey variant — contact tags on the detail hero. A tag is a label the broker
+// put on the record, not a live filter, so it carries no accent color; only the
+// geometry is shared with the purple filter chip above.
+.contact-chip--muted {
+  background: var(--color-storm-grey-50, #f6f7f9);
+  border-color: var(--color-storm-grey-200, #d5dae2);
+  color: var(--color-storm-grey-950, #22262f);
+  font-weight: 600;
+
+  &:has(.contact-chip__remove:hover) {
+    border-color: var(--color-storm-grey-400, #8495ac);
+  }
+
+  .contact-chip__remove {
+    // A rounded square, not a circle — the X sits inside a soft grey tile.
+    border-radius: var(--bp-border-radius-sm, 4px);
+    color: var(--color-storm-grey-950, #22262f);
+
+    &:hover {
+      background: var(--color-storm-grey-200, #d5dae2);
+    }
+  }
+}
+
 // Toolbar action buttons (Save / Clear / Revert): Blueprint's "sm" size, pinned
 // to the 28px chip height with a 14px label. Scoped to the filter bar so the
 // override is contained until the Blueprint components are updated directly.
@@ -220,6 +244,9 @@
 // radius, no dot. Layered over the Blueprint Badge; colors are the hex of the
 // Blueprint 200/300 (bg) and 950 (text) tokens.
 .contact-stage-badge {
+  // Pinned to 20px so the pill reads the same everywhere it appears — the People
+  // table, the contact hero, and (once Blueprint picks this up) the small Badge.
+  height: 20px;
   padding: 2px 8px;
   border-radius: 6px;
   font-size: 12px;
@@ -303,24 +330,61 @@
     border-top: 1px solid var(--color-storm-grey-100, #eceef2);
   }
 
+  // The header is one flex row: the trigger fills it and the optional section
+  // action sits at the end as a real sibling. It used to be absolutely
+  // positioned — a button can't nest inside the trigger button — which meant
+  // every change to the header's padding needed a matching top/right nudge here.
+  .contact-accordion__header {
+    display: flex;
+    // Top-aligned, so the action stays level with the title rather than drifting
+    // to the middle of a header that has grown a second line.
+    align-items: flex-start;
+    // The ROW owns the header's fill, not the trigger. `.accordion-item` sits on
+    // the theme's grey `--bp-accordion-bg`, which the trigger used to hide by
+    // spanning the full width; now that it stops short of the action, painting
+    // only the trigger leaves a grey block behind the action button.
+    background: var(--bp-card-bg, #fff);
+  }
+  .accordion-header {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .contact-accordion__action {
+    flex-shrink: 0;
+    // Mirrors the trigger's own inset so the 28px button centers on the title.
+    padding: 16px 16px 12px 0;
+  }
+
   // Header: white (card bg), no shadow. Keeps Blueprint's default chevron on the
-  // RIGHT (like the deal detail rail). An open header gets a bottom border so it
-  // reads as separated from its content, matching the deal detail accordions.
+  // RIGHT (like the deal detail rail).
+  //
+  // The header and body each own their padding (16/16/12 and 0/16/16) rather than
+  // inheriting one inset from the parent — that's what lets the header sit tight
+  // to its content while the body keeps a full 16px bottom margin.
+  // TODO(blueprint): this belongs on the Accordion (or Collapsible) component.
   .accordion-button,
   .accordion-button:not(.collapsed) {
-    background: var(--bp-card-bg, #fff);
+    // Transparent in both states — the header row above paints the fill, so the
+    // trigger and the action share one surface instead of tiling two.
+    background: transparent;
     box-shadow: none;
-    // Width 0 but keep the grey border color in both states. Using `border: 0`
-    // would reset the color to `currentColor` (near-black), which the button's
-    // `all` transition then animates through — flashing a black strip as the
-    // bottom border widens on expand.
-    border: 0 solid var(--color-storm-grey-100, #eceef2);
+    border: 0;
     color: inherit;
     font-weight: 600;
-    padding: 16px;
+    padding: 16px 16px 12px;
   }
-  .accordion-button:not(.collapsed) {
-    border-bottom-width: 1px;
+  // The whole header is the toggle, not just the 14px chevron — say so with the
+  // cursor rather than a fill, which read as a hover *target* on a row that's
+  // really just a label.
+  .accordion-button {
+    cursor: pointer;
+  }
+  // An open header gets a bottom border so it reads as separated from its
+  // content, matching the deal detail accordions. It lives on the header ROW,
+  // not the trigger: the trigger no longer spans the full width, so a border
+  // there would stop short of the action button.
+  .contact-accordion__header:has(.accordion-button:not(.collapsed)) {
+    border-bottom: 1px solid var(--color-storm-grey-100, #eceef2);
   }
   // Chevron pinned to the right edge (padding-right controls its inset, so keep
   // that padding small); the overlaid action sits just to its left. Dimmed so
@@ -336,7 +400,7 @@
   // with its own padding — zero it so the inset isn't doubled.
   .accordion-body {
     background-color: var(--bp-accordion-bg);
-    padding: 16px;
+    padding: 0 16px 16px;
   }
   .accordion-content {
     padding: 0;
@@ -370,12 +434,8 @@
       transform: rotate(0deg);
     }
     // Old style was flush white — no header/content divider.
-    .accordion-button:not(.collapsed) {
+    .contact-accordion__header:has(.accordion-button:not(.collapsed)) {
       border-bottom-width: 0;
-    }
-    // The chevron vacates the right edge, so the action returns to the far right.
-    .contact-accordion__action {
-      right: 16px;
     }
   }
 }
@@ -478,6 +538,19 @@
   &__meta-sep {
     color: var(--color-storm-grey-500, #62748e);
   }
+  // Inquiry meta: icon-only badges lead the line, so the row centers on them and
+  // opens to 8px around the rule that separates them from the facts.
+  &__meta--badges {
+    align-items: center;
+    gap: 8px;
+  }
+  &__meta-badges,
+  &__meta-facts {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 4px;
+  }
   // A property's facts line is muted throughout — unlike a deal's meta, where
   // the two figures are the point and only the separator recedes.
   &__meta--muted {
@@ -526,6 +599,11 @@
   }
   &__badge-icon {
     font-size: 10px; // font/size/x-small
+  }
+  // No label — a 20px square carrying just the glyph, so the badge can ride
+  // inline with the meta text instead of claiming a row.
+  &__badge--icon-only {
+    min-width: 20px;
   }
   // The property card's "Deal" badge: outlined rather than filled, because it's
   // a link out, not a state.
@@ -922,7 +1000,165 @@
 .contact-details-panel {
   border: 1px solid var(--color-storm-grey-100, #eceef2);
   border-radius: var(--bp-border-radius-lg, 8px);
-  padding: 12px;
+  // Tighter at the top: the first row is a 28px icon button whose own padding
+  // already reads as inset, so a full 12px above it looked like a gap.
+  padding: 8px 12px 12px;
+}
+
+// The hero's reach-out records (phone / email / address). Every measurement is
+// transcribed from Figma: a 20px icon column, 28px rows overlapped 4px so the
+// stack reads at a 24px pitch, and a value chip that only fills in on hover.
+.contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  &__group {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    height: 28px;
+    margin-bottom: -4px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  // The address sizes to its content instead — a long street line wraps. It
+  // top-aligns so the icon stays with the FIRST line rather than drifting to the
+  // middle of a two-line address.
+  &__row--static {
+    height: auto;
+    min-height: 28px;
+    align-items: flex-start;
+    margin-bottom: 0;
+  }
+
+  // Fixed 28px tall, matching the icon buttons it holds on the phone/email rows.
+  // Without the height it collapses to the 14px glyph on the address row, which
+  // top-aligns the pin 7px above where every other icon in the block sits.
+  &__icon-slot {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 28px;
+    color: var(--bp-secondary-color, #62748e);
+  }
+
+  // The verify toggle. Quiet until hovered, when it reads as the icon button it
+  // is — the glyph's weight (solid = verified) is the state; the button is how
+  // you change it.
+  &__verify {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--bp-border-radius, 6px);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    transition: background-color 0.12s ease-in-out;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--color-storm-grey-100, #eceef2);
+      outline: none;
+    }
+  }
+
+  // The value itself — a borderless button that fills in on hover, green when
+  // the record is verified (safe to reach out on) and grey when it isn't. The
+  // color is the whole point of the hover, so it's the affordance and the
+  // warning at once.
+  &__value {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 100%;
+    min-width: 0;
+    height: 24px;
+    padding: 4px;
+    border: 0;
+    border-radius: var(--bp-border-radius-lg, 8px);
+    background: transparent;
+    color: var(--color-storm-grey-950, #22262f);
+    font-size: 14px;
+    line-height: 19px;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.12s ease-in-out;
+
+    // The value truncates; the trailing "(mobile)" note never does.
+    > span:first-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    &--verified:hover,
+    &--verified:focus-visible {
+      background: var(--color-mountain-meadow-100, #cdfee5);
+      outline: none;
+    }
+    &--unverified:hover,
+    &--unverified:focus-visible {
+      background: var(--color-storm-grey-100, #eceef2);
+      outline: none;
+    }
+  }
+
+  &__value-note {
+    flex-shrink: 0;
+    color: var(--bp-secondary-color, #62748e);
+    font-size: 12px;
+  }
+
+  // Show N More / Show Less, aligned under the values (20px icon column + 4px
+  // gap + the icon button's own 4px inset).
+  &__more {
+    display: flex;
+    align-items: center;
+    height: 28px;
+    padding-left: 28px;
+  }
+  &__more-link {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--bp-link-color, #2042a7);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 19px;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  &__address {
+    min-width: 0;
+    // 4.5 + half a 19px line = 14px, the same optical centre the 28px icon slot
+    // and the 24px value chips on the rows above land on. The half-pixel is the
+    // price of matching them exactly rather than close enough.
+    padding: 4.5px 0;
+    font-size: 14px;
+    line-height: 19px;
+    color: var(--color-storm-grey-950, #22262f);
+  }
 }
 
 // The hero's "Details" expander: a compact 28px outline pill that floats to the
@@ -948,21 +1184,6 @@
   --bp-breadcrumb-item-padding-x: 0.5rem;
 }
 
-// The per-section action button (e.g. "Add"), overlaid at the header's right.
-// z-index must beat Bootstrap's `.accordion-button:not(.collapsed)` (z-index: 3),
-// which otherwise paints the expanded header over this button and hides it.
-// The optional section action (e.g. an "Add" button) sits just to the LEFT of
-// the accordion's right-side chevron (~16px padding + ~14px glyph). Overlaid
-// (not nested in the trigger) so its click doesn't toggle the section.
-.contact-accordion__action {
-  position: absolute;
-  // Vertically centered within the 59px header (matches the chevron), with a
-  // comfortable gap to the left of the right-side chevron.
-  top: 11px;
-  right: 44px;
-  z-index: 5;
-}
-
 // Owner avatar in the shared-access clusters: an offset outline. Uses the
 // darkest storm-grey (not blue — a blue ring reads as a browser focus state).
 .contact-hero__owner-avatar {
@@ -973,10 +1194,16 @@
     0 0 0 3.5px #{colors.$storm-grey-950};
 }
 
-// Collaborator avatars in the contact hero's access row (individual, not
-// stacked): a subtle storm-grey ring to separate them from the card.
-.contact-access-avatar {
-  box-shadow: 0 0 0 1px var(--color-storm-grey-500, #62748e);
+// Everyone who isn't the owner stacks into one overlapping group beside them.
+// Blueprint's `.avatar-group` already supplies the white pill + base shadow;
+// tighten its inset to the designed 2px and paint the child avatars' rings the
+// card color so the overlap reads as separation rather than a grey outline.
+.contact-hero__access-group {
+  padding: 2px;
+
+  .avatar {
+    border-color: var(--bp-card-bg, #fff);
+  }
 }
 
 // Hero access avatars double as a way into the sharing modal — signal that

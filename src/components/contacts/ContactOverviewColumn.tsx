@@ -6,9 +6,7 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faPhone,
-  faEnvelope,
-  faLocationDot,
+  faBan,
   faPlus,
   faChevronDown,
   faChevronRight,
@@ -25,6 +23,9 @@ import { ContactStageBadge } from "#/components/contacts/ContactStageBadge";
 import { ContactSection } from "#/components/contacts/ContactSection";
 import { ContactChip } from "#/components/contacts/ContactChip";
 import { ContactHeroAccessAvatars } from "#/components/contacts/ContactHeroAccessAvatars";
+import { ContactHeroInfo } from "#/components/contacts/ContactHeroInfo";
+import { useComposeFocus } from "#/components/contacts/useComposeFocus";
+import { callFlow } from "#/components/call/callFlow";
 import type { ContactShare } from "#/data/teammates";
 import { ContactDealCard } from "#/components/contacts/ContactDealCard";
 import { ContactInquiryCard } from "#/components/contacts/ContactInquiryCard";
@@ -56,24 +57,6 @@ function medDate(iso: string): string {
     day: "numeric",
     year: "numeric",
   });
-}
-
-/** A labelled icon row in the contact info block. */
-function InfoRow({
-  icon,
-  children,
-}: {
-  icon: typeof faPhone;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="d-flex gap-2">
-      <FontAwesomeIcon icon={icon} className="text-muted mt-1" />
-      <div className="flex-grow-1" style={{ minWidth: 0 }}>
-        {children}
-      </div>
-    </div>
-  );
 }
 
 /** A "Label value" row used in the expanded contact details. Hidden when the
@@ -170,7 +153,9 @@ export function ContactOverviewColumn({
   ]
     .filter(Boolean)
     .join(" ");
-  const hasAddress = !!(addressLine1 || cityStateZip);
+  // One line, same as the design — a mailing address is read, not scanned, so
+  // splitting it over two rows only adds height to the block above the deals.
+  const addressLine = [addressLine1, cityStateZip].filter(Boolean).join(", ");
   const phoneInvalid = contact.phoneStatus === "invalid";
 
   // Primary phone/email first, then any extras (de-duplicated) — the details
@@ -243,7 +228,7 @@ export function ContactOverviewColumn({
       />
 
       {/* Contact hero */}
-      <div className="p-5 d-flex flex-column gap-3 position-relative">
+      <div className="p-4 d-flex flex-column gap-3 position-relative">
         <Button
           variant="ghost"
           size="icon-sm"
@@ -281,25 +266,28 @@ export function ContactOverviewColumn({
               {contactInitials(contact)}
             </Avatar.Fallback>
           </Avatar>
-          <div
-            className="flex-grow-1 d-flex flex-column"
-            style={{ minWidth: 0, gap: 4 }}
-          >
+          <div className="flex-grow-1 d-flex flex-column" style={{ minWidth: 0 }}>
             <span
               className="fw-semibold"
-              style={{ fontSize: 24, lineHeight: 1.1 }}
+              style={{ fontSize: 24, lineHeight: "27px" }}
             >
               {contactFullName(contact)}
             </span>
-            <div className="text-muted d-flex flex-column">
+            {/* Both supporting lines sit at body size — they're context for the
+                name, not headings of their own. Only the last-touch value is
+                emphasized, because that's the fact the broker scans for. */}
+            <div
+              className="text-muted d-flex flex-column"
+              style={{ fontSize: 14, lineHeight: "19px" }}
+            >
               {(contact.title || contact.company) && (
-                <span style={{ fontSize: 16, fontWeight: 500 }}>
+                <span>
                   {[contact.title, contact.company].filter(Boolean).join(" · ")}
                 </span>
               )}
-              <span style={{ fontSize: 14 }}>
+              <span>
                 Last touch:{" "}
-                <span className="fw-bold">{buildLastTouch(contact)}</span>
+                <span className="fw-semibold">{buildLastTouch(contact)}</span>
               </span>
             </div>
           </div>
@@ -307,10 +295,12 @@ export function ContactOverviewColumn({
 
         <div className="d-flex align-items-center justify-content-between gap-2">
           <div className="d-flex align-items-center flex-wrap gap-2">
+            {/* The compact People-table badge, unscaled — the hero used to size
+                it up to match the deal cards, but at 28px it read as the loudest
+                thing on the card, ahead of the name. */}
             <ContactStageBadge
               relationship={contact.relationship}
               className="d-inline-flex align-items-center"
-              style={{ height: 28, fontSize: 14 }}
             />
             <ContactHeroAccessAvatars shares={shares} onOpenShare={onOpenShare} />
           </div>
@@ -331,80 +321,61 @@ export function ContactOverviewColumn({
 
         {showDetails && (
           <div className="contact-details-panel d-flex flex-column gap-3">
-            {/* Contact info — each line hidden when the contact has no value
-                for it; the whole block drops out if there's nothing to show. */}
-            {(allPhones.length > 0 || allEmails.length > 0 || hasAddress) && (
-              <div className="d-flex flex-column gap-2 border-bottom pb-3">
-                {allPhones.length > 0 && (
-                  <InfoRow icon={faPhone}>
-                    <div className="d-flex flex-column gap-1">
-                      {allPhones.map((phone, i) => (
-                        <span
-                          key={`${phone}-${i}`}
-                          className={
-                            i === 0 && phoneInvalid
-                              ? "text-decoration-line-through text-destructive"
-                              : undefined
-                          }
-                        >
-                          {phone}{" "}
-                          {i === 0 && (
-                            <span className="text-muted fs-small">(mobile)</span>
-                          )}
-                        </span>
-                      ))}
-                    </div>
-                  </InfoRow>
-                )}
-                {allEmails.length > 0 && (
-                  <InfoRow icon={faEnvelope}>
-                    <div
-                      className="d-flex flex-column gap-1"
-                      style={{ minWidth: 0 }}
-                    >
-                      {allEmails.map((email, i) => (
-                        <span
-                          key={`${email}-${i}`}
-                          className="text-truncate d-inline-block w-100"
-                        >
-                          {email}
-                        </span>
-                      ))}
-                    </div>
-                  </InfoRow>
-                )}
-                {hasAddress && (
-                  <InfoRow icon={faLocationDot}>
-                    {addressLine1 && <div>{addressLine1}</div>}
-                    {cityStateZip && <div>{cityStateZip}</div>}
-                  </InfoRow>
-                )}
-              </div>
-            )}
+            {/* Reach-out records. Keyed by contact so the per-type Show/Hide
+                state resets when a call session steps to the next person —
+                this component doesn't remount on its own. */}
+            <ContactHeroInfo
+              key={contact.id}
+              contactId={contact.id}
+              phones={allPhones}
+              emails={allEmails}
+              addressLine={addressLine}
+              phoneInvalid={phoneInvalid}
+              onDial={(phone) => callFlow.open(contact, phone)}
+              onEmail={() => useComposeFocus.getState().request("email")}
+            />
 
             {/* Details */}
-            <div className="d-flex flex-column gap-2">
+            <div className="d-flex flex-column gap-3 border-bottom pb-3">
               <FieldRow label="Source" value={contact.source} />
               <FieldRow label="Company" value={contact.company} />
               <FieldRow label="Title" value={contact.title} />
               <FieldRow label="Created" value={medDate(contact.createdAt)} />
-              <div className="d-flex flex-wrap align-items-center gap-2 pt-1">
+              <div className="d-flex flex-wrap align-items-center gap-2">
                 <span className="fw-semibold">Tags</span>
                 {tags.map((t) => (
                   <ContactChip
                     key={t}
                     label={t}
+                    appearance="muted"
                     removeLabel={`Remove tag ${t}`}
                     onRemove={() =>
                       setTags((prev) => prev.filter((x) => x !== t))
                     }
                   />
                 ))}
-                <Button variant="ghost" size="icon-sm" aria-label="Add tag">
+                <Button
+                  variant="ghost"
+                  appearance="muted"
+                  size="icon-sm"
+                  aria-label="Add tag"
+                >
                   <FontAwesomeIcon icon={faPlus} />
                 </Button>
               </div>
             </div>
+
+            {/* TODO: wire up — flagging a contact do-not-call has to suppress
+                them across call lists and campaigns, not just here. */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="align-self-start"
+              onClick={() => {}}
+            >
+              <FontAwesomeIcon icon={faBan} />
+              Mark as Do Not Call
+            </Button>
           </div>
         )}
       </div>
@@ -426,7 +397,7 @@ export function ContactOverviewColumn({
             <Button
               variant="ghost"
               appearance="muted"
-              size="icon"
+              size="icon-sm"
               aria-label="New deal"
               onClick={() => setNewDealOpen(true)}
             >
@@ -525,7 +496,7 @@ export function ContactOverviewColumn({
             <Button
               variant="ghost"
               appearance="muted"
-              size="icon"
+              size="icon-sm"
               aria-label="Add property"
             >
               <FontAwesomeIcon icon={faPlus} />

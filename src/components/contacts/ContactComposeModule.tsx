@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
@@ -34,6 +34,7 @@ import {
   RelatedDealSelect,
   SparkleButton,
 } from "#/components/contacts/callLogFields";
+import { useComposeFocus } from "#/components/contacts/useComposeFocus";
 
 /** The payload emitted on submit — the panel stamps `id`/`seq`. */
 // `createdAt` is stamped centrally by the page's `addLog`, not by composers.
@@ -170,6 +171,30 @@ export function ContactComposeModule({
   // Reset the outcome only lazily; keep it simple with a stable default.
   const composeName = contact.firstName;
 
+  // An outside request to compose — e.g. clicking an email address in the
+  // contact hero — switches tabs and puts the cursor in the message field, so
+  // the broker lands ready to type. Keyed on the request counter, not the kind,
+  // so clicking the same address twice re-focuses.
+  const focusSeq = useComposeFocus((s) => s.seq);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const [pendingFocus, setPendingFocus] = useState<ComposeKind | null>(null);
+  useEffect(() => {
+    if (focusSeq === 0) return;
+    const kind = useComposeFocus.getState().kind;
+    if (!kind) return;
+    setTab(kind);
+    setPendingFocus(kind);
+  }, [focusSeq]);
+  // Deliberately a second pass: the requested tab's textarea doesn't exist until
+  // the tab switch above commits, so focusing in that same effect would land on
+  // whichever tab was open before. Waiting for `tab` to match is what makes the
+  // ref point at the right field.
+  useEffect(() => {
+    if (!pendingFocus || pendingFocus !== tab) return;
+    setPendingFocus(null);
+    bodyRef.current?.focus();
+  }, [pendingFocus, tab]);
+
   // A contact can carry more than one number; the dropdown only appears when
   // there's a choice to make. With a single number we fold it into the button.
   // `contact.phone` is the primary and leads the list, followed by any extras.
@@ -258,6 +283,7 @@ export function ContactComposeModule({
 
         <div className="compose-textarea">
           <Textarea
+            ref={bodyRef}
             value={body[tab]}
             onChange={(e) => setTabBody(tab, e.target.value)}
             placeholder={PLACEHOLDER[tab](composeName)}
@@ -388,6 +414,7 @@ export function ContactComposeModule({
             </div>
             <div className="compose-textarea">
               <Textarea
+                ref={bodyRef}
                 value={body.email}
                 onChange={(e) => setTabBody("email", e.target.value)}
                 placeholder={PLACEHOLDER.email(composeName)}
