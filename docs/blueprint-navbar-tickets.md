@@ -261,12 +261,25 @@ item must be assembled from `ui/DropdownMenu` and hand-restyled. Building a
 standard account menu took four separate workarounds. These are the parts that
 should exist.
 
-**On the estimate:** unlike BP-A, this is not a set of small fixes. It adds public
-API surface — new exported parts, each needing a desktop form, a mobile form, and
-correct keyboard semantics — so it carries design and documentation cost, and the
-decisions are hard to reverse once consumers depend on the names. Strongly
-consider splitting it: items 1 and 2 are a 3 each on their own, items 3–5 are 1
-each. As a single ticket it is a 3 that will feel bigger than the number.
+**Scope:** all five items land in one file —
+`src/components/Navbar/index.tsx` (458 lines), including the single
+`Object.assign` compound export at `:403-438` that every new part must be
+registered in. Items 1 and 3 additionally need token additions in
+`scss/components/navbar/_index.scss`. Item 4 needs a docs example. That's the
+whole surface: one React file, one SCSS file, docs.
+
+**Keep this as one ticket.** The items are not independently deliverable — they
+add sibling parts to the same compound component, several touch the same export
+block, and item 3's `GroupMenuLabel` is a prerequisite for item 1's mobile-fork
+coverage. Splitting would produce branches that conflict on the same lines. If
+incremental progress needs to be visible, use subtasks or a checklist inside this
+ticket rather than separate tickets.
+
+**On the estimate:** unlike BP-A this is not a set of small fixes — it adds public
+API surface, and each part needs a desktop form, a mobile form, and correct
+keyboard semantics. The names are hard to reverse once consumers depend on them,
+so it carries design and documentation cost the diff size won't reflect. A 3 with
+that understood.
 
 ## Item 1 — `GroupMenuItem` is the only part with a mobile fork
 
@@ -278,7 +291,7 @@ right pattern — `Navbar.Group` deliberately renders a `Collapsible` below
 works in both. **No change requested there.**
 
 The problem is that `GroupMenuItem` is the *only* part that implements it. There
-is no `Navbar.GroupMenuLabel`, `GroupMenuRadioGroup`, `GroupMenuRadioItem`, or
+is no `Navbar.GroupMenuRadioGroup`, `GroupMenuRadioItem`, or
 `GroupMenuCheckboxItem`. A consumer who needs any of those inside a navbar menu
 has no Navbar-level part to reach for, and the only alternative — importing
 `DropdownMenu.RadioGroup` and friends — cannot work in the mobile branch, because
@@ -292,7 +305,6 @@ use the part. Neither is a library-quality answer.
 **Proposed API** — complete the pattern `GroupMenuItem` already establishes:
 
 ```
-Navbar.GroupMenuLabel
 Navbar.GroupMenuRadioGroup
 Navbar.GroupMenuRadioItem
 Navbar.GroupMenuCheckboxItem
@@ -302,6 +314,10 @@ each delegating to the `DropdownMenu` part on desktop and rendering the
 equivalent plain markup inside the `Collapsible` on mobile. Where a mobile
 analogue genuinely doesn't exist, document the part as desktop-only and publish
 the `isMobile` fork as the sanctioned pattern, so consumers aren't inventing it.
+
+`Navbar.GroupMenuLabel` belongs to this set too, but it is specified in item 3
+alongside the separator, since both are about menu structure rather than
+selection state. Build it there and hold it to the same both-branches requirement.
 
 See the SPIKE ticket before implementing: `GroupMenuItem`'s existing mobile fork
 calls `useRender` inside a conditional, and the new parts should not copy that
