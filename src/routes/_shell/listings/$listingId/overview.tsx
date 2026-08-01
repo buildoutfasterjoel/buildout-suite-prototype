@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTriangleExclamation } from "@fortawesome/pro-duotone-svg-icons";
 import { useDataStore } from "#/data/dataStore";
 import { publishReadiness, REQUIRED_FIELD_LABEL } from "#/data/stageGates";
+import { gateContext } from "#/data/dealShape";
 import { requestSetupCompletion } from "#/components/deals/useStageGate";
 import { IngestionBanner } from "#/components/deals/IngestionBanner";
 import { TodayPlanner } from "#/components/deals/TodayPlanner";
@@ -33,7 +34,8 @@ function SetupIncompleteBanner({ listing }: { listing: Listing }) {
     listing.publishedAt === null;
   if (!needsSetup) return null;
 
-  const { missing } = publishReadiness(listing);
+  const { shape, shellActive } = gateContext(listing);
+  const { missing } = publishReadiness(listing, { shape, shellActive });
   if (missing.length === 0) return null;
 
   return (

@@ -8,6 +8,7 @@ import {
   unsatisfiedRequired,
   buildTransitionInput,
 } from "#/data/stageGates";
+import { gateContext } from "#/data/dealShape";
 
 /**
  * App-wide open/close state for the stage-gate modal. Both entry points (the
@@ -78,7 +79,8 @@ export function requestStageChange(
     return;
   }
 
-  const config = resolveGate(deal.status, targetStage, deal.dealType);
+  const ctx = gateContext(deal);
+  const config = resolveGate(deal.status, targetStage, deal.dealType, ctx.shape);
 
   // Pure backward confirm (not leaving Active) — nothing to decide, swap directly.
   if (config.kind === "confirm" && !config.leavesActive) {
@@ -90,7 +92,7 @@ export function requestStageChange(
   // the listing about to go live is the point, not a fallback for missing data.
   // Non-publishing forward gates keep the zero-click swap.
   if (config.kind === "field" && !config.publishes) {
-    const form = seedGateForm(deal);
+    const form = seedGateForm(deal, { shellActive: ctx.shellActive });
     if (unsatisfiedRequired(config, form).length === 0) {
       commitStageTransition(
         buildTransitionInput(config, form, deal.id, actor, deal.dealType),

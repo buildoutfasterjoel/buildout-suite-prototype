@@ -13,6 +13,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendar, faSparkle, faUser } from "@fortawesome/pro-regular-svg-icons";
 import { faNote } from "@fortawesome/pro-duotone-svg-icons";
 import type { PropertyStatus } from "#/data/types";
+import { dealShape, gateContext } from "#/data/dealShape";
 import {
   getListing,
   getSellerOptionGroups,
@@ -219,12 +220,12 @@ export function StageGate({
   const config = useMemo(() => {
     if (!deal) return null;
     if (completeSetup) return completeSetupGate(deal);
-    return resolveGate(deal.status, targetStage, deal.dealType);
+    return resolveGate(deal.status, targetStage, deal.dealType, dealShape(deal));
   }, [deal, targetStage, completeSetup]);
 
   // Seed the working form from the deal each time the gate opens.
   const initialForm = useMemo<GateFormState>(
-    () => (deal ? seedGateForm(deal) : EMPTY_GATE_FORM),
+    () => (deal ? seedGateForm(deal, { shellActive: gateContext(deal).shellActive }) : EMPTY_GATE_FORM),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [dealId, open, completeSetup],
   );
