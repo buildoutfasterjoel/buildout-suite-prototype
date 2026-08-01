@@ -483,9 +483,20 @@ export function buildTransitionInput(
     }
     if (Object.keys(marketing).length > 0) input.marketing = marketing
     if (isLease) {
-      if (form.leaseRate != null) input.leaseRate = form.leaseRate
-      input.leaseRateUnits = form.leaseRateUnits
-      if (form.availableSqFt != null) input.availableSqFt = form.availableSqFt
+      // Only a gate that actually asked for a rate may write one. `required`
+      // already carries the shape decision, so this needs no extra parameter.
+      //
+      // A shell must not write here at all: `input.leaseRateUnits` is set
+      // unconditionally below, and that alone flips `hasLeaseTerms` in
+      // `commitStageTransition`, which then synthesises a `spaceLeaseTerms[0]`
+      // row keyed to the sentinel unit `'whole-property'`. That phantom row
+      // breaks the very invariant the shell publish gate rests on — a shell
+      // holds no space terms, because its spaces do.
+      if (config.required.includes('leaseRate')) {
+        if (form.leaseRate != null) input.leaseRate = form.leaseRate
+        input.leaseRateUnits = form.leaseRateUnits
+        if (form.availableSqFt != null) input.availableSqFt = form.availableSqFt
+      }
     } else if (form.askingPrice != null) {
       input.financials = { askingPrice: form.askingPrice }
     }
