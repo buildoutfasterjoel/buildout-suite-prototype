@@ -12,7 +12,6 @@ import {
   faUserGear,
   faEllipsisVertical,
   faHandshake,
-  faArrowsRotate,
   faSquareDashedCirclePlus,
   faTrashAlt,
 } from "@fortawesome/pro-regular-svg-icons";
@@ -30,8 +29,6 @@ import { AvatarGroup } from "./AvatarGroup";
 import { SyndicationStatus } from "#/components/listings/SyndicationStatus";
 import { requestStageChange } from "#/components/deals/useStageGate";
 import { AddSpaceModal } from "#/components/deals/AddSpaceModal";
-import { resyncChildFromParent } from "#/data/leaseSpaces";
-import { notify } from "#/lib/notify";
 
 /**
  * Full-bleed page header for a listing (which is its deal, 1:1) — identity on the
@@ -51,11 +48,6 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
   // For a child space deal, the last breadcrumb crumb is the unit/suite label.
   const spaceLabel =
     property?.units.find((u) => u.id === listing.unitId)?.label ?? listing.name;
-
-  const resync = () => {
-    resyncChildFromParent(listing.id);
-    notify({ title: "Re-synced from parent", description: listing.name });
-  };
 
   return (
     <div className="bg-card border-bottom">
@@ -140,11 +132,6 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
                   no listing to syndicate. */}
               {listing.dealSide === "seller" && (
                 <SyndicationStatus listing={listing} />
-              )}
-              {parentDeal && (
-                <Button variant="ghost" size="sm" onClick={resync}>
-                  <FontAwesomeIcon icon={faArrowsRotate} /> Re-sync from parent
-                </Button>
               )}
             </div>
           </div>
