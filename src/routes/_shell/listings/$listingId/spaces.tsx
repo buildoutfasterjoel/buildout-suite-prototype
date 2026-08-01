@@ -25,12 +25,17 @@ function SpacesTab() {
   const version = useDataStore((s) => s.listings);
   void version;
   const listing = getListing(listingId);
+  // Whether this deal has a Spaces tab at all — a top-level lease deal, regardless
+  // of stage. Separate from canAddSpaces: a Lost shell still has this tab, it just
+  // can't accept new spaces (see below).
+  const isLeaseParent =
+    listing?.dealType === "Lease" && listing?.parentDealId == null;
   const canAddSpace = listing ? canAddSpaces(listing) : false;
   const rows = buildingAvailability(listingId);
   const property = listing ? getProperty(listing.propertyId) : undefined;
   const [addOpen, setAddOpen] = useState(false);
 
-  if (!canAddSpace) {
+  if (!isLeaseParent) {
     return (
       <div className="p-4">
         <Empty>
@@ -52,9 +57,11 @@ function SpacesTab() {
     <div className="p-4">
       <div className="d-flex align-items-center justify-content-between mb-3">
         <h2 className="fs-6 fw-semibold mb-0">Spaces</h2>
-        <Button variant="primary" onClick={() => setAddOpen(true)}>
-          <FontAwesomeIcon icon={faPlus} /> Add space
-        </Button>
+        {canAddSpace && (
+          <Button variant="primary" onClick={() => setAddOpen(true)}>
+            <FontAwesomeIcon icon={faPlus} /> Add space
+          </Button>
+        )}
       </div>
 
       {rows.length === 0 ? (
@@ -67,11 +74,13 @@ function SpacesTab() {
             Add a space to spin an individual unit into its own deal. The
             building&apos;s marketing is shared by every space.
           </Empty.Content>
-          <Empty.Actions>
-            <Button variant="primary" onClick={() => setAddOpen(true)}>
-              <FontAwesomeIcon icon={faPlus} /> Add space
-            </Button>
-          </Empty.Actions>
+          {canAddSpace && (
+            <Empty.Actions>
+              <Button variant="primary" onClick={() => setAddOpen(true)}>
+                <FontAwesomeIcon icon={faPlus} /> Add space
+              </Button>
+            </Empty.Actions>
+          )}
         </Empty>
       ) : (
         <div className="d-flex flex-column gap-2">
