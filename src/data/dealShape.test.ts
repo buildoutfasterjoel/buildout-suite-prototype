@@ -3,7 +3,8 @@ import { createProposalListing, emptyDraft } from './createListing'
 import { addPropertyUnit, addSpaceToDeal } from './leaseSpaces'
 import { commitStageTransition } from './actions'
 import {
-  dealShape, availableStages, dealStageLabel, spaceAvailability, gateContext, canAddSpaces,
+  dealShape, availableStages, dealStageLabel, spaceAvailability, gateContext,
+  canAddSpaces, isLeaseParent,
 } from './dealShape'
 
 function makeLeaseParent() {
@@ -90,6 +91,37 @@ describe('gateContext', () => {
   })
 })
 
+describe('isLeaseParent', () => {
+  it('is true for a flat lease deal and stays true once it becomes a shell', () => {
+    const parent = makeLeaseParent()
+    expect(isLeaseParent(parent)).toBe(true)
+    const unit = addPropertyUnit(parent.propertyId, { label: 'Suite 300', sqft: 900, unitType: 'retail' })!
+    addSpaceToDeal(parent.id, unit.id)
+    expect(dealShape(parent)).toBe('shell')
+    expect(isLeaseParent(parent)).toBe(true)
+  })
+
+  it('is false for a space deal and for a sale deal', () => {
+    const parent = makeLeaseParent()
+    const unit = addPropertyUnit(parent.propertyId, { label: 'Suite 400', sqft: 900, unitType: 'retail' })!
+    const child = addSpaceToDeal(parent.id, unit.id)!.deal
+    expect(isLeaseParent(child)).toBe(false)
+    expect(isLeaseParent({ ...parent, dealType: 'Sale' })).toBe(false)
+  })
+
+  it('is false for a missing deal, so callers need no null dance', () => {
+    expect(isLeaseParent(undefined)).toBe(false)
+    expect(isLeaseParent(null)).toBe(false)
+  })
+
+  it('stays true for a Lost shell — the tab survives, only the button goes', () => {
+    const parent = makeLeaseParent()
+    const lost = { ...parent, status: 'inactive' as const }
+    expect(isLeaseParent(lost)).toBe(true)
+    expect(canAddSpaces(lost)).toBe(false)
+  })
+})
+
 describe('canAddSpaces', () => {
   it('allows Pitching and Active lease parents', () => {
     const parent = makeLeaseParent()
@@ -103,5 +135,12 @@ describe('canAddSpaces', () => {
     expect(canAddSpaces({ ...parent, status: 'closed' })).toBe(false)
     expect(canAddSpaces({ ...parent, parentDealId: 'p1' })).toBe(false)
     expect(canAddSpaces({ ...parent, dealType: 'Sale' })).toBe(false)
+  })
+
+  it('blocks a tenant-rep lease deal — the split is a landlord-rep concept', () => {
+    const parent = makeLeaseParent()
+    expect(parent.dealSide).toBe('seller')
+    expect(canAddSpaces({ ...parent, dealSide: 'buyer' })).toBe(false)
+    expect(canAddSpaces({ ...parent, dealSide: 'buyer', status: 'active' })).toBe(false)
   })
 })

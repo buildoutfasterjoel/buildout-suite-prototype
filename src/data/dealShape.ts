@@ -48,11 +48,25 @@ export function gateContext(deal: Listing): { shape: DealShape; shellActive: boo
   return { shape, shellActive: shell?.status === 'active' }
 }
 
+/**
+ * Whether this deal owns a building's spaces — a top-level landlord-rep lease
+ * deal, whether or not it has been split yet. The one rule `dealShape` cannot
+ * express: `shell` and `flat-lease` are the same thing to navigation (both get
+ * the Spaces tab), and which of the two a deal is depends only on whether a
+ * child happens to exist. Distinct from `canAddSpaces`, which additionally
+ * requires a stage that can still accept one — a Lost shell keeps its tab.
+ */
+export function isLeaseParent(deal: Listing | undefined | null): boolean {
+  if (!deal) return false
+  const shape = dealShape(deal)
+  return shape === 'shell' || shape === 'flat-lease'
+}
+
 /** Spaces may only be added while the deal can still become a shell. */
 export function canAddSpaces(deal: Listing): boolean {
   return (
-    deal.dealType === 'Lease' &&
-    deal.parentDealId == null &&
+    isLeaseParent(deal) &&
+    deal.dealSide === 'seller' &&
     (deal.status === 'proposal' || deal.status === 'active')
   )
 }
