@@ -29,9 +29,15 @@ function LeadsRoute() {
 
   if (!listing || !property) return null;
 
-  const unitId = dealShape(listing) === "space" ? listing.unitId : undefined;
+  // The space deal's own id — leads are scoped by which listing a contact's
+  // `inquiredListingIds` names, and this space deal IS one such listing.
+  const spaceDealId = dealShape(listing) === "space" ? listing.id : undefined;
 
   return (
-    <PropertyDetailLeads property={property} initialSearch={q} unitId={unitId} />
+    <PropertyDetailLeads
+      property={property}
+      initialSearch={q}
+      spaceDealId={spaceDealId}
+    />
   );
 }

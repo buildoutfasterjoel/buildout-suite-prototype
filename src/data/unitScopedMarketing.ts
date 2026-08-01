@@ -13,13 +13,17 @@ export function mediaForUnit(
 }
 
 /**
- * Leads do NOT fall back: an inquiry about the building is not an inquiry about
- * Suite 200, and showing it as one would misattribute the broker's pipeline.
+ * Leads do NOT fall back: an inquiry on the building's own listing is not an
+ * inquiry on Suite 200, and showing it as one would misattribute the broker's
+ * pipeline. Unlike media, no new field was needed for this — a contact's
+ * `inquiredListingIds` already records exactly which listing(s) (the shell's
+ * own, or a specific space deal's) they inquired against, and a contact can
+ * legitimately appear under more than one space.
  */
-export function leadsForUnit<T extends { unitId: string | null }>(
+export function leadsForSpaceDeal<T extends { inquiredListingIds?: string[] }>(
   leads: T[],
-  unitId: string | null,
+  spaceDealId: string | null,
 ): T[] {
-  if (!unitId) return leads
-  return leads.filter((l) => l.unitId === unitId)
+  if (!spaceDealId) return leads
+  return leads.filter((l) => (l.inquiredListingIds ?? []).includes(spaceDealId))
 }

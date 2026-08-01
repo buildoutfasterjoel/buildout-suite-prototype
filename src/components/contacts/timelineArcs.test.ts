@@ -40,7 +40,6 @@ function fakeContact(over: Partial<Contact> = {}): Contact {
     state: "SC",
     zip: "29401",
     tags: [],
-    unitId: null,
     ...over,
   };
 }

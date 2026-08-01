@@ -999,7 +999,6 @@ function generateContact(allPropertyIds: string[]): Contact {
       TAG_POOL,
       faker.number.int({ min: 0, max: 3 }),
     ),
-    unitId: null,
   }
 }
 

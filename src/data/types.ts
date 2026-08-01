@@ -1050,8 +1050,6 @@ export interface Contact {
       date?: string
     }
   >
-  /** The space deal this inquiry arrived on, when known. */
-  unitId: string | null
   phoneStatus: PhoneStatus
   doNotCall: boolean
   /** Job title / position, e.g. "Managing Member". */

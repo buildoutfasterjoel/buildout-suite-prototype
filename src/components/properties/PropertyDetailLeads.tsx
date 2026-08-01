@@ -27,7 +27,7 @@ import {
 import { faCircleInfo } from "@fortawesome/pro-duotone-svg-icons";
 import type { Contact, Property } from "#/data/types";
 import { getLeadsForProperty } from "#/data/store";
-import { leadsForUnit } from "#/data/unitScopedMarketing";
+import { leadsForSpaceDeal } from "#/data/unitScopedMarketing";
 import { LEAD_STATUSES, leadStatusFor } from "#/data/leadFacts";
 import { useDataStore } from "#/data/dataStore";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
@@ -79,8 +79,6 @@ type Lead = {
   lastUpdated: string;
   exchange1031: string;
   expiration1031: string;
-  /** The space deal this inquiry arrived on, when known (see `Contact.unitId`). */
-  unitId: string | null;
 };
 
 function fmtDate(d: Date): string {
@@ -135,7 +133,6 @@ function toLead(contact: Contact): Lead {
           new Date(added.getFullYear() + 1, added.getMonth(), added.getDate()),
         )
       : "--",
-    unitId: contact.unitId,
   };
 }
 
@@ -152,18 +149,19 @@ const CHECKBOX_COL_W = 44;
 export function PropertyDetailLeads({
   property,
   initialSearch,
-  unitId,
+  spaceDealId,
 }: {
   property: Property;
   /** Pre-fill the name search (deep link from a contact's inquiry card). */
   initialSearch?: string;
   /**
-   * Scope to a single space deal's own inquiries — no fallback to building-wide
-   * leads, unlike media. An inquiry about the building is not an inquiry about
-   * this space, and showing it as one would misattribute the broker's pipeline.
-   * Omitted (or null) shows the property's whole lead library, unfiltered.
+   * Scope to a single space deal's own inquirers — no fallback to
+   * building-wide leads, unlike media. An inquiry on the building's own
+   * listing is not an inquiry on this space, and showing it as one would
+   * misattribute the broker's pipeline. Omitted (or null) shows the
+   * property's whole lead library, unfiltered.
    */
-  unitId?: string | null;
+  spaceDealId?: string | null;
 }) {
   const navigate = useNavigate();
   const [search, setSearch] = useState(initialSearch ?? "");
@@ -175,24 +173,27 @@ export function PropertyDetailLeads({
 
   // The deal's assigned seller is the broker's client, not a lead they worked —
   // getLeadsForProperty keeps them out of the list.
-  const leads = useMemo(
-    () => getLeadsForProperty(property.id).map(toLead),
+  const allLeads = useMemo(
+    () => getLeadsForProperty(property.id),
     [property.id, contacts],
   );
 
   // Leads do NOT fall back to building-wide inquiries the way media does — see
-  // `leadsForUnit`.
-  const scopedLeads = useMemo(
-    () => leadsForUnit(leads, unitId ?? null),
-    [leads, unitId],
+  // `leadsForSpaceDeal`. Scoping happens on the raw contacts (which carry
+  // `inquiredListingIds`) before the `Lead` projection, since that's where the
+  // per-listing inquiry data actually lives; a contact who is only linked to
+  // the property (not an inquirer on this space) drops out here too.
+  const scopedContacts = useMemo(
+    () => leadsForSpaceDeal(allLeads, spaceDealId ?? null),
+    [allLeads, spaceDealId],
   );
+
+  const leads = useMemo(() => scopedContacts.map(toLead), [scopedContacts]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return q
-      ? scopedLeads.filter((l) => l.name.toLowerCase().includes(q))
-      : scopedLeads;
-  }, [scopedLeads, search]);
+    return q ? leads.filter((l) => l.name.toLowerCase().includes(q)) : leads;
+  }, [leads, search]);
 
   const allSelected =
     filtered.length > 0 && filtered.every((l) => selected.has(l.id));
@@ -216,10 +217,10 @@ export function PropertyDetailLeads({
 
   return (
     <div className="d-flex flex-column gap-3 p-4" style={{ minWidth: 0 }}>
-      {unitId && (
+      {spaceDealId && (
         <Alert severity="info" withIcon>
           <FontAwesomeIcon icon={faCircleInfo} />
-          Showing {scopedLeads.length} of {leads.length} — filtered to this
+          Showing {leads.length} of {allLeads.length} — filtered to this
           space. The full library lives on the building.
         </Alert>
       )}
