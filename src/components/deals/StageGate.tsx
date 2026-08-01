@@ -219,7 +219,7 @@ export function StageGate({
   const deal = getListing(dealId);
   const config = useMemo(() => {
     if (!deal) return null;
-    if (completeSetup) return completeSetupGate(deal);
+    if (completeSetup) return completeSetupGate(deal, dealShape(deal));
     return resolveGate(deal.status, targetStage, deal.dealType, dealShape(deal));
   }, [deal, targetStage, completeSetup]);
 

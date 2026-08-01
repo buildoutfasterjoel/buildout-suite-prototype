@@ -356,8 +356,11 @@ export function resolveGate(
  * required fields as the publish gate, but pinned to the deal's current stage so
  * it publishes in place without changing the stage.
  */
-export function completeSetupGate(deal: Listing): GateConfig {
-  const publishGate = resolveGate('proposal', 'active', deal.dealType)
+export function completeSetupGate(
+  deal: Listing,
+  shape: DealShape = deal.dealType === 'Lease' ? 'flat-lease' : 'sale',
+): GateConfig {
+  const publishGate = resolveGate('proposal', 'active', deal.dealType, shape)
   return {
     ...publishGate,
     fromStage: deal.status,
