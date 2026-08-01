@@ -1,19 +1,22 @@
 import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
+import { faVectorSquare } from "@fortawesome/pro-regular-svg-icons";
 import { BuildingSection } from "#/components/listings/edit/sections/BuildingSection";
 import { BuyerSection } from "#/components/listings/edit/sections/BuyerSection";
 import { CondosSection } from "#/components/listings/edit/sections/CondosSection";
 import { LandSection } from "#/components/listings/edit/sections/LandSection";
 import { LeaseSection } from "#/components/listings/edit/sections/LeaseSection";
-import { LeaseSpacesSection } from "#/components/listings/edit/sections/LeaseSpacesSection";
 import { LocationSection } from "#/components/listings/edit/sections/LocationSection";
 import { LotsSection } from "#/components/listings/edit/sections/LotsSection";
 import { MarketingVisibilitySection } from "#/components/listings/edit/sections/MarketingVisibilitySection";
 import { PropertySection } from "#/components/listings/edit/sections/PropertySection";
 import { SaleSection } from "#/components/listings/edit/sections/SaleSection";
+import { SpaceTermsSection } from "#/components/listings/edit/sections/SpaceTermsSection";
 import { TransitSection } from "#/components/listings/edit/sections/TransitSection";
 import { UnitsSection } from "#/components/listings/edit/sections/UnitsSection";
 import { VisualMediaSection } from "#/components/listings/edit/sections/VisualMediaSection";
 import { DisclaimerNotesSection } from "#/components/listings/edit/sections/DisclaimerNotesSection";
+import { Section } from "#/components/listings/listingWidgets";
+import { emptySpaceLeaseTerms } from "#/data/createListing";
 import { propertyTypeEffects, showBuyerSection } from "#/data/listingFormLogic";
 import type {
 	DealMarketing,
@@ -31,6 +34,7 @@ import type {
  * never owns state of its own.
  */
 export function ListingFormEditor({
+	listing,
 	dealType,
 	status,
 	marketing,
@@ -55,6 +59,13 @@ export function ListingFormEditor({
 	setInternalNotes: (v: string) => void;
 }) {
 	const effects = propertyTypeEffects(property.propertyType);
+
+	// A space deal edits exactly one unit's terms — its own. Every other listing
+	// shape manages spaces from the Spaces tab.
+	const spaceUnit =
+		listing.parentDealId != null && listing.unitId
+			? property.units.find((u) => u.id === listing.unitId)
+			: undefined;
 
 	return (
 		<div className="d-flex flex-column gap-6">
@@ -107,12 +118,34 @@ export function ListingFormEditor({
 				<>
 					<Separator />
 					<LeaseSection marketing={marketing} patchMarketing={patchMarketing} />
-					<Separator />
-					<LeaseSpacesSection
-						property={property}
-						marketing={marketing}
-						patchMarketing={patchMarketing}
-					/>
+					{/* Space terms belong to the space deal that owns the unit. A shell or
+					    flat lease deal manages its spaces from the Spaces tab instead. */}
+					{spaceUnit && (
+						<>
+							<Separator />
+							<Section title="Space Terms" icon={faVectorSquare}>
+								<SpaceTermsSection
+									bare
+									unit={spaceUnit}
+									property={property}
+									terms={
+										marketing.spaceLeaseTerms?.[0] ?? emptySpaceLeaseTerms(spaceUnit.id)
+									}
+									onChange={(patch) =>
+										patchMarketing({
+											spaceLeaseTerms: [
+												{
+													...(marketing.spaceLeaseTerms?.[0] ??
+														emptySpaceLeaseTerms(spaceUnit.id)),
+													...patch,
+												},
+											],
+										})
+									}
+								/>
+							</Section>
+						</>
+					)}
 				</>
 			)}
 			<Separator />
