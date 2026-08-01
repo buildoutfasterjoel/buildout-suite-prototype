@@ -8,7 +8,7 @@ import { faVectorSquare, faPlus } from "@fortawesome/pro-regular-svg-icons";
 import { useDataStore } from "#/data/dataStore";
 import { getListing, getProperty } from "#/data/store";
 import { buildingAvailability } from "#/data/buildingAvailability";
-import { canAddSpaces, dealShape } from "#/data/dealShape";
+import { canAddSpaces, dealShape, isLeaseParent } from "#/data/dealShape";
 import { emptySpaceLeaseTerms } from "#/data/createListing";
 import { updateDealMarketing } from "#/data/actions";
 import { SpaceTermsSection } from "#/components/listings/edit/sections/SpaceTermsSection";
@@ -28,14 +28,13 @@ function SpacesTab() {
   // Whether this deal has a Spaces tab at all — a top-level lease deal, regardless
   // of stage. Separate from canAddSpaces: a Lost shell still has this tab, it just
   // can't accept new spaces (see below).
-  const isLeaseParent =
-    listing?.dealType === "Lease" && listing?.parentDealId == null;
+  const leaseParent = isLeaseParent(listing);
   const canAddSpace = listing ? canAddSpaces(listing) : false;
   const rows = buildingAvailability(listingId);
   const property = listing ? getProperty(listing.propertyId) : undefined;
   const [addOpen, setAddOpen] = useState(false);
 
-  if (!isLeaseParent) {
+  if (!leaseParent) {
     return (
       <div className="p-4">
         <Empty>
@@ -123,7 +122,6 @@ function SpacesTab() {
                 </div>
                 <Collapsible.Content className="border-top p-3">
                   <SpaceTermsSection
-                    bare
                     unit={unit}
                     property={property}
                     terms={terms}

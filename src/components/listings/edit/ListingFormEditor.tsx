@@ -62,10 +62,54 @@ export function ListingFormEditor({
 
 	// A space deal edits exactly one unit's terms — its own. Every other listing
 	// shape manages spaces from the Spaces tab.
+	const isSpaceDeal = listing.parentDealId != null;
 	const spaceUnit =
-		listing.parentDealId != null && listing.unitId
+		isSpaceDeal && listing.unitId
 			? property.units.find((u) => u.id === listing.unitId)
 			: undefined;
+
+	// Every other section on this tab is property-level. Location, Transit,
+	// Property, Building, Units and Lots write straight to the shared `Property`,
+	// so editing them from inside Suite 200 silently rewrites the building with
+	// no indication of scope. Lease copy, Marketing Visibility, Visual Media and
+	// the Disclaimer write into the child's own forked `marketing`, giving the
+	// building's marketing a second editable home that quietly diverges from the
+	// shell. Both are wrong for a space, whose only marketing surface is the
+	// read-through Property Marketing hub. So the space's Listing tab is exactly
+	// its own terms; the Deal tab still carries Setup, Transaction and Financials.
+	if (isSpaceDeal) {
+		return (
+			<div className="d-flex flex-column gap-6">
+				{spaceUnit ? (
+					<Section title="Space Terms" icon={faVectorSquare}>
+						<SpaceTermsSection
+							unit={spaceUnit}
+							property={property}
+							terms={
+								marketing.spaceLeaseTerms?.[0] ?? emptySpaceLeaseTerms(spaceUnit.id)
+							}
+							onChange={(patch) =>
+								patchMarketing({
+									spaceLeaseTerms: [
+										{
+											...(marketing.spaceLeaseTerms?.[0] ??
+												emptySpaceLeaseTerms(spaceUnit.id)),
+											...patch,
+										},
+									],
+								})
+							}
+						/>
+					</Section>
+				) : (
+					<p className="text-muted mb-0">
+						This space is not linked to a unit on the building, so there are no
+						space terms to edit.
+					</p>
+				)}
+			</div>
+		);
+	}
 
 	return (
 		<div className="d-flex flex-column gap-6">
@@ -117,35 +161,9 @@ export function ListingFormEditor({
 			{dealType === "Lease" && (
 				<>
 					<Separator />
+					{/* Space terms belong to the space deal that owns the unit — a shell
+					    or flat lease deal manages its spaces from the Spaces tab. */}
 					<LeaseSection marketing={marketing} patchMarketing={patchMarketing} />
-					{/* Space terms belong to the space deal that owns the unit. A shell or
-					    flat lease deal manages its spaces from the Spaces tab instead. */}
-					{spaceUnit && (
-						<>
-							<Separator />
-							<Section title="Space Terms" icon={faVectorSquare}>
-								<SpaceTermsSection
-									bare
-									unit={spaceUnit}
-									property={property}
-									terms={
-										marketing.spaceLeaseTerms?.[0] ?? emptySpaceLeaseTerms(spaceUnit.id)
-									}
-									onChange={(patch) =>
-										patchMarketing({
-											spaceLeaseTerms: [
-												{
-													...(marketing.spaceLeaseTerms?.[0] ??
-														emptySpaceLeaseTerms(spaceUnit.id)),
-													...patch,
-												},
-											],
-										})
-									}
-								/>
-							</Section>
-						</>
-					)}
 				</>
 			)}
 			<Separator />
@@ -167,11 +185,9 @@ export function ListingFormEditor({
 				</>
 			)}
 			<Separator />
-			<VisualMediaSection
-				marketing={marketing}
-				patchMarketing={patchMarketing}
-				unitId={spaceUnit?.id}
-			/>
+			{/* Unscoped here by construction: only a non-space shape reaches this
+			    branch, and those own the whole library. */}
+			<VisualMediaSection marketing={marketing} patchMarketing={patchMarketing} />
 			<Separator />
 			<DisclaimerNotesSection
 				marketing={marketing}

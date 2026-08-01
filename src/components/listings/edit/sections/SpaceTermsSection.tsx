@@ -1,6 +1,4 @@
 import { Accordion } from "@buildoutinc/blueprint-react/ui/Accordion";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faVectorSquare } from "@fortawesome/pro-regular-svg-icons";
 import {
 	Col,
 	DateField,
@@ -11,7 +9,6 @@ import {
 	TextField,
 	YesNoNaField,
 } from "#/components/listings/edit/fieldWidgets";
-import { CollapsibleCard } from "#/components/listings/edit/ReorderableAccordion";
 import { ALL_SUBTYPES } from "#/components/listings/edit/sections/PropertySection";
 import type {
 	LeaseRateUnits,
@@ -35,30 +32,26 @@ const LEASE_RATE_MODES = ["Flat", "Range", "Hidden"] as const;
 const SPACE_SIZE_UNITS = ["SF", "RSF", "SqM"] as const;
 
 /**
- * A single space's lease terms editor. On a shell/flat lease deal this
- * renders inside a `CollapsibleCard` — one per unit, managed from the Spaces
- * tab. On a space deal (which owns exactly one unit) it renders `bare`,
- * inline in the Listing tab's own edit form.
+ * A single space's lease terms editor. Renders the fields only — each caller
+ * supplies its own frame: the Spaces tab wraps one per unit in a `Collapsible`,
+ * and a space deal's Listing tab drops it into a `Section` as the whole tab.
  */
 export function SpaceTermsSection({
 	unit,
 	property,
 	terms,
 	onChange,
-	bare = false,
 }: {
 	unit: PropertyUnit;
 	property: Property;
 	terms: SpaceLeaseTerms;
 	onChange: (patch: Partial<SpaceLeaseTerms>) => void;
-	/** Render bare, without the collapsible card wrapper. Used on a space deal's own edit form. */
-	bare?: boolean;
 }) {
 	const isIndustrial = property.propertyType === "industrial";
 	// Multi-tenant properties require a per-space suite/address (visual hint only).
 	const addressRequired = property.tenancy !== "Single";
 
-	const body = (
+	return (
 		<>
 			{/* Availability is the space deal's stage — see spaceAvailability() — not a field. */}
 			<p className="form-text mb-0">
@@ -600,23 +593,5 @@ export function SpaceTermsSection({
 				</Accordion.Item>
 			</Accordion>
 		</>
-	);
-
-	if (bare) return body;
-
-	return (
-		<CollapsibleCard
-			item={unit}
-			renderTrigger={() => (
-				<span className="fw-semibold d-flex align-items-center gap-2">
-					<FontAwesomeIcon icon={faVectorSquare} className="text-muted" />
-					{unit.label}
-					<span className="text-muted fw-normal ms-1">
-						{unit.sqft.toLocaleString()} SF
-					</span>
-				</span>
-			)}
-			renderContent={() => body}
-		/>
 	);
 }
