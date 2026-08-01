@@ -807,11 +807,16 @@ git commit -m "feat(lease): resolve gates against deal shape and shell state"
 
 ---
 
-## Task 6: Extract `SpaceTermsSection`
+## Task 6: Extract `SpaceTermsSection` and retire `LeaseSpacesSection`
+
+This task both creates the new component and removes the old one. They are one
+unit: leaving the extraction and the deletion in separate commits would leave the
+tree with two copies of the same 550-line editor.
 
 **Files:**
 - Create: `src/components/listings/edit/sections/SpaceTermsSection.tsx`
-- Modify: `src/components/listings/edit/sections/LeaseSpacesSection.tsx` (becomes a thin re-export, deleted in Task 7)
+- Delete: `src/components/listings/edit/sections/LeaseSpacesSection.tsx`
+- Modify: `src/components/listings/edit/ListingFormEditor.tsx:106-117`
 
 **Interfaces:**
 - Consumes: `Property`, `PropertyUnit`, `SpaceLeaseTerms` from `#/data/types`; the field widgets from `#/components/listings/edit/fieldWidgets`; `CollapsibleCard` from `#/components/listings/edit/ReorderableAccordion`; `ALL_SUBTYPES` from `#/components/listings/edit/sections/PropertySection`.
@@ -881,32 +886,12 @@ export function SpaceTermsSection({ unit, property, terms, onChange, bare = fals
 
 Note the `Close Date` field was conditional on `terms.status === "Closed"`; remove it along with the Status select.
 
-- [ ] **Step 2: Type-check**
+- [ ] **Step 2: Type-check the new file in isolation**
 
 Run: `bunx tsc --noEmit`
-Expected: clean. Unused imports in the new file (e.g. `DateField` if the only use was Close Date — it is also used by `Date Available` and `Sublease Expiration`, so keep it) must be removed if the compiler flags them.
+Expected: clean. Remove any import the compiler flags as unused. Keep `DateField` — it is still used by `Date Available` and `Sublease Expiration`.
 
-- [ ] **Step 3: Commit**
-
-```bash
-git add src/components/listings/edit/sections/SpaceTermsSection.tsx
-git commit -m "refactor(lease): extract SpaceTermsSection from the per-unit lease card"
-```
-
----
-
-## Task 7: Remove Lease Spaces from the edit form; mount space terms on the space deal
-
-**Files:**
-- Modify: `src/components/listings/edit/ListingFormEditor.tsx:106-117`
-- Delete: `src/components/listings/edit/sections/LeaseSpacesSection.tsx`
-- Modify: `src/components/deals/DealMarketingEditor.tsx` (pass the listing through if not already available)
-
-**Interfaces:**
-- Consumes: `SpaceTermsSection` from Task 6; `dealShape` from `#/data/dealShape`.
-- Produces: `ListingFormEditor` renders `SpaceTermsSection` only when the listing is a space deal.
-
-- [ ] **Step 1: Replace the lease block in `ListingFormEditor.tsx`**
+- [ ] **Step 3: Replace the lease block in `ListingFormEditor.tsx`**
 
 `ListingFormEditor` already receives the full `listing` prop (declared at `:45`, currently unused). Replace lines 106–117:
 
@@ -960,20 +945,22 @@ Add above the `return`:
 
 Add the imports: `SpaceTermsSection`, `Section` from `#/components/listings/listingWidgets`, `faVectorSquare` from `@fortawesome/pro-regular-svg-icons`, `emptySpaceLeaseTerms` from `#/data/createListing`. Remove the `LeaseSpacesSection` import. Remove `listing` from the eslint-unused list if one exists.
 
-- [ ] **Step 2: Delete the old section**
+- [ ] **Step 4: Delete the old section**
 
 ```bash
 git rm src/components/listings/edit/sections/LeaseSpacesSection.tsx
 grep -rn "LeaseSpacesSection" src
 ```
-Expected: no output.
+Expected: no output from the grep.
 
-- [ ] **Step 3: Verify**
+- [ ] **Step 5: Verify**
 
 Run: `bunx tsc --noEmit && bunx vitest run`
 Expected: clean; all suites pass.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 6: Commit**
+
+Extraction and deletion land together so the tree never holds two copies.
 
 ```bash
 git add -A src/components/listings/edit
