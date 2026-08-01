@@ -29,7 +29,7 @@ import {
 import { useDataStore } from "#/data/dataStore";
 import { getListing, getProperty } from "#/data/store";
 import { propertyQualifiesForUnderwriting } from "#/components/deals/underwriting/eligibility";
-import { dealShape, canAddSpaces } from "#/data/dealShape";
+import { dealShape } from "#/data/dealShape";
 
 type NavItem = { label: string; href: string; icon: IconDefinition };
 type NavGroup = { label?: string; items: NavItem[] };
@@ -125,6 +125,11 @@ export function PropertyDetailSidebar() {
     listing?.underwriting != null || propertyQualifiesForUnderwriting(property);
 
   const shape = listing ? dealShape(listing) : "sale";
+  // Whether this deal has a Spaces tab at all — a top-level lease deal, regardless
+  // of stage. Mirrors `isLeaseParent` in spaces.tsx: separate from canAddSpaces,
+  // which governs only the Add-space buttons, not navigation.
+  const isLeaseParent =
+    listing?.dealType === "Lease" && listing?.parentDealId == null;
 
   /** Property-level marketing surfaces — a space deal has none of these. */
   const PROPERTY_ONLY = new Set([
@@ -146,7 +151,7 @@ export function PropertyDetailSidebar() {
       if (shape === "shell" && (item.href === "financials" || item.href === "financial-documents")) {
         return false;
       }
-      if (item.href === "spaces") return canAddSpaces(listing!) || shape === "shell";
+      if (item.href === "spaces") return isLeaseParent;
       if (item.href === "underwriting") return showsUnderwriting;
       return true;
     }),
