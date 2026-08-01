@@ -292,6 +292,43 @@ describe("requestStageChange wiring for a space deal", () => {
   });
 });
 
+describe("shell ladder enforcement", () => {
+  beforeEach(() => useStageGate.getState().close());
+
+  it("refuses a shell's move to Under Contract or Closed, quietly", () => {
+    const { parent } = makeSpaceDeal();
+    for (const target of ["under-contract", "closed"] as const) {
+      requestStageChange(parent.id, target);
+      // Silent no-op: nothing committed, no modal.
+      expect(useDataStore.getState().listings.get(parent.id)?.status).toBe(
+        "proposal",
+      );
+      expect(useStageGate.getState().open).toBe(false);
+    }
+  });
+
+  it("still lets a shell reach the stages its ladder does have", () => {
+    const { parent } = makeSpaceDeal();
+    requestStageChange(parent.id, "active");
+    // A publishing move always opens the preview rather than committing.
+    expect(useStageGate.getState().open).toBe(true);
+    expect(useStageGate.getState().targetStage).toBe("active");
+  });
+
+  it("leaves a childless flat-lease deal on the full ladder", () => {
+    const parent = createProposalListing({
+      ...emptyDraft(),
+      name: "Whole Building Lease",
+      dealType: "Lease",
+    });
+    putDeal({ ...parent, dealSide: "seller", status: "active" });
+    requestStageChange(parent.id, "under-contract");
+    // Reaches the gate (gaps to fill) rather than being refused outright.
+    expect(useStageGate.getState().open).toBe(true);
+    expect(useStageGate.getState().targetStage).toBe("under-contract");
+  });
+});
+
 describe("seedGateForm wiring for a space deal", () => {
   it("seeds shellActive from the parent's live status via gateContext, not a stale default", () => {
     const { parent, child } = makeSpaceDeal();
