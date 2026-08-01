@@ -35,7 +35,7 @@ import type {
 } from "#/data/types";
 import { resolveIngestionConflict, updateDeal } from "#/data/actions";
 import { updateProperty } from "#/data/store";
-import { dealShape } from "#/data/dealShape";
+import { availableStages, dealShape, dealStageLabel } from "#/data/dealShape";
 import {
 	commissionAmountFromPct,
 	commissionPctFromAmount,
@@ -46,10 +46,6 @@ import {
 	grossIncome,
 	capRate,
 } from "#/data/listingFinancials";
-import {
-	STATUS_LABELS,
-	PROPERTY_STATUSES,
-} from "#/components/properties/propertyDisplay";
 import { Section } from "#/components/listings/listingWidgets";
 import {
 	TextField,
@@ -397,6 +393,10 @@ export function DealMarketingEditor({
 			params: { listingId: listing.id },
 		});
 
+	// Computed once — `dealShape` scans every listing to find children, so it
+	// isn't free to call more than once per render.
+	const shape = dealShape(listing);
+
 	const pendingPublishDealId = useStageGate((s) => s.pendingPublishDealId);
 	const showPublishBanner = pendingPublishDealId === listing.id;
 
@@ -618,8 +618,10 @@ export function DealMarketingEditor({
 								<SelectField
 									label="Status"
 									value={status}
-									options={PROPERTY_STATUSES}
-									labels={STATUS_LABELS}
+									options={availableStages(shape)}
+									labels={Object.fromEntries(
+										availableStages(shape).map((s) => [s, dealStageLabel(s, shape)]),
+									)}
 									onChange={setStatus}
 								/>
 							</Col>
@@ -654,7 +656,7 @@ export function DealMarketingEditor({
 						/>
 					</Section>
 
-					{dealShape(listing) !== "shell" && (
+					{shape !== "shell" && (
 						<>
 						<Separator />
 

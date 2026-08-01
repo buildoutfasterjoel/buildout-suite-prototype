@@ -17,11 +17,9 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing, ListingStage } from "#/data/types";
 import { getProperty, getListing } from "#/data/store";
-import { canAddSpaces } from "#/data/dealShape";
+import { canAddSpaces, dealShape, dealStageLabel, availableStages } from "#/data/dealShape";
 import {
-  STATUS_LABELS,
   STATUS_COLORS,
-  PROPERTY_STATUSES,
   hash,
   getRefId,
   getPhotoUrl,
@@ -40,6 +38,7 @@ import { AddSpaceModal } from "#/components/deals/AddSpaceModal";
 export function PropertyDetailHeader({ listing }: { listing: Listing }) {
   const seed = hash(listing.id);
   const refId = getRefId(listing.id);
+  const shape = dealShape(listing);
   const property = getProperty(listing.propertyId);
   const address = `${property?.street}, ${property?.city}, ${property?.state} ${property?.zip}`;
   const [addSpaceOpen, setAddSpaceOpen] = useState(false);
@@ -159,12 +158,12 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
                       }}
                     />
                     <Select.Value>
-                      {(v) => STATUS_LABELS[v as ListingStage]}
+                      {(v) => dealStageLabel(v as ListingStage, shape)}
                     </Select.Value>
                   </span>
                 </Select.Trigger>
                 <Select.Content>
-                  {PROPERTY_STATUSES.map((s) => (
+                  {availableStages(shape).map((s) => (
                     <Select.Item key={s} value={s}>
                       <span className="d-inline-flex align-items-center gap-2">
                         <span
@@ -175,7 +174,7 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
                             backgroundColor: STATUS_COLORS[s],
                           }}
                         />
-                        {STATUS_LABELS[s]}
+                        {dealStageLabel(s, shape)}
                       </span>
                     </Select.Item>
                   ))}

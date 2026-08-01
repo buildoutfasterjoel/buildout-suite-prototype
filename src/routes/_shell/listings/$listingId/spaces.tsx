@@ -8,7 +8,7 @@ import { faVectorSquare, faPlus } from "@fortawesome/pro-regular-svg-icons";
 import { useDataStore } from "#/data/dataStore";
 import { getListing, getProperty } from "#/data/store";
 import { buildingAvailability } from "#/data/buildingAvailability";
-import { canAddSpaces } from "#/data/dealShape";
+import { canAddSpaces, dealShape } from "#/data/dealShape";
 import { emptySpaceLeaseTerms } from "#/data/createListing";
 import { updateDealMarketing } from "#/data/actions";
 import { SpaceTermsSection } from "#/components/listings/edit/sections/SpaceTermsSection";
@@ -111,7 +111,7 @@ function SpacesTab() {
                         : "Rate TBD"}
                     </span>
                     <span className="text-muted">{row.availability}</span>
-                    <DealStageBadge stage={child.status} />
+                    <DealStageBadge stage={child.status} shape={dealShape(child)} />
                     <Link
                       to="/listings/$listingId"
                       params={{ listingId: row.dealId }}
