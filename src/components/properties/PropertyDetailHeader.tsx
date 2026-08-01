@@ -17,6 +17,7 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing, ListingStage } from "#/data/types";
 import { getProperty, getListing } from "#/data/store";
+import { canAddSpaces } from "#/data/dealShape";
 import {
   STATUS_LABELS,
   STATUS_COLORS,
@@ -182,7 +183,7 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
               </Select>
             </div>
             <div className="d-flex align-items-center gap-2">
-              {listing.dealType === "Lease" && listing.parentDealId == null && (
+              {canAddSpaces(listing) && (
                 <Button
                   variant="secondary"
                   aria-label="Add space"
