@@ -9,11 +9,11 @@ import { faArrowRight, faEnvelope } from "@fortawesome/pro-regular-svg-icons";
 import { getProperty, getStore } from "#/data/store";
 import type { Listing } from "#/data/types";
 import {
-  STATUS_LABELS,
   STATUS_COLORS,
   getPhotoUrl,
   hash,
 } from "#/components/properties/propertyDisplay";
+import { dealShape, dealStageLabel } from "#/data/dealShape";
 import { getListingTraffic } from "#/data/listingTraffic";
 
 function StatColumn({ label, value }: { label: string; value: number }) {
@@ -57,7 +57,7 @@ function ListingRow({ listing, isLast }: { listing: Listing; isLast: boolean }) 
             borderColor: STATUS_COLORS[listing.status],
           }}
         >
-          {STATUS_LABELS[listing.status].toUpperCase()}
+          {dealStageLabel(listing.status, dealShape(listing)).toUpperCase()}
         </Badge>
         <span className="text-muted fs-xs">
           {property?.street}, {property?.city}, {property?.state}
