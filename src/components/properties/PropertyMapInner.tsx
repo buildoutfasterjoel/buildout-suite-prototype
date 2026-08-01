@@ -7,8 +7,8 @@ import { getProperty } from "#/data/store";
 import {
   TYPE_COLORS,
   TYPE_LABELS,
-  STATUS_LABELS,
 } from "./propertyDisplay";
+import { dealShape, dealStageLabel } from "#/data/dealShape";
 import { dealHeadlineLabel } from "#/components/deals/dealDisplay";
 
 const US_CENTER: [number, number] = [39.5, -98.5];
@@ -89,7 +89,7 @@ export default function PropertyMapInner({ listings }: { listings: Listing[] }) 
                   </span>
                 </div>
                 <div className="text-muted fs-xs mt-1">
-                  {STATUS_LABELS[p.status]}
+                  {dealStageLabel(p.status, dealShape(p))}
                 </div>
               </div>
             </Popup>

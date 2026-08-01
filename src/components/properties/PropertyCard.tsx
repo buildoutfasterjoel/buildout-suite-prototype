@@ -10,12 +10,12 @@ import { getProperty } from "#/data/store";
 import {
   TYPE_ICONS,
   TYPE_LABELS,
-  STATUS_LABELS,
   STATUS_COLORS,
   hash,
   getRefId,
   getPhotoUrl,
 } from "./propertyDisplay";
+import { dealShape, dealStageLabel } from "#/data/dealShape";
 import { dealHeadlineLabel } from "#/components/deals/dealDisplay";
 import { AvatarGroup } from "./AvatarGroup";
 
@@ -72,7 +72,7 @@ export function PropertyCard({ listing }: { listing: Listing }) {
               }}
             >
               <FontAwesomeIcon icon={faSignHanging} style={{ fontSize: 9 }} />
-              {STATUS_LABELS[listing.status]}
+              {dealStageLabel(listing.status, dealShape(listing))}
             </span>
             <span
               className="fw-semibold text-white"
