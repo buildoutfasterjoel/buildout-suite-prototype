@@ -117,8 +117,8 @@ export function emptyUnitMixRow(): UnitMixRow {
   }
 }
 
-export function emptyVisualMediaLink(): VisualMediaLink {
-  return { id: crypto.randomUUID(), url: '', mediaType: 'Interactive Site Plan' }
+export function emptyVisualMediaLink(unitId: string | null = null): VisualMediaLink {
+  return { id: crypto.randomUUID(), url: '', mediaType: 'Interactive Site Plan', unitId }
 }
 import {
   addListing,

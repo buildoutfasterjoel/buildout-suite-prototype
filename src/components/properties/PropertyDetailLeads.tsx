@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Table } from "@buildoutinc/blueprint-react/ui/Table";
+import { Alert } from "@buildoutinc/blueprint-react/ui/Alert";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
@@ -23,8 +24,10 @@ import {
   faEnvelope,
   faPhone,
 } from "@fortawesome/pro-regular-svg-icons";
+import { faCircleInfo } from "@fortawesome/pro-duotone-svg-icons";
 import type { Contact, Property } from "#/data/types";
 import { getLeadsForProperty } from "#/data/store";
+import { leadsForUnit } from "#/data/unitScopedMarketing";
 import { LEAD_STATUSES, leadStatusFor } from "#/data/leadFacts";
 import { useDataStore } from "#/data/dataStore";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
@@ -76,6 +79,8 @@ type Lead = {
   lastUpdated: string;
   exchange1031: string;
   expiration1031: string;
+  /** The space deal this inquiry arrived on, when known (see `Contact.unitId`). */
+  unitId: string | null;
 };
 
 function fmtDate(d: Date): string {
@@ -130,6 +135,7 @@ function toLead(contact: Contact): Lead {
           new Date(added.getFullYear() + 1, added.getMonth(), added.getDate()),
         )
       : "--",
+    unitId: contact.unitId,
   };
 }
 
@@ -146,10 +152,18 @@ const CHECKBOX_COL_W = 44;
 export function PropertyDetailLeads({
   property,
   initialSearch,
+  unitId,
 }: {
   property: Property;
   /** Pre-fill the name search (deep link from a contact's inquiry card). */
   initialSearch?: string;
+  /**
+   * Scope to a single space deal's own inquiries — no fallback to building-wide
+   * leads, unlike media. An inquiry about the building is not an inquiry about
+   * this space, and showing it as one would misattribute the broker's pipeline.
+   * Omitted (or null) shows the property's whole lead library, unfiltered.
+   */
+  unitId?: string | null;
 }) {
   const navigate = useNavigate();
   const [search, setSearch] = useState(initialSearch ?? "");
@@ -166,10 +180,19 @@ export function PropertyDetailLeads({
     [property.id, contacts],
   );
 
+  // Leads do NOT fall back to building-wide inquiries the way media does — see
+  // `leadsForUnit`.
+  const scopedLeads = useMemo(
+    () => leadsForUnit(leads, unitId ?? null),
+    [leads, unitId],
+  );
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return q ? leads.filter((l) => l.name.toLowerCase().includes(q)) : leads;
-  }, [leads, search]);
+    return q
+      ? scopedLeads.filter((l) => l.name.toLowerCase().includes(q))
+      : scopedLeads;
+  }, [scopedLeads, search]);
 
   const allSelected =
     filtered.length > 0 && filtered.every((l) => selected.has(l.id));
@@ -193,6 +216,13 @@ export function PropertyDetailLeads({
 
   return (
     <div className="d-flex flex-column gap-3 p-4" style={{ minWidth: 0 }}>
+      {unitId && (
+        <Alert severity="info" withIcon>
+          <FontAwesomeIcon icon={faCircleInfo} />
+          Showing {scopedLeads.length} of {leads.length} — filtered to this
+          space. The full library lives on the building.
+        </Alert>
+      )}
       {/* Title row */}
       <ListingPageHeader
         title="Leads"

@@ -167,7 +167,11 @@ export function ListingFormEditor({
 				</>
 			)}
 			<Separator />
-			<VisualMediaSection marketing={marketing} patchMarketing={patchMarketing} />
+			<VisualMediaSection
+				marketing={marketing}
+				patchMarketing={patchMarketing}
+				unitId={spaceUnit?.id}
+			/>
 			<Separator />
 			<DisclaimerNotesSection
 				marketing={marketing}

@@ -121,6 +121,8 @@ export interface VisualMediaLink {
   id: string
   url: string
   mediaType: VisualMediaType
+  /** The space this asset depicts, when it depicts one. Null = whole building. */
+  unitId: string | null
 }
 
 export interface Property {
@@ -1048,6 +1050,8 @@ export interface Contact {
       date?: string
     }
   >
+  /** The space deal this inquiry arrived on, when known. */
+  unitId: string | null
   phoneStatus: PhoneStatus
   doNotCall: boolean
   /** Job title / position, e.g. "Managing Member". */

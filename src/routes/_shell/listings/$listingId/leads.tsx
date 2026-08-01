@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getStore } from "#/data/store";
+import { dealShape } from "#/data/dealShape";
 import { PropertyDetailLeads } from "#/components/properties/PropertyDetailLeads";
 
 export const Route = createFileRoute("/_shell/listings/$listingId/leads")({
@@ -26,7 +27,11 @@ function LeadsRoute() {
   const listing = store.listings.get(listingId);
   const property = listing && store.properties.get(listing.propertyId);
 
-  if (!property) return null;
+  if (!listing || !property) return null;
 
-  return <PropertyDetailLeads property={property} initialSearch={q} />;
+  const unitId = dealShape(listing) === "space" ? listing.unitId : undefined;
+
+  return (
+    <PropertyDetailLeads property={property} initialSearch={q} unitId={unitId} />
+  );
 }

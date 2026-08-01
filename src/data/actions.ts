@@ -716,6 +716,8 @@ export interface NewContactInput {
   inquiredListingIds?: string[]
   /** What they wrote and how it reached us, keyed by inquired listing id. */
   inquiryDetails?: Contact['inquiryDetails']
+  /** The space deal this inquiry arrived on, when known. */
+  unitId?: string | null
   /** Primary address (line 1), if captured. */
   street?: string
   city?: string
@@ -858,6 +860,7 @@ export function createContact(input: NewContactInput): { contact: Contact } {
     inquiries: input.inquiredListingIds?.length ?? 0,
     inquiredListingIds: input.inquiredListingIds,
     inquiryDetails: input.inquiryDetails,
+    unitId: input.unitId ?? null,
     phoneStatus: 'unknown',
     doNotCall: input.doNotCall ?? false,
     title: input.title ?? '',
