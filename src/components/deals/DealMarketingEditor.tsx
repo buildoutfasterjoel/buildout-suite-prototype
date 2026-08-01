@@ -35,6 +35,7 @@ import type {
 } from "#/data/types";
 import { resolveIngestionConflict, updateDeal } from "#/data/actions";
 import { updateProperty } from "#/data/store";
+import { dealShape } from "#/data/dealShape";
 import {
 	commissionAmountFromPct,
 	commissionPctFromAmount,
@@ -653,236 +654,240 @@ export function DealMarketingEditor({
 						/>
 					</Section>
 
-					<Separator />
+					{dealShape(listing) !== "shell" && (
+						<>
+						<Separator />
 
-					{/* ── Transaction terms (parity with the stage gate + Edit Transaction dialog) ── */}
-					<Section title="Transaction Terms" icon={faFileContract}>
-						<FieldGrid>
-							<Col>
-								<NumberField
-									label="Sale Price"
-									value={transaction.salePrice || null}
-									onChange={setSalePrice}
-								/>
-							</Col>
-							<Col>
-								<NumberField
-									label="Gross Commission %"
-									value={transaction.commissionPct || null}
-									onChange={setCommissionPct}
-								/>
-							</Col>
-							<Col>
-								<NumberField
-									label="Gross Commission $"
-									value={transaction.commissionAmount || null}
-									onChange={setCommissionAmount}
-								/>
-							</Col>
-							<Col>
-								<NumberField
-									label="Close Probability (%)"
-									value={transaction.closeProbability || null}
-									onChange={(v) =>
-										patchTransaction({ closeProbability: v ?? 0 })
-									}
-								/>
-							</Col>
-							<Col>
-								<DateField
-									label="Contract Executed"
-									value={transaction.contractExecutedDate}
-									onChange={(v) =>
-										patchTransaction({ contractExecutedDate: v })
-									}
-								/>
-							</Col>
-							<Col>
-								<DateField
-									label="Close Date"
-									value={transaction.closeDate}
-									onChange={(v) => patchTransaction({ closeDate: v })}
-								/>
-							</Col>
-						</FieldGrid>
-					</Section>
-
-					{isSale && <Separator />}
-
-					{/* ── Financials ── */}
-					{isSale && (
-						<Section title="Financials" icon={faChartLine}>
+						{/* ── Transaction terms (parity with the stage gate + Edit Transaction dialog) ── */}
+						<Section title="Transaction Terms" icon={faFileContract}>
 							<FieldGrid>
 								<Col>
 									<NumberField
-										label="Asking Price"
-										value={financials.askingPrice}
-										onChange={(v) => patchFinancials({ askingPrice: v ?? 0 })}
-										fieldKey="askingPrice"
+										label="Sale Price"
+										value={transaction.salePrice || null}
+										onChange={setSalePrice}
 									/>
 								</Col>
 								<Col>
 									<NumberField
-										label="Cap Rate %"
-										value={financials.capRate}
-										onChange={(v) => patchFinancials({ capRate: v ?? 0 })}
+										label="Gross Commission %"
+										value={transaction.commissionPct || null}
+										onChange={setCommissionPct}
 									/>
 								</Col>
 								<Col>
 									<NumberField
-										label="NOI"
-										value={financials.noi}
-										onChange={(v) => patchFinancials({ noi: v ?? 0 })}
-										fieldKey="noi"
+										label="Gross Commission $"
+										value={transaction.commissionAmount || null}
+										onChange={setCommissionAmount}
 									/>
 								</Col>
 								<Col>
 									<NumberField
-										label="Operating Expenses"
-										value={financials.operatingExpenses}
+										label="Close Probability (%)"
+										value={transaction.closeProbability || null}
 										onChange={(v) =>
-											patchFinancials({ operatingExpenses: v ?? 0 })
+											patchTransaction({ closeProbability: v ?? 0 })
 										}
 									/>
 								</Col>
 								<Col>
-									<NumberField
-										label="Gross Scheduled Income"
-										value={financials.grossScheduledIncome || null}
+									<DateField
+										label="Contract Executed"
+										value={transaction.contractExecutedDate}
 										onChange={(v) =>
-											patchFinancials({ grossScheduledIncome: v ?? 0 })
+											patchTransaction({ contractExecutedDate: v })
 										}
 									/>
 								</Col>
 								<Col>
-									<NumberField
-										label="Other Income"
-										value={financials.otherIncome || null}
-										onChange={(v) => patchFinancials({ otherIncome: v ?? 0 })}
-									/>
-								</Col>
-								<Col>
-									<NumberField
-										label="Vacancy %"
-										value={financials.vacancyPct || null}
-										onChange={(v) => patchFinancials({ vacancyPct: v ?? 0 })}
-									/>
-								</Col>
-								<Col>
-									<NumberField
-										label="Loan Amount"
-										value={financials.loanAmount || null}
-										onChange={(v) => patchFinancials({ loanAmount: v ?? 0 })}
-									/>
-								</Col>
-								<Col>
-									<NumberField
-										label="Down Payment"
-										value={financials.downPayment || null}
-										onChange={(v) => patchFinancials({ downPayment: v ?? 0 })}
-									/>
-								</Col>
-								<Col>
-									<NumberField
-										label="Debt Service"
-										value={financials.debtService || null}
-										onChange={(v) => patchFinancials({ debtService: v ?? 0 })}
-									/>
-								</Col>
-								<Col>
-									<NumberField
-										label="Cash Flow"
-										value={financials.cashFlow || null}
-										onChange={(v) => patchFinancials({ cashFlow: v ?? 0 })}
+									<DateField
+										label="Close Date"
+										value={transaction.closeDate}
+										onChange={(v) => patchTransaction({ closeDate: v })}
 									/>
 								</Col>
 							</FieldGrid>
+						</Section>
 
-							{/* Computed underwriting (read-only; blank until inputs exist) */}
-							<FieldGrid>
-								<Col>
-									<Field>
-										<Field.Label>Total Scheduled Income (calc)</Field.Label>
-										<Input
-											readOnly
-											value={formatCalcAmount(
-												totalScheduledIncome(
-													financials.grossScheduledIncome,
-													financials.otherIncome,
-												),
-											)}
+						{isSale && <Separator />}
+
+						{/* ── Financials ── */}
+						{isSale && (
+							<Section title="Financials" icon={faChartLine}>
+								<FieldGrid>
+									<Col>
+										<NumberField
+											label="Asking Price"
+											value={financials.askingPrice}
+											onChange={(v) => patchFinancials({ askingPrice: v ?? 0 })}
+											fieldKey="askingPrice"
 										/>
-									</Field>
-								</Col>
-								<Col>
-									<Field>
-										<Field.Label>Vacancy Cost (calc)</Field.Label>
-										<Input
-											readOnly
-											value={formatCalcAmount(
-												vacancyCost(
-													financials.grossScheduledIncome,
-													financials.vacancyPct,
-												),
-											)}
+									</Col>
+									<Col>
+										<NumberField
+											label="Cap Rate %"
+											value={financials.capRate}
+											onChange={(v) => patchFinancials({ capRate: v ?? 0 })}
 										/>
-									</Field>
-								</Col>
-								<Col>
-									<Field>
-										<Field.Label>Gross Income (calc)</Field.Label>
-										<Input
-											readOnly
-											value={formatCalcAmount(
-												grossIncome(
+									</Col>
+									<Col>
+										<NumberField
+											label="NOI"
+											value={financials.noi}
+											onChange={(v) => patchFinancials({ noi: v ?? 0 })}
+											fieldKey="noi"
+										/>
+									</Col>
+									<Col>
+										<NumberField
+											label="Operating Expenses"
+											value={financials.operatingExpenses}
+											onChange={(v) =>
+												patchFinancials({ operatingExpenses: v ?? 0 })
+											}
+										/>
+									</Col>
+									<Col>
+										<NumberField
+											label="Gross Scheduled Income"
+											value={financials.grossScheduledIncome || null}
+											onChange={(v) =>
+												patchFinancials({ grossScheduledIncome: v ?? 0 })
+											}
+										/>
+									</Col>
+									<Col>
+										<NumberField
+											label="Other Income"
+											value={financials.otherIncome || null}
+											onChange={(v) => patchFinancials({ otherIncome: v ?? 0 })}
+										/>
+									</Col>
+									<Col>
+										<NumberField
+											label="Vacancy %"
+											value={financials.vacancyPct || null}
+											onChange={(v) => patchFinancials({ vacancyPct: v ?? 0 })}
+										/>
+									</Col>
+									<Col>
+										<NumberField
+											label="Loan Amount"
+											value={financials.loanAmount || null}
+											onChange={(v) => patchFinancials({ loanAmount: v ?? 0 })}
+										/>
+									</Col>
+									<Col>
+										<NumberField
+											label="Down Payment"
+											value={financials.downPayment || null}
+											onChange={(v) => patchFinancials({ downPayment: v ?? 0 })}
+										/>
+									</Col>
+									<Col>
+										<NumberField
+											label="Debt Service"
+											value={financials.debtService || null}
+											onChange={(v) => patchFinancials({ debtService: v ?? 0 })}
+										/>
+									</Col>
+									<Col>
+										<NumberField
+											label="Cash Flow"
+											value={financials.cashFlow || null}
+											onChange={(v) => patchFinancials({ cashFlow: v ?? 0 })}
+										/>
+									</Col>
+								</FieldGrid>
+
+								{/* Computed underwriting (read-only; blank until inputs exist) */}
+								<FieldGrid>
+									<Col>
+										<Field>
+											<Field.Label>Total Scheduled Income (calc)</Field.Label>
+											<Input
+												readOnly
+												value={formatCalcAmount(
 													totalScheduledIncome(
 														financials.grossScheduledIncome,
 														financials.otherIncome,
 													),
+												)}
+											/>
+										</Field>
+									</Col>
+									<Col>
+										<Field>
+											<Field.Label>Vacancy Cost (calc)</Field.Label>
+											<Input
+												readOnly
+												value={formatCalcAmount(
 													vacancyCost(
 														financials.grossScheduledIncome,
 														financials.vacancyPct,
 													),
-												),
-											)}
-										/>
-									</Field>
-								</Col>
-								<Col>
-									<Field>
-										<Field.Label>Cap Rate (calc)</Field.Label>
-										<Input
-											readOnly
-											value={formatCalcPercent(
-												capRate(financials.noi, financials.askingPrice),
-											)}
-										/>
-									</Field>
-								</Col>
-							</FieldGrid>
+												)}
+											/>
+										</Field>
+									</Col>
+									<Col>
+										<Field>
+											<Field.Label>Gross Income (calc)</Field.Label>
+											<Input
+												readOnly
+												value={formatCalcAmount(
+													grossIncome(
+														totalScheduledIncome(
+															financials.grossScheduledIncome,
+															financials.otherIncome,
+														),
+														vacancyCost(
+															financials.grossScheduledIncome,
+															financials.vacancyPct,
+														),
+													),
+												)}
+											/>
+										</Field>
+									</Col>
+									<Col>
+										<Field>
+											<Field.Label>Cap Rate (calc)</Field.Label>
+											<Input
+												readOnly
+												value={formatCalcPercent(
+													capRate(financials.noi, financials.askingPrice),
+												)}
+											/>
+										</Field>
+									</Col>
+								</FieldGrid>
 
-							<div style={{ maxWidth: 360 }}>
-								<SwitchRow
-									label="Hide price"
-									checked={financials.hidePrice}
-									onChange={(v) => patchFinancials({ hidePrice: v })}
+								<div style={{ maxWidth: 360 }}>
+									<SwitchRow
+										label="Hide price"
+										checked={financials.hidePrice}
+										onChange={(v) => patchFinancials({ hidePrice: v })}
+									/>
+								</div>
+								<LineItemEditor
+									title="Income"
+									items={financials.income}
+									onChange={(v) => patchFinancials({ income: v })}
 								/>
-							</div>
-							<LineItemEditor
-								title="Income"
-								items={financials.income}
-								onChange={(v) => patchFinancials({ income: v })}
-							/>
-							<LineItemEditor
-								title="Expenses"
-								items={financials.expenses}
-								onChange={(v) => patchFinancials({ expenses: v })}
-							/>
-							<ScenarioEditor
-								scenarios={financials.scenarios}
-								onChange={(v) => patchFinancials({ scenarios: v })}
-							/>
-						</Section>
+								<LineItemEditor
+									title="Expenses"
+									items={financials.expenses}
+									onChange={(v) => patchFinancials({ expenses: v })}
+								/>
+								<ScenarioEditor
+									scenarios={financials.scenarios}
+									onChange={(v) => patchFinancials({ scenarios: v })}
+								/>
+							</Section>
+						)}
+						</>
 					)}
 				</div>
 			) : (

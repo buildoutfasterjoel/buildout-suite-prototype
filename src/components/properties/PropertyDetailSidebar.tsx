@@ -24,10 +24,12 @@ import {
   faReceipt,
   faNoteSticky,
   faChevronRight,
+  faBuildingFlag,
 } from "@fortawesome/pro-regular-svg-icons";
 import { useDataStore } from "#/data/dataStore";
 import { getListing, getProperty } from "#/data/store";
 import { propertyQualifiesForUnderwriting } from "#/components/deals/underwriting/eligibility";
+import { dealShape, canAddSpaces } from "#/data/dealShape";
 
 type NavItem = { label: string; href: string; icon: IconDefinition };
 type NavGroup = { label?: string; items: NavItem[] };
@@ -63,6 +65,11 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Demographics", href: "demographics", icon: faMapLocationDot },
       { label: "Grids", href: "grids", icon: faTableCells },
       { label: "Plans", href: "plans", icon: faRulerCombined },
+      {
+        label: "Property Marketing",
+        href: "property-marketing",
+        icon: faBuildingFlag,
+      },
     ],
   },
   {
@@ -113,20 +120,37 @@ export function PropertyDetailSidebar() {
   const version = useDataStore((s) => s.listings);
   void version;
   const listing = getListing(listingId);
-  const canAddSpace =
-    listing?.dealType === "Lease" && listing?.parentDealId == null;
   const property = listing ? getProperty(listing.propertyId) : undefined;
   const showsUnderwriting =
     listing?.underwriting != null || propertyQualifiesForUnderwriting(property);
 
+  const shape = listing ? dealShape(listing) : "sale";
+
+  /** Property-level marketing surfaces — a space deal has none of these. */
+  const PROPERTY_ONLY = new Set([
+    "documents", "website", "email", "demographics", "grids", "plans",
+  ]);
+  /** Surfaces that only make sense on the building's own assignment. */
+  const SHELL_ONLY = new Set(["spaces", "underwriting", "client-report"]);
+
   const navGroups = NAV_GROUPS.map((group) => ({
     ...group,
     items: group.items.filter((item) => {
-      if (item.href === "spaces") return canAddSpace;
+      if (item.href === "property-marketing") return shape === "space";
+      if (shape === "space") {
+        if (PROPERTY_ONLY.has(item.href)) return false;
+        if (SHELL_ONLY.has(item.href)) return false;
+        return true;
+      }
+      // Money is earned per space, so a shell has no voucher and no invoices.
+      if (shape === "shell" && (item.href === "financials" || item.href === "financial-documents")) {
+        return false;
+      }
+      if (item.href === "spaces") return canAddSpaces(listing!) || shape === "shell";
       if (item.href === "underwriting") return showsUnderwriting;
       return true;
     }),
-  }));
+  })).filter((group) => group.items.length > 0);
 
   function handleTabChange(value: string) {
     const item = navGroups
