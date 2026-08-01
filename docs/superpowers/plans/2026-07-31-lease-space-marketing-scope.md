@@ -767,14 +767,17 @@ git commit -m "feat(lease): gate a space deal's publish on its own numbers and a
 
 **Files:**
 - Modify: `src/components/deals/useStageGate.ts:81,93`, `src/components/deals/StageGate.tsx:222,227`
+- Modify: `src/routes/_shell/listings/$listingId/overview.tsx:36`
 
 **Interfaces:**
-- Consumes: `dealShape` from `#/data/dealShape`; `getListing` from `#/data/store`.
+- Consumes: `dealShape`, `gateContext` from `#/data/dealShape`.
 - Produces: no new exports. Runtime behaviour only.
 
 `gateContext` already exists and is already tested — Task 1 built it. This task only wires it in.
 
-- [ ] **Step 1: Thread it through both call sites**
+There are **three** call sites, not two. `publishReadiness(listing)` in `overview.tsx:36` feeds the "Setup incomplete" banner; with no context it resolves the **flat-lease** gate for a space deal and would list the wrong missing fields. It is unreachable today (`addSpaceToDeal` always creates children at `proposal`, and the banner requires `status !== 'proposal'`), but leaving it unwired plants a bug for the first task that lets a space deal start past Draft.
+
+- [ ] **Step 1: Thread it through all three call sites**
 
 In `src/components/deals/useStageGate.ts`, replace line 81 and line 93:
 ```ts
@@ -791,17 +794,26 @@ In `src/components/deals/StageGate.tsx`, replace line 222 and line 227:
     () => (deal ? seedGateForm(deal, { shellActive: gateContext(deal).shellActive }) : EMPTY_GATE_FORM),
 ```
 
-Import `dealShape` and `gateContext` from `#/data/dealShape` in both files.
+In `src/routes/_shell/listings/$listingId/overview.tsx`, replace the bare `publishReadiness(listing)` call at line 36:
+
+```tsx
+const { shape, shellActive } = gateContext(listing);
+const { ready, missing } = publishReadiness(listing, { shape, shellActive });
+```
+
+Match the existing destructuring at that site — read the surrounding lines and keep whatever variable names are already in use rather than renaming them.
+
+Import `dealShape` and `gateContext` from `#/data/dealShape` in the files that need them.
 
 - [ ] **Step 2: Verify**
 
 Run: `bunx tsc --noEmit && bunx vitest run`
-Expected: all suites pass.
+Expected: all suites pass. `setupIncompleteBanner.test.ts` covers the banner — it must stay green without modification.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/components/deals/useStageGate.ts src/components/deals/StageGate.tsx
+git add src/components/deals/useStageGate.ts src/components/deals/StageGate.tsx src/routes/_shell/listings/\$listingId/overview.tsx
 git commit -m "feat(lease): resolve gates against deal shape and shell state"
 ```
 
