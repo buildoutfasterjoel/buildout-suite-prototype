@@ -1566,6 +1566,50 @@ Media and Leads on a space deal show the filtered view with the scope alert; on 
 
 ---
 
+## Delivery status (2026-07-31)
+
+All 11 tasks implemented and reviewed on `joel/lease-update`. Gates at handover: `bunx tsc --noEmit`
+clean, `bunx vitest run` 656 passing, `bun --bun run build` clean.
+
+**One defect this plan caused, found only by the whole-branch review.** The spec says a shell holds no
+rate of its own — that is why it loses Back Office — but it left the shell on the normal lease publish
+gate, which requires `leaseRate` and `availableSqFt`. Once Task 2 made promotion *move* terms rows down
+to the children, the shell had neither the fields nor an editor for them, so it could never publish;
+and because a space's Draft → Active requires `shellActive`, nothing on the branch could publish at
+all. Fixed by giving `resolveGate` a `shape === 'shell'` branch that requires only the building's
+marketing content. Two follow-on regressions (a phantom `spaceLeaseTerms` row written on shell publish,
+and a shape-blind `buildPublishPreview` showing a "Required" row the gate did not want) were found and
+fixed in a second pass. Every task-level review passed; none could see this, because each compared one
+task against its own brief.
+
+### Spec requirements NOT delivered — no task was ever assigned them
+
+These are missing features, not broken code. Each needs a product decision before it is worth building.
+
+1. **The feed-up is unobservable.** `advertisedAvailability` is implemented and tested but has zero
+   consumers — no marketing surface renders an availability table. The spec's central claim, *"moving
+   Suite 200 to Under Contract flips the brochure and the website with no further action,"* therefore
+   cannot be demonstrated.
+2. **Media unit-filtering is on the wrong surface.** The filter landed on `VisualMediaSection` (part of
+   the edit form). The Media **tab** the space sidebar links to still renders a hash-derived gallery,
+   so a space shows different photos from its building rather than a filtered view of one library.
+   Compounding it: a child's `marketing.visualMedia` is a copy-on-create snapshot, so media added to
+   either side never reaches the other.
+3. **A space's Leads tab is always empty.** `leadsForSpaceDeal` is correct, but nothing in seed data or
+   at runtime writes a space-deal id into any contact's `inquiredListingIds`, and space deals only
+   exist after seeding.
+
+### Accepted residuals
+
+- Dragging a shell card onto Under Contract/Closed on the pipeline board snaps back with no feedback.
+  The transition is correctly refused in `requestStageChange`; only the toast is missing.
+- Tenant-rep (buy-side) lease deals still show an empty Spaces tab. `canAddSpaces` excludes them so the
+  Add button and promote path are closed, but the nav item is not gated on `dealSide`.
+- `gateContext`/`dealShape` read the parent listing imperatively, so a child's Setup-incomplete banner
+  will not re-render in place when its shell goes Active. Navigating to the space remounts it.
+
+---
+
 ## Final verification
 
 - [ ] Run the full gate: `bunx tsc --noEmit && bunx vitest run && bun --bun run build`
