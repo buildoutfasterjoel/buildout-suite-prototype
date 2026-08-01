@@ -305,6 +305,28 @@ export function resolveGate(
           publishes: true,
         }
       }
+      // A shell publishes the BUILDING's marketing and nothing else. The rate and
+      // the available SF live on its spaces — `addSpaceToDeal` physically moves
+      // each `spaceLeaseTerms` row onto the child — so a shell structurally
+      // cannot hold either number. Gating it on them would leave Approve &
+      // Publish permanently disabled, and with it every space, whose own gate
+      // requires a live shell. This is the same logic that strips the shell's
+      // Back Office: the money belongs to the space.
+      if (shape === 'shell') {
+        return {
+          ...base,
+          kind: 'field',
+          title: 'Approve & Publish',
+          required: [
+            'saleTitle',
+            'saleDescription',
+            'aiDocsReviewed',
+            'listedOnDate',
+            'listingExpirationDate',
+          ],
+          publishes: true,
+        }
+      }
       return {
         ...base,
         kind: 'field',
