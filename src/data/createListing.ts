@@ -129,6 +129,7 @@ import {
   contactLabel,
 } from './store'
 import { DEFAULT_PERSONAL_SPLIT_PCT, closeProbabilityForStage } from './commission'
+import { CURRENT_USER } from './teammates'
 
 /**
  * The editable subset of a listing the New Listing modal collects — just the
@@ -277,13 +278,20 @@ const DEFAULT_SUBTYPE: Record<PropertyType, PropertySubtype> = {
   'special-purpose': 'Self-Storage',
 }
 
-/** The signed-in broker — a proposal is created under whoever starts it. */
+/**
+ * The signed-in broker — a proposal is created under whoever starts it.
+ *
+ * Named from `CURRENT_USER` rather than a literal "You": a broker row sits beside
+ * teammates and outside brokers who are named, so "You (Listing Broker)" read as a
+ * placeholder next to them. "You" is still right in an activity log's voice, which
+ * is why the history actor keeps it.
+ */
 function currentUserBroker(commissionAmount: number): DealBroker {
   return {
     id: crypto.randomUUID(),
-    name: 'You (Listing Broker)',
+    name: CURRENT_USER.name,
     role: 'Primary Broker - Sell Side',
-    email: 'me@buildout.com',
+    email: CURRENT_USER.email,
     side: 'internal',
     commissionSplitPct: 100,
     grossCommission: commissionAmount,
