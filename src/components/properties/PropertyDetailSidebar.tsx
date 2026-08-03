@@ -1,10 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  useLocation,
-  useParams,
-  useNavigate,
-  useSearch,
-} from "@tanstack/react-router";
+import { useLocation, useParams, useNavigate } from "@tanstack/react-router";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
 import { Collapsible } from "@buildoutinc/blueprint-react/ui/Collapsible";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -29,7 +24,6 @@ import {
   faReceipt,
   faNoteSticky,
   faChevronRight,
-  faBuildingFlag,
 } from "@fortawesome/pro-regular-svg-icons";
 import { useDataStore } from "#/data/dataStore";
 import { getListing, getProperty } from "#/data/store";
@@ -70,11 +64,6 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Demographics", href: "demographics", icon: faMapLocationDot },
       { label: "Grids", href: "grids", icon: faTableCells },
       { label: "Plans", href: "plans", icon: faRulerCombined },
-      {
-        label: "Property Marketing",
-        href: "property-marketing",
-        icon: faBuildingFlag,
-      },
     ],
   },
   {
@@ -95,10 +84,6 @@ export function PropertyDetailSidebar() {
   const { pathname } = useLocation();
   const { listingId } = useParams({ from: "/_shell/listings/$listingId" });
   const navigate = useNavigate();
-  // Loose read: most routes under this layout declare no `from` param at all,
-  // so this can't be typed against a single route's search schema.
-  const rawSearch = useSearch({ strict: false }) as Record<string, unknown>;
-  const from = typeof rawSearch.from === "string" ? rawSearch.from : undefined;
   // Collapsed category labels. Starts empty → all groups expanded, so SSR and
   // the first client render match; the persisted set is restored in an effect
   // on mount (below), avoiding a hydration mismatch.
@@ -139,24 +124,14 @@ export function PropertyDetailSidebar() {
   // from canAddSpaces, which governs only the Add-space buttons, not navigation.
   const leaseParent = isLeaseParent(listing);
 
-  /** Property-level marketing surfaces — a space deal has none of these. */
-  const PROPERTY_ONLY = new Set([
-    "documents", "website", "email", "demographics", "grids", "plans",
-  ]);
-  /** Surfaces that only make sense on the building's own assignment. */
-  const SHELL_ONLY = new Set(["spaces", "underwriting", "client-report"]);
-
   const navGroups = NAV_GROUPS.map((group) => ({
     ...group,
     items: group.items.filter((item) => {
-      if (item.href === "property-marketing") return shape === "space";
-      if (shape === "space") {
-        if (PROPERTY_ONLY.has(item.href)) return false;
-        if (SHELL_ONLY.has(item.href)) return false;
-        return true;
-      }
       // Money is earned per space, so a shell has no voucher and no invoices.
-      if (shape === "shell" && (item.href === "financials" || item.href === "financial-documents")) {
+      if (
+        shape === "shell" &&
+        (item.href === "financials" || item.href === "financial-documents")
+      ) {
         return false;
       }
       if (item.href === "spaces") return leaseParent;
@@ -170,15 +145,8 @@ export function PropertyDetailSidebar() {
       .flatMap((g) => g.items)
       .find((i) => i.label === value);
     if (!item) return;
-    // Carry `from` (the space that sent the broker here) across hops within
-    // the Marketing group, so the return bar survives Documents -> Website;
-    // drop it the moment the broker leaves that group for anything else.
-    const inMarketing = navGroups
-      .find((g) => g.label === "Marketing")
-      ?.items.some((i) => i.href === item.href);
     void navigate({
       to: `/listings/${listingId}/${item.href}`,
-      search: inMarketing && from ? { from } : {},
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
   }

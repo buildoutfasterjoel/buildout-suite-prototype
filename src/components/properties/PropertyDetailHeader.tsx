@@ -16,7 +16,7 @@ import {
   faTrashAlt,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing, ListingStage } from "#/data/types";
-import { getProperty, getListing } from "#/data/store";
+import { getProperty } from "#/data/store";
 import { canAddSpaces, dealShape, dealStageLabel, availableStages } from "#/data/dealShape";
 import {
   STATUS_COLORS,
@@ -42,12 +42,6 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
   const property = getProperty(listing.propertyId);
   const address = `${property?.street}, ${property?.city}, ${property?.state} ${property?.zip}`;
   const [addSpaceOpen, setAddSpaceOpen] = useState(false);
-  const parentDeal = listing.parentDealId
-    ? getListing(listing.parentDealId)
-    : undefined;
-  // For a child space deal, the last breadcrumb crumb is the unit/suite label.
-  const spaceLabel =
-    property?.units.find((u) => u.id === listing.unitId)?.label ?? listing.name;
 
   return (
     <div className="bg-card border-bottom">
@@ -88,30 +82,9 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
                   </Breadcrumb.Link>
                 </Breadcrumb.Item>
                 <Breadcrumb.Separator />
-                {parentDeal ? (
-                  <>
-                    <Breadcrumb.Item>
-                      <Breadcrumb.Link
-                        render={
-                          <Link
-                            to="/listings/$listingId"
-                            params={{ listingId: parentDeal.id }}
-                          />
-                        }
-                      >
-                        {parentDeal.name}
-                      </Breadcrumb.Link>
-                    </Breadcrumb.Item>
-                    <Breadcrumb.Separator />
-                    <Breadcrumb.Item>
-                      <Breadcrumb.Page>{spaceLabel}</Breadcrumb.Page>
-                    </Breadcrumb.Item>
-                  </>
-                ) : (
-                  <Breadcrumb.Item>
-                    <Breadcrumb.Page>{listing.name}</Breadcrumb.Page>
-                  </Breadcrumb.Item>
-                )}
+                <Breadcrumb.Item>
+                  <Breadcrumb.Page>{listing.name}</Breadcrumb.Page>
+                </Breadcrumb.Item>
               </Breadcrumb.List>
             </Breadcrumb>
             <h1

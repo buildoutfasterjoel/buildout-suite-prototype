@@ -894,7 +894,6 @@ export function DealMarketingEditor({
 				</div>
 			) : (
 				<ListingFormEditor
-					listing={listing}
 					dealType={dealType}
 					status={status}
 					marketing={marketing}
