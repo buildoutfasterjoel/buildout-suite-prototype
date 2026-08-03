@@ -51,10 +51,13 @@ function ListingNotFound() {
 
 function PropertyDetail() {
   const { listingId } = Route.useParams();
-  // Reactive selector (not getStore()) so a commitStageTransition — which
-  // replaces the listings map and the listing object — re-renders this
-  // component immediately (header stage Select, SyndicationStatus, etc.).
-  const listing = useDataStore((s) => s.listings.get(listingId));
+  // Subscribe to the whole map, not `.get(listingId)`: a deal's *shape* is derived
+  // from other listings, so adding a space turns this deal into a shell without
+  // touching its own object. A `.get()` selector would compare referentially equal
+  // and skip the re-render, leaving the header offering a flat lease's full stage
+  // ladder on a deal that can no longer go past Active. Also covers the original
+  // reason for a reactive selector — commitStageTransition replaces both.
+  const listing = useDataStore((s) => s.listings).get(listingId);
 
   if (!listing) return <ListingNotFound />;
 

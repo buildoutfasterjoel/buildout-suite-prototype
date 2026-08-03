@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { createProposalListing, emptyDraft } from './createListing'
 import { addPropertyUnit, addSpaceToDeal } from './leaseSpaces'
 import { commitStageTransition } from './actions'
+import { useDataStore } from './dataStore'
 import {
   dealShape, availableStages, dealStageLabel, spaceAvailability, gateContext,
   canAddSpaces, isLeaseParent,
@@ -47,6 +48,33 @@ describe('availableStages', () => {
   it('leaves sale and flat-lease on the full ladder', () => {
     expect(availableStages('sale')).toEqual(availableStages('space'))
     expect(availableStages('flat-lease')).toEqual(availableStages('space'))
+  })
+
+  /**
+   * Guards the subscription shape the deal page depends on. A parent's ladder
+   * truncates the instant a child exists, but adding a child does not touch the
+   * parent's own object — so a component keyed on `listings.get(parentId)` compares
+   * referentially equal, skips its re-render, and keeps offering Under Contract and
+   * Closed on a deal that can no longer reach them. `$listingId.tsx` subscribes to
+   * the whole map for exactly this reason.
+   */
+  it('truncates the parent ladder on a child insert that leaves the parent object identical', () => {
+    const parent = makeLeaseParent()
+    expect(availableStages(dealShape(parent))).toHaveLength(5)
+
+    const before = useDataStore.getState().listings
+    const unit = addPropertyUnit(parent.propertyId, { label: 'Suite 300', sqft: 900, unitType: 'office' })!
+    addSpaceToDeal(parent.id, unit.id)
+    const after = useDataStore.getState().listings
+
+    // The map is replaced; the parent record within it is not.
+    expect(after).not.toBe(before)
+    expect(after.get(parent.id)).toBe(before.get(parent.id))
+
+    // Yet the ladder it should offer has changed.
+    expect(availableStages(dealShape(after.get(parent.id)!))).toEqual([
+      'proposal', 'active', 'inactive',
+    ])
   })
 })
 
