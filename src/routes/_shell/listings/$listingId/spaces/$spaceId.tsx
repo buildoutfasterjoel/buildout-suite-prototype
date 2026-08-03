@@ -109,7 +109,13 @@ function SpacePanelRoute() {
               padding for its own absolutely-positioned close button, so `w-100`
               stops short of it rather than colliding. */}
           <div className="d-flex align-items-center justify-content-between gap-3 w-100">
-            <Offcanvas.Title>{unit?.label ?? listing.name}</Offcanvas.Title>
+            <Offcanvas.Title
+              className="text-truncate"
+              style={{ minWidth: 0 }}
+              title={unit?.label ?? listing.name}
+            >
+              {unit?.label ?? listing.name}
+            </Offcanvas.Title>
             <DealStageSelect listing={listing} />
           </div>
         </Offcanvas.Header>

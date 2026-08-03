@@ -32,36 +32,42 @@ export function DealStageSelect({ listing }: { listing: Listing }) {
   const shape = dealShape(listing);
 
   return (
-    <Select
-      value={listing.status}
-      onValueChange={(v) => {
-        if (v && v !== listing.status) {
-          requestStageChange(listing.id, v as ListingStage);
-        }
-      }}
-    >
-      <Select.Trigger style={{ minWidth: 168 }}>
-        <span className="d-inline-flex align-items-center gap-2">
-          <span
-            className="rounded-circle"
-            style={{
-              width: 8,
-              height: 8,
-              backgroundColor: STATUS_COLORS[listing.status],
-            }}
-          />
-          <Select.Value>
-            {(v) => dealStageLabel(v as ListingStage, shape)}
-          </Select.Value>
-        </span>
-      </Select.Trigger>
-      <Select.Content>
-        {availableStages(shape).map((s) => (
-          <Select.Item key={s} value={s}>
-            <StageLabel stage={s} label={dealStageLabel(s, shape)} />
-          </Select.Item>
-        ))}
-      </Select.Content>
-    </Select>
+    // Blueprint's Select.Trigger is a Bootstrap `.form-select`, which is width:100%.
+    // Dropped straight into a flex row it fills the row and crushes whatever sits
+    // beside it. This content-sized, non-shrinking wrapper is what keeps the trigger
+    // at its own width, so callers can place it in a row without knowing that.
+    <div className="d-flex flex-shrink-0">
+      <Select
+        value={listing.status}
+        onValueChange={(v) => {
+          if (v && v !== listing.status) {
+            requestStageChange(listing.id, v as ListingStage);
+          }
+        }}
+      >
+        <Select.Trigger style={{ minWidth: 168 }}>
+          <span className="d-inline-flex align-items-center gap-2">
+            <span
+              className="rounded-circle"
+              style={{
+                width: 8,
+                height: 8,
+                backgroundColor: STATUS_COLORS[listing.status],
+              }}
+            />
+            <Select.Value>
+              {(v) => dealStageLabel(v as ListingStage, shape)}
+            </Select.Value>
+          </span>
+        </Select.Trigger>
+        <Select.Content>
+          {availableStages(shape).map((s) => (
+            <Select.Item key={s} value={s}>
+              <StageLabel stage={s} label={dealStageLabel(s, shape)} />
+            </Select.Item>
+          ))}
+        </Select.Content>
+      </Select>
+    </div>
   );
 }
