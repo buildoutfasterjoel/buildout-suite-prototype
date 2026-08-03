@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   createFileRoute,
   Outlet,
@@ -12,6 +13,7 @@ import { dealShape } from "#/data/dealShape";
 import { DealStageChip } from "#/components/deals/DealStageChip";
 import { requestStageChange } from "#/components/deals/useStageGate";
 import type { ListingStage } from "#/data/types";
+import { suitePanelPath } from "#/data/suitePanelPath";
 import {
   SPACE_PANEL_TABS,
   DEFAULT_SPACE_PANEL_LEAF,
@@ -41,7 +43,28 @@ function SpacePanelRoute() {
   const listing = listings.get(spaceId);
   const property = listing ? getProperty(listing.propertyId) : undefined;
 
-  if (!listing || !property) return null;
+  // The `listingId` segment declares which building this panel is scoped to — the
+  // header, breadcrumb, and Back Office guards all key off it. A suite whose real
+  // parent differs (or a listing that isn't a suite at all, i.e. has no
+  // `parentDealId`) must never render under it: that would paint this suite's
+  // voucher/commission/etc. over the wrong building's frame. If the suite has
+  // simply been reparented, send it to where it actually lives instead of just
+  // going blank; `suitePanelPath` returns null for a non-suite listing, so that
+  // case falls through to the plain "render nothing" guard below.
+  const belongsHere = !!listing && listing.parentDealId === listingId;
+  const correctPath =
+    listing && !belongsHere
+      ? suitePanelPath(listing, leafFromPathname(pathname))
+      : null;
+
+  useEffect(() => {
+    if (correctPath && correctPath !== pathname) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      void navigate({ to: correctPath, replace: true } as any);
+    }
+  }, [correctPath, pathname, navigate]);
+
+  if (!listing || !property || !belongsHere) return null;
 
   const unit = property.units.find((u) => u.id === listing.unitId);
   const activeLeaf = leafFromPathname(pathname) ?? DEFAULT_SPACE_PANEL_LEAF;
@@ -49,13 +72,26 @@ function SpacePanelRoute() {
   const pills =
     SPACE_PANEL_TABS.find((t) => t.id === activeTab)?.leaves ?? [];
 
+  // Tab/pill clicks replace the current history entry rather than pushing: they
+  // move between sections of the same panel, not to a new place, so Back should
+  // still close the panel in one step instead of walking every section visited.
+  // The deep-link entry that opened the panel (see the route's own navigate, and
+  // the canonicalizing redirect in $listingId.tsx) stays a normal push, so Back
+  // from a freshly-opened panel closes it.
   const goToLeaf = (leaf: SpacePanelLeaf) => {
     void navigate({
       to: `/listings/${listingId}/spaces/${spaceId}/${leaf}`,
+      replace: true,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
   };
 
+  // A normal push, deliberately: clicking close is a forward action the user chose
+  // (mirroring the push that opened the panel), not the Back button itself — that
+  // case is handled above by making in-panel tab/pill moves replace instead of
+  // push. Leaving this as a push means Back after an explicit close returns to the
+  // last tab viewed (symmetric with how opening/closing already behave elsewhere),
+  // rather than skipping the panel out of history entirely.
   const close = () =>
     void navigate({
       to: "/listings/$listingId/spaces",

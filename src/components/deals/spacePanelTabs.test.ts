@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest'
+import { readdirSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import {
   SPACE_PANEL_TABS,
   SPACE_PANEL_LEAVES,
@@ -6,6 +8,18 @@ import {
   tabForLeaf,
   leafFromPathname,
 } from './spacePanelTabs'
+
+// The panel's leaves are built into navigate() calls as template-literal strings
+// cast `as any` (see $spaceId.tsx's goToLeaf), which opts out of the project's only
+// type gate. Nothing else pins SPACE_PANEL_LEAVES to the route files that actually
+// exist, so a slug could drift from disk and every tool would stay green. Read the
+// real directory instead of hand-copying it a second time.
+const SPACE_ROUTES_DIR = fileURLToPath(
+  new URL(
+    '../../routes/_shell/listings/$listingId/spaces/$spaceId/',
+    import.meta.url,
+  ),
+)
 
 describe('SPACE_PANEL_TABS', () => {
   it('has four tabs in design order', () => {
@@ -66,5 +80,21 @@ describe('leafFromPathname', () => {
     expect(leafFromPathname('/listings/L1/spaces/S1')).toBeNull()
     expect(leafFromPathname('/listings/L1/website')).toBeNull()
     expect(leafFromPathname('')).toBeNull()
+  })
+})
+
+describe('SPACE_PANEL_LEAVES vs. the route files on disk', () => {
+  it('has a <leaf>.tsx route file for every declared leaf', () => {
+    const files = readdirSync(SPACE_ROUTES_DIR)
+    const routeLeaves = new Set(
+      files
+        .filter((f) => f.endsWith('.tsx') && f !== 'index.tsx')
+        .map((f) => f.replace(/\.tsx$/, '')),
+    )
+    for (const leaf of SPACE_PANEL_LEAVES) {
+      expect(routeLeaves.has(leaf), `missing route file for leaf "${leaf}"`).toBe(
+        true,
+      )
+    }
   })
 })

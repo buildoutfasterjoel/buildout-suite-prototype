@@ -61,7 +61,7 @@ function PropertyDetail() {
   const listing = useDataStore((s) => s.listings).get(listingId);
 
   const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
 
   // A suite has no page of its own — it renders as a panel over its building. This runs in
   // the component rather than beforeLoad because the store is client-owned (Zustand +
@@ -73,9 +73,12 @@ function PropertyDetail() {
     : null;
 
   useEffect(() => {
+    // Carry the current search along — e.g. ContactInquiryCard links to a legacy
+    // `?q=` on a suite's Leads tab so the broker lands on the row they act on, and
+    // that must survive landing on the panel instead of the old page.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (panelPath) void navigate({ to: panelPath, replace: true } as any);
-  }, [panelPath, navigate]);
+    if (panelPath) void navigate({ to: panelPath, search, replace: true } as any);
+  }, [panelPath, search, navigate]);
 
   if (!listing) return <ListingNotFound />;
 
