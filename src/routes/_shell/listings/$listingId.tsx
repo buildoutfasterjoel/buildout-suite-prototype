@@ -1,4 +1,5 @@
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
@@ -6,6 +7,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBuildingCircleExclamation } from "@fortawesome/pro-regular-svg-icons";
 import { getStore } from "#/data/store";
 import { useDataStore } from "#/data/dataStore";
+import { suitePanelPath, legacySubPath } from "#/data/suitePanelPath";
 import { PropertyDetailHeader } from "#/components/properties/PropertyDetailHeader";
 import { PropertyDetailSidebar } from "#/components/properties/PropertyDetailSidebar";
 
@@ -50,12 +52,38 @@ function ListingNotFound() {
 
 function PropertyDetail() {
   const { listingId } = Route.useParams();
-  // Reactive selector (not getStore()) so a commitStageTransition — which
-  // replaces the listings map and the listing object — re-renders this
-  // component immediately (header stage Select, SyndicationStatus, etc.).
-  const listing = useDataStore((s) => s.listings.get(listingId));
+  // Subscribe to the whole map, not `.get(listingId)`: a deal's *shape* is derived
+  // from other listings, so adding a space turns this deal into a shell without
+  // touching its own object. A `.get()` selector would compare referentially equal
+  // and skip the re-render, leaving the header offering a flat lease's full stage
+  // ladder on a deal that can no longer go past Active. Also covers the original
+  // reason for a reactive selector — commitStageTransition replaces both.
+  const listing = useDataStore((s) => s.listings).get(listingId);
+
+  const navigate = useNavigate();
+  const { pathname, search } = useLocation();
+
+  // A suite has no page of its own — it renders as a panel over its building. This runs in
+  // the component rather than beforeLoad because the store is client-owned (Zustand +
+  // IndexedDB): on a cold load beforeLoad fires before hydration, the suite lookup misses,
+  // and it never re-runs. A reactive selector re-renders the moment hydration lands, so the
+  // canonicalization always happens. `replace` keeps the legacy URL out of history.
+  const panelPath = listing
+    ? suitePanelPath(listing, legacySubPath(pathname, listing.id))
+    : null;
+
+  useEffect(() => {
+    // Carry the current search along — e.g. ContactInquiryCard links to a legacy
+    // `?q=` on a suite's Leads tab so the broker lands on the row they act on, and
+    // that must survive landing on the panel instead of the old page.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (panelPath) void navigate({ to: panelPath, search, replace: true } as any);
+  }, [panelPath, search, navigate]);
 
   if (!listing) return <ListingNotFound />;
+
+  // Don't paint the suite's old page for a frame on the way out.
+  if (panelPath) return null;
 
   return (
     <div className="h-100 overflow-y-auto overflow-x-hidden">

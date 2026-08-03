@@ -10,7 +10,7 @@ import {
   faFolderPlus,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing } from "#/data/types";
-import { STATUS_LABELS } from "../properties/propertyDisplay";
+import { dealShape, dealStageLabel } from "#/data/dealShape";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
 import { formatDateTime, initials } from "./dealDisplay";
 
@@ -51,6 +51,7 @@ type FeedItem = {
 
 /** Fold the deal's logged activities and its stage history into one feed. */
 function buildFeed(listing: Listing): FeedItem[] {
+  const shape = dealShape(listing);
   const activities: FeedItem[] = listing.activities.map((a) => ({
     id: a.id,
     actor: a.actor,
@@ -66,18 +67,18 @@ function buildFeed(listing: Listing): FeedItem[] {
         <>
           moved the deal from{" "}
           <Badge variant="secondary" appearance="muted">
-            {STATUS_LABELS[h.fromStage]}
+            {dealStageLabel(h.fromStage, shape)}
           </Badge>{" "}
           to{" "}
           <Badge variant="secondary" appearance="muted">
-            {STATUS_LABELS[h.toStage]}
+            {dealStageLabel(h.toStage, shape)}
           </Badge>
         </>
       ) : (
         <>
           created the deal in{" "}
           <Badge variant="secondary" appearance="muted">
-            {STATUS_LABELS[h.toStage ?? "proposal"]}
+            {dealStageLabel(h.toStage ?? "proposal", shape)}
           </Badge>
         </>
       ),

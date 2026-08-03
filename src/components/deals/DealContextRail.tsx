@@ -27,6 +27,7 @@ import {
   getRefId,
 } from "#/components/properties/propertyDisplay";
 import { initials } from "./dealDisplay";
+import { contactRoleLabel } from "./createDealHelpers";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 
 function iconForFile(name: string): IconDefinition {
@@ -274,6 +275,12 @@ export function DealContextRail({ listing }: { listing: Listing }) {
   const buyers = resolve(listing.buyerContactIds);
   const others = resolve(listing.otherContactIds);
 
+  // The two sides are `seller`/`buyer` in the data model, but a lease calls them
+  // Landlord and Tenant. Same helper the create-deal wizard uses, so a deal reads
+  // the same way in the rail as it did when it was created.
+  const sellSideLabel = contactRoleLabel("seller", listing.dealType);
+  const buySideLabel = contactRoleLabel("buyer", listing.dealType);
+
   const [open, setOpen] = useState<string[]>(["seller"]);
   const addTo = (section: string) =>
     setOpen((prev) => (prev.includes(section) ? prev : [...prev, section]));
@@ -319,10 +326,10 @@ export function DealContextRail({ listing }: { listing: Listing }) {
           />
           <DropdownMenu.Content>
             <DropdownMenu.Item onClick={() => addTo("seller")}>
-              Add Seller
+              Add {sellSideLabel}
             </DropdownMenu.Item>
             <DropdownMenu.Item onClick={() => addTo("buyer")}>
-              Add Buyer
+              Add {buySideLabel}
             </DropdownMenu.Item>
             <DropdownMenu.Item onClick={() => addTo("other")}>
               Add Other
@@ -331,8 +338,16 @@ export function DealContextRail({ listing }: { listing: Listing }) {
         </DropdownMenu>
       </div>
       <Accordion multiple value={open} onValueChange={setOpen}>
-        <ContactSection value="seller" label="Seller" contacts={sellers} />
-        <ContactSection value="buyer" label="Buyer" contacts={buyers} />
+        <ContactSection
+          value="seller"
+          label={sellSideLabel}
+          contacts={sellers}
+        />
+        <ContactSection
+          value="buyer"
+          label={buySideLabel}
+          contacts={buyers}
+        />
         <ContactSection value="other" label="Other" contacts={others} />
       </Accordion>
 

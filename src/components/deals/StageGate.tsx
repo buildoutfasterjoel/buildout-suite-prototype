@@ -13,6 +13,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendar, faSparkle, faUser } from "@fortawesome/pro-regular-svg-icons";
 import { faNote } from "@fortawesome/pro-duotone-svg-icons";
 import type { PropertyStatus } from "#/data/types";
+import { dealShape, dealStageLabel, gateContext } from "#/data/dealShape";
 import {
   getListing,
   getSellerOptionGroups,
@@ -36,7 +37,6 @@ import {
 import { commitStageTransition } from "#/data/actions";
 import { useStageGate } from "#/components/deals/useStageGate";
 import { PublishPreview } from "#/components/deals/PublishPreview";
-import { STATUS_LABELS } from "#/components/properties/propertyDisplay";
 import { CurrencyInput } from "#/components/common/CurrencyInput";
 import {
   commissionAmountFromPct,
@@ -216,15 +216,18 @@ export function StageGate({
   completeSetup?: boolean;
 }) {
   const deal = getListing(dealId);
+  // Computed once and reused below (for both the gate config and the
+  // confirmation copy) rather than calling `dealShape` again per use.
+  const shape = deal ? dealShape(deal) : undefined;
   const config = useMemo(() => {
-    if (!deal) return null;
-    if (completeSetup) return completeSetupGate(deal);
-    return resolveGate(deal.status, targetStage, deal.dealType);
-  }, [deal, targetStage, completeSetup]);
+    if (!deal || !shape) return null;
+    if (completeSetup) return completeSetupGate(deal, shape);
+    return resolveGate(deal.status, targetStage, deal.dealType, shape);
+  }, [deal, targetStage, completeSetup, shape]);
 
   // Seed the working form from the deal each time the gate opens.
   const initialForm = useMemo<GateFormState>(
-    () => (deal ? seedGateForm(deal) : EMPTY_GATE_FORM),
+    () => (deal ? seedGateForm(deal, { shellActive: gateContext(deal).shellActive }) : EMPTY_GATE_FORM),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [dealId, open, completeSetup],
   );
@@ -395,7 +398,7 @@ export function StageGate({
             <>
               <p className="mb-0">
                 Move this deal back to{" "}
-                <strong>{STATUS_LABELS[config.targetStage]}</strong>?
+                <strong>{dealStageLabel(config.targetStage, shape ?? "sale")}</strong>?
               </p>
               {config.leavesActive && (
                 <Field orientation="horizontal">

@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { createProposalListing, emptyDraft } from './createListing'
+import { createProposalListing, emptyDraft, emptySpaceLeaseTerms } from './createListing'
 import { getProperty, getListing } from './store'
 import {
-  addPropertyUnit, addSpaceToDeal, resyncChildFromParent,
+  addPropertyUnit, addSpaceToDeal,
   getChildDeals, isUmbrella, spacesStageBreakdown,
 } from './leaseSpaces'
 import { commitStageTransition } from './actions'
@@ -27,18 +27,35 @@ describe('lease space actions', () => {
     expect(getChildDeals(parent.id).map((c) => c.id)).toContain(res.deal.id)
   })
 
-  it('snapshots the parent template and re-syncs on demand', () => {
+  it('moves the parent existing terms row onto the child', () => {
     const parent = makeParent()
-    const unit = addPropertyUnit(parent.propertyId, { label: 'Suite 200', sqft: 1000, unitType: 'retail' })!
-    // Parent gets a template.
-    commitStageTransition({ dealId: parent.id, targetStage: 'proposal', actor: 'T', marketing: { leaseTitle: 'Mall Brand' } })
+    const unit = addPropertyUnit(parent.propertyId, { label: 'Suite 300', sqft: 3000, unitType: 'retail' })!
+    // Broker priced the suite on the parent before promoting it.
+    commitStageTransition({
+      dealId: parent.id,
+      targetStage: 'proposal',
+      actor: 'T',
+      marketing: {
+        spaceLeaseTerms: [{ ...emptySpaceLeaseTerms(unit.id), leaseRate: 28, leaseTermMonths: 60 }],
+      },
+    })
+
     const child = addSpaceToDeal(parent.id, unit.id)!.deal
-    expect(child.marketing.leaseTitle).toBe('Mall Brand')
-    // Parent template changes after the child was created.
-    commitStageTransition({ dealId: parent.id, targetStage: 'proposal', actor: 'T', marketing: { leaseTitle: 'Mall Rebrand' } })
-    expect(getListing(child.id)!.marketing.leaseTitle).toBe('Mall Brand') // snapshot, unchanged
-    resyncChildFromParent(child.id)
-    expect(getListing(child.id)!.marketing.leaseTitle).toBe('Mall Rebrand') // re-pulled
+
+    // The row moved to the child, carrying its numbers.
+    expect(child.marketing.spaceLeaseTerms).toHaveLength(1)
+    expect(child.marketing.spaceLeaseTerms[0]!.leaseRate).toBe(28)
+    expect(child.marketing.spaceLeaseTerms[0]!.leaseTermMonths).toBe(60)
+    // And is gone from the parent, so there is one editable home per unit.
+    expect(getListing(parent.id)!.marketing.spaceLeaseTerms.some((t) => t.unitId === unit.id)).toBe(false)
+  })
+
+  it('seeds a blank row when the parent never priced the unit', () => {
+    const parent = makeParent()
+    const unit = addPropertyUnit(parent.propertyId, { label: 'Suite 400', sqft: 900, unitType: 'retail' })!
+    const child = addSpaceToDeal(parent.id, unit.id)!.deal
+    expect(child.marketing.spaceLeaseTerms[0]!.unitId).toBe(unit.id)
+    expect(child.marketing.spaceLeaseTerms[0]!.leaseRate).toBeNull()
   })
 
   it('rolls up child stages', () => {

@@ -28,6 +28,8 @@ import {
 import { useDataStore } from "#/data/dataStore";
 import { getListing, getProperty } from "#/data/store";
 import { propertyQualifiesForUnderwriting } from "#/components/deals/underwriting/eligibility";
+import { dealShape, isLeaseParent } from "#/data/dealShape";
+import { buildingSectionHref } from "#/data/suitePanelPath";
 
 type NavItem = { label: string; href: string; icon: IconDefinition };
 type NavGroup = { label?: string; items: NavItem[] };
@@ -113,36 +115,54 @@ export function PropertyDetailSidebar() {
   const version = useDataStore((s) => s.listings);
   void version;
   const listing = getListing(listingId);
-  const canAddSpace =
-    listing?.dealType === "Lease" && listing?.parentDealId == null;
   const property = listing ? getProperty(listing.propertyId) : undefined;
   const showsUnderwriting =
     listing?.underwriting != null || propertyQualifiesForUnderwriting(property);
 
+  const shape = listing ? dealShape(listing) : "sale";
+  // Whether this deal has a Spaces tab at all — a top-level lease deal, regardless
+  // of stage. Shares one predicate with the tab itself (spaces.tsx): separate
+  // from canAddSpaces, which governs only the Add-space buttons, not navigation.
+  const leaseParent = isLeaseParent(listing);
+
   const navGroups = NAV_GROUPS.map((group) => ({
     ...group,
     items: group.items.filter((item) => {
-      if (item.href === "spaces") return canAddSpace;
+      // Money is earned per space, so a shell has no voucher and no invoices.
+      if (
+        shape === "shell" &&
+        (item.href === "financials" || item.href === "financial-documents")
+      ) {
+        return false;
+      }
+      if (item.href === "spaces") return leaseParent;
       if (item.href === "underwriting") return showsUnderwriting;
       return true;
     }),
-  }));
+  })).filter((group) => group.items.length > 0);
 
   function handleTabChange(value: string) {
     const item = navGroups
       .flatMap((g) => g.items)
       .find((i) => i.label === value);
     if (!item) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    void navigate({ to: `/listings/${listingId}/${item.href}` } as any);
+    void navigate({
+      to: `/listings/${listingId}/${item.href}`,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
   }
+
+  // Which building section is live. Read from the first segment after the listing
+  // id rather than the last, because a suite panel appends its own leaf and those
+  // slugs mirror the building's own — matching the last segment made opening a
+  // panel jump the sidebar off Spaces and onto Overview, then back on close.
+  const sectionHref = buildingSectionHref(pathname, listingId);
 
   return (
     <nav className="px-3 py-1" aria-label="Property sections">
       {navGroups.map((group, i) => {
         const activeInGroup =
-          group.items.find((item) => pathname.endsWith(`/${item.href}`))
-            ?.label ?? "";
+          group.items.find((item) => item.href === sectionHref)?.label ?? "";
         const isCollapsed = group.label ? collapsed.has(group.label) : false;
         const tabs = (
           <Tabs

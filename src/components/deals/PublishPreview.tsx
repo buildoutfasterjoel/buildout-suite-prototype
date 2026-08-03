@@ -62,7 +62,7 @@ export function PublishPreview({
   onToggleReviewed: (docId: string, reviewed: boolean) => void;
   dateFields: ReactNode;
 }) {
-  const model = buildPublishPreview(deal, property, form);
+  const model = buildPublishPreview(deal, property, form, config);
   // Every gating requirement, not just the ones with a row in `model.sections` —
   // `aiDocsReviewed` and the two listing dates gate `canConfirm` too, but have no
   // row of their own.

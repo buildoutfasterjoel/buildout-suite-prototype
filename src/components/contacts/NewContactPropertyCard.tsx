@@ -8,9 +8,9 @@ import { getListing, getProperty } from "#/data/store";
 import {
   TYPE_ICONS,
   TYPE_LABELS,
-  STATUS_LABELS,
   formatPrice,
 } from "#/components/properties/propertyDisplay";
+import { dealShape, dealStageLabel } from "#/data/dealShape";
 import { CardBadge, BadgeDivider } from "#/components/deals/DealCardBadges";
 import {
   LINKED_DEAL_ICON,
@@ -150,7 +150,7 @@ export function NewContactPropertyCard({
               dealBadge(
                 "Deal",
                 LINKED_DEAL_ICON[single.status],
-                `Open the ${STATUS_LABELS[single.status]} deal`,
+                `Open the ${dealStageLabel(single.status, dealShape(single))} deal`,
                 () =>
                   void navigate({
                     to: "/listings/$listingId",

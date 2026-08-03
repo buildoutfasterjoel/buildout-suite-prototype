@@ -32,6 +32,7 @@ const emptyForm: GateFormState = {
   availableSqFt: null,
   leaseTermMonths: null,
   leaseCommencementDate: null,
+  shellActive: false,
 }
 
 /** A publish gate satisfied on every requirement. */

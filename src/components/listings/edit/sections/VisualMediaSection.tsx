@@ -1,6 +1,8 @@
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { Alert } from "@buildoutinc/blueprint-react/ui/Alert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faImage, faPlus, faTrashCan } from "@fortawesome/pro-regular-svg-icons";
+import { faCircleInfo } from "@fortawesome/pro-duotone-svg-icons";
 import {
 	Col,
 	FieldGrid,
@@ -9,6 +11,7 @@ import {
 } from "#/components/listings/edit/fieldWidgets";
 import { Section } from "#/components/listings/listingWidgets";
 import { emptyVisualMediaLink } from "#/data/createListing";
+import { mediaForUnit } from "#/data/unitScopedMarketing";
 import type { DealMarketing, VisualMediaType } from "#/data/types";
 
 const VISUAL_MEDIA_TYPES: VisualMediaType[] = [
@@ -28,20 +31,31 @@ const VISUAL_MEDIA_TYPES: VisualMediaType[] = [
 export function VisualMediaSection({
 	marketing,
 	patchMarketing,
+	unitId,
 }: {
 	marketing: DealMarketing;
 	patchMarketing: (p: Partial<DealMarketing>) => void;
+	/**
+	 * Scope to a single space deal — shows its own tagged assets plus the
+	 * building-wide ones (unlike Leads, media falls back: a suite with no
+	 * photos of its own should still show the building's). Omitted (or null)
+	 * shows the whole library, unfiltered.
+	 */
+	unitId?: string | null;
 }) {
-	const links = marketing.visualMedia ?? [];
+	const allLinks = marketing.visualMedia ?? [];
+	const links = mediaForUnit(allLinks, unitId ?? null);
 
-	const update = (id: string, patch: Partial<(typeof links)[number]>) =>
+	const update = (id: string, patch: Partial<(typeof allLinks)[number]>) =>
 		patchMarketing({
-			visualMedia: links.map((l) => (l.id === id ? { ...l, ...patch } : l)),
+			visualMedia: allLinks.map((l) => (l.id === id ? { ...l, ...patch } : l)),
 		});
 	const add = () =>
-		patchMarketing({ visualMedia: [...links, emptyVisualMediaLink()] });
+		patchMarketing({
+			visualMedia: [...allLinks, emptyVisualMediaLink(unitId ?? null)],
+		});
 	const remove = (id: string) =>
-		patchMarketing({ visualMedia: links.filter((l) => l.id !== id) });
+		patchMarketing({ visualMedia: allLinks.filter((l) => l.id !== id) });
 
 	return (
 		<Section
@@ -54,6 +68,13 @@ export function VisualMediaSection({
 				</Button>
 			}
 		>
+			{unitId && (
+				<Alert severity="info" withIcon className="mb-3">
+					<FontAwesomeIcon icon={faCircleInfo} />
+					Showing {links.length} of {allLinks.length} — filtered to this
+					space. The full library lives on the building.
+				</Alert>
+			)}
 			{links.length === 0 ? (
 				<p className="text-muted mb-0">
 					No visual media links added to this listing.

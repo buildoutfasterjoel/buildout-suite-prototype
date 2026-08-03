@@ -18,7 +18,9 @@ describe('listing-form record types', () => {
       rackRate: null, rent: 1800, minRent: null, maxRent: null, marketRent: 1850,
       securityDeposit: 1800, description: '',
     }
-    const media: VisualMediaLink = { id: 'm1', url: 'https://x', mediaType: 'Matterport Tour' }
+    const media: VisualMediaLink = {
+      id: 'm1', url: 'https://x', mediaType: 'Matterport Tour', unitId: null,
+    }
     expect([lot.id, condo.id, row.id, media.id]).toEqual(['l1', 'c1', 'u1', 'm1'])
   })
 })

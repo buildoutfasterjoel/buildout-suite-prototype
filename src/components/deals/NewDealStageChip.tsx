@@ -3,10 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCaretDown } from "@fortawesome/pro-regular-svg-icons";
 import { faCircleSmall } from "@fortawesome/pro-solid-svg-icons";
 import type { PropertyStatus } from "#/data/types";
-import {
-  STATUS_LABELS,
-  PROPERTY_STATUSES,
-} from "#/components/properties/propertyDisplay";
+import { availableStages, dealStageLabel, type DealShape } from "#/data/dealShape";
 import { STAGE_DOT } from "#/components/deals/newCardTokens";
 
 /**
@@ -21,9 +18,11 @@ import { STAGE_DOT } from "#/components/deals/newCardTokens";
 export function NewDealStageChip({
   value,
   onChange,
+  shape = "sale",
 }: {
   value: PropertyStatus;
   onChange: (next: PropertyStatus) => void;
+  shape?: DealShape;
 }) {
   return (
     <DropdownMenu>
@@ -32,14 +31,14 @@ export function NewDealStageChip({
           <button
             type="button"
             className="deal-tile__stage-chip"
-            aria-label={`Deal stage: ${STATUS_LABELS[value]}`}
+            aria-label={`Deal stage: ${dealStageLabel(value, shape)}`}
           >
             <FontAwesomeIcon
               icon={faCircleSmall}
               className="deal-tile__stage-dot"
               style={{ color: STAGE_DOT[value] }}
             />
-            {STATUS_LABELS[value]}
+            {dealStageLabel(value, shape)}
             <FontAwesomeIcon
               icon={faCaretDown}
               className="deal-tile__stage-caret"
@@ -48,14 +47,14 @@ export function NewDealStageChip({
         }
       />
       <DropdownMenu.Content align="start">
-        {PROPERTY_STATUSES.map((s) => (
+        {availableStages(shape).map((s) => (
           <DropdownMenu.Item key={s} onClick={() => onChange(s)}>
             <FontAwesomeIcon
               icon={faCircleSmall}
               style={{ color: STAGE_DOT[s] }}
               className="me-2"
             />
-            {STATUS_LABELS[s]}
+            {dealStageLabel(s, shape)}
           </DropdownMenu.Item>
         ))}
       </DropdownMenu.Content>

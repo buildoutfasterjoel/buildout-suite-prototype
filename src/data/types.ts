@@ -121,6 +121,8 @@ export interface VisualMediaLink {
   id: string
   url: string
   mediaType: VisualMediaType
+  /** The space this asset depicts, when it depicts one. Null = whole building. */
+  unitId: string | null
 }
 
 export interface Property {

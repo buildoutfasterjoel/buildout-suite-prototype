@@ -34,6 +34,7 @@ import {
 import { dealHeadlineLabel } from "#/components/deals/dealDisplay";
 import { SIDE_DISPLAY } from "#/components/contacts/contactDisplay";
 import { DealStageChip } from "#/components/deals/DealStageChip";
+import { dealShape } from "#/data/dealShape";
 import { ContactLinkButton } from "#/components/contacts/ContactLinkButton";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
 
@@ -257,8 +258,13 @@ export function ContactDealCard({
 
       {/* Meta chips */}
       <div className="d-flex flex-wrap align-items-center gap-2">
+        {/* `addSpaceToDeal` copies the parent's seller contacts onto every child,
+            so a landlord's contact page lists the shell AND each space. Without
+            the shape the chip would default to "sale" and offer both a full
+            ladder to a shell and "Pitching" where a space reads "Draft". */}
         <DealStageChip
           value={listing.status}
+          shape={dealShape(listing)}
           onChange={(next) => requestStageChange(listing.id, next)}
           size="sm"
         />

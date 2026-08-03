@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach, vi } from "vitest";
 import { useDataStore } from "#/data/dataStore";
 import {
   useStageGate,
@@ -6,6 +6,12 @@ import {
   requestSetupCompletion,
 } from "./useStageGate";
 import type { DealSide, Listing } from "#/data/types";
+import * as stageGates from "#/data/stageGates";
+import { seedGateForm } from "#/data/stageGates";
+import { gateContext } from "#/data/dealShape";
+import { createProposalListing, emptyDraft } from "#/data/createListing";
+import { addPropertyUnit, addSpaceToDeal } from "#/data/leaseSpaces";
+import { commitStageTransition } from "#/data/actions";
 
 function findDeal(side: DealSide) {
   const deal = [...useDataStore.getState().listings.values()].find(
@@ -245,5 +251,98 @@ describe("pendingPublishDealId", () => {
     useStageGate.getState().setPendingPublish("deal-9");
     useStageGate.getState().close();
     expect(useStageGate.getState().pendingPublishDealId).toBe("deal-9");
+  });
+});
+
+/** A genuine space deal, built through the real lease-space flow (not a mutated stub). */
+function makeSpaceDeal() {
+  const parent = createProposalListing({
+    ...emptyDraft(),
+    name: "Mall Assignment",
+    dealType: "Lease",
+  });
+  const unit = addPropertyUnit(parent.propertyId, {
+    label: "Suite 100",
+    sqft: 2400,
+    unitType: "retail",
+  })!;
+  const child = addSpaceToDeal(parent.id, unit.id)!.deal;
+  return { parent, child };
+}
+
+describe("requestStageChange wiring for a space deal", () => {
+  beforeEach(() => useStageGate.getState().close());
+
+  it("resolves the SPACE publish gate, not the flat-lease gate", () => {
+    const { child } = makeSpaceDeal();
+    const resolveGateSpy = vi.spyOn(stageGates, "resolveGate");
+
+    requestStageChange(child.id, "active");
+
+    // requestStageChange always opens the publish gate for a forward move into
+    // Active — but WHICH gate it resolved is only visible through this spy.
+    const config = resolveGateSpy.mock.results.at(-1)?.value as {
+      required: string[];
+    };
+    expect(config.required).toContain("shellActive");
+    expect(config.required).not.toContain("saleTitle");
+    expect(useStageGate.getState().open).toBe(true);
+
+    resolveGateSpy.mockRestore();
+  });
+});
+
+describe("shell ladder enforcement", () => {
+  beforeEach(() => useStageGate.getState().close());
+
+  it("refuses a shell's move to Under Contract or Closed, quietly", () => {
+    const { parent } = makeSpaceDeal();
+    for (const target of ["under-contract", "closed"] as const) {
+      requestStageChange(parent.id, target);
+      // Silent no-op: nothing committed, no modal.
+      expect(useDataStore.getState().listings.get(parent.id)?.status).toBe(
+        "proposal",
+      );
+      expect(useStageGate.getState().open).toBe(false);
+    }
+  });
+
+  it("still lets a shell reach the stages its ladder does have", () => {
+    const { parent } = makeSpaceDeal();
+    requestStageChange(parent.id, "active");
+    // A publishing move always opens the preview rather than committing.
+    expect(useStageGate.getState().open).toBe(true);
+    expect(useStageGate.getState().targetStage).toBe("active");
+  });
+
+  it("leaves a childless flat-lease deal on the full ladder", () => {
+    const parent = createProposalListing({
+      ...emptyDraft(),
+      name: "Whole Building Lease",
+      dealType: "Lease",
+    });
+    putDeal({ ...parent, dealSide: "seller", status: "active" });
+    requestStageChange(parent.id, "under-contract");
+    // Reaches the gate (gaps to fill) rather than being refused outright.
+    expect(useStageGate.getState().open).toBe(true);
+    expect(useStageGate.getState().targetStage).toBe("under-contract");
+  });
+});
+
+describe("seedGateForm wiring for a space deal", () => {
+  it("seeds shellActive from the parent's live status via gateContext, not a stale default", () => {
+    const { parent, child } = makeSpaceDeal();
+
+    const formBefore = seedGateForm(child, {
+      shellActive: gateContext(child).shellActive,
+    });
+    expect(formBefore.shellActive).toBe(false);
+
+    commitStageTransition({ dealId: parent.id, targetStage: "active", actor: "T" });
+
+    const formAfter = seedGateForm(child, {
+      shellActive: gateContext(child).shellActive,
+    });
+    expect(formAfter.shellActive).toBe(true);
   });
 });

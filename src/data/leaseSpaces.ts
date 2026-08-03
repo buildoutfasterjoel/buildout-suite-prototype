@@ -6,22 +6,6 @@ import { updateDealMarketing } from './actions'
 /** Re-exported so callers can spawn a unit + a bound space deal from one module. */
 export { addPropertyUnit }
 
-/** Marketing fields a child inherits (snapshot) from its umbrella parent. */
-const TEMPLATE_KEYS = [
-  'leaseTitle', 'leaseDescription', 'leaseBullets', 'leaseCommissionSplitPct',
-  'propertyUse', 'investmentType', 'marketingChannel', 'visibilityTier',
-] as const
-
-/** Copy the parent's template fields into a marketing object. */
-function applyTemplate(target: Listing['marketing'], parent: Listing['marketing']): Listing['marketing'] {
-  const patch: Partial<Listing['marketing']> = {}
-  for (const k of TEMPLATE_KEYS) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(patch as any)[k] = parent[k]
-  }
-  return { ...target, ...patch }
-}
-
 /** Children of an umbrella deal (excludes the parent itself). */
 export function getChildDeals(parentDealId: string): Listing[] {
   return [...getStore().listings.values()].filter((l) => l.parentDealId === parentDealId)
@@ -58,6 +42,10 @@ export function addSpaceToDeal(
   const dealId = `D-${String(Math.floor(Date.now() % 100000)).padStart(5, '0')}`
   const childrenCount = getChildDeals(parentDealId).length
 
+  // The parent's row for this unit — if the broker already priced it, that row
+  // moves to the child rather than forking a blank copy. One editable home per unit.
+  const existingRow = parent.marketing.spaceLeaseTerms?.find((t) => t.unitId === unitId)
+
   const child: Listing = {
     ...parent,
     id,
@@ -80,33 +68,23 @@ export function addSpaceToDeal(
       { id: crypto.randomUUID(), label: 'Created under', fromStage: null, toStage: 'proposal', actor: 'You (Listing Broker)', timestamp: now },
     ],
     documents: [],
-    marketing: applyTemplate(
-      {
-        ...parent.marketing,
-        availableSqFt: unit.sqft,
-        spaceLeaseTerms: [{ ...emptySpaceLeaseTerms(unitId) }],
-      },
-      parent.marketing,
-    ),
+    marketing: {
+      ...parent.marketing,
+      availableSqFt: unit.sqft,
+      spaceLeaseTerms: [existingRow ? { ...existingRow } : { ...emptySpaceLeaseTerms(unitId) }],
+    },
     createdAt: now,
     updatedAt: now,
   }
 
   addListing(child)
-  return { deal: child }
-}
 
-export function resyncChildFromParent(childId: string): { deal: Listing } | null {
-  const child = getListing(childId)
-  if (!child || !child.parentDealId) return null
-  const parent = getListing(child.parentDealId)
-  if (!parent) return null
-  const merged = applyTemplate(child.marketing, parent.marketing)
-  const patch: Partial<Listing['marketing']> = {}
-  for (const k of TEMPLATE_KEYS) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(patch as any)[k] = (merged as any)[k]
+  // Drop the moved row from the parent so the shell holds no space terms of its own.
+  if (existingRow) {
+    updateDealMarketing(parentDealId, {
+      spaceLeaseTerms: (parent.marketing.spaceLeaseTerms ?? []).filter((t) => t.unitId !== unitId),
+    })
   }
-  const res = updateDealMarketing(childId, patch)
-  return res.deal ? { deal: res.deal } : null
+
+  return { deal: child }
 }

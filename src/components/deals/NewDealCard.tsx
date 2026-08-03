@@ -12,6 +12,7 @@ import {
 } from "#/components/properties/propertyDisplay";
 import { dealHeadlineLabel } from "#/components/deals/dealDisplay";
 import { NewDealStageChip } from "#/components/deals/NewDealStageChip";
+import { dealShape } from "#/data/dealShape";
 import { CardBadge, BadgeDivider } from "#/components/deals/DealCardBadges";
 import {
   relationshipBadge,
@@ -160,7 +161,11 @@ export function NewDealCard({
         <div className="deal-tile__badges">
           <div className="deal-tile__badges-main">
             {!board && onStageChange && (
-              <NewDealStageChip value={listing.status} onChange={onStageChange} />
+              <NewDealStageChip
+                value={listing.status}
+                shape={dealShape(listing)}
+                onChange={onStageChange}
+              />
             )}
             <CardBadge
               icon={side.icon}

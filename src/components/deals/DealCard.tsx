@@ -17,6 +17,7 @@ import { getContact, getListing, getProperty } from "#/data/store";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
 import { NewDealCard } from "./NewDealCard";
 import { isUmbrella, spacesStageBreakdown } from "#/data/leaseSpaces";
+import { dealShape } from "#/data/dealShape";
 import { DealStageBadge } from "./DealStageBadge";
 import { dealHeadlineLabel } from "./dealDisplay";
 import {
@@ -174,7 +175,9 @@ export function DealCardView({
           </span>
           {(showStatus || action) && (
             <div className="ms-auto d-flex align-items-center gap-2">
-              {showStatus && <DealStageBadge stage={listing.status} />}
+              {showStatus && (
+                <DealStageBadge stage={listing.status} shape={dealShape(listing)} />
+              )}
               {action && (
                 <span
                   onClick={(e) => {

@@ -4,7 +4,6 @@ import { BuyerSection } from "#/components/listings/edit/sections/BuyerSection";
 import { CondosSection } from "#/components/listings/edit/sections/CondosSection";
 import { LandSection } from "#/components/listings/edit/sections/LandSection";
 import { LeaseSection } from "#/components/listings/edit/sections/LeaseSection";
-import { LeaseSpacesSection } from "#/components/listings/edit/sections/LeaseSpacesSection";
 import { LocationSection } from "#/components/listings/edit/sections/LocationSection";
 import { LotsSection } from "#/components/listings/edit/sections/LotsSection";
 import { MarketingVisibilitySection } from "#/components/listings/edit/sections/MarketingVisibilitySection";
@@ -19,7 +18,6 @@ import type {
 	DealMarketing,
 	DealPitchFinancials,
 	DealType,
-	Listing,
 	Property,
 	PropertyStatus,
 } from "#/data/types";
@@ -42,7 +40,6 @@ export function ListingFormEditor({
 	internalNotes,
 	setInternalNotes,
 }: {
-	listing: Listing;
 	dealType: DealType;
 	status: PropertyStatus;
 	marketing: DealMarketing;
@@ -106,13 +103,9 @@ export function ListingFormEditor({
 			{dealType === "Lease" && (
 				<>
 					<Separator />
+					{/* Space terms belong to the space deal that owns the unit — a shell
+					    or flat lease deal manages its spaces from the Spaces tab. */}
 					<LeaseSection marketing={marketing} patchMarketing={patchMarketing} />
-					<Separator />
-					<LeaseSpacesSection
-						property={property}
-						marketing={marketing}
-						patchMarketing={patchMarketing}
-					/>
 				</>
 			)}
 			<Separator />
@@ -134,6 +127,8 @@ export function ListingFormEditor({
 				</>
 			)}
 			<Separator />
+			{/* Unscoped here by construction: only a non-space shape reaches this
+			    branch, and those own the whole library. */}
 			<VisualMediaSection marketing={marketing} patchMarketing={patchMarketing} />
 			<Separator />
 			<DisclaimerNotesSection

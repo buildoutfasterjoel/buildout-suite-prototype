@@ -50,6 +50,7 @@ import {
   type ContactOption,
 } from "#/data/store";
 import { STAGE_LABEL } from "#/data/stageGates";
+import { isMultifamilyOnly } from "#/data/leaseEligibility";
 import {
   TYPE_ICONS,
   TYPE_LABELS,
@@ -267,7 +268,11 @@ export function CreateDealModal({
   }
 
   const propertyGroups = useMemo<PropertyGroup[]>(() => {
-    const all = getPropertyOptions();
+    // A multifamily-only building is a property-management assignment, so it is
+    // not offered for a Lease at all. Sale keeps the full list.
+    const all = getPropertyOptions().filter(
+      (o) => dealType !== "Lease" || !isMultifamilyOnly(getProperty(o.value)),
+    );
     // Owned properties are elevated only for the owning side — Seller (Sale) or
     // Landlord (Lease) — and only once a contact is chosen.
     const owner =
@@ -278,7 +283,7 @@ export function CreateDealModal({
       ? `${owner.firstName} ${owner.lastName}`.trim()
       : null;
     return buildPropertyGroups(all, owner?.propertyIds ?? [], ownerName);
-  }, [side, contactOption]);
+  }, [side, contactOption, dealType]);
   const contactOptions = useMemo<ContactOption[]>(getContactOptions, []);
 
   // Resolve the full property record (for its units) from the locked prop or the
@@ -293,7 +298,12 @@ export function CreateDealModal({
   const hasUnits = units.length > 0;
   // AI underwriting is only offered for supported asset classes (Multi-Family,
   // Self Storage, Industrial Outdoor Storage).
-  const underwritingEligible = propertyQualifiesForUnderwriting(selectedProperty);
+  const underwritingEligible =
+    propertyQualifiesForUnderwriting(selectedProperty);
+  // A locked property — New Deal opened from the property record — can't be
+  // filtered out of a picker, so the multifamily guardrail moves onto the Lease
+  // tab itself: the building is a property-management assignment, not a lease.
+  const leaseBlocked = isMultifamilyOnly(property);
 
   // Reset the scope whenever the property or deal type changes. A Sale defaults
   // to representing the whole building (you're selling the asset); a Lease starts
@@ -302,6 +312,19 @@ export function CreateDealModal({
     setWholeBuilding(dealType === "Sale");
     setSelectedUnitId(null);
   }, [selectedProperty?.id, dealType]);
+
+  // Switching to Lease drops a multifamily pick made under Sale — that building
+  // just left the picker, so it can't stay selected behind the tab change.
+  useEffect(() => {
+    if (dealType !== "Lease" || property) return;
+    if (
+      propertyOption &&
+      isMultifamilyOnly(getProperty(propertyOption.value))
+    ) {
+      setPropertyOption(null);
+      setPropertyInput("");
+    }
+  }, [dealType, property, propertyOption]);
 
   // Drop underwriting if the property is switched to a non-qualifying class, so
   // a stale "on" state can't slip through to a deal that shouldn't have it.
@@ -499,7 +522,9 @@ export function CreateDealModal({
       // Attached files kick off a background ingestion run — the IngestionWatcher
       // advances it and commits what it finds. Nothing is filled synchronously.
       ingestion:
-        files.length > 0 ? startIngestionState(files.map((f) => f.name)) : undefined,
+        files.length > 0
+          ? startIngestionState(files.map((f) => f.name))
+          : undefined,
     };
     const { deal: listing } = createDeal(draft);
     onOpenChange(false);
@@ -511,7 +536,7 @@ export function CreateDealModal({
 
   return (
     <Modal open={open} onOpenChange={onOpenChange}>
-      <Modal.Content scrollable centered>
+      <Modal.Content scrollable centered size="lg">
         <Modal.Header>
           <Modal.Title>New deal</Modal.Title>
           <Modal.Description>
@@ -528,28 +553,39 @@ export function CreateDealModal({
 
           {step === 1 && (
             <>
-              <Tabs
-                value={dealType}
-                onValueChange={(v) =>
-                  setDealType(v as NewListingDraft["dealType"])
-                }
-                className="mb-3"
-              >
-                <Tabs.List variant="pills">
-                  <Tabs.Tab
-                    value="Sale"
-                    className="flex-grow-1 justify-content-center"
-                  >
-                    Sale
-                  </Tabs.Tab>
-                  <Tabs.Tab
-                    value="Lease"
-                    className="flex-grow-1 justify-content-center"
-                  >
-                    Lease
-                  </Tabs.Tab>
-                </Tabs.List>
-              </Tabs>
+              <div>
+                <Tabs
+                  value={dealType}
+                  onValueChange={(v) =>
+                    setDealType(v as NewListingDraft["dealType"])
+                  }
+                  className={leaseBlocked ? "mb-2" : "mb-3"}
+                >
+                  <Tabs.List variant="pills">
+                    <Tabs.Tab
+                      value="Sale"
+                      className="flex-grow-1 justify-content-center"
+                    >
+                      Sale
+                    </Tabs.Tab>
+                    <Tabs.Tab
+                      value="Lease"
+                      disabled={leaseBlocked}
+                      className="flex-grow-1 justify-content-center"
+                    >
+                      Lease
+                    </Tabs.Tab>
+                  </Tabs.List>
+                </Tabs>
+
+                {leaseBlocked && (
+                  <p className="text-muted fs-small mb-0">
+                    {property?.name ?? "This property"} is multi-family only, so
+                    it takes a property-management assignment rather than a
+                    lease.
+                  </p>
+                )}
+              </div>
 
               {/* Side */}
               <Field>
@@ -680,7 +716,6 @@ export function CreateDealModal({
                     ))}
                   </div>
                 )}
-
               </Field>
 
               {/* Stage — most deals start in Pitching, but a broker can start one
@@ -716,7 +751,9 @@ export function CreateDealModal({
                 {!contact && (
                   <div className="col-12 col-md-6">
                     <Field>
-                      <Field.Label>{contactRoleLabel(side, dealType)}</Field.Label>
+                      <Field.Label>
+                        {contactRoleLabel(side, dealType)}
+                      </Field.Label>
                       <Combobox
                         items={contactOptions}
                         value={contactOption}
@@ -838,7 +875,10 @@ export function CreateDealModal({
                           </Combobox.Empty>
                           <Combobox.List>
                             {(group: PropertyGroup) => (
-                              <Combobox.Group key={group.value} items={group.items}>
+                              <Combobox.Group
+                                key={group.value}
+                                items={group.items}
+                              >
                                 {group.label && (
                                   <Combobox.GroupLabel>
                                     {group.label}
@@ -846,7 +886,10 @@ export function CreateDealModal({
                                 )}
                                 <Combobox.Collection>
                                   {(item: PropertyOption) => (
-                                    <Combobox.Item key={item.value} value={item}>
+                                    <Combobox.Item
+                                      key={item.value}
+                                      value={item}
+                                    >
                                       <span
                                         className="d-flex gap-2 user-select-none"
                                         style={{ minWidth: 0 }}
@@ -887,6 +930,11 @@ export function CreateDealModal({
                           </Combobox.List>
                         </Combobox.Content>
                       </Combobox>
+                      {dealType === "Lease" && (
+                        <Field.Description>
+                          Multi-family is property management only.
+                        </Field.Description>
+                      )}
                     </Field>
                   )}
                 </div>
@@ -959,7 +1007,6 @@ export function CreateDealModal({
               {missingHint && (
                 <p className="text-muted fs-small mb-0">{missingHint}</p>
               )}
-
             </>
           )}
 

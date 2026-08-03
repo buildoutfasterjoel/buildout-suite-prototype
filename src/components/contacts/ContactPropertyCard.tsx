@@ -7,7 +7,7 @@ import { getListing, getProperty } from "#/data/store";
 import { TYPE_LABELS, formatPrice } from "#/components/properties/propertyDisplay";
 import { SIDE_DISPLAY } from "#/components/contacts/contactDisplay";
 import { STAGE_CHIP_COLORS } from "#/components/deals/DealStageChip";
-import { STATUS_LABELS } from "#/components/properties/propertyDisplay";
+import { dealShape, dealStageLabel } from "#/data/dealShape";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
 
 /** Deal statuses that still count as an "active" (open) deal on the property. */
@@ -119,7 +119,7 @@ export function ContactPropertyCard({
                     borderColor: STAGE_CHIP_COLORS[single.status].border,
                     color: STAGE_CHIP_COLORS[single.status].text,
                   }}
-                  aria-label={`Open the ${STATUS_LABELS[single.status]} deal`}
+                  aria-label={`Open the ${dealStageLabel(single.status, dealShape(single))} deal`}
                   onClick={(e) => {
                     e.stopPropagation();
                     void navigate({

@@ -1,8 +1,15 @@
 import type { ListingStage } from "#/data/types";
-import { STATUS_COLORS, STATUS_LABELS } from "../properties/propertyDisplay";
+import { dealStageLabel, type DealShape } from "#/data/dealShape";
+import { STATUS_COLORS } from "../properties/propertyDisplay";
 
 /** Soft-colored pill with a status dot for the unified listing + deal stage. */
-export function DealStageBadge({ stage }: { stage: ListingStage }) {
+export function DealStageBadge({
+  stage,
+  shape = "sale",
+}: {
+  stage: ListingStage;
+  shape?: DealShape;
+}) {
   const color = STATUS_COLORS[stage];
   return (
     <span
@@ -19,7 +26,7 @@ export function DealStageBadge({ stage }: { stage: ListingStage }) {
         className="rounded-circle"
         style={{ width: 8, height: 8, backgroundColor: color }}
       />
-      {STATUS_LABELS[stage]}
+      {dealStageLabel(stage, shape)}
     </span>
   );
 }

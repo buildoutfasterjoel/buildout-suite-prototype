@@ -8,6 +8,7 @@ import {
   unsatisfiedRequired,
   buildTransitionInput,
 } from "#/data/stageGates";
+import { availableStages, dealShape, gateContext } from "#/data/dealShape";
 
 /**
  * App-wide open/close state for the stage-gate modal. Both entry points (the
@@ -70,6 +71,21 @@ export function requestStageChange(
 ): void {
   const deal = getListing(dealId);
   if (!deal || deal.status === targetStage) return;
+
+  // A shape's ladder is a fact about the deal, not a property of whichever
+  // control was clicked. A shell has no tenant and no commission of its own —
+  // its spaces carry those — so Under Contract and Closed would land it in a UI
+  // that has already stripped Transaction Terms, Financials, Voucher and
+  // Invoices. Enforce the ladder here so the board's drag handler, every stage
+  // chip, and any future caller are covered by one rule rather than by each
+  // dropdown remembering to narrow its own option list.
+  //
+  // The refusal is a silent no-op: no commit, no modal, no toast. Every UI that
+  // can reach this already declines to offer the stage, so arriving here means
+  // a drag onto a column the card should not have accepted — leaving the deal
+  // where it is (and the board re-deriving from the store) is the whole fix.
+  if (!availableStages(dealShape(deal)).includes(targetStage)) return;
+
   const actor = deal.internalBrokers[0]?.name ?? "You";
 
   // A buy-side deal is not a listing — it moves stages directly, no gate.
@@ -78,7 +94,8 @@ export function requestStageChange(
     return;
   }
 
-  const config = resolveGate(deal.status, targetStage, deal.dealType);
+  const ctx = gateContext(deal);
+  const config = resolveGate(deal.status, targetStage, deal.dealType, ctx.shape);
 
   // Pure backward confirm (not leaving Active) — nothing to decide, swap directly.
   if (config.kind === "confirm" && !config.leavesActive) {
@@ -90,7 +107,7 @@ export function requestStageChange(
   // the listing about to go live is the point, not a fallback for missing data.
   // Non-publishing forward gates keep the zero-click swap.
   if (config.kind === "field" && !config.publishes) {
-    const form = seedGateForm(deal);
+    const form = seedGateForm(deal, { shellActive: ctx.shellActive });
     if (unsatisfiedRequired(config, form).length === 0) {
       commitStageTransition(
         buildTransitionInput(config, form, deal.id, actor, deal.dealType),

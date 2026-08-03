@@ -4,6 +4,7 @@ import { Field } from "@buildoutinc/blueprint-react/ui/Field";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { Textarea } from "@buildoutinc/blueprint-react/ui/Textarea";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
+import { Combobox } from "@buildoutinc/blueprint-react/ui/Combobox";
 import { Switch } from "@buildoutinc/blueprint-react/ui/Switch";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Popover } from "@buildoutinc/blueprint-react/ui/Popover";
@@ -255,6 +256,57 @@ export function SelectField<T extends string>({
           ))}
         </Select.Content>
       </Select>
+    </Field>
+  );
+}
+
+/**
+ * `SelectField` with typeahead, for option lists long enough that one scroll of
+ * every choice is worse than filtering. Same shape as `SelectField` except the
+ * change handler also takes `null` — the clear button is the point of an
+ * autocomplete, so the caller's field has to be nullable.
+ */
+export function ComboField<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+  placeholder,
+  required,
+}: {
+  label: string;
+  value: T | null;
+  options: readonly T[];
+  onChange: (v: T | null) => void;
+  /** Shown when nothing is selected. Defaults to "Search…". */
+  placeholder?: string;
+  required?: boolean;
+}) {
+  return (
+    <Field>
+      <Field.Label>
+        {label}
+        {required && <span className="text-danger ms-1">*</span>}
+      </Field.Label>
+      <Combobox
+        items={options as T[]}
+        value={value}
+        onValueChange={(v) => onChange((v as T | null) ?? null)}
+      >
+        <Combobox.InputGroup>
+          <Combobox.Input placeholder={placeholder ?? "Search…"} showClear />
+        </Combobox.InputGroup>
+        <Combobox.Content>
+          <Combobox.Empty className="text-muted">No match</Combobox.Empty>
+          <Combobox.List>
+            {(item: T) => (
+              <Combobox.Item key={item} value={item}>
+                {item}
+              </Combobox.Item>
+            )}
+          </Combobox.List>
+        </Combobox.Content>
+      </Combobox>
     </Field>
   );
 }

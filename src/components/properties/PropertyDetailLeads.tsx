@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Table } from "@buildoutinc/blueprint-react/ui/Table";
+import { Alert } from "@buildoutinc/blueprint-react/ui/Alert";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
@@ -23,8 +24,10 @@ import {
   faEnvelope,
   faPhone,
 } from "@fortawesome/pro-regular-svg-icons";
+import { faCircleInfo } from "@fortawesome/pro-duotone-svg-icons";
 import type { Contact, Property } from "#/data/types";
-import { getLeadsForProperty } from "#/data/store";
+import { getLeadsForProperty, getListing } from "#/data/store";
+import { leadsForSpaceDeal } from "#/data/unitScopedMarketing";
 import { LEAD_STATUSES, leadStatusFor } from "#/data/leadFacts";
 import { useDataStore } from "#/data/dataStore";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
@@ -146,10 +149,19 @@ const CHECKBOX_COL_W = 44;
 export function PropertyDetailLeads({
   property,
   initialSearch,
+  spaceDealId,
 }: {
   property: Property;
   /** Pre-fill the name search (deep link from a contact's inquiry card). */
   initialSearch?: string;
+  /**
+   * Scope to a single space deal's own inquirers — no fallback to
+   * building-wide leads, unlike media. An inquiry on the building's own
+   * listing is not an inquiry on this space, and showing it as one would
+   * misattribute the broker's pipeline. Omitted (or null) shows the
+   * property's whole lead library, unfiltered.
+   */
+  spaceDealId?: string | null;
 }) {
   const navigate = useNavigate();
   const [search, setSearch] = useState(initialSearch ?? "");
@@ -161,10 +173,45 @@ export function PropertyDetailLeads({
 
   // The deal's assigned seller is the broker's client, not a lead they worked —
   // getLeadsForProperty keeps them out of the list.
-  const leads = useMemo(
-    () => getLeadsForProperty(property.id).map(toLead),
+  const allLeads = useMemo(
+    () => getLeadsForProperty(property.id),
     [property.id, contacts],
   );
+
+  // Leads do NOT fall back to building-wide inquiries the way media does — see
+  // `leadsForSpaceDeal`. Scoping happens on the raw contacts (which carry
+  // `inquiredListingIds`) before the `Lead` projection, since that's where the
+  // per-listing inquiry data actually lives; a contact who is only linked to
+  // the property (not an inquirer on this space) drops out here too.
+  const scopedContacts = useMemo(
+    () => leadsForSpaceDeal(allLeads, spaceDealId ?? null),
+    [allLeads, spaceDealId],
+  );
+
+  const leads = useMemo(() => scopedContacts.map(toLead), [scopedContacts]);
+
+  // The suite a lead inquired about, for the building-level table's Space column.
+  // Keyed by contact id because `toLead` carries the contact's id straight through.
+  const spaceLabels = useMemo(() => {
+    const byLead = new Map<string, string>();
+    for (const contact of scopedContacts) {
+      for (const listingId of contact.inquiredListingIds ?? []) {
+        const deal = getListing(listingId);
+        // Only a child space deal names a unit; a building-level inquiry does not.
+        if (!deal?.parentDealId) continue;
+        const unit = property.units.find((u) => u.id === deal.unitId);
+        if (unit) {
+          byLead.set(contact.id, unit.label);
+          break;
+        }
+      }
+    }
+    return byLead;
+  }, [scopedContacts, property.units]);
+
+  // Inside the suite panel every row is that same suite, so the column would
+  // repeat one value on every line — only the building-level view names it.
+  const showSpaceColumn = !spaceDealId;
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -193,6 +240,13 @@ export function PropertyDetailLeads({
 
   return (
     <div className="d-flex flex-column gap-3 p-4" style={{ minWidth: 0 }}>
+      {spaceDealId && (
+        <Alert severity="info" withIcon>
+          <FontAwesomeIcon icon={faCircleInfo} />
+          Showing {leads.length} of {allLeads.length} — filtered to this
+          space. The full library lives on the building.
+        </Alert>
+      )}
       {/* Title row */}
       <ListingPageHeader
         title="Leads"
@@ -336,6 +390,7 @@ export function PropertyDetailLeads({
               <Table.Head sticky style={{ left: CHECKBOX_COL_W }}>
                 Name
               </Table.Head>
+              {showSpaceColumn && <Table.Head>Space</Table.Head>}
               <Table.Head>Email</Table.Head>
               <Table.Head>Phone</Table.Head>
               <Table.Head>Added By</Table.Head>
@@ -400,6 +455,11 @@ export function PropertyDetailLeads({
                     </Link>
                   </div>
                 </Table.Cell>
+                {showSpaceColumn && (
+                  <Table.Cell className="text-muted">
+                    {spaceLabels.get(lead.id) ?? "—"}
+                  </Table.Cell>
+                )}
                 <Table.Cell>{lead.email}</Table.Cell>
                 <Table.Cell>{lead.phone || muted}</Table.Cell>
                 <Table.Cell>

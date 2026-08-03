@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faVectorSquare, faPlus } from "@fortawesome/pro-regular-svg-icons";
 import { useDataStore } from "#/data/dataStore";
-import { getListing } from "#/data/store";
-import { getChildDeals } from "#/data/leaseSpaces";
+import { getListing, getProperty } from "#/data/store";
+import { buildingAvailability } from "#/data/buildingAvailability";
+import { canAddSpaces, dealShape, isLeaseParent } from "#/data/dealShape";
 import { AddSpaceModal } from "#/components/deals/AddSpaceModal";
 import { DealStageBadge } from "#/components/deals/DealStageBadge";
 
@@ -20,12 +21,16 @@ function SpacesTab() {
   const version = useDataStore((s) => s.listings);
   void version;
   const listing = getListing(listingId);
-  const canAddSpace =
-    listing?.dealType === "Lease" && listing?.parentDealId == null;
-  const children = getChildDeals(listingId);
+  // Whether this deal has a Spaces tab at all — a top-level lease deal, regardless
+  // of stage. Separate from canAddSpaces: a Lost shell still has this tab, it just
+  // can't accept new spaces (see below).
+  const leaseParent = isLeaseParent(listing);
+  const canAddSpace = listing ? canAddSpaces(listing) : false;
+  const rows = buildingAvailability(listingId);
+  const property = listing ? getProperty(listing.propertyId) : undefined;
   const [addOpen, setAddOpen] = useState(false);
 
-  if (!canAddSpace) {
+  if (!leaseParent) {
     return (
       <div className="p-4">
         <Empty>
@@ -47,50 +52,63 @@ function SpacesTab() {
     <div className="p-4">
       <div className="d-flex align-items-center justify-content-between mb-3">
         <h2 className="fs-6 fw-semibold mb-0">Spaces</h2>
-        <Button variant="primary" onClick={() => setAddOpen(true)}>
-          <FontAwesomeIcon icon={faPlus} /> Add space
-        </Button>
+        {canAddSpace && (
+          <Button variant="primary" onClick={() => setAddOpen(true)}>
+            <FontAwesomeIcon icon={faPlus} /> Add space
+          </Button>
+        )}
       </div>
 
-      {children.length === 0 ? (
+      {rows.length === 0 ? (
         <Empty>
           <Empty.Media>
             <FontAwesomeIcon icon={faVectorSquare} aria-label="No spaces" />
           </Empty.Media>
           <Empty.Content>
             <Empty.Title>No spaces yet</Empty.Title>
-            Add a space to spin an individual unit into its own deal — it
-            inherits this deal&apos;s marketing template.
+            Add a space to spin an individual unit into its own deal. The
+            building&apos;s marketing is shared by every space.
           </Empty.Content>
-          <Empty.Actions>
-            <Button variant="primary" onClick={() => setAddOpen(true)}>
-              <FontAwesomeIcon icon={faPlus} /> Add space
-            </Button>
-          </Empty.Actions>
+          {canAddSpace && (
+            <Empty.Actions>
+              <Button variant="primary" onClick={() => setAddOpen(true)}>
+                <FontAwesomeIcon icon={faPlus} /> Add space
+              </Button>
+            </Empty.Actions>
+          )}
         </Empty>
       ) : (
         <div className="d-flex flex-column gap-2">
-          {children.map((c) => (
-            <Link
-              key={c.id}
-              to="/listings/$listingId"
-              params={{ listingId: c.id }}
-              className="d-flex align-items-center justify-content-between gap-3 border rounded p-3 text-decoration-none"
-            >
-              <span className="d-flex align-items-center gap-2 text-body fw-semibold">
-                <FontAwesomeIcon icon={faVectorSquare} className="text-muted" />
-                {c.name}
-              </span>
-              <span className="d-flex align-items-center gap-3">
-                <span className="text-muted">
-                  {c.marketing.spaceLeaseTerms[0]?.leaseRate
-                    ? `$${c.marketing.spaceLeaseTerms[0]?.leaseRate} ${c.marketing.spaceLeaseTerms[0]?.leaseRateUnits}`
-                    : "Rate TBD"}
+          {rows.map((row) => {
+            const child = getListing(row.dealId);
+            const unit = property?.units.find((u) => u.id === row.unitId);
+            if (!child || !unit || !property) return null;
+            return (
+              <Link
+                key={row.dealId}
+                to="/listings/$listingId/spaces/$spaceId"
+                params={{ listingId, spaceId: row.dealId }}
+                className="d-flex align-items-center gap-3 border rounded p-3 text-decoration-none text-body"
+              >
+                <span className="d-flex align-items-center gap-2 fw-semibold">
+                  <FontAwesomeIcon icon={faVectorSquare} className="text-muted" />
+                  {unit.label}
+                  <span className="text-muted fw-normal">
+                    {row.sqft.toLocaleString()} SF
+                  </span>
                 </span>
-                <DealStageBadge stage={c.status} />
-              </span>
-            </Link>
-          ))}
+                <span className="d-flex align-items-center gap-3 ms-auto">
+                  <span className="text-muted">
+                    {row.leaseRate != null
+                      ? `$${row.leaseRate} ${row.leaseRateUnits}`
+                      : "Rate TBD"}
+                  </span>
+                  <span className="text-muted">{row.availability}</span>
+                  <DealStageBadge stage={child.status} shape={dealShape(child)} />
+                </span>
+              </Link>
+            );
+          })}
         </div>
       )}
 
@@ -99,6 +117,10 @@ function SpacesTab() {
         open={addOpen}
         onOpenChange={setAddOpen}
       />
+
+      {/* The suite panel renders here — a child route, so this roster and the
+          building's chrome stay mounted behind it. */}
+      <Outlet />
     </div>
   );
 }

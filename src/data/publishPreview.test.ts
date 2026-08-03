@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Listing, Property } from "./types";
-import { seedGateForm } from "./stageGates";
+import { resolveGate, seedGateForm } from "./stageGates";
+import type { DealShape } from "./dealShape";
 import { buildPublishPreview } from "./publishPreview";
 
 /** Minimal Listing stub covering only what buildPublishPreview reads. */
@@ -50,16 +51,40 @@ const property = {
   state: "IL",
 } as unknown as Property;
 
-function build(deal: Listing) {
-  return buildPublishPreview(deal, property, seedGateForm(deal));
+/** A lease deal with the building's own content filled in. */
+function leaseStub({
+  availableSqFt,
+  leaseRate,
+}: {
+  availableSqFt: number;
+  leaseRate: number;
+}): Listing {
+  return dealStub({
+    dealType: "Lease",
+    marketing: {
+      ...dealStub().marketing,
+      leaseTitle: "Suite 200",
+      leaseDescription: "Second floor suite",
+      availableSqFt,
+      spaceLeaseTerms: leaseRate
+        ? [{ leaseRate, leaseRateUnits: "SF/Yr" }]
+        : [],
+    },
+  } as Partial<Listing>);
 }
 
-function contentRows(deal: Listing) {
-  return build(deal).sections.find((s) => s.id === "content")!.rows;
+/** The preview always renders against the gate the deal would actually open. */
+function build(deal: Listing, shape?: DealShape) {
+  const config = resolveGate("proposal", "active", deal.dealType, shape);
+  return buildPublishPreview(deal, property, seedGateForm(deal), config);
 }
 
-function row(deal: Listing, label: string) {
-  return contentRows(deal).find((r) => r.label === label);
+function contentRows(deal: Listing, shape?: DealShape) {
+  return build(deal, shape).sections.find((s) => s.id === "content")!.rows;
+}
+
+function row(deal: Listing, label: string, shape?: DealShape) {
+  return contentRows(deal, shape).find((r) => r.label === label);
 }
 
 describe("buildPublishPreview", () => {
@@ -144,6 +169,28 @@ describe("buildPublishPreview", () => {
       },
     } as Partial<Listing>);
     expect(row(lease, "Available SF")?.status).toBe("missing");
+  });
+
+  /**
+   * A shell's gate does not require a rate or an available SF, so its preview
+   * must not render those rows either — otherwise the modal shows
+   * "Lease rate — Not set [Required]" while its own gap alert is empty and
+   * Confirm is enabled, against a field no surface in the app can fill.
+   */
+  it("omits the lease rate and available SF rows for a shell", () => {
+    const shell = leaseStub({ availableSqFt: 0, leaseRate: 0 });
+    expect(row(shell, "Lease rate", "shell")).toBeUndefined();
+    expect(row(shell, "Available SF", "shell")).toBeUndefined();
+    expect(row(shell, "Asking price", "shell")).toBeUndefined();
+    // The building's own content still gates, and nothing reads as missing.
+    expect(row(shell, "Listing title", "shell")?.status).toBe("ok");
+    expect(contentRows(shell, "shell").every((r) => r.status === "ok")).toBe(true);
+  });
+
+  it("still renders both rows for a flat lease deal", () => {
+    const flat = leaseStub({ availableSqFt: 0, leaseRate: 0 });
+    expect(row(flat, "Lease rate", "flat-lease")?.status).toBe("missing");
+    expect(row(flat, "Available SF", "flat-lease")?.status).toBe("missing");
   });
 
   it("carries the derived photo gallery", () => {

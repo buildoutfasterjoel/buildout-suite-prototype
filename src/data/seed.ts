@@ -2131,6 +2131,7 @@ export function generateDataset() {
         id: faker.string.uuid(),
         url: 'https://tours.example.com/matterport/demo-listing',
         mediaType: 'Matterport Tour',
+        unitId: null,
       } satisfies VisualMediaLink,
     ]
     demoListing.marketing.overrideDisclaimer = false

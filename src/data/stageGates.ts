@@ -9,6 +9,7 @@ import type {
   Listing,
   PropertyStatus,
 } from './types'
+import type { DealShape } from './dealShape'
 
 export type GateKind = 'field' | 'confirm' | 'dead'
 
@@ -29,6 +30,7 @@ export type RequiredField =
   | 'availableSqFt'
   | 'leaseTermMonths'
   | 'leaseCommencementDate'
+  | 'shellActive'
 
 /** The editable state the StageGate modal collects. Fields not relevant to a gate are ignored. */
 export interface GateFormState {
@@ -62,6 +64,8 @@ export interface GateFormState {
   leaseTermMonths: number | null
   /** Closed (lease): tenancy start. */
   leaseCommencementDate: string | null
+  /** Approve & Publish (space deal): the building's marketing is live. */
+  shellActive: boolean
 }
 
 export interface GateConfig {
@@ -127,6 +131,7 @@ export const REQUIRED_FIELD_LABEL: Record<RequiredField, string> = {
   availableSqFt: 'Available SF',
   leaseTermMonths: 'Lease term',
   leaseCommencementDate: 'Commencement date',
+  shellActive: 'Building marketing published',
 }
 
 /** A blank working form — fields not relevant to a given gate are ignored. */
@@ -153,6 +158,7 @@ export const EMPTY_GATE_FORM: GateFormState = {
   availableSqFt: null,
   leaseTermMonths: null,
   leaseCommencementDate: null,
+  shellActive: false,
 }
 
 /**
@@ -185,7 +191,7 @@ function hasUnresolvedConflict(deal: Listing, fieldKey: IngestionFieldKey): bool
   )
 }
 
-export function seedGateForm(deal: Listing): GateFormState {
+export function seedGateForm(deal: Listing, ctx?: { shellActive?: boolean }): GateFormState {
   const aiDocs = (deal.documents ?? []).filter((d) => d.aiGenerated)
   const isLease = deal.dealType === 'Lease'
   const space = deal.marketing.spaceLeaseTerms[0]
@@ -231,6 +237,7 @@ export function seedGateForm(deal: Listing): GateFormState {
     leaseTermMonths: space?.leaseTermMonths ?? null,
     leaseCommencementDate: deal.transaction.leaseCommencementDate,
     aiDocsAllReviewed: aiDocs.length === 0,
+    shellActive: ctx?.shellActive ?? false,
   }
 }
 
@@ -241,9 +248,10 @@ export function seedGateForm(deal: Listing): GateFormState {
  */
 export function publishReadiness(
   deal: Listing,
+  ctx?: { shape?: DealShape; shellActive?: boolean },
 ): { ready: boolean; missing: RequiredField[] } {
-  const config = resolveGate('proposal', 'active', deal.dealType)
-  const form = seedGateForm(deal)
+  const config = resolveGate('proposal', 'active', deal.dealType, ctx?.shape)
+  const form = seedGateForm(deal, { shellActive: ctx?.shellActive })
   const missing = config.required.filter((f) => !fieldSatisfied(f, form))
   return { ready: missing.length === 0, missing }
 }
@@ -252,6 +260,7 @@ export function resolveGate(
   from: PropertyStatus,
   target: PropertyStatus,
   dealType: DealType,
+  shape: DealShape = dealType === 'Lease' ? 'flat-lease' : 'sale',
 ): GateConfig {
   const isLease = dealType === 'Lease'
   const fi = LADDER.indexOf(from) // -1 when reopening from Lost
@@ -283,6 +292,41 @@ export function resolveGate(
   // Forward field gates, keyed by target stage.
   switch (target) {
     case 'active':
+      // A space deal's publish gate is the moment the suite enters the building's
+      // marketing. It gates on the space's own numbers only — title, description,
+      // doc review, and the listing-agreement dates are property-level and belong
+      // to the shell, which must itself already be live.
+      if (shape === 'space') {
+        return {
+          ...base,
+          kind: 'field',
+          title: 'Publish space to the building listing',
+          required: ['leaseRate', 'availableSqFt', 'leaseTermMonths', 'shellActive'],
+          publishes: true,
+        }
+      }
+      // A shell publishes the BUILDING's marketing and nothing else. The rate and
+      // the available SF live on its spaces — `addSpaceToDeal` physically moves
+      // each `spaceLeaseTerms` row onto the child — so a shell structurally
+      // cannot hold either number. Gating it on them would leave Approve &
+      // Publish permanently disabled, and with it every space, whose own gate
+      // requires a live shell. This is the same logic that strips the shell's
+      // Back Office: the money belongs to the space.
+      if (shape === 'shell') {
+        return {
+          ...base,
+          kind: 'field',
+          title: 'Approve & Publish',
+          required: [
+            'saleTitle',
+            'saleDescription',
+            'aiDocsReviewed',
+            'listedOnDate',
+            'listingExpirationDate',
+          ],
+          publishes: true,
+        }
+      }
       return {
         ...base,
         kind: 'field',
@@ -334,8 +378,11 @@ export function resolveGate(
  * required fields as the publish gate, but pinned to the deal's current stage so
  * it publishes in place without changing the stage.
  */
-export function completeSetupGate(deal: Listing): GateConfig {
-  const publishGate = resolveGate('proposal', 'active', deal.dealType)
+export function completeSetupGate(
+  deal: Listing,
+  shape: DealShape = deal.dealType === 'Lease' ? 'flat-lease' : 'sale',
+): GateConfig {
+  const publishGate = resolveGate('proposal', 'active', deal.dealType, shape)
   return {
     ...publishGate,
     fromStage: deal.status,
@@ -378,6 +425,8 @@ export function fieldSatisfied(field: RequiredField, form: GateFormState): boole
       return form.leaseTermMonths != null && form.leaseTermMonths > 0
     case 'leaseCommencementDate':
       return !!form.leaseCommencementDate
+    case 'shellActive':
+      return form.shellActive
   }
 }
 
@@ -434,9 +483,20 @@ export function buildTransitionInput(
     }
     if (Object.keys(marketing).length > 0) input.marketing = marketing
     if (isLease) {
-      if (form.leaseRate != null) input.leaseRate = form.leaseRate
-      input.leaseRateUnits = form.leaseRateUnits
-      if (form.availableSqFt != null) input.availableSqFt = form.availableSqFt
+      // Only a gate that actually asked for a rate may write one. `required`
+      // already carries the shape decision, so this needs no extra parameter.
+      //
+      // A shell must not write here at all: `input.leaseRateUnits` is set
+      // unconditionally below, and that alone flips `hasLeaseTerms` in
+      // `commitStageTransition`, which then synthesises a `spaceLeaseTerms[0]`
+      // row keyed to the sentinel unit `'whole-property'`. That phantom row
+      // breaks the very invariant the shell publish gate rests on — a shell
+      // holds no space terms, because its spaces do.
+      if (config.required.includes('leaseRate')) {
+        if (form.leaseRate != null) input.leaseRate = form.leaseRate
+        input.leaseRateUnits = form.leaseRateUnits
+        if (form.availableSqFt != null) input.availableSqFt = form.availableSqFt
+      }
     } else if (form.askingPrice != null) {
       input.financials = { askingPrice: form.askingPrice }
     }

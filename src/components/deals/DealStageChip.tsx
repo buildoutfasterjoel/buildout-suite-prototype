@@ -3,10 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown } from "@fortawesome/pro-regular-svg-icons";
 import { faCircleSmall } from "@fortawesome/pro-solid-svg-icons";
 import type { PropertyStatus } from "#/data/types";
-import {
-  STATUS_LABELS,
-  PROPERTY_STATUSES,
-} from "#/components/properties/propertyDisplay";
+import { availableStages, dealStageLabel, type DealShape } from "#/data/dealShape";
 
 /**
  * Per-stage chip palette (hex of Blueprint family tokens): a soft tinted
@@ -39,11 +36,13 @@ export function DealStageChip({
   value,
   onChange,
   size = "md",
+  shape = "sale",
 }: {
   value: PropertyStatus;
   onChange: (next: PropertyStatus) => void;
   /** "sm" renders a compact 20px-tall pill (4px side padding, 4px gap). */
   size?: "md" | "sm";
+  shape?: DealShape;
 }) {
   const c = STAGE_CHIP_COLORS[value];
   const compact = size === "sm";
@@ -68,20 +67,20 @@ export function DealStageChip({
               icon={faCircleSmall}
               style={{ color: c.dot, fontSize: 14 }}
             />
-            {STATUS_LABELS[value]}
+            {dealStageLabel(value, shape)}
             <FontAwesomeIcon icon={faChevronDown} style={{ fontSize: 12 }} />
           </button>
         }
       />
       <DropdownMenu.Content align="start">
-        {PROPERTY_STATUSES.map((s) => (
+        {availableStages(shape).map((s) => (
           <DropdownMenu.Item key={s} onClick={() => onChange(s)}>
             <FontAwesomeIcon
               icon={faCircleSmall}
               style={{ color: STAGE_CHIP_COLORS[s].dot }}
               className="me-2"
             />
-            {STATUS_LABELS[s]}
+            {dealStageLabel(s, shape)}
           </DropdownMenu.Item>
         ))}
       </DropdownMenu.Content>

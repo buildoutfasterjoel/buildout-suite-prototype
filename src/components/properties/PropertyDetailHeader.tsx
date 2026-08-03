@@ -3,7 +3,6 @@ import { Link } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Breadcrumb } from "@buildoutinc/blueprint-react/ui/Breadcrumb";
-import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -12,26 +11,17 @@ import {
   faUserGear,
   faEllipsisVertical,
   faHandshake,
-  faArrowsRotate,
   faSquareDashedCirclePlus,
   faTrashAlt,
 } from "@fortawesome/pro-regular-svg-icons";
-import type { Listing, ListingStage } from "#/data/types";
-import { getProperty, getListing } from "#/data/store";
-import {
-  STATUS_LABELS,
-  STATUS_COLORS,
-  PROPERTY_STATUSES,
-  hash,
-  getRefId,
-  getPhotoUrl,
-} from "./propertyDisplay";
+import type { Listing } from "#/data/types";
+import { getProperty } from "#/data/store";
+import { canAddSpaces } from "#/data/dealShape";
+import { hash, getRefId, getPhotoUrl } from "./propertyDisplay";
 import { AvatarGroup } from "./AvatarGroup";
 import { SyndicationStatus } from "#/components/listings/SyndicationStatus";
-import { requestStageChange } from "#/components/deals/useStageGate";
+import { DealStageSelect } from "#/components/deals/DealStageSelect";
 import { AddSpaceModal } from "#/components/deals/AddSpaceModal";
-import { resyncChildFromParent } from "#/data/leaseSpaces";
-import { notify } from "#/lib/notify";
 
 /**
  * Full-bleed page header for a listing (which is its deal, 1:1) — identity on the
@@ -45,17 +35,6 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
   const property = getProperty(listing.propertyId);
   const address = `${property?.street}, ${property?.city}, ${property?.state} ${property?.zip}`;
   const [addSpaceOpen, setAddSpaceOpen] = useState(false);
-  const parentDeal = listing.parentDealId
-    ? getListing(listing.parentDealId)
-    : undefined;
-  // For a child space deal, the last breadcrumb crumb is the unit/suite label.
-  const spaceLabel =
-    property?.units.find((u) => u.id === listing.unitId)?.label ?? listing.name;
-
-  const resync = () => {
-    resyncChildFromParent(listing.id);
-    notify({ title: "Re-synced from parent", description: listing.name });
-  };
 
   return (
     <div className="bg-card border-bottom">
@@ -96,30 +75,9 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
                   </Breadcrumb.Link>
                 </Breadcrumb.Item>
                 <Breadcrumb.Separator />
-                {parentDeal ? (
-                  <>
-                    <Breadcrumb.Item>
-                      <Breadcrumb.Link
-                        render={
-                          <Link
-                            to="/listings/$listingId"
-                            params={{ listingId: parentDeal.id }}
-                          />
-                        }
-                      >
-                        {parentDeal.name}
-                      </Breadcrumb.Link>
-                    </Breadcrumb.Item>
-                    <Breadcrumb.Separator />
-                    <Breadcrumb.Item>
-                      <Breadcrumb.Page>{spaceLabel}</Breadcrumb.Page>
-                    </Breadcrumb.Item>
-                  </>
-                ) : (
-                  <Breadcrumb.Item>
-                    <Breadcrumb.Page>{listing.name}</Breadcrumb.Page>
-                  </Breadcrumb.Item>
-                )}
+                <Breadcrumb.Item>
+                  <Breadcrumb.Page>{listing.name}</Breadcrumb.Page>
+                </Breadcrumb.Item>
               </Breadcrumb.List>
             </Breadcrumb>
             <h1
@@ -141,61 +99,16 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
               {listing.dealSide === "seller" && (
                 <SyndicationStatus listing={listing} />
               )}
-              {parentDeal && (
-                <Button variant="ghost" size="sm" onClick={resync}>
-                  <FontAwesomeIcon icon={faArrowsRotate} /> Re-sync from parent
-                </Button>
-              )}
             </div>
           </div>
 
           {/* Stage + access block · actions · options on its own */}
           <div className="d-flex align-items-center gap-3 flex-shrink-0">
             <div className="d-flex align-items-center gap-2">
-              <Select
-                value={listing.status}
-                onValueChange={(v) => {
-                  if (v && v !== listing.status) {
-                    requestStageChange(listing.id, v as ListingStage);
-                  }
-                }}
-              >
-                <Select.Trigger style={{ minWidth: 168 }}>
-                  <span className="d-inline-flex align-items-center gap-2">
-                    <span
-                      className="rounded-circle"
-                      style={{
-                        width: 8,
-                        height: 8,
-                        backgroundColor: STATUS_COLORS[listing.status],
-                      }}
-                    />
-                    <Select.Value>
-                      {(v) => STATUS_LABELS[v as ListingStage]}
-                    </Select.Value>
-                  </span>
-                </Select.Trigger>
-                <Select.Content>
-                  {PROPERTY_STATUSES.map((s) => (
-                    <Select.Item key={s} value={s}>
-                      <span className="d-inline-flex align-items-center gap-2">
-                        <span
-                          className="rounded-circle"
-                          style={{
-                            width: 8,
-                            height: 8,
-                            backgroundColor: STATUS_COLORS[s],
-                          }}
-                        />
-                        {STATUS_LABELS[s]}
-                      </span>
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select>
+              <DealStageSelect listing={listing} />
             </div>
             <div className="d-flex align-items-center gap-2">
-              {listing.dealType === "Lease" && listing.parentDealId == null && (
+              {canAddSpaces(listing) && (
                 <Button
                   variant="secondary"
                   aria-label="Add space"
