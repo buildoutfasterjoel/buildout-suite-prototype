@@ -79,7 +79,7 @@ Consequences, all desirable:
 |---|---|
 | Back button | Pops to the parent; the panel closes, background untouched |
 | Deep link / refresh | Building + roster render, panel opens over them |
-| Sharing a suite | Works — the URL is real, not UI state |
+| Sharing a suite | Works, down to the individual section — the URL is real, not UI state |
 | Renderings of a suite | Exactly one |
 
 **`/listings/{suiteId}` redirects in**, to `/listings/{shellId}/spaces/{suiteId}`. Board cards, contact
@@ -90,10 +90,11 @@ sites.
 
 - `$listingId/spaces.tsx` keeps the roster and gains an `<Outlet />`, becoming a layout that still
   renders content. No index route is needed.
-- New `$listingId/spaces/$spaceId.tsx` renders the panel.
-- The redirect belongs in `$listingId.tsx`'s `beforeLoad`: if the listing has a `parentDealId`,
-  redirect to the nested panel URL. Placing it on the layout catches every sub-route at once, so
-  `/listings/{suiteId}/financials` resolves too rather than 404ing.
+- New `$listingId/spaces/$spaceId.tsx` is itself a layout: panel chrome plus an `<Outlet />`, with one
+  leaf per section (see *Panel organization*).
+- The redirect belongs in `$listingId.tsx`'s `beforeLoad`: if the listing has a `parentDealId`, rewrite
+  the path under the panel. Placing it on the layout catches every sub-route at once, and because the
+  leaf slugs are unchanged it is a single rewrite rather than a per-route table.
 
 ## What the panel holds
 
@@ -136,9 +137,8 @@ Not refactored — deleted. Each of these exists only to sustain a suite pretend
 - The `parentDeal` breadcrumb branch in `PropertyDetailHeader`
 - The Spaces roster's inline row expansion, replaced by the panel
 
-The suite's own routes go with them — `overview`, `activities`, `history`, `leads`, `media`,
-`financials`, `financial-documents`, `notes` no longer resolve for a space deal, because the layout
-redirect catches them before they render. Their surviving content is listed in the panel table above.
+The suite's own routes are **not** deleted — they move underneath the panel. See *Panel organization*
+below.
 
 **`dealShape` stays.** `'space'` still drives the truncated stage ladder and the Draft/Pitching
 relabel. What is being removed is navigation machinery, not the model.
@@ -160,12 +160,66 @@ portaled at the root rather than nested inside the panel's DOM; and `requestStag
 refuses any target outside the shape's ladder (`c7620a9`), so the backstop is independent of how the
 gate is presented. Stacking order still wants a visual check.
 
-## Deferred: panel internals
+## Panel organization
 
-Eight sections is a lot for a panel, and refining them against a sketch is guesswork. The panel's
-width, whether the sections stack in one scroll or get internal navigation, and which of them collapse
-or merge are **deliberately left to a follow-on design**, to be settled once there is something to
-click through. The expectation is that sections will merge, not that eight is right.
+The panel is a **layout with child routes**, not a single route. `spaces/$spaceId.tsx` renders the
+panel chrome — unit label, stage control, tab bars — plus an `<Outlet />`; each section is a leaf.
+
+Two levels of tabs, both from Blueprint's `Tabs`: major sections use the default variant, and the
+sections that subdivide use `variant="pills"`.
+
+| Tab (default variant) | Pills | Leaf route |
+|---|---|---|
+| **Deal** | Details | `overview` |
+| | Activity | `activities` |
+| | History | `history` |
+| **Terms** | — | `terms` |
+| **Interest** | Leads | `leads` |
+| | Media | `media` |
+| **Back Office** | Voucher | `financials` |
+| | Invoices | `financial-documents` |
+| | Notes | `notes` |
+
+`overview` is the index — opening a suite lands on Deal › Details.
+
+No tab is named *Marketing*. Leads and Media here are unit-filtered views of the property's store, so
+that word would rebuild the ambiguity this design exists to remove. **Interest** names what they have
+in common: signals that someone wants this space.
+
+### Leaves are flat, and that is deliberate
+
+Pills add no URL segment. `financials` sits directly under `$spaceId` rather than under
+`back-office/`, so every pill is one short shareable link and the top-level tab is *derived* from
+which leaf is active — the same pattern `PropertyDetailSidebar` already uses to compute
+`activeInGroup` from `pathname`.
+
+This is the point of the sub-URLs: a broker can send a teammate the exact voucher or the exact lead
+list they are talking about, not just "the suite."
+
+### The redirect is one rewrite, not a mapping table
+
+Because every leaf slug is **identical to the slug that route has today**, the redirect from a legacy
+suite URL is a pure path rewrite:
+
+```
+/listings/{suiteId}/{anything}  →  /listings/{shellId}/spaces/{suiteId}/{anything}
+```
+
+Two special cases: a bare `/listings/{suiteId}` lands on `overview`, and `/listings/{suiteId}/edit`
+maps to `terms` — the only genuinely new slug, since a space's terms live on the edit form today.
+
+Keeping the slugs stable is worth more than tidier names. Every shared link, board card, and contact
+link survives at the granularity someone actually sent it.
+
+## Still deferred
+
+**Width and density.** Whether this is a 70–80% sheet or narrower, and how the tabbed chrome reads
+inside an overlay that is itself over a page, needs a real click-through. Two tab bars plus panel plus
+page is a lot of nested chrome on paper.
+
+**Whether four tabs and nine leaves survive contact with use.** The expectation is still that some
+merge. Terms having no pills, and Back Office wanting table width the panel may not give it, are the
+two most likely to move.
 
 ## Risks
 
