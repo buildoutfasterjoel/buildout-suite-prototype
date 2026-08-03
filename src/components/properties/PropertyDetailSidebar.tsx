@@ -29,6 +29,7 @@ import { useDataStore } from "#/data/dataStore";
 import { getListing, getProperty } from "#/data/store";
 import { propertyQualifiesForUnderwriting } from "#/components/deals/underwriting/eligibility";
 import { dealShape, isLeaseParent } from "#/data/dealShape";
+import { buildingSectionHref } from "#/data/suitePanelPath";
 
 type NavItem = { label: string; href: string; icon: IconDefinition };
 type NavGroup = { label?: string; items: NavItem[] };
@@ -151,12 +152,17 @@ export function PropertyDetailSidebar() {
     } as any);
   }
 
+  // Which building section is live. Read from the first segment after the listing
+  // id rather than the last, because a suite panel appends its own leaf and those
+  // slugs mirror the building's own — matching the last segment made opening a
+  // panel jump the sidebar off Spaces and onto Overview, then back on close.
+  const sectionHref = buildingSectionHref(pathname, listingId);
+
   return (
     <nav className="px-3 py-1" aria-label="Property sections">
       {navGroups.map((group, i) => {
         const activeInGroup =
-          group.items.find((item) => pathname.endsWith(`/${item.href}`))
-            ?.label ?? "";
+          group.items.find((item) => item.href === sectionHref)?.label ?? "";
         const isCollapsed = group.label ? collapsed.has(group.label) : false;
         const tabs = (
           <Tabs

@@ -43,3 +43,21 @@ export function legacySubPath(pathname: string, listingId: string): string | nul
   const rest = pathname.slice(at + marker.length).replace(/\/$/, '')
   return rest === '' ? null : rest
 }
+
+/**
+ * Which of the building's own sections a path belongs to — the FIRST segment after
+ * the listing id, not the last.
+ *
+ * The distinction matters because a suite panel's leaf slugs deliberately mirror the
+ * building's section slugs (that mirroring is what makes the legacy rewrite one rule
+ * instead of a table). So `/listings/L1/spaces/S1/overview` must resolve to `spaces`,
+ * not `overview`: the broker is on the building's Spaces section with a panel over
+ * it. Matching the last segment instead lights up the wrong sidebar item the moment
+ * a panel opens, and switches it back when the panel closes.
+ */
+export function buildingSectionHref(
+  pathname: string,
+  listingId: string,
+): string | null {
+  return legacySubPath(pathname, listingId)?.split('/')[0] ?? null
+}

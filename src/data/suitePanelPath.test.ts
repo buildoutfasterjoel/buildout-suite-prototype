@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { suitePanelPath, legacySubPath } from './suitePanelPath'
+import {
+  suitePanelPath,
+  legacySubPath,
+  buildingSectionHref,
+} from './suitePanelPath'
 import type { Listing } from './types'
 
 const suite = { id: 'S1', parentDealId: 'L1' } as unknown as Listing
@@ -65,5 +69,36 @@ describe('legacySubPath', () => {
 
   it('returns null when the listing id is not in the path', () => {
     expect(legacySubPath('/contacts/C1', 'L1')).toBeNull()
+  })
+})
+
+describe('buildingSectionHref', () => {
+  it('names the building section for a plain building route', () => {
+    expect(buildingSectionHref('/listings/L1/overview', 'L1')).toBe('overview')
+    expect(buildingSectionHref('/listings/L1/financial-documents', 'L1')).toBe(
+      'financial-documents',
+    )
+  })
+
+  /**
+   * The regression this exists for. A suite panel's leaf slugs deliberately mirror
+   * the building's own section slugs, so matching the LAST path segment lit up the
+   * building's Overview item the moment a suite panel opened on its default leaf.
+   * The broker is still on Spaces — the panel is over it, not instead of it.
+   */
+  it('stays on spaces while a suite panel is open, whatever leaf it shows', () => {
+    expect(buildingSectionHref('/listings/L1/spaces/S1/overview', 'L1')).toBe('spaces')
+    expect(buildingSectionHref('/listings/L1/spaces/S1/leads', 'L1')).toBe('spaces')
+    expect(buildingSectionHref('/listings/L1/spaces/S1/financials', 'L1')).toBe('spaces')
+    expect(buildingSectionHref('/listings/L1/spaces', 'L1')).toBe('spaces')
+  })
+
+  it('tolerates a trailing slash', () => {
+    expect(buildingSectionHref('/listings/L1/media/', 'L1')).toBe('media')
+  })
+
+  it('returns null when there is no section segment', () => {
+    expect(buildingSectionHref('/listings/L1', 'L1')).toBeNull()
+    expect(buildingSectionHref('/contacts/C1', 'L1')).toBeNull()
   })
 })
