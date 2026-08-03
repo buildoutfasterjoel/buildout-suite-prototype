@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { suitePanelPath } from './suitePanelPath'
+import { suitePanelPath, legacySubPath } from './suitePanelPath'
 import type { Listing } from './types'
 
 const suite = { id: 'S1', parentDealId: 'L1' } as unknown as Listing
@@ -38,5 +38,32 @@ describe('suitePanelPath', () => {
     expect(suitePanelPath(suite, 'property-marketing')).toBe(
       '/listings/L1/spaces/S1/overview',
     )
+  })
+})
+
+describe('legacySubPath', () => {
+  it('returns null for a bare listing URL', () => {
+    expect(legacySubPath('/listings/L1', 'L1')).toBeNull()
+  })
+
+  it('treats a trailing slash on a bare URL as bare', () => {
+    expect(legacySubPath('/listings/L1/', 'L1')).toBeNull()
+  })
+
+  it('extracts a single sub-segment', () => {
+    expect(legacySubPath('/listings/L1/financials', 'L1')).toBe('financials')
+    expect(legacySubPath('/listings/L1/financial-documents', 'L1')).toBe('financial-documents')
+  })
+
+  it('strips a trailing slash from a sub-segment', () => {
+    expect(legacySubPath('/listings/L1/leads/', 'L1')).toBe('leads')
+  })
+
+  it('keeps a deeper path intact rather than truncating it', () => {
+    expect(legacySubPath('/listings/L1/spaces/S1/overview', 'L1')).toBe('spaces/S1/overview')
+  })
+
+  it('returns null when the listing id is not in the path', () => {
+    expect(legacySubPath('/contacts/C1', 'L1')).toBeNull()
   })
 })

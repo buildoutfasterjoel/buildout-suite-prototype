@@ -29,3 +29,17 @@ export function suitePanelPath(
   // such section, so land on Details rather than 404.
   return `${base}/${DEFAULT_SPACE_PANEL_LEAF}`
 }
+
+/**
+ * The part of a legacy listing URL after `/listings/{id}/`, or null when there is none.
+ *
+ * Split on the FIRST occurrence only: a panel URL contains the shell's id followed by
+ * `/spaces/{suiteId}/{leaf}`, and truncating at a later occurrence would mangle it.
+ */
+export function legacySubPath(pathname: string, listingId: string): string | null {
+  const marker = `/listings/${listingId}/`
+  const at = pathname.indexOf(marker)
+  if (at === -1) return null
+  const rest = pathname.slice(at + marker.length).replace(/\/$/, '')
+  return rest === '' ? null : rest
+}

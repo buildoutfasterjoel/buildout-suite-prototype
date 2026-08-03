@@ -1,4 +1,5 @@
-import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
@@ -6,26 +7,12 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBuildingCircleExclamation } from "@fortawesome/pro-regular-svg-icons";
 import { getStore } from "#/data/store";
 import { useDataStore } from "#/data/dataStore";
-import { suitePanelPath } from "#/data/suitePanelPath";
+import { suitePanelPath, legacySubPath } from "#/data/suitePanelPath";
 import { PropertyDetailHeader } from "#/components/properties/PropertyDetailHeader";
 import { PropertyDetailSidebar } from "#/components/properties/PropertyDetailSidebar";
 import { MarketingScopeBar } from "#/components/deals/MarketingScopeBar";
 
 export const Route = createFileRoute("/_shell/listings/$listingId")({
-  // A suite has no page of its own: rewrite any legacy suite URL onto the panel over
-  // its building. Placed on the layout so every sub-route is caught by one rule —
-  // board cards, contact links and shared deep links all keep working.
-  beforeLoad: ({ params, location }) => {
-    const listing = getStore().listings.get(params.listingId);
-    if (!listing) return;
-    const sub =
-      location.pathname
-        .split(`/listings/${params.listingId}/`)[1]
-        ?.replace(/\/$/, "") ?? null;
-    const to = suitePanelPath(listing, sub);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (to) throw redirect({ to } as any);
-  },
   component: PropertyDetail,
   head: ({ params }) => {
     const listing = getStore().listings.get(params.listingId);
@@ -74,7 +61,27 @@ function PropertyDetail() {
   // reason for a reactive selector — commitStageTransition replaces both.
   const listing = useDataStore((s) => s.listings).get(listingId);
 
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+
+  // A suite has no page of its own — it renders as a panel over its building. This runs in
+  // the component rather than beforeLoad because the store is client-owned (Zustand +
+  // IndexedDB): on a cold load beforeLoad fires before hydration, the suite lookup misses,
+  // and it never re-runs. A reactive selector re-renders the moment hydration lands, so the
+  // canonicalization always happens. `replace` keeps the legacy URL out of history.
+  const panelPath = listing
+    ? suitePanelPath(listing, legacySubPath(pathname, listing.id))
+    : null;
+
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (panelPath) void navigate({ to: panelPath, replace: true } as any);
+  }, [panelPath, navigate]);
+
   if (!listing) return <ListingNotFound />;
+
+  // Don't paint the suite's old page for a frame on the way out.
+  if (panelPath) return null;
 
   return (
     <div className="h-100 overflow-y-auto overflow-x-hidden">
