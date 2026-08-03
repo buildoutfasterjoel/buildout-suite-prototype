@@ -121,7 +121,7 @@ export function ContactTasksPanel({
             <Button
               variant="ghost"
               appearance="muted"
-              size="icon"
+              size="icon-sm"
               aria-label="Add task"
               onClick={() => useAddTask.getState().openFor(contact.id)}
             >

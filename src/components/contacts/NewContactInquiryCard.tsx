@@ -1,7 +1,11 @@
 import { useNavigate } from "@tanstack/react-router";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEnvelope, faFileContract } from "@fortawesome/pro-regular-svg-icons";
+import {
+  faFile,
+  faMessageQuestion,
+  faPenLine,
+} from "@fortawesome/pro-regular-svg-icons";
 import type { Contact } from "#/data/types";
 import { useDataStore } from "#/data/dataStore";
 import { getProperty } from "#/data/store";
@@ -30,9 +34,11 @@ function medDate(iso: string): string {
  * signals (stage chip, side, transaction value, gross) that would read as an
  * active business agreement. An inquiry is a cold contact raising a hand.
  *
- * The badge row carries the inquiry's own facts only — what they did, and
- * whether the CA is signed. No relationship badge, because every card in this
- * section is an inquiry by definition.
+ * The inquiry's own facts — what they did, and whether the CA is signed — ride
+ * inline with the meta text as icon-only badges rather than a labelled row of
+ * their own: at this size the words repeated what the tooltip already says, and
+ * the card is narrow enough that they wrapped. No relationship badge, because
+ * every card in this section is an inquiry by definition.
  *
  * One click path, no exceptions: anywhere on the card goes to the listing's Leads
  * tab pre-searched to this contact. Seeing the inquiry in context is the only
@@ -51,7 +57,7 @@ export function NewContactInquiryCard({
   if (!listing) return null;
 
   const property = getProperty(listing.propertyId);
-  const { kind, label, tooltip, caSigned, channel, date, message } = inquiryFacts(
+  const { kind, tooltip, caSigned, channel, date, message } = inquiryFacts(
     contact,
     listingId,
   );
@@ -108,46 +114,43 @@ export function NewContactInquiryCard({
                 </Tooltip.Content>
               </Tooltip>
             </div>
-            {/* Two unlabeled facts with tooltips, same as the deal card's meta —
-                the word "Inquired" lives on the badge below, not here twice. */}
-            <div className="deal-tile__meta">
-              <Tooltip>
-                <Tooltip.Trigger render={<span>{channel}</span>} />
-                <Tooltip.Content>Where the inquiry came from</Tooltip.Content>
-              </Tooltip>
-              <span className="deal-tile__meta-sep">•</span>
-              <Tooltip>
-                <Tooltip.Trigger render={<span>{inquiredOn}</span>} />
-                <Tooltip.Content>Date inquired</Tooltip.Content>
-              </Tooltip>
+            {/* Badges then two unlabeled facts, all tooltipped — the words
+                "Inquired" and "LoopNet" would otherwise repeat what the glyph
+                and the channel already say. */}
+            <div className="deal-tile__meta deal-tile__meta--badges">
+              <span className="deal-tile__meta-badges">
+                <CardBadge
+                  icon={kind === "docs" ? faFile : faMessageQuestion}
+                  bg="#eceef2"
+                  color="#22262f"
+                  tooltip={tooltip}
+                />
+                {/* Only a document request carries a CA, and only a signed one is
+                    worth a badge — "pending" is the normal state of a fresh
+                    inquiry, so flagging it just adds noise to every new card. */}
+                {kind === "docs" && caSigned && (
+                  <CardBadge
+                    icon={faPenLine}
+                    bg="#dcebfd"
+                    color="#182753"
+                    tooltip="Confidentiality agreement signed"
+                  />
+                )}
+              </span>
+              <span className="deal-tile__divider" />
+              <span className="deal-tile__meta-facts">
+                <Tooltip>
+                  <Tooltip.Trigger render={<span>{channel}</span>} />
+                  <Tooltip.Content>Where the inquiry came from</Tooltip.Content>
+                </Tooltip>
+                <span className="deal-tile__meta-sep">•</span>
+                <Tooltip>
+                  <Tooltip.Trigger render={<span>{inquiredOn}</span>} />
+                  <Tooltip.Content>Date inquired</Tooltip.Content>
+                </Tooltip>
+              </span>
             </div>
           </div>
-        </div>
-
-        {/* No relationship badge here: every card in this section is an inquiry,
-            and the type badge plus the date already say so. */}
-        <div className="deal-tile__badges-main">
-          <CardBadge
-            icon={kind === "docs" ? faFileContract : faEnvelope}
-            label={label}
-            bg="#eceef2"
-            color="#22262f"
-            tooltip={tooltip}
-          />
-          {/* Only a document request needs a signature, so the CA badge rides
-              with that path alone. */}
-          {kind === "docs" && (
-            <CardBadge
-              label={caSigned ? "CA Signed" : "CA Pending"}
-              bg={caSigned ? "#cdfee5" : "#fff3c5"}
-              color={caSigned ? "#003024" : "#481800"}
-              tooltip={
-                caSigned
-                  ? "Confidentiality agreement signed"
-                  : "Waiting on a signed confidentiality agreement"
-              }
-            />
-          )}
         </div>
 
         {/* Their own words — often the only qualifying detail on a cold contact. */}

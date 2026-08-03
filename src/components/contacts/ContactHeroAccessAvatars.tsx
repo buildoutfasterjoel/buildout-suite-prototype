@@ -26,6 +26,7 @@ function AccessAvatar({
   name: string;
   access: string;
   avatarUrl?: string;
+  /** The owner leads the cluster with an offset ring, outside the group. */
   isOwner?: boolean;
   onOpenShare: () => void;
 }) {
@@ -34,11 +35,12 @@ function AccessAvatar({
       <Tooltip.Trigger
         render={
           <Avatar
-            size="sm"
             role="button"
             tabIndex={0}
             aria-label={`${name} · ${access} — manage sharing`}
-            className={`contact-hero__access ${isOwner ? "contact-hero__owner-avatar" : "contact-access-avatar"}`}
+            className={`contact-hero__access${
+              isOwner ? " contact-hero__owner-avatar" : ""
+            }`}
             onClick={onOpenShare}
             onKeyDown={(e: KeyboardEvent) => {
               if (e.key === "Enter" || e.key === " ") {
@@ -62,10 +64,11 @@ function AccessAvatar({
 }
 
 /**
- * The contact hero's access cluster: individual avatars (not a stacked group)
- * sitting next to the stage badge. The owner leads with an offset ring; each
- * avatar reveals a name + access-level tooltip on hover and opens the sharing
- * modal on click.
+ * The contact hero's access cluster, sitting next to the stage badge: the owner
+ * stands alone with an offset ring — they're the one accountable for the record,
+ * not one of a crowd — and everyone else with access stacks into an overlapping
+ * avatar group beside them. Every avatar still reveals a name + access-level
+ * tooltip on hover and opens the sharing modal on click.
  */
 export function ContactHeroAccessAvatars({
   shares,
@@ -84,16 +87,20 @@ export function ContactHeroAccessAvatars({
         isOwner
         onOpenShare={onOpenShare}
       />
-      {shares.map((s) => (
-        <AccessAvatar
-          key={s.member.id}
-          initials={s.member.initials}
-          name={s.member.name}
-          access={accessTierLabel(s.tier)}
-          avatarUrl={s.member.avatarUrl}
-          onOpenShare={onOpenShare}
-        />
-      ))}
+      {shares.length > 0 && (
+        <Avatar.Group className="contact-hero__access-group">
+          {shares.map((s) => (
+            <AccessAvatar
+              key={s.member.id}
+              initials={s.member.initials}
+              name={s.member.name}
+              access={accessTierLabel(s.tier)}
+              avatarUrl={s.member.avatarUrl}
+              onOpenShare={onOpenShare}
+            />
+          ))}
+        </Avatar.Group>
+      )}
       <Tooltip>
         <Tooltip.Trigger
           render={

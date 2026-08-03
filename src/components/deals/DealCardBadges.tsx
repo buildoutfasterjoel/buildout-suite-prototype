@@ -9,7 +9,12 @@ import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
  * 12px semibold label — and differ only in fill (see newCardTokens).
  */
 
-/** A filled 20px badge with a leading glyph, optionally wrapped in a tooltip. */
+/**
+ * A filled 20px badge with a leading glyph, optionally wrapped in a tooltip.
+ * Omitting `label` gives the square icon-only form — used where the badges ride
+ * inline with a card's meta text and the words would crowd it out; the tooltip
+ * then carries the meaning, so pass one.
+ */
 export function CardBadge({
   icon,
   label,
@@ -19,7 +24,7 @@ export function CardBadge({
   iconColor,
 }: {
   icon?: IconDefinition;
-  label: ReactNode;
+  label?: ReactNode;
   bg: string;
   color: string;
   tooltip?: string;
@@ -28,7 +33,9 @@ export function CardBadge({
 }) {
   const badge = (
     <span
-      className="deal-tile__badge"
+      className={`deal-tile__badge${
+        label === undefined ? " deal-tile__badge--icon-only" : ""
+      }`}
       style={{ backgroundColor: bg, color }}
     >
       {icon && (

@@ -3,15 +3,14 @@ import { Accordion } from "@buildoutinc/blueprint-react/ui/Accordion";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 
 /**
- * One collapsible section on the contact detail page, styled to match the deal
- * detail rail's Seller/Buyer/Other accordions: the expand chevron sits on the
- * RIGHT (Blueprint's default), an optional action (e.g. an "Add" button) sits
- * just to its left, and the panel content has a subtle grey background.
+ * One collapsible section on the contact detail page: the expand chevron, the
+ * label + count, and an optional action (e.g. an "Add" button) on the far right.
  *
- * The action is an overlaid sibling of the trigger (not nested inside it) so it
- * toggles its own click, not the section. Shared by the left overview column
- * (Deals, Properties, …) and the Tasks column so their headers stay identical.
- * Render inside an `<Accordion className="contact-overview-accordion" …>`.
+ * The action is a flex sibling of the trigger rather than a child of it — HTML
+ * won't nest a button inside a button, and the click has to toggle the action,
+ * not the section. Shared by the left overview column (Deals, Properties, …) and
+ * the Tasks column so their headers stay identical. Render inside an
+ * `<Accordion className="contact-overview-accordion" …>`.
  */
 export function ContactSection({
   value,
@@ -34,30 +33,32 @@ export function ContactSection({
   children: ReactNode;
 }) {
   return (
-    <Accordion.Item value={value} className="position-relative">
-      <Accordion.Trigger>
-        <span className="d-flex align-items-center gap-2">
-          <span
-            className="fw-semibold"
-            style={{ fontSize: 20, lineHeight: "26px" }}
-          >
-            {label}
+    <Accordion.Item value={value}>
+      <div className="contact-accordion__header">
+        <Accordion.Trigger>
+          <span className="d-flex align-items-center gap-2">
+            <span
+              className="fw-semibold"
+              style={{ fontSize: 20, lineHeight: "26px" }}
+            >
+              {label}
+            </span>
+            {count !== undefined &&
+              (primaryCount && count > 0 ? (
+                <Badge variant="primary">{count}</Badge>
+              ) : (
+                <Badge
+                  variant="secondary"
+                  appearance="muted"
+                  style={{ backgroundColor: "#ECEEF2" }}
+                >
+                  {count}
+                </Badge>
+              ))}
           </span>
-          {count !== undefined &&
-            (primaryCount && count > 0 ? (
-              <Badge variant="primary">{count}</Badge>
-            ) : (
-              <Badge
-                variant="secondary"
-                appearance="muted"
-                style={{ backgroundColor: "#ECEEF2" }}
-              >
-                {count}
-              </Badge>
-            ))}
-        </span>
-      </Accordion.Trigger>
-      {action && <div className="contact-accordion__action">{action}</div>}
+        </Accordion.Trigger>
+        {action && <div className="contact-accordion__action">{action}</div>}
+      </div>
       <Accordion.Content>{children}</Accordion.Content>
     </Accordion.Item>
   );

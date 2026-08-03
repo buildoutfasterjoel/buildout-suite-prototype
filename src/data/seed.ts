@@ -932,6 +932,31 @@ function generateContact(allPropertyIds: string[]): Contact {
     { weight: 10, value: 'invalid' as const },
   ])
 
+  // Secondary numbers / addresses beyond the primary — a desk line, a personal
+  // email. Most people in the book have one of each; the minority who have
+  // several are what the hero's Show/Hide records exist for, so the mix has to
+  // exist in the seed or that control never appears.
+  const extraPhones = Array.from(
+    {
+      length: faker.helpers.weightedArrayElement([
+        { weight: 62, value: 0 },
+        { weight: 26, value: 1 },
+        { weight: 12, value: 2 },
+      ]),
+    },
+    () => faker.phone.number({ style: 'national' }),
+  )
+  const extraEmails = Array.from(
+    {
+      length: faker.helpers.weightedArrayElement([
+        { weight: 68, value: 0 },
+        { weight: 24, value: 1 },
+        { weight: 8, value: 2 },
+      ]),
+    },
+    () => faker.internet.email(),
+  )
+
   const propertyIds = faker.helpers.arrayElements(
     allPropertyIds,
     faker.number.int({ min: 1, max: 4 }),
@@ -942,7 +967,9 @@ function generateContact(allPropertyIds: string[]): Contact {
     firstName: faker.person.firstName(),
     lastName: faker.person.lastName(),
     email: faker.internet.email(),
+    emails: extraEmails.length ? extraEmails : undefined,
     phone: faker.phone.number({ style: 'national' }),
+    phones: extraPhones.length ? extraPhones : undefined,
     company: faker.company.name(),
     role,
     propertyIds,
