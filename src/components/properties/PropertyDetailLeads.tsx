@@ -26,7 +26,7 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import { faCircleInfo } from "@fortawesome/pro-duotone-svg-icons";
 import type { Contact, Property } from "#/data/types";
-import { getLeadsForProperty } from "#/data/store";
+import { getLeadsForProperty, getListing } from "#/data/store";
 import { leadsForSpaceDeal } from "#/data/unitScopedMarketing";
 import { LEAD_STATUSES, leadStatusFor } from "#/data/leadFacts";
 import { useDataStore } from "#/data/dataStore";
@@ -189,6 +189,29 @@ export function PropertyDetailLeads({
   );
 
   const leads = useMemo(() => scopedContacts.map(toLead), [scopedContacts]);
+
+  // The suite a lead inquired about, for the building-level table's Space column.
+  // Keyed by contact id because `toLead` carries the contact's id straight through.
+  const spaceLabels = useMemo(() => {
+    const byLead = new Map<string, string>();
+    for (const contact of scopedContacts) {
+      for (const listingId of contact.inquiredListingIds ?? []) {
+        const deal = getListing(listingId);
+        // Only a child space deal names a unit; a building-level inquiry does not.
+        if (!deal?.parentDealId) continue;
+        const unit = property.units.find((u) => u.id === deal.unitId);
+        if (unit) {
+          byLead.set(contact.id, unit.label);
+          break;
+        }
+      }
+    }
+    return byLead;
+  }, [scopedContacts, property.units]);
+
+  // Inside the suite panel every row is that same suite, so the column would
+  // repeat one value on every line — only the building-level view names it.
+  const showSpaceColumn = !spaceDealId;
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -367,6 +390,7 @@ export function PropertyDetailLeads({
               <Table.Head sticky style={{ left: CHECKBOX_COL_W }}>
                 Name
               </Table.Head>
+              {showSpaceColumn && <Table.Head>Space</Table.Head>}
               <Table.Head>Email</Table.Head>
               <Table.Head>Phone</Table.Head>
               <Table.Head>Added By</Table.Head>
@@ -431,6 +455,11 @@ export function PropertyDetailLeads({
                     </Link>
                   </div>
                 </Table.Cell>
+                {showSpaceColumn && (
+                  <Table.Cell className="text-muted">
+                    {spaceLabels.get(lead.id) ?? "—"}
+                  </Table.Cell>
+                )}
                 <Table.Cell>{lead.email}</Table.Cell>
                 <Table.Cell>{lead.phone || muted}</Table.Cell>
                 <Table.Cell>
