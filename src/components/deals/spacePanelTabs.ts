@@ -5,8 +5,6 @@
  */
 export type SpacePanelLeaf =
   | 'overview'
-  | 'activities'
-  | 'history'
   | 'terms'
   | 'leads'
   | 'media'
@@ -15,12 +13,17 @@ export type SpacePanelLeaf =
   | 'notes'
 
 /**
- * The four major sections. Deliberately no "Marketing" tab: Leads and Media here are
+ * The major sections. Deliberately no "Marketing" tab: Leads and Media are
  * unit-filtered views of the *property's* store, so that word would rebuild the
- * ambiguity the panel exists to remove. "Interest" names what they share — signals
- * that someone wants this space.
+ * ambiguity the panel exists to remove — they get their own plainly-named tabs
+ * instead.
  */
-export type SpacePanelTab = 'deal' | 'terms' | 'interest' | 'back-office'
+export type SpacePanelTab =
+  | 'deal'
+  | 'terms'
+  | 'leads'
+  | 'media'
+  | 'back-office'
 
 export interface SpacePanelTabDef {
   id: SpacePanelTab
@@ -29,14 +32,12 @@ export interface SpacePanelTabDef {
 }
 
 export const SPACE_PANEL_TABS: SpacePanelTabDef[] = [
+  // Activity and History are absent on purpose: a suite has no per-space activity
+  // feed or audit trail to show. The building keeps both.
   {
     id: 'deal',
     label: 'Deal',
-    leaves: [
-      { leaf: 'overview', label: 'Details' },
-      { leaf: 'activities', label: 'Activity' },
-      { leaf: 'history', label: 'History' },
-    ],
+    leaves: [{ leaf: 'overview', label: 'Details' }],
   },
   {
     id: 'terms',
@@ -44,12 +45,14 @@ export const SPACE_PANEL_TABS: SpacePanelTabDef[] = [
     leaves: [{ leaf: 'terms', label: 'Terms' }],
   },
   {
-    id: 'interest',
-    label: 'Interest',
-    leaves: [
-      { leaf: 'leads', label: 'Leads' },
-      { leaf: 'media', label: 'Media' },
-    ],
+    id: 'leads',
+    label: 'Leads',
+    leaves: [{ leaf: 'leads', label: 'Leads' }],
+  },
+  {
+    id: 'media',
+    label: 'Media',
+    leaves: [{ leaf: 'media', label: 'Media' }],
   },
   {
     id: 'back-office',

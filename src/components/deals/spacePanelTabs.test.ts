@@ -22,9 +22,9 @@ const SPACE_ROUTES_DIR = fileURLToPath(
 )
 
 describe('SPACE_PANEL_TABS', () => {
-  it('has four tabs in design order', () => {
+  it('has five tabs in design order', () => {
     expect(SPACE_PANEL_TABS.map((t) => t.id)).toEqual([
-      'deal', 'terms', 'interest', 'back-office',
+      'deal', 'terms', 'leads', 'media', 'back-office',
     ])
   })
 
@@ -35,16 +35,28 @@ describe('SPACE_PANEL_TABS', () => {
     for (const label of labels) expect(label).not.toMatch(/marketing/i)
   })
 
-  it('exposes nine leaves, each owned by exactly one tab', () => {
-    expect(SPACE_PANEL_LEAVES).toHaveLength(9)
-    expect(new Set(SPACE_PANEL_LEAVES).size).toBe(9)
+  /**
+   * A suite has no per-space activity feed or audit trail — the app does not record
+   * either against an individual space — so the panel must not offer them. The
+   * building keeps both.
+   */
+  it('offers no Activity or History, which a suite does not have', () => {
+    const slugs = SPACE_PANEL_LEAVES as string[]
+    expect(slugs).not.toContain('activities')
+    expect(slugs).not.toContain('history')
+  })
+
+  it('exposes seven leaves, each owned by exactly one tab', () => {
+    expect(SPACE_PANEL_LEAVES).toHaveLength(7)
+    expect(new Set(SPACE_PANEL_LEAVES).size).toBe(7)
   })
 
   it('keeps leaf slugs identical to the building routes they mirror', () => {
     expect(SPACE_PANEL_LEAVES).toEqual([
-      'overview', 'activities', 'history',
+      'overview',
       'terms',
-      'leads', 'media',
+      'leads',
+      'media',
       'financials', 'financial-documents', 'notes',
     ])
   })
@@ -53,13 +65,20 @@ describe('SPACE_PANEL_TABS', () => {
     expect(DEFAULT_SPACE_PANEL_LEAF).toBe('overview')
     expect(tabForLeaf(DEFAULT_SPACE_PANEL_LEAF)).toBe('deal')
   })
+
+  /** Only Back Office subdivides now, so it is the one tab that shows a pills bar. */
+  it('leaves Back Office as the only tab with more than one leaf', () => {
+    const subdividing = SPACE_PANEL_TABS.filter((t) => t.leaves.length > 1)
+    expect(subdividing.map((t) => t.id)).toEqual(['back-office'])
+  })
 })
 
 describe('tabForLeaf', () => {
   it('routes each leaf to its owning tab', () => {
-    expect(tabForLeaf('activities')).toBe('deal')
+    expect(tabForLeaf('overview')).toBe('deal')
     expect(tabForLeaf('terms')).toBe('terms')
-    expect(tabForLeaf('media')).toBe('interest')
+    expect(tabForLeaf('leads')).toBe('leads')
+    expect(tabForLeaf('media')).toBe('media')
     expect(tabForLeaf('financial-documents')).toBe('back-office')
   })
 })
