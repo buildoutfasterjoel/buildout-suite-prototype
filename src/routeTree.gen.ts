@@ -56,6 +56,8 @@ import { Route as ShellBackofficeContactsContactIdRouteImport } from './routes/_
 import { Route as ShellListingsListingIdSpacesSpaceIdRouteImport } from './routes/_shell/listings/$listingId/spaces/$spaceId'
 import { Route as ShellListingsListingIdSpacesSpaceIdIndexRouteImport } from './routes/_shell/listings/$listingId/spaces/$spaceId/index'
 import { Route as ShellListingsListingIdSpacesSpaceIdOverviewRouteImport } from './routes/_shell/listings/$listingId/spaces/$spaceId/overview'
+import { Route as ShellListingsListingIdSpacesSpaceIdHistoryRouteImport } from './routes/_shell/listings/$listingId/spaces/$spaceId/history'
+import { Route as ShellListingsListingIdSpacesSpaceIdActivitiesRouteImport } from './routes/_shell/listings/$listingId/spaces/$spaceId/activities'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -318,6 +320,18 @@ const ShellListingsListingIdSpacesSpaceIdOverviewRoute =
     path: '/overview',
     getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
   } as any)
+const ShellListingsListingIdSpacesSpaceIdHistoryRoute =
+  ShellListingsListingIdSpacesSpaceIdHistoryRouteImport.update({
+    id: '/history',
+    path: '/history',
+    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
+  } as any)
+const ShellListingsListingIdSpacesSpaceIdActivitiesRoute =
+  ShellListingsListingIdSpacesSpaceIdActivitiesRouteImport.update({
+    id: '/activities',
+    path: '/activities',
+    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -364,6 +378,8 @@ export interface FileRoutesByFullPath {
   '/backoffice/contacts/': typeof ShellBackofficeContactsIndexRoute
   '/listings/$listingId/': typeof ShellListingsListingIdIndexRoute
   '/listings/$listingId/spaces/$spaceId': typeof ShellListingsListingIdSpacesSpaceIdRouteWithChildren
+  '/listings/$listingId/spaces/$spaceId/activities': typeof ShellListingsListingIdSpacesSpaceIdActivitiesRoute
+  '/listings/$listingId/spaces/$spaceId/history': typeof ShellListingsListingIdSpacesSpaceIdHistoryRoute
   '/listings/$listingId/spaces/$spaceId/overview': typeof ShellListingsListingIdSpacesSpaceIdOverviewRoute
   '/listings/$listingId/spaces/$spaceId/': typeof ShellListingsListingIdSpacesSpaceIdIndexRoute
 }
@@ -404,6 +420,8 @@ export interface FileRoutesByTo {
   '/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
   '/backoffice/contacts': typeof ShellBackofficeContactsIndexRoute
   '/listings/$listingId': typeof ShellListingsListingIdIndexRoute
+  '/listings/$listingId/spaces/$spaceId/activities': typeof ShellListingsListingIdSpacesSpaceIdActivitiesRoute
+  '/listings/$listingId/spaces/$spaceId/history': typeof ShellListingsListingIdSpacesSpaceIdHistoryRoute
   '/listings/$listingId/spaces/$spaceId/overview': typeof ShellListingsListingIdSpacesSpaceIdOverviewRoute
   '/listings/$listingId/spaces/$spaceId': typeof ShellListingsListingIdSpacesSpaceIdIndexRoute
 }
@@ -454,6 +472,8 @@ export interface FileRoutesById {
   '/_shell/backoffice/contacts/': typeof ShellBackofficeContactsIndexRoute
   '/_shell/listings/$listingId/': typeof ShellListingsListingIdIndexRoute
   '/_shell/listings/$listingId/spaces/$spaceId': typeof ShellListingsListingIdSpacesSpaceIdRouteWithChildren
+  '/_shell/listings/$listingId/spaces/$spaceId/activities': typeof ShellListingsListingIdSpacesSpaceIdActivitiesRoute
+  '/_shell/listings/$listingId/spaces/$spaceId/history': typeof ShellListingsListingIdSpacesSpaceIdHistoryRoute
   '/_shell/listings/$listingId/spaces/$spaceId/overview': typeof ShellListingsListingIdSpacesSpaceIdOverviewRoute
   '/_shell/listings/$listingId/spaces/$spaceId/': typeof ShellListingsListingIdSpacesSpaceIdIndexRoute
 }
@@ -504,6 +524,8 @@ export interface FileRouteTypes {
     | '/backoffice/contacts/'
     | '/listings/$listingId/'
     | '/listings/$listingId/spaces/$spaceId'
+    | '/listings/$listingId/spaces/$spaceId/activities'
+    | '/listings/$listingId/spaces/$spaceId/history'
     | '/listings/$listingId/spaces/$spaceId/overview'
     | '/listings/$listingId/spaces/$spaceId/'
   fileRoutesByTo: FileRoutesByTo
@@ -544,6 +566,8 @@ export interface FileRouteTypes {
     | '/listings/$listingId/website'
     | '/backoffice/contacts'
     | '/listings/$listingId'
+    | '/listings/$listingId/spaces/$spaceId/activities'
+    | '/listings/$listingId/spaces/$spaceId/history'
     | '/listings/$listingId/spaces/$spaceId/overview'
     | '/listings/$listingId/spaces/$spaceId'
   id:
@@ -593,6 +617,8 @@ export interface FileRouteTypes {
     | '/_shell/backoffice/contacts/'
     | '/_shell/listings/$listingId/'
     | '/_shell/listings/$listingId/spaces/$spaceId'
+    | '/_shell/listings/$listingId/spaces/$spaceId/activities'
+    | '/_shell/listings/$listingId/spaces/$spaceId/history'
     | '/_shell/listings/$listingId/spaces/$spaceId/overview'
     | '/_shell/listings/$listingId/spaces/$spaceId/'
   fileRoutesById: FileRoutesById
@@ -934,6 +960,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdOverviewRouteImport
       parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
     }
+    '/_shell/listings/$listingId/spaces/$spaceId/history': {
+      id: '/_shell/listings/$listingId/spaces/$spaceId/history'
+      path: '/history'
+      fullPath: '/listings/$listingId/spaces/$spaceId/history'
+      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdHistoryRouteImport
+      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
+    }
+    '/_shell/listings/$listingId/spaces/$spaceId/activities': {
+      id: '/_shell/listings/$listingId/spaces/$spaceId/activities'
+      path: '/activities'
+      fullPath: '/listings/$listingId/spaces/$spaceId/activities'
+      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdActivitiesRouteImport
+      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
+    }
   }
 }
 
@@ -990,12 +1030,18 @@ const ShellEmailRouteWithChildren = ShellEmailRoute._addFileChildren(
 )
 
 interface ShellListingsListingIdSpacesSpaceIdRouteChildren {
+  ShellListingsListingIdSpacesSpaceIdActivitiesRoute: typeof ShellListingsListingIdSpacesSpaceIdActivitiesRoute
+  ShellListingsListingIdSpacesSpaceIdHistoryRoute: typeof ShellListingsListingIdSpacesSpaceIdHistoryRoute
   ShellListingsListingIdSpacesSpaceIdOverviewRoute: typeof ShellListingsListingIdSpacesSpaceIdOverviewRoute
   ShellListingsListingIdSpacesSpaceIdIndexRoute: typeof ShellListingsListingIdSpacesSpaceIdIndexRoute
 }
 
 const ShellListingsListingIdSpacesSpaceIdRouteChildren: ShellListingsListingIdSpacesSpaceIdRouteChildren =
   {
+    ShellListingsListingIdSpacesSpaceIdActivitiesRoute:
+      ShellListingsListingIdSpacesSpaceIdActivitiesRoute,
+    ShellListingsListingIdSpacesSpaceIdHistoryRoute:
+      ShellListingsListingIdSpacesSpaceIdHistoryRoute,
     ShellListingsListingIdSpacesSpaceIdOverviewRoute:
       ShellListingsListingIdSpacesSpaceIdOverviewRoute,
     ShellListingsListingIdSpacesSpaceIdIndexRoute:
