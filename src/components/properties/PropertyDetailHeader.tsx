@@ -3,7 +3,6 @@ import { Link } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Breadcrumb } from "@buildoutinc/blueprint-react/ui/Breadcrumb";
-import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -15,18 +14,13 @@ import {
   faSquareDashedCirclePlus,
   faTrashAlt,
 } from "@fortawesome/pro-regular-svg-icons";
-import type { Listing, ListingStage } from "#/data/types";
+import type { Listing } from "#/data/types";
 import { getProperty } from "#/data/store";
-import { canAddSpaces, dealShape, dealStageLabel, availableStages } from "#/data/dealShape";
-import {
-  STATUS_COLORS,
-  hash,
-  getRefId,
-  getPhotoUrl,
-} from "./propertyDisplay";
+import { canAddSpaces } from "#/data/dealShape";
+import { hash, getRefId, getPhotoUrl } from "./propertyDisplay";
 import { AvatarGroup } from "./AvatarGroup";
 import { SyndicationStatus } from "#/components/listings/SyndicationStatus";
-import { requestStageChange } from "#/components/deals/useStageGate";
+import { DealStageSelect } from "#/components/deals/DealStageSelect";
 import { AddSpaceModal } from "#/components/deals/AddSpaceModal";
 
 /**
@@ -38,7 +32,6 @@ import { AddSpaceModal } from "#/components/deals/AddSpaceModal";
 export function PropertyDetailHeader({ listing }: { listing: Listing }) {
   const seed = hash(listing.id);
   const refId = getRefId(listing.id);
-  const shape = dealShape(listing);
   const property = getProperty(listing.propertyId);
   const address = `${property?.street}, ${property?.city}, ${property?.state} ${property?.zip}`;
   const [addSpaceOpen, setAddSpaceOpen] = useState(false);
@@ -112,47 +105,7 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
           {/* Stage + access block · actions · options on its own */}
           <div className="d-flex align-items-center gap-3 flex-shrink-0">
             <div className="d-flex align-items-center gap-2">
-              <Select
-                value={listing.status}
-                onValueChange={(v) => {
-                  if (v && v !== listing.status) {
-                    requestStageChange(listing.id, v as ListingStage);
-                  }
-                }}
-              >
-                <Select.Trigger style={{ minWidth: 168 }}>
-                  <span className="d-inline-flex align-items-center gap-2">
-                    <span
-                      className="rounded-circle"
-                      style={{
-                        width: 8,
-                        height: 8,
-                        backgroundColor: STATUS_COLORS[listing.status],
-                      }}
-                    />
-                    <Select.Value>
-                      {(v) => dealStageLabel(v as ListingStage, shape)}
-                    </Select.Value>
-                  </span>
-                </Select.Trigger>
-                <Select.Content>
-                  {availableStages(shape).map((s) => (
-                    <Select.Item key={s} value={s}>
-                      <span className="d-inline-flex align-items-center gap-2">
-                        <span
-                          className="rounded-circle"
-                          style={{
-                            width: 8,
-                            height: 8,
-                            backgroundColor: STATUS_COLORS[s],
-                          }}
-                        />
-                        {dealStageLabel(s, shape)}
-                      </span>
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select>
+              <DealStageSelect listing={listing} />
             </div>
             <div className="d-flex align-items-center gap-2">
               {canAddSpaces(listing) && (

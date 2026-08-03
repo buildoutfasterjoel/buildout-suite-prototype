@@ -9,10 +9,7 @@ import { Offcanvas } from "@buildoutinc/blueprint-react/ui/Offcanvas";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
 import { useDataStore } from "#/data/dataStore";
 import { getProperty } from "#/data/store";
-import { dealShape } from "#/data/dealShape";
-import { DealStageChip } from "#/components/deals/DealStageChip";
-import { requestStageChange } from "#/components/deals/useStageGate";
-import type { ListingStage } from "#/data/types";
+import { DealStageSelect } from "#/components/deals/DealStageSelect";
 import { suitePanelPath } from "#/data/suitePanelPath";
 import {
   SPACE_PANEL_TABS,
@@ -106,12 +103,15 @@ function SpacePanelRoute() {
         style={{ width: "min(78vw, 1100px)" }}
       >
         <Offcanvas.Header>
-          <Offcanvas.Title>{unit?.label ?? listing.name}</Offcanvas.Title>
-          <DealStageChip
-            value={listing.status}
-            shape={dealShape(listing)}
-            onChange={(v) => requestStageChange(listing.id, v as ListingStage)}
-          />
+          {/* Blueprint's theme sets `.offcanvas-header` to `flex-direction: column`,
+              so header children stack by default. This row puts the stage control
+              opposite the title instead. The header already reserves inline-end
+              padding for its own absolutely-positioned close button, so `w-100`
+              stops short of it rather than colliding. */}
+          <div className="d-flex align-items-center justify-content-between gap-3 w-100">
+            <Offcanvas.Title>{unit?.label ?? listing.name}</Offcanvas.Title>
+            <DealStageSelect listing={listing} />
+          </div>
         </Offcanvas.Header>
 
         <Offcanvas.Body className="d-flex flex-column gap-3">
