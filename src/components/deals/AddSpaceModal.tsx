@@ -11,11 +11,16 @@ import type { UnitType } from "#/data/types";
 import { getListing, getProperty } from "#/data/store";
 import { getChildDeals, addSpaceToDeal, addPropertyUnit } from "#/data/leaseSpaces";
 
+/**
+ * Commercial types only. A space added here is immediately spun into a lease
+ * deal, and housing is a property-management assignment rather than a lease — so
+ * `residential` is absent even though `UnitType` still allows it for units that
+ * live on the property record without ever being leased.
+ */
 const UNIT_TYPE_OPTIONS: { value: UnitType; label: string }[] = [
   { value: "retail", label: "Retail" },
   { value: "office", label: "Office" },
   { value: "industrial", label: "Industrial" },
-  { value: "residential", label: "Residential" },
   { value: "other", label: "Other" },
 ];
 

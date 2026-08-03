@@ -1,6 +1,7 @@
 import { Accordion } from "@buildoutinc/blueprint-react/ui/Accordion";
 import {
 	Col,
+	ComboField,
 	DateField,
 	FieldGrid,
 	NumberField,
@@ -10,6 +11,7 @@ import {
 	YesNoNaField,
 } from "#/components/listings/edit/fieldWidgets";
 import { ALL_SUBTYPES } from "#/components/listings/edit/sections/PropertySection";
+import { isResidentialSubtype } from "#/data/leaseEligibility";
 import type {
 	LeaseRateUnits,
 	Property,
@@ -30,6 +32,13 @@ const LEASE_TYPES: SpaceLeaseType[] = [
 ];
 const LEASE_RATE_MODES = ["Flat", "Range", "Hidden"] as const;
 const SPACE_SIZE_UNITS = ["SF", "RSF", "SqM"] as const;
+/**
+ * Space Type offers the commercial subtypes only. A space that reaches this
+ * editor is a leased space, and housing is a property-management assignment
+ * rather than a lease — so the residential subtypes would never be a valid
+ * answer here, even inside a mixed-use building whose apartments sit upstairs.
+ */
+const COMMERCIAL_SUBTYPES = ALL_SUBTYPES.filter((s) => !isResidentialSubtype(s));
 
 /**
  * A single space's lease terms editor. Renders the fields only — each caller
@@ -61,11 +70,11 @@ export function SpaceTermsSection({
 			{/* ── Space type & tenant ── */}
 			<FieldGrid>
 				<Col>
-					<SelectField
+					<ComboField
 						label="Space Type"
 						value={terms.spaceType ?? null}
-						options={ALL_SUBTYPES}
-						placeholder="— Select —"
+						options={COMMERCIAL_SUBTYPES}
+						placeholder="Search space types…"
 						onChange={(v) => onChange({ spaceType: v })}
 					/>
 				</Col>
