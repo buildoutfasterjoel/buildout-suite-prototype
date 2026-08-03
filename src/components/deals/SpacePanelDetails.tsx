@@ -1,7 +1,35 @@
+import { useState } from "react";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
+import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPlus } from "@fortawesome/pro-regular-svg-icons";
 import { getProperty, getStore } from "#/data/store";
 import { spaceAvailability } from "#/data/dealShape";
 import type { Contact, Listing } from "#/data/types";
+
+/**
+ * The two party lists the panel can add to. Neither write path exists yet — there is
+ * no add-contact-to-deal action in the data layer, and brokers have no roster to pick
+ * from — so the buttons state their intent rather than pretending.
+ *
+ * `blurb` is deliberately specific about what the real flow will do, so a click during
+ * a demo reads as "not built yet" and not as "broken".
+ */
+const PENDING_ADDS = {
+  tenant: {
+    title: "Add tenant",
+    blurb:
+      "This will link an existing contact to this space as its tenant. Linking one here also satisfies the tenant requirement on the Under Contract gate, which is the only place a tenant can be attached today.",
+  },
+  broker: {
+    title: "Add broker",
+    blurb:
+      "This will add a broker to this space's commission split. Brokers have no shared roster yet, so the real flow needs a short form — name, role, split, and whether they are internal or outside.",
+  },
+} as const;
+
+type PendingAdd = keyof typeof PENDING_ADDS;
 
 /**
  * Deal > Details for a suite panel. Four headline facts (rescued from the deleted
@@ -11,6 +39,7 @@ import type { Contact, Listing } from "#/data/types";
  * so repeating it on every suite is noise.
  */
 export function SpacePanelDetails({ listing }: { listing: Listing }) {
+  const [pending, setPending] = useState<PendingAdd | null>(null);
   const property = getProperty(listing.propertyId);
   const { contacts } = getStore();
   const terms = listing.marketing.spaceLeaseTerms?.[0];
@@ -61,10 +90,19 @@ export function SpacePanelDetails({ listing }: { listing: Listing }) {
       <div className="row g-3 align-items-stretch">
         <div className="col-12 col-lg-6">
           <Card className="h-100">
-            <Card.Header>
+            <Card.Header className="d-flex align-items-center justify-content-between gap-2">
               <Card.Title className="fs-large fw-semibold mb-0">
                 Tenant
               </Card.Title>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex-shrink-0"
+                onClick={() => setPending("tenant")}
+              >
+                <FontAwesomeIcon icon={faPlus} />
+                Add tenant
+              </Button>
             </Card.Header>
             <Card.Body>
               {tenants.length === 0 ? (
@@ -95,10 +133,19 @@ export function SpacePanelDetails({ listing }: { listing: Listing }) {
 
         <div className="col-12 col-lg-6">
           <Card className="h-100">
-            <Card.Header>
+            <Card.Header className="d-flex align-items-center justify-content-between gap-2">
               <Card.Title className="fs-large fw-semibold mb-0">
                 Brokers
               </Card.Title>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex-shrink-0"
+                onClick={() => setPending("broker")}
+              >
+                <FontAwesomeIcon icon={faPlus} />
+                Add broker
+              </Button>
             </Card.Header>
             <Card.Body>
               {brokers.length === 0 ? (
@@ -133,6 +180,28 @@ export function SpacePanelDetails({ listing }: { listing: Listing }) {
           </Card>
         </div>
       </div>
+
+      {/* One modal for both buttons — the only thing that differs is the copy, and
+          two near-identical modals would drift the moment either is wired up. */}
+      <Modal
+        open={pending !== null}
+        onOpenChange={(open) => !open && setPending(null)}
+      >
+        <Modal.Content centered>
+          <Modal.Header>
+            <Modal.Title>
+              {pending ? PENDING_ADDS[pending].title : ""}
+            </Modal.Title>
+            <Modal.Description>Not wired up yet.</Modal.Description>
+          </Modal.Header>
+          <Modal.Body>
+            <p className="mb-0">{pending ? PENDING_ADDS[pending].blurb : ""}</p>
+          </Modal.Body>
+          <Modal.Footer>
+            <Modal.Close render={<Button variant="primary">Got it</Button>} />
+          </Modal.Footer>
+        </Modal.Content>
+      </Modal>
     </div>
   );
 }
