@@ -405,7 +405,7 @@ export function ContactOverviewColumn({
             </Button>
           }
         >
-          <div className="d-flex flex-column gap-3">
+          <div className="d-flex flex-column gap-2">
             {deals.length === 0 ? (
               <span className="text-muted fs-small">
                 Deals you link to this contact will show up here.
@@ -463,7 +463,7 @@ export function ContactOverviewColumn({
           label="Listing Inquiries"
           count={inquiryListingIds.length}
         >
-          <div className="d-flex flex-column gap-3">
+          <div className="d-flex flex-column gap-2">
             {inquiryListingIds.length === 0 ? (
               <span className="text-muted fs-small">
                 Listings this contact inquires about will show up here.
@@ -503,7 +503,7 @@ export function ContactOverviewColumn({
             </Button>
           }
         >
-          <div className="d-flex flex-column gap-3">
+          <div className="d-flex flex-column gap-2">
             {propertyGroups.length === 0 ? (
               <span className="text-muted fs-small">None on file.</span>
             ) : (
