@@ -15,6 +15,8 @@ import { buildingAvailability } from "#/data/buildingAvailability";
 import { canAddSpaces, isLeaseParent } from "#/data/dealShape";
 import { emptySpaceLeaseTerms } from "#/data/createListing";
 import { updateDealMarketing } from "#/data/actions";
+import type { SpaceLeaseTerms } from "#/data/types";
+import { notify } from "#/lib/notify";
 import { SpaceTermsSection } from "#/components/listings/edit/sections/SpaceTermsSection";
 import { AddSpaceModal } from "#/components/deals/AddSpaceModal";
 import { DealStageSelect } from "#/components/deals/DealStageSelect";
@@ -71,6 +73,33 @@ function SpacesTab() {
     if (spaceParam) setRowOpen(spaceParam, true);
   }, [spaceParam]);
 
+  // One working copy per space, behind that row's own Save/Cancel — the same
+  // contract as the deal edit form, which holds a draft and commits it on Save.
+  // The roster used to write straight through on every keystroke, so the two
+  // editors for the same terms behaved differently and neither confirmed
+  // anything had happened.
+  //
+  // Keyed by deal id rather than held per-row, because several rows can be open
+  // at once. A draft deliberately survives collapsing the row: the header is a
+  // big click target and silently discarding typing would be worse than keeping
+  // it, so only Save and Cancel resolve a draft.
+  const [drafts, setDrafts] = useState<Record<string, SpaceLeaseTerms>>({});
+  const patchDraft = (dealId: string, base: SpaceLeaseTerms, patch: Partial<SpaceLeaseTerms>) =>
+    setDrafts((prev) => ({ ...prev, [dealId]: { ...(prev[dealId] ?? base), ...patch } }));
+  const clearDraft = (dealId: string) =>
+    setDrafts((prev) => {
+      const next = { ...prev };
+      delete next[dealId];
+      return next;
+    });
+  const saveDraft = (dealId: string) => {
+    const draft = drafts[dealId];
+    if (!draft) return;
+    updateDealMarketing(dealId, { spaceLeaseTerms: [draft] });
+    clearDraft(dealId);
+    notify({ title: "Space terms saved" });
+  };
+
   if (!leaseParent) {
     return (
       <div className="p-4">
@@ -124,9 +153,14 @@ function SpacesTab() {
             const child = getListing(row.dealId);
             const unit = property?.units.find((u) => u.id === row.unitId);
             if (!child || !unit || !property) return null;
-            const terms =
+            const saved =
               child.marketing.spaceLeaseTerms?.[0] ??
               emptySpaceLeaseTerms(row.unitId);
+            // The row edits its draft when one exists and the stored terms
+            // otherwise, so an untouched row shows exactly what is persisted.
+            const draft = drafts[row.dealId];
+            const terms = draft ?? saved;
+            const dirty = draft != null;
             const rowOpen = openRows.has(row.dealId);
             return (
               <Collapsible
@@ -158,6 +192,13 @@ function SpacesTab() {
                       </span>
                     </span>
                     <span className="d-flex align-items-center gap-3 ms-auto">
+                      {/* A draft outlives collapsing the row, so say so here —
+                          otherwise the unsaved edits are invisible once closed. */}
+                      {dirty && !rowOpen && (
+                        <span className="text-warning fw-normal">
+                          Unsaved changes
+                        </span>
+                      )}
                       <span className="text-muted fw-normal">
                         {row.leaseRate != null
                           ? `$${row.leaseRate} ${row.leaseRateUnits}`
@@ -190,12 +231,31 @@ function SpacesTab() {
                     unit={unit}
                     property={property}
                     terms={terms}
-                    onChange={(patch) =>
-                      updateDealMarketing(row.dealId, {
-                        spaceLeaseTerms: [{ ...terms, ...patch }],
-                      })
-                    }
+                    onChange={(patch) => patchDraft(row.dealId, saved, patch)}
                   />
+                  {/* Cancel ghost, Save primary, in that order — the same bar the
+                      deal edit form ends with, so the two editors for these terms
+                      behave identically. Disabled until something changes, since a
+                      Save that does nothing teaches nothing. */}
+                  <div className="d-flex justify-content-end align-items-center gap-2 border-top mt-3 pt-3">
+                    {dirty && (
+                      <span className="text-muted me-auto">Unsaved changes</span>
+                    )}
+                    <Button
+                      variant="ghost"
+                      disabled={!dirty}
+                      onClick={() => clearDraft(row.dealId)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="primary"
+                      disabled={!dirty}
+                      onClick={() => saveDraft(row.dealId)}
+                    >
+                      Save
+                    </Button>
+                  </div>
                 </Collapsible.Content>
               </Collapsible>
             );
