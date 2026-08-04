@@ -1168,7 +1168,9 @@ git commit -m "feat(spaces): make the roster a space's control surface, not a li
 - Consumes: the `?space=` param from Task 7
 - Produces: `dealCardLinkProps(listing: Listing)`, used by both `DealCard.tsx` exports and by `TimelineEvent.tsx`
 
-`DealCard.tsx` has **two** exports that wrap a card in a `Link`, and both can render a space: `DealCardById({ listingId, showStatus, action, footer })` at line 274, and the draggable board card `DealCard({ listing })` at line 337. `TimelineEvent.tsx` needs the same decision. Three call sites, one rule — so the rule goes in a helper rather than being written three times.
+`DealCard.tsx` has **two** exports that wrap a card in a `Link`, and both can render a space: `DealCardById({ listingId, showStatus, action, footer })` at line 274, and the draggable board card `DealCard({ listing })` at line 337. `TimelineEvent.tsx` needs the same decision. And so does `PropertyGrid.tsx` — see below. Four call sites, one rule, so the rule goes in a helper rather than being written four times.
+
+> **`PropertyGrid.tsx` is the fourth site, and the design doc was wrong about it.** The spec claimed it "only gets top-level listings." It does not: `listings/index.tsx` builds its list as `Array.from(getStore().listings.values())` with no shape filter, and only `boardListings` narrows it — excluding umbrella *parents*, never space *children*. So grid view renders a card per space linking straight at `/listings/{spaceId}`. Since this feature has no route guard by design, that is a live hole, not a cosmetic one.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1308,15 +1310,30 @@ In `TimelineEvent.tsx`, the association link at line 137 uses `a.id`, which can 
 
 Add `import { getListing } from "#/data/store";` and the `dealCardLinkProps` import if either is absent.
 
-- [ ] **Step 8: Run the gates**
+- [ ] **Step 8: Use it in the listings grid**
+
+`src/components/properties/PropertyGrid.tsx:30-33` links every card at the listing's own id. Grid view receives space children (see the note at the top of this task), so it needs the same rule:
+
+```tsx
+            <Link
+              {...dealCardLinkProps(listing)}
+              className="text-decoration-none text-reset d-block h-100"
+            >
+```
+
+Add `import { dealCardLinkProps } from "#/components/deals/dealCardLink";`.
+
+Leave the `map` view alone — `PropertyMapInner` renders no deal link, so it has no equivalent hole.
+
+- [ ] **Step 9: Run the gates**
 
 Run: `bunx tsc --noEmit && bunx vitest run`
 Expected: tsc exits 0; all tests pass (684 + 2 = 686).
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
-git add src/components/deals/dealCardLink.ts src/components/deals/dealCardLink.test.ts src/components/deals/DealCard.tsx src/components/contacts/TimelineEvent.tsx
+git add src/components/deals/dealCardLink.ts src/components/deals/dealCardLink.test.ts src/components/deals/DealCard.tsx src/components/contacts/TimelineEvent.tsx src/components/properties/PropertyGrid.tsx
 git commit -m "fix(links): send a space card to its building's roster, not a page"
 ```
 
