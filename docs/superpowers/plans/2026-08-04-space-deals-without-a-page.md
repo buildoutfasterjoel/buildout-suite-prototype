@@ -477,7 +477,7 @@ git commit -m "refactor(nav): give the sidebar and breadcrumb one source of sect
 Create `src/routes/_shell/listings/$listingId/vouchers/index.tsx`:
 
 ```tsx
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Table } from "@buildoutinc/blueprint-react/ui/Table";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faAngleRight } from "@fortawesome/pro-regular-svg-icons";
@@ -485,6 +485,7 @@ import { useDataStore } from "#/data/dataStore";
 import { dealStageLabel } from "#/data/dealShape";
 import { spaceVouchers } from "#/data/spaceVouchers";
 import { ListingPageHeader } from "#/components/listings/ListingPageHeader";
+import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
 
 export const Route = createFileRoute("/_shell/listings/$listingId/vouchers/")({
   component: VouchersIndexRoute,
@@ -499,6 +500,7 @@ const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
  */
 function VouchersIndexRoute() {
   const { listingId } = Route.useParams();
+  const navigate = useNavigate();
   // Subscribe to the map: a row's commission and tenant live on the *child*
   // deals, so this must re-render when any of them changes, not just the shell.
   void useDataStore((s) => s.listings);
@@ -528,7 +530,23 @@ function VouchersIndexRoute() {
         </Table.Header>
         <Table.Body>
           {rows.map((row) => (
-            <Table.Row key={row.dealId}>
+            // The whole row navigates, matching ContactsTable's pattern — the
+            // trailing chevron promises a full-row target, so the row must be
+            // one. `shouldIgnoreRowClick` already exempts `<a>`, so the label
+            // link below still handles its own click (and modified clicks keep
+            // opening new tabs), while the Link itself carries the keyboard
+            // affordance and href semantics.
+            <Table.Row
+              key={row.dealId}
+              style={{ cursor: "pointer" }}
+              onClick={(e) => {
+                if (shouldIgnoreRowClick(e)) return;
+                void navigate({
+                  to: "/listings/$listingId/vouchers/$spaceId",
+                  params: { listingId, spaceId: row.dealId },
+                });
+              }}
+            >
               <Table.Cell className="fw-medium">
                 <Link
                   to="/listings/$listingId/vouchers/$spaceId"
