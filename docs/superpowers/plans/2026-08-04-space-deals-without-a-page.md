@@ -1363,7 +1363,7 @@ Last on purpose: nothing is removed before its replacement works. All of this ex
 - Modify: `src/components/properties/dealNav.test.ts` (drop assertions about the deleted rules)
 - Modify: `src/components/properties/PropertyDetailSidebar.tsx` (drop the `from` carry)
 - Modify: `src/routes/_shell/listings/$listingId/{demographics,documents,email,grids,media,plans,website,leads}.tsx` (drop the `from` param)
-- Modify: `src/components/properties/PropertyDetailHeader.tsx` (drop the `parentDeal` branch)
+- ~~Modify: `src/components/properties/PropertyDetailHeader.tsx` (drop the `parentDeal` branch)~~ — **already done in Task 6.** Replacing the breadcrumb removed the last reference to `parentDeal`/`spaceLabel`, and `noUnusedLocals: true` made leaving them a hard `tsc` error, so they went then. Nothing to do here.
 - Modify: `src/components/deals/DealContextRail.tsx` (drop `LinkedParentDeal` + its `parent` lookup)
 - Modify: `src/components/listings/edit/ListingFormEditor.tsx` (drop the space-terms section)
 - Modify: `src/components/deals/DealMarketingEditor.tsx` (drop the now-unused `listing` prop pass-through if `tsc` flags it)
@@ -1457,7 +1457,7 @@ In each of `demographics.tsx`, `documents.tsx`, `email.tsx`, `grids.tsx`, `media
 
 - [ ] **Step 4: Drop the dead parent affordances**
 
-In `PropertyDetailHeader.tsx`, remove the `parentDeal` and `spaceLabel` consts. Task 6 already replaced the breadcrumb that consumed them, so nothing else references them — `tsc` will confirm.
+`PropertyDetailHeader.tsx` needs nothing here — Task 6 already removed the `parentDeal` and `spaceLabel` consts, because replacing the breadcrumb dropped their last reference and `noUnusedLocals: true` turns an unused const into a build failure. Verify with `grep -n "parentDeal\|spaceLabel" src/components/properties/PropertyDetailHeader.tsx`; the only expected hit is the unrelated `parentDealId={listing.id}` prop passed to `AddSpaceModal`.
 
 In `DealContextRail.tsx`, remove the `LinkedParentDeal` function, the `const parent = listing.parentDealId ? ... : undefined` lookup, and the `{parent && (...)}` block that renders it.
 
