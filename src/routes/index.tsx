@@ -114,6 +114,23 @@ function Home() {
         </div>
 
         <div className="col-md-4">
+          <Link to="/settings/company" className="text-decoration-none">
+            <Card className="shadow-sm h-100">
+              <CardHeader>
+                <CardTitle>Company Settings</CardTitle>
+              </CardHeader>
+              <CardBody>
+                Admin settings shell — a grouped, collapsible section nav beside
+                its own content card. Company info and brand styles, plus the
+                new roles &amp; permissions model: a users roster, per-user
+                effective permissions with Default/Custom attribution, additive
+                role assignment, and per-permission overrides.
+              </CardBody>
+            </Card>
+          </Link>
+        </div>
+
+        <div className="col-md-4">
           <Link
             to="/editor/$listingId"
             params={{ listingId: sampleListingId }}
