@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Navbar, useNavbar } from "@buildoutinc/blueprint-react/ui/Navbar";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
@@ -13,14 +13,16 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import { useDataStore } from "#/data/dataStore";
 import { CURRENT_USER } from "#/data/teammates";
+import type { RoleId } from "#/data/permissions";
+import { useRoster } from "#/components/settings/users/useRoster";
+import { useViewerRoles } from "#/components/settings/users/useViewer";
 import {
-  PERSONA_LABELS,
-  PERSONA_ORDER,
+  VIEW_AS_ORDER,
   identityLine,
-  readPersona,
-  writePersona,
-  type Persona,
-} from "./personas";
+  readViewAsRole,
+  viewAsLabel,
+  writeViewAsRole,
+} from "./viewAsRole";
 
 /**
  * The account dropdown in the navbar footer.
@@ -32,12 +34,32 @@ import {
 export function AccountMenu() {
   const navigate = useNavigate();
   const { isMobile } = useNavbar();
-  const [persona, setPersona] = useState<Persona>(() => readPersona());
   const resetDemo = useDataStore((s) => s.reset);
+  const setRoles = useRoster((s) => s.setRoles);
 
-  function changePersona(next: Persona) {
-    writePersona(next);
-    setPersona(next);
+  // The chosen role lives on the signed-in user's roster row, so the menu reads
+  // it back from there rather than keeping its own copy — editing Ethan's roles
+  // on his own permissions page moves this checkmark too.
+  const viewerRoles = useViewerRoles();
+  const activeRole = viewerRoles[0] ?? "broker";
+
+  // Restore the persisted seat on mount. The roster seed can't read
+  // localStorage itself (it's built at module load, and has to be SSR-safe), so
+  // the stored choice is applied here once the client is up. Skipped when it
+  // already matches, so this never writes a fresh users array for no reason.
+  useEffect(() => {
+    const stored = readViewAsRole();
+    const current = useRoster.getState().users.find(
+      (u) => u.id === CURRENT_USER.id,
+    );
+    if (current && (current.roleIds.length !== 1 || current.roleIds[0] !== stored)) {
+      setRoles(CURRENT_USER.id, [stored]);
+    }
+  }, [setRoles]);
+
+  function changeRole(next: RoleId) {
+    writeViewAsRole(next);
+    setRoles(CURRENT_USER.id, [next]);
   }
 
   // Wipe the demo world back to the deterministic clean state, then reload so
@@ -84,7 +106,7 @@ export function AccountMenu() {
                 {CURRENT_USER.email}
               </div>
               <div className="small text-truncate text-buildout-blue-200">
-                {identityLine(persona, CURRENT_USER.company)}
+                {identityLine(activeRole, CURRENT_USER.company)}
               </div>
             </div>
           </div>
@@ -109,29 +131,29 @@ export function AccountMenu() {
           {isMobile ? (
             // Base UI's submenu and radio parts have no Menu.Root in Navbar's
             // collapsible branch, so mobile gets flat rows instead.
-            PERSONA_ORDER.map((p) => (
+            VIEW_AS_ORDER.map((roleId) => (
               <Navbar.GroupMenuItem
-                key={p}
-                onClick={() => changePersona(p)}
-                className={p === persona ? "active" : undefined}
+                key={roleId}
+                onClick={() => changeRole(roleId)}
+                className={roleId === activeRole ? "active" : undefined}
               >
-                {PERSONA_LABELS[p]}
+                {viewAsLabel(roleId)}
               </Navbar.GroupMenuItem>
             ))
           ) : (
             <DropdownMenu.Sub>
               <DropdownMenu.SubTrigger className="d-flex align-items-center gap-2">
                 <FontAwesomeIcon icon={faUser} />
-                Viewing as: {PERSONA_LABELS[persona]}
+                Viewing as: {viewAsLabel(activeRole)}
               </DropdownMenu.SubTrigger>
               <DropdownMenu.SubContent className="navbar-dropdown">
                 <DropdownMenu.RadioGroup
-                  value={persona}
-                  onValueChange={(value) => changePersona(value as Persona)}
+                  value={activeRole}
+                  onValueChange={(value) => changeRole(value as RoleId)}
                 >
-                  {PERSONA_ORDER.map((p) => (
-                    <DropdownMenu.RadioItem key={p} value={p}>
-                      {PERSONA_LABELS[p]}
+                  {VIEW_AS_ORDER.map((roleId) => (
+                    <DropdownMenu.RadioItem key={roleId} value={roleId}>
+                      {viewAsLabel(roleId)}
                     </DropdownMenu.RadioItem>
                   ))}
                 </DropdownMenu.RadioGroup>

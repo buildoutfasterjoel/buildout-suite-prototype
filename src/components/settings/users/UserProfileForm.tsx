@@ -38,6 +38,8 @@ import {
   SUB_SPECIALTY_OPTIONS,
 } from "#/data/companySettings";
 import { notify } from "#/lib/notify";
+import { ManageCompanyNotice } from "./ManageCompanyNotice";
+import { useCan } from "./useViewer";
 import {
   MultiSelectField,
   RequiredMark,
@@ -103,6 +105,10 @@ function PluginListField({
  */
 export function UserProfileForm({ user }: { user: RosterUser }) {
   const setIdentity = useRoster((s) => s.setIdentity);
+  // Your own profile is always yours to edit. Someone else's takes Manage
+  // Company, and without it there's nothing here worth showing — a teammate's
+  // contact details aren't this page's job.
+  const canManage = useCan("manage-company");
   const [form, setForm] = useState<UserProfile>(() => seedProfile(user));
 
   const set = <K extends keyof UserProfile>(key: K, value: UserProfile[K]) =>
@@ -127,6 +133,12 @@ export function UserProfileForm({ user }: { user: RosterUser }) {
       title: "Profile saved",
       description: `${form.firstName}'s profile has been updated.`,
     });
+  }
+
+  if (!canManage && !user.isYou) {
+    return (
+      <ManageCompanyNotice what={`view ${form.firstName}'s profile`} />
+    );
   }
 
   return (

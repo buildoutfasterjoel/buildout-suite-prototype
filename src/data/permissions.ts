@@ -180,7 +180,7 @@ export type RoleId =
   | "broker"
   | "marketing-assistant"
   | "transaction-coordinator"
-  | "assistant-to-broker"
+  | "office-admin"
   | "managing-director";
 
 /**
@@ -281,8 +281,8 @@ export const ROLES: Role[] = [
     defaults: ["change-deal-statuses", "edit-profile-photo"],
   },
   {
-    id: "assistant-to-broker",
-    name: "Assistant to Broker",
+    id: "office-admin",
+    name: "Office Admin",
     description: "General admin, scheduling, data entry.",
     accessKind: "sharing",
     provisional: true,
@@ -315,6 +315,21 @@ export interface ResolvedPermission {
 /** Union of the given roles' defaults — the value before overrides. */
 export function roleDefaultFor(roleIds: RoleId[], permissionId: string): boolean {
   return roleIds.some((id) => ROLE_BY_ID.get(id)?.defaults.includes(permissionId));
+}
+
+/**
+ * Whether one permission is effectively on — the same rule as
+ * `resolvePermissions`, for callers that only need to ask about one thing.
+ * This is the `can?` check enforcement reads.
+ */
+export function isPermissionOn(
+  roleIds: RoleId[],
+  overrides: PermissionOverrides,
+  permissionId: string,
+): boolean {
+  const override = overrides[permissionId];
+  if (override !== undefined) return override;
+  return roleDefaultFor(roleIds, permissionId);
 }
 
 /** Which of the assigned roles grant a permission, for the "from Broker" line. */

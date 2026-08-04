@@ -17,6 +17,8 @@ import {
 import { ROLES, type RoleId } from "#/data/permissions";
 import { OFFICES, rosterCounts, type RosterUser } from "#/data/roster";
 import { useRoster } from "./useRoster";
+import { useCan } from "./useViewer";
+import { ManageCompanyNotice } from "./ManageCompanyNotice";
 import { notify } from "#/lib/notify";
 import { NeutralBadge, RoleBadge, StatusIndicator } from "./roleDisplay";
 
@@ -45,6 +47,8 @@ const STATUS_FILTER_LABELS: Record<StatusFilter, string> = {
 export function UsersRoster() {
   const navigate = useNavigate();
   const users = useRoster((s) => s.users);
+  // Anyone may browse the roster; only Manage Company may add to it.
+  const canManage = useCan("manage-company");
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleId | typeof ALL_ROLES>(
     ALL_ROLES,
@@ -88,26 +92,31 @@ export function UsersRoster() {
       {/* Header */}
       <div className="d-flex align-items-start gap-3">
         <div className="flex-grow-1">
-          <h2 className="fs-4 fw-bold mb-1">Users</h2>
+          <h2 className="fs-5 fw-semibold mb-1">Users</h2>
           <p className="text-muted mb-0">
             Everyone at Buildout. Select a person to view or change what they
             can do.
           </p>
         </div>
-        <Button
-          variant="primary"
-          className="flex-shrink-0"
-          onClick={() =>
-            notify({
-              title: "Invite user",
-              description: "Inviting teammates isn't wired up in this prototype.",
-            })
-          }
-        >
-          <FontAwesomeIcon icon={faPlus} />
-          Invite user
-        </Button>
+        {canManage && (
+          <Button
+            variant="primary"
+            className="flex-shrink-0"
+            onClick={() =>
+              notify({
+                title: "Invite user",
+                description:
+                  "Inviting teammates isn't wired up in this prototype.",
+              })
+            }
+          >
+            <FontAwesomeIcon icon={faPlus} />
+            Invite user
+          </Button>
+        )}
       </div>
+
+      {!canManage && <ManageCompanyNotice what="invite or change teammates" />}
 
       {/* Toolbar */}
       <div className="d-flex align-items-center gap-3 flex-wrap">

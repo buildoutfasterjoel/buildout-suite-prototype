@@ -11,6 +11,8 @@ import {
   type CompanyStyles,
 } from "#/data/companySettings";
 import { notify } from "#/lib/notify";
+import { ManageCompanyNotice } from "#/components/settings/users/ManageCompanyNotice";
+import { useCan } from "#/components/settings/users/useViewer";
 import {
   SettingsCol,
   SettingsRow,
@@ -47,6 +49,7 @@ function fontStack(font: string): string {
  * sits beside the fields so a color change is visible without exporting a doc.
  */
 export function CompanyStylesForm() {
+  const canManage = useCan("manage-company");
   const [styles, setStyles] = useState<CompanyStyles>(COMPANY_STYLES);
 
   const set = <K extends keyof CompanyStyles>(
@@ -196,14 +199,20 @@ export function CompanyStylesForm() {
         </div>
       </SettingsSection>
 
-      <div className="d-flex justify-content-end mt-5">
-        <Button
-          variant="primary"
-          onClick={() => notify({ title: "Brand styles saved" })}
-        >
-          Save Changes
-        </Button>
-      </div>
+      {canManage ? (
+        <div className="d-flex justify-content-end mt-5">
+          <Button
+            variant="primary"
+            onClick={() => notify({ title: "Brand styles saved" })}
+          >
+            Save Changes
+          </Button>
+        </div>
+      ) : (
+        <div className="mt-5">
+          <ManageCompanyNotice what="change brand styles" />
+        </div>
+      )}
     </div>
   );
 }

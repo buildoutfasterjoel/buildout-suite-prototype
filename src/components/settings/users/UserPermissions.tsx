@@ -1,10 +1,9 @@
-import { useMemo, useState } from "react";
-import { Alert } from "@buildoutinc/blueprint-react/ui/Alert";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Switch } from "@buildoutinc/blueprint-react/ui/Switch";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLock, faPencil, faRotateLeft } from "@fortawesome/pro-regular-svg-icons";
+import { faPencil, faRotateLeft } from "@fortawesome/pro-regular-svg-icons";
 import { faCircleInfo } from "@fortawesome/pro-duotone-svg-icons";
 import {
   resolvePermissions,
@@ -17,11 +16,12 @@ import type { RosterUser } from "#/data/roster";
 import { useRoster } from "./useRoster";
 import { notify } from "#/lib/notify";
 import { AssignRolesPanel } from "./AssignRolesPanel";
+import { ManageCompanyNotice } from "./ManageCompanyNotice";
+import { useCan } from "./useViewer";
 import {
   Attribution,
   CUSTOM_TEXT,
   CustomChip,
-  NeutralBadge,
   SCOPE_META,
   ScopeDot,
   StatePill,
@@ -47,8 +47,20 @@ export function UserPermissions({ user }: { user: RosterUser }) {
   const setOverride = useRoster((s) => s.setOverride);
   const clearOverrides = useRoster((s) => s.clearOverrides);
 
+  // This page is gated by Manage Company — the same permission it can grant.
+  // Without it, the notice replaces the whole page (see the early return below).
+  const canManage = useCan("manage-company");
   const [editing, setEditing] = useState(false);
   const [rolesOpen, setRolesOpen] = useState(false);
+
+  // Losing the permission mid-session (by switching seats) must not leave the
+  // page in edit mode with live switches.
+  useEffect(() => {
+    if (!canManage) {
+      setEditing(false);
+      setRolesOpen(false);
+    }
+  }, [canManage]);
 
   const firstName = firstNameOf(user);
   const resolved = useMemo(
@@ -90,46 +102,21 @@ export function UserPermissions({ user }: { user: RosterUser }) {
     });
   }
 
+  // Without Manage Company there's nothing here to read or act on, so the notice
+  // stands alone rather than heading a list the viewer can't touch.
+  if (!canManage) {
+    return (
+      <ManageCompanyNotice
+        what={`change ${user.isYou ? "your own" : `${firstName}'s`} permissions`}
+      />
+    );
+  }
+
   return (
     // No breadcrumb or identity block here — those live in the tab layout, so
     // they stay put as you move between a user's tabs. This tab owns only its
     // own actions.
     <div className="d-flex flex-column gap-4">
-      {/* States the model rather than explaining away the off switches.
-          "Why some things are off" led with a problem the reader may not have
-          had, and its body answered two questions at once — where values come
-          from, and why being allowed isn't the same as having access. Those are
-          the two things worth knowing, so they're now one line each, and the
-          heading is the rule instead of a complaint about it. */}
-      <Alert severity="info" withIcon>
-        <FontAwesomeIcon icon={faCircleInfo} />
-        <div>
-          <div className="fw-semibold">
-            Roles decide what {firstName} can do — sharing decides which records
-          </div>
-          <div>
-            {user.roleIds.length === 0 ? (
-              <>
-                {firstName} has no role assigned, so nothing is on yet. Assign
-                one to give them a starting set.
-              </>
-            ) : (
-              <>
-                Everything here comes from the{" "}
-                <span className="fw-semibold">
-                  {user.roleIds.map(roleName).join(" + ")}
-                </span>{" "}
-                {user.roleIds.length === 1 ? "role" : "roles"} unless it&apos;s
-                marked <span className="fw-semibold">Custom</span>.
-              </>
-            )}{" "}
-            Being allowed to edit a listing doesn&apos;t open any listing —
-            {" "}
-            {firstName} still has to be shared into the record.
-          </div>
-        </div>
-      </Alert>
-
       {/* Summary line, with the mode controls riding on its right. The count is
           what an admin reads first and the button is what they reach for next,
           so pairing them saves a line and keeps the action next to its subject. */}
@@ -176,6 +163,45 @@ export function UserPermissions({ user }: { user: RosterUser }) {
             changing someone's role is the common fix, and burying it made the
             page look like the only lever was toggling permissions one by one. */}
         <div className="ms-auto d-flex align-items-center gap-2">
+          {/* The model explained on demand rather than in a standing banner:
+              it's the same two sentences every visit, and an admin who already
+              knows how roles and sharing relate doesn't need re-telling. */}
+          <Tooltip>
+            <Tooltip.Trigger
+              render={
+                <span
+                  tabIndex={0}
+                  className="text-muted d-inline-flex align-items-center me-1"
+                  style={{ cursor: "help" }}
+                  aria-label="How roles and sharing decide access"
+                />
+              }
+            >
+              <FontAwesomeIcon icon={faCircleInfo} />
+            </Tooltip.Trigger>
+            <Tooltip.Content side="bottom" align="end" style={{ maxWidth: 320 }}>
+              <div className="fw-semibold mb-1">
+                Roles decide what {firstName} can do — sharing decides which
+                records
+              </div>
+              {user.roleIds.length === 0 ? (
+                <>
+                  {firstName} has no role assigned, so nothing is on yet. Assign
+                  one to give them a starting set.
+                </>
+              ) : (
+                <>
+                  Everything here comes from the{" "}
+                  {user.roleIds.map(roleName).join(" + ")}{" "}
+                  {user.roleIds.length === 1 ? "role" : "roles"} unless it&apos;s
+                  marked Custom.
+                </>
+              )}{" "}
+              Being allowed to edit a listing doesn&apos;t open any listing —{" "}
+              {firstName} still has to be shared into the record.
+            </Tooltip.Content>
+          </Tooltip>
+
           <Button variant="outline" size="sm" onClick={() => setRolesOpen(true)}>
             Assign roles
           </Button>
@@ -190,29 +216,10 @@ export function UserPermissions({ user }: { user: RosterUser }) {
         </div>
       </div>
 
-      {/* The one rule that can't be changed. Neutral rather than tinted: the
-          lock and the "Can't be changed" badge already say it's immutable, and
-          a warning color here would read as a problem to fix. */}
-      {user.roleIds.includes("managing-director") && (
-        <div className="d-flex align-items-start gap-3 border rounded p-3 bg-storm-grey-50">
-          <FontAwesomeIcon
-            icon={faLock}
-            className="text-storm-grey-600 mt-1 flex-shrink-0"
-          />
-          <div className="flex-grow-1">
-            <div className="fw-semibold">
-              Private records stay name-only — even for {firstName}
-            </div>
-            <div className="text-muted small">
-              They see every record in the firm, but private ones show a name and
-              nothing else.
-            </div>
-          </div>
-          <NeutralBadge className="flex-shrink-0">
-            Can&apos;t be changed
-          </NeutralBadge>
-        </div>
-      )}
+      {/* The Managing Director "private records stay name-only" rule used to sit
+          here as an immutable-constraint row. Hidden for now — it's a rule about
+          record visibility rather than a permission, so it wants its own home
+          once record-level sharing exists. */}
 
       {/* Permission groups, side by side from lg up. Two narrower columns keep
           each label within a short glance of its own switch — one full-width
@@ -329,14 +336,6 @@ function PermissionRow({
         )}
         <CustomChip custom={custom} />
         <Attribution grantedBy={row.grantedBy} custom={custom} />
-        {/* Replaces the old two-line "Turned off for Diana…" explanation: the
-            Custom chip says it's overridden, so the only thing left worth
-            saying is what the roles would have given — i.e. what reset does. */}
-        {custom && (
-          <span className="text-muted small">
-            · role default: {roleDefault ? "On" : "Off"}
-          </span>
-        )}
       </div>
 
       {/* Controls. The reset button occupies a fixed slot whether or not it's

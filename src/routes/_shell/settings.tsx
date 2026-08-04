@@ -19,7 +19,7 @@ function CompanySettingsLayout() {
       <div className="bg-card border-bottom">
         <div className="container p-4">
           <div className="d-flex align-items-center gap-3">
-            <h1 className="fs-3 fw-bold mb-0">Company Settings</h1>
+            <h1 className="fs-4 fw-semibold mb-0">Company Settings</h1>
             <Separator orientation="vertical" style={{ height: 24 }} />
             <p className="text-muted mb-0">
               Update your company information and settings.

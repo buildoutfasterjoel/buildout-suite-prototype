@@ -28,7 +28,7 @@ export function SettingsSection({
       <section className="d-flex flex-column gap-3">
         <div className="d-flex align-items-start justify-content-between gap-3">
           <div>
-            <h2 className="fs-4 fw-bold mb-0">{title}</h2>
+            <h2 className="fs-5 fw-semibold mb-0">{title}</h2>
             {description && (
               <p className="text-muted mb-0 mt-1">{description}</p>
             )}

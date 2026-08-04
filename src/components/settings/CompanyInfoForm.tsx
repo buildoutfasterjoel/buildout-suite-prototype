@@ -21,6 +21,8 @@ import {
   type CompanySettings,
 } from "#/data/companySettings";
 import { notify } from "#/lib/notify";
+import { ManageCompanyNotice } from "#/components/settings/users/ManageCompanyNotice";
+import { useCan } from "#/components/settings/users/useViewer";
 import {
   MultiSelectField,
   RequiredMark,
@@ -49,6 +51,8 @@ const SOCIAL_FIELDS = [
  * settings surfaces; Save Changes confirms with a toast.
  */
 export function CompanyInfoForm() {
+  // Company settings are themselves behind Manage Company.
+  const canManage = useCan("manage-company");
   const [form, setForm] = useState<CompanySettings>(COMPANY_SETTINGS);
 
   const set = <K extends keyof CompanySettings>(
@@ -247,11 +251,17 @@ export function CompanyInfoForm() {
         </div>
       </SettingsSection>
 
-      <div className="d-flex justify-content-end mt-5">
-        <Button variant="primary" onClick={handleSave}>
-          Save Changes
-        </Button>
-      </div>
+      {canManage ? (
+        <div className="d-flex justify-content-end mt-5">
+          <Button variant="primary" onClick={handleSave}>
+            Save Changes
+          </Button>
+        </div>
+      ) : (
+        <div className="mt-5">
+          <ManageCompanyNotice what="change company settings" />
+        </div>
+      )}
     </div>
   );
 }

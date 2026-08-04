@@ -96,9 +96,9 @@ const ASSIGNMENTS: Record<string, Assignment> = {
     },
   },
   "riley-park": {
-    title: "Assistant to Broker",
+    title: "Office Admin",
     office: "Chicago — West Loop",
-    roleIds: ["assistant-to-broker"],
+    roleIds: ["office-admin"],
   },
   "maya-brooks": {
     title: "Marketing Assistant",

@@ -58,7 +58,7 @@ export function AssignRolesPanel({
     <Offcanvas open={open} onOpenChange={onOpenChange}>
       <Offcanvas.Content side="right" style={{ maxWidth: 560 }}>
         <Offcanvas.Header>
-          <Offcanvas.Title className="fs-5 fw-bold mb-0">
+          <Offcanvas.Title className="fs-5 fw-semibold mb-0">
             Assign roles
           </Offcanvas.Title>
           <Offcanvas.Description className="text-muted mb-0">

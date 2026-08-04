@@ -7,18 +7,29 @@ import { ROLE_BY_ID } from "#/data/permissions";
 import type { UserStatus } from "#/data/roster";
 
 /**
- * Every badge here is Blueprint's `Badge` on the `secondary` variant, with a
- * Buildout token pair layered on top for hue. The component only ships
- * primary/secondary/outline, which can't cover five roles plus the state and
- * origin chips — and Bootstrap's color utilities are `!important`, so they win
- * over `.badge-secondary` cleanly without any custom CSS.
+ * Role badge colors, from the Figma spec (My Sandbox → 1310-80954).
+ *
+ * All five are tints on Blueprint's `secondary` badge — no solid fill, so no one
+ * role shouts over the others. Each pairs a Buildout token with its own family's
+ * 950 for text, resolving to the spec's hex within rounding:
+ *
+ *   Broker                  #dcebfd / #182753  (badge/accent/secondary)
+ *   Managing Director       #f2e8ff / #360764  (badge/default/secondary)
+ *   Marketing Assistant     #ffe785 / #481800
+ *   Transaction Coordinator #a0fad1 / #003024
+ *   Office Admin            #eceef2 / #22262f  (badge/muted/secondary)
+ *
+ * Palette tokens rather than the matching `appearance` props because the
+ * installed blueprint-theme resolves those semantic backgrounds differently from
+ * this Figma file — the text colors agree, the tints don't. Worth reconciling
+ * upstream; until then these hit the spec.
  */
 const ROLE_PILL: Record<RoleId, string> = {
-  broker: "bg-buildout-blue-100 text-buildout-blue-700",
-  "managing-director": "bg-solid-pink-100 text-solid-pink-700",
-  "marketing-assistant": "bg-seagull-100 text-seagull-700",
-  "transaction-coordinator": "bg-harvest-gold-100 text-harvest-gold-700",
-  "assistant-to-broker": "bg-storm-grey-100 text-storm-grey-700",
+  broker: "bg-buildout-blue-100 text-buildout-blue-950",
+  "managing-director": "bg-purple-heart-100 text-purple-heart-950",
+  "marketing-assistant": "bg-harvest-gold-200 text-harvest-gold-950",
+  "transaction-coordinator": "bg-mountain-meadow-200 text-mountain-meadow-950",
+  "office-admin": "bg-storm-grey-100 text-storm-grey-950",
 };
 
 /** The neutral pair, for badges that carry no state of their own. */
@@ -172,8 +183,11 @@ export function CustomChip({ custom }: { custom: boolean }) {
 }
 
 /**
- * Attribution line: which assigned role granted this, or that none did.
- * Reads as "· from Broker" beside the label.
+ * Which assigned role granted this, as "· from Broker".
+ *
+ * Silent when no role grants it: an Off row with no attribution already says
+ * "nothing turns this on", and spelling that out on every such row was a line of
+ * text per row that told the reader what they could see.
  */
 export function Attribution({
   grantedBy,
@@ -182,12 +196,7 @@ export function Attribution({
   grantedBy: RoleId[];
   custom: boolean;
 }): ReactNode {
-  if (custom) return null;
-  if (grantedBy.length === 0) {
-    return (
-      <span className="text-muted small">· not part of any assigned role</span>
-    );
-  }
+  if (custom || grantedBy.length === 0) return null;
   const names = grantedBy.map((id) => ROLE_BY_ID.get(id)?.name ?? id);
   return <span className="text-muted small">· from {names.join(" + ")}</span>;
 }

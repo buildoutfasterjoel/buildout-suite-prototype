@@ -103,7 +103,7 @@ export function UserDetailLayout({
         </Avatar>
         <div className="flex-grow-1" style={{ minWidth: 0 }}>
           <div className="d-flex align-items-center gap-2 flex-wrap">
-            <h2 className="fs-4 fw-bold mb-0">{user.name}</h2>
+            <h2 className="fs-5 fw-semibold mb-0">{user.name}</h2>
             {user.roleIds.map((roleId) => (
               <RoleBadge key={roleId} roleId={roleId} />
             ))}
