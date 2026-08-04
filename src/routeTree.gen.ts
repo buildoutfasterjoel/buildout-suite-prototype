@@ -71,6 +71,7 @@ import { Route as ShellListingsListingIdClientReportRouteImport } from './routes
 import { Route as ShellListingsListingIdActivitiesRouteImport } from './routes/_shell/listings/$listingId/activities'
 import { Route as ShellBackofficeContactsContactIdRouteImport } from './routes/_shell/backoffice/contacts/$contactId'
 import { Route as ShellSettingsUsersUserIdIndexRouteImport } from './routes/_shell/settings/users/$userId/index'
+import { Route as ShellListingsListingIdVouchersIndexRouteImport } from './routes/_shell/listings/$listingId/vouchers/index'
 import { Route as ShellSettingsUsersUserIdProfileRouteImport } from './routes/_shell/settings/users/$userId/profile'
 import { Route as ShellSettingsUsersUserIdPermissionsRouteImport } from './routes/_shell/settings/users/$userId/permissions'
 import { Route as ShellSettingsUsersUserIdNotificationsRouteImport } from './routes/_shell/settings/users/$userId/notifications'
@@ -417,6 +418,12 @@ const ShellSettingsUsersUserIdIndexRoute =
     path: '/',
     getParentRoute: () => ShellSettingsUsersUserIdRoute,
   } as any)
+const ShellListingsListingIdVouchersIndexRoute =
+  ShellListingsListingIdVouchersIndexRouteImport.update({
+    id: '/vouchers/',
+    path: '/vouchers/',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
 const ShellSettingsUsersUserIdProfileRoute =
   ShellSettingsUsersUserIdProfileRouteImport.update({
     id: '/profile',
@@ -521,6 +528,7 @@ export interface FileRoutesByFullPath {
   '/settings/users/$userId/notifications': typeof ShellSettingsUsersUserIdNotificationsRoute
   '/settings/users/$userId/permissions': typeof ShellSettingsUsersUserIdPermissionsRoute
   '/settings/users/$userId/profile': typeof ShellSettingsUsersUserIdProfileRoute
+  '/listings/$listingId/vouchers/': typeof ShellListingsListingIdVouchersIndexRoute
   '/settings/users/$userId/': typeof ShellSettingsUsersUserIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -580,6 +588,7 @@ export interface FileRoutesByTo {
   '/settings/users/$userId/notifications': typeof ShellSettingsUsersUserIdNotificationsRoute
   '/settings/users/$userId/permissions': typeof ShellSettingsUsersUserIdPermissionsRoute
   '/settings/users/$userId/profile': typeof ShellSettingsUsersUserIdProfileRoute
+  '/listings/$listingId/vouchers': typeof ShellListingsListingIdVouchersIndexRoute
   '/settings/users/$userId': typeof ShellSettingsUsersUserIdIndexRoute
 }
 export interface FileRoutesById {
@@ -651,6 +660,7 @@ export interface FileRoutesById {
   '/_shell/settings/users/$userId/notifications': typeof ShellSettingsUsersUserIdNotificationsRoute
   '/_shell/settings/users/$userId/permissions': typeof ShellSettingsUsersUserIdPermissionsRoute
   '/_shell/settings/users/$userId/profile': typeof ShellSettingsUsersUserIdProfileRoute
+  '/_shell/listings/$listingId/vouchers/': typeof ShellListingsListingIdVouchersIndexRoute
   '/_shell/settings/users/$userId/': typeof ShellSettingsUsersUserIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -722,6 +732,7 @@ export interface FileRouteTypes {
     | '/settings/users/$userId/notifications'
     | '/settings/users/$userId/permissions'
     | '/settings/users/$userId/profile'
+    | '/listings/$listingId/vouchers/'
     | '/settings/users/$userId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -781,6 +792,7 @@ export interface FileRouteTypes {
     | '/settings/users/$userId/notifications'
     | '/settings/users/$userId/permissions'
     | '/settings/users/$userId/profile'
+    | '/listings/$listingId/vouchers'
     | '/settings/users/$userId'
   id:
     | '__root__'
@@ -851,6 +863,7 @@ export interface FileRouteTypes {
     | '/_shell/settings/users/$userId/notifications'
     | '/_shell/settings/users/$userId/permissions'
     | '/_shell/settings/users/$userId/profile'
+    | '/_shell/listings/$listingId/vouchers/'
     | '/_shell/settings/users/$userId/'
   fileRoutesById: FileRoutesById
 }
@@ -1296,6 +1309,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellSettingsUsersUserIdIndexRouteImport
       parentRoute: typeof ShellSettingsUsersUserIdRoute
     }
+    '/_shell/listings/$listingId/vouchers/': {
+      id: '/_shell/listings/$listingId/vouchers/'
+      path: '/vouchers'
+      fullPath: '/listings/$listingId/vouchers/'
+      preLoaderRoute: typeof ShellListingsListingIdVouchersIndexRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
     '/_shell/settings/users/$userId/profile': {
       id: '/_shell/settings/users/$userId/profile'
       path: '/profile'
@@ -1416,6 +1436,7 @@ interface ShellListingsListingIdRouteChildren {
   ShellListingsListingIdWebsiteRoute: typeof ShellListingsListingIdWebsiteRoute
   ShellListingsListingIdIndexRoute: typeof ShellListingsListingIdIndexRoute
   ShellListingsListingIdVouchersSpaceIdRoute: typeof ShellListingsListingIdVouchersSpaceIdRoute
+  ShellListingsListingIdVouchersIndexRoute: typeof ShellListingsListingIdVouchersIndexRoute
 }
 
 const ShellListingsListingIdRouteChildren: ShellListingsListingIdRouteChildren =
@@ -1450,6 +1471,8 @@ const ShellListingsListingIdRouteChildren: ShellListingsListingIdRouteChildren =
     ShellListingsListingIdIndexRoute: ShellListingsListingIdIndexRoute,
     ShellListingsListingIdVouchersSpaceIdRoute:
       ShellListingsListingIdVouchersSpaceIdRoute,
+    ShellListingsListingIdVouchersIndexRoute:
+      ShellListingsListingIdVouchersIndexRoute,
   }
 
 const ShellListingsListingIdRouteWithChildren =
