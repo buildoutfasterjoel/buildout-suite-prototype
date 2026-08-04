@@ -39,6 +39,7 @@ import {
   getClientReportKpis,
   buildActivitySummaryText,
 } from "#/data/listingClientReport";
+import { buildingSectionListingId } from "#/components/deals/dealCardLink";
 import {
   searchAllDef,
   listDealsDef,
@@ -133,6 +134,35 @@ export function resolveContactByName(name: string): Contact | null {
     contacts.find((c) => `${c.firstName} ${c.lastName}`.toLowerCase().includes(q)) ??
     null
   );
+}
+
+/**
+ * Keep a model-composed deal path off a space's page. A space has no page of
+ * its own: its terms live on its building's Spaces roster and its voucher
+ * behind the building's Vouchers section. `navigateTo` takes the path from the
+ * model, which composes it from an id it looked up (see `navigateToDef`), so
+ * there is no link to fix — the correction has to happen on the way out.
+ *
+ *   /listings/{space}           → /listings/{building}/spaces?space={space}
+ *   /listings/{space}/{section} → /listings/{building}/{section}
+ *
+ * Anything else passes through untouched: another route, a path already
+ * carrying a query or hash, an unknown id, or a building.
+ *
+ * The `?space=` rides along inside the path string because the injected
+ * `navigate` takes a pathname; the router splits the query off when it commits
+ * the location.
+ */
+export function rewriteSpaceDealPath(path: string): string {
+  const match = /^\/listings\/([^/?#]+)(\/[^?#]*)?$/.exec(path);
+  if (!match) return path;
+  const [, listingId, section] = match;
+  const buildingId = getListing(listingId)?.parentDealId;
+  if (!buildingId) return path;
+  if (!section || section === "/") {
+    return `/listings/${buildingId}/spaces?space=${listingId}`;
+  }
+  return `/listings/${buildingId}${section}`;
 }
 
 /**
@@ -357,14 +387,19 @@ export function createClientTools({
       return {
         summary: buildActivitySummaryText(listing.name, kpis),
         kpis,
-        reportPath: `/listings/${listingId}/client-report`,
+        // The client report is a building-level section, and the id came from
+        // the model — a space resolves to the building that owns the report.
+        reportPath: `/listings/${buildingSectionListingId(listingId)}/client-report`,
       };
     }),
 
     navigateToDef.client(async (args) => {
       const { path } = args as { path: string };
-      navigate(path);
-      return { navigatedTo: path };
+      // The model builds this path itself, so a space id can arrive in it —
+      // see `rewriteSpaceDealPath` for why that has to be corrected here.
+      const to = rewriteSpaceDealPath(path);
+      navigate(to);
+      return { navigatedTo: to };
     }),
 
     filterListingsDef.client(async (args) => {
