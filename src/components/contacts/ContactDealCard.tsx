@@ -261,7 +261,7 @@ export function ContactDealCard({
         {/* `addSpaceToDeal` copies the parent's seller contacts onto every child,
             so a landlord's contact page lists the shell AND each space. Without
             the shape the chip would default to "sale" and offer both a full
-            ladder to a shell and "Pitching" where a space reads "Draft". */}
+            ladder to a shell and "Pitching" where a space reads "Inactive". */}
         <DealStageChip
           value={listing.status}
           shape={dealShape(listing)}

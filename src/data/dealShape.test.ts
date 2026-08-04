@@ -35,8 +35,8 @@ describe('dealShape', () => {
 })
 
 describe('availableStages', () => {
-  it('caps a shell at Pitching, Active, Lost', () => {
-    expect(availableStages('shell')).toEqual(['proposal', 'active', 'inactive'])
+  it('caps a shell at Pitching and Active — no Lost, that is a per-space outcome', () => {
+    expect(availableStages('shell')).toEqual(['proposal', 'active'])
   })
 
   it('gives a space deal the full ladder', () => {
@@ -73,14 +73,14 @@ describe('availableStages', () => {
 
     // Yet the ladder it should offer has changed.
     expect(availableStages(dealShape(after.get(parent.id)!))).toEqual([
-      'proposal', 'active', 'inactive',
+      'proposal', 'active',
     ])
   })
 })
 
 describe('dealStageLabel', () => {
-  it('labels proposal Draft on a space deal', () => {
-    expect(dealStageLabel('proposal', 'space')).toBe('Draft')
+  it('labels proposal Inactive on a space deal', () => {
+    expect(dealStageLabel('proposal', 'space')).toBe('Inactive')
   })
 
   it('labels proposal Pitching everywhere else', () => {

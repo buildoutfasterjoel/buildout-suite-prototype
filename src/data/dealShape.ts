@@ -23,21 +23,24 @@ export function dealShape(deal: Listing): DealShape {
 }
 
 /**
- * A shell never advances past Active: its spaces carry the transactions, so it
- * has no tenant, no commission, and nothing to close. Every other shape keeps
- * the full ladder — a space deal's difference is in labelling, not in reach.
+ * A shell is only ever two things: winning the assignment, or working it. Its
+ * spaces carry the transactions, so it has no tenant, no commission, and nothing
+ * to close — and no Lost either, because losing a building means its spaces went
+ * with it, which is a per-space outcome. Every other shape keeps the full
+ * ladder — a space deal's difference is in labelling, not in reach.
  */
 export function availableStages(shape: DealShape): PropertyStatus[] {
-  if (shape === 'shell') return ['proposal', 'active', 'inactive']
+  if (shape === 'shell') return ['proposal', 'active']
   return [...FULL_LADDER]
 }
 
 /**
  * A suite is never "pitched" — the assignment was already won on the shell — but
- * it does need a pre-market state, so `proposal` reads as Draft there.
+ * it does need a pre-market state, so `proposal` reads as Inactive there: a suite
+ * that exists on the building without being advertised yet.
  */
 export function dealStageLabel(status: PropertyStatus, shape: DealShape): string {
-  if (shape === 'space' && status === 'proposal') return 'Draft'
+  if (shape === 'space' && status === 'proposal') return 'Inactive'
   return STAGE_LABEL[status]
 }
 
