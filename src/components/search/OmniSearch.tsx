@@ -137,7 +137,7 @@ export function OmniSearch() {
    * plain-path `navigate` above.
    */
   const openDeal = (deal: Listing) => {
-    router.navigate(dealCardLinkProps(deal) as never);
+    router.navigate(dealCardLinkProps(deal));
     close();
   };
 
