@@ -795,7 +795,14 @@ export interface SpaceLeaseTerms {
   leaseRateMode?: 'Flat' | 'Range' | 'Hidden'
   leaseRateTo?: number | null
   leaseRateUnitLabelOverride?: string
-  spaceSize?: number | null
+  /**
+   * How to label the space's size. The size ITSELF is `marketing.availableSqFt`
+   * on the space's own deal — the field the publish gate, the deal cards, the
+   * financials and the website copy all read. There is deliberately no
+   * `spaceSize` here: it existed, nothing ever read it, and the roster's size
+   * input wrote to it — so a broker could fill in a size, watch the terms save,
+   * and still be told Available SF was missing.
+   */
   spaceSizeUnits?: string
   leaseTypeLabelOverride?: string
   subleaseExpiration?: string | null

@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { createProposalListing, emptyDraft, emptySpaceLeaseTerms } from './createListing'
-import { getProperty, getListing } from './store'
+import { getProperty, getListing, updateProperty } from './store'
 import {
   addPropertyUnit, addSpaceToDeal,
   getChildDeals, isUmbrella, spacesStageBreakdown,
 } from './leaseSpaces'
-import { commitStageTransition } from './actions'
+import { commitStageTransition, updateDealMarketing } from './actions'
 
 function makeParent() {
   return createProposalListing({ ...emptyDraft(), name: 'Mall Assignment', dealType: 'Lease' })
@@ -69,5 +69,64 @@ describe('lease space actions', () => {
     expect(rollup.total).toBe(2)
     expect(rollup.byStage.active).toBe(1)
     expect(rollup.byStage.proposal).toBe(1)
+  })
+})
+
+/**
+ * A broker opening a brand-new space should not have to retype what the building
+ * already knows about that unit. The physical facts live on `PropertyUnit`, so the
+ * space's terms row starts from them.
+ *
+ * Space *type* is deliberately not seeded: `UnitType` is a coarse category
+ * ('office', 'retail') while `spaceType` is a fine-grained subtype ('Medical',
+ * 'Strip Center'), so deriving one from the other would be inventing a judgement
+ * that belongs to the broker.
+ */
+describe('a new space inherits what its unit already knows', () => {
+  it('seeds the terms row from the unit physical facts', () => {
+    const parent = makeParent()
+    const unit = addPropertyUnit(parent.propertyId, {
+      label: 'Suite 300', sqft: 2600, unitType: 'office',
+    })!
+    // Fill in what a seeded building would already carry for a suite. Re-read the
+    // property AFTER adding the unit — mapping a stale copy would write the new
+    // unit back out of existence.
+    const property = getProperty(parent.propertyId)!
+    updateProperty(property.id, {
+      units: property.units.map((u) =>
+        u.id === unit.id
+          ? { ...u, suite: '300', floor: 3, ceilingHeight: 12, offices: 4, conferenceRooms: 1, furnished: true }
+          : u,
+      ),
+    })
+
+    const child = addSpaceToDeal(parent.id, unit.id)!.deal
+    const terms = child.marketing.spaceLeaseTerms[0]!
+
+    expect(terms.spaceName).toBe('Suite 300')
+    expect(terms.suite).toBe('300')
+    expect(terms.floor).toBe(3)
+    expect(terms.ceilingHeight).toBe(12)
+    expect(terms.offices).toBe(4)
+    expect(terms.conferenceRooms).toBe(1)
+    expect(terms.furnished).toBe(true)
+    // The size itself is not on the terms row — it is the space's own marketing.
+    expect(child.marketing.availableSqFt).toBe(2600)
+  })
+
+  it('leaves a row the broker already priced on the parent untouched', () => {
+    const parent = makeParent()
+    const unit = addPropertyUnit(parent.propertyId, {
+      label: 'Suite 400', sqft: 1800, unitType: 'retail',
+    })!
+    // Priced on the parent first — that row MOVES to the child as authored.
+    updateDealMarketing(parent.id, {
+      spaceLeaseTerms: [{ ...emptySpaceLeaseTerms(unit.id), leaseRate: 31, spaceName: 'Corner unit' }],
+    })
+
+    const child = addSpaceToDeal(parent.id, unit.id)!.deal
+    const terms = child.marketing.spaceLeaseTerms[0]!
+    expect(terms.leaseRate).toBe(31)
+    expect(terms.spaceName).toBe('Corner unit')
   })
 })

@@ -44,17 +44,27 @@ const COMMERCIAL_SUBTYPES = ALL_SUBTYPES.filter((s) => !isResidentialSubtype(s))
  * A single space's lease terms editor. Renders the fields only — each caller
  * supplies its own frame: the Spaces tab wraps one per unit in a `Collapsible`,
  * and a space deal's Listing tab drops it into a `Section` as the whole tab.
+ *
+ * Size is passed separately from `terms` because it does not live on the terms
+ * row: a space's size is `marketing.availableSqFt` on its own deal, which is what
+ * the publish gate and every display surface read. Keeping it out of
+ * `SpaceLeaseTerms` is what stops a second, unread copy existing.
  */
 export function SpaceTermsSection({
 	unit,
 	property,
 	terms,
 	onChange,
+	availableSqFt,
+	onAvailableSqFtChange,
 }: {
 	unit: PropertyUnit;
 	property: Property;
 	terms: SpaceLeaseTerms;
 	onChange: (patch: Partial<SpaceLeaseTerms>) => void;
+	/** The space's size, from `marketing.availableSqFt` on its deal. */
+	availableSqFt: number | null;
+	onAvailableSqFtChange: (value: number | null) => void;
 }) {
 	const isIndustrial = property.propertyType === "industrial";
 	// Multi-tenant properties require a per-space suite/address (visual hint only).
@@ -186,8 +196,8 @@ export function SpaceTermsSection({
 				<Col>
 					<NumberField
 						label="Space Size"
-						value={terms.spaceSize ?? null}
-						onChange={(v) => onChange({ spaceSize: v })}
+						value={availableSqFt}
+						onChange={onAvailableSqFtChange}
 					/>
 				</Col>
 				<Col>

@@ -83,8 +83,12 @@ function SpacesTab() {
   // at once. A draft deliberately survives collapsing the row: the header is a
   // big click target and silently discarding typing would be worse than keeping
   // it, so only Save and Cancel resolve a draft.
-  const [drafts, setDrafts] = useState<Record<string, SpaceLeaseTerms>>({});
-  const patchDraft = (dealId: string, base: SpaceLeaseTerms, patch: Partial<SpaceLeaseTerms>) =>
+  // A draft covers both halves of a space's terms: the terms row, and the size,
+  // which lives on `marketing.availableSqFt` rather than on the row (see
+  // SpaceLeaseTerms). Save commits them together so the two cannot drift.
+  type SpaceDraft = { terms: SpaceLeaseTerms; availableSqFt: number | null };
+  const [drafts, setDrafts] = useState<Record<string, SpaceDraft>>({});
+  const patchDraft = (dealId: string, base: SpaceDraft, patch: Partial<SpaceDraft>) =>
     setDrafts((prev) => ({ ...prev, [dealId]: { ...(prev[dealId] ?? base), ...patch } }));
   const clearDraft = (dealId: string) =>
     setDrafts((prev) => {
@@ -95,7 +99,12 @@ function SpacesTab() {
   const saveDraft = (dealId: string) => {
     const draft = drafts[dealId];
     if (!draft) return;
-    updateDealMarketing(dealId, { spaceLeaseTerms: [draft] });
+    updateDealMarketing(dealId, {
+      spaceLeaseTerms: [draft.terms],
+      // 0 rather than null: `DealMarketing.availableSqFt` is a number, and a
+      // cleared field means "no size on record", which the gate reads as unmet.
+      availableSqFt: draft.availableSqFt ?? 0,
+    });
     clearDraft(dealId);
     notify({ title: "Space terms saved" });
   };
@@ -153,13 +162,19 @@ function SpacesTab() {
             const child = getListing(row.dealId);
             const unit = property?.units.find((u) => u.id === row.unitId);
             if (!child || !unit || !property) return null;
-            const saved =
-              child.marketing.spaceLeaseTerms?.[0] ??
-              emptySpaceLeaseTerms(row.unitId);
-            // The row edits its draft when one exists and the stored terms
+            // What is on record: the terms row, plus the size from the space's
+            // own marketing. `addSpaceToDeal` seeds that size from the unit, so an
+            // untouched row already shows the suite's real square footage.
+            const saved: SpaceDraft = {
+              terms:
+                child.marketing.spaceLeaseTerms?.[0] ??
+                emptySpaceLeaseTerms(row.unitId),
+              availableSqFt: child.marketing.availableSqFt || null,
+            };
+            // The row edits its draft when one exists and the stored values
             // otherwise, so an untouched row shows exactly what is persisted.
             const draft = drafts[row.dealId];
-            const terms = draft ?? saved;
+            const current = draft ?? saved;
             const dirty = draft != null;
             const rowOpen = openRows.has(row.dealId);
             return (
@@ -230,8 +245,16 @@ function SpacesTab() {
                   <SpaceTermsSection
                     unit={unit}
                     property={property}
-                    terms={terms}
-                    onChange={(patch) => patchDraft(row.dealId, saved, patch)}
+                    terms={current.terms}
+                    onChange={(patch) =>
+                      patchDraft(row.dealId, saved, {
+                        terms: { ...current.terms, ...patch },
+                      })
+                    }
+                    availableSqFt={current.availableSqFt}
+                    onAvailableSqFtChange={(v) =>
+                      patchDraft(row.dealId, saved, { availableSqFt: v })
+                    }
                   />
                   {/* Cancel ghost, Save primary, in that order — the same bar the
                       deal edit form ends with, so the two editors for these terms

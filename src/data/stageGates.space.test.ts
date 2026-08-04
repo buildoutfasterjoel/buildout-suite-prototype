@@ -254,3 +254,42 @@ describe('other shapes are unchanged', () => {
       .toEqual(resolveGate('proposal', 'active', 'Lease', 'flat-lease').required)
   })
 })
+
+/**
+ * The roster is a space's only terms editor, so whatever it writes has to be
+ * exactly what the publish gate reads. It briefly was not: the size field wrote
+ * `SpaceLeaseTerms.spaceSize`, which nothing in the app ever read, while the gate
+ * read `marketing.availableSqFt` — so a broker could fill in a size, see the terms
+ * save, and still be told Available SF was missing.
+ */
+describe('what the roster writes satisfies the space publish gate', () => {
+  it('is ready once rate, term and available SF are set — and not before', () => {
+    const parent = createProposalListing({ ...emptyDraft(), name: 'Mall', dealType: 'Lease' })
+    const unit = addPropertyUnit(parent.propertyId, { label: 'Suite 100', sqft: 4200, unitType: 'retail' })!
+    const child = addSpaceToDeal(parent.id, unit.id)!.deal
+
+    // A space is seeded with its unit's size, so only rate and term are open.
+    expect(publishReadiness(child, { shape: 'space' }).missing).toEqual([
+      'leaseRate', 'leaseTermMonths',
+    ])
+
+    updateDealMarketing(child.id, {
+      spaceLeaseTerms: [{ ...emptySpaceLeaseTerms(unit.id), leaseRate: 28, leaseTermMonths: 60 }],
+    })
+    expect(publishReadiness(getListing(child.id)!, { shape: 'space' }).ready).toBe(true)
+  })
+
+  it('reports Available SF missing when the size is cleared, not silently passing', () => {
+    const parent = createProposalListing({ ...emptyDraft(), name: 'Plaza', dealType: 'Lease' })
+    const unit = addPropertyUnit(parent.propertyId, { label: 'Suite 200', sqft: 1000, unitType: 'office' })!
+    const child = addSpaceToDeal(parent.id, unit.id)!.deal
+
+    updateDealMarketing(child.id, {
+      availableSqFt: 0,
+      spaceLeaseTerms: [{ ...emptySpaceLeaseTerms(unit.id), leaseRate: 30, leaseTermMonths: 36 }],
+    })
+    const { ready, missing } = publishReadiness(getListing(child.id)!, { shape: 'space' })
+    expect(ready).toBe(false)
+    expect(missing).toEqual(['availableSqFt'])
+  })
+})
