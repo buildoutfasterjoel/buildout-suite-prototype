@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
   resolveGate,
-  fieldSatisfied,
   canConfirm,
   publishReadiness,
   seedGateForm,
@@ -32,8 +31,8 @@ const EMPTY: GateFormState = {
 describe('space deal Approve & Publish gate', () => {
   const gate = resolveGate('proposal', 'active', 'Lease', 'space')
 
-  it('gates on the space own numbers plus a live building', () => {
-    expect(gate.required).toEqual(['leaseRate', 'availableSqFt', 'leaseTermMonths', 'shellActive'])
+  it('gates on the space own numbers and nothing else', () => {
+    expect(gate.required).toEqual(['leaseRate', 'availableSqFt', 'leaseTermMonths'])
   })
 
   it('does not require property-level fields the space cannot own', () => {
@@ -42,15 +41,27 @@ describe('space deal Approve & Publish gate', () => {
     }
   })
 
-  it('blocks until the shell is Active', () => {
-    const priced = { ...EMPTY, leaseRate: 28, availableSqFt: 4200, leaseTermMonths: 60 }
-    expect(canConfirm(gate, priced)).toBe(false)
-    expect(canConfirm(gate, { ...priced, shellActive: true })).toBe(true)
+  /**
+   * The building publishes the website, documents and campaigns; a space
+   * publishes its own availability. Those are different acts, so the parent's
+   * stage must not gate the child: once a shell's spaces carry the terms, the
+   * shell structurally cannot hold them, and blocking every space on the
+   * building's marketing content left a suite with no way to go live.
+   */
+  it('does not gate on the building stage', () => {
+    expect(gate.required).not.toContain('shellActive')
   })
 
-  it('satisfies shellActive only when true', () => {
-    expect(fieldSatisfied('shellActive', EMPTY)).toBe(false)
-    expect(fieldSatisfied('shellActive', { ...EMPTY, shellActive: true })).toBe(true)
+  it('confirms on the space own numbers alone, whatever the building is doing', () => {
+    const priced = { ...EMPTY, leaseRate: 28, availableSqFt: 4200, leaseTermMonths: 60 }
+    expect(canConfirm(gate, priced)).toBe(true)
+  })
+
+  it('still blocks when one of the space own numbers is missing', () => {
+    const priced = { ...EMPTY, leaseRate: 28, availableSqFt: 4200, leaseTermMonths: 60 }
+    expect(canConfirm(gate, { ...priced, leaseRate: null })).toBe(false)
+    expect(canConfirm(gate, { ...priced, availableSqFt: null })).toBe(false)
+    expect(canConfirm(gate, { ...priced, leaseTermMonths: null })).toBe(false)
   })
 })
 
