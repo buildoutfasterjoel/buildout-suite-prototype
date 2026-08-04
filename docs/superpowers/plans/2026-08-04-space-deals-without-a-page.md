@@ -49,6 +49,14 @@
 
 No `vouchers.tsx` layout file is needed — this repo already nests `listings/index.tsx` alongside `listings/$listingId.tsx` with no `listings.tsx`, so TanStack creates the intermediate route itself.
 
+## Build order: 1, 2, **4, 3**, 5, 6, 7, 8, 9
+
+Tasks 3 and 4 are numbered index-then-detail because that is how they read, but they must be **built detail-first**. TanStack Router types `<Link to>` against the generated route tree, so Task 3's index linking to `vouchers/$spaceId` is a hard `tsc` error (TS2820) until Task 4 creates that route. Task 4 has no `<Link>` at all, so it has no such dependency and compiles alone.
+
+This bites only typed `to` props. Task 2's `NAV_GROUPS` forward-references `href: "vouchers"` as a plain `string`, which is never checked against the route tree — that is why it was fine.
+
+Every other link resolves in this order: Task 6's breadcrumb → `vouchers` (exists after 3), Task 7's roster → `vouchers/$spaceId` (exists after 4).
+
 ---
 
 ### Task 1: `spaceVouchers` derivation
@@ -454,6 +462,8 @@ git commit -m "refactor(nav): give the sidebar and breadcrumb one source of sect
 
 ### Task 3: The Vouchers index route
 
+> **Build Task 4 before this one.** Its `<Link to="/listings/$listingId/vouchers/$spaceId">` is typed against the generated route tree, so this task cannot compile until Task 4 creates that route. See "Build order" above.
+
 **Files:**
 - Create: `src/routes/_shell/listings/$listingId/vouchers/index.tsx`
 - Modify: `src/routeTree.gen.ts` (**by regeneration only**)
@@ -569,6 +579,8 @@ git commit -m "feat(vouchers): index every space's commission on the shell"
 ---
 
 ### Task 4: The per-space voucher detail
+
+> **Build this before Task 3.** It creates the route Task 3's index links to, and it has no `<Link>` of its own, so it compiles standalone. See "Build order" above.
 
 **Files:**
 - Create: `src/routes/_shell/listings/$listingId/vouchers/$spaceId.tsx`
