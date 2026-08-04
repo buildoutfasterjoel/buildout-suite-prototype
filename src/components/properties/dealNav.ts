@@ -96,7 +96,9 @@ export function dealBreadcrumbTrail(
   const item = NAV_GROUPS.flatMap((g) => g.items).find((i) => i.href === section);
   if (!item) return none;
 
-  return { sectionLabel: item.label, detailId: detail ?? null };
+  // `||`, not `??`: a trailing slash splits to an empty string, which is no more
+  // a detail id than a missing segment is.
+  return { sectionLabel: item.label, detailId: detail || null };
 }
 
 /**

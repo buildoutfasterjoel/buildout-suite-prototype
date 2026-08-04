@@ -25,6 +25,13 @@ describe("dealBreadcrumbTrail", () => {
     });
   });
 
+  it("reports no detail for a section with a trailing slash", () => {
+    expect(dealBreadcrumbTrail(`/listings/${ID}/leads/`, ID)).toEqual({
+      sectionLabel: "Leads",
+      detailId: null,
+    });
+  });
+
   it("carries the detail id on a drill-down", () => {
     // Asserted through `financials` rather than `vouchers`: the Vouchers item
     // does not enter NAV_GROUPS until a later task, so that href would not
@@ -113,13 +120,20 @@ describe("visibleNavGroups", () => {
     expect(hrefs("sale", { leaseParent: false, showsUnderwriting: false })).not.toContain("underwriting");
   });
 
-  it("drops a group that ends up empty", () => {
-    // Back Office always keeps Notes, so force the emptiness through a group
-    // whose every item is conditional: none exist today, so assert the
-    // invariant instead — no rendered group is ever empty.
+  it("never renders an empty group", () => {
+    // Not a test of the `.filter(items.length > 0)` line: every group holds at
+    // least one unconditional item today (Overview, Leads, Notes), so no shape
+    // or option can empty one, and that filter cannot be reached from here.
+    // What's asserted is the property the filter exists to guarantee — if a
+    // future group is made entirely conditional, this is what catches it.
     for (const shape of ["sale", "flat-lease", "shell", "space"] as const) {
-      for (const group of visibleNavGroups(shape, { leaseParent: false, showsUnderwriting: false })) {
-        expect(group.items.length, shape).toBeGreaterThan(0);
+      for (const opts of [
+        { leaseParent: false, showsUnderwriting: false },
+        { leaseParent: true, showsUnderwriting: true },
+      ]) {
+        for (const group of visibleNavGroups(shape, opts)) {
+          expect(group.items.length, `${shape} ${JSON.stringify(opts)}`).toBeGreaterThan(0);
+        }
       }
     }
   });

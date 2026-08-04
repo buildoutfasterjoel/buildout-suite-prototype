@@ -8,7 +8,10 @@ import { useDataStore } from "#/data/dataStore";
 import { getListing, getProperty } from "#/data/store";
 import { propertyQualifiesForUnderwriting } from "#/components/deals/underwriting/eligibility";
 import { dealShape, isLeaseParent } from "#/data/dealShape";
-import { visibleNavGroups } from "#/components/properties/dealNav";
+import {
+  dealBreadcrumbTrail,
+  visibleNavGroups,
+} from "#/components/properties/dealNav";
 
 /** localStorage key for which sidebar category groups are collapsed. */
 const COLLAPSED_STORAGE_KEY = "deal-sidebar-collapsed-groups";
@@ -58,6 +61,11 @@ export function PropertyDetailSidebar() {
   const leaseParent = isLeaseParent(listing);
 
   const navGroups = visibleNavGroups(shape, { leaseParent, showsUnderwriting });
+  // Which section the URL is on — read the same way the breadcrumb reads it, so
+  // the two can't disagree. It takes the *first* segment after the listing id,
+  // which is what keeps a drill-down (…/vouchers/{spaceId}) highlighting its
+  // section rather than nothing at all. Hoisted: one call, not one per group.
+  const { sectionLabel } = dealBreadcrumbTrail(pathname, listingId);
 
   function handleTabChange(value: string) {
     const item = navGroups
@@ -71,8 +79,7 @@ export function PropertyDetailSidebar() {
     <nav className="px-3 py-1" aria-label="Property sections">
       {navGroups.map((group, i) => {
         const activeInGroup =
-          group.items.find((item) => pathname.endsWith(`/${item.href}`))
-            ?.label ?? "";
+          group.items.find((item) => item.label === sectionLabel)?.label ?? "";
         const isCollapsed = group.label ? collapsed.has(group.label) : false;
         const tabs = (
           <Tabs

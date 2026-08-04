@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
@@ -63,6 +63,13 @@ function SpacesTab() {
       else next.delete(dealId);
       return next;
     });
+  // Arriving at a *different* `?space=` while already on this roster reuses the
+  // component, so the initialiser above never runs again — the AI rail's deal
+  // cards make that a two-click journey. Additive on purpose: it opens the named
+  // row without closing the ones the broker opened themselves.
+  useEffect(() => {
+    if (spaceParam) setRowOpen(spaceParam, true);
+  }, [spaceParam]);
 
   if (!leaseParent) {
     return (
@@ -130,8 +137,8 @@ function SpacesTab() {
               >
                 <div className="d-flex align-items-center gap-2 pe-3">
                   {/* The whole row header is the trigger — the terms editor below
-                  is the row's main act, so clicking anywhere but the deal button
-                  expands it. */}
+                  is the row's main act, so clicking anywhere but the row's
+                  controls expands it. */}
                   <Collapsible.Trigger
                     className="flex-grow-1 d-flex align-items-center gap-3 border-0 bg-transparent p-3 text-start text-body"
                     style={{ cursor: "pointer" }}
