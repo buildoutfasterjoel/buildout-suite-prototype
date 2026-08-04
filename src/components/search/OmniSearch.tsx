@@ -21,6 +21,7 @@ import type { Property, Listing, Contact } from "#/data/types";
 import { useAssistant } from "#/ai/useAssistant";
 import { useCreateDeal } from "#/data/useCreateDeal";
 import { useOmniSearch } from "#/components/search/useOmniSearch";
+import { dealCardLinkProps } from "#/components/deals/dealCardLink";
 import { OmniSparkleIcon } from "#/components/search/OmniSparkleIcon";
 
 /** Max rows shown per entity group in the palette. */
@@ -129,6 +130,17 @@ export function OmniSearch() {
     close();
   };
 
+  /**
+   * Open a deal row. Where that lands is `dealCardLinkProps`' call, not this
+   * palette's — a space has no page of its own, so it opens its building's
+   * roster instead. Needs route params (and search), so it can't go through the
+   * plain-path `navigate` above.
+   */
+  const openDeal = (deal: Listing) => {
+    router.navigate(dealCardLinkProps(deal) as never);
+    close();
+  };
+
   const entries = useMemo<Entry[]>(() => {
     const q = query.trim();
 
@@ -198,7 +210,7 @@ export function OmniSearch() {
             .filter(Boolean)
             .join(" · "),
           typeLabel: "Deal",
-          activate: () => navigate(`/listings/${d.id}`),
+          activate: () => openDeal(d),
         });
       }
     }
@@ -235,7 +247,7 @@ export function OmniSearch() {
     }
 
     return list;
-    // `navigate`/`askAssistant`/`close` are stable enough for this ephemeral
+    // `navigate`/`openDeal`/`askAssistant`/`close` are stable enough for this ephemeral
     // UI; recompute whenever the query, tab, or underlying data changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, tab, properties, contacts, listings]);

@@ -8,6 +8,7 @@ import { getPhotoUrl } from "#/components/properties/propertyDisplay";
 import { contactFullName } from "#/components/contacts/contactDisplay";
 import { inquiryFacts } from "#/components/contacts/inquiryFacts";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
+import { buildingSectionListingId } from "#/components/deals/dealCardLink";
 
 function medDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
@@ -54,10 +55,12 @@ export function ContactInquiryCard({
     listingId,
   );
 
+  // Leads are a building-level section, so a space's inquiry opens its
+  // building's Leads list — a space has no page of its own.
   const openLeadsRow = () =>
     void navigate({
       to: "/listings/$listingId/leads",
-      params: { listingId },
+      params: { listingId: buildingSectionListingId(listingId) },
       search: { q: contactFullName(contact) },
     });
 

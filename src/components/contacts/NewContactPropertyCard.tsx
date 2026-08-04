@@ -18,6 +18,7 @@ import {
   relationshipBadge,
 } from "#/components/deals/newCardTokens";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
+import { dealCardLinkProps } from "#/components/deals/dealCardLink";
 
 /**
  * A property the contact owns, in the redesigned card language: same shell,
@@ -151,11 +152,7 @@ export function NewContactPropertyCard({
                 "Deal",
                 LINKED_DEAL_ICON[single.status],
                 `Open the ${dealStageLabel(single.status, dealShape(single))} deal`,
-                () =>
-                  void navigate({
-                    to: "/listings/$listingId",
-                    params: { listingId: single.id },
-                  }),
+                () => void navigate(dealCardLinkProps(single)),
               )}
           <span className="deal-tile__rel-group">
             {(multiple || single) && <BadgeDivider />}

@@ -18,6 +18,7 @@ import {
   type GateFormState,
 } from "#/data/stageGates";
 import { buildPublishPreview, type PreviewRow } from "#/data/publishPreview";
+import { buildingSectionListingId } from "#/components/deals/dealCardLink";
 
 function Row({ row }: { row: PreviewRow }) {
   const missing = row.status === "missing";
@@ -164,8 +165,11 @@ export function PublishPreview({
                       Review
                     </Badge>
                   </label>
+                  {/* Documents belong to the building, and a space has no page
+                      of its own — so the id is resolved, not assumed. A raw
+                      anchor on purpose: this opens a new tab. */}
                   <a
-                    href={`/listings/${deal.id}/documents`}
+                    href={`/listings/${buildingSectionListingId(deal.id)}/documents`}
                     target="_blank"
                     rel="noreferrer"
                     className="text-nowrap"

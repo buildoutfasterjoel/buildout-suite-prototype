@@ -9,6 +9,7 @@ import { SIDE_DISPLAY } from "#/components/contacts/contactDisplay";
 import { STAGE_CHIP_COLORS } from "#/components/deals/DealStageChip";
 import { dealShape, dealStageLabel } from "#/data/dealShape";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
+import { dealCardLinkProps } from "#/components/deals/dealCardLink";
 
 /** Deal statuses that still count as an "active" (open) deal on the property. */
 const ACTIVE_DEAL_STATUSES = new Set<PropertyStatus>([
@@ -122,10 +123,7 @@ export function ContactPropertyCard({
                   aria-label={`Open the ${dealStageLabel(single.status, dealShape(single))} deal`}
                   onClick={(e) => {
                     e.stopPropagation();
-                    void navigate({
-                      to: "/listings/$listingId",
-                      params: { listingId: single.id },
-                    });
+                    void navigate(dealCardLinkProps(single));
                   }}
                 >
                   <FontAwesomeIcon icon={faLink} />

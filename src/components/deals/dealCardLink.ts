@@ -1,4 +1,5 @@
 import type { Listing } from "#/data/types";
+import { getListing } from "#/data/store";
 
 /**
  * Where a card for this deal should go. A space deal has no page of its own, so
@@ -21,4 +22,14 @@ export function dealCardLinkProps(listing: Listing):
     };
   }
   return { to: "/listings/$listingId", params: { listingId: listing.id } };
+}
+
+/**
+ * The listing whose page owns a building-level section for this deal. Sections
+ * like Documents and Leads belong to the building, and a space has no page of
+ * its own — so a space resolves to its parent, and everything else to itself.
+ * Takes an id rather than a Listing because most callers only hold the id.
+ */
+export function buildingSectionListingId(listingId: string): string {
+  return getListing(listingId)?.parentDealId ?? listingId;
 }

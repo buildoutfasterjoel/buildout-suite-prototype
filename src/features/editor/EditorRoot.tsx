@@ -6,6 +6,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faClockRotateLeft } from "@fortawesome/pro-regular-svg-icons";
 import type { Property } from "#/data/types";
 import { getListing } from "#/data/store";
+import { buildingSectionListingId } from "#/components/deals/dealCardLink";
 import { SIDEBAR_PIN_STORAGE_KEY, useEditorStore } from "./store";
 import { DocsNavRail } from "./DocsNavRail";
 import { PropertiesPanel } from "./PropertiesPanel";
@@ -53,7 +54,12 @@ export function EditorRoot({
 
   function handleSaveAndClose() {
     markSaved();
-    void navigate({ to: "/listings/$listingId/documents", params: { listingId } });
+    // Documents is a building-level section, and a space has no page of its own,
+    // so closing the editor on a space's doc lands on its building's Documents.
+    void navigate({
+      to: "/listings/$listingId/documents",
+      params: { listingId: buildingSectionListingId(listingId) },
+    });
   }
 
   // Sync the persisted pin preference after mount (kept out of the store's
