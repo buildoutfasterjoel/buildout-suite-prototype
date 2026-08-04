@@ -997,8 +997,12 @@ Replace the `<Breadcrumb.List>` body. The deal's own name becomes a link once a 
                     <Breadcrumb.Item>
                       {/* The section is a link only when a record sits below it —
                           that link is how the detail view gets back to its index,
-                          which is why the detail has no back button of its own. */}
-                      {detailLabel ? (
+                          which is why the detail has no back button of its own.
+                          Keyed on `detailId`, the structural fact, not on
+                          `detailLabel`, which is only whether we found a name: a
+                          stale space id renders an empty body (the route's own
+                          guard) and must still leave a way back. */}
+                      {detailId ? (
                         <Breadcrumb.Link
                           render={
                             <Link
@@ -1015,6 +1019,9 @@ Replace the `<Breadcrumb.List>` body. The deal's own name becomes a link once a 
                     </Breadcrumb.Item>
                   </>
                 )}
+                {/* Display, so keyed on the label: with an id we cannot name,
+                    show no crumb rather than a raw uuid. The section above stays
+                    a link either way. */}
                 {detailLabel && (
                   <>
                     <Breadcrumb.Separator />
