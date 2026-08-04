@@ -1249,8 +1249,35 @@
 // on the row paints every cell — including the frozen `.sticky-cell` columns,
 // which read that variable through the same inset box-shadow — so the highlight
 // spans the horizontally-scrolled table uniformly.
+// The TanStack devtools badge is fixed to the bottom-right corner, so a
+// right-side Offcanvas footer puts its primary action underneath it. Inset the
+// footer's trailing edge far enough to clear the badge.
+.settings-panel__footer {
+  padding-inline-end: 3.25rem;
+}
+
+// A permission row in the per-user permissions list.
+//
+// Bootstrap's `border-3` and `border-<color>` utilities apply to every side, so
+// composing them gave a 3px grey divider between rows and a purple bar across
+// the top of a customized one. Sides need to differ here, so the row owns its
+// own borders: a hairline divider between rows, and a 3px left rule that only
+// customized rows color. Every row reserves the rule so nothing shifts.
+.permission-row {
+  border-left: 3px solid transparent;
+
+  + .permission-row {
+    border-top: 1px solid var(--bp-border-color, #{colors.$storm-grey-200});
+  }
+}
+
+.permission-row--custom {
+  border-left-color: colors.$purple-heart-500;
+}
+
 .contacts-row,
-.list-row {
+.list-row,
+.users-roster__row {
   cursor: pointer;
 
   &:hover {

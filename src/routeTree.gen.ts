@@ -14,6 +14,7 @@ import { Route as ShellRouteImport } from './routes/_shell'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ShellTasksRouteImport } from './routes/_shell/tasks'
 import { Route as ShellSuiteRouteImport } from './routes/_shell/suite'
+import { Route as ShellSettingsRouteImport } from './routes/_shell/settings'
 import { Route as ShellPropertiesRouteImport } from './routes/_shell/properties'
 import { Route as ShellListingsRouteImport } from './routes/_shell/listings'
 import { Route as ShellEmailRouteImport } from './routes/_shell/email'
@@ -22,16 +23,32 @@ import { Route as ShellBackofficeRouteImport } from './routes/_shell/backoffice'
 import { Route as ShellAppRouteImport } from './routes/_shell/app'
 import { Route as ShellTasksIndexRouteImport } from './routes/_shell/tasks/index'
 import { Route as ShellSuiteIndexRouteImport } from './routes/_shell/suite/index'
+import { Route as ShellSettingsIndexRouteImport } from './routes/_shell/settings/index'
 import { Route as ShellPropertiesIndexRouteImport } from './routes/_shell/properties/index'
 import { Route as ShellListingsIndexRouteImport } from './routes/_shell/listings/index'
 import { Route as ShellEmailIndexRouteImport } from './routes/_shell/email/index'
 import { Route as ShellAppIndexRouteImport } from './routes/_shell/app/index'
+import { Route as ShellSettingsUsersRouteImport } from './routes/_shell/settings/users'
+import { Route as ShellSettingsSyndicationRouteImport } from './routes/_shell/settings/syndication'
+import { Route as ShellSettingsPluginsRouteImport } from './routes/_shell/settings/plugins'
+import { Route as ShellSettingsPlaybooksRouteImport } from './routes/_shell/settings/playbooks'
+import { Route as ShellSettingsPipelineRouteImport } from './routes/_shell/settings/pipeline'
+import { Route as ShellSettingsOfficesRouteImport } from './routes/_shell/settings/offices'
+import { Route as ShellSettingsNotificationsRouteImport } from './routes/_shell/settings/notifications'
+import { Route as ShellSettingsLogosRouteImport } from './routes/_shell/settings/logos'
+import { Route as ShellSettingsListingsRouteImport } from './routes/_shell/settings/listings'
+import { Route as ShellSettingsEmailRouteImport } from './routes/_shell/settings/email'
+import { Route as ShellSettingsCustomFieldsRouteImport } from './routes/_shell/settings/custom-fields'
+import { Route as ShellSettingsCompanyRouteImport } from './routes/_shell/settings/company'
+import { Route as ShellSettingsAffiliationsRouteImport } from './routes/_shell/settings/affiliations'
 import { Route as ShellPropertiesPropertyIdRouteImport } from './routes/_shell/properties/$propertyId'
 import { Route as ShellListingsListingIdRouteImport } from './routes/_shell/listings/$listingId'
 import { Route as ShellEmailEmailIdRouteImport } from './routes/_shell/email/$emailId'
 import { Route as ShellEditorListingIdRouteImport } from './routes/_shell/editor/$listingId'
+import { Route as ShellSettingsUsersIndexRouteImport } from './routes/_shell/settings/users/index'
 import { Route as ShellListingsListingIdIndexRouteImport } from './routes/_shell/listings/$listingId/index'
 import { Route as ShellBackofficeContactsIndexRouteImport } from './routes/_shell/backoffice/contacts/index'
+import { Route as ShellSettingsUsersUserIdRouteImport } from './routes/_shell/settings/users/$userId'
 import { Route as ShellListingsListingIdWebsiteRouteImport } from './routes/_shell/listings/$listingId/website'
 import { Route as ShellListingsListingIdUnderwritingRouteImport } from './routes/_shell/listings/$listingId/underwriting'
 import { Route as ShellListingsListingIdSpacesRouteImport } from './routes/_shell/listings/$listingId/spaces'
@@ -52,6 +69,12 @@ import { Route as ShellListingsListingIdDemographicsRouteImport } from './routes
 import { Route as ShellListingsListingIdClientReportRouteImport } from './routes/_shell/listings/$listingId/client-report'
 import { Route as ShellListingsListingIdActivitiesRouteImport } from './routes/_shell/listings/$listingId/activities'
 import { Route as ShellBackofficeContactsContactIdRouteImport } from './routes/_shell/backoffice/contacts/$contactId'
+import { Route as ShellSettingsUsersUserIdIndexRouteImport } from './routes/_shell/settings/users/$userId/index'
+import { Route as ShellSettingsUsersUserIdProfileRouteImport } from './routes/_shell/settings/users/$userId/profile'
+import { Route as ShellSettingsUsersUserIdPermissionsRouteImport } from './routes/_shell/settings/users/$userId/permissions'
+import { Route as ShellSettingsUsersUserIdNotificationsRouteImport } from './routes/_shell/settings/users/$userId/notifications'
+import { Route as ShellSettingsUsersUserIdIntegrationsRouteImport } from './routes/_shell/settings/users/$userId/integrations'
+import { Route as ShellSettingsUsersUserIdEmailRouteImport } from './routes/_shell/settings/users/$userId/email'
 import { Route as ShellListingsListingIdSpacesSpaceIdRouteImport } from './routes/_shell/listings/$listingId/spaces/$spaceId'
 import { Route as ShellListingsListingIdSpacesSpaceIdIndexRouteImport } from './routes/_shell/listings/$listingId/spaces/$spaceId/index'
 import { Route as ShellListingsListingIdSpacesSpaceIdTermsRouteImport } from './routes/_shell/listings/$listingId/spaces/$spaceId/terms'
@@ -84,6 +107,11 @@ const ShellTasksRoute = ShellTasksRouteImport.update({
 const ShellSuiteRoute = ShellSuiteRouteImport.update({
   id: '/suite',
   path: '/suite',
+  getParentRoute: () => ShellRoute,
+} as any)
+const ShellSettingsRoute = ShellSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => ShellRoute,
 } as any)
 const ShellPropertiesRoute = ShellPropertiesRouteImport.update({
@@ -126,6 +154,11 @@ const ShellSuiteIndexRoute = ShellSuiteIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ShellSuiteRoute,
 } as any)
+const ShellSettingsIndexRoute = ShellSettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
 const ShellPropertiesIndexRoute = ShellPropertiesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -146,6 +179,75 @@ const ShellAppIndexRoute = ShellAppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ShellAppRoute,
 } as any)
+const ShellSettingsUsersRoute = ShellSettingsUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
+const ShellSettingsSyndicationRoute =
+  ShellSettingsSyndicationRouteImport.update({
+    id: '/syndication',
+    path: '/syndication',
+    getParentRoute: () => ShellSettingsRoute,
+  } as any)
+const ShellSettingsPluginsRoute = ShellSettingsPluginsRouteImport.update({
+  id: '/plugins',
+  path: '/plugins',
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
+const ShellSettingsPlaybooksRoute = ShellSettingsPlaybooksRouteImport.update({
+  id: '/playbooks',
+  path: '/playbooks',
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
+const ShellSettingsPipelineRoute = ShellSettingsPipelineRouteImport.update({
+  id: '/pipeline',
+  path: '/pipeline',
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
+const ShellSettingsOfficesRoute = ShellSettingsOfficesRouteImport.update({
+  id: '/offices',
+  path: '/offices',
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
+const ShellSettingsNotificationsRoute =
+  ShellSettingsNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => ShellSettingsRoute,
+  } as any)
+const ShellSettingsLogosRoute = ShellSettingsLogosRouteImport.update({
+  id: '/logos',
+  path: '/logos',
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
+const ShellSettingsListingsRoute = ShellSettingsListingsRouteImport.update({
+  id: '/listings',
+  path: '/listings',
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
+const ShellSettingsEmailRoute = ShellSettingsEmailRouteImport.update({
+  id: '/email',
+  path: '/email',
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
+const ShellSettingsCustomFieldsRoute =
+  ShellSettingsCustomFieldsRouteImport.update({
+    id: '/custom-fields',
+    path: '/custom-fields',
+    getParentRoute: () => ShellSettingsRoute,
+  } as any)
+const ShellSettingsCompanyRoute = ShellSettingsCompanyRouteImport.update({
+  id: '/company',
+  path: '/company',
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
+const ShellSettingsAffiliationsRoute =
+  ShellSettingsAffiliationsRouteImport.update({
+    id: '/affiliations',
+    path: '/affiliations',
+    getParentRoute: () => ShellSettingsRoute,
+  } as any)
 const ShellPropertiesPropertyIdRoute =
   ShellPropertiesPropertyIdRouteImport.update({
     id: '/$propertyId',
@@ -167,6 +269,11 @@ const ShellEditorListingIdRoute = ShellEditorListingIdRouteImport.update({
   path: '/$listingId',
   getParentRoute: () => ShellEditorRoute,
 } as any)
+const ShellSettingsUsersIndexRoute = ShellSettingsUsersIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShellSettingsUsersRoute,
+} as any)
 const ShellListingsListingIdIndexRoute =
   ShellListingsListingIdIndexRouteImport.update({
     id: '/',
@@ -178,6 +285,12 @@ const ShellBackofficeContactsIndexRoute =
     id: '/contacts/',
     path: '/contacts/',
     getParentRoute: () => ShellBackofficeRoute,
+  } as any)
+const ShellSettingsUsersUserIdRoute =
+  ShellSettingsUsersUserIdRouteImport.update({
+    id: '/$userId',
+    path: '/$userId',
+    getParentRoute: () => ShellSettingsUsersRoute,
   } as any)
 const ShellListingsListingIdWebsiteRoute =
   ShellListingsListingIdWebsiteRouteImport.update({
@@ -299,6 +412,42 @@ const ShellBackofficeContactsContactIdRoute =
     path: '/contacts/$contactId',
     getParentRoute: () => ShellBackofficeRoute,
   } as any)
+const ShellSettingsUsersUserIdIndexRoute =
+  ShellSettingsUsersUserIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => ShellSettingsUsersUserIdRoute,
+  } as any)
+const ShellSettingsUsersUserIdProfileRoute =
+  ShellSettingsUsersUserIdProfileRouteImport.update({
+    id: '/profile',
+    path: '/profile',
+    getParentRoute: () => ShellSettingsUsersUserIdRoute,
+  } as any)
+const ShellSettingsUsersUserIdPermissionsRoute =
+  ShellSettingsUsersUserIdPermissionsRouteImport.update({
+    id: '/permissions',
+    path: '/permissions',
+    getParentRoute: () => ShellSettingsUsersUserIdRoute,
+  } as any)
+const ShellSettingsUsersUserIdNotificationsRoute =
+  ShellSettingsUsersUserIdNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => ShellSettingsUsersUserIdRoute,
+  } as any)
+const ShellSettingsUsersUserIdIntegrationsRoute =
+  ShellSettingsUsersUserIdIntegrationsRouteImport.update({
+    id: '/integrations',
+    path: '/integrations',
+    getParentRoute: () => ShellSettingsUsersUserIdRoute,
+  } as any)
+const ShellSettingsUsersUserIdEmailRoute =
+  ShellSettingsUsersUserIdEmailRouteImport.update({
+    id: '/email',
+    path: '/email',
+    getParentRoute: () => ShellSettingsUsersUserIdRoute,
+  } as any)
 const ShellListingsListingIdSpacesSpaceIdRoute =
   ShellListingsListingIdSpacesSpaceIdRouteImport.update({
     id: '/$spaceId',
@@ -363,16 +512,31 @@ export interface FileRoutesByFullPath {
   '/email': typeof ShellEmailRouteWithChildren
   '/listings': typeof ShellListingsRouteWithChildren
   '/properties': typeof ShellPropertiesRouteWithChildren
+  '/settings': typeof ShellSettingsRouteWithChildren
   '/suite': typeof ShellSuiteRouteWithChildren
   '/tasks': typeof ShellTasksRouteWithChildren
   '/editor/$listingId': typeof ShellEditorListingIdRoute
   '/email/$emailId': typeof ShellEmailEmailIdRoute
   '/listings/$listingId': typeof ShellListingsListingIdRouteWithChildren
   '/properties/$propertyId': typeof ShellPropertiesPropertyIdRoute
+  '/settings/affiliations': typeof ShellSettingsAffiliationsRoute
+  '/settings/company': typeof ShellSettingsCompanyRoute
+  '/settings/custom-fields': typeof ShellSettingsCustomFieldsRoute
+  '/settings/email': typeof ShellSettingsEmailRoute
+  '/settings/listings': typeof ShellSettingsListingsRoute
+  '/settings/logos': typeof ShellSettingsLogosRoute
+  '/settings/notifications': typeof ShellSettingsNotificationsRoute
+  '/settings/offices': typeof ShellSettingsOfficesRoute
+  '/settings/pipeline': typeof ShellSettingsPipelineRoute
+  '/settings/playbooks': typeof ShellSettingsPlaybooksRoute
+  '/settings/plugins': typeof ShellSettingsPluginsRoute
+  '/settings/syndication': typeof ShellSettingsSyndicationRoute
+  '/settings/users': typeof ShellSettingsUsersRouteWithChildren
   '/app/': typeof ShellAppIndexRoute
   '/email/': typeof ShellEmailIndexRoute
   '/listings/': typeof ShellListingsIndexRoute
   '/properties/': typeof ShellPropertiesIndexRoute
+  '/settings/': typeof ShellSettingsIndexRoute
   '/suite/': typeof ShellSuiteIndexRoute
   '/tasks/': typeof ShellTasksIndexRoute
   '/backoffice/contacts/$contactId': typeof ShellBackofficeContactsContactIdRoute
@@ -395,9 +559,17 @@ export interface FileRoutesByFullPath {
   '/listings/$listingId/spaces': typeof ShellListingsListingIdSpacesRouteWithChildren
   '/listings/$listingId/underwriting': typeof ShellListingsListingIdUnderwritingRoute
   '/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
+  '/settings/users/$userId': typeof ShellSettingsUsersUserIdRouteWithChildren
   '/backoffice/contacts/': typeof ShellBackofficeContactsIndexRoute
   '/listings/$listingId/': typeof ShellListingsListingIdIndexRoute
+  '/settings/users/': typeof ShellSettingsUsersIndexRoute
   '/listings/$listingId/spaces/$spaceId': typeof ShellListingsListingIdSpacesSpaceIdRouteWithChildren
+  '/settings/users/$userId/email': typeof ShellSettingsUsersUserIdEmailRoute
+  '/settings/users/$userId/integrations': typeof ShellSettingsUsersUserIdIntegrationsRoute
+  '/settings/users/$userId/notifications': typeof ShellSettingsUsersUserIdNotificationsRoute
+  '/settings/users/$userId/permissions': typeof ShellSettingsUsersUserIdPermissionsRoute
+  '/settings/users/$userId/profile': typeof ShellSettingsUsersUserIdProfileRoute
+  '/settings/users/$userId/': typeof ShellSettingsUsersUserIdIndexRoute
   '/listings/$listingId/spaces/$spaceId/financial-documents': typeof ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRoute
   '/listings/$listingId/spaces/$spaceId/financials': typeof ShellListingsListingIdSpacesSpaceIdFinancialsRoute
   '/listings/$listingId/spaces/$spaceId/leads': typeof ShellListingsListingIdSpacesSpaceIdLeadsRoute
@@ -415,10 +587,23 @@ export interface FileRoutesByTo {
   '/editor/$listingId': typeof ShellEditorListingIdRoute
   '/email/$emailId': typeof ShellEmailEmailIdRoute
   '/properties/$propertyId': typeof ShellPropertiesPropertyIdRoute
+  '/settings/affiliations': typeof ShellSettingsAffiliationsRoute
+  '/settings/company': typeof ShellSettingsCompanyRoute
+  '/settings/custom-fields': typeof ShellSettingsCustomFieldsRoute
+  '/settings/email': typeof ShellSettingsEmailRoute
+  '/settings/listings': typeof ShellSettingsListingsRoute
+  '/settings/logos': typeof ShellSettingsLogosRoute
+  '/settings/notifications': typeof ShellSettingsNotificationsRoute
+  '/settings/offices': typeof ShellSettingsOfficesRoute
+  '/settings/pipeline': typeof ShellSettingsPipelineRoute
+  '/settings/playbooks': typeof ShellSettingsPlaybooksRoute
+  '/settings/plugins': typeof ShellSettingsPluginsRoute
+  '/settings/syndication': typeof ShellSettingsSyndicationRoute
   '/app': typeof ShellAppIndexRoute
   '/email': typeof ShellEmailIndexRoute
   '/listings': typeof ShellListingsIndexRoute
   '/properties': typeof ShellPropertiesIndexRoute
+  '/settings': typeof ShellSettingsIndexRoute
   '/suite': typeof ShellSuiteIndexRoute
   '/tasks': typeof ShellTasksIndexRoute
   '/backoffice/contacts/$contactId': typeof ShellBackofficeContactsContactIdRoute
@@ -443,6 +628,13 @@ export interface FileRoutesByTo {
   '/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
   '/backoffice/contacts': typeof ShellBackofficeContactsIndexRoute
   '/listings/$listingId': typeof ShellListingsListingIdIndexRoute
+  '/settings/users': typeof ShellSettingsUsersIndexRoute
+  '/settings/users/$userId/email': typeof ShellSettingsUsersUserIdEmailRoute
+  '/settings/users/$userId/integrations': typeof ShellSettingsUsersUserIdIntegrationsRoute
+  '/settings/users/$userId/notifications': typeof ShellSettingsUsersUserIdNotificationsRoute
+  '/settings/users/$userId/permissions': typeof ShellSettingsUsersUserIdPermissionsRoute
+  '/settings/users/$userId/profile': typeof ShellSettingsUsersUserIdProfileRoute
+  '/settings/users/$userId': typeof ShellSettingsUsersUserIdIndexRoute
   '/listings/$listingId/spaces/$spaceId/financial-documents': typeof ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRoute
   '/listings/$listingId/spaces/$spaceId/financials': typeof ShellListingsListingIdSpacesSpaceIdFinancialsRoute
   '/listings/$listingId/spaces/$spaceId/leads': typeof ShellListingsListingIdSpacesSpaceIdLeadsRoute
@@ -463,16 +655,31 @@ export interface FileRoutesById {
   '/_shell/email': typeof ShellEmailRouteWithChildren
   '/_shell/listings': typeof ShellListingsRouteWithChildren
   '/_shell/properties': typeof ShellPropertiesRouteWithChildren
+  '/_shell/settings': typeof ShellSettingsRouteWithChildren
   '/_shell/suite': typeof ShellSuiteRouteWithChildren
   '/_shell/tasks': typeof ShellTasksRouteWithChildren
   '/_shell/editor/$listingId': typeof ShellEditorListingIdRoute
   '/_shell/email/$emailId': typeof ShellEmailEmailIdRoute
   '/_shell/listings/$listingId': typeof ShellListingsListingIdRouteWithChildren
   '/_shell/properties/$propertyId': typeof ShellPropertiesPropertyIdRoute
+  '/_shell/settings/affiliations': typeof ShellSettingsAffiliationsRoute
+  '/_shell/settings/company': typeof ShellSettingsCompanyRoute
+  '/_shell/settings/custom-fields': typeof ShellSettingsCustomFieldsRoute
+  '/_shell/settings/email': typeof ShellSettingsEmailRoute
+  '/_shell/settings/listings': typeof ShellSettingsListingsRoute
+  '/_shell/settings/logos': typeof ShellSettingsLogosRoute
+  '/_shell/settings/notifications': typeof ShellSettingsNotificationsRoute
+  '/_shell/settings/offices': typeof ShellSettingsOfficesRoute
+  '/_shell/settings/pipeline': typeof ShellSettingsPipelineRoute
+  '/_shell/settings/playbooks': typeof ShellSettingsPlaybooksRoute
+  '/_shell/settings/plugins': typeof ShellSettingsPluginsRoute
+  '/_shell/settings/syndication': typeof ShellSettingsSyndicationRoute
+  '/_shell/settings/users': typeof ShellSettingsUsersRouteWithChildren
   '/_shell/app/': typeof ShellAppIndexRoute
   '/_shell/email/': typeof ShellEmailIndexRoute
   '/_shell/listings/': typeof ShellListingsIndexRoute
   '/_shell/properties/': typeof ShellPropertiesIndexRoute
+  '/_shell/settings/': typeof ShellSettingsIndexRoute
   '/_shell/suite/': typeof ShellSuiteIndexRoute
   '/_shell/tasks/': typeof ShellTasksIndexRoute
   '/_shell/backoffice/contacts/$contactId': typeof ShellBackofficeContactsContactIdRoute
@@ -495,9 +702,17 @@ export interface FileRoutesById {
   '/_shell/listings/$listingId/spaces': typeof ShellListingsListingIdSpacesRouteWithChildren
   '/_shell/listings/$listingId/underwriting': typeof ShellListingsListingIdUnderwritingRoute
   '/_shell/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
+  '/_shell/settings/users/$userId': typeof ShellSettingsUsersUserIdRouteWithChildren
   '/_shell/backoffice/contacts/': typeof ShellBackofficeContactsIndexRoute
   '/_shell/listings/$listingId/': typeof ShellListingsListingIdIndexRoute
+  '/_shell/settings/users/': typeof ShellSettingsUsersIndexRoute
   '/_shell/listings/$listingId/spaces/$spaceId': typeof ShellListingsListingIdSpacesSpaceIdRouteWithChildren
+  '/_shell/settings/users/$userId/email': typeof ShellSettingsUsersUserIdEmailRoute
+  '/_shell/settings/users/$userId/integrations': typeof ShellSettingsUsersUserIdIntegrationsRoute
+  '/_shell/settings/users/$userId/notifications': typeof ShellSettingsUsersUserIdNotificationsRoute
+  '/_shell/settings/users/$userId/permissions': typeof ShellSettingsUsersUserIdPermissionsRoute
+  '/_shell/settings/users/$userId/profile': typeof ShellSettingsUsersUserIdProfileRoute
+  '/_shell/settings/users/$userId/': typeof ShellSettingsUsersUserIdIndexRoute
   '/_shell/listings/$listingId/spaces/$spaceId/financial-documents': typeof ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRoute
   '/_shell/listings/$listingId/spaces/$spaceId/financials': typeof ShellListingsListingIdSpacesSpaceIdFinancialsRoute
   '/_shell/listings/$listingId/spaces/$spaceId/leads': typeof ShellListingsListingIdSpacesSpaceIdLeadsRoute
@@ -518,16 +733,31 @@ export interface FileRouteTypes {
     | '/email'
     | '/listings'
     | '/properties'
+    | '/settings'
     | '/suite'
     | '/tasks'
     | '/editor/$listingId'
     | '/email/$emailId'
     | '/listings/$listingId'
     | '/properties/$propertyId'
+    | '/settings/affiliations'
+    | '/settings/company'
+    | '/settings/custom-fields'
+    | '/settings/email'
+    | '/settings/listings'
+    | '/settings/logos'
+    | '/settings/notifications'
+    | '/settings/offices'
+    | '/settings/pipeline'
+    | '/settings/playbooks'
+    | '/settings/plugins'
+    | '/settings/syndication'
+    | '/settings/users'
     | '/app/'
     | '/email/'
     | '/listings/'
     | '/properties/'
+    | '/settings/'
     | '/suite/'
     | '/tasks/'
     | '/backoffice/contacts/$contactId'
@@ -550,9 +780,17 @@ export interface FileRouteTypes {
     | '/listings/$listingId/spaces'
     | '/listings/$listingId/underwriting'
     | '/listings/$listingId/website'
+    | '/settings/users/$userId'
     | '/backoffice/contacts/'
     | '/listings/$listingId/'
+    | '/settings/users/'
     | '/listings/$listingId/spaces/$spaceId'
+    | '/settings/users/$userId/email'
+    | '/settings/users/$userId/integrations'
+    | '/settings/users/$userId/notifications'
+    | '/settings/users/$userId/permissions'
+    | '/settings/users/$userId/profile'
+    | '/settings/users/$userId/'
     | '/listings/$listingId/spaces/$spaceId/financial-documents'
     | '/listings/$listingId/spaces/$spaceId/financials'
     | '/listings/$listingId/spaces/$spaceId/leads'
@@ -570,10 +808,23 @@ export interface FileRouteTypes {
     | '/editor/$listingId'
     | '/email/$emailId'
     | '/properties/$propertyId'
+    | '/settings/affiliations'
+    | '/settings/company'
+    | '/settings/custom-fields'
+    | '/settings/email'
+    | '/settings/listings'
+    | '/settings/logos'
+    | '/settings/notifications'
+    | '/settings/offices'
+    | '/settings/pipeline'
+    | '/settings/playbooks'
+    | '/settings/plugins'
+    | '/settings/syndication'
     | '/app'
     | '/email'
     | '/listings'
     | '/properties'
+    | '/settings'
     | '/suite'
     | '/tasks'
     | '/backoffice/contacts/$contactId'
@@ -598,6 +849,13 @@ export interface FileRouteTypes {
     | '/listings/$listingId/website'
     | '/backoffice/contacts'
     | '/listings/$listingId'
+    | '/settings/users'
+    | '/settings/users/$userId/email'
+    | '/settings/users/$userId/integrations'
+    | '/settings/users/$userId/notifications'
+    | '/settings/users/$userId/permissions'
+    | '/settings/users/$userId/profile'
+    | '/settings/users/$userId'
     | '/listings/$listingId/spaces/$spaceId/financial-documents'
     | '/listings/$listingId/spaces/$spaceId/financials'
     | '/listings/$listingId/spaces/$spaceId/leads'
@@ -617,16 +875,31 @@ export interface FileRouteTypes {
     | '/_shell/email'
     | '/_shell/listings'
     | '/_shell/properties'
+    | '/_shell/settings'
     | '/_shell/suite'
     | '/_shell/tasks'
     | '/_shell/editor/$listingId'
     | '/_shell/email/$emailId'
     | '/_shell/listings/$listingId'
     | '/_shell/properties/$propertyId'
+    | '/_shell/settings/affiliations'
+    | '/_shell/settings/company'
+    | '/_shell/settings/custom-fields'
+    | '/_shell/settings/email'
+    | '/_shell/settings/listings'
+    | '/_shell/settings/logos'
+    | '/_shell/settings/notifications'
+    | '/_shell/settings/offices'
+    | '/_shell/settings/pipeline'
+    | '/_shell/settings/playbooks'
+    | '/_shell/settings/plugins'
+    | '/_shell/settings/syndication'
+    | '/_shell/settings/users'
     | '/_shell/app/'
     | '/_shell/email/'
     | '/_shell/listings/'
     | '/_shell/properties/'
+    | '/_shell/settings/'
     | '/_shell/suite/'
     | '/_shell/tasks/'
     | '/_shell/backoffice/contacts/$contactId'
@@ -649,9 +922,17 @@ export interface FileRouteTypes {
     | '/_shell/listings/$listingId/spaces'
     | '/_shell/listings/$listingId/underwriting'
     | '/_shell/listings/$listingId/website'
+    | '/_shell/settings/users/$userId'
     | '/_shell/backoffice/contacts/'
     | '/_shell/listings/$listingId/'
+    | '/_shell/settings/users/'
     | '/_shell/listings/$listingId/spaces/$spaceId'
+    | '/_shell/settings/users/$userId/email'
+    | '/_shell/settings/users/$userId/integrations'
+    | '/_shell/settings/users/$userId/notifications'
+    | '/_shell/settings/users/$userId/permissions'
+    | '/_shell/settings/users/$userId/profile'
+    | '/_shell/settings/users/$userId/'
     | '/_shell/listings/$listingId/spaces/$spaceId/financial-documents'
     | '/_shell/listings/$listingId/spaces/$spaceId/financials'
     | '/_shell/listings/$listingId/spaces/$spaceId/leads'
@@ -703,6 +984,13 @@ declare module '@tanstack/react-router' {
       path: '/suite'
       fullPath: '/suite'
       preLoaderRoute: typeof ShellSuiteRouteImport
+      parentRoute: typeof ShellRoute
+    }
+    '/_shell/settings': {
+      id: '/_shell/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof ShellSettingsRouteImport
       parentRoute: typeof ShellRoute
     }
     '/_shell/properties': {
@@ -761,6 +1049,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellSuiteIndexRouteImport
       parentRoute: typeof ShellSuiteRoute
     }
+    '/_shell/settings/': {
+      id: '/_shell/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof ShellSettingsIndexRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
     '/_shell/properties/': {
       id: '/_shell/properties/'
       path: '/'
@@ -788,6 +1083,97 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/'
       preLoaderRoute: typeof ShellAppIndexRouteImport
       parentRoute: typeof ShellAppRoute
+    }
+    '/_shell/settings/users': {
+      id: '/_shell/settings/users'
+      path: '/users'
+      fullPath: '/settings/users'
+      preLoaderRoute: typeof ShellSettingsUsersRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/syndication': {
+      id: '/_shell/settings/syndication'
+      path: '/syndication'
+      fullPath: '/settings/syndication'
+      preLoaderRoute: typeof ShellSettingsSyndicationRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/plugins': {
+      id: '/_shell/settings/plugins'
+      path: '/plugins'
+      fullPath: '/settings/plugins'
+      preLoaderRoute: typeof ShellSettingsPluginsRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/playbooks': {
+      id: '/_shell/settings/playbooks'
+      path: '/playbooks'
+      fullPath: '/settings/playbooks'
+      preLoaderRoute: typeof ShellSettingsPlaybooksRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/pipeline': {
+      id: '/_shell/settings/pipeline'
+      path: '/pipeline'
+      fullPath: '/settings/pipeline'
+      preLoaderRoute: typeof ShellSettingsPipelineRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/offices': {
+      id: '/_shell/settings/offices'
+      path: '/offices'
+      fullPath: '/settings/offices'
+      preLoaderRoute: typeof ShellSettingsOfficesRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/notifications': {
+      id: '/_shell/settings/notifications'
+      path: '/notifications'
+      fullPath: '/settings/notifications'
+      preLoaderRoute: typeof ShellSettingsNotificationsRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/logos': {
+      id: '/_shell/settings/logos'
+      path: '/logos'
+      fullPath: '/settings/logos'
+      preLoaderRoute: typeof ShellSettingsLogosRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/listings': {
+      id: '/_shell/settings/listings'
+      path: '/listings'
+      fullPath: '/settings/listings'
+      preLoaderRoute: typeof ShellSettingsListingsRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/email': {
+      id: '/_shell/settings/email'
+      path: '/email'
+      fullPath: '/settings/email'
+      preLoaderRoute: typeof ShellSettingsEmailRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/custom-fields': {
+      id: '/_shell/settings/custom-fields'
+      path: '/custom-fields'
+      fullPath: '/settings/custom-fields'
+      preLoaderRoute: typeof ShellSettingsCustomFieldsRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/company': {
+      id: '/_shell/settings/company'
+      path: '/company'
+      fullPath: '/settings/company'
+      preLoaderRoute: typeof ShellSettingsCompanyRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/affiliations': {
+      id: '/_shell/settings/affiliations'
+      path: '/affiliations'
+      fullPath: '/settings/affiliations'
+      preLoaderRoute: typeof ShellSettingsAffiliationsRouteImport
+      parentRoute: typeof ShellSettingsRoute
     }
     '/_shell/properties/$propertyId': {
       id: '/_shell/properties/$propertyId'
@@ -817,6 +1203,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellEditorListingIdRouteImport
       parentRoute: typeof ShellEditorRoute
     }
+    '/_shell/settings/users/': {
+      id: '/_shell/settings/users/'
+      path: '/'
+      fullPath: '/settings/users/'
+      preLoaderRoute: typeof ShellSettingsUsersIndexRouteImport
+      parentRoute: typeof ShellSettingsUsersRoute
+    }
     '/_shell/listings/$listingId/': {
       id: '/_shell/listings/$listingId/'
       path: '/'
@@ -830,6 +1223,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/backoffice/contacts/'
       preLoaderRoute: typeof ShellBackofficeContactsIndexRouteImport
       parentRoute: typeof ShellBackofficeRoute
+    }
+    '/_shell/settings/users/$userId': {
+      id: '/_shell/settings/users/$userId'
+      path: '/$userId'
+      fullPath: '/settings/users/$userId'
+      preLoaderRoute: typeof ShellSettingsUsersUserIdRouteImport
+      parentRoute: typeof ShellSettingsUsersRoute
     }
     '/_shell/listings/$listingId/website': {
       id: '/_shell/listings/$listingId/website'
@@ -970,6 +1370,48 @@ declare module '@tanstack/react-router' {
       fullPath: '/backoffice/contacts/$contactId'
       preLoaderRoute: typeof ShellBackofficeContactsContactIdRouteImport
       parentRoute: typeof ShellBackofficeRoute
+    }
+    '/_shell/settings/users/$userId/': {
+      id: '/_shell/settings/users/$userId/'
+      path: '/'
+      fullPath: '/settings/users/$userId/'
+      preLoaderRoute: typeof ShellSettingsUsersUserIdIndexRouteImport
+      parentRoute: typeof ShellSettingsUsersUserIdRoute
+    }
+    '/_shell/settings/users/$userId/profile': {
+      id: '/_shell/settings/users/$userId/profile'
+      path: '/profile'
+      fullPath: '/settings/users/$userId/profile'
+      preLoaderRoute: typeof ShellSettingsUsersUserIdProfileRouteImport
+      parentRoute: typeof ShellSettingsUsersUserIdRoute
+    }
+    '/_shell/settings/users/$userId/permissions': {
+      id: '/_shell/settings/users/$userId/permissions'
+      path: '/permissions'
+      fullPath: '/settings/users/$userId/permissions'
+      preLoaderRoute: typeof ShellSettingsUsersUserIdPermissionsRouteImport
+      parentRoute: typeof ShellSettingsUsersUserIdRoute
+    }
+    '/_shell/settings/users/$userId/notifications': {
+      id: '/_shell/settings/users/$userId/notifications'
+      path: '/notifications'
+      fullPath: '/settings/users/$userId/notifications'
+      preLoaderRoute: typeof ShellSettingsUsersUserIdNotificationsRouteImport
+      parentRoute: typeof ShellSettingsUsersUserIdRoute
+    }
+    '/_shell/settings/users/$userId/integrations': {
+      id: '/_shell/settings/users/$userId/integrations'
+      path: '/integrations'
+      fullPath: '/settings/users/$userId/integrations'
+      preLoaderRoute: typeof ShellSettingsUsersUserIdIntegrationsRouteImport
+      parentRoute: typeof ShellSettingsUsersUserIdRoute
+    }
+    '/_shell/settings/users/$userId/email': {
+      id: '/_shell/settings/users/$userId/email'
+      path: '/email'
+      fullPath: '/settings/users/$userId/email'
+      preLoaderRoute: typeof ShellSettingsUsersUserIdEmailRouteImport
+      parentRoute: typeof ShellSettingsUsersUserIdRoute
     }
     '/_shell/listings/$listingId/spaces/$spaceId': {
       id: '/_shell/listings/$listingId/spaces/$spaceId'
@@ -1227,6 +1669,84 @@ const ShellPropertiesRouteWithChildren = ShellPropertiesRoute._addFileChildren(
   ShellPropertiesRouteChildren,
 )
 
+interface ShellSettingsUsersUserIdRouteChildren {
+  ShellSettingsUsersUserIdEmailRoute: typeof ShellSettingsUsersUserIdEmailRoute
+  ShellSettingsUsersUserIdIntegrationsRoute: typeof ShellSettingsUsersUserIdIntegrationsRoute
+  ShellSettingsUsersUserIdNotificationsRoute: typeof ShellSettingsUsersUserIdNotificationsRoute
+  ShellSettingsUsersUserIdPermissionsRoute: typeof ShellSettingsUsersUserIdPermissionsRoute
+  ShellSettingsUsersUserIdProfileRoute: typeof ShellSettingsUsersUserIdProfileRoute
+  ShellSettingsUsersUserIdIndexRoute: typeof ShellSettingsUsersUserIdIndexRoute
+}
+
+const ShellSettingsUsersUserIdRouteChildren: ShellSettingsUsersUserIdRouteChildren =
+  {
+    ShellSettingsUsersUserIdEmailRoute: ShellSettingsUsersUserIdEmailRoute,
+    ShellSettingsUsersUserIdIntegrationsRoute:
+      ShellSettingsUsersUserIdIntegrationsRoute,
+    ShellSettingsUsersUserIdNotificationsRoute:
+      ShellSettingsUsersUserIdNotificationsRoute,
+    ShellSettingsUsersUserIdPermissionsRoute:
+      ShellSettingsUsersUserIdPermissionsRoute,
+    ShellSettingsUsersUserIdProfileRoute: ShellSettingsUsersUserIdProfileRoute,
+    ShellSettingsUsersUserIdIndexRoute: ShellSettingsUsersUserIdIndexRoute,
+  }
+
+const ShellSettingsUsersUserIdRouteWithChildren =
+  ShellSettingsUsersUserIdRoute._addFileChildren(
+    ShellSettingsUsersUserIdRouteChildren,
+  )
+
+interface ShellSettingsUsersRouteChildren {
+  ShellSettingsUsersUserIdRoute: typeof ShellSettingsUsersUserIdRouteWithChildren
+  ShellSettingsUsersIndexRoute: typeof ShellSettingsUsersIndexRoute
+}
+
+const ShellSettingsUsersRouteChildren: ShellSettingsUsersRouteChildren = {
+  ShellSettingsUsersUserIdRoute: ShellSettingsUsersUserIdRouteWithChildren,
+  ShellSettingsUsersIndexRoute: ShellSettingsUsersIndexRoute,
+}
+
+const ShellSettingsUsersRouteWithChildren =
+  ShellSettingsUsersRoute._addFileChildren(ShellSettingsUsersRouteChildren)
+
+interface ShellSettingsRouteChildren {
+  ShellSettingsAffiliationsRoute: typeof ShellSettingsAffiliationsRoute
+  ShellSettingsCompanyRoute: typeof ShellSettingsCompanyRoute
+  ShellSettingsCustomFieldsRoute: typeof ShellSettingsCustomFieldsRoute
+  ShellSettingsEmailRoute: typeof ShellSettingsEmailRoute
+  ShellSettingsListingsRoute: typeof ShellSettingsListingsRoute
+  ShellSettingsLogosRoute: typeof ShellSettingsLogosRoute
+  ShellSettingsNotificationsRoute: typeof ShellSettingsNotificationsRoute
+  ShellSettingsOfficesRoute: typeof ShellSettingsOfficesRoute
+  ShellSettingsPipelineRoute: typeof ShellSettingsPipelineRoute
+  ShellSettingsPlaybooksRoute: typeof ShellSettingsPlaybooksRoute
+  ShellSettingsPluginsRoute: typeof ShellSettingsPluginsRoute
+  ShellSettingsSyndicationRoute: typeof ShellSettingsSyndicationRoute
+  ShellSettingsUsersRoute: typeof ShellSettingsUsersRouteWithChildren
+  ShellSettingsIndexRoute: typeof ShellSettingsIndexRoute
+}
+
+const ShellSettingsRouteChildren: ShellSettingsRouteChildren = {
+  ShellSettingsAffiliationsRoute: ShellSettingsAffiliationsRoute,
+  ShellSettingsCompanyRoute: ShellSettingsCompanyRoute,
+  ShellSettingsCustomFieldsRoute: ShellSettingsCustomFieldsRoute,
+  ShellSettingsEmailRoute: ShellSettingsEmailRoute,
+  ShellSettingsListingsRoute: ShellSettingsListingsRoute,
+  ShellSettingsLogosRoute: ShellSettingsLogosRoute,
+  ShellSettingsNotificationsRoute: ShellSettingsNotificationsRoute,
+  ShellSettingsOfficesRoute: ShellSettingsOfficesRoute,
+  ShellSettingsPipelineRoute: ShellSettingsPipelineRoute,
+  ShellSettingsPlaybooksRoute: ShellSettingsPlaybooksRoute,
+  ShellSettingsPluginsRoute: ShellSettingsPluginsRoute,
+  ShellSettingsSyndicationRoute: ShellSettingsSyndicationRoute,
+  ShellSettingsUsersRoute: ShellSettingsUsersRouteWithChildren,
+  ShellSettingsIndexRoute: ShellSettingsIndexRoute,
+}
+
+const ShellSettingsRouteWithChildren = ShellSettingsRoute._addFileChildren(
+  ShellSettingsRouteChildren,
+)
+
 interface ShellSuiteRouteChildren {
   ShellSuiteIndexRoute: typeof ShellSuiteIndexRoute
 }
@@ -1258,6 +1778,7 @@ interface ShellRouteChildren {
   ShellEmailRoute: typeof ShellEmailRouteWithChildren
   ShellListingsRoute: typeof ShellListingsRouteWithChildren
   ShellPropertiesRoute: typeof ShellPropertiesRouteWithChildren
+  ShellSettingsRoute: typeof ShellSettingsRouteWithChildren
   ShellSuiteRoute: typeof ShellSuiteRouteWithChildren
   ShellTasksRoute: typeof ShellTasksRouteWithChildren
 }
@@ -1269,6 +1790,7 @@ const ShellRouteChildren: ShellRouteChildren = {
   ShellEmailRoute: ShellEmailRouteWithChildren,
   ShellListingsRoute: ShellListingsRouteWithChildren,
   ShellPropertiesRoute: ShellPropertiesRouteWithChildren,
+  ShellSettingsRoute: ShellSettingsRouteWithChildren,
   ShellSuiteRoute: ShellSuiteRouteWithChildren,
   ShellTasksRoute: ShellTasksRouteWithChildren,
 }

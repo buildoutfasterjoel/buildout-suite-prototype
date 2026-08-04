@@ -89,14 +89,17 @@ export function AccountMenu() {
             </div>
           </div>
 
-          {/* Zone 2 — real product settings. Both are placeholders until the
-              settings screens exist, so they close the menu and go nowhere. */}
+          {/* Zone 2 — real product settings. Profile settings has no screen yet,
+              so it closes the menu and goes nowhere. */}
           <Navbar.Separator orientation="horizontal" className="my-1" />
           <Navbar.GroupMenuItem className="d-flex align-items-center gap-2">
             <FontAwesomeIcon icon={faUserGear} />
             Profile settings
           </Navbar.GroupMenuItem>
-          <Navbar.GroupMenuItem className="d-flex align-items-center gap-2">
+          <Navbar.GroupMenuItem
+            className="d-flex align-items-center gap-2"
+            onClick={() => navigate({ to: "/settings/company" })}
+          >
             <FontAwesomeIcon icon={faBuildings} />
             Company settings
           </Navbar.GroupMenuItem>
