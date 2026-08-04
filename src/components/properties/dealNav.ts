@@ -15,7 +15,6 @@ import {
   faMapLocationDot,
   faTableCells,
   faRulerCombined,
-  faBuildingFlag,
   faFileInvoiceDollar,
   faReceipt,
   faNoteSticky,
@@ -56,7 +55,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Demographics", href: "demographics", icon: faMapLocationDot },
       { label: "Grids", href: "grids", icon: faTableCells },
       { label: "Plans", href: "plans", icon: faRulerCombined },
-      { label: "Property Marketing", href: "property-marketing", icon: faBuildingFlag },
     ],
   },
   {
@@ -101,13 +99,6 @@ export function dealBreadcrumbTrail(
   return { sectionLabel: item.label, detailId: detail ?? null };
 }
 
-/** Property-level marketing surfaces — a space deal has none of these. */
-const PROPERTY_ONLY = new Set([
-  "documents", "website", "email", "demographics", "grids", "plans",
-]);
-/** Surfaces that only make sense on the building's own assignment. */
-const SHELL_ONLY = new Set(["spaces", "underwriting", "client-report"]);
-
 /**
  * The sections this deal actually shows, by shape. Lives beside NAV_GROUPS so a
  * rule and the item it governs cannot drift apart, and so the rules are testable
@@ -126,12 +117,6 @@ export function visibleNavGroups(
       // index; every other shape keeps the single Voucher + Invoices pair. The
       // two are mutually exclusive — never show both.
       if (item.href === "vouchers") return shape === "shell";
-      if (item.href === "property-marketing") return shape === "space";
-      if (shape === "space") {
-        if (PROPERTY_ONLY.has(item.href)) return false;
-        if (SHELL_ONLY.has(item.href)) return false;
-        return true;
-      }
       // Money is earned per space, so a shell has no voucher and no invoices.
       if (
         shape === "shell" &&

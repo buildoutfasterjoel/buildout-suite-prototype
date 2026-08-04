@@ -52,7 +52,6 @@ import { Route as ShellSettingsUsersUserIdRouteImport } from './routes/_shell/se
 import { Route as ShellListingsListingIdWebsiteRouteImport } from './routes/_shell/listings/$listingId/website'
 import { Route as ShellListingsListingIdUnderwritingRouteImport } from './routes/_shell/listings/$listingId/underwriting'
 import { Route as ShellListingsListingIdSpacesRouteImport } from './routes/_shell/listings/$listingId/spaces'
-import { Route as ShellListingsListingIdPropertyMarketingRouteImport } from './routes/_shell/listings/$listingId/property-marketing'
 import { Route as ShellListingsListingIdPlansRouteImport } from './routes/_shell/listings/$listingId/plans'
 import { Route as ShellListingsListingIdOverviewRouteImport } from './routes/_shell/listings/$listingId/overview'
 import { Route as ShellListingsListingIdNotesRouteImport } from './routes/_shell/listings/$listingId/notes'
@@ -304,12 +303,6 @@ const ShellListingsListingIdSpacesRoute =
     path: '/spaces',
     getParentRoute: () => ShellListingsListingIdRoute,
   } as any)
-const ShellListingsListingIdPropertyMarketingRoute =
-  ShellListingsListingIdPropertyMarketingRouteImport.update({
-    id: '/property-marketing',
-    path: '/property-marketing',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
 const ShellListingsListingIdPlansRoute =
   ShellListingsListingIdPlansRouteImport.update({
     id: '/plans',
@@ -514,7 +507,6 @@ export interface FileRoutesByFullPath {
   '/listings/$listingId/notes': typeof ShellListingsListingIdNotesRoute
   '/listings/$listingId/overview': typeof ShellListingsListingIdOverviewRoute
   '/listings/$listingId/plans': typeof ShellListingsListingIdPlansRoute
-  '/listings/$listingId/property-marketing': typeof ShellListingsListingIdPropertyMarketingRoute
   '/listings/$listingId/spaces': typeof ShellListingsListingIdSpacesRoute
   '/listings/$listingId/underwriting': typeof ShellListingsListingIdUnderwritingRoute
   '/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
@@ -575,7 +567,6 @@ export interface FileRoutesByTo {
   '/listings/$listingId/notes': typeof ShellListingsListingIdNotesRoute
   '/listings/$listingId/overview': typeof ShellListingsListingIdOverviewRoute
   '/listings/$listingId/plans': typeof ShellListingsListingIdPlansRoute
-  '/listings/$listingId/property-marketing': typeof ShellListingsListingIdPropertyMarketingRoute
   '/listings/$listingId/spaces': typeof ShellListingsListingIdSpacesRoute
   '/listings/$listingId/underwriting': typeof ShellListingsListingIdUnderwritingRoute
   '/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
@@ -646,7 +637,6 @@ export interface FileRoutesById {
   '/_shell/listings/$listingId/notes': typeof ShellListingsListingIdNotesRoute
   '/_shell/listings/$listingId/overview': typeof ShellListingsListingIdOverviewRoute
   '/_shell/listings/$listingId/plans': typeof ShellListingsListingIdPlansRoute
-  '/_shell/listings/$listingId/property-marketing': typeof ShellListingsListingIdPropertyMarketingRoute
   '/_shell/listings/$listingId/spaces': typeof ShellListingsListingIdSpacesRoute
   '/_shell/listings/$listingId/underwriting': typeof ShellListingsListingIdUnderwritingRoute
   '/_shell/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
@@ -718,7 +708,6 @@ export interface FileRouteTypes {
     | '/listings/$listingId/notes'
     | '/listings/$listingId/overview'
     | '/listings/$listingId/plans'
-    | '/listings/$listingId/property-marketing'
     | '/listings/$listingId/spaces'
     | '/listings/$listingId/underwriting'
     | '/listings/$listingId/website'
@@ -779,7 +768,6 @@ export interface FileRouteTypes {
     | '/listings/$listingId/notes'
     | '/listings/$listingId/overview'
     | '/listings/$listingId/plans'
-    | '/listings/$listingId/property-marketing'
     | '/listings/$listingId/spaces'
     | '/listings/$listingId/underwriting'
     | '/listings/$listingId/website'
@@ -849,7 +837,6 @@ export interface FileRouteTypes {
     | '/_shell/listings/$listingId/notes'
     | '/_shell/listings/$listingId/overview'
     | '/_shell/listings/$listingId/plans'
-    | '/_shell/listings/$listingId/property-marketing'
     | '/_shell/listings/$listingId/spaces'
     | '/_shell/listings/$listingId/underwriting'
     | '/_shell/listings/$listingId/website'
@@ -1176,13 +1163,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellListingsListingIdSpacesRouteImport
       parentRoute: typeof ShellListingsListingIdRoute
     }
-    '/_shell/listings/$listingId/property-marketing': {
-      id: '/_shell/listings/$listingId/property-marketing'
-      path: '/property-marketing'
-      fullPath: '/listings/$listingId/property-marketing'
-      preLoaderRoute: typeof ShellListingsListingIdPropertyMarketingRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
-    }
     '/_shell/listings/$listingId/plans': {
       id: '/_shell/listings/$listingId/plans'
       path: '/plans'
@@ -1430,7 +1410,6 @@ interface ShellListingsListingIdRouteChildren {
   ShellListingsListingIdNotesRoute: typeof ShellListingsListingIdNotesRoute
   ShellListingsListingIdOverviewRoute: typeof ShellListingsListingIdOverviewRoute
   ShellListingsListingIdPlansRoute: typeof ShellListingsListingIdPlansRoute
-  ShellListingsListingIdPropertyMarketingRoute: typeof ShellListingsListingIdPropertyMarketingRoute
   ShellListingsListingIdSpacesRoute: typeof ShellListingsListingIdSpacesRoute
   ShellListingsListingIdUnderwritingRoute: typeof ShellListingsListingIdUnderwritingRoute
   ShellListingsListingIdWebsiteRoute: typeof ShellListingsListingIdWebsiteRoute
@@ -1462,8 +1441,6 @@ const ShellListingsListingIdRouteChildren: ShellListingsListingIdRouteChildren =
     ShellListingsListingIdNotesRoute: ShellListingsListingIdNotesRoute,
     ShellListingsListingIdOverviewRoute: ShellListingsListingIdOverviewRoute,
     ShellListingsListingIdPlansRoute: ShellListingsListingIdPlansRoute,
-    ShellListingsListingIdPropertyMarketingRoute:
-      ShellListingsListingIdPropertyMarketingRoute,
     ShellListingsListingIdSpacesRoute: ShellListingsListingIdSpacesRoute,
     ShellListingsListingIdUnderwritingRoute:
       ShellListingsListingIdUnderwritingRoute,

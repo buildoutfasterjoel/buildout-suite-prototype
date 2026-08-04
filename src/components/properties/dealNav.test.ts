@@ -114,8 +114,13 @@ describe("visibleNavGroups", () => {
   });
 
   it("drops a group that ends up empty", () => {
-    for (const group of visibleNavGroups("space", { leaseParent: false, showsUnderwriting: false })) {
-      expect(group.items.length).toBeGreaterThan(0);
+    // Back Office always keeps Notes, so force the emptiness through a group
+    // whose every item is conditional: none exist today, so assert the
+    // invariant instead — no rendered group is ever empty.
+    for (const shape of ["sale", "flat-lease", "shell", "space"] as const) {
+      for (const group of visibleNavGroups(shape, { leaseParent: false, showsUnderwriting: false })) {
+        expect(group.items.length, shape).toBeGreaterThan(0);
+      }
     }
   });
 });

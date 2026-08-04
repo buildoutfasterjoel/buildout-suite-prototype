@@ -8,7 +8,6 @@ import { getStore } from "#/data/store";
 import { useDataStore } from "#/data/dataStore";
 import { PropertyDetailHeader } from "#/components/properties/PropertyDetailHeader";
 import { PropertyDetailSidebar } from "#/components/properties/PropertyDetailSidebar";
-import { MarketingScopeBar } from "#/components/deals/MarketingScopeBar";
 
 export const Route = createFileRoute("/_shell/listings/$listingId")({
   component: PropertyDetail,
@@ -77,7 +76,6 @@ function PropertyDetail() {
         {/* Detail content — each tab renders its own layout, including
             the deal context rail where applicable (e.g. Overview). */}
         <Card className="flex-grow-1 shadow" style={{ minWidth: 0 }}>
-          <MarketingScopeBar />
           <Outlet />
         </Card>
       </div>

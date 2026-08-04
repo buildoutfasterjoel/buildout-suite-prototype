@@ -1,10 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  useLocation,
-  useParams,
-  useNavigate,
-  useSearch,
-} from "@tanstack/react-router";
+import { useLocation, useParams, useNavigate } from "@tanstack/react-router";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
 import { Collapsible } from "@buildoutinc/blueprint-react/ui/Collapsible";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -22,10 +17,6 @@ export function PropertyDetailSidebar() {
   const { pathname } = useLocation();
   const { listingId } = useParams({ from: "/_shell/listings/$listingId" });
   const navigate = useNavigate();
-  // Loose read: most routes under this layout declare no `from` param at all,
-  // so this can't be typed against a single route's search schema.
-  const rawSearch = useSearch({ strict: false }) as Record<string, unknown>;
-  const from = typeof rawSearch.from === "string" ? rawSearch.from : undefined;
   // Collapsed category labels. Starts empty → all groups expanded, so SSR and
   // the first client render match; the persisted set is restored in an effect
   // on mount (below), avoiding a hydration mismatch.
@@ -73,17 +64,7 @@ export function PropertyDetailSidebar() {
       .flatMap((g) => g.items)
       .find((i) => i.label === value);
     if (!item) return;
-    // Carry `from` (the space that sent the broker here) across hops within
-    // the Marketing group, so the return bar survives Documents -> Website;
-    // drop it the moment the broker leaves that group for anything else.
-    const inMarketing = navGroups
-      .find((g) => g.label === "Marketing")
-      ?.items.some((i) => i.href === item.href);
-    void navigate({
-      to: `/listings/${listingId}/${item.href}`,
-      search: inMarketing && from ? { from } : {},
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
+    void navigate({ to: `/listings/${listingId}/${item.href}` });
   }
 
   return (
