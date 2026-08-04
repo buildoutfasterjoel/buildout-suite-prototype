@@ -279,8 +279,12 @@ describe('dealBreadcrumbTrail', () => {
   })
 
   it('carries the detail id on a drill-down', () => {
-    expect(dealBreadcrumbTrail(`/listings/${ID}/vouchers/space-9`, ID)).toEqual({
-      sectionLabel: 'Vouchers',
+    // Asserted through `financials` rather than `vouchers`: the Vouchers item
+    // does not enter NAV_GROUPS until Task 5, so that href would not resolve
+    // yet. The parsing under test is the same either way. Task 6 adds the real
+    // vouchers/{spaceId} case once the item exists.
+    expect(dealBreadcrumbTrail(`/listings/${ID}/financials/space-9`, ID)).toEqual({
+      sectionLabel: 'Voucher',
       detailId: 'space-9',
     })
   })
@@ -881,7 +885,23 @@ git commit -m "feat(nav): give a shell the Vouchers index instead of a single vo
 - Consumes: `dealBreadcrumbTrail` from Task 2
 - Produces: nothing new
 
-- [ ] **Step 1: Add the imports and derive the trail**
+- [ ] **Step 1: Cover the real vouchers drill-down**
+
+Task 2 asserted drill-down parsing through `financials`, because the `Vouchers` item did not exist in `NAV_GROUPS` until Task 5. It does now, so add the real case to `src/components/properties/dealNav.test.ts` beside the existing drill-down test (double quotes and semicolons, matching that file):
+
+```ts
+  it("labels the vouchers drill-down and carries the space id", () => {
+    expect(dealBreadcrumbTrail(`/listings/${ID}/vouchers/space-9`, ID)).toEqual({
+      sectionLabel: "Vouchers",
+      detailId: "space-9",
+    });
+  });
+```
+
+Run: `bunx vitest run src/components/properties/dealNav.test.ts`
+Expected: PASS, 14 tests (13 from Tasks 2 and 5 + this one).
+
+- [ ] **Step 2: Add the imports and derive the trail**
 
 In `PropertyDetailHeader.tsx`, add to the existing `@tanstack/react-router` import and bring in the helper:
 
@@ -912,7 +932,7 @@ Inside the component, after the existing `property`/`address` lines:
 
 Add `getListing` to this file's existing `#/data/store` import if it is not already there.
 
-- [ ] **Step 2: Replace the breadcrumb list**
+- [ ] **Step 3: Replace the breadcrumb list**
 
 Replace the `<Breadcrumb.List>` body. The deal's own name becomes a link once a section follows it, and stays a plain page when it is the last crumb:
 
@@ -978,12 +998,12 @@ Replace the `<Breadcrumb.List>` body. The deal's own name becomes a link once a 
 
 > Vouchers is the only section with a drill-down, so the section-link target is hardcoded to it. If a second drill-down section ever appears, that target moves into `NAV_GROUPS`.
 
-- [ ] **Step 3: Run the gates**
+- [ ] **Step 4: Run the gates**
 
 Run: `bunx tsc --noEmit && bunx vitest run`
-Expected: tsc exits 0; 683 tests pass.
+Expected: tsc exits 0; 684 tests pass (683 + the vouchers drill-down case added in Step 1).
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add src/components/properties/PropertyDetailHeader.tsx
@@ -1089,7 +1109,7 @@ import { DealStageBadge } from "#/components/deals/DealStageBadge";
 - [ ] **Step 5: Run the gates**
 
 Run: `bunx tsc --noEmit && bunx vitest run`
-Expected: tsc exits 0; 683 tests pass.
+Expected: tsc exits 0; 684 tests pass.
 
 - [ ] **Step 6: Commit**
 
@@ -1289,7 +1309,7 @@ Preserve whatever the existing `: (` fallback renders for an association with no
 - [ ] **Step 8: Run the gates**
 
 Run: `bunx tsc --noEmit && bunx vitest run`
-Expected: tsc exits 0; all tests pass (683 + 2 = 685).
+Expected: tsc exits 0; all tests pass (684 + 2 = 686).
 
 - [ ] **Step 9: Commit**
 
@@ -1438,7 +1458,7 @@ Expected: no output.
 - [ ] **Step 8: Run the gates**
 
 Run: `bunx tsc --noEmit && bunx vitest run`
-Expected: tsc exits 0; 685 tests pass. Fix every unused-import error `tsc` names — that is the deletion's own checklist.
+Expected: tsc exits 0; 686 tests pass. Fix every unused-import error `tsc` names — that is the deletion's own checklist.
 
 - [ ] **Step 9: Commit**
 
