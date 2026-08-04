@@ -8,88 +8,15 @@ import {
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
 import { Collapsible } from "@buildoutinc/blueprint-react/ui/Collapsible";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import {
-  faGaugeHigh,
-  faAddressBook,
-  faBolt,
-  faFileInvoiceDollar,
-  faFileLines,
-  faGlobe,
-  faEnvelope,
-  faImage,
-  faTableCells,
-  faMapLocationDot,
-  faFileChartColumn,
-  faVectorSquare,
-  faHardDrive,
-  faCalculator,
-  faClockRotateLeft,
-  faRulerCombined,
-  faReceipt,
-  faNoteSticky,
-  faChevronRight,
-  faBuildingFlag,
-} from "@fortawesome/pro-regular-svg-icons";
+import { faChevronRight } from "@fortawesome/pro-regular-svg-icons";
 import { useDataStore } from "#/data/dataStore";
 import { getListing, getProperty } from "#/data/store";
 import { propertyQualifiesForUnderwriting } from "#/components/deals/underwriting/eligibility";
 import { dealShape, isLeaseParent } from "#/data/dealShape";
-
-type NavItem = { label: string; href: string; icon: IconDefinition };
-type NavGroup = { label?: string; items: NavItem[] };
+import { NAV_GROUPS } from "#/components/properties/dealNav";
 
 /** localStorage key for which sidebar category groups are collapsed. */
 const COLLAPSED_STORAGE_KEY = "deal-sidebar-collapsed-groups";
-
-const NAV_GROUPS: NavGroup[] = [
-  {
-    label: "Deal",
-    items: [
-      { label: "Overview", href: "overview", icon: faGaugeHigh },
-      {
-        label: "Client Report",
-        href: "client-report",
-        icon: faFileChartColumn,
-      },
-      { label: "Activity", href: "activities", icon: faBolt },
-      { label: "History", href: "history", icon: faClockRotateLeft },
-      { label: "Spaces", href: "spaces", icon: faVectorSquare },
-      { label: "Files", href: "files", icon: faHardDrive },
-      { label: "Underwriting", href: "underwriting", icon: faCalculator },
-    ],
-  },
-  {
-    label: "Marketing",
-    items: [
-      { label: "Leads", href: "leads", icon: faAddressBook },
-      { label: "Documents", href: "documents", icon: faFileLines },
-      { label: "Website", href: "website", icon: faGlobe },
-      { label: "Email", href: "email", icon: faEnvelope },
-      { label: "Media", href: "media", icon: faImage },
-      { label: "Demographics", href: "demographics", icon: faMapLocationDot },
-      { label: "Grids", href: "grids", icon: faTableCells },
-      { label: "Plans", href: "plans", icon: faRulerCombined },
-      {
-        label: "Property Marketing",
-        href: "property-marketing",
-        icon: faBuildingFlag,
-      },
-    ],
-  },
-  {
-    label: "Back Office",
-    items: [
-      { label: "Voucher", href: "financials", icon: faFileInvoiceDollar },
-      {
-        label: "Invoices",
-        href: "financial-documents",
-        icon: faReceipt,
-      },
-      { label: "Notes", href: "notes", icon: faNoteSticky },
-    ],
-  },
-];
 
 export function PropertyDetailSidebar() {
   const { pathname } = useLocation();
