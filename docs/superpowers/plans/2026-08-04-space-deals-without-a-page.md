@@ -191,8 +191,14 @@ export function spaceVouchers(shellDealId: string): SpaceVoucherRow[] {
         dealId: child.id,
         label: unit?.label ?? child.name,
         tenantName: tenant ? `${tenant.firstName} ${tenant.lastName}`.trim() : null,
-        // 0 is a real commission on a favour deal, so only absent/nullish reads as "none".
-        commissionAmount: commission == null ? null : commission,
+        // `createProposalListing` seeds commissionAmount to 0 and the type is
+        // `number`, so 0 — not null — is what "has not transacted yet" looks
+        // like. Hence a positive test rather than a null check. The prototype
+        // records no genuine $0 commission, and the index prints this row's
+        // stage right beside the figure, so "—" is never ambiguous in practice.
+        // Do NOT widen DealTransaction.commissionAmount to make this nullable:
+        // that taxes every call site app-wide for a distinction nothing makes.
+        commissionAmount: commission > 0 ? commission : null,
         stage: child.status,
       }
     })
