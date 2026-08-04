@@ -11,6 +11,8 @@ import {
   faFilePdf,
   faFileSpreadsheet,
 } from "@fortawesome/pro-regular-svg-icons";
+import { getListing } from "#/data/store";
+import { dealCardLinkProps } from "#/components/deals/dealCardLink";
 import { IconBadge } from "#/components/contacts/IconBadge";
 import { TimelineBadge } from "#/components/contacts/TimelineBadge";
 import { ClampText } from "#/components/contacts/ClampText";
@@ -132,12 +134,12 @@ export function TimelineEvent({
             directly under the subject. */}
         {event.associations && event.associations.length > 0 && (
           <div className="tl-row__deals">
-            {event.associations.map((a, i) =>
-              a.id ? (
+            {event.associations.map((a, i) => {
+              const deal = a.id ? getListing(a.id) : undefined;
+              return deal ? (
                 <Link
                   key={i}
-                  to="/listings/$listingId"
-                  params={{ listingId: a.id }}
+                  {...dealCardLinkProps(deal)}
                   className="tl-row__deal-link"
                 >
                   {a.label}
@@ -146,8 +148,8 @@ export function TimelineEvent({
                 <span key={i} className="tl-row__deal-link">
                   {a.label}
                 </span>
-              ),
-            )}
+              );
+            })}
           </div>
         )}
 
