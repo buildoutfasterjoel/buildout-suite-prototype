@@ -309,7 +309,7 @@ Expected: FAIL — `Failed to resolve import "./dealNav"`.
 
 - [ ] **Step 3: Create `dealNav.ts`**
 
-Move the `NavItem`/`NavGroup` types and the whole `NAV_GROUPS` array out of `PropertyDetailSidebar.tsx:39-92` verbatim, **plus** the `Vouchers` item that Task 5 needs. Create `src/components/properties/dealNav.ts`:
+Move the `NavItem`/`NavGroup` types and the whole `NAV_GROUPS` array out of `PropertyDetailSidebar.tsx:39-92` **verbatim** — no items added, removed, or reordered. Task 5 adds the `Vouchers` item. Create `src/components/properties/dealNav.ts`:
 
 ```ts
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
@@ -375,10 +375,6 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Back Office",
     items: [
-      // A shell's spaces each earn their own commission, so a shell gets this
-      // index instead of the single Voucher/Invoices pair below. The sidebar
-      // picks one or the other by deal shape; they are never both shown.
-      { label: "Vouchers", href: "vouchers", icon: faFileInvoiceDollar },
       { label: "Voucher", href: "financials", icon: faFileInvoiceDollar },
       { label: "Invoices", href: "financial-documents", icon: faReceipt },
       { label: "Notes", href: "notes", icon: faNoteSticky },
@@ -430,7 +426,7 @@ import { NAV_GROUPS } from "#/components/properties/dealNav";
 
 Then remove every icon import that is now unused from this file. After the move, the sidebar's own JSX still uses `faChevronRight`, so keep that one; `tsc` will name any others via `noUnusedLocals`.
 
-> The `Vouchers` item is now in `NAV_GROUPS` but nothing filters it yet, so a non-shell deal will briefly show both `Vouchers` and `Voucher`. Task 5 fixes that. This is the one intentionally-incomplete moment in the plan; it keeps the extraction reviewable on its own.
+This task is a pure move plus one new pure function: the sidebar renders exactly the same nav afterwards. Nothing about the UI should change.
 
 - [ ] **Step 6: Run the gates**
 
@@ -687,25 +683,139 @@ git commit -m "feat(vouchers): open a space's voucher and invoices inside its bu
 
 ### Task 5: Back Office varies by deal shape
 
+Adds the `Vouchers` item and, in the same task, moves the sidebar's shape rules into a tested pure function beside the nav data they filter. The rules were inline in JSX with no test file; putting them in `dealNav.ts` is what makes this task's one new rule verifiable at all.
+
 **Files:**
-- Modify: `src/components/properties/PropertyDetailSidebar.tsx` (the `navGroups` filter)
+- Modify: `src/components/properties/dealNav.ts` (add the `Vouchers` item; add `visibleNavGroups`)
+- Modify: `src/components/properties/dealNav.test.ts` (tests for `visibleNavGroups`)
+- Modify: `src/components/properties/PropertyDetailSidebar.tsx` (call `visibleNavGroups`)
 
 **Interfaces:**
-- Consumes: `NAV_GROUPS` from Task 2; the `vouchers` route from Task 3
-- Produces: nothing new
+- Consumes: `NAV_GROUPS`, `NavGroup` from Task 2; the `vouchers` route from Task 3
+- Produces: `visibleNavGroups(shape: DealShape, opts: { leaseParent: boolean; showsUnderwriting: boolean }): NavGroup[]` — Task 9 deletes two of its rules
 
-- [ ] **Step 1: Filter the Vouchers item to a shell**
+- [ ] **Step 1: Write the failing tests**
 
-In `PropertyDetailSidebar.tsx`, inside the `navGroups = NAV_GROUPS.map(...)` filter, add one rule at the top of the predicate. The `shape === "shell"` rule that hides `financials`/`financial-documents` already exists — this is its mirror image:
+Append to `src/components/properties/dealNav.test.ts`:
 
-```tsx
-  const navGroups = NAV_GROUPS.map((group) => ({
+```ts
+import { visibleNavGroups } from './dealNav'
+
+function hrefs(shape: Parameters<typeof visibleNavGroups>[0], opts = {
+  leaseParent: false,
+  showsUnderwriting: false,
+}) {
+  return visibleNavGroups(shape, opts).flatMap((g) => g.items).map((i) => i.href)
+}
+
+describe('visibleNavGroups', () => {
+  it('gives a shell the Vouchers index and neither Voucher nor Invoices', () => {
+    const shown = hrefs('shell', { leaseParent: true, showsUnderwriting: false })
+    expect(shown).toContain('vouchers')
+    expect(shown).not.toContain('financials')
+    expect(shown).not.toContain('financial-documents')
+  })
+
+  it('gives every other shape Voucher and Invoices but no Vouchers index', () => {
+    for (const shape of ['sale', 'flat-lease', 'space'] as const) {
+      const shown = hrefs(shape, { leaseParent: true, showsUnderwriting: false })
+      expect(shown, shape).not.toContain('vouchers')
+    }
+    const sale = hrefs('sale')
+    expect(sale).toContain('financials')
+    expect(sale).toContain('financial-documents')
+  })
+
+  it('never shows the Vouchers index and the single Voucher together', () => {
+    for (const shape of ['sale', 'flat-lease', 'shell', 'space'] as const) {
+      const shown = hrefs(shape, { leaseParent: true, showsUnderwriting: true })
+      expect(
+        shown.includes('vouchers') && shown.includes('financials'),
+        shape,
+      ).toBe(false)
+    }
+  })
+
+  it('shows Spaces only for a lease parent', () => {
+    expect(hrefs('shell', { leaseParent: true, showsUnderwriting: false })).toContain('spaces')
+    expect(hrefs('sale', { leaseParent: false, showsUnderwriting: false })).not.toContain('spaces')
+  })
+
+  it('shows Underwriting only when the property qualifies', () => {
+    expect(hrefs('sale', { leaseParent: false, showsUnderwriting: true })).toContain('underwriting')
+    expect(hrefs('sale', { leaseParent: false, showsUnderwriting: false })).not.toContain('underwriting')
+  })
+
+  it('drops a group that ends up empty', () => {
+    for (const group of visibleNavGroups('space', { leaseParent: false, showsUnderwriting: false })) {
+      expect(group.items.length).toBeGreaterThan(0)
+    }
+  })
+})
+```
+
+- [ ] **Step 2: Run the tests to verify they fail**
+
+Run: `bunx vitest run src/components/properties/dealNav.test.ts`
+Expected: FAIL — `visibleNavGroups is not a function`.
+
+- [ ] **Step 3: Add the Vouchers item**
+
+In `dealNav.ts`, add it as the **first** item of the Back Office group, where `Voucher` sits today:
+
+```ts
+  {
+    label: "Back Office",
+    items: [
+      // A shell's spaces each earn their own commission, so a shell gets this
+      // index instead of the single Voucher/Invoices pair below. `visibleNavGroups`
+      // picks one or the other by shape; they are never both shown.
+      { label: "Vouchers", href: "vouchers", icon: faFileInvoiceDollar },
+      { label: "Voucher", href: "financials", icon: faFileInvoiceDollar },
+      { label: "Invoices", href: "financial-documents", icon: faReceipt },
+      { label: "Notes", href: "notes", icon: faNoteSticky },
+    ],
+  },
+```
+
+- [ ] **Step 4: Move the filter into `dealNav.ts`**
+
+Append to `dealNav.ts`. This is the sidebar's existing predicate (`PropertyDetailSidebar.tsx:142-166`) moved verbatim, plus the one new `vouchers` rule:
+
+```ts
+import type { DealShape } from "#/data/dealShape";
+
+/** Property-level marketing surfaces — a space deal has none of these. */
+const PROPERTY_ONLY = new Set([
+  "documents", "website", "email", "demographics", "grids", "plans",
+]);
+/** Surfaces that only make sense on the building's own assignment. */
+const SHELL_ONLY = new Set(["spaces", "underwriting", "client-report"]);
+
+/**
+ * The sections this deal actually shows, by shape. Lives beside NAV_GROUPS so a
+ * rule and the item it governs cannot drift apart, and so the rules are testable
+ * without rendering a sidebar.
+ *
+ * Groups that filter down to nothing are dropped, so no empty category renders.
+ */
+export function visibleNavGroups(
+  shape: DealShape,
+  opts: { leaseParent: boolean; showsUnderwriting: boolean },
+): NavGroup[] {
+  return NAV_GROUPS.map((group) => ({
     ...group,
     items: group.items.filter((item) => {
       // A shell's spaces each earn their own commission, so it gets the Vouchers
-      // index; every other shape keeps the single Voucher + Invoices pair below.
-      // The two are mutually exclusive — never show both.
+      // index; every other shape keeps the single Voucher + Invoices pair. The
+      // two are mutually exclusive — never show both.
       if (item.href === "vouchers") return shape === "shell";
+      if (item.href === "property-marketing") return shape === "space";
+      if (shape === "space") {
+        if (PROPERTY_ONLY.has(item.href)) return false;
+        if (SHELL_ONLY.has(item.href)) return false;
+        return true;
+      }
       // Money is earned per space, so a shell has no voucher and no invoices.
       if (
         shape === "shell" &&
@@ -713,21 +823,44 @@ In `PropertyDetailSidebar.tsx`, inside the `navGroups = NAV_GROUPS.map(...)` fil
       ) {
         return false;
       }
-      if (item.href === "spaces") return leaseParent;
-      // ... rest of the existing predicate unchanged
+      if (item.href === "spaces") return opts.leaseParent;
+      if (item.href === "underwriting") return opts.showsUnderwriting;
+      return true;
+    }),
+  })).filter((group) => group.items.length > 0);
+}
 ```
 
-- [ ] **Step 2: Verify by inspection**
+- [ ] **Step 5: Run the tests to verify they pass**
 
-Run: `bunx tsc --noEmit`
-Expected: exits 0.
+Run: `bunx vitest run src/components/properties/dealNav.test.ts`
+Expected: PASS, 13 tests (7 from Task 2 + 6 new).
 
-There is no unit test here — the sidebar is a component with no existing test file, and its filter is one boolean. It gets covered by the manual pass in Task 9.
+- [ ] **Step 6: Call it from the sidebar**
 
-- [ ] **Step 3: Commit**
+In `PropertyDetailSidebar.tsx`, delete the local `PROPERTY_ONLY` and `SHELL_ONLY` consts and the whole `navGroups = NAV_GROUPS.map(...)` expression (lines 142-166), replacing them with:
+
+```tsx
+  const navGroups = visibleNavGroups(shape, { leaseParent, showsUnderwriting });
+```
+
+Change the import to bring in the function instead of the data:
+
+```tsx
+import { visibleNavGroups } from "#/components/properties/dealNav";
+```
+
+`NAV_GROUPS` is no longer referenced here — `tsc`'s `noUnusedLocals` will confirm.
+
+- [ ] **Step 7: Run the gates**
+
+Run: `bunx tsc --noEmit && bunx vitest run`
+Expected: tsc exits 0; all tests pass (677 + 6 = 683).
+
+- [ ] **Step 8: Commit**
 
 ```bash
-git add src/components/properties/PropertyDetailSidebar.tsx
+git add src/components/properties/dealNav.ts src/components/properties/dealNav.test.ts src/components/properties/PropertyDetailSidebar.tsx
 git commit -m "feat(nav): give a shell the Vouchers index instead of a single voucher"
 ```
 
@@ -842,7 +975,7 @@ Replace the `<Breadcrumb.List>` body. The deal's own name becomes a link once a 
 - [ ] **Step 3: Run the gates**
 
 Run: `bunx tsc --noEmit && bunx vitest run`
-Expected: tsc exits 0; 677 tests pass.
+Expected: tsc exits 0; 683 tests pass.
 
 - [ ] **Step 4: Commit**
 
@@ -950,7 +1083,7 @@ import { DealStageBadge } from "#/components/deals/DealStageBadge";
 - [ ] **Step 5: Run the gates**
 
 Run: `bunx tsc --noEmit && bunx vitest run`
-Expected: tsc exits 0; 677 tests pass.
+Expected: tsc exits 0; 683 tests pass.
 
 - [ ] **Step 6: Commit**
 
@@ -1150,7 +1283,7 @@ Preserve whatever the existing `: (` fallback renders for an association with no
 - [ ] **Step 8: Run the gates**
 
 Run: `bunx tsc --noEmit && bunx vitest run`
-Expected: tsc exits 0; all tests pass (677 + 2 = 679).
+Expected: tsc exits 0; all tests pass (683 + 2 = 685).
 
 - [ ] **Step 9: Commit**
 
@@ -1170,8 +1303,9 @@ Last on purpose: nothing is removed before its replacement works. All of this ex
 - Delete: `src/components/deals/PropertyMarketingHub.tsx`
 - Delete: `src/routes/_shell/listings/$listingId/property-marketing.tsx`
 - Modify: `src/routes/_shell/listings/$listingId.tsx` (drop the `MarketingScopeBar` mount)
-- Modify: `src/components/properties/dealNav.ts` (drop the `Property Marketing` item)
-- Modify: `src/components/properties/PropertyDetailSidebar.tsx` (drop `from` carry + `shape === "space"` filtering)
+- Modify: `src/components/properties/dealNav.ts` (drop the `Property Marketing` item, and drop the `property-marketing` + `shape === "space"` rules from `visibleNavGroups`)
+- Modify: `src/components/properties/dealNav.test.ts` (drop assertions about the deleted rules)
+- Modify: `src/components/properties/PropertyDetailSidebar.tsx` (drop the `from` carry)
 - Modify: `src/routes/_shell/listings/$listingId/{demographics,documents,email,grids,media,plans,website,leads}.tsx` (drop the `from` param)
 - Modify: `src/components/properties/PropertyDetailHeader.tsx` (drop the `parentDeal` branch)
 - Modify: `src/components/deals/DealContextRail.tsx` (drop `LinkedParentDeal` + its `parent` lookup)
@@ -1207,9 +1341,55 @@ In `src/routes/_shell/listings/$listingId.tsx`, remove the `MarketingScopeBar` i
 
 In `src/components/properties/dealNav.ts`, remove the `Property Marketing` item from the Marketing group and its now-unused `faBuildingFlag` import.
 
-- [ ] **Step 3: Strip the `from` param and space nav filtering**
+- [ ] **Step 3: Strip the `from` param and the space nav rules**
 
-In `PropertyDetailSidebar.tsx`, remove: the `useSearch` import and the `rawSearch`/`from` lines, the `PROPERTY_ONLY` and `SHELL_ONLY` sets and the `shape === "space"` branch in the filter, and the `inMarketing`/`search:` argument in `onValueChange`'s `navigate` call — leaving a plain `navigate({ to: ... })`.
+In `PropertyDetailSidebar.tsx`, remove the `useSearch` import, the `rawSearch`/`from` lines, and the `inMarketing`/`search:` argument in `onValueChange`'s `navigate` call — leaving a plain `navigate({ to: ... })`.
+
+In `dealNav.ts`'s `visibleNavGroups`, a space no longer renders a sidebar at all, so its rules are dead. Remove the `PROPERTY_ONLY` and `SHELL_ONLY` sets, the `property-marketing` rule, and the `shape === "space"` branch. What remains:
+
+```ts
+export function visibleNavGroups(
+  shape: DealShape,
+  opts: { leaseParent: boolean; showsUnderwriting: boolean },
+): NavGroup[] {
+  return NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => {
+      // A shell's spaces each earn their own commission, so it gets the Vouchers
+      // index; every other shape keeps the single Voucher + Invoices pair. The
+      // two are mutually exclusive — never show both.
+      if (item.href === "vouchers") return shape === "shell";
+      // Money is earned per space, so a shell has no voucher and no invoices.
+      if (
+        shape === "shell" &&
+        (item.href === "financials" || item.href === "financial-documents")
+      ) {
+        return false;
+      }
+      if (item.href === "spaces") return opts.leaseParent;
+      if (item.href === "underwriting") return opts.showsUnderwriting;
+      return true;
+    }),
+  })).filter((group) => group.items.length > 0);
+}
+```
+
+`DealShape` still includes `'space'`, and passing it now returns the ordinary non-shell nav. That is correct and unreachable rather than wrong: no sidebar renders for a space.
+
+In `dealNav.test.ts`, update the two tests that assert space-specific behaviour. In *"gives every other shape Voucher and Invoices but no Vouchers index"*, keep `'space'` in the loop — it still must not get `vouchers`. Replace the *"drops a group that ends up empty"* test, which relied on a space filtering a whole group away, with one that no longer depends on space rules:
+
+```ts
+  it('drops a group that ends up empty', () => {
+    // Back Office always keeps Notes, so force the emptiness through a group
+    // whose every item is conditional: none exist today, so assert the
+    // invariant instead — no rendered group is ever empty.
+    for (const shape of ['sale', 'flat-lease', 'shell', 'space'] as const) {
+      for (const group of visibleNavGroups(shape, { leaseParent: false, showsUnderwriting: false })) {
+        expect(group.items.length, shape).toBeGreaterThan(0)
+      }
+    }
+  })
+```
 
 In each of `demographics.tsx`, `documents.tsx`, `email.tsx`, `grids.tsx`, `media.tsx`, `plans.tsx`, `website.tsx`, remove the `validateSearch` that declares `from`. In `leads.tsx`, keep `q` and remove only the `from` half:
 
@@ -1252,7 +1432,7 @@ Expected: no output.
 - [ ] **Step 8: Run the gates**
 
 Run: `bunx tsc --noEmit && bunx vitest run`
-Expected: tsc exits 0; 677 tests pass. Fix every unused-import error `tsc` names — that is the deletion's own checklist.
+Expected: tsc exits 0; 685 tests pass. Fix every unused-import error `tsc` names — that is the deletion's own checklist.
 
 - [ ] **Step 9: Commit**
 
