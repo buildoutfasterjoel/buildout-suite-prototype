@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { dealBreadcrumbTrail, NAV_GROUPS } from "./dealNav";
+import { dealBreadcrumbTrail, NAV_GROUPS, visibleNavGroups } from "./dealNav";
 
 const ID = "deal-1";
 
@@ -55,5 +55,60 @@ describe("NAV_GROUPS", () => {
   it("has unique hrefs, so a breadcrumb lookup cannot be ambiguous", () => {
     const hrefs = NAV_GROUPS.flatMap((g) => g.items).map((i) => i.href);
     expect(new Set(hrefs).size).toBe(hrefs.length);
+  });
+});
+
+function hrefs(
+  shape: Parameters<typeof visibleNavGroups>[0],
+  opts = {
+    leaseParent: false,
+    showsUnderwriting: false,
+  },
+) {
+  return visibleNavGroups(shape, opts).flatMap((g) => g.items).map((i) => i.href);
+}
+
+describe("visibleNavGroups", () => {
+  it("gives a shell the Vouchers index and neither Voucher nor Invoices", () => {
+    const shown = hrefs("shell", { leaseParent: true, showsUnderwriting: false });
+    expect(shown).toContain("vouchers");
+    expect(shown).not.toContain("financials");
+    expect(shown).not.toContain("financial-documents");
+  });
+
+  it("gives every other shape Voucher and Invoices but no Vouchers index", () => {
+    for (const shape of ["sale", "flat-lease", "space"] as const) {
+      const shown = hrefs(shape, { leaseParent: true, showsUnderwriting: false });
+      expect(shown, shape).not.toContain("vouchers");
+    }
+    const sale = hrefs("sale");
+    expect(sale).toContain("financials");
+    expect(sale).toContain("financial-documents");
+  });
+
+  it("never shows the Vouchers index and the single Voucher together", () => {
+    for (const shape of ["sale", "flat-lease", "shell", "space"] as const) {
+      const shown = hrefs(shape, { leaseParent: true, showsUnderwriting: true });
+      expect(
+        shown.includes("vouchers") && shown.includes("financials"),
+        shape,
+      ).toBe(false);
+    }
+  });
+
+  it("shows Spaces only for a lease parent", () => {
+    expect(hrefs("shell", { leaseParent: true, showsUnderwriting: false })).toContain("spaces");
+    expect(hrefs("sale", { leaseParent: false, showsUnderwriting: false })).not.toContain("spaces");
+  });
+
+  it("shows Underwriting only when the property qualifies", () => {
+    expect(hrefs("sale", { leaseParent: false, showsUnderwriting: true })).toContain("underwriting");
+    expect(hrefs("sale", { leaseParent: false, showsUnderwriting: false })).not.toContain("underwriting");
+  });
+
+  it("drops a group that ends up empty", () => {
+    for (const group of visibleNavGroups("space", { leaseParent: false, showsUnderwriting: false })) {
+      expect(group.items.length).toBeGreaterThan(0);
+    }
   });
 });

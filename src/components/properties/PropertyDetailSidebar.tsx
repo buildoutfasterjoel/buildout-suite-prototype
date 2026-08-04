@@ -13,7 +13,7 @@ import { useDataStore } from "#/data/dataStore";
 import { getListing, getProperty } from "#/data/store";
 import { propertyQualifiesForUnderwriting } from "#/components/deals/underwriting/eligibility";
 import { dealShape, isLeaseParent } from "#/data/dealShape";
-import { NAV_GROUPS } from "#/components/properties/dealNav";
+import { visibleNavGroups } from "#/components/properties/dealNav";
 
 /** localStorage key for which sidebar category groups are collapsed. */
 const COLLAPSED_STORAGE_KEY = "deal-sidebar-collapsed-groups";
@@ -66,31 +66,7 @@ export function PropertyDetailSidebar() {
   // from canAddSpaces, which governs only the Add-space buttons, not navigation.
   const leaseParent = isLeaseParent(listing);
 
-  /** Property-level marketing surfaces — a space deal has none of these. */
-  const PROPERTY_ONLY = new Set([
-    "documents", "website", "email", "demographics", "grids", "plans",
-  ]);
-  /** Surfaces that only make sense on the building's own assignment. */
-  const SHELL_ONLY = new Set(["spaces", "underwriting", "client-report"]);
-
-  const navGroups = NAV_GROUPS.map((group) => ({
-    ...group,
-    items: group.items.filter((item) => {
-      if (item.href === "property-marketing") return shape === "space";
-      if (shape === "space") {
-        if (PROPERTY_ONLY.has(item.href)) return false;
-        if (SHELL_ONLY.has(item.href)) return false;
-        return true;
-      }
-      // Money is earned per space, so a shell has no voucher and no invoices.
-      if (shape === "shell" && (item.href === "financials" || item.href === "financial-documents")) {
-        return false;
-      }
-      if (item.href === "spaces") return leaseParent;
-      if (item.href === "underwriting") return showsUnderwriting;
-      return true;
-    }),
-  })).filter((group) => group.items.length > 0);
+  const navGroups = visibleNavGroups(shape, { leaseParent, showsUnderwriting });
 
   function handleTabChange(value: string) {
     const item = navGroups

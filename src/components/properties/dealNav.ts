@@ -20,6 +20,7 @@ import {
   faReceipt,
   faNoteSticky,
 } from "@fortawesome/pro-regular-svg-icons";
+import type { DealShape } from "#/data/dealShape";
 
 export type NavItem = { label: string; href: string; icon: IconDefinition };
 export type NavGroup = { label?: string; items: NavItem[] };
@@ -61,6 +62,10 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Back Office",
     items: [
+      // A shell's spaces each earn their own commission, so a shell gets this
+      // index instead of the single Voucher/Invoices pair below. `visibleNavGroups`
+      // picks one or the other by shape; they are never both shown.
+      { label: "Vouchers", href: "vouchers", icon: faFileInvoiceDollar },
       { label: "Voucher", href: "financials", icon: faFileInvoiceDollar },
       { label: "Invoices", href: "financial-documents", icon: faReceipt },
       { label: "Notes", href: "notes", icon: faNoteSticky },
@@ -94,4 +99,49 @@ export function dealBreadcrumbTrail(
   if (!item) return none;
 
   return { sectionLabel: item.label, detailId: detail ?? null };
+}
+
+/** Property-level marketing surfaces — a space deal has none of these. */
+const PROPERTY_ONLY = new Set([
+  "documents", "website", "email", "demographics", "grids", "plans",
+]);
+/** Surfaces that only make sense on the building's own assignment. */
+const SHELL_ONLY = new Set(["spaces", "underwriting", "client-report"]);
+
+/**
+ * The sections this deal actually shows, by shape. Lives beside NAV_GROUPS so a
+ * rule and the item it governs cannot drift apart, and so the rules are testable
+ * without rendering a sidebar.
+ *
+ * Groups that filter down to nothing are dropped, so no empty category renders.
+ */
+export function visibleNavGroups(
+  shape: DealShape,
+  opts: { leaseParent: boolean; showsUnderwriting: boolean },
+): NavGroup[] {
+  return NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => {
+      // A shell's spaces each earn their own commission, so it gets the Vouchers
+      // index; every other shape keeps the single Voucher + Invoices pair. The
+      // two are mutually exclusive — never show both.
+      if (item.href === "vouchers") return shape === "shell";
+      if (item.href === "property-marketing") return shape === "space";
+      if (shape === "space") {
+        if (PROPERTY_ONLY.has(item.href)) return false;
+        if (SHELL_ONLY.has(item.href)) return false;
+        return true;
+      }
+      // Money is earned per space, so a shell has no voucher and no invoices.
+      if (
+        shape === "shell" &&
+        (item.href === "financials" || item.href === "financial-documents")
+      ) {
+        return false;
+      }
+      if (item.href === "spaces") return opts.leaseParent;
+      if (item.href === "underwriting") return opts.showsUnderwriting;
+      return true;
+    }),
+  })).filter((group) => group.items.length > 0);
 }
