@@ -12,14 +12,21 @@ import {
 import { useDataStore } from "#/data/dataStore";
 import { getListing, getProperty } from "#/data/store";
 import { buildingAvailability } from "#/data/buildingAvailability";
-import { canAddSpaces, dealShape, isLeaseParent } from "#/data/dealShape";
+import { canAddSpaces, isLeaseParent } from "#/data/dealShape";
 import { emptySpaceLeaseTerms } from "#/data/createListing";
 import { updateDealMarketing } from "#/data/actions";
 import { SpaceTermsSection } from "#/components/listings/edit/sections/SpaceTermsSection";
 import { AddSpaceModal } from "#/components/deals/AddSpaceModal";
-import { DealStageBadge } from "#/components/deals/DealStageBadge";
+import { DealStageSelect } from "#/components/deals/DealStageSelect";
 
 export const Route = createFileRoute("/_shell/listings/$listingId/spaces")({
+  // `space` names which row opens on arrival — a space card on the pipeline
+  // board links straight here rather than to a page of its own.
+  validateSearch: (search: Record<string, unknown>): { space?: string } => ({
+    ...(typeof search.space === "string" && search.space
+      ? { space: search.space }
+      : {}),
+  }),
   component: SpacesTab,
 });
 
@@ -34,12 +41,21 @@ function SpacesTab() {
   // can't accept new spaces (see below).
   const leaseParent = isLeaseParent(listing);
   const canAddSpace = listing ? canAddSpaces(listing) : false;
-  const rows = buildingAvailability(listingId);
+  const { space: spaceParam } = Route.useSearch();
+  const rows = [...buildingAvailability(listingId)].sort((a, b) =>
+    a.label.localeCompare(b.label, "en", { numeric: true }),
+  );
   const property = listing ? getProperty(listing.propertyId) : undefined;
   const [addOpen, setAddOpen] = useState(false);
   // Which rows are expanded. Controlled rather than left to each Collapsible so
   // the row's angle can point at its own state.
-  const [openRows, setOpenRows] = useState<Set<string>>(new Set());
+  // Seeded once, from the URL. Local state owns it afterwards, so a broker can
+  // open several rows. Deterministic on server and client, so no hydration
+  // mismatch. `buildingAvailability` is left unsorted for its marketing
+  // consumers; the sort above keeps this page and the Vouchers index in step.
+  const [openRows, setOpenRows] = useState<Set<string>>(
+    () => new Set(spaceParam ? [spaceParam] : []),
+  );
   const setRowOpen = (dealId: string, open: boolean) =>
     setOpenRows((prev) => {
       const next = new Set(prev);
@@ -143,20 +159,23 @@ function SpacesTab() {
                       <span className="text-muted fw-normal">
                         {row.availability}
                       </span>
-                      <DealStageBadge stage={child.status} shape={dealShape(child)} />
                     </span>
                   </Collapsible.Trigger>
+                  {/* Outside the Trigger on purpose: inside it, opening the
+                      select would toggle the row. The gate it opens is the
+                      globally-mounted GlobalStageGateModal, so no wiring here. */}
+                  <DealStageSelect listing={child} />
                   <Button
                     variant="ghost"
                     nativeButton={false}
                     render={
                       <Link
-                        to="/listings/$listingId"
-                        params={{ listingId: row.dealId }}
+                        to="/listings/$listingId/vouchers/$spaceId"
+                        params={{ listingId, spaceId: row.dealId }}
                       />
                     }
                   >
-                    Open deal
+                    Voucher
                   </Button>
                 </div>
                 <Collapsible.Content className="border-top p-3">
