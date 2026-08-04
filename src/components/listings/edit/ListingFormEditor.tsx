@@ -1,4 +1,5 @@
 import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
+import { faVectorSquare } from "@fortawesome/pro-regular-svg-icons";
 import { BuildingSection } from "#/components/listings/edit/sections/BuildingSection";
 import { BuyerSection } from "#/components/listings/edit/sections/BuyerSection";
 import { CondosSection } from "#/components/listings/edit/sections/CondosSection";
@@ -9,15 +10,19 @@ import { LotsSection } from "#/components/listings/edit/sections/LotsSection";
 import { MarketingVisibilitySection } from "#/components/listings/edit/sections/MarketingVisibilitySection";
 import { PropertySection } from "#/components/listings/edit/sections/PropertySection";
 import { SaleSection } from "#/components/listings/edit/sections/SaleSection";
+import { SpaceTermsSection } from "#/components/listings/edit/sections/SpaceTermsSection";
 import { TransitSection } from "#/components/listings/edit/sections/TransitSection";
 import { UnitsSection } from "#/components/listings/edit/sections/UnitsSection";
 import { VisualMediaSection } from "#/components/listings/edit/sections/VisualMediaSection";
 import { DisclaimerNotesSection } from "#/components/listings/edit/sections/DisclaimerNotesSection";
+import { Section } from "#/components/listings/listingWidgets";
+import { emptySpaceLeaseTerms } from "#/data/createListing";
 import { propertyTypeEffects, showBuyerSection } from "#/data/listingFormLogic";
 import type {
 	DealMarketing,
 	DealPitchFinancials,
 	DealType,
+	Listing,
 	Property,
 	PropertyStatus,
 } from "#/data/types";
@@ -29,6 +34,7 @@ import type {
  * never owns state of its own.
  */
 export function ListingFormEditor({
+	listing,
 	dealType,
 	status,
 	marketing,
@@ -40,6 +46,7 @@ export function ListingFormEditor({
 	internalNotes,
 	setInternalNotes,
 }: {
+	listing: Listing;
 	dealType: DealType;
 	status: PropertyStatus;
 	marketing: DealMarketing;
@@ -52,6 +59,57 @@ export function ListingFormEditor({
 	setInternalNotes: (v: string) => void;
 }) {
 	const effects = propertyTypeEffects(property.propertyType);
+
+	// A space deal edits exactly one unit's terms — its own. Every other listing
+	// shape manages spaces from the Spaces tab.
+	const isSpaceDeal = listing.parentDealId != null;
+	const spaceUnit =
+		isSpaceDeal && listing.unitId
+			? property.units.find((u) => u.id === listing.unitId)
+			: undefined;
+
+	// Every other section on this tab is property-level. Location, Transit,
+	// Property, Building, Units and Lots write straight to the shared `Property`,
+	// so editing them from inside Suite 200 silently rewrites the building with
+	// no indication of scope. Lease copy, Marketing Visibility, Visual Media and
+	// the Disclaimer write into the child's own forked `marketing`, giving the
+	// building's marketing a second editable home that quietly diverges from the
+	// shell. Both are wrong for a space, whose only marketing surface is the
+	// read-through Property Marketing hub. So the space's Listing tab is exactly
+	// its own terms; the Deal tab still carries Setup, Transaction and Financials.
+	if (isSpaceDeal) {
+		return (
+			<div className="d-flex flex-column gap-6">
+				{spaceUnit ? (
+					<Section title="Space Terms" icon={faVectorSquare}>
+						<SpaceTermsSection
+							unit={spaceUnit}
+							property={property}
+							terms={
+								marketing.spaceLeaseTerms?.[0] ?? emptySpaceLeaseTerms(spaceUnit.id)
+							}
+							onChange={(patch) =>
+								patchMarketing({
+									spaceLeaseTerms: [
+										{
+											...(marketing.spaceLeaseTerms?.[0] ??
+												emptySpaceLeaseTerms(spaceUnit.id)),
+											...patch,
+										},
+									],
+								})
+							}
+						/>
+					</Section>
+				) : (
+					<p className="text-muted mb-0">
+						This space is not linked to a unit on the building, so there are no
+						space terms to edit.
+					</p>
+				)}
+			</div>
+		);
+	}
 
 	return (
 		<div className="d-flex flex-column gap-6">

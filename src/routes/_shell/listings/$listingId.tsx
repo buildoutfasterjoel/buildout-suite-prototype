@@ -1,5 +1,4 @@
-import { useEffect } from "react";
-import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
@@ -7,9 +6,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBuildingCircleExclamation } from "@fortawesome/pro-regular-svg-icons";
 import { getStore } from "#/data/store";
 import { useDataStore } from "#/data/dataStore";
-import { suitePanelPath, legacySubPath } from "#/data/suitePanelPath";
 import { PropertyDetailHeader } from "#/components/properties/PropertyDetailHeader";
 import { PropertyDetailSidebar } from "#/components/properties/PropertyDetailSidebar";
+import { MarketingScopeBar } from "#/components/deals/MarketingScopeBar";
 
 export const Route = createFileRoute("/_shell/listings/$listingId")({
   component: PropertyDetail,
@@ -60,30 +59,7 @@ function PropertyDetail() {
   // reason for a reactive selector — commitStageTransition replaces both.
   const listing = useDataStore((s) => s.listings).get(listingId);
 
-  const navigate = useNavigate();
-  const { pathname, search } = useLocation();
-
-  // A suite has no page of its own — it renders as a panel over its building. This runs in
-  // the component rather than beforeLoad because the store is client-owned (Zustand +
-  // IndexedDB): on a cold load beforeLoad fires before hydration, the suite lookup misses,
-  // and it never re-runs. A reactive selector re-renders the moment hydration lands, so the
-  // canonicalization always happens. `replace` keeps the legacy URL out of history.
-  const panelPath = listing
-    ? suitePanelPath(listing, legacySubPath(pathname, listing.id))
-    : null;
-
-  useEffect(() => {
-    // Carry the current search along — e.g. ContactInquiryCard links to a legacy
-    // `?q=` on a suite's Leads tab so the broker lands on the row they act on, and
-    // that must survive landing on the panel instead of the old page.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (panelPath) void navigate({ to: panelPath, search, replace: true } as any);
-  }, [panelPath, search, navigate]);
-
   if (!listing) return <ListingNotFound />;
-
-  // Don't paint the suite's old page for a frame on the way out.
-  if (panelPath) return null;
 
   return (
     <div className="h-100 overflow-y-auto overflow-x-hidden">
@@ -101,6 +77,7 @@ function PropertyDetail() {
         {/* Detail content — each tab renders its own layout, including
             the deal context rail where applicable (e.g. Overview). */}
         <Card className="flex-grow-1 shadow" style={{ minWidth: 0 }}>
+          <MarketingScopeBar />
           <Outlet />
         </Card>
       </div>
