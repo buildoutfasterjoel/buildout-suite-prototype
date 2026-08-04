@@ -36,6 +36,13 @@ describe("dealBreadcrumbTrail", () => {
     });
   });
 
+  it("labels the vouchers drill-down and carries the space id", () => {
+    expect(dealBreadcrumbTrail(`/listings/${ID}/vouchers/space-9`, ID)).toEqual({
+      sectionLabel: "Vouchers",
+      detailId: "space-9",
+    });
+  });
+
   it("shows no crumb for a section absent from NAV_GROUPS, rather than inventing one", () => {
     expect(dealBreadcrumbTrail(`/listings/${ID}/edit`, ID)).toEqual({
       sectionLabel: null,
