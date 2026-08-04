@@ -1308,41 +1308,6 @@ In `TimelineEvent.tsx`, the association link at line 137 uses `a.id`, which can 
 
 Add `import { getListing } from "#/data/store";` and the `dealCardLinkProps` import if either is absent.
 
-- [ ] **Step 2: Route a timeline association for a space to the roster**
-
-In `TimelineEvent.tsx`, the association link uses `a.id`, which can be a space deal's id. Guard it the same way:
-
-```tsx
-            {event.associations.map((a, i) => {
-              if (!a.id) return <span key={i}>{a.label}</span>;
-              // A space deal has no page; its association opens the building's
-              // roster with that row expanded.
-              const deal = getListing(a.id);
-              return deal?.parentDealId ? (
-                <Link
-                  key={i}
-                  to="/listings/$listingId/spaces"
-                  params={{ listingId: deal.parentDealId }}
-                  search={{ space: deal.id }}
-                  className="tl-row__deal-link"
-                >
-                  {a.label}
-                </Link>
-              ) : (
-                <Link
-                  key={i}
-                  to="/listings/$listingId"
-                  params={{ listingId: a.id }}
-                  className="tl-row__deal-link"
-                >
-                  {a.label}
-                </Link>
-              );
-            })}
-```
-
-Preserve whatever the existing `: (` fallback renders for an association with no `a.id` — read the file and keep that branch's markup rather than the `<span>` above if it differs. Add `import { getListing } from "#/data/store";` if absent.
-
 - [ ] **Step 8: Run the gates**
 
 Run: `bunx tsc --noEmit && bunx vitest run`
