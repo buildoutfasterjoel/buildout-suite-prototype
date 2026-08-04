@@ -12,7 +12,7 @@ export interface AvailabilityRow {
   leaseRateUnits: LeaseRateUnits
   leaseTermMonths: number | null
   availability: SpaceAvailability
-  /** False for a space the building is not currently advertising (Draft or Lost). */
+  /** False for a space the building is not currently advertising (Inactive or Lost). */
   advertised: boolean
 }
 
