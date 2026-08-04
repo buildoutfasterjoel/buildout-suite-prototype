@@ -132,8 +132,12 @@ Suite 305    Globex       $58,000      Under Contract    →
 ```
 
 Every space is listed and clickable, including ones with no money yet — a voucher exists before it is
-filled, and an em-dash is honest about that. Ordered by suite label, matching the roster, so the two
-pages never disagree.
+filled, and an em-dash is honest about that.
+
+Ordered by suite label. Note that `getChildDeals` returns store-insertion order, so the roster is
+currently unordered too — the index sorts, and the roster gets the same sort at render, so the two pages
+cannot disagree. `buildingAvailability`'s own contract is left alone, since marketing surfaces consume
+it.
 
 The summary line is the one aggregate a shell can legitimately show. A shell holds no rate and earns no
 commission of its own, but the sum of what its spaces are earning is exactly the question an index
@@ -207,7 +211,7 @@ Edges: `/listings/{id}` with no section keeps today's `All Deals / {name}`; a se
 
 | File | What |
 |---|---|
-| `spaces.tsx` | `DealStageSelect` per row; read `?space=`; drop "Open deal"; add voucher link |
+| `spaces.tsx` | `DealStageSelect` per row; read `?space=`; drop "Open deal"; add voucher link; sort rows by suite label so the roster and the Vouchers index agree |
 | `PropertyDetailSidebar.tsx` | Import `NAV_GROUPS` from `dealNav`; swap Voucher/Invoices → Vouchers for a shell |
 | `PropertyDetailHeader.tsx` | Breadcrumb gains section + detail crumbs; deal name becomes a link |
 | `DealFinancials.tsx`, `DealInvoices.tsx` | Optional heading prop, defaulting to current strings |
