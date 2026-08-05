@@ -1,6 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
+import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
+import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faListCheck, faWavePulse } from "@fortawesome/pro-regular-svg-icons";
+import { faSparkles } from "@fortawesome/pro-solid-svg-icons";
 import type { Contact, DealSummary } from "#/data/types";
 import {
   ContactComposeModule,
@@ -36,12 +41,18 @@ import { getListingsForProperty, getProperty } from "#/data/store";
 import { createRosaProposalDeal } from "#/components/call/rosaDeal";
 import { ROSA_FINANCIAL_DOCS } from "#/components/call/rosaDocs";
 import { ROSA_AGREEMENT_EMAIL_ID } from "#/components/call/rosaClosing";
+
+/** The three panes the "tabs" narrow layout folds into one card. */
+type PaneKey = "timeline" | "briefing" | "tasks";
+
 export function ContactEngagementPanel({
   contact,
   deals,
   logged,
   onLog,
   onStartCall,
+  narrowSlot,
+  sideTabs,
 }: {
   contact: Contact;
   deals: DealSummary[];
@@ -49,10 +60,26 @@ export function ContactEngagementPanel({
   logged: ComposedActivity[];
   onLog: (draft: ComposedDraft) => void;
   onStartCall: (phone: string) => void;
+  /**
+   * Cards that belong to the right column on a wide screen and move in here when
+   * it goes away ("stacked" narrow layout). Rendered between Activity and the
+   * Timeline — above the feed, because they're what you check before reading it.
+   */
+  narrowSlot?: ReactNode;
+  /**
+   * The "tabs" narrow layout: Briefing and Tasks become tabs alongside the
+   * Timeline in one card rather than cards of their own. The timeline state all
+   * lives here, so the panel owns the tab strip and the route just supplies the
+   * two panels.
+   */
+  sideTabs?: { briefing: ReactNode; tasks: ReactNode; taskCount: number };
 }) {
   const tabTrack = useContactUiPrefs((s) => s.tabTrack);
   const timelineFilter = useContactUiPrefs((s) => s.timelineFilter);
   const [filter, setFilter] = useState<FilterKey>("all");
+  // Which pane the "tabs" narrow layout is showing. Harmless when `sideTabs` is
+  // absent, and holding it here means resizing back and forth doesn't lose it.
+  const [pane, setPane] = useState<PaneKey>("timeline");
   // "Needs Reply" quick filter (dropdown mode only) — attention rows only.
   const [needsReply, setNeedsReply] = useState(false);
   // Ephemeral per-event UI state (prototype — resets on reload).
@@ -174,6 +201,8 @@ export function ContactEngagementPanel({
     () => visibleEvents(events, "all").filter(isUnhandled).length,
     [events, resolved],
   );
+  // Total rows the feed would show unfiltered — the Timeline tab's badge.
+  const timelineCount = useMemo(() => visibleEvents(events, "all").length, [events]);
 
   // "Needs Reply" only applies in the dropdown filter mode.
   const attentionOnly = timelineFilter === "dropdown" && needsReply;
@@ -246,6 +275,52 @@ export function ContactEngagementPanel({
     resolve(event.id);
   }
 
+  const filterControl =
+    timelineFilter === "dropdown" ? (
+      <TimelineFilterDropdown
+        events={events}
+        value={filter}
+        onChange={setFilter}
+        needsReply={needsReply}
+        onNeedsReplyChange={setNeedsReply}
+        attentionCount={attentionCount}
+      />
+    ) : (
+      <TimelineFilterBar events={events} value={filter} onChange={setFilter} />
+    );
+
+  const feed = (
+    <div className="d-flex flex-column gap-3 p-4">
+      {groups.length === 0 ? (
+        <span className="text-muted fs-small">No activity to show.</span>
+      ) : (
+        <Tooltip.Provider delay={200}>
+          <div className="tl-feed">
+            {groups.map((group) => (
+              <section key={group.bucket} className="tl-group">
+                <div className="tl-group__header">{group.bucket}</div>
+                {group.events.map((event) => (
+                  <TimelineEvent
+                    key={event.id}
+                    event={event}
+                    attention={needsAttention(event) && !resolved.has(event.id)}
+                    pinned={!!event.pinned}
+                    arriving={arrivingIds.has(event.id)}
+                    replyOpen={replyOpenId === event.id}
+                    threadOpen={threadOpenId === event.id}
+                    onAction={(id) => handleAction(event, id)}
+                    onReplySend={(text) => handleReplySend(event, text)}
+                    onReplyCancel={() => setReplyOpenId(null)}
+                  />
+                ))}
+              </section>
+            ))}
+          </div>
+        </Tooltip.Provider>
+      )}
+    </div>
+  );
+
   return (
     <div className={`d-flex flex-column gap-4 tabtrack tabtrack--${tabTrack}`}>
       {/* Composer card — the "Log Activity" title shares the header row with
@@ -267,62 +342,72 @@ export function ContactEngagementPanel({
         />
       </Card>
 
-      {/* Timeline card — "Timeline" title shares the header row with the filter
-          pills (same pattern as the composer), then the grouped feed. */}
-      <Card className="panel-card overflow-hidden">
-        <div className="compose-header">
-          <span
-            className="fw-semibold"
-            style={{ fontSize: 20, lineHeight: "26px" }}
-          >
-            Timeline
-          </span>
-          {timelineFilter === "dropdown" ? (
-            <TimelineFilterDropdown
-              events={events}
-              value={filter}
-              onChange={setFilter}
-              needsReply={needsReply}
-              onNeedsReplyChange={setNeedsReply}
-              attentionCount={attentionCount}
-            />
-          ) : (
-            <TimelineFilterBar events={events} value={filter} onChange={setFilter} />
-          )}
-        </div>
+      {/* "Stacked" narrow layout: the right column's cards land here, between the
+          composer and the feed. */}
+      {narrowSlot}
 
-        <div className="d-flex flex-column gap-3 p-4">
-          {groups.length === 0 ? (
-            <span className="text-muted fs-small">No activity to show.</span>
-          ) : (
-            <Tooltip.Provider delay={200}>
-              <div className="tl-feed">
-                {groups.map((group) => (
-                  <section key={group.bucket} className="tl-group">
-                    <div className="tl-group__header">{group.bucket}</div>
-                    {group.events.map((event) => (
-                      <TimelineEvent
-                        key={event.id}
-                        event={event}
-                        attention={
-                          needsAttention(event) && !resolved.has(event.id)
-                        }
-                        pinned={!!event.pinned}
-                        arriving={arrivingIds.has(event.id)}
-                        replyOpen={replyOpenId === event.id}
-                        threadOpen={threadOpenId === event.id}
-                        onAction={(id) => handleAction(event, id)}
-                        onReplySend={(text) => handleReplySend(event, text)}
-                        onReplyCancel={() => setReplyOpenId(null)}
-                      />
-                    ))}
-                  </section>
-                ))}
+      {sideTabs ? (
+        /* "Tabs" narrow layout: one card, three panes. The filter row moves below
+           the tab strip — it belongs to the Timeline pane, not to the card. */
+        <Card className="panel-card overflow-hidden">
+          <div className="compose-header contact-pane-tabs">
+            <Tabs value={pane} onValueChange={(v) => v && setPane(v as PaneKey)}>
+              <Tabs.List>
+                <Tabs.Tab
+                  value="timeline"
+                  icon={<FontAwesomeIcon icon={faWavePulse} />}
+                >
+                  Timeline
+                  <Badge variant="secondary" appearance="muted">
+                    {timelineCount}
+                  </Badge>
+                </Tabs.Tab>
+                <Tabs.Tab
+                  value="briefing"
+                  icon={<FontAwesomeIcon icon={faSparkles} />}
+                >
+                  Briefing
+                </Tabs.Tab>
+                <Tabs.Tab
+                  value="tasks"
+                  icon={<FontAwesomeIcon icon={faListCheck} />}
+                >
+                  Tasks
+                  <Badge variant="secondary" appearance="muted">
+                    {sideTabs.taskCount}
+                  </Badge>
+                </Tabs.Tab>
+              </Tabs.List>
+            </Tabs>
+          </div>
+
+          {pane === "timeline" && (
+            <>
+              <div className="compose-header compose-header--filters">
+                {filterControl}
               </div>
-            </Tooltip.Provider>
+              {feed}
+            </>
           )}
-        </div>
-      </Card>
+          {pane === "briefing" && <div className="p-4">{sideTabs.briefing}</div>}
+          {pane === "tasks" && <div className="p-4">{sideTabs.tasks}</div>}
+        </Card>
+      ) : (
+        /* Timeline card — "Timeline" title shares the header row with the filter
+           pills (same pattern as the composer), then the grouped feed. */
+        <Card className="panel-card overflow-hidden">
+          <div className="compose-header">
+            <span
+              className="fw-semibold"
+              style={{ fontSize: 20, lineHeight: "26px" }}
+            >
+              Timeline
+            </span>
+            {filterControl}
+          </div>
+          {feed}
+        </Card>
+      )}
 
       {/* AI Start-a-Deal progress — scan docs → map fields → create deal. */}
       <AiDealProgressModal

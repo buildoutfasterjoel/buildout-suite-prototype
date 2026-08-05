@@ -16,6 +16,7 @@ import { ContactDesignToggles } from "#/components/contacts/ContactDesignToggles
 import { ShareContactModal } from "#/components/contacts/ShareContactModal";
 import { useContactShares } from "#/components/contacts/useContactShares";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
+import { CONTACT_NARROW_QUERY, useMediaQuery } from "#/lib/useMediaQuery";
 import { callFlow } from "#/components/call/callFlow";
 import type { ComposedDraft } from "#/components/contacts/ContactComposeModule";
 import {
@@ -85,9 +86,33 @@ function ContactDetailPage() {
   const addLog = (draft: ComposedDraft) =>
     useContactSession.getState().addLog(contactId, draft);
 
+  // Three columns need room the viewport doesn't always have. Below the
+  // breakpoint the right column goes away and its two cards move — either into
+  // the middle column's stack or into a tab strip beside the Timeline (the
+  // `narrowLayout` design option decides which).
+  const isNarrow = useMediaQuery(CONTACT_NARROW_QUERY);
+  const narrowLayout = useContactUiPrefs((s) => s.narrowLayout);
+
   if (!detail) return <ContactNotFound />;
 
   const { contact, deals, leadDeals, tasks, completedTasks } = detail;
+
+  // Authored once and placed by whichever layout is active, so the cards keep
+  // identical props in all three arrangements.
+  const briefingCard = (
+    <ContactBriefingSection
+      briefing={buildBriefing(contact, deals)}
+      open={briefingOpen}
+      onToggle={() => setBriefingOpen(!briefingOpen)}
+    />
+  );
+  const tasksCard = (
+    <ContactTasksPanel
+      contact={contact}
+      tasks={tasks}
+      completedTasks={completedTasks}
+    />
+  );
 
   return (
     <div
@@ -97,8 +122,9 @@ function ContactDetailPage() {
       {/* Fixed top bar */}
       <ContactDetailTopBar contact={contact} />
 
-      {/* Full-height 3-column row; each column scrolls independently and the
-          page itself never scrolls. */}
+      {/* Full-height column row; each column scrolls independently and the page
+          itself never scrolls. Below the breakpoint the right column's cards
+          relocate into the middle one — see `narrowLayout`. */}
       <div className="d-flex gap-4 flex-grow-1 overflow-hidden">
         <div
           className="flex-shrink-0 h-100 overflow-auto panel-scroll"
@@ -119,26 +145,51 @@ function ContactDetailPage() {
             logged={logged}
             onLog={addLog}
             onStartCall={(phone) => callFlow.open(contact, phone)}
+            narrowSlot={
+              isNarrow && narrowLayout === "stacked" ? (
+                <>
+                  {briefingCard}
+                  {tasksCard}
+                </>
+              ) : undefined
+            }
+            sideTabs={
+              isNarrow && narrowLayout === "tabs"
+                ? {
+                    briefing: (
+                      <ContactBriefingSection
+                        briefing={buildBriefing(contact, deals)}
+                        open
+                        onToggle={() => {}}
+                        bare
+                      />
+                    ),
+                    tasks: (
+                      <ContactTasksPanel
+                        contact={contact}
+                        tasks={tasks}
+                        completedTasks={completedTasks}
+                        bare
+                      />
+                    ),
+                    taskCount: tasks.length,
+                  }
+                : undefined
+            }
           />
         </div>
-        <div
-          className="flex-shrink-0 h-100 overflow-auto panel-scroll"
-          style={{ width: 380 }}
-        >
-          <div className="d-flex flex-column gap-4">
-            {/* AI briefing — floats above the Tasks section */}
-            <ContactBriefingSection
-              briefing={buildBriefing(contact, deals)}
-              open={briefingOpen}
-              onToggle={() => setBriefingOpen(!briefingOpen)}
-            />
-            <ContactTasksPanel
-              contact={contact}
-              tasks={tasks}
-              completedTasks={completedTasks}
-            />
+        {!isNarrow && (
+          <div
+            className="flex-shrink-0 h-100 overflow-auto panel-scroll"
+            style={{ width: 380 }}
+          >
+            <div className="d-flex flex-column gap-4">
+              {/* AI briefing — floats above the Tasks section */}
+              {briefingCard}
+              {tasksCard}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <ShareContactModal

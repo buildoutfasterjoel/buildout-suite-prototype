@@ -3454,6 +3454,61 @@
   }
 }
 
+// ── Narrow layout (< 1280px): Briefing + Tasks fold in beside the Timeline ──
+// The "tabs" option puts all three panes in one card. The strip owns the card's
+// top row on its own, so the Timeline's filter controls drop to a second row.
+.contact-pane-tabs {
+  padding-bottom: 0;
+
+  // The strip is the only thing in this header row, so it takes the full width
+  // rather than being squeezed by `.compose-header`'s first-child rule.
+  > * {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  // Blueprint stacks a tab's label children in a column (for a label + sublabel
+  // pattern), which drops the count badge onto its own line. These tabs want the
+  // count beside the word, so the label row goes horizontal.
+  // TODO(blueprint): a "tab with count" variant belongs on the Tabs component.
+  .nav-link-text {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+// The filter row under the tab strip: right-aligned, since the tabs above already
+// occupy the left and a left-aligned control would read as a fourth tab.
+.compose-header--filters {
+  justify-content: flex-end;
+}
+
+// A tab pane's Tasks list: no card, no collapse — just the Add action and the
+// rows. The action is pushed right so it lands where the section header's own
+// Add button sits in the wide layout.
+.contact-tasks-bare {
+  display: flex;
+  flex-direction: column;
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: -8px;
+  }
+}
+
+// A tab pane's Briefing: the gradient wash belongs to the card, so a bare
+// briefing drops it and keeps only the body's type.
+.contact-briefing--bare {
+  border: 0;
+  background: none;
+
+  .contact-briefing__body {
+    padding: 0;
+  }
+}
+
 // ── AI Briefing section (top of the middle column) ──
 // A collapsible section whose header matches the overview-column accordion
 // headers (left chevron + 20/26 semibold). The AI gradient washes the whole
