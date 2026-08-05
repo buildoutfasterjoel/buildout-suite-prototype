@@ -105,9 +105,9 @@ export function SettingsSidebar() {
 
   const sectionHref = sectionHrefFor(pathname);
 
-  function handleTabChange(value: string) {
+  function goToSection(label: string) {
     const item = SETTINGS_NAV.flatMap((g) => g.items).find(
-      (i) => i.label === value,
+      (i) => i.label === label,
     );
     if (!item) return;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -141,15 +141,21 @@ export function SettingsSidebar() {
             <Collapsible.Content>
               <Tabs
                 value={activeInGroup}
-                onValueChange={handleTabChange}
+                onValueChange={goToSection}
                 orientation="vertical"
               >
                 <Tabs.List variant="pills" orientation="vertical">
                   {group.items.map((item) => (
+                    // onClick as well as onValueChange: Tabs only fires the
+                    // latter when the value actually changes, so on a nested
+                    // page like /settings/users/:id the already-active Users tab
+                    // was inert. Clicking it should walk back up to the index.
+                    // Navigating twice to one URL is a no-op, so both can fire.
                     <Tabs.Tab
                       key={item.label}
                       value={item.label}
                       icon={<FontAwesomeIcon icon={item.icon} />}
+                      onClick={() => goToSection(item.label)}
                     >
                       {item.label}
                     </Tabs.Tab>

@@ -9,8 +9,8 @@
  *      propagates to everyone who hasn't customized that permission.
  *   2. A record-scoped permission says what a person is *allowed* to do; it
  *      does not grant access to any record. Sharing decides which listings and
- *      deals they can open. Account-wide permissions have nothing to share
- *      into, so they take effect everywhere immediately.
+ *      deals they can open. Account-wide permissions need no record shared with
+ *      them, so they take effect everywhere immediately.
  *
  * Prototype data: the roster, assignments, and overrides are seeded here and
  * mutated in a session-scoped store (see `useRoster`), not persisted.
@@ -207,7 +207,7 @@ export const ROLE_ACCESS_DETAIL: Record<RoleAccessKind, string> = {
   "firm-wide":
     "Sees across the whole company by default, rather than one record at a time.",
   sharing:
-    "No records of their own. They can only act on listings and deals someone has shared them into.",
+    "No records of their own. They can only act on listings and deals that have been shared with them.",
 };
 
 export interface Role {

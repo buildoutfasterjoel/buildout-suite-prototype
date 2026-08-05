@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
-import { Offcanvas } from "@buildoutinc/blueprint-react/ui/Offcanvas";
+import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
 import { RadioGroup } from "@buildoutinc/blueprint-react/ui/RadioGroup";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -19,14 +19,22 @@ import { NeutralBadge, SCOPE_META } from "./roleDisplay";
 /**
  * Assign a role to one user.
  *
+ * A centered modal, not a flyout. This app reserves Offcanvas for filtering the
+ * list you're already looking at — `ContactFilters` and `TaskFilters`, both
+ * left-side, both titled "Filters" — while every committed decision is a Modal
+ * (NewContact, CreateDeal, ShareContact, StageGate, and a dozen more). This has
+ * a Save/Cancel footer and changes data, so it belongs with the latter. Sized
+ * and scrolled to match `ShareContactModal`, the closest analogue: pick one
+ * option from a list, see what it implies, commit.
+ *
  * One role per person: the engineering plan models assignments as a
  * non-exclusive set and the resolver still unions a list, but the product rule
  * is a single role, so this is a radio group rather than checkboxes. If that
- * relaxes, the resolver needs no change — only this panel.
+ * relaxes, the resolver needs no change — only this component.
  *
  * Picking a role shows exactly what it grants. That's the question an admin
- * actually has here ("what am I about to give them?"), and answering it in the
- * panel avoids assigning a role, saving, and then reading the list to find out.
+ * actually has here ("what am I about to give them?"), and answering it here
+ * avoids assigning a role, saving, and then reading the list to find out.
  */
 export function AssignRolesPanel({
   open,
@@ -63,19 +71,24 @@ export function AssignRolesPanel({
   const selectedRole = selected ? ROLE_BY_ID.get(selected) : undefined;
 
   return (
-    <Offcanvas open={open} onOpenChange={onOpenChange}>
-      <Offcanvas.Content side="right" style={{ maxWidth: 560 }}>
-        <Offcanvas.Header>
-          <Offcanvas.Title className="fs-5 fw-semibold mb-0">
-            Assign role
-          </Offcanvas.Title>
-          <Offcanvas.Description className="text-muted mb-0">
-            A role decides what {firstName}&apos;s allowed to do. Each person has
-            one.
-          </Offcanvas.Description>
-        </Offcanvas.Header>
+    <Modal open={open} onOpenChange={onOpenChange}>
+      <Modal.Content centered style={{ maxWidth: "33rem" }}>
+        <Modal.Header>
+          <Modal.Title>Assign role</Modal.Title>
+        </Modal.Header>
 
-        <Offcanvas.Body className="d-flex flex-column gap-4">
+        {/* The body scrolls rather than the page: five roles plus the selected
+            role's permission list outgrows a viewport, and the footer's Save
+            should stay reachable. Matches AddContactsToListModal. */}
+        <Modal.Body
+          className="d-flex flex-column gap-4"
+          style={{ maxHeight: "60vh", overflowY: "auto" }}
+        >
+          <p className="text-muted mb-0">
+            A role decides what {firstName} is allowed to do. Each person has
+            one.
+          </p>
+
           <RadioGroup
             value={selected ?? ""}
             onValueChange={(v) => v && setSelected(v as RoleId)}
@@ -172,12 +185,10 @@ export function AssignRolesPanel({
               )}
             </div>
           )}
-        </Offcanvas.Body>
+        </Modal.Body>
 
-        <Offcanvas.Footer className="settings-panel__footer d-flex justify-content-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
+        <Modal.Footer>
+          <Modal.Close render={<Button variant="ghost" />}>Cancel</Modal.Close>
           <Button
             variant="primary"
             disabled={!selected}
@@ -185,8 +196,8 @@ export function AssignRolesPanel({
           >
             Save role
           </Button>
-        </Offcanvas.Footer>
-      </Offcanvas.Content>
-    </Offcanvas>
+        </Modal.Footer>
+      </Modal.Content>
+    </Modal>
   );
 }

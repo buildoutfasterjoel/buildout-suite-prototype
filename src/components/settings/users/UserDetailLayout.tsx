@@ -7,6 +7,7 @@ import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
   faBell,
   faEnvelope,
+  faGear,
   faPlug,
   faShieldHalved,
   faUser,
@@ -79,6 +80,7 @@ export function UserDetailLayout({
         <Breadcrumb.List>
           <Breadcrumb.Item>
             <Breadcrumb.Link render={<Link to="/settings/company" />}>
+              <FontAwesomeIcon icon={faGear} />
               Company settings
             </Breadcrumb.Link>
           </Breadcrumb.Item>

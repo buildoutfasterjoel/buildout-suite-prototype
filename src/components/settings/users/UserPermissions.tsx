@@ -27,6 +27,11 @@ import {
 
 const SCOPE_ORDER: PermissionScope[] = ["record", "account"];
 
+/** "an Office Admin" but "a Broker" — every role name is spoken in a toast. */
+function article(word: string): string {
+  return /^[aeiou]/i.test(word) ? "an" : "a";
+}
+
 /** First name — every explainer in the mocks addresses the person directly. */
 function firstNameOf(user: RosterUser): string {
   return user.name.split(" ")[0];
@@ -192,8 +197,8 @@ export function UserPermissions({ user }: { user: RosterUser }) {
                   marked Custom.
                 </>
               )}{" "}
-              Being allowed to edit a listing doesn&apos;t open any listing —{" "}
-              {firstName} still has to be shared into the record.
+              Being allowed to edit a listing doesn&apos;t open any listing —
+              the record still has to be shared with {firstName}.
             </Tooltip.Content>
           </Tooltip>
 
@@ -205,7 +210,7 @@ export function UserPermissions({ user }: { user: RosterUser }) {
               size="sm"
               onClick={() => setRolesOpen(true)}
             >
-              Assign roles
+              Assign role
             </Button>
           )}
           <Button
@@ -232,17 +237,17 @@ export function UserPermissions({ user }: { user: RosterUser }) {
       <div className="row g-4">
         {SCOPE_ORDER.map((scope) => (
           <div key={scope} className="col-lg-6">
+            {/* The icon leads the heading: at this size it reads as the group's
+                marker — the job the coloured dot used to do — and carries the
+                scope explanation on hover rather than in a standing subtitle. */}
             <div className="d-flex align-items-center gap-2 mb-2">
-              <span className="fs-6 fw-semibold">
-                {SCOPE_META[scope].heading}
-              </span>
               <Tooltip>
                 <Tooltip.Trigger
                   render={
                     <span
                       tabIndex={0}
                       className="text-muted d-inline-flex align-items-center"
-                      style={{ cursor: "help" }}
+                      style={{ cursor: "help", fontSize: "1.25rem" }}
                       aria-label={`What "${SCOPE_META[scope].heading}" means`}
                     />
                   }
@@ -253,6 +258,9 @@ export function UserPermissions({ user }: { user: RosterUser }) {
                   {SCOPE_META[scope].tooltip}
                 </Tooltip.Content>
               </Tooltip>
+              <span className="fs-6 fw-semibold">
+                {SCOPE_META[scope].heading}
+              </span>
             </div>
 
             <div className="border rounded overflow-hidden">
@@ -282,7 +290,9 @@ export function UserPermissions({ user }: { user: RosterUser }) {
           notify({
             title: "Role saved",
             description: next[0]
-              ? `${firstName} is now a ${roleName(next[0])}.`
+              ? `${firstName} is now ${article(roleName(next[0]))} ${roleName(
+                  next[0],
+                )}.`
               : `${firstName} has no role assigned.`,
           });
         }}
