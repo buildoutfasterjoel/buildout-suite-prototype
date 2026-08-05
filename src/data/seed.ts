@@ -1044,6 +1044,12 @@ function shiftTaskDate(stageStartedAt: string, days: number): string {
  * Dates are offsets from `stageStartedAt` (when the listing entered its
  * current stage), matching the convention `createListing.ts`'s
  * `seedProposalPlan` already uses for brand-new proposals.
+ *
+ * A deal task has no explicit type — the Tasks page derives one from the label
+ * (`deriveTaskType`). The stage plans below are worded so that every task type
+ * shows up somewhere in the open work: call (proposal), email + showing
+ * (active), meeting (under-contract), follow-up (inactive), and to-do
+ * throughout. `seed.test.ts` holds that coverage in place.
  */
 export function generateTasks(stage: ListingStage, stageStartedAt: string): DealTask[] {
   const assignee = () => faker.helpers.arrayElement(TASK_ASSIGNEE_INITIALS)
@@ -1081,6 +1087,7 @@ export function generateTasks(stage: ListingStage, stageStartedAt: string): Deal
         auto('Underwriting', 'First-pass underwrite complete', 0),
         auto('Listing proposal', 'Generated automatically', 0),
         auto("Broker's Opinion of Value", 'Generated automatically', 0),
+        todo('Call owner to confirm pricing strategy', 1),
         todo('Upload executed listing agreement', 2, '2 days after listing executed'),
         todo('Order professional photography', 3, '3 days after listing executed'),
         todo('Order property signage', 5, '5 days after listing executed'),
@@ -1089,6 +1096,7 @@ export function generateTasks(stage: ListingStage, stageStartedAt: string): Deal
     case 'active':
       return [
         auto('Send marketing package', 'Sent to prospect list', 2),
+        todo('Email updated marketing package to prospects', 6),
         todo('Schedule property tours', 10, '10 days after listing went live'),
         todo('Review incoming offers', 20, null, 'overdue'),
         todo('Confirm due diligence dates', 30),
@@ -1099,6 +1107,7 @@ export function generateTasks(stage: ListingStage, stageStartedAt: string): Deal
       return [
         todo('Execute purchase agreement (PSA)', 2),
         todo('Collect earnest money', 5),
+        todo('Meeting with title company on closing logistics', 12),
         todo('Complete due diligence', 21),
         todo('Finalize buyer financing', 30),
         todo('Clear closing contingencies', 35),

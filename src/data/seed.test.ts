@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { generateTasks, generateDataset } from './seed'
+import type { ListingStage } from './types'
 import { buildContactTimeline } from '#/components/contacts/timelineArcs'
 import { matchesContactFilters, emptyContactFilters } from '#/components/contacts/contactFilterModel'
+import {
+  TASK_TYPE_LABELS,
+  deriveTaskType,
+  type TaskTypeKey,
+} from '#/components/contacts/taskDisplay'
 
 const START = '2026-01-01T00:00:00.000Z'
 
@@ -12,6 +18,7 @@ describe('generateTasks', () => {
       'Underwriting',
       'Listing proposal',
       "Broker's Opinion of Value",
+      'Call owner to confirm pricing strategy',
       'Upload executed listing agreement',
       'Order professional photography',
       'Order property signage',
@@ -25,6 +32,7 @@ describe('generateTasks', () => {
     const tasks = generateTasks('active', START)
     expect(tasks.map((t) => t.label)).toEqual([
       'Send marketing package',
+      'Email updated marketing package to prospects',
       'Schedule property tours',
       'Review incoming offers',
       'Confirm due diligence dates',
@@ -36,6 +44,7 @@ describe('generateTasks', () => {
     expect(tasks.map((t) => t.label)).toEqual([
       'Execute purchase agreement (PSA)',
       'Collect earnest money',
+      'Meeting with title company on closing logistics',
       'Complete due diligence',
       'Finalize buyer financing',
       'Clear closing contingencies',
@@ -66,6 +75,23 @@ describe('generateTasks', () => {
     const tasks = generateTasks('proposal', START)
     const upload = tasks.find((t) => t.label === 'Upload executed listing agreement')
     expect(upload?.date).toBe('2026-01-03')
+  })
+
+  // The Tasks page badges a task by the type derived from its label, so the
+  // stage plans have to be worded such that every type is actually reachable —
+  // otherwise the page only ever shows To-Do. Open tasks only: a type that
+  // exists solely on completed work is invisible by default.
+  it('covers every task type across the stage plans, in open work', () => {
+    const stages: ListingStage[] = ['proposal', 'active', 'under-contract', 'closed', 'inactive']
+    const openTypes = new Set(
+      stages
+        .flatMap((s) => generateTasks(s, START))
+        .filter((t) => t.status !== 'complete')
+        .map((t) => deriveTaskType(t.label)),
+    )
+    for (const type of Object.keys(TASK_TYPE_LABELS) as TaskTypeKey[]) {
+      expect(openTypes, `no open seeded task derives the "${type}" type`).toContain(type)
+    }
   })
 })
 

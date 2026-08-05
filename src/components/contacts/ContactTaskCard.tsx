@@ -1,19 +1,20 @@
+import { Link } from "@tanstack/react-router";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faAlarmExclamation,
-  faHandshake,
-  faSparkles,
-  faCheck,
-} from "@fortawesome/pro-regular-svg-icons";
+import { faAlarmExclamation, faSparkles } from "@fortawesome/pro-regular-svg-icons";
 import type { ContactTask } from "#/data/types";
+import { getListing } from "#/data/store";
+import { dealCardLinkProps } from "#/components/deals/dealCardLink";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
 import { todayISO } from "#/components/contacts/contactDisplay";
+import { TaskCheckbox } from "#/components/tasks/TaskCheckbox";
 import {
+  TASK_TYPE_ICONS,
+  TASK_TYPE_LABELS,
   isAiSuggested,
   taskDueLabel,
-  taskTypeLabel,
+  taskTypeKey,
 } from "#/components/contacts/taskDisplay";
 
 /**
@@ -21,10 +22,13 @@ import {
  * "Task" component. The tile is inset (horizontal padding) so a gray hover
  * background reads as a card. Layout:
  *  - top row: completion checkbox, the title, and the assignee avatar;
- *  - bottom row: badges (AI sparkle if AI-created, a text type label, and an
- *    outlined deal badge when the source is a deal) with the due date pushed to
- *    the right — muted with no icon normally, red + bold with an alarm icon when
- *    overdue.
+ *  - bottom row: badges (AI sparkle if AI-created, an icon-only type badge, and
+ *    a ghost link to the associated deal) with the due date pushed to the right
+ *    — muted with no icon normally, red + bold with an alarm icon when overdue.
+ *
+ * The type badge is icon-only here (the Tasks page shows icon + label) and the
+ * deal reads as a hyperlink rather than a chip, keeping this narrow column
+ * legible.
  *
  * Self-contained until Blueprint ships a Task component. Completion is
  * controlled by the parent panel, so `done`/`onToggle` come in as props.
@@ -42,10 +46,14 @@ export function ContactTaskCard({
   onOpen?: () => void;
 }) {
   const due = taskDueLabel(task.date);
-  // Overdue purely by date: an incomplete task whose due date is before today.
-  const isOverdue = !done && !!task.date && task.date < todayISO();
-  const typeLabel = taskTypeLabel(task);
+  // Overdue purely by date. A completed task keeps the alarm icon but drops the
+  // red — "this was overdue when you finished it", not a live warning.
+  const isOverdue = !!task.date && task.date < todayISO();
+  const type = taskTypeKey(task);
   const showSparkle = isAiSuggested(task);
+  // A space deal has no page of its own, so the badge links wherever
+  // `dealCardLinkProps` sends it (the building's roster, for a space).
+  const dealListing = task.dealId ? getListing(task.dealId) : undefined;
 
   return (
     <div
@@ -63,17 +71,7 @@ export function ContactTaskCard({
       }
     >
       <div className="contact-task-card__inner">
-        {/* Completion checkbox (circular, per design) */}
-        <button
-          type="button"
-          role="checkbox"
-          aria-checked={done}
-          aria-label={done ? "Mark task incomplete" : "Mark task complete"}
-          className="contact-task-card__check"
-          onClick={onToggle}
-        >
-          {done && <FontAwesomeIcon icon={faCheck} />}
-        </button>
+        <TaskCheckbox checked={done} onToggle={onToggle} />
 
         <div className="contact-task-card__content">
           {/* Top row: title + assignee avatar */}
@@ -120,26 +118,37 @@ export function ContactTaskCard({
                   <FontAwesomeIcon icon={faSparkles} />
                 </span>
               )}
-              {typeLabel && (
-                <span className="contact-task-card__badge contact-task-card__badge--type">
-                  {typeLabel}
-                </span>
+              {type && (
+                <Tooltip>
+                  <Tooltip.Trigger
+                    render={
+                      <span className="contact-task-card__badge contact-task-card__badge--type contact-task-card__badge--icon">
+                        <FontAwesomeIcon icon={TASK_TYPE_ICONS[type]} />
+                      </span>
+                    }
+                  />
+                  <Tooltip.Content>{TASK_TYPE_LABELS[type]}</Tooltip.Content>
+                </Tooltip>
               )}
-              {task.dealId && (
-                <span
-                  className="contact-task-card__badge contact-task-card__badge--deal"
+              {dealListing && (
+                <Link
+                  {...dealCardLinkProps(dealListing)}
+                  className="contact-task-card__badge contact-task-card__badge--ghost"
                   title={task.dealName}
                 >
-                  <FontAwesomeIcon icon={faHandshake} />
                   <span className="text-truncate">{task.dealName}</span>
-                </span>
+                </Link>
               )}
             </div>
 
             {due && (
               <span
                 className={`contact-task-card__due${
-                  isOverdue ? " contact-task-card__due--overdue" : ""
+                  isOverdue
+                    ? done
+                      ? " contact-task-card__due--was-overdue"
+                      : " contact-task-card__due--overdue"
+                    : ""
                 }`}
               >
                 {isOverdue && <FontAwesomeIcon icon={faAlarmExclamation} />}

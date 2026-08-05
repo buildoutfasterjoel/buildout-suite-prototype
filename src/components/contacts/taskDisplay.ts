@@ -1,3 +1,12 @@
+import {
+  faArrowRotateRight,
+  faCalendarDays,
+  faDoorOpen,
+  faEnvelope,
+  faListCheck,
+  faPhone,
+} from "@fortawesome/pro-regular-svg-icons";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { ContactTask } from "#/data/types";
 
 /**
@@ -25,6 +34,19 @@ export const TASK_TYPE_LABELS: Record<TaskTypeKey, string> = {
   "to-do": "To-Do",
   "follow-up": "Follow-Up",
   showing: "Showing",
+};
+
+/**
+ * Icon for each scoped task type. Drives the type badge on both task surfaces —
+ * icon-only on the contact detail page, icon + label on the Tasks page.
+ */
+export const TASK_TYPE_ICONS: Record<TaskTypeKey, IconDefinition> = {
+  call: faPhone,
+  email: faEnvelope,
+  meeting: faCalendarDays,
+  "to-do": faListCheck,
+  "follow-up": faArrowRotateRight,
+  showing: faDoorOpen,
 };
 
 /** Keyword → type rules, checked in order; first match wins. */
@@ -61,15 +83,17 @@ export function deriveTaskType(label: string): TaskTypeKey | null {
 }
 
 /**
- * The short type-badge label for a task, scoped to the Task types. Prefers a
- * standalone task's explicit `type`; otherwise infers from the label. Returns
- * null when there's no meaningful type (so the badge is hidden), e.g. a
- * "None"-typed task or an unmatched label.
+ * The type key for a task, scoped to the Task types. Prefers a standalone
+ * task's explicit `type`; otherwise infers from the label. Returns null when
+ * there's no meaningful type (so the badge is hidden), e.g. a "None"-typed task
+ * or an unmatched label.
  */
-export function taskTypeLabel(task: ContactTask): string | null {
-  if (task.type) return TASK_TYPE_LABELS[task.type as TaskTypeKey] ?? null;
-  const derived = deriveTaskType(task.label);
-  return derived ? TASK_TYPE_LABELS[derived] : null;
+export function taskTypeKey(task: ContactTask): TaskTypeKey | null {
+  if (task.type) {
+    const key = task.type as TaskTypeKey;
+    return TASK_TYPE_LABELS[key] ? key : null;
+  }
+  return deriveTaskType(task.label);
 }
 
 /**

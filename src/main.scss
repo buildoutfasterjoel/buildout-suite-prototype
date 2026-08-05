@@ -813,38 +813,6 @@
     border-bottom: 0;
   }
 
-  // Circular completion checkbox.
-  &__check {
-    flex-shrink: 0;
-    width: 18px;
-    height: 18px;
-    margin-top: 1px;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--bp-input-bg, #fff);
-    border: 1.5px solid var(--color-storm-grey-200, #d5dae2);
-    border-radius: 999px;
-    color: #fff;
-    font-size: 10px;
-    line-height: 1;
-    cursor: pointer;
-    transition:
-      background-color 0.12s ease,
-      border-color 0.12s ease;
-
-    &:hover {
-      background-color: var(--color-buildout-blue-50, #eff6ff);
-      border-color: var(--color-storm-grey-300, #afb9ca);
-    }
-
-    &[aria-checked="true"] {
-      background-color: var(--color-buildout-blue-500, #3f86f2);
-      border-color: var(--color-buildout-blue-500, #3f86f2);
-    }
-  }
-
   // Content column: title row + meta row.
   &__content {
     flex: 1 0 0;
@@ -937,17 +905,31 @@
       color: var(--color-storm-grey-900, #22262f);
     }
 
-    &--deal {
+    // Icon-only badge (contact column type badge): a 20px square, no label.
+    &--icon {
+      width: 20px;
+      padding: 4px;
+    }
+
+    // The associated record (deal or contact) on both task surfaces: the accent
+    // ghost badge — no fill, no border, so it reads as the hyperlink it is.
+    &--ghost {
       max-width: 100%;
-      border: 1px solid var(--color-storm-grey-200, #d5dae2);
-      color: #333a47;
+      padding: 4px;
+      color: var(--root-accent, #2042a7);
+      text-decoration: none;
 
       svg {
-        color: #333a47;
+        color: var(--root-accent, #2042a7);
+      }
+
+      &:is(a):hover {
+        color: var(--root-accent, #2042a7);
+        text-decoration: underline;
       }
 
       .text-truncate {
-        max-width: 160px;
+        max-width: 200px;
       }
     }
   }
@@ -977,21 +959,97 @@
         color: #af050d;
       }
     }
+
+    // Was overdue when completed: keeps the alarm icon and the semibold weight,
+    // but drops to muted — it's history, not a live warning.
+    &--was-overdue {
+      font-weight: 600;
+      color: var(--color-storm-grey-600, #506079);
+
+      svg {
+        color: var(--color-storm-grey-600, #506079);
+      }
+    }
   }
 
-  // Completed: mute + strike the label and give the checkbox a soft fill.
+  // Completed: mute + strike the label and drain the color from the badges.
   &--done {
     .contact-task-card__label {
       color: var(--color-storm-grey-500, #62748e);
       text-decoration: line-through;
     }
 
-    .contact-task-card__check,
-    .contact-task-card__check[aria-checked="true"] {
-      background-color: var(--color-buildout-blue-100, #dcebfd);
-      border-color: transparent;
-      color: var(--color-buildout-blue-800, #203d88);
+    .contact-task-card__badge--ai {
+      background: var(--color-storm-grey-100, #eceef2);
+      color: var(--color-storm-grey-900, #22262f);
     }
+  }
+}
+
+// Task completion checkbox (Figma "TaskCheckbox"). One 18px box that moves
+// through the completion sequence via `data-state`; every state transitions
+// from the last, so checking reads as a single motion:
+//   unchecked → anim (grown + tilted, green) → settle (base shape, green)
+//   → checked (gray)
+// The checkmark is always in the DOM — states reveal it by color, which is what
+// makes the hover hint and the fade-to-gray a pure transition.
+.task-checkbox {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bp-input-bg, #fff);
+  border: 1px solid var(--color-storm-grey-300, #afb9ca);
+  border-radius: var(--bp-border-radius-md, 6px);
+  color: transparent;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 0.24s ease,
+    border-color 0.24s ease,
+    border-radius 0.2s ease,
+    color 0.24s ease,
+    font-size 0.2s ease,
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  // Hover reveals a gray checkmark — a preview of what the click does.
+  &[data-state="unchecked"]:hover {
+    color: var(--color-storm-grey-300, #afb9ca);
+  }
+
+  // Green fill + white check, grown to 22px and tilted 4°.
+  &[data-state="anim"] {
+    background: var(--root-success, #00bc7d);
+    border-color: transparent;
+    border-radius: var(--bp-border-radius-lg, 8px);
+    color: var(--root-success-foreground, #eafff5);
+    font-size: 12px;
+    transform: scale(1.2222) rotate(4deg);
+  }
+
+  // Back to the base shape, still green.
+  &[data-state="settle"] {
+    background: var(--root-success, #00bc7d);
+    border-color: transparent;
+    color: var(--root-success-foreground, #eafff5);
+    font-size: 12px;
+  }
+
+  // Completed: gray fill, near-white check.
+  &[data-state="checked"] {
+    background: var(--color-storm-grey-300, #afb9ca);
+    border-color: transparent;
+    color: var(--color-storm-grey-50, #f6f7f9);
+    font-size: 12px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
   }
 }
 
@@ -3689,12 +3747,25 @@
 // the collapse chevron matches the Contact Details accordions (default chevron
 // on the right, dimmed). The outer .border/.rounded-3 owns the card frame, so
 // the accordion item's own border is zeroed.
+//
+// The frame deliberately does NOT clip with overflow:hidden — that would trap
+// the sticky header in its own scroll container. Corners are rounded part by
+// part instead (inheriting the frame's radius down to the header button).
 .tasks-group {
   .accordion-item {
     border: 0;
-    border-radius: 0;
+    border-radius: inherit;
     margin-top: 0;
     background: transparent;
+  }
+
+  // Section headers stay pinned to the top of the scrolling page while their
+  // own rows pass underneath, then scroll away with the section.
+  .accordion-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    border-radius: inherit;
   }
 
   .accordion-button,
@@ -3702,12 +3773,16 @@
     background: var(--bp-card-bg, #fff);
     box-shadow: none;
     border: 0 solid var(--color-storm-grey-100, #eceef2);
+    border-radius: inherit;
     color: inherit;
     padding: 12px 16px;
   }
   // Bottom border only while open, so the header reads as separated from rows.
+  // Square bottom corners then, since rows sit directly beneath.
   .accordion-button:not(.collapsed) {
     border-bottom-width: 1px;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
   }
   // Chevron on the LEFT, ahead of the title, dimmed. Collapsed points RIGHT,
   // open points DOWN — re-aiming Bootstrap's animated rotation (matches the
