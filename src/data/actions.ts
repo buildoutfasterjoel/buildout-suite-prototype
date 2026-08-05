@@ -566,6 +566,8 @@ export interface NewTaskInput {
   reminders?: string[]
   followUpDate?: string | null
   requireAttachments?: boolean
+  /** Set by the assistant's `create_task` tool; the Add Task modal leaves it off. */
+  createdByAi?: boolean
 }
 
 /** Resolve a teammate's two-letter initials from their id (falls back to the current user). */
@@ -598,6 +600,7 @@ export function createTask(input: NewTaskInput): { task: Task } {
     requireAttachments: input.requireAttachments ?? false,
     status: 'open',
     createdAt: new Date().toISOString(),
+    createdByAi: input.createdByAi ?? false,
   }
   useDataStore.setState((s) => {
     const tasks = new Map(s.tasks)

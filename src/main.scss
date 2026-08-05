@@ -3743,15 +3743,17 @@
 }
 
 // ── Tasks page (grouped view) ───────────────────────────────────────────────
-// Each section is a bordered rounded card wrapping a Blueprint Accordion, so
-// the collapse chevron matches the Contact Details accordions (default chevron
-// on the right, dimmed). The outer .border/.rounded-3 owns the card frame, so
-// the accordion item's own border is zeroed.
+// Each section is its own .panel-card wrapping a Blueprint Accordion, so the
+// collapse chevron matches the Contact Details accordions (default chevron on
+// the right, dimmed). The card owns the frame, so the accordion item's own
+// border is zeroed and its radius is inherited from the card.
 //
-// The frame deliberately does NOT clip with overflow:hidden — that would trap
+// The card deliberately does NOT clip with overflow:hidden — that would trap
 // the sticky header in its own scroll container. Corners are rounded part by
-// part instead (inheriting the frame's radius down to the header button).
+// part instead (inheriting the card's radius down to the header button).
 .tasks-group {
+  border-radius: inherit;
+
   .accordion-item {
     border: 0;
     border-radius: inherit;

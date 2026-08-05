@@ -10,9 +10,9 @@ import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
 import { todayISO } from "#/components/contacts/contactDisplay";
 import { TaskCheckbox } from "#/components/tasks/TaskCheckbox";
 import {
+  AI_TASK_BADGE_LABEL,
   TASK_TYPE_ICONS,
   TASK_TYPE_LABELS,
-  isAiSuggested,
   taskDueLabel,
   taskTypeKey,
 } from "#/components/contacts/taskDisplay";
@@ -50,7 +50,6 @@ export function ContactTaskCard({
   // red — "this was overdue when you finished it", not a live warning.
   const isOverdue = !!task.date && task.date < todayISO();
   const type = taskTypeKey(task);
-  const showSparkle = isAiSuggested(task);
   // A space deal has no page of its own, so the badge links wherever
   // `dealCardLinkProps` sends it (the building's roster, for a space).
   const dealListing = task.dealId ? getListing(task.dealId) : undefined;
@@ -109,14 +108,20 @@ export function ContactTaskCard({
           {/* Bottom row: badges + due date */}
           <div className="contact-task-card__meta">
             <div className="contact-task-card__badges">
-              {showSparkle && (
-                <span
-                  className="contact-task-card__badge contact-task-card__badge--ai"
-                  aria-label="AI suggested"
-                  title="AI suggested"
-                >
-                  <FontAwesomeIcon icon={faSparkles} />
-                </span>
+              {task.createdByAi && (
+                <Tooltip>
+                  <Tooltip.Trigger
+                    render={
+                      <span
+                        className="contact-task-card__badge contact-task-card__badge--ai"
+                        aria-label={AI_TASK_BADGE_LABEL}
+                      >
+                        <FontAwesomeIcon icon={faSparkles} />
+                      </span>
+                    }
+                  />
+                  <Tooltip.Content>{AI_TASK_BADGE_LABEL}</Tooltip.Content>
+                </Tooltip>
               )}
               {type && (
                 <Tooltip>

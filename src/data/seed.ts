@@ -1087,7 +1087,9 @@ export function generateTasks(stage: ListingStage, stageStartedAt: string): Deal
         auto('Underwriting', 'First-pass underwrite complete', 0),
         auto('Listing proposal', 'Generated automatically', 0),
         auto("Broker's Opinion of Value", 'Generated automatically', 0),
-        todo('Call owner to confirm pricing strategy', 1),
+        // Queued by the assistant after the last touch — the sparkle badge is
+        // reserved for exactly this, never for the `auto()` deliverables above.
+        { ...todo('Call owner to confirm pricing strategy', 1), createdByAi: true },
         todo('Upload executed listing agreement', 2, '2 days after listing executed'),
         todo('Order professional photography', 3, '3 days after listing executed'),
         todo('Order property signage', 5, '5 days after listing executed'),
@@ -1125,7 +1127,7 @@ export function generateTasks(stage: ListingStage, stageStartedAt: string): Deal
     case 'inactive':
       return [
         todo('Archive listing documents', 1, null, 'complete'),
-        todo('Follow up with owner', 14),
+        { ...todo('Follow up with owner', 14), createdByAi: true },
       ]
   }
 }
