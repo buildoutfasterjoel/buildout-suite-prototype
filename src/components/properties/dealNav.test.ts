@@ -63,12 +63,27 @@ describe("dealBreadcrumbTrail", () => {
       detailId: null,
     });
   });
+
+  it("labels the listing section", () => {
+    expect(dealBreadcrumbTrail(`/listings/${ID}/listing`, ID)).toEqual({
+      sectionLabel: "Listing",
+      detailId: null,
+    });
+  });
 });
 
 describe("NAV_GROUPS", () => {
   it("has unique hrefs, so a breadcrumb lookup cannot be ambiguous", () => {
     const hrefs = NAV_GROUPS.flatMap((g) => g.items).map((i) => i.href);
     expect(new Set(hrefs).size).toBe(hrefs.length);
+  });
+
+  it("leads Marketing with the Listing page", () => {
+    const marketing = NAV_GROUPS.find((g) => g.label === "Marketing");
+    expect(marketing?.items[0]).toMatchObject({
+      label: "Listing",
+      href: "listing",
+    });
   });
 });
 
@@ -118,6 +133,16 @@ describe("visibleNavGroups", () => {
   it("shows Underwriting only when the property qualifies", () => {
     expect(hrefs("sale", { leaseParent: false, showsUnderwriting: true })).toContain("underwriting");
     expect(hrefs("sale", { leaseParent: false, showsUnderwriting: false })).not.toContain("underwriting");
+  });
+
+  it("shows Listing for every shape that has a page", () => {
+    // Not filtered by shape: the listing fields are the deal's marketing content
+    // whatever the deal's shape. A space has no page at all, so it never asks.
+    for (const shape of ["sale", "flat-lease", "shell"] as const) {
+      expect(hrefs(shape, { leaseParent: true, showsUnderwriting: true }), shape).toContain(
+        "listing",
+      );
+    }
   });
 
   it("never renders an empty group", () => {
