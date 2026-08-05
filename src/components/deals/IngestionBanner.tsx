@@ -10,6 +10,7 @@ import {
 import { faSpinnerThird } from "@fortawesome/pro-regular-svg-icons";
 import { INGESTION_STAGES, unresolvedCount } from "#/data/ingestion";
 import { dismissIngestion } from "#/data/actions";
+import { ingestionReviewTarget } from "#/components/deals/ingestionRouting";
 import type { Listing } from "#/data/types";
 
 /**
@@ -51,6 +52,11 @@ export function IngestionBanner({ listing }: { listing: Listing }) {
 
   if (ingestion.status === "needs-review") {
     const remaining = unresolvedCount(ingestion);
+    // Whichever page holds the first field the broker has not settled — the
+    // conflicts are split across the two edit pages now. Branched in the JSX
+    // (rather than a shared `const`) so each `to` stays the literal union
+    // member TanStack's router expects, instead of widening to `string`.
+    const onDealPage = ingestionReviewTarget(ingestion.conflicts) === "deal";
     return (
       <Alert severity="warning" withIcon className={BANNER_CLASS}>
         <FontAwesomeIcon icon={faTriangleExclamation} />
@@ -68,11 +74,19 @@ export function IngestionBanner({ listing }: { listing: Listing }) {
             size="sm"
             nativeButton={false}
             render={
-              <Link
-                to="/listings/$listingId/edit"
-                params={{ listingId: listing.id }}
-                search={{ review: "ingestion" }}
-              />
+              onDealPage ? (
+                <Link
+                  to="/listings/$listingId/edit"
+                  params={{ listingId: listing.id }}
+                  search={{ review: "ingestion" }}
+                />
+              ) : (
+                <Link
+                  to="/listings/$listingId/listing"
+                  params={{ listingId: listing.id }}
+                  search={{ review: "ingestion" }}
+                />
+              )
             }
           >
             Review fields

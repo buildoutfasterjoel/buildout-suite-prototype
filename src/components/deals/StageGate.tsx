@@ -585,8 +585,9 @@ export function StageGate({
                 useStageGate.getState().setPendingPublish(deal.id);
                 onOpenChange(false);
                 // A space's terms live on its building's roster, not on an edit
-                // form — the space-terms section was removed from that form when
-                // spaces stopped having pages. Everything else still edits normally.
+                // form. Everything else goes to the listing form: what the publish
+                // gate flags is marketing content, which lives there now, not on
+                // the deal form.
                 void navigate(
                   deal.parentDealId
                     ? {
@@ -595,7 +596,7 @@ export function StageGate({
                         search: { space: deal.id },
                       }
                     : {
-                        to: "/listings/$listingId/edit",
+                        to: "/listings/$listingId/listing",
                         params: { listingId: deal.id },
                       },
                 );

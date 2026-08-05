@@ -51,15 +51,16 @@ const ALLOWED: Record<string, string> = {
   "src/features/editor/EditorRoot.tsx": "Save and close → Documents, id resolved",
 
   // Pattern C — a space's terms moved to the roster, so the publish gate's
-  // "Back to editing" branches on `parentDealId` instead of assuming /edit.
-  "src/components/deals/StageGate.tsx": "publish gate branches space → roster, deal → /edit",
+  // "Back to editing" branches on `parentDealId` instead of assuming a page.
+  "src/components/deals/StageGate.tsx": "publish gate branches space → roster, deal → /listing",
 
   // Within the deal whose page is already open: these link a deal to its own
   // sections, so the id is the URL's, never a card's.
   "src/components/properties/PropertyDetailHeader.tsx": "sections of the open deal",
   "src/components/properties/PropertyDetailSidebar.tsx": "sections of the open deal",
-  "src/components/deals/DealMarketingEditor.tsx": "the open deal's own edit form, back to its overview",
-  "src/components/deals/IngestionBanner.tsx": "rendered on the open deal's overview, links to its edit form",
+  "src/components/deals/edit/DealEditor.tsx": "the open deal's own edit form, back to its overview",
+  "src/components/listings/edit/ListingEditor.tsx": "the open deal's own edit form, cross-links to the Deal page when conflicts remain there",
+  "src/components/deals/IngestionBanner.tsx": "rendered on the open deal's overview, links to whichever edit page holds the first unresolved conflict",
 
   // Opens a deal it has just created. `createDeal` never sets `parentDealId` —
   // a space only ever comes from `addSpaceToDeal` — so neither can produce one.
