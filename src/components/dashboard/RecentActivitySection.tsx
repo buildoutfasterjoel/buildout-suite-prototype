@@ -30,42 +30,49 @@ function ActivityRow({ item }: { item: ActivityItem }) {
   return (
     <article className="tl-row" data-type={item.kind}>
       <div className="tl-row__rail">
-        <IconBadge icon={config.icon} tone={config.tone} attention={false} />
+        <IconBadge icon={config.icon} attention={false} />
         <span className="tl-row__connector" aria-hidden="true" />
       </div>
 
       <div className="tl-row__body">
         <div className="tl-row__head">
-          <span className="tl-row__actors">
-            {ACTOR_NAME}
-            {" › "}
-            <span className="tl-row__contact-name">{item.contactName}</span>
-            {item.durationSecs != null && (
-              <span className="tl-row__duration">
-                {" "}
-                ({durationLabel(item.durationSecs)})
-              </span>
-            )}
-          </span>
-          <span className="tl-row__head-right">
-            <Tooltip>
-              <Tooltip.Trigger
-                render={
-                  <span className="tl-row__time">
-                    {relativeTime(item.timestamp, DASHBOARD_NOW)}
-                  </span>
-                }
-              />
-              <Tooltip.Content>{exactTime(item.timestamp)}</Tooltip.Content>
-            </Tooltip>
-          </span>
+          {/* Same head shape as the contact timeline: actors and the timestamp on
+              one line, then the event's own line below. */}
+          <div className="tl-row__actors">
+            <span className="tl-row__actor">{ACTOR_NAME}</span>
+            <span className="tl-row__arrow">›</span>
+            <span className="tl-row__recipient">{item.contactName}</span>
+            <span className="tl-row__meta">
+              <Tooltip>
+                <Tooltip.Trigger
+                  render={
+                    <span className="tl-row__time">
+                      {relativeTime(item.timestamp, DASHBOARD_NOW)}
+                    </span>
+                  }
+                />
+                <Tooltip.Content>{exactTime(item.timestamp)}</Tooltip.Content>
+              </Tooltip>
+              {item.durationSecs != null && (
+                <span className="tl-row__duration">
+                  ({durationLabel(item.durationSecs)})
+                </span>
+              )}
+            </span>
+          </div>
+
+          <div className="tl-row__context">
+            <span className="tl-row__subject">
+              <span>{config.defaultTitle}</span>
+            </span>
+          </div>
         </div>
 
-        <div className="tl-row__subject">
-          <span>{config.defaultTitle}</span>
-        </div>
-
-        {item.body && <p className="tl-row__text">{item.body}</p>}
+        {item.body && (
+          <div className="tl-row__content">
+            <p className="tl-row__text">{item.body}</p>
+          </div>
+        )}
       </div>
     </article>
   );

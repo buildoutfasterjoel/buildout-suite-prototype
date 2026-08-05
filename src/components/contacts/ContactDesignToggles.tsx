@@ -5,6 +5,7 @@ import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaintbrush } from "@fortawesome/pro-regular-svg-icons";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
+import { CONTACT_NARROW_QUERY, useMediaQuery } from "#/lib/useMediaQuery";
 
 /** A single labeled switch row inside the design menu. */
 function ToggleRow({
@@ -54,6 +55,11 @@ export function ContactDesignToggles() {
   const setTimelineFilter = useContactUiPrefs((s) => s.setTimelineFilter);
   const dealCards = useContactUiPrefs((s) => s.dealCards);
   const setDealCards = useContactUiPrefs((s) => s.setDealCards);
+  const narrowLayout = useContactUiPrefs((s) => s.narrowLayout);
+  const setNarrowLayout = useContactUiPrefs((s) => s.setNarrowLayout);
+  // The narrow-layout switch only changes anything below the breakpoint, so say
+  // so rather than letting it read as broken on a wide screen.
+  const isNarrow = useMediaQuery(CONTACT_NARROW_QUERY);
 
   return (
     <Popover>
@@ -104,6 +110,15 @@ export function ContactDesignToggles() {
             value={dealCards === "new" ? "New" : "Current"}
             checked={dealCards === "new"}
             onCheckedChange={(c) => setDealCards(c ? "new" : "current")}
+          />
+          <Separator />
+          <ToggleRow
+            title="Narrow layout"
+            value={`${narrowLayout === "tabs" ? "Tabs" : "Stacked"}${
+              isNarrow ? "" : " · needs < 1280px"
+            }`}
+            checked={narrowLayout === "tabs"}
+            onCheckedChange={(c) => setNarrowLayout(c ? "tabs" : "stacked")}
           />
         </Popover.Body>
       </Popover.Content>

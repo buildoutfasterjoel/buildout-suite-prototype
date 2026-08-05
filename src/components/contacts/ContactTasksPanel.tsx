@@ -32,10 +32,13 @@ export function ContactTasksPanel({
   contact,
   tasks,
   completedTasks,
+  bare = false,
 }: {
   contact: Contact;
   tasks: ContactTask[];
   completedTasks: ContactTask[];
+  /** Drop the card + collapsible header — used as the body of a tab. */
+  bare?: boolean;
 }) {
   // Section collapse + completed-reveal persist across contacts (useContactUiPrefs).
   const tasksOpen = useContactUiPrefs((s) => s.tasksOpen);
@@ -102,6 +105,73 @@ export function ContactTasksPanel({
     return undefined;
   };
 
+  const body = (
+    <div className="d-flex flex-column">
+      {active.length === 0 ? (
+        <span className="text-muted fs-small">
+          No open tasks — AI queues them after your next call or email.
+        </span>
+      ) : (
+        active.map((r) => (
+          <ContactTaskCard
+            key={r.task.id}
+            task={r.task}
+            done={false}
+            onToggle={() => toggle(r.task, false)}
+            onOpen={openTask(r.task)}
+          />
+        ))
+      )}
+
+      {completed.length > 0 && (
+        <Button
+          variant="ghost"
+          className="w-100"
+          onClick={() => setShowCompleted(!showCompleted)}
+        >
+          {showCompleted
+            ? "Hide Completed Tasks"
+            : `Show ${completed.length} Completed Task${
+                completed.length === 1 ? "" : "s"
+              }`}
+        </Button>
+      )}
+
+      {showCompleted &&
+        completed.map((r) => (
+          <ContactTaskCard
+            key={r.task.id}
+            task={r.task}
+            done
+            onToggle={() => toggle(r.task, true)}
+            onOpen={openTask(r.task)}
+          />
+        ))}
+    </div>
+  );
+
+  // Inside a tab the tab strip already names the section and carries the count,
+  // so the card, the collapse and the header all come off — but the Add action
+  // has to survive, since it's the only way to create a task from here.
+  if (bare) {
+    return (
+      <div className="contact-tasks-bare">
+        <div className="contact-tasks-bare__actions">
+          <Button
+            variant="ghost"
+            appearance="muted"
+            size="icon-sm"
+            aria-label="Add task"
+            onClick={() => useAddTask.getState().openFor(contact.id)}
+          >
+            <FontAwesomeIcon icon={faPlus} />
+          </Button>
+        </div>
+        {body}
+      </div>
+    );
+  }
+
   return (
     <Card className="panel-card overflow-hidden">
       <Accordion
@@ -129,48 +199,7 @@ export function ContactTasksPanel({
             </Button>
           }
         >
-          <div className="d-flex flex-column">
-            {active.length === 0 ? (
-              <span className="text-muted fs-small">
-                No open tasks — AI queues them after your next call or email.
-              </span>
-            ) : (
-              active.map((r) => (
-                <ContactTaskCard
-                  key={r.task.id}
-                  task={r.task}
-                  done={false}
-                  onToggle={() => toggle(r.task, false)}
-                  onOpen={openTask(r.task)}
-                />
-              ))
-            )}
-
-            {completed.length > 0 && (
-              <Button
-                variant="ghost"
-                className="w-100"
-                onClick={() => setShowCompleted(!showCompleted)}
-              >
-                {showCompleted
-                  ? "Hide Completed Tasks"
-                  : `Show ${completed.length} Completed Task${
-                      completed.length === 1 ? "" : "s"
-                    }`}
-              </Button>
-            )}
-
-            {showCompleted &&
-              completed.map((r) => (
-                <ContactTaskCard
-                  key={r.task.id}
-                  task={r.task}
-                  done
-                  onToggle={() => toggle(r.task, true)}
-                  onOpen={openTask(r.task)}
-                />
-              ))}
-          </div>
+          {body}
         </ContactSection>
       </Accordion>
     </Card>

@@ -1,21 +1,29 @@
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+// The rail glyphs are SOLID — at 14px inside a 36px bubble an outline glyph goes
+// thin and muddy, and the bubble already carries the weight. The filter icons
+// below stay regular; they sit on their own in a control, not in a bubble.
 import {
-  faPhone,
+  faPhone as faPhoneSolid,
   faPhoneArrowDownLeft,
-  faEnvelope,
-  faEnvelopeOpen,
+  faEnvelope as faEnvelopeSolid,
   faReply,
   faEnvelopes,
   faCalendarUsers,
   faBuilding,
-  faNoteSticky,
-  faCircleQuestion,
+  faNoteSticky as faNoteStickySolid,
+  faCircleQuestion as faCircleQuestionSolid,
   faBullhorn,
   faListCheck,
   faFlagCheckered,
   faShuffle,
   faUserGear,
   faGear,
+} from "@fortawesome/pro-solid-svg-icons";
+import {
+  faPhone,
+  faEnvelope,
+  faNoteSticky,
+  faCircleQuestion,
   faListUl,
   faCalendar,
   faBinoculars,
@@ -29,8 +37,8 @@ import { contactFullName } from "#/components/contacts/contactDisplay";
 // Activity timeline data model
 //
 // A single `TimelineEvent` shape backs every row (mirrors the Figma
-// `TimelineEvent` component set). The `type` drives icon/tone/content via the
-// `TYPE_CONFIG` map; per-row booleans (pinned, …) and PR2 state props
+// `TimelineEvent` component set). The `type` drives icon/content via the
+// `TYPE_CONFIG` map; per-row booleans (pinned, …) and state props
 // (action bar, reply open, …) toggle overlays. No per-type component forks.
 //
 // Excluded per product scope: Text/SMS, saved/viewed property, property search,
@@ -55,19 +63,6 @@ export type TimelineEventType =
   | "assignment"
   | "change-log";
 
-/** Circular icon-badge tones (channel color) — see IconBadge. */
-export type IconTone = "green" | "amber" | "blue" | "rose" | "accent" | "slate";
-
-/** Pill tones for delivery / engagement / status — see TimelineBadge. */
-export type BadgeTone =
-  | "sent"
-  | "open"
-  | "click"
-  | "reply"
-  | "activity"
-  | "system"
-  | "error";
-
 /** Which FilterBar tab an event counts toward. */
 export type FilterKey =
   | "all"
@@ -84,13 +79,6 @@ export type FilterKey =
 export interface TimelineActor {
   name: string;
   avatarUrl?: string;
-}
-
-export interface TimelineBadgeData {
-  label: string;
-  tone: BadgeTone;
-  /** Optional trailing meta, e.g. "2h after send". */
-  meta?: string;
 }
 
 /** A labeled bullet group (Call summary, Next steps, To…). */
@@ -168,9 +156,6 @@ export interface TimelineEvent {
   subject?: string;
   blocks?: TimelineBlock[];
   body?: string;
-  /** Source-channel tag rendered inline with the headline (e.g. an inquiry's "LoopNet"). */
-  sourceTag?: string;
-  badges?: TimelineBadgeData[];
   reply?: TimelineReply;
   threadId?: string;
   messageId?: string;
@@ -183,7 +168,7 @@ export interface TimelineEvent {
   hasAttachment?: boolean;
   /** Attached documents, rendered as file chips under the body. */
   attachments?: TimelineAttachment[];
-  /** Voicemail / missed flag — flips the icon to an outline/amber treatment. */
+  /** Voicemail / missed flag — what holds an inbound call in needs-attention. */
   attempted?: boolean;
   /**
    * Per-event action bar — overrides the type's default labels when this one
@@ -193,189 +178,150 @@ export interface TimelineEvent {
   actionBar?: TypeConfig["actionBar"];
 }
 
+/**
+ * Which channel buttons the hover FAB carries between the pin and the overflow
+ * trigger. Derived per type rather than per row, because it's the channel that
+ * decides whether "reply" is even a coherent action.
+ */
+export type FabChannel = "none" | "call" | "email" | "inquiry";
+
 /** Per-type presentation + action-label config (the Figma type variant set). */
 export interface TypeConfig {
   icon: IconDefinition;
-  tone: IconTone;
-  /** Default fill; `attempted`/system rows render outline. */
-  filled: boolean;
   filter: Exclude<FilterKey, "all" | "attachments">;
   /** Default headline when an event supplies no `title`. */
   defaultTitle: string;
   /** System / marketing rows are not 1:1 editable. */
   readOnly?: boolean;
-  /** Tier-1 action bar labels (consumed in PR2). */
+  /**
+   * Needs-attention action bar. `primary` is the filled button; `ghosts` are the
+   * outlined ones. Every bar also gets a "Dismiss" ghost, added by the bar
+   * itself — it's the one action that means the same thing on every row.
+   */
   actionBar?: { primary?: string; ghosts?: string[] };
-  /** Type-specific overflow-menu top items (consumed in PR2). */
-  overflow?: string[];
+  /** Channel buttons in the hover FAB. Defaults to "none". */
+  fab?: FabChannel;
 }
 
-/** Overflow-menu items appended to every type's own items (Tier-3). */
-export const UNIVERSAL_OVERFLOW = [
-  "Pin to top",
-  "Comment",
-  "Create task",
-  "Associate",
-  "Copy link",
-  "Delete",
-];
+/**
+ * The overflow menu, now the same three items on every row. It used to stack a
+ * per-type list on top of a six-item universal set, which made the menu the
+ * widest surface in the feed and buried the two things anyone actually reached
+ * for. Channel actions live in the hover FAB instead, where they're one click.
+ */
+export const OVERFLOW_ITEMS = ["Pin to Top", "Edit", "Delete"] as const;
 
 /**
- * The per-type map. Also carries the action-bar / overflow labels so PR2 can
- * relabel actions by type ("Call back" vs "Reply") without per-type forks.
+ * The per-type map. Also carries the action-bar labels and the FAB channel so a
+ * row can relabel its actions by type ("Call back" vs "Reply") without per-type
+ * component forks.
+ *
+ * The three designed action bars are Call back / Reply / Email — a missed call
+ * wants a call back, an email wants a reply, and an inquiry wants first contact
+ * on whichever channel suits. Every bar carries "Task for later" so the broker
+ * can defer without the row going quiet, and "Dismiss" is added by the bar.
  */
 export const TYPE_CONFIG: Record<TimelineEventType, TypeConfig> = {
   call: {
-    icon: faPhone,
-    tone: "green",
-    filled: true,
+    icon: faPhoneSolid,
     filter: "calls",
     defaultTitle: "Logged a call",
-    actionBar: { primary: "Call back", ghosts: ["Log follow-up"] },
-    overflow: ["Play recording", "Edit summary", "Log call"],
+    actionBar: { primary: "Call back", ghosts: ["Task for later"] },
+    fab: "call",
   },
   email: {
-    icon: faEnvelope,
-    tone: "blue",
-    filled: true,
+    icon: faEnvelopeSolid,
     filter: "emails",
     defaultTitle: "Sent an email",
-    actionBar: { primary: "Reply", ghosts: ["Reply all", "Forward"] },
-    overflow: ["View thread", "Resend", "Log call"],
+    actionBar: { primary: "Reply", ghosts: ["Reply all", "Task for later"] },
+    fab: "email",
   },
   "inbound-email": {
-    icon: faEnvelopeOpen,
-    tone: "blue",
-    filled: false,
+    icon: faEnvelopeSolid,
     filter: "emails",
     defaultTitle: "Received an email",
-    actionBar: { primary: "Reply", ghosts: ["Reply all", "Forward"] },
-    overflow: ["View thread", "Create task", "Book meeting"],
+    actionBar: { primary: "Reply", ghosts: ["Reply all", "Task for later"] },
+    fab: "email",
   },
   "email-reply": {
     icon: faReply,
-    tone: "blue",
-    filled: false,
     filter: "emails",
     defaultTitle: "Replied",
-    actionBar: { primary: "Reply", ghosts: ["Reply all"] },
-    overflow: ["View thread", "Create task", "Book meeting"],
+    actionBar: { primary: "Reply", ghosts: ["Reply all", "Task for later"] },
+    fab: "email",
   },
   "inbound-call": {
     icon: faPhoneArrowDownLeft,
-    tone: "rose",
-    filled: false,
     filter: "calls",
-    defaultTitle: "Inbound call",
-    actionBar: { primary: "Call back", ghosts: [] },
-    overflow: ["Play voicemail", "Create task", "Log call"],
+    defaultTitle: "Missed call",
+    actionBar: { primary: "Call back", ghosts: ["Task for later"] },
+    fab: "call",
   },
   conversation: {
     icon: faEnvelopes,
-    tone: "blue",
-    filled: true,
     filter: "emails",
     defaultTitle: "Email conversation",
-    actionBar: { primary: "Reply", ghosts: ["Reply all", "Forward"] },
-    overflow: ["View full thread", "Create task"],
+    actionBar: { primary: "Reply", ghosts: ["Reply all", "Task for later"] },
+    fab: "email",
   },
   meeting: {
     icon: faCalendarUsers,
-    tone: "accent",
-    filled: true,
     filter: "meetings",
     defaultTitle: "Logged a meeting",
-    actionBar: { primary: "Add notes", ghosts: ["Reschedule"] },
-    overflow: ["Set disposition", "Create task"],
   },
   tour: {
     icon: faBuilding,
-    tone: "accent",
-    filled: true,
     filter: "tours",
     defaultTitle: "Logged a tour",
-    actionBar: { primary: "Send side-by-side", ghosts: ["Add feedback"] },
-    overflow: ["Add feedback", "Create task"],
   },
   note: {
-    icon: faNoteSticky,
-    tone: "slate",
-    filled: true,
+    icon: faNoteStickySolid,
     filter: "notes",
     defaultTitle: "Added a note",
-    actionBar: { primary: "Comment", ghosts: ["Edit"] },
-    overflow: ["Edit", "Change visibility"],
   },
   inquiry: {
-    icon: faCircleQuestion,
-    tone: "blue",
-    filled: false,
+    icon: faCircleQuestionSolid,
     filter: "inquiries",
     defaultTitle: "Property inquiry",
-    actionBar: { primary: "Respond", ghosts: [] },
-    overflow: ["Send listing", "Create task"],
+    actionBar: { primary: "Email", ghosts: ["Call", "Task for later"] },
+    fab: "inquiry",
   },
   marketing: {
     icon: faBullhorn,
-    tone: "accent",
-    filled: true,
     filter: "marketing",
     defaultTitle: "Marketing email",
     readOnly: true,
-    actionBar: { primary: "Email directly", ghosts: [] },
-    overflow: ["View campaign", "Email directly"],
   },
   task: {
     icon: faListCheck,
-    tone: "green",
-    filled: true,
     filter: "activity",
     defaultTitle: "Task",
-    actionBar: { primary: "Do it now", ghosts: ["Reassign"] },
-    overflow: ["Edit task", "Reassign"],
   },
   created: {
     icon: faFlagCheckered,
-    tone: "slate",
-    filled: false,
     filter: "activity",
     defaultTitle: "Contact created",
     readOnly: true,
-    overflow: ["View source"],
   },
   "stage-change": {
     icon: faShuffle,
-    tone: "slate",
-    filled: false,
     filter: "activity",
     defaultTitle: "Stage change",
     readOnly: true,
-    overflow: ["View change log"],
   },
   assignment: {
     icon: faUserGear,
-    tone: "slate",
-    filled: false,
     filter: "activity",
     defaultTitle: "Assignment",
     readOnly: true,
-    overflow: ["View change log"],
   },
   "change-log": {
     icon: faGear,
-    tone: "slate",
-    filled: false,
     filter: "activity",
     defaultTitle: "Record change",
     readOnly: true,
-    overflow: ["View change log"],
   },
 };
-
-/** Universal overflow items appended after any type-specific ones (PR2). */
-export function overflowItems(type: TimelineEventType): string[] {
-  return [...(TYPE_CONFIG[type].overflow ?? []), ...UNIVERSAL_OVERFLOW];
-}
 
 /**
  * Whether a row still needs the broker's attention (drives the colored icon +
@@ -558,34 +504,6 @@ export function shortDateTime(iso: string): string {
   });
 }
 
-/** A run of consecutive messages from one sender. */
-export interface ThreadMessageGroup {
-  sender: string;
-  direction: "out" | "in";
-  messages: TimelineThreadMessage[];
-}
-
-/**
- * Collapse runs of consecutive messages from the same sender into one group, so
- * a follow-up ("one more thing, ten minutes later") reads as a continuation
- * rather than a second exchange. Order is preserved — pass messages in the order
- * they'll be displayed, since adjacency is what's being grouped.
- */
-export function groupThreadMessages(
-  messages: TimelineThreadMessage[],
-): ThreadMessageGroup[] {
-  const groups: ThreadMessageGroup[] = [];
-  for (const m of messages) {
-    const open = groups.at(-1);
-    if (open && open.direction === m.direction && open.sender === m.sender) {
-      open.messages.push(m);
-    } else {
-      groups.push({ sender: m.sender, direction: m.direction, messages: [m] });
-    }
-  }
-  return groups;
-}
-
 export function durationLabel(secs: number): string {
   const m = Math.floor(secs / 60);
   const s = (secs % 60).toString().padStart(2, "0");
@@ -625,11 +543,12 @@ export function composedToEvent(a: ComposedActivity, c: Contact): TimelineEvent 
     seq: 1_000_000 + a.seq,
     subject: isEmail ? a.subject : undefined,
     body: a.body || undefined,
-    // "Connected" is the default/assumed call outcome — only surface a badge for
-    // the outcomes that actually carry information (No Answer, Left Voicemail…).
-    badges:
+    // "Connected" is the default/assumed call outcome, so it adds nothing; the
+    // outcomes that carry information (No Answer, Left Voicemail…) ride in the
+    // headline, since the row no longer has a badge to put them in.
+    title:
       a.outcome && a.outcome !== "Connected"
-        ? [{ label: a.outcome, tone: "reply" }]
+        ? `${TYPE_CONFIG[type].defaultTitle} — ${a.outcome}`
         : undefined,
     associations: a.relatedDeal
       ? [{ type: "deal", label: a.relatedDeal }]

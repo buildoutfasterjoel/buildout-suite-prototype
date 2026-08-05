@@ -6,7 +6,9 @@ import {
   faUsers,
   faThumbtack,
   faPaperclip,
+  faChevronDown,
   faChevronRight,
+  faDownload,
   faFile,
   faFilePdf,
   faFileSpreadsheet,
@@ -14,14 +16,13 @@ import {
 import { getListing } from "#/data/store";
 import { dealCardLinkProps } from "#/components/deals/dealCardLink";
 import { IconBadge } from "#/components/contacts/IconBadge";
-import { TimelineBadge } from "#/components/contacts/TimelineBadge";
 import { ClampText } from "#/components/contacts/ClampText";
 import { ReplyCard } from "#/components/contacts/ReplyCard";
 import { ReplyComposer } from "#/components/contacts/ReplyComposer";
 import { ConversationThread } from "#/components/contacts/ConversationThread";
 import {
   TimelineActionBar,
-  TimelineHoverToolbar,
+  TimelineFab,
   type ActionDispatch,
 } from "#/components/contacts/TimelineActions";
 import {
@@ -29,6 +30,7 @@ import {
   relativeTime,
   exactTime,
   durationLabel,
+  type TimelineAttachment,
   type TimelineEvent as TimelineEventData,
 } from "#/components/contacts/timeline";
 
@@ -40,10 +42,50 @@ function attachmentIcon(name: string) {
 }
 
 /**
- * The single row that renders every timeline event type via composition. State
- * overlays are boolean props (pinned / replyOpen / threadOpen); every action
- * flows out through one `onAction` dispatch, so the row itself has no
- * side-effects.
+ * One attached document: type glyph, name over a size/format line, and a
+ * download affordance. A deal-linked attachment (e.g. a sent BOV) opens that
+ * deal's document editor instead.
+ */
+function AttachmentChip({ attachment }: { attachment: TimelineAttachment }) {
+  const inner = (
+    <>
+      <FontAwesomeIcon
+        icon={attachmentIcon(attachment.name)}
+        className="tl-attach__icon"
+      />
+      <span className="tl-attach__label">
+        <span className="tl-attach__name">{attachment.name}</span>
+        {attachment.meta && <span className="tl-attach__meta">{attachment.meta}</span>}
+      </span>
+      <FontAwesomeIcon icon={faDownload} className="tl-attach__end" />
+    </>
+  );
+  return attachment.dealId ? (
+    <Link
+      to="/editor/$listingId"
+      params={{ listingId: attachment.dealId }}
+      search={{ focus: "underwriting" }}
+      className="tl-attach__chip tl-attach__chip--link"
+    >
+      {inner}
+    </Link>
+  ) : (
+    <div className="tl-attach__chip">{inner}</div>
+  );
+}
+
+/**
+ * The single row that renders every timeline event type by composition.
+ *
+ * Anatomy (mirrors the Figma layer names): a Rail carrying the channel bubble
+ * and the connector, then a Body of Head (actors + inline time, then the subject
+ * line with its associations), Content (clamped body, attachments, thread), and
+ * — only while the row still needs attention — the action bar. The hover FAB
+ * floats above the row's top edge.
+ *
+ * State overlays are boolean props (pinned / replyOpen / threadOpen); every
+ * action flows out through one `onAction` dispatch, so the row has no
+ * side-effects of its own.
  */
 export function TimelineEvent({
   event,
@@ -69,15 +111,39 @@ export function TimelineEvent({
   onReplyCancel: () => void;
 }) {
   const config = TYPE_CONFIG[event.type];
-
   const headline = event.subject ?? event.title ?? config.defaultTitle;
 
-  // Tier-1 action bar shows only while the row still needs attention (unreplied
+  // The action bar shows only while the row still needs attention (unreplied
   // email, missed call, open inquiry, live thread); resolving it removes the
-  // reply/respond/call-back options. Read-only system rows never get it. An
-  // event can carry its own bar (e.g. "Start a Deal") over the type default.
+  // reply/call-back options. Read-only system rows never get one. An event can
+  // carry its own bar (e.g. "Start a Deal") over the type default.
   const actionBar = event.actionBar ?? config.actionBar;
   const isActionable = !config.readOnly && !!actionBar?.primary && attention;
+
+  const isThread = event.type === "conversation" && !!event.thread;
+  // Everything the row has to say, as one clamped block. Bullet blocks, a plain
+  // body and a thread's latest message all read as content, so they clamp
+  // together rather than each growing the row on its own.
+  const content = isThread ? null : (
+    <>
+      {event.blocks?.map((block, i) => (
+        <div key={i} className="tl-block">
+          {block.kicker && <div className="tl-block__kicker">{block.kicker}</div>}
+          {block.items.length === 1 ? (
+            <p className="tl-row__text">{block.items[0]}</p>
+          ) : (
+            <ul className="tl-block__list">
+              {block.items.map((item, j) => (
+                <li key={j}>{item}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ))}
+      {event.body && <p className="tl-row__text">{event.body}</p>}
+    </>
+  );
+  const hasContent = isThread || !!event.body || !!event.blocks?.length;
 
   return (
     <article
@@ -86,168 +152,140 @@ export function TimelineEvent({
       data-pinned={pinned || undefined}
     >
       <div className="tl-row__rail">
-        <IconBadge icon={config.icon} tone={config.tone} attention={attention} />
+        <span className="tl-row__icon-wrap">
+          <IconBadge icon={config.icon} attention={attention} />
+        </span>
         <span className="tl-row__connector" aria-hidden="true" />
       </div>
 
       <div className="tl-row__body">
         <div className="tl-row__head">
-          <span className="tl-row__actors">
-            {event.actor.name}
+          {/* Actors and the timestamp share one line — the time is part of "who
+              did what, when", not a right-aligned column of its own. */}
+          <div className="tl-row__actors">
+            <span className="tl-row__actor">{event.actor.name}</span>
             {event.contact && (
               <>
-                {" › "}
-                <span className="tl-row__contact-name">{event.contact.name}</span>
+                <span className="tl-row__arrow">›</span>
+                <span className="tl-row__recipient">{event.contact.name}</span>
               </>
             )}
-            {event.durationSecs != null && (
-              <span className="tl-row__duration"> ({durationLabel(event.durationSecs)})</span>
-            )}
-          </span>
+            <span className="tl-row__meta">
+              <Tooltip>
+                <Tooltip.Trigger
+                  render={<span className="tl-row__time">{relativeTime(event.timestamp)}</span>}
+                />
+                <Tooltip.Content>{exactTime(event.timestamp)}</Tooltip.Content>
+              </Tooltip>
+              {event.durationSecs != null && (
+                <span className="tl-row__duration">
+                  ({durationLabel(event.durationSecs)})
+                </span>
+              )}
+              {pinned && (
+                <FontAwesomeIcon
+                  icon={faThumbtack}
+                  className="tl-row__flag"
+                  title="Pinned"
+                />
+              )}
+            </span>
+          </div>
 
-          <span className="tl-row__head-right">
-            {pinned && (
-              <FontAwesomeIcon icon={faThumbtack} className="tl-row__flag" title="Pinned" />
+          <div className="tl-row__context">
+            {/* Truncates rather than wrapping (see the SCSS), so the full text
+                has to stay reachable on hover. */}
+            <span className="tl-row__subject" title={headline}>
+              {event.hasAttachment && (
+                <FontAwesomeIcon icon={faPaperclip} className="tl-row__clip" />
+              )}
+              <span>{headline}</span>
+            </span>
+            {/* Deal / property links, separated from the subject by a rule so the
+                two read as one line without either claiming the other's weight. */}
+            {event.associations && event.associations.length > 0 && (
+              <span className="tl-row__assoc">
+                <span className="tl-row__assoc-sep" aria-hidden="true">
+                  |
+                </span>
+                {event.associations.map((a, i) => {
+                  // A space deal has no page of its own, so the destination has
+                  // to be resolved from the deal rather than assumed.
+                  const deal = a.id ? getListing(a.id) : undefined;
+                  return deal ? (
+                    <Link
+                      key={i}
+                      {...dealCardLinkProps(deal)}
+                      className="tl-row__deal-link"
+                    >
+                      {a.label}
+                    </Link>
+                  ) : (
+                    <span key={i} className="tl-row__deal-link">
+                      {a.label}
+                    </span>
+                  );
+                })}
+              </span>
             )}
-            {event.hasAttachment && (
-              <FontAwesomeIcon icon={faPaperclip} className="tl-row__flag" title="Has attachment" />
-            )}
-            <Tooltip>
-              <Tooltip.Trigger
-                render={<span className="tl-row__time">{relativeTime(event.timestamp)}</span>}
-              />
-              <Tooltip.Content>{exactTime(event.timestamp)}</Tooltip.Content>
-            </Tooltip>
-          </span>
+          </div>
         </div>
 
-        {headline && (
-          <div className="tl-row__subject">
-            <span>{headline}</span>
-            {event.sourceTag && (
-              <TimelineBadge badge={{ label: event.sourceTag, tone: "system" }} />
-            )}
-          </div>
-        )}
-
-        {/* Deal / property links — plain hyperlinked text on their own line
-            directly under the subject. */}
-        {event.associations && event.associations.length > 0 && (
-          <div className="tl-row__deals">
-            {event.associations.map((a, i) => {
-              const deal = a.id ? getListing(a.id) : undefined;
-              return deal ? (
-                <Link
-                  key={i}
-                  {...dealCardLinkProps(deal)}
-                  className="tl-row__deal-link"
-                >
-                  {a.label}
-                </Link>
-              ) : (
-                <span key={i} className="tl-row__deal-link">
-                  {a.label}
-                </span>
-              );
-            })}
-          </div>
-        )}
-
-        {event.type === "conversation" && event.thread ? (
-          <>
-            <div className="tl-convo">
-              <p className="tl-convo__latest">
-                <span className="tl-convo__latest-label">
-                  LATEST · {event.thread.latestSender}
-                </span>
-                {event.thread.latestBody}
-              </p>
-              <button
-                type="button"
-                className={`tl-convo__more ${threadOpen ? "is-open" : ""}`}
-                onClick={() => onAction("View full thread")}
-              >
-                {threadOpen ? "Hide thread" : `View full thread (${event.thread.count})`}
-                <FontAwesomeIcon icon={faChevronRight} />
-              </button>
-            </div>
-            {threadOpen && <ConversationThread thread={event.thread} />}
-          </>
-        ) : (
-          <>
-            {event.blocks?.map((block, i) => (
-              <div key={i} className="tl-block">
-                {block.kicker && (
-                  <div className="tl-block__kicker">{block.kicker}</div>
-                )}
-                {block.clamp ? (
-                  block.items.map((item, j) => <ClampText key={j} text={item} />)
-                ) : (
-                  <ul className="tl-block__list">
-                    {block.items.map((item, j) => (
-                      <li key={j}>{item}</li>
+        {(hasContent || !!event.attachments?.length) && (
+          <div className="tl-row__content">
+            {isThread && event.thread ? (
+              <>
+                {/* Collapsed, the thread shows only its latest message — the same
+                    two-line clamp every other row gets. */}
+                {!threadOpen && <ClampText>{event.thread.latestBody}</ClampText>}
+                {event.attachments && event.attachments.length > 0 && (
+                  <div className="tl-attach">
+                    {event.attachments.map((a) => (
+                      <AttachmentChip key={a.name} attachment={a} />
                     ))}
-                  </ul>
+                  </div>
                 )}
-              </div>
-            ))}
-            {event.body && <p className="tl-row__text">{event.body}</p>}
-            {event.reply && <ReplyCard reply={event.reply} />}
-          </>
-        )}
-
-        {event.attachments && event.attachments.length > 0 && (
-          <div className="tl-attach">
-            {event.attachments.map((a) => {
-              const chip = (
-                <>
-                  <FontAwesomeIcon
-                    icon={attachmentIcon(a.name)}
-                    className="tl-attach__icon"
-                  />
-                  <span className="tl-attach__label">
-                    <span className="tl-attach__name">{a.name}</span>
-                    {a.meta && <span className="tl-attach__meta">{a.meta}</span>}
-                  </span>
-                </>
-              );
-              // A deal-linked attachment (e.g. a sent BOV) opens that deal's
-              // document editor; plain attachments stay static chips.
-              return a.dealId ? (
-                <Link
-                  key={a.name}
-                  to="/editor/$listingId"
-                  params={{ listingId: a.dealId }}
-                  search={{ focus: "underwriting" }}
-                  className="tl-attach__chip tl-attach__chip--link"
+                <button
+                  type="button"
+                  className="tl-link tl-link--toggle"
+                  aria-expanded={threadOpen}
+                  onClick={() => onAction("View full thread")}
                 >
-                  {chip}
-                </Link>
-              ) : (
-                <div key={a.name} className="tl-attach__chip">
-                  {chip}
-                </div>
-              );
-            })}
-          </div>
-        )}
+                  <FontAwesomeIcon
+                    icon={threadOpen ? faChevronDown : faChevronRight}
+                  />
+                  {threadOpen ? "Hide thread" : `View full thread (${event.thread.count})`}
+                </button>
+                {threadOpen && (
+                  <ConversationThread thread={event.thread} onAction={onAction} />
+                )}
+              </>
+            ) : (
+              <>
+                {hasContent && <ClampText>{content}</ClampText>}
+                {event.reply && <ReplyCard reply={event.reply} />}
+                {event.attachments && event.attachments.length > 0 && (
+                  <div className="tl-attach">
+                    {event.attachments.map((a) => (
+                      <AttachmentChip key={a.name} attachment={a} />
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
 
-        {event.badges && event.badges.length > 0 && (
-          <div className="tl-row__badges">
-            {event.badges.map((b, i) => (
-              <TimelineBadge key={i} badge={b} />
-            ))}
-          </div>
-        )}
-
-        {event.visibility && (
-          <div className="tl-row__visibility">
-            <FontAwesomeIcon icon={event.visibility === "private" ? faLock : faUsers} />
-            {event.visibility === "private"
-              ? "Private to you"
-              : event.visibility === "team"
-                ? "Visible to your team"
-                : "Private to you and anyone you're sharing with"}
+            {event.visibility && (
+              <div className="tl-row__visibility">
+                <FontAwesomeIcon
+                  icon={event.visibility === "private" ? faLock : faUsers}
+                />
+                {event.visibility === "private"
+                  ? "Private to you"
+                  : event.visibility === "team"
+                    ? "Visible to your team"
+                    : "Private to you and anyone you're sharing with"}
+              </div>
+            )}
           </div>
         )}
 
@@ -264,7 +302,7 @@ export function TimelineEvent({
         )}
       </div>
 
-      <TimelineHoverToolbar type={event.type} pinned={pinned} onAction={onAction} />
+      <TimelineFab type={event.type} pinned={pinned} onAction={onAction} />
     </article>
   );
 }

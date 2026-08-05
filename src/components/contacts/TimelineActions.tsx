@@ -1,17 +1,23 @@
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faThumbtack,
   faPhone,
+  faEnvelope,
   faReply,
   faReplyAll,
   faShare,
-  faEllipsis,
+  faPencil,
+  faTrash,
+  faEllipsisVertical,
 } from "@fortawesome/pro-regular-svg-icons";
 import {
+  OVERFLOW_ITEMS,
   TYPE_CONFIG,
-  UNIVERSAL_OVERFLOW,
+  type FabChannel,
   type TimelineEventType,
   type TypeConfig,
 } from "#/components/contacts/timeline";
@@ -19,9 +25,9 @@ import {
 export type ActionDispatch = (id: string) => void;
 
 /**
- * Tier-1 action bar — a primary action plus up to two ghosts, always visible on
- * actionable rows. Labels come from the per-type config so a call shows
- * "Call back" where an email shows "Reply".
+ * The needs-attention action bar: one filled primary, the type's outlined
+ * seconds, then Dismiss. Labels come from the per-type config so a missed call
+ * offers "Call back" where an email offers "Reply".
  */
 export function TimelineActionBar({
   actionBar,
@@ -48,7 +54,8 @@ export function TimelineActionBar({
         </Button>
       ))}
       {/* "Seen it, no response needed" — clears the attention state (greys the
-          icon, removes the bar) without logging any follow-up. */}
+          bubble, removes the bar) without logging any follow-up. Ghost, because
+          it's the one action that resolves the row by doing nothing to it. */}
       <Button
         variant="ghost"
         size="sm"
@@ -61,13 +68,68 @@ export function TimelineActionBar({
   );
 }
 
+/** The channel buttons a FAB carries, keyed by the type's channel. */
+const FAB_BUTTONS: Record<
+  FabChannel,
+  { id: string; icon: IconDefinition; label: string }[]
+> = {
+  none: [],
+  call: [{ id: "Call", icon: faPhone, label: "Call" }],
+  email: [
+    { id: "Reply", icon: faReply, label: "Reply" },
+    { id: "Reply all", icon: faReplyAll, label: "Reply all" },
+    { id: "Forward", icon: faShare, label: "Forward" },
+  ],
+  // An inquiry has no message to reply to — it's a first-contact decision, so
+  // the FAB offers the two channels rather than a reply.
+  inquiry: [
+    { id: "Email", icon: faEnvelope, label: "Email" },
+    { id: "Call", icon: faPhone, label: "Call" },
+  ],
+};
+
 /**
- * Tier-2 hover toolbar — Pin is always present; call rows get a Call button and
- * email rows get Reply / Reply all / Forward. The Tier-3 overflow trigger closes
- * the bar for every type. Appears on row hover/focus (see SCSS). Channel is read
- * from the type's filter bucket ("calls" / "emails").
+ * One icon button inside a FAB. Tooltipped, because a bare glyph in a hover
+ * overlay is the easiest place in the feed to guess wrong.
  */
-export function TimelineHoverToolbar({
+function FabButton({
+  icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: IconDefinition;
+  label: string;
+  active?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Tooltip>
+      <Tooltip.Trigger
+        render={
+          <button
+            type="button"
+            className={`tl-fab__btn${active ? " is-active" : ""}`}
+            aria-label={label}
+            aria-pressed={active}
+            onClick={onClick}
+          >
+            <FontAwesomeIcon icon={icon} />
+          </button>
+        }
+      />
+      <Tooltip.Content>{label}</Tooltip.Content>
+    </Tooltip>
+  );
+}
+
+/**
+ * The floating action bar revealed on row hover, offset above the row's top edge.
+ * Pin leads, the type's channel actions sit in the middle, and the overflow
+ * trigger closes it — so the button count varies by event while the shell stays
+ * identical.
+ */
+export function TimelineFab({
   type,
   pinned,
   onAction,
@@ -76,102 +138,88 @@ export function TimelineHoverToolbar({
   pinned: boolean;
   onAction: ActionDispatch;
 }) {
-  const channel = TYPE_CONFIG[type].filter;
+  const channel = TYPE_CONFIG[type].fab ?? "none";
   return (
-    <div className="tl-toolbar">
-      <button
-        type="button"
-        className={`tl-toolbar__btn ${pinned ? "is-active" : ""}`}
-        aria-label={pinned ? "Unpin" : "Pin to top"}
-        aria-pressed={pinned}
+    <div className="tl-fab">
+      <FabButton
+        icon={faThumbtack}
+        label={pinned ? "Unpin" : "Pin to Top"}
+        active={pinned}
         onClick={() => onAction("Pin to top")}
-      >
-        <FontAwesomeIcon icon={faThumbtack} />
-      </button>
-
-      {channel === "calls" && (
-        <button
-          type="button"
-          className="tl-toolbar__btn"
-          aria-label="Call"
-          onClick={() => onAction("Call")}
-        >
-          <FontAwesomeIcon icon={faPhone} />
-        </button>
-      )}
-
-      {channel === "emails" && (
-        <>
-          <button
-            type="button"
-            className="tl-toolbar__btn"
-            aria-label="Reply"
-            onClick={() => onAction("Reply")}
-          >
-            <FontAwesomeIcon icon={faReply} />
-          </button>
-          <button
-            type="button"
-            className="tl-toolbar__btn"
-            aria-label="Reply all"
-            onClick={() => onAction("Reply all")}
-          >
-            <FontAwesomeIcon icon={faReplyAll} />
-          </button>
-          <button
-            type="button"
-            className="tl-toolbar__btn"
-            aria-label="Forward"
-            onClick={() => onAction("Forward")}
-          >
-            <FontAwesomeIcon icon={faShare} />
-          </button>
-        </>
-      )}
-
-      <TimelineOverflowMenu type={type} onAction={onAction} />
+      />
+      {FAB_BUTTONS[channel].map((b) => (
+        <FabButton
+          key={b.id}
+          icon={b.icon}
+          label={b.label}
+          onClick={() => onAction(b.id)}
+        />
+      ))}
+      <TimelineOverflowMenu pinned={pinned} onAction={onAction} />
     </div>
   );
 }
 
+/** Glyphs for the three overflow items. */
+const OVERFLOW_ICONS: Record<string, IconDefinition> = {
+  "Pin to Top": faThumbtack,
+  Edit: faPencil,
+  Delete: faTrash,
+};
+
 /**
- * Tier-3 overflow menu — type-specific items on top (e.g. "Play recording",
- * "View change log"), then the universal set. Delete is destructive.
+ * The overflow menu — Pin / Edit / Delete on every row. Delete is destructive
+ * and reads that way.
  */
 export function TimelineOverflowMenu({
-  type,
+  pinned,
   onAction,
 }: {
-  type: TimelineEventType;
+  pinned: boolean;
   onAction: ActionDispatch;
 }) {
-  const topItems = TYPE_CONFIG[type].overflow ?? [];
   return (
     <DropdownMenu>
       <DropdownMenu.Trigger
         render={
-          <button type="button" className="tl-toolbar__btn" aria-label="More actions">
-            <FontAwesomeIcon icon={faEllipsis} />
+          <button type="button" className="tl-fab__btn" aria-label="More actions">
+            <FontAwesomeIcon icon={faEllipsisVertical} />
           </button>
         }
       />
       <DropdownMenu.Content align="end" className="tl-menu">
-        {topItems.map((item) => (
-          <DropdownMenu.Item key={item} onClick={() => onAction(item)}>
-            {item}
-          </DropdownMenu.Item>
-        ))}
-        {topItems.length > 0 && <DropdownMenu.Separator />}
-        {UNIVERSAL_OVERFLOW.map((item) => (
+        {OVERFLOW_ITEMS.map((item) => (
           <DropdownMenu.Item
             key={item}
-            onClick={() => onAction(item)}
+            // The menu's pin row mirrors the FAB's pin button, so it has to say
+            // which way it will go — otherwise a pinned row offers "Pin to Top".
+            onClick={() => onAction(item === "Pin to Top" ? "Pin to top" : item)}
             className={item === "Delete" ? "tl-menu__danger" : undefined}
           >
-            {item}
+            <FontAwesomeIcon icon={OVERFLOW_ICONS[item]} className="tl-menu__icon" />
+            {item === "Pin to Top" && pinned ? "Unpin" : item}
           </DropdownMenu.Item>
         ))}
       </DropdownMenu.Content>
     </DropdownMenu>
+  );
+}
+
+/**
+ * The three-button FAB on a single message inside an expanded email thread —
+ * reply / reply all / forward, scoped to that message rather than the thread.
+ */
+export function ThreadMessageFab({ onAction }: { onAction: ActionDispatch }) {
+  return (
+    <div className="tl-fab tl-fab--msg">
+      {FAB_BUTTONS.email.map((b) => (
+        <FabButton
+          key={b.id}
+          icon={b.icon}
+          label={b.label}
+          onClick={() => onAction(b.id)}
+        />
+      ))}
+    </div>
   );
 }

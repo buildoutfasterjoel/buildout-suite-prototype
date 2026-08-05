@@ -2885,7 +2885,12 @@
 }
 
 // ── Row ──
+// Anatomy transcribed from the Figma layer names: Rail (36px bubble + connector)
+// then Body → Head (Actors + inline Meta, then Event Context) → Content →
+// ActionBar. The hover FAB is an absolute child, so the row is its containing
+// block.
 .tl-row {
+  position: relative;
   display: flex;
   gap: 12px;
   // Full-row grey hover — extends slightly past the content on each side so the
@@ -2893,7 +2898,7 @@
   // card's padding).
   border-radius: 8px;
   margin: 0 -8px;
-  padding: 4px 12px;
+  padding: 8px 12px 0;
   transition: background-color 0.12s ease-in-out;
 
   &:hover {
@@ -2905,114 +2910,187 @@
     flex-direction: column;
     align-items: center;
     flex-shrink: 0;
-    width: 32px;
+    width: 36px;
+  }
+  // Holds the bubble at a fixed height so the connector starts at the same place
+  // on every row, whatever the head wraps to.
+  &__icon-wrap {
+    display: flex;
+    align-items: center;
+    height: 40px;
+    padding: 2px 0 4px;
   }
   &__connector {
     flex: 1 1 auto;
     width: 2px;
-    min-height: 10px;
-    margin: 4px 0;
     background: var(--color-storm-grey-100, #eceef2);
-  }
-  // The last row in a group hides its trailing connector.
-  &:last-child &__connector {
-    display: none;
   }
 
   &__body {
     flex: 1 1 auto;
     min-width: 0;
-    padding-bottom: 16px;
+    padding-bottom: 24px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
+  }
+
+  // The last row of a section closes the group: no trailing rail, and no bottom
+  // padding holding open space the next row would have filled.
+  &:last-child {
+    .tl-row__connector {
+      display: none;
+    }
+    .tl-row__body {
+      padding-bottom: 0;
+    }
   }
 
   &__head {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 0;
+    gap: 2px;
   }
+
+  // Actors and the timestamp share one line — "who did what, when" is one fact,
+  // so the time sits with the names instead of in a right-aligned column.
   &__actors {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--color-storm-grey-900, #22262f);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
     min-width: 0;
+    font-size: 14px;
+    line-height: 19px;
+    color: var(--color-storm-grey-950, #22262f);
   }
-  // Contact name (after the "›") reads as regular weight — the actor name stays
-  // semibold so the header line has a clear owner.
-  &__contact-name {
+  &__actor {
+    font-weight: 600;
+  }
+  &__arrow,
+  &__recipient {
     font-weight: 400;
   }
-  &__duration {
-    color: var(--color-storm-grey-600, #506079);
-    font-weight: 500;
-  }
-  &__head-right {
+  &__meta {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-  }
-  &__flag {
+    gap: 4px;
+    padding: 2px 0 0 4px;
     font-size: 12px;
-    color: var(--color-storm-grey-400, #8495ac);
+    line-height: 16px;
+    color: var(--bp-secondary-color, #506079);
   }
   &__time {
-    font-size: 12px;
-    color: var(--color-storm-grey-600, #506079);
     white-space: nowrap;
     cursor: default;
   }
+  &__duration,
+  &__flag {
+    color: var(--bp-secondary-color, #506079);
+  }
 
-  &__subject {
+  // Subject and its associations on one line, the rule between them. Deliberately
+  // no wrapping: the separator would strand itself at the head of the second line
+  // and read as a typo, so the subject truncates instead and carries a title.
+  &__context {
     display: flex;
+    flex-wrap: nowrap;
     align-items: center;
-    flex-wrap: wrap;
     gap: 8px;
+    width: 100%;
+    min-width: 0;
     font-size: 14px;
-    font-weight: 600;
-    color: var(--color-storm-grey-900, #22262f);
+    line-height: 19px;
   }
-  &__text {
-    margin: 0;
-    font-size: 14px;
-    color: var(--color-storm-grey-700, #424e62);
-    line-height: 1.5;
-  }
-
-  &__badges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 2px;
-  }
-  // Deal / property links — plain hyperlinked text sitting directly under the
-  // subject line (not pills).
-  &__deals {
-    display: flex;
-    flex-wrap: wrap;
+  &__subject {
+    display: inline-flex;
     align-items: center;
-    gap: 2px 10px;
-    margin-top: -2px;
+    gap: 4px;
+    min-width: 0;
+    font-weight: 600;
+    color: var(--color-storm-grey-950, #22262f);
+
+    > span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+  &__clip {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--bp-secondary-color, #62748e);
+  }
+  &__assoc {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 8px;
+    max-width: 50%;
+  }
+  &__assoc-sep {
+    color: var(--bp-secondary-color, #506079);
+    font-weight: 400;
   }
   &__deal-link {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--color-buildout-blue-600, #2350c9);
+    overflow: hidden;
+    font-weight: 600;
+    color: var(--bp-link-color, #2042a7);
+    text-overflow: ellipsis;
+    white-space: nowrap;
     text-decoration: none;
 
     &:hover {
       text-decoration: underline;
     }
   }
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    min-width: 0;
+  }
+  &__text {
+    margin: 0;
+    font-size: 14px;
+    line-height: 19px;
+    color: var(--bp-secondary-color, #506079);
+  }
   &__visibility {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     font-size: 12px;
-    color: var(--color-storm-grey-600, #506079);
+    color: var(--bp-secondary-color, #506079);
+  }
+}
+
+// The shared "Show more" / "Hide thread" text link. 14px semibold in the link
+// color — the timeline's only inline control, so it reads as text, not a button.
+.tl-link {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 19px;
+  color: var(--bp-link-color, #2042a7);
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  // The thread toggle leads with a chevron; a plain Show more link doesn't.
+  &--toggle svg {
+    font-size: 12px;
   }
 }
 
@@ -3062,14 +3140,15 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  padding-top: 4px;
 
   &__chip {
     display: inline-flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
-    padding: 6px 12px 6px 10px;
+    padding: 8px;
     border: 1px solid var(--color-storm-grey-100, #eceef2);
-    border-radius: 8px;
+    border-radius: var(--bp-border-radius, 6px);
     background: var(--color-storm-grey-50, #f6f7f9);
 
     // Deal-linked chips (e.g. a sent BOV) open the document editor.
@@ -3087,205 +3166,137 @@
       }
     }
   }
-  &__icon {
-    font-size: 16px;
-    color: var(--color-buildout-blue-600, #2350c9);
+  // Both glyphs sit on the name's line, not centred on the two-line label.
+  &__icon,
+  &__end {
+    flex-shrink: 0;
+    padding: 4px 0;
+    font-size: 14px;
+    color: var(--bp-secondary-color, #62748e);
   }
   &__label {
     display: flex;
     flex-direction: column;
-    line-height: 1.25;
+    min-width: 0;
   }
   &__name {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
-    color: var(--color-storm-grey-800, #2f3949);
+    line-height: 19px;
+    color: var(--color-storm-grey-950, #22262f);
   }
   &__meta {
-    font-size: 11px;
-    color: var(--color-storm-grey-600, #506079);
+    font-size: 10px;
+    line-height: 13px;
+    color: var(--bp-secondary-color, #506079);
   }
 }
 
 // ── Voicemail transcript clamp ──
+// Clamped content — the 2-line cap every row's content wears (see ClampText).
 .tl-clamp {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 
   &__text {
-    margin: 0;
     font-size: 14px;
-    color: var(--color-storm-grey-700, #424e62);
-    line-height: 1.5;
+    line-height: 19px;
+    color: var(--bp-secondary-color, #506079);
+
+    // The clamp is a -webkit-box, so a child's own margin would push the last
+    // visible line out of the box and clip mid-glyph.
+    > *:first-child {
+      margin-top: 0;
+    }
+    > *:last-child {
+      margin-bottom: 0;
+    }
   }
 }
 
-// ── Collapsed conversation preview ──
-.tl-convo {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px 12px;
-  border: 1px solid var(--color-storm-grey-100, #eceef2);
-  border-radius: 8px;
-  background: var(--color-storm-grey-50, #f6f7f9);
-
-  &__latest {
-    margin: 0;
-    font-size: 14px;
-    color: var(--color-storm-grey-700, #424e62);
-    line-height: 1.5;
-  }
-  &__latest-label {
-    display: block;
-    font-size: 10.5px;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    color: var(--color-storm-grey-600, #506079);
-    margin-bottom: 2px;
-  }
-  &__more {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--color-buildout-blue-600, #2350c9);
-  }
-}
-
-// ── Icon badge — solid bubble, white glyph ──
-// Resting rows are grey so the feed stays calm; attention rows (missed call,
-// unreplied email, open inquiry) take their channel tone so color = "act on it".
+// ── Icon badge — 36px bubble, 14px solid glyph ──
+// Resting rows are a soft grey fill with a grey-blue glyph so a long feed stays
+// calm; attention rows (missed call, unreplied email, open inquiry) fill purple
+// with a white glyph, so color means exactly "act on this".
 .tl-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  font-size: 13px;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--bp-border-radius-full, 999px);
+  font-size: 14px;
   flex-shrink: 0;
-  color: #fff;
 
   &--resting {
-    background: var(--color-storm-grey-400, #8495ac);
+    background: var(--color-storm-grey-100, #eceef2);
+    color: var(--color-storm-grey-400, #8495ac);
   }
-  // Needs-reply attention state — one purple for every channel (was per-channel
-  // red/blue), so the color reads simply as "act on this".
   &--attention {
     background: var(--color-purple-heart-500, #9f55f7);
-  }
-  &--green {
-    background: var(--color-mountain-meadow-500, #00bc7d);
-  }
-  &--amber {
-    background: var(--color-harvest-gold-500, #fd9a00);
-  }
-  &--blue {
-    background: var(--color-buildout-blue-500, #3f86f2);
-  }
-  &--rose {
-    background: var(--color-solid-pink-400, #ff5961);
-  }
-  &--accent {
-    background: var(--color-purple-heart-500, #9f55f7);
-  }
-  &--slate {
-    background: var(--color-storm-grey-500, #64748b);
+    color: #fff;
   }
 }
 
-// ── Status / engagement pills — 7 tones layered on the Blueprint Badge ──
-.tl-badge {
-  font-weight: 600;
-  border: 1px solid transparent;
-
-  &__meta {
-    margin-left: 4px;
-    font-weight: 400;
-    opacity: 0.8;
-  }
-
-  &--sent {
-    background: var(--color-storm-grey-100, #eceef2);
-    color: var(--color-storm-grey-700, #424e62);
-  }
-  &--open {
-    background: #e7f0fe;
-    color: var(--color-buildout-blue-700, #1f47ad);
-  }
-  &--click {
-    background: #f2e8fe;
-    color: var(--color-purple-heart-700, #6b21c8);
-  }
-  &--reply {
-    background: #e3f7ef;
-    color: var(--color-mountain-meadow-700, #007a52);
-  }
-  &--activity {
-    background: #eaf2ff;
-    color: var(--color-buildout-blue-700, #1f47ad);
-  }
-  &--system {
-    background: var(--color-storm-grey-100, #eceef2);
-    color: var(--color-storm-grey-600, #506079);
-  }
-  &--error {
-    background: #fce4e2;
-    color: #b42318;
-  }
-}
-
-// ── Timeline interactions (PR2): tiers, reply, thread ──
-
-// Row becomes the positioning context for the hover toolbar overlay.
-.tl-row {
-  position: relative;
-}
-
-// Tier-2 hover toolbar — overlays the top-right of the row on hover/focus.
-.tl-toolbar {
+// ── Floating action bar — revealed on row hover, offset above the row's edge ──
+// The button set varies by event (pin + channel actions + overflow); the shell
+// doesn't. Also used per-message inside an expanded thread (`--msg`).
+.tl-fab {
   position: absolute;
   top: -12px;
   right: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 3px;
-  border-radius: 8px;
+  padding: 2px;
+  border-radius: var(--bp-border-radius-lg, 8px);
   background: var(--bp-card-bg, #fff);
   border: 1px solid var(--color-storm-grey-100, #eceef2);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
+  box-shadow:
+    0 2px 4px -2px rgba(0, 0, 0, 0.1),
+    0 4px 6px -1px rgba(0, 0, 0, 0.1);
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.12s ease-in-out;
 
-  .tl-row:hover &,
-  .tl-row:focus-within & {
+  .tl-row:hover > &,
+  .tl-row:focus-within > & {
     opacity: 1;
     visibility: visible;
+  }
+
+  // A message inside a thread owns its own hover target, so its FAB answers to
+  // the message rather than the row it's nested in.
+  &--msg {
+    .tl-thread__msg:hover > &,
+    .tl-thread__msg:focus-within > & {
+      opacity: 1;
+      visibility: visible;
+    }
   }
 
   &__btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
     padding: 0;
     border: 0;
-    border-radius: 6px;
+    border-radius: var(--bp-border-radius, 6px);
     background: transparent;
-    color: var(--color-storm-grey-600, #506079);
+    color: var(--color-storm-grey-700, #424e62);
     font-size: 12px;
     cursor: pointer;
-    transition: background-color 0.12s, color 0.12s;
+    transition:
+      background-color 0.12s,
+      color 0.12s;
 
     &:hover {
       background: var(--color-storm-grey-100, #eceef2);
-      color: var(--color-storm-grey-900, #22262f);
+      color: var(--color-storm-grey-950, #22262f);
     }
     &.is-active {
       color: var(--color-purple-heart-600, #8833ea);
@@ -3309,10 +3320,19 @@
 
 // Tier-3 overflow menu — destructive item.
 .tl-menu {
-  min-width: 190px;
+  min-width: 160px;
 
+  &__icon {
+    width: 14px;
+    margin-right: 8px;
+    color: var(--bp-secondary-color, #506079);
+  }
   &__danger {
     color: var(--bp-destructive, #d92d20);
+
+    .tl-menu__icon {
+      color: currentcolor;
+    }
   }
 }
 
@@ -3389,66 +3409,103 @@
   }
 }
 
-// Expanded conversation thread (accordion).
+// ── Expanded email thread ──
+// Plain attributed blocks rather than chat bubbles: inside a thread the reader
+// wants to read, and alternating fills turn a four-message exchange into a
+// pattern to decode. The indent plus the rail is what says "these belong to the
+// row above". Bodies are never clamped here.
 .tl-thread {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 16px;
+  margin-top: 4px;
   padding-left: 12px;
-  border-left: 2px solid var(--color-storm-grey-100, #eceef2);
 
-  // One bubble per sender run — consecutive messages from the same person stack
-  // inside it rather than repeating the attribution.
-  &__group {
-    padding: 8px 10px;
-    border-radius: 8px;
-    background: var(--color-storm-grey-50, #f6f7f9);
-
-    &--out {
-      background: #eef3fe;
-    }
-  }
-  &__group-head {
-    font-size: 12px;
-    color: var(--color-storm-grey-900, #22262f);
-  }
   &__msg {
-    // A follow-up inside the same run gets a hairline instead of a second name,
-    // so the messages stay countable without re-announcing the sender.
-    & + & {
-      margin-top: 6px;
-      padding-top: 6px;
-      border-top: 1px solid var(--color-storm-grey-200, #dfe3ea);
-    }
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
   }
-  &__msg-body {
-    margin: 2px 0 0;
-    font-size: 13px;
-    color: var(--color-storm-grey-700, #424e62);
-    line-height: 1.5;
+  &__msg-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+  }
+  &__msg-sender {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 19px;
+    color: var(--color-storm-grey-950, #22262f);
   }
   &__msg-time {
-    display: block;
-    margin-top: 2px;
+    padding: 2px 0 0 4px;
     font-size: 12px;
-    color: var(--color-storm-grey-600, #506079);
-    font-weight: 400;
+    line-height: 16px;
+    color: var(--bp-secondary-color, #506079);
+  }
+  &__msg-body {
+    margin: 0;
+    font-size: 14px;
+    line-height: 19px;
+    color: var(--bp-secondary-color, #506079);
   }
 }
 
-// "View full thread" toggle — chevron points down when open.
-.tl-convo__more {
-  border: 0;
-  background: transparent;
-  padding: 0;
-  cursor: pointer;
+// ── Narrow layout (< 1280px): Briefing + Tasks fold in beside the Timeline ──
+// The "tabs" option puts all three panes in one card. The strip owns the card's
+// top row on its own, so the Timeline's filter controls drop to a second row.
+.contact-pane-tabs {
+  padding-bottom: 0;
 
-  svg {
-    transition: transform 0.15s ease-in-out;
+  // The strip is the only thing in this header row, so it takes the full width
+  // rather than being squeezed by `.compose-header`'s first-child rule.
+  > * {
+    flex: 1 1 auto;
+    min-width: 0;
   }
-  &.is-open svg {
-    transform: rotate(90deg);
+
+  // Blueprint stacks a tab's label children in a column (for a label + sublabel
+  // pattern), which drops the count badge onto its own line. These tabs want the
+  // count beside the word, so the label row goes horizontal.
+  // TODO(blueprint): a "tab with count" variant belongs on the Tabs component.
+  .nav-link-text {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+// The filter row under the tab strip: right-aligned, since the tabs above already
+// occupy the left and a left-aligned control would read as a fourth tab.
+.compose-header--filters {
+  justify-content: flex-end;
+}
+
+// A tab pane's Tasks list: no card, no collapse — just the Add action and the
+// rows. The action is pushed right so it lands where the section header's own
+// Add button sits in the wide layout.
+.contact-tasks-bare {
+  display: flex;
+  flex-direction: column;
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: -8px;
+  }
+}
+
+// A tab pane's Briefing: the gradient wash belongs to the card, so a bare
+// briefing drops it and keeps only the body's type.
+.contact-briefing--bare {
+  border: 0;
+  background: none;
+
+  .contact-briefing__body {
+    padding: 0;
   }
 }
 

@@ -45,6 +45,13 @@ interface ContactUiPrefs {
    * "new" renders the redesigned deal-tile treatment.
    */
   dealCards: "current" | "new";
+  /**
+   * Where the Briefing and Tasks cards go once the viewport is too narrow for
+   * three columns: "stacked" drops them into the middle column between Activity
+   * and the Timeline; "tabs" folds all three into one tabbed card. Only takes
+   * effect below the breakpoint (see CONTACT_NARROW_QUERY).
+   */
+  narrowLayout: "stacked" | "tabs";
 
   setOverviewSections: (sections: string[]) => void;
   setShowDetails: (open: boolean) => void;
@@ -57,6 +64,7 @@ interface ContactUiPrefs {
   setTimelineFilter: (style: "dropdown" | "tabs") => void;
   /** Flips the deal/property cards between the shipped and redesigned looks. */
   setDealCards: (style: "current" | "new") => void;
+  setNarrowLayout: (layout: "stacked" | "tabs") => void;
 }
 
 export const useContactUiPrefs = create<ContactUiPrefs>((set) => ({
@@ -77,6 +85,7 @@ export const useContactUiPrefs = create<ContactUiPrefs>((set) => ({
   // The redesigned cards are the default now; flip the switch to compare
   // against the shipped look.
   dealCards: "new",
+  narrowLayout: "stacked",
 
   setOverviewSections: (overviewSections) => set({ overviewSections }),
   setShowDetails: (showDetails) => set({ showDetails }),
@@ -88,4 +97,5 @@ export const useContactUiPrefs = create<ContactUiPrefs>((set) => ({
   setTabTrack: (tabTrack) => set({ tabTrack }),
   setTimelineFilter: (timelineFilter) => set({ timelineFilter }),
   setDealCards: (dealCards) => set({ dealCards }),
+  setNarrowLayout: (narrowLayout) => set({ narrowLayout }),
 }));

@@ -97,10 +97,6 @@ function rosa(ctx: ArcCtx): TimelineEvent[] {
       direction: "out",
       subject: "The piece on your block I mentioned",
       body: `Rosa,\n\nHere's the article on the neighborhood's little renaissance I mentioned — your corner gets a paragraph of its own. No business in this email; I just thought you'd want to see it.\n\n${ME}`,
-      badges: [
-        { label: "Sent", tone: "sent" },
-        { label: "Opened", tone: "open", meta: "20m after send" },
-      ],
       reply: {
         replier: ctx.ref.name,
         delay: "1d after send",
@@ -166,7 +162,6 @@ function earl(ctx: ArcCtx): TimelineEvent[] {
       direction: "in",
       subject: "One question before Friday",
       body: "I read the easement material twice and I'm nearly there. One thing I can't square: if the easement lowers the buyer's basis, does it tie their hands on interior work too? Dorothy's mural in the stairwell — I need to know it's protected. Answer me that and I'll sign Friday.",
-      badges: [{ label: "New", tone: "reply" }],
       hasAttachment: false,
     }),
     mk(ctx, "call", 2, {
@@ -212,11 +207,6 @@ function earl(ctx: ArcCtx): TimelineEvent[] {
       direction: "out",
       subject: "The building's story, on paper",
       body: `Earl,\n\nAttached is the historical piece I mentioned — the block's arc from the 1890s through the preservation overlay. I want to lead the marketing with this story, not bury it. A buyer who pays a premium for that lineage is exactly the buyer you want holding the keys.\n\nWalk me through your thoughts Wednesday.\n\n${ME}`,
-      badges: [
-        { label: "Sent", tone: "sent" },
-        { label: "Opened", tone: "open", meta: "1h after send" },
-        { label: "Clicked", tone: "click" },
-      ],
       reply: {
         replier: ctx.ref.name,
         delay: "1d after send",
@@ -275,8 +265,7 @@ function earl(ctx: ArcCtx): TimelineEvent[] {
  * which is what keeps the row in its "awaiting a reply" attention state — and
  * it lands before the day-1 call, where he finally signs off.
  *
- * `attach` marks a message that carried a file; `openedMeta` is the read-receipt
- * detail on an outbound row.
+ * `attach` marks a message that carried a file.
  */
 const VICTOR_THREAD: {
   day: number;
@@ -285,7 +274,6 @@ const VICTOR_THREAD: {
   direction: "out" | "in";
   body: string;
   attach?: boolean;
-  openedMeta?: string;
 }[] = [
   {
     day: 22,
@@ -293,7 +281,6 @@ const VICTOR_THREAD: {
     min: 5,
     direction: "out",
     attach: true,
-    openedMeta: "12m after send",
     body: "Victor — first written offer is in at 97% of ask, all cash, 30-day close, from one of the vetted buyers we toured. A second group is drafting now. My rec: counter at ask and let the second offer flush out. Terms attached.",
   },
   {
@@ -309,7 +296,6 @@ const VICTOR_THREAD: {
     min: 25,
     direction: "out",
     attach: true,
-    openedMeta: "4m after send",
     body: "Fallback math attached — day 60 with both parties gone. Carry is $41k/month, we'd re-launch broad in mid-September into a thinner buyer pool, and my honest read is we land 93–95% of ask on that path. Countering at ask risks about two points to protect four.",
   },
   {
@@ -332,7 +318,6 @@ const VICTOR_THREAD: {
     min: 50,
     direction: "out",
     attach: true,
-    openedMeta: "1h after send",
     body: "Re-run at 6.45% attached — day 60 comes in at 93.4%, so the case holds. And agreed on sequencing: the counter sits until their draft is in writing. I'll tell their broker we're reviewing, nothing more.",
   },
   {
@@ -365,7 +350,6 @@ function victor(ctx: ArcCtx): TimelineEvent[] {
       direction: "in",
       subject: "The second buyer's broker called me directly",
       body: "Twenty minutes ago, on my cell. I didn't engage and I didn't like it. Two things before end of day: how did they get my number, and does this change the counter math? Call me.",
-      badges: [{ label: "New", tone: "reply" }],
     }),
     mk(ctx, "call", 1, {
       direction: "out",
@@ -406,16 +390,6 @@ function victor(ctx: ArcCtx): TimelineEvent[] {
         direction: m.direction,
         subject: i === 0 ? subject : `Re: ${subject}`,
         body: m.body,
-        badges:
-          m.direction === "out"
-            ? [
-                { label: "Sent", tone: "sent" as const },
-                { label: "Opened", tone: "open" as const, meta: m.openedMeta },
-              ]
-            : // Only the newest inbound is still unread; the rest are history.
-              i === VICTOR_THREAD.length - 1
-              ? [{ label: "New", tone: "reply" as const }]
-              : undefined,
         threadId,
         messageId: messages[i].id,
         inReplyTo: i > 0 ? messages[i - 1].id : undefined,
@@ -426,7 +400,6 @@ function victor(ctx: ArcCtx): TimelineEvent[] {
     mk(ctx, "task", 20, {
       title: "Completed task",
       body: "Assemble the diligence data room — leases, T12, service contracts",
-      badges: [{ label: "Done", tone: "activity" }],
       source: "user",
       associations: assoc(ctx.deal),
     }),
@@ -445,10 +418,6 @@ function victor(ctx: ArcCtx): TimelineEvent[] {
     mk(ctx, "marketing", 45, {
       title: `${dealName} — pre-market send`,
       body: "OM sent to the ten vetted buyers under CA. No broad launch — per Victor's instruction.",
-      badges: [
-        { label: "Sent", tone: "sent" },
-        { label: "Opened", tone: "open", meta: "8 of 10" },
-      ],
       source: "automation",
       associations: assoc(ctx.deal),
     }),
@@ -475,11 +444,6 @@ function victor(ctx: ArcCtx): TimelineEvent[] {
       direction: "out",
       subject: `${dealName}: listing agreement + OM draft`,
       body: `Victor,\n\nListing agreement and OM draft attached. Pro forma is signed leases only — no projected escalations, exactly as you asked. Quiet pre-market to ten vetted buyers first; broad launch only if we need it. Your call at each step.\n\n${ME}`,
-      badges: [
-        { label: "Sent", tone: "sent" },
-        { label: "Opened", tone: "open" },
-        { label: "Clicked", tone: "click" },
-      ],
       hasAttachment: true,
       associations: assoc(ctx.deal),
     }),
@@ -492,10 +456,6 @@ function victor(ctx: ArcCtx): TimelineEvent[] {
       direction: "out",
       subject: `${dealName}: pricing analysis (BOV)`,
       body: `Victor,\n\nBOV attached — anchored to your own sale two blocks over plus the two most recent trades in the submarket. The ask I'd take to market pencils on in-place income with zero projected escalations. That's the defensible number.\n\n${ME}`,
-      badges: [
-        { label: "Sent", tone: "sent" },
-        { label: "Opened", tone: "open", meta: "1h after send" },
-      ],
       reply: {
         replier: ctx.ref.name,
         delay: "4h after send",
@@ -542,7 +502,6 @@ function margaret(ctx: ArcCtx): TimelineEvent[] {
       direction: "in",
       subject: "Appraisal — confirming Friday",
       body: "Confirming the appraisal still lands Friday. My CPA is holding time Friday afternoon to review it, and I'd rather not reschedule him. If the date has moved, I want to know today — you've earned the benefit of the doubt, so just tell me straight.",
-      badges: [{ label: "New", tone: "reply" }],
     }),
     mk(ctx, "call", 2, {
       direction: "out",
@@ -621,11 +580,6 @@ function margaret(ctx: ArcCtx): TimelineEvent[] {
       direction: "out",
       subject: "Side-by-side: the two front-runners",
       body: `Margaret,\n\nSide-by-side attached — in-place income, basis, and execution risk on both. The primary is turnkey with the stronger NOI; the backup is a lower basis with more work. Both clear your return target and both fit the exchange window.\n\nReview with your CPA and tell me which way you lean.\n\n${ME}`,
-      badges: [
-        { label: "Sent", tone: "sent" },
-        { label: "Opened", tone: "open", meta: "30m after send" },
-        { label: "Clicked", tone: "click" },
-      ],
       reply: {
         replier: ctx.ref.name,
         delay: "1d after send",
@@ -652,11 +606,6 @@ function margaret(ctx: ArcCtx): TimelineEvent[] {
       direction: "out",
       subject: "First candidate set — built around your exchange clock",
       body: `Margaret,\n\nOpening set attached — six candidates, each annotated with my read and how it fits your identification window. Since you're managing this from out of state, I'll walk the shortlist on video so you never have to get on a plane for a maybe.\n\n${ME}`,
-      badges: [
-        { label: "Sent", tone: "sent" },
-        { label: "Opened", tone: "open" },
-        { label: "Clicked", tone: "click" },
-      ],
       reply: {
         replier: ctx.ref.name,
         delay: "3h after send",
@@ -670,10 +619,6 @@ function margaret(ctx: ArcCtx): TimelineEvent[] {
       direction: "out",
       subject: "Your search, in writing",
       body: `Margaret,\n\nGood speaking today. Recapping so we're precise: you're exchanging out of the family estate, the identification window is the constraint that matters, and you want income-stable retail you never have to think about. Everything I send will be measured against those three sentences.\n\n${ME}`,
-      badges: [
-        { label: "Sent", tone: "sent" },
-        { label: "Opened", tone: "open" },
-      ],
     }),
     mk(ctx, "stage-change", 86, {
       title: "Stage changed",
@@ -697,7 +642,6 @@ function patricia(ctx: ArcCtx): TimelineEvent[] {
       direction: "in",
       subject: "Intro: Karen Osgood, Meridian Capital",
       body: "As promised — copying Karen Osgood, who leads dispositions at Meridian. Karen, this is the broker I mentioned: the certainty-weighted process I described came from their playbook. I'll let you two take it from here.",
-      badges: [{ label: "New", tone: "reply" }],
     }),
     mk(ctx, "note", 4, {
       body: "Past client, warm, institutional. Two live threads out of one close: the second disposition next year, and the referral intro she's sending this week. This is how a closed deal becomes the next two.",
@@ -725,10 +669,6 @@ function patricia(ctx: ArcCtx): TimelineEvent[] {
       direction: "out",
       subject: `Closed — ${dealName} recap`,
       body: `Patricia,\n\nClosed and funded, at value, on schedule. Full recap attached, including the comp this sets for the rest of the portfolio.\n\nIt was a genuinely well-run process on your side. Whenever the next asset is ready, I'd be glad to do it again.\n\n${ME}`,
-      badges: [
-        { label: "Sent", tone: "sent" },
-        { label: "Opened", tone: "open", meta: "1h after send" },
-      ],
       reply: {
         replier: ctx.ref.name,
         delay: "3h after send",
@@ -787,11 +727,6 @@ function patricia(ctx: ArcCtx): TimelineEvent[] {
       direction: "out",
       subject: `${dealName}: LOI comparison`,
       body: `Patricia,\n\nBoth LOIs attached, weighted for execution certainty per the board's priorities — not just headline price. The regional group is under the national on price but all-cash with a 21-day close and no financing contingency. My recommendation: take certainty.\n\n${ME}`,
-      badges: [
-        { label: "Sent", tone: "sent" },
-        { label: "Opened", tone: "open" },
-        { label: "Clicked", tone: "click" },
-      ],
       hasAttachment: true,
       associations: assoc(ctx.deal),
     }),
@@ -817,10 +752,6 @@ function patricia(ctx: ArcCtx): TimelineEvent[] {
     mk(ctx, "marketing", 120, {
       title: `${dealName} — institutional launch`,
       body: "OM to eleven institutional buyers under CA. Five CAs returned within 48 hours.",
-      badges: [
-        { label: "Sent", tone: "sent" },
-        { label: "Opened", tone: "open", meta: "9 of 11" },
-      ],
       source: "automation",
       associations: assoc(ctx.deal),
     }),
@@ -833,10 +764,6 @@ function patricia(ctx: ArcCtx): TimelineEvent[] {
       direction: "out",
       subject: `${dealName}: BOV + disposition plan`,
       body: `Patricia,\n\nBOV attached — cap-rate-led, built on signed-lease NOI only, with the three most relevant trades in the deck. Plan is a quiet launch to roughly a dozen vetted institutions, then a certainty-weighted comparison for your board rather than a price-only view.\n\n${ME}`,
-      badges: [
-        { label: "Sent", tone: "sent" },
-        { label: "Opened", tone: "open", meta: "25m after send" },
-      ],
       reply: {
         replier: ctx.ref.name,
         delay: "1d after send",

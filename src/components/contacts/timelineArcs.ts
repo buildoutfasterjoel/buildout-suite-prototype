@@ -77,7 +77,7 @@ function arcFor(ctx: ArcCtx): TimelineEvent[] {
 
 // ── Listing inquiries ────────────────────────────────────────────────────────
 
-/** What an inquiry came in through — shown inline with the headline. */
+/** What an inquiry came in through — folded into the row's headline. */
 const INQUIRY_CHANNELS = ["LoopNet", "Buildout site", "Crexi", "Brochure link"];
 
 /**
@@ -136,13 +136,17 @@ function inquiryBeats(ctx: ArcCtx, alreadyAuthored: TimelineEvent[]): TimelineEv
     const days = detail?.date
       ? daysSince(detail.date)
       : Math.min(createdDays, 10 + i * 7);
+    // The channel rides in the headline. It used to be a badge beside the
+    // subject; the row no longer has badges, and where a lead came from is worth
+    // keeping — it's the difference between a portal tyre-kicker and someone who
+    // found you directly.
+    const channel =
+      detail?.channel ??
+      INQUIRY_CHANNELS[(channelFrom + i) % INQUIRY_CHANNELS.length];
     const over = {
       direction: "in" as const,
-      title: `Inquired about ${listing.name}`,
+      title: `Inquired about ${listing.name} via ${channel}`,
       body: detail?.message ?? INQUIRY_ASKS[(askFrom + i) % INQUIRY_ASKS.length],
-      sourceTag:
-        detail?.channel ??
-        INQUIRY_CHANNELS[(channelFrom + i) % INQUIRY_CHANNELS.length],
       associations: [
         { type: "deal" as const, label: listing.name, id: listing.id },
       ],
@@ -220,12 +224,6 @@ function marketingBeat(ctx: ArcCtx, days: number): TimelineEvent {
   return mk(ctx, "marketing", days, {
     title: campaign,
     body: `Campaign sent to ${ctx.first}'s segment.`,
-    badges: [
-      { label: "Sent", tone: "sent" },
-      ...(ctx.rng() > 0.4
-        ? [{ label: "Opened", tone: "open" as const }]
-        : []),
-    ],
     source: "automation",
     visibility: "team",
   });
@@ -257,14 +255,15 @@ function nurturingArc(ctx: ArcCtx): TimelineEvent[] {
   // First touch — a cold call that didn't go far.
   const firstCall = pick(rng, [
     {
-      badge: "Left Voicemail",
+      // A voicemail is a 40-second call; the summary below says so in words.
+      voicemail: true,
       summary: [
         `Left a voicemail introducing myself and the recent sale activity around ${ctx.c.company}'s building.`,
       ],
       next: ["Try again Thursday morning", "Send the market one-pager first"],
     },
     {
-      badge: null,
+      voicemail: false,
       summary: [
         `${first} picked up but was short on time — owns through ${ctx.c.company}, not thinking about a move this year.`,
         "Polite, not dismissive. Door is open.",
@@ -275,11 +274,8 @@ function nurturingArc(ctx: ArcCtx): TimelineEvent[] {
   events.push(
     mk(ctx, "call", back(0.85), {
       direction: "out",
-      durationSecs: firstCall.badge ? 42 : 4 * 60 + 30,
+      durationSecs: firstCall.voicemail ? 42 : 4 * 60 + 30,
       title: `Cold call to ${first}`,
-      badges: firstCall.badge
-        ? [{ label: firstCall.badge, tone: "reply" }]
-        : undefined,
       blocks: [
         { kicker: "Call summary", items: firstCall.summary },
         { kicker: "Next steps", items: firstCall.next },
@@ -298,10 +294,6 @@ function nurturingArc(ctx: ArcCtx): TimelineEvent[] {
         "No ask — just the market data I mentioned",
       ]),
       body: `Hi ${first} — no agenda here, just the recent trades near your building so you have real numbers on hand. Worth a quick read before your next loan conversation.`,
-      badges: [
-        { label: "Sent", tone: "sent" },
-        { label: "Opened", tone: "open", meta: "1d after send" },
-      ],
       reply: replied
         ? {
             replier: ctx.ref.name,
@@ -391,9 +383,8 @@ function pitchingArc(ctx: ArcCtx): TimelineEvent[] {
     events.push(
       mk(ctx, "inquiry", f(16), {
         direction: "in",
-        title: `Inquired about ${dealName}`,
+        title: `Inquired about ${dealName} via ${pick(rng, INQUIRY_CHANNELS)}`,
         body: "Requested the offering memorandum and current availability.",
-        sourceTag: pick(rng, ["LoopNet", "Buildout site", "Crexi"]),
         associations: assoc(deal),
         source: "api",
       }),
@@ -451,11 +442,6 @@ function pitchingArc(ctx: ArcCtx): TimelineEvent[] {
       body: seller
         ? `${first},\n\nAttached is the ${term} analysis for ${dealName}, anchored to the three most recent trades nearby. Happy to walk through the assumptions whenever suits.\n\n${OWNER_FIRST}`
         : `${first},\n\nHere's the opening set matched to your criteria. Two are on-market, one is a quiet opportunity I can get us into early. My notes on each are attached.\n\n${OWNER_FIRST}`,
-      badges: [
-        { label: "Sent", tone: "sent" },
-        { label: "Opened", tone: "open", meta: "3h after send" },
-        { label: "Clicked", tone: "click" },
-      ],
       reply: {
         replier: ctx.ref.name,
         delay: "1d after send",
@@ -579,10 +565,6 @@ function activeClientArc(ctx: ArcCtx): TimelineEvent[] {
       body: seller
         ? `${first},\n\nCountersigned agreement attached. Launch plan: quiet pre-market to the vetted list first, broad only if we need it. Weekly status every Friday.\n\n${OWNER_FIRST}`
         : `${first},\n\nGreat to be officially on your side of the table. Search plan attached — targets, outreach order, and the weekly cadence.\n\n${OWNER_FIRST}`,
-      badges: [
-        { label: "Sent", tone: "sent" },
-        { label: "Opened", tone: "open" },
-      ],
       hasAttachment: true,
       associations: assoc(deal),
     }),
@@ -610,10 +592,6 @@ function activeClientArc(ctx: ArcCtx): TimelineEvent[] {
       mk(ctx, "marketing", back(0.5), {
         title: `${dealName} — pre-market send`,
         body: "OM sent to the vetted buyer list under CA.",
-        badges: [
-          { label: "Sent", tone: "sent" },
-          { label: "Opened", tone: "open", meta: "8 of 11" },
-        ],
         source: "automation",
         associations: assoc(deal),
       }),
@@ -637,9 +615,8 @@ function activeClientArc(ctx: ArcCtx): TimelineEvent[] {
       events.push(
         mk(ctx, "inquiry", back(0.7), {
           direction: "in",
-          title: `Inquired about ${dealName}`,
+          title: `Inquired about ${dealName} via ${pick(rng, INQUIRY_CHANNELS)}`,
           body: "Requested the offering memorandum and current availability.",
-          sourceTag: pick(rng, ["LoopNet", "Buildout site", "Crexi"]),
           associations: assoc(deal),
           source: "api",
         }),
@@ -650,11 +627,6 @@ function activeClientArc(ctx: ArcCtx): TimelineEvent[] {
         direction: "out",
         subject: "This week's candidates — my notes attached",
         body: `${first},\n\nFour new candidates this week; two clear your criteria on the first pass. Notes and numbers attached — let's tour the top two.\n\n${OWNER_FIRST}`,
-        badges: [
-          { label: "Sent", tone: "sent" },
-          { label: "Opened", tone: "open" },
-          { label: "Clicked", tone: "click" },
-        ],
         hasAttachment: true,
       }),
       mk(ctx, "tour", back(0.45), {
@@ -673,10 +645,6 @@ function activeClientArc(ctx: ArcCtx): TimelineEvent[] {
         direction: "out",
         subject: "Side-by-side: the two front-runners",
         body: `${first},\n\nSide-by-side attached — in-place income, basis, and my read on each seller's flexibility. Both pencil; one is the safer hold, the other has the upside.\n\n${OWNER_FIRST}`,
-        badges: [
-          { label: "Sent", tone: "sent" },
-          { label: "Opened", tone: "open", meta: "1h after send" },
-        ],
         hasAttachment: true,
         associations: assoc(deal),
       }),
@@ -722,10 +690,6 @@ function activeClientArc(ctx: ArcCtx): TimelineEvent[] {
       direction: "out",
       subject: seller ? `${dealName}: offer strategy` : `${dealName}: making our move`,
       body: outMsg,
-      badges: [
-        { label: "Sent", tone: "sent" },
-        { label: "Opened", tone: "open" },
-      ],
       threadId,
       messageId: `${threadId}-m1`,
       hasAttachment: true,
@@ -735,7 +699,6 @@ function activeClientArc(ctx: ArcCtx): TimelineEvent[] {
       direction: "in",
       subject: seller ? `Re: ${dealName}: offer strategy` : `Re: ${dealName}: making our move`,
       body: inMsg,
-      badges: [{ label: "New", tone: "reply" }],
       threadId,
       messageId: `${threadId}-m2`,
       inReplyTo: `${threadId}-m1`,
@@ -771,7 +734,6 @@ function activeClientArc(ctx: ArcCtx): TimelineEvent[] {
       mk(ctx, "task", back(0.3), {
         title: "Completed task",
         body: seller ? "Assemble diligence data room" : "Collect proof of funds",
-        badges: [{ label: "Done", tone: "activity" }],
         source: "user",
       }),
     );
@@ -804,10 +766,6 @@ function underContractArc(ctx: ArcCtx): TimelineEvent[] {
       body: seller
         ? `${first},\n\nPre-market recap attached: strong early interest, tours starting this week. Weekly status every Friday, as promised.\n\n${OWNER_FIRST}`
         : `${first},\n\nOffer submitted as discussed. I'll press for an answer inside 48 hours and keep the backup candidate warm in the meantime.\n\n${OWNER_FIRST}`,
-      badges: [
-        { label: "Sent", tone: "sent" },
-        { label: "Opened", tone: "open" },
-      ],
       hasAttachment: true,
       associations: assoc(deal),
     }),
@@ -923,10 +881,6 @@ function pastClientArc(ctx: ArcCtx): TimelineEvent[] {
       direction: "out",
       subject: `${dealName}: proposal + process plan`,
       body: `${first},\n\nProposal attached — pricing case, buyer pool, and the week-by-week plan.\n\n${OWNER_FIRST}`,
-      badges: [
-        { label: "Sent", tone: "sent" },
-        { label: "Opened", tone: "open" },
-      ],
       hasAttachment: true,
       associations: assoc(deal),
     }),
@@ -960,10 +914,6 @@ function pastClientArc(ctx: ArcCtx): TimelineEvent[] {
       direction: "out",
       subject: `Closed — ${dealName} recap`,
       body: `${first},\n\nClosed and funded. Full recap attached, including what this sets as the comp for the rest of your holdings.\n\nA genuinely well-run process on your side. Whenever the next one is ready, I'd be glad to do it again.\n\n${OWNER_FIRST}`,
-      badges: [
-        { label: "Sent", tone: "sent" },
-        { label: "Opened", tone: "open" },
-      ],
       reply: {
         replier: ctx.ref.name,
         delay: "3h after send",

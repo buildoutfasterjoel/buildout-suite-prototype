@@ -15,12 +15,29 @@ export function ContactBriefingSection({
   briefing,
   open,
   onToggle,
+  bare = false,
 }: {
   briefing: string;
   open: boolean;
   onToggle: () => void;
+  /**
+   * Drop the card and its collapsible header — used when the briefing is the body
+   * of a tab, where the tab already names it and a second collapse would be one
+   * click to reach content the reader just asked for.
+   */
+  bare?: boolean;
 }) {
   const legacy = useContactUiPrefs((s) => s.legacyAccordions);
+
+  if (bare) {
+    return (
+      <div className="contact-briefing contact-briefing--bare">
+        <div className="contact-briefing__body">
+          <p className="mb-0">{briefing}</p>
+        </div>
+      </div>
+    );
+  }
 
   const heading = (
     <span className="d-flex align-items-center gap-2 min-w-0">
