@@ -1,29 +1,66 @@
-import { useLayoutEffect, useRef, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronRight } from "@fortawesome/pro-regular-svg-icons";
+import {
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 /**
- * Body text clamped to `lines` (default 2). When the content actually overflows
- * that height, a "Show more" / "Show less" toggle appears — styled like the
- * timeline's "View full thread" link. Used for the missed-call voicemail
- * transcript, which can run long.
+ * Event content clamped to `lines` (default 2), with a "Show more" / "Show less"
+ * link that appears only when the content actually overflows. Every row's content
+ * runs through this — one long note could otherwise set the height of the whole
+ * feed, which makes the timeline impossible to scan.
+ *
+ * Takes children rather than a text prop so a row can clamp a bullet list or
+ * several paragraphs as one block instead of line by line.
  */
-export function ClampText({ text, lines = 2 }: { text: string; lines?: number }) {
-  const ref = useRef<HTMLParagraphElement>(null);
+export function ClampText({
+  children,
+  lines = 2,
+}: {
+  children: ReactNode;
+  lines?: number;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [overflows, setOverflows] = useState(false);
 
-  useLayoutEffect(() => {
+  // Only measure while clamped. Once expanded the element no longer overflows, so
+  // re-measuring would hide the toggle and strand the reader in the expanded view
+  // with no way back.
+  const measure = useCallback(() => {
     const el = ref.current;
-    if (!el) return;
-    // Measure against the clamped height regardless of the current expanded
-    // state so the toggle stays visible once revealed.
+    if (!el || expanded) return;
     setOverflows(el.scrollHeight - el.clientHeight > 1);
-  }, [text, lines]);
+  }, [expanded]);
+
+  useLayoutEffect(() => {
+    measure();
+    // One measurement on mount isn't enough. The web font lands *after* first
+    // layout and changes how many lines the text takes, so text that ends up
+    // fitting is measured mid-fallback-font and reports an overflow it doesn't
+    // have — which is how every row came to show a "Show more" that did nothing.
+    // The observer covers the other mover: the column's width.
+    let cancelled = false;
+    void document.fonts?.ready.then(() => {
+      if (!cancelled) measure();
+    });
+    const el = ref.current;
+    const ro =
+      el && typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => measure())
+        : null;
+    ro?.observe(el!);
+    return () => {
+      cancelled = true;
+      ro?.disconnect();
+    };
+  }, [children, lines, measure]);
 
   return (
     <div className="tl-clamp">
-      <p
+      <div
         ref={ref}
         className="tl-clamp__text"
         style={
@@ -37,16 +74,16 @@ export function ClampText({ text, lines = 2 }: { text: string; lines?: number })
               }
         }
       >
-        {text}
-      </p>
-      {(overflows || expanded) && (
+        {children}
+      </div>
+      {overflows && (
         <button
           type="button"
-          className={`tl-convo__more ${expanded ? "is-open" : ""}`}
+          className="tl-link"
+          aria-expanded={expanded}
           onClick={() => setExpanded((v) => !v)}
         >
           {expanded ? "Show less" : "Show more"}
-          <FontAwesomeIcon icon={faChevronRight} />
         </button>
       )}
     </div>

@@ -230,7 +230,8 @@ describe("listing inquiries as timeline rows", () => {
     );
     const inquiries = events.filter((e) => e.type === "inquiry");
     expect(inquiries).toHaveLength(1);
-    expect(inquiries[0].title).toBe(`Inquired about ${listing.name}`);
+    // The channel is drawn from a pool, so only the stable part is pinned here.
+    expect(inquiries[0].title).toContain(`Inquired about ${listing.name} via `);
     // The link the timeline renders through to the deal.
     expect(inquiries[0].associations?.[0]?.id).toBe(listing.id);
     expect(inquiries[0].direction).toBe("in");
@@ -268,7 +269,8 @@ describe("listing inquiries as timeline rows", () => {
     );
     const inquiry = events.find((e) => e.type === "inquiry")!;
     expect(inquiry.body).toBe("Send the T-12.");
-    expect(inquiry.sourceTag).toBe("LoopNet");
+    // The record's own channel, folded into the headline.
+    expect(inquiry.title).toBe(`Inquired about ${listing.name} via LoopNet`);
   });
 
   it("falls back to synthesized copy for inquiries the record doesn't detail", () => {
@@ -311,7 +313,8 @@ describe("listing inquiries as timeline rows", () => {
       ).filter((e) => e.type === "inquiry");
       expect(rows).toHaveLength(3);
       expect(new Set(rows.map((r) => r.body)).size).toBe(3);
-      expect(new Set(rows.map((r) => r.sourceTag)).size).toBe(3);
+      // The channel now lives at the tail of the headline.
+      expect(new Set(rows.map((r) => r.title?.split(" via ").pop())).size).toBe(3);
     }
   });
 

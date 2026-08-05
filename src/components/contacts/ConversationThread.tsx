@@ -1,46 +1,49 @@
 import {
   exactTime,
-  groupThreadMessages,
   shortDateTime,
   type TimelineThread,
 } from "#/components/contacts/timeline";
+import {
+  ThreadMessageFab,
+  type ActionDispatch,
+} from "#/components/contacts/TimelineActions";
 
 /**
- * The expanded email thread — stacked newest → oldest (most recent on top, to
- * match the timeline's ordering), each run marked by direction (You vs the
- * contact). Rendered inline (accordion) beneath the Conversation card; never a
- * modal.
+ * The expanded email thread — stacked newest → oldest, matching the timeline's
+ * own ordering. Each message is a plain attributed block (sender + exact time,
+ * then the body); on hover it reveals its own reply / reply all / forward FAB,
+ * because in a thread you answer a specific message, not the thread.
  *
- * Consecutive messages from one sender share a single bubble and attribution, so
- * a follow-up reads as a continuation rather than a second exchange, and every
- * message carries its own exact timestamp — inside a thread the gap between two
- * messages is the point, and a relative label ("3w ago") flattens it away.
+ * Every message carries an exact timestamp rather than a relative one: inside a
+ * thread the gap between two messages is the point, and "3w ago" collapses
+ * messages minutes apart into the same string. Bodies are deliberately not
+ * clamped — the reader opened the thread to read it.
  */
-export function ConversationThread({ thread }: { thread: TimelineThread }) {
-  // Reverse first, then group: adjacency has to be computed in display order.
-  const groups = groupThreadMessages([...thread.messages].reverse());
+export function ConversationThread({
+  thread,
+  onAction,
+}: {
+  thread: TimelineThread;
+  onAction: ActionDispatch;
+}) {
   return (
     <div className="tl-thread">
-      {groups.map((group) => (
-        <div
-          key={group.messages[0].id}
-          className={`tl-thread__group tl-thread__group--${group.direction}`}
-        >
-          <div className="tl-thread__group-head fw-semibold">
-            {group.direction === "out" ? "You" : group.sender}
+      {[...thread.messages].reverse().map((m) => (
+        <div key={m.id} className="tl-thread__msg">
+          <div className="tl-thread__msg-head">
+            <span className="tl-thread__msg-sender">
+              {m.direction === "out" ? "You" : m.sender}
+            </span>
+            <time
+              className="tl-thread__msg-time"
+              dateTime={m.timestamp}
+              title={exactTime(m.timestamp)}
+            >
+              {shortDateTime(m.timestamp)}
+            </time>
           </div>
-          {group.messages.map((m) => (
-            <div key={m.id} className="tl-thread__msg">
-              <p className="tl-thread__msg-body">{m.body}</p>
-              <time
-                className="tl-thread__msg-time"
-                dateTime={m.timestamp}
-                title={exactTime(m.timestamp)}
-              >
-                {shortDateTime(m.timestamp)}
-              </time>
-            </div>
-          ))}
+          <p className="tl-thread__msg-body">{m.body}</p>
+          <ThreadMessageFab onAction={onAction} />
         </div>
       ))}
     </div>
