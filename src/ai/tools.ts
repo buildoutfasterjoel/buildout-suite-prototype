@@ -533,6 +533,8 @@ export function createClientTools({
         dueDate: due ? parseDueDate(due) : null,
         contactId: c?.id ?? null,
         source: "contact",
+        // The assistant queued this, so the row earns its sparkle badge.
+        createdByAi: true,
       });
       return {
         taskId: task.id,
