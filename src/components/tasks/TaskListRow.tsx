@@ -24,13 +24,15 @@ import {
 
 /**
  * A task row on the Tasks page — the same inset "card" tile as the contact
- * detail column, but always showing the assignee (name + photo) and a source
- * badge for the deal or contact the task hangs off. Clicking opens the task;
- * the checkbox toggles completion. Reuses the `.contact-task-card` styles.
+ * detail column, but always showing the assignee and a source badge for the
+ * deal or contact the task hangs off. Clicking opens the task; the checkbox
+ * toggles completion. Reuses the `.contact-task-card` styles.
  *
  * This page has room to spell things out, so the type badge carries its icon
- * *and* label (the contact column shows icon only). The source is a ghost
- * accent badge linking through to the deal or contact, same as that column.
+ * *and* label (the contact column shows icon only). Everything else is turned
+ * down instead: the assignee is an avatar with its name in a tooltip, and the
+ * source badge is muted rather than the contact column's hyperlink-blue ghost
+ * — at this density, a column of blue links pulls the eye off the task titles.
  */
 export function TaskListRow({
   task,
@@ -83,29 +85,31 @@ export function TaskListRow({
         <TaskCheckbox checked={task.completed} onToggle={onToggle} />
 
         <div className="contact-task-card__content">
-          {/* Top row: title + assignee (name + avatar) */}
+          {/* Top row: title + assignee avatar (name lives in its tooltip) */}
           <div className="contact-task-card__titlerow">
             <span className="contact-task-card__label">{task.title}</span>
-            <span className="contact-task-card__assignee">
-              <span className="contact-task-card__assignee-name">
-                {task.assigneeName}
-              </span>
-              <Avatar
-                size="sm"
-                className="contact-task-card__avatar"
-                style={{ width: 18, height: 18 }}
-              >
-                {task.assigneeAvatarUrl && (
-                  <Avatar.Image
-                    src={task.assigneeAvatarUrl}
-                    alt={task.assigneeName}
-                  />
-                )}
-                <Avatar.Fallback style={{ fontSize: 8 }}>
-                  {task.assigneeInitials}
-                </Avatar.Fallback>
-              </Avatar>
-            </span>
+            <Tooltip>
+              <Tooltip.Trigger
+                render={
+                  <Avatar
+                    size="sm"
+                    className="contact-task-card__avatar"
+                    style={{ width: 18, height: 18 }}
+                  >
+                    {task.assigneeAvatarUrl && (
+                      <Avatar.Image
+                        src={task.assigneeAvatarUrl}
+                        alt={task.assigneeName}
+                      />
+                    )}
+                    <Avatar.Fallback style={{ fontSize: 8 }}>
+                      {task.assigneeInitials}
+                    </Avatar.Fallback>
+                  </Avatar>
+                }
+              />
+              <Tooltip.Content>Assigned to {task.assigneeName}</Tooltip.Content>
+            </Tooltip>
           </div>
 
           {/* Bottom row: badges + due date */}
@@ -136,14 +140,14 @@ export function TaskListRow({
                 (sourceLink ? (
                   <Link
                     {...sourceLink}
-                    className="contact-task-card__badge contact-task-card__badge--ghost"
+                    className="contact-task-card__badge contact-task-card__badge--source-muted"
                     title={task.sourceLabel}
                   >
                     {sourceBadge}
                   </Link>
                 ) : (
                   <span
-                    className="contact-task-card__badge contact-task-card__badge--ghost"
+                    className="contact-task-card__badge contact-task-card__badge--source-muted"
                     title={task.sourceLabel}
                   >
                     {sourceBadge}
