@@ -8,7 +8,7 @@ import { getStore } from "#/data/store";
 import type { DealMarketing, DealType, PropertyStatus } from "#/data/types";
 
 /**
- * Listing tab — Buyer. Only meaningful once a Sale deal is Under Contract;
+ * Listing page — Buyer. Only meaningful once a Sale deal is Under Contract;
  * the caller (`ListingFormEditor`) gates rendering (and its preceding
  * `<Separator/>`) on `showBuyerSection(dealType, status)` so there's never an
  * orphan separator when this section is hidden.

@@ -25,7 +25,7 @@ const VISUAL_MEDIA_TYPES: VisualMediaType[] = [
 ];
 
 /**
- * Listing tab — Visual Media. Repeatable rows of virtual-tour / rendering
+ * Listing page — Visual Media. Repeatable rows of virtual-tour / rendering
  * embeds on `marketing.visualMedia` — each row a public URL + media type.
  */
 export function VisualMediaSection({

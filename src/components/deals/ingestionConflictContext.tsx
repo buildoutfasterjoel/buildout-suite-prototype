@@ -50,7 +50,7 @@ export function conflictRowId(fieldKey: IngestionFieldKey): string {
   return `ingestion-conflict-${fieldKey}`;
 }
 
-/** How many unresolved conflicts fall on a given set of field keys — for tab badges. */
+/** How many unresolved conflicts fall on a given set of field keys — for page badges. */
 export function countConflictsFor(
   conflicts: IngestionConflict[],
   fieldKeys: IngestionFieldKey[],

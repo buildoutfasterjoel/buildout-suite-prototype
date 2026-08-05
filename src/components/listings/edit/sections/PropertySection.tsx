@@ -118,7 +118,7 @@ function AdditionalTypesEditor({
 }
 
 /**
- * Listing tab — Property. Primary type/subtype, an optional display-label
+ * Listing page — Property. Primary type/subtype, an optional display-label
  * override, repeatable additional types + aliases, and the required-when-land
  * Lot Size pair. A collapsed "Additional Fields" accordion holds the
  * long-tail site fields most listings never touch.

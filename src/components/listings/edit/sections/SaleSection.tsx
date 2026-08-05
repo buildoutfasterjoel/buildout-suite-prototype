@@ -31,7 +31,7 @@ const INVESTMENT_TYPES: InvestmentType[] = [
 ];
 
 /**
- * Listing tab — Sale Marketing & Terms. Only rendered for Sale deals
+ * Listing page — Sale Marketing & Terms. Only rendered for Sale deals
  * (`dealType === "Sale"`). Title/description/bullets and the core deal terms
  * show up front; the Auction toggle reveals its own date/time/location/bid/URL
  * fields inline, and the long-tail tax/loan/exchange fields sit behind a
