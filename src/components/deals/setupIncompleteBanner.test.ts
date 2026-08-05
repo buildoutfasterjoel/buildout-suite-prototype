@@ -210,6 +210,7 @@ describe("planner tasks follow the deal's stage", () => {
     expect(moved.tasks.map((t) => t.label)).toEqual([
       "Execute purchase agreement (PSA)",
       "Collect earnest money",
+      "Meeting with title company on closing logistics",
       "Complete due diligence",
       "Finalize buyer financing",
       "Clear closing contingencies",

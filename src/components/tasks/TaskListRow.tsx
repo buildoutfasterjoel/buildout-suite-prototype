@@ -1,16 +1,20 @@
+import { Link } from "@tanstack/react-router";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faAlarmExclamation,
-  faCheck,
   faHandshake,
   faSparkles,
   faUser,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { TaskView } from "#/data/types";
+import { getListing } from "#/data/store";
+import { dealCardLinkProps } from "#/components/deals/dealCardLink";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
 import { todayISO } from "#/components/contacts/contactDisplay";
+import { TaskCheckbox } from "#/components/tasks/TaskCheckbox";
 import {
+  TASK_TYPE_ICONS,
   TASK_TYPE_LABELS,
   taskDueLabel,
   type TaskTypeKey,
@@ -21,6 +25,10 @@ import {
  * detail column, but always showing the assignee (name + photo) and a source
  * badge for the deal or contact the task hangs off. Clicking opens the task;
  * the checkbox toggles completion. Reuses the `.contact-task-card` styles.
+ *
+ * This page has room to spell things out, so the type badge carries its icon
+ * *and* label (the contact column shows icon only). The source is a ghost
+ * accent badge linking through to the deal or contact, same as that column.
  */
 export function TaskListRow({
   task,
@@ -32,10 +40,32 @@ export function TaskListRow({
   onOpen: () => void;
 }) {
   const due = taskDueLabel(task.dueDate);
-  const isOverdue = !task.completed && !!task.dueDate && task.dueDate < todayISO();
-  const typeLabel = task.type
-    ? TASK_TYPE_LABELS[task.type as TaskTypeKey]
-    : null;
+  // Overdue purely by date. A completed task keeps the alarm icon but drops the
+  // red — "this was overdue when you finished it", not a live warning.
+  const isOverdue = !!task.dueDate && task.dueDate < todayISO();
+  const type = task.type as TaskTypeKey | null;
+  const typeLabel = type ? TASK_TYPE_LABELS[type] : null;
+
+  // Where the source chip goes. A space deal has no page of its own, so deals
+  // route through `dealCardLinkProps`. Falls back to a plain chip if the record
+  // is gone — a dangling badge beats a dead link.
+  const sourceListing =
+    task.sourceKind === "deal" && task.dealId ? getListing(task.dealId) : undefined;
+  const sourceLink = sourceListing
+    ? dealCardLinkProps(sourceListing)
+    : task.sourceKind === "contact" && task.contactId
+      ? ({
+          to: "/backoffice/contacts/$contactId",
+          params: { contactId: task.contactId },
+        } as const)
+      : null;
+
+  const sourceBadge = task.sourceKind !== "none" && (
+    <>
+      <FontAwesomeIcon icon={task.sourceKind === "deal" ? faHandshake : faUser} />
+      <span className="text-truncate">{task.sourceLabel}</span>
+    </>
+  );
 
   return (
     <div
@@ -48,16 +78,7 @@ export function TaskListRow({
       }}
     >
       <div className="contact-task-card__inner">
-        <button
-          type="button"
-          role="checkbox"
-          aria-checked={task.completed}
-          aria-label={task.completed ? "Mark task incomplete" : "Mark task complete"}
-          className="contact-task-card__check"
-          onClick={onToggle}
-        >
-          {task.completed && <FontAwesomeIcon icon={faCheck} />}
-        </button>
+        <TaskCheckbox checked={task.completed} onToggle={onToggle} />
 
         <div className="contact-task-card__content">
           {/* Top row: title + assignee (name + avatar) */}
@@ -97,28 +118,39 @@ export function TaskListRow({
                   <FontAwesomeIcon icon={faSparkles} />
                 </span>
               )}
-              {typeLabel && (
+              {type && typeLabel && (
                 <span className="contact-task-card__badge contact-task-card__badge--type">
+                  <FontAwesomeIcon icon={TASK_TYPE_ICONS[type]} />
                   {typeLabel}
                 </span>
               )}
-              {task.sourceKind !== "none" && (
-                <span
-                  className="contact-task-card__badge contact-task-card__badge--deal"
-                  title={task.sourceLabel}
-                >
-                  <FontAwesomeIcon
-                    icon={task.sourceKind === "deal" ? faHandshake : faUser}
-                  />
-                  <span className="text-truncate">{task.sourceLabel}</span>
-                </span>
-              )}
+              {sourceBadge &&
+                (sourceLink ? (
+                  <Link
+                    {...sourceLink}
+                    className="contact-task-card__badge contact-task-card__badge--ghost"
+                    title={task.sourceLabel}
+                  >
+                    {sourceBadge}
+                  </Link>
+                ) : (
+                  <span
+                    className="contact-task-card__badge contact-task-card__badge--ghost"
+                    title={task.sourceLabel}
+                  >
+                    {sourceBadge}
+                  </span>
+                ))}
             </div>
 
             {due && (
               <span
                 className={`contact-task-card__due${
-                  isOverdue ? " contact-task-card__due--overdue" : ""
+                  isOverdue
+                    ? task.completed
+                      ? " contact-task-card__due--was-overdue"
+                      : " contact-task-card__due--overdue"
+                    : ""
                 }`}
               >
                 {isOverdue && <FontAwesomeIcon icon={faAlarmExclamation} />}

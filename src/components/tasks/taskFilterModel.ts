@@ -71,6 +71,39 @@ export function dueBucket(
   return "future";
 }
 
+/**
+ * Sections of the grouped view. Finer-grained than `DueBucket`: "future" splits
+ * into the rest of the current calendar week and everything after it.
+ */
+export type DueSection = "overdue" | "today" | "week" | "future" | "none";
+
+/**
+ * The last day of the calendar week containing `today`, as ISO `YYYY-MM-DD`.
+ * Weeks run Sunday → Saturday. Parsed as local midnight so the day never shifts.
+ */
+export function endOfWeekISO(today: string): string {
+  const [y, m, d] = today.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + (6 - date.getDay()));
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${mm}-${dd}`;
+}
+
+/**
+ * Which grouped-view section a due date belongs to. Anything due after today
+ * but on or before the end of this calendar week is "week"; later is "future".
+ */
+export function dueSection(
+  dueDate: string | null,
+  today: string,
+  weekEnd = endOfWeekISO(today),
+): DueSection {
+  const bucket = dueBucket(dueDate, today);
+  if (bucket !== "future") return bucket;
+  return dueDate && dueDate <= weekEnd ? "week" : "future";
+}
+
 /** True when the task passes every active filter. Completion is gated here too. */
 export function matchesTaskFilters(
   t: TaskView,

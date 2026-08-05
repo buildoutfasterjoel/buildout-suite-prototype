@@ -32,8 +32,9 @@ import { TaskFilterBar } from "#/components/tasks/TaskFilterBar";
 import { useTaskUiPrefs } from "#/components/tasks/useTaskUiPrefs";
 import {
   countActiveTaskFilters,
-  dueBucket,
+  dueSection,
   emptyTaskFilters,
+  endOfWeekISO,
   matchesTaskFilters,
 } from "#/components/tasks/taskFilterModel";
 
@@ -43,6 +44,9 @@ export const Route = createFileRoute("/_shell/tasks/")({
 });
 
 const PAGE_SIZE = 10;
+
+/** Rows shown in a truncated section before the "Show all …" button. */
+const COLLAPSED_ROWS = 3;
 
 /** Nulls-last ascending by due date. */
 function byDue(a: TaskView, b: TaskView): number {
@@ -80,6 +84,8 @@ function TasksPage() {
   const setFilters = useTaskUiPrefs((s) => s.setFilters);
   const view = useTaskUiPrefs((s) => s.view);
   const setView = useTaskUiPrefs((s) => s.setView);
+  const collapsedSections = useTaskUiPrefs((s) => s.collapsedSections);
+  const setSectionOpen = useTaskUiPrefs((s) => s.setSectionOpen);
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
 
@@ -122,20 +128,19 @@ function TasksPage() {
     }
   };
 
-  // Grouped view partitions.
+  // Grouped view partitions. "This Week" is the remainder of the current
+  // calendar week (after today); anything later falls through to Future.
   const groups = useMemo(() => {
+    const weekEnd = endOfWeekISO(today);
     const open = filtered.filter((t) => !t.completed);
+    const inSection = (key: string) =>
+      open.filter((t) => dueSection(t.dueDate, today, weekEnd) === key).sort(byDue);
     return {
-      overdue: open
-        .filter((t) => dueBucket(t.dueDate, today) === "overdue")
-        .sort(byDue),
-      today: open
-        .filter((t) => dueBucket(t.dueDate, today) === "today")
-        .sort(byDue),
-      future: open
-        .filter((t) => dueBucket(t.dueDate, today) === "future")
-        .sort(byDue),
-      none: open.filter((t) => !t.dueDate),
+      overdue: inSection("overdue"),
+      today: inSection("today"),
+      week: inSection("week"),
+      future: inSection("future"),
+      none: inSection("none"),
       completed: filtered.filter((t) => t.completed).sort(byDue),
     };
   }, [filtered, today]);
@@ -144,11 +149,26 @@ function TasksPage() {
     key: string;
     title: string;
     tone: "default" | "overdue";
+    /** Truncate to 3 rows with a "Show all …" reveal; the label is the due status. */
+    truncateLabel?: string;
     tasks: TaskView[];
   }[] = [
-    { key: "overdue", title: "Overdue", tone: "overdue" as const, tasks: groups.overdue },
+    {
+      key: "overdue",
+      title: "Overdue",
+      tone: "overdue" as const,
+      truncateLabel: "overdue",
+      tasks: groups.overdue,
+    },
     { key: "today", title: "Today", tone: "default" as const, tasks: groups.today },
-    { key: "future", title: "Future", tone: "default" as const, tasks: groups.future },
+    { key: "week", title: "This Week", tone: "default" as const, tasks: groups.week },
+    {
+      key: "future",
+      title: "Future",
+      tone: "default" as const,
+      truncateLabel: "future",
+      tasks: groups.future,
+    },
     { key: "none", title: "No Date", tone: "default" as const, tasks: groups.none },
     {
       key: "completed",
@@ -166,16 +186,18 @@ function TasksPage() {
 
   // The list view is a fixed-height column so its rows scroll internally and
   // pagination stays pinned. The grouped view just lets the page scroll, so its
-  // accordion sections size to their content instead of bunching up.
+  // accordion sections size to their content instead of bunching up. In that
+  // view the page padding sits INSIDE the scroll container (on an inner
+  // wrapper), so rows scrolling past the sticky section headers are clipped at
+  // the very top edge instead of peeking through the padding strip above them.
   const isList = view === "list";
 
-  return (
-    <div className={isList ? "h-100 overflow-hidden p-4 d-flex" : "h-100 overflow-auto p-4"}>
+  const card = (
       <Card
         className={`panel-card mx-auto w-100${
           isList ? " flex-grow-1 d-flex flex-column overflow-hidden" : ""
         }`}
-        style={{ maxWidth: "56rem" }}
+        style={{ maxWidth: "48rem" }}
       >
         <Card.Body
           className={`d-flex flex-column gap-4${isList ? " overflow-hidden" : ""}`}
@@ -320,6 +342,9 @@ function TasksPage() {
                     title={s.title}
                     tone={s.tone}
                     tasks={s.tasks}
+                    truncateLabel={s.truncateLabel}
+                    open={!collapsedSections[s.key]}
+                    onOpenChange={(open) => setSectionOpen(s.key, open)}
                     onToggle={toggleComplete}
                     onOpen={openTask}
                   />
@@ -392,6 +417,13 @@ function TasksPage() {
             )}
           </Card.Body>
         </Card>
+  );
+
+  return isList ? (
+    <div className="h-100 overflow-hidden p-4 d-flex">{card}</div>
+  ) : (
+    <div className="h-100 overflow-auto">
+      <div className="p-4">{card}</div>
     </div>
   );
 }
@@ -399,28 +431,41 @@ function TasksPage() {
 /**
  * A collapsible section for the grouped view. Uses Blueprint's Accordion so the
  * chevron matches the Contact Details accordions; the title matches their
- * 20px / 26px sizing.
+ * 20px / 26px sizing. The header sticks to the top of the scrolling page while
+ * the section's rows pass under it.
+ *
+ * Open/collapsed lives in `useTaskUiPrefs` (persists across navigation); the
+ * `truncateLabel` reveal is local state, so it resets when the page unmounts.
  */
 function TaskGroup({
   title,
   tone,
   tasks,
+  truncateLabel,
+  open,
+  onOpenChange,
   onToggle,
   onOpen,
 }: {
   title: string;
   tone: "default" | "overdue";
   tasks: TaskView[];
+  truncateLabel?: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onToggle: (t: TaskView) => void;
   onOpen: (t: TaskView) => void;
 }) {
-  const [open, setOpen] = useState<string[]>(["open"]);
+  const [showAll, setShowAll] = useState(false);
+  const truncated =
+    !!truncateLabel && !showAll && tasks.length > COLLAPSED_ROWS;
+  const visible = truncated ? tasks.slice(0, COLLAPSED_ROWS) : tasks;
   return (
     <Accordion
       multiple
-      value={open}
-      onValueChange={setOpen}
-      className="tasks-group border rounded-3 overflow-hidden"
+      value={open ? ["open"] : []}
+      onValueChange={(value) => onOpenChange(value.includes("open"))}
+      className="tasks-group border rounded-3"
     >
       <Accordion.Item value="open">
         <Accordion.Trigger>
@@ -441,7 +486,7 @@ function TaskGroup({
         </Accordion.Trigger>
         <Accordion.Content>
           <div className="px-3">
-            {tasks.map((t) => (
+            {visible.map((t) => (
               <TaskListRow
                 key={t.id}
                 task={t}
@@ -450,6 +495,13 @@ function TaskGroup({
               />
             ))}
           </div>
+          {truncated && (
+            <div className="px-3 py-2 border-top">
+              <Button variant="ghost" onClick={() => setShowAll(true)}>
+                Show all {tasks.length} {truncateLabel} tasks
+              </Button>
+            </div>
+          )}
         </Accordion.Content>
       </Accordion.Item>
     </Accordion>
