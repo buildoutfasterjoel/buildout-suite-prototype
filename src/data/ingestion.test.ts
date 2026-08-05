@@ -373,6 +373,7 @@ import { useDataStore } from './dataStore'
 import { generateDataset } from './seed'
 import { publishReadiness } from './stageGates'
 import { emptyDraft } from './createListing'
+import { updateProperty } from './store'
 import {
   createDeal,
   finishIngestion,
@@ -493,6 +494,22 @@ describe('ingestion actions', () => {
     resolveIngestionConflict(deal.id, 'occupancyPct', 'doc')
     const property = useDataStore.getState().properties.get(current(deal.id).propertyId)!
     expect(property.occupancyPct).toBe(occConflict.docRaw)
+  })
+
+  it('does not revert a directly-edited occupancy when resolving an unrelated conflict', () => {
+    // Regression: resolving any conflict used to write the property's occupancy
+    // unconditionally, using the value `deriveConflicts` snapshotted when the
+    // run finished. A broker who edited occupancy directly in between (e.g. a
+    // Save on the Listing page) would see that edit silently reverted the next
+    // time they resolved an unrelated conflict like Asking Price.
+    const deal = createDealWithFiles()
+    finishIngestion(deal.id)
+    updateProperty(deal.propertyId, { occupancyPct: 87 })
+
+    resolveIngestionConflict(deal.id, 'askingPrice', 'doc')
+
+    const property = useDataStore.getState().properties.get(deal.propertyId)!
+    expect(property.occupancyPct).toBe(87)
   })
 
   it('flips to complete on the last resolution, leaving only the doc review outstanding', () => {
