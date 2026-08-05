@@ -19,15 +19,18 @@ import { AssignRolesPanel } from "./AssignRolesPanel";
 import { ManageCompanyNotice } from "./ManageCompanyNotice";
 import { useCan } from "./useViewer";
 import {
-  Attribution,
   CUSTOM_TEXT,
   CustomChip,
   SCOPE_META,
-  ScopeDot,
   StatePill,
 } from "./roleDisplay";
 
 const SCOPE_ORDER: PermissionScope[] = ["record", "account"];
+
+/** "an Office Admin" but "a Broker" — every role name is spoken in a toast. */
+function article(word: string): string {
+  return /^[aeiou]/i.test(word) ? "an" : "a";
+}
 
 /** First name — every explainer in the mocks addresses the person directly. */
 function firstNameOf(user: RosterUser): string {
@@ -123,7 +126,7 @@ export function UserPermissions({ user }: { user: RosterUser }) {
       <div className="d-flex align-items-center gap-2 flex-wrap">
         <span>
           <span className="fw-bold">{summary.onCount}</span> of {summary.total}{" "}
-          turned on
+          permissions turned on
         </span>
         <span className="text-muted" aria-hidden>
           ·
@@ -137,7 +140,7 @@ export function UserPermissions({ user }: { user: RosterUser }) {
             {summary.customCount} changed from the role default
           </span>
         )}
-        {summary.customCount > 0 && (
+        {summary.customCount > 0 && editing && (
           <>
             <span className="text-muted" aria-hidden>
               ·
@@ -159,9 +162,6 @@ export function UserPermissions({ user }: { user: RosterUser }) {
           </>
         )}
 
-        {/* Assign roles stands on its own rather than hiding behind edit mode:
-            changing someone's role is the common fix, and burying it made the
-            page look like the only lever was toggling permissions one by one. */}
         <div className="ms-auto d-flex align-items-center gap-2">
           {/* The model explained on demand rather than in a standing banner:
               it's the same two sentences every visit, and an admin who already
@@ -197,14 +197,22 @@ export function UserPermissions({ user }: { user: RosterUser }) {
                   marked Custom.
                 </>
               )}{" "}
-              Being allowed to edit a listing doesn&apos;t open any listing —{" "}
-              {firstName} still has to be shared into the record.
+              Being allowed to edit a listing doesn&apos;t open any listing —
+              the record still has to be shared with {firstName}.
             </Tooltip.Content>
           </Tooltip>
 
-          <Button variant="outline" size="sm" onClick={() => setRolesOpen(true)}>
-            Assign roles
-          </Button>
+          {/* Assigning a role and hand-tuning permissions are alternative
+              answers to the same question, so only one is offered at a time. */}
+          {!editing && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setRolesOpen(true)}
+            >
+              Assign role
+            </Button>
+          )}
           <Button
             variant={editing ? "primary" : "outline"}
             size="sm"
@@ -229,15 +237,31 @@ export function UserPermissions({ user }: { user: RosterUser }) {
       <div className="row g-4">
         {SCOPE_ORDER.map((scope) => (
           <div key={scope} className="col-lg-6">
-            <div className="d-flex align-items-center gap-2 mb-1">
-              <ScopeDot scope={scope} />
-              <span className="text-uppercase fw-semibold small">
+            {/* The icon leads the heading: at this size it reads as the group's
+                marker — the job the coloured dot used to do — and carries the
+                scope explanation on hover rather than in a standing subtitle. */}
+            <div className="d-flex align-items-center gap-2 mb-2">
+              <Tooltip>
+                <Tooltip.Trigger
+                  render={
+                    <span
+                      tabIndex={0}
+                      className="text-muted d-inline-flex align-items-center"
+                      style={{ cursor: "help", fontSize: "1.25rem" }}
+                      aria-label={`What "${SCOPE_META[scope].heading}" means`}
+                    />
+                  }
+                >
+                  <FontAwesomeIcon icon={faCircleInfo} />
+                </Tooltip.Trigger>
+                <Tooltip.Content side="top" style={{ maxWidth: 300 }}>
+                  {SCOPE_META[scope].tooltip}
+                </Tooltip.Content>
+              </Tooltip>
+              <span className="fs-6 fw-semibold">
                 {SCOPE_META[scope].heading}
               </span>
             </div>
-            <p className="text-muted small mb-3 ps-3">
-              {SCOPE_META[scope].blurb(firstName)}
-            </p>
 
             <div className="border rounded overflow-hidden">
               {byScope[scope].map((row) => (
@@ -264,10 +288,12 @@ export function UserPermissions({ user }: { user: RosterUser }) {
           setRoles(user.id, next);
           setRolesOpen(false);
           notify({
-            title: "Roles saved",
-            description: `${firstName} now has ${next.length || "no"} role${
-              next.length === 1 ? "" : "s"
-            }.`,
+            title: "Role saved",
+            description: next[0]
+              ? `${firstName} is now ${article(roleName(next[0]))} ${roleName(
+                  next[0],
+                )}.`
+              : `${firstName} has no role assigned.`,
           });
         }}
       />
@@ -335,11 +361,15 @@ function PermissionRow({
           </Tooltip>
         )}
         <CustomChip custom={custom} />
-        <Attribution grantedBy={row.grantedBy} custom={custom} />
       </div>
 
-      {/* Controls. The reset button occupies a fixed slot whether or not it's
-          shown, so switches stay in one column down the list. */}
+      {/* Controls. A muted status badge while reading, a live switch while
+          editing — this app's own convention (see the syndication channel
+          cards), and the reason neither a disabled nor a read-only switch works
+          here: Blueprint's disabled switch drops the checked fill, so twenty
+          rows would render identically, and a read-only switch invites a click
+          that does nothing. The reset button keeps a fixed slot so the switches
+          stay in one column down the list. */}
       <div className="flex-shrink-0 d-flex align-items-center gap-2">
         {editing ? (
           <>

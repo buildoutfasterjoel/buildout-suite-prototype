@@ -59,19 +59,24 @@ type Assignment = {
 };
 
 /**
- * Role assignments per person. Diana Reyes carries the multi-role case from the
- * mocks — Broker + Managing Director with three customizations — so the Custom
- * chips, the "changed from the role default" count, and the per-row override
- * controls all have something real to render. Maya Brooks is the deactivated row.
+ * Role assignments per person — exactly one role each, which is the product rule
+ * the assign-roles panel enforces. (The resolver still unions a list, so the
+ * engine is ready if that rule ever relaxes; see `resolvePermissions`.)
+ *
+ * Diana Reyes carries the customized case: a Managing Director with three
+ * overrides — one removed that her role allows, two granted beyond it — so the
+ * Custom chips, the "changed from the role default" count, and the per-row
+ * override controls all have something real to render. Maya Brooks is the
+ * deactivated row.
  *
  * Offices are spread across the list so the filter has more than one bucket to
  * show, with the two Chicago offices carrying most people.
  */
 const ASSIGNMENTS: Record<string, Assignment> = {
   you: {
-    title: "Broker",
+    title: "Managing Director",
     office: "Chicago — West Loop",
-    roleIds: ["broker"],
+    roleIds: ["managing-director"],
   },
   "sarah-chen": {
     title: "Broker",
@@ -86,12 +91,12 @@ const ASSIGNMENTS: Record<string, Assignment> = {
   "diana-reyes": {
     title: "Principal",
     office: "Chicago — West Loop",
-    roleIds: ["broker", "managing-director"],
+    roleIds: ["managing-director"],
     overrides: {
-      // Removed even though Broker would allow it.
-      "delete-listings": false,
-      // Granted beyond either role.
-      "edit-other-documents": true,
+      // Removed even though Managing Director would allow it.
+      "view-other-documents": false,
+      // Granted beyond the role.
+      "edit-listings": true,
       "other-user-credentials": true,
     },
   },

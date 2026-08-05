@@ -96,22 +96,31 @@ describe("resolvePermissions", () => {
 });
 
 describe("seed roster", () => {
-  it("reproduces the mocks' customized multi-role user", () => {
+  it("carries a customized user for the Custom chips to render", () => {
     const diana = SEED_ROSTER.find((u) => u.id === "diana-reyes");
-    expect(diana?.roleIds).toEqual(["broker", "managing-director"]);
+    expect(diana?.roleIds).toEqual(["managing-director"]);
     const summary = summarize(
       resolvePermissions(diana!.roleIds, diana!.overrides),
     );
-    // 16 from the two roles, minus one removed, plus two granted.
-    expect(summary).toMatchObject({ onCount: 17, customCount: 3 });
+    // 6 from Managing Director, minus one removed, plus two granted.
+    expect(summary).toMatchObject({ onCount: 7, customCount: 3 });
   });
 
-  it("assigns every person at least one real role", () => {
+  it("gives every person exactly one real role", () => {
     const roleIds = new Set(ROLES.map((r) => r.id));
     for (const user of SEED_ROSTER) {
-      expect(user.roleIds.length, user.name).toBeGreaterThan(0);
+      // The product rule the assign-role panel enforces. The resolver still
+      // unions a list, so this is a seed guard rather than an engine limit.
+      expect(user.roleIds, user.name).toHaveLength(1);
       for (const id of user.roleIds) expect(roleIds).toContain(id);
     }
+  });
+
+  it("seats the signed-in user as a Managing Director", () => {
+    // The default demo seat: admin screens are usable on arrival, and switching
+    // to any other role shows them locked.
+    const you = SEED_ROSTER.find((u) => u.isYou);
+    expect(you?.roleIds).toEqual(["managing-director"]);
   });
 
   it("puts every person in a known office, so the filter can't miss anyone", () => {

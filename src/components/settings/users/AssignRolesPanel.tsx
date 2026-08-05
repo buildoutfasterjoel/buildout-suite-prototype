@@ -1,25 +1,40 @@
-import { useEffect, useState } from "react";
-import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
-import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
-import { Offcanvas } from "@buildoutinc/blueprint-react/ui/Offcanvas";
+import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
+import { RadioGroup } from "@buildoutinc/blueprint-react/ui/RadioGroup";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTriangleExclamation, faXmark } from "@fortawesome/pro-regular-svg-icons";
+import { faCheck } from "@fortawesome/pro-regular-svg-icons";
+import { faCircleInfo } from "@fortawesome/pro-duotone-svg-icons";
 import {
+  PERMISSIONS,
   ROLES,
+  ROLE_ACCESS_DETAIL,
   ROLE_ACCESS_LABELS,
-  roleUnionCount,
+  ROLE_BY_ID,
   type RoleId,
 } from "#/data/permissions";
-import { NeutralBadge, RoleBadge } from "./roleDisplay";
+import { NeutralBadge, SCOPE_META } from "./roleDisplay";
 
 /**
- * Assign roles for one user.
+ * Assign a role to one user.
  *
- * Roles are additive and non-exclusive: two roles give the union of what either
- * allows, never less. The running count makes that concrete before saving,
- * since "what did adding this role actually change?" is the question an admin
- * is really asking.
+ * A centered modal, not a flyout. This app reserves Offcanvas for filtering the
+ * list you're already looking at — `ContactFilters` and `TaskFilters`, both
+ * left-side, both titled "Filters" — while every committed decision is a Modal
+ * (NewContact, CreateDeal, ShareContact, StageGate, and a dozen more). This has
+ * a Save/Cancel footer and changes data, so it belongs with the latter. Sized
+ * and scrolled to match `ShareContactModal`, the closest analogue: pick one
+ * option from a list, see what it implies, commit.
+ *
+ * One role per person: the engineering plan models assignments as a
+ * non-exclusive set and the resolver still unions a list, but the product rule
+ * is a single role, so this is a radio group rather than checkboxes. If that
+ * relaxes, the resolver needs no change — only this component.
+ *
+ * Picking a role shows exactly what it grants. That's the question an admin
+ * actually has here ("what am I about to give them?"), and answering it here
+ * avoids assigning a role, saving, and then reading the list to find out.
  */
 export function AssignRolesPanel({
   open,
@@ -34,71 +49,53 @@ export function AssignRolesPanel({
   roleIds: RoleId[];
   onSave: (next: RoleId[]) => void;
 }) {
-  const [selected, setSelected] = useState<RoleId[]>(roleIds);
+  const [selected, setSelected] = useState<RoleId | null>(roleIds[0] ?? null);
 
   // Re-seed each time the panel opens so a cancelled edit leaves nothing behind.
   useEffect(() => {
-    if (open) setSelected(roleIds);
+    if (open) setSelected(roleIds[0] ?? null);
   }, [open, roleIds]);
 
-  function toggle(roleId: RoleId, checked: boolean) {
-    setSelected((prev) =>
-      checked ? [...prev, roleId] : prev.filter((id) => id !== roleId),
-    );
-  }
+  // The chosen role's defaults, split by scope and in registry order so the two
+  // lists read the same way as the permissions page behind the panel.
+  const granted = useMemo(() => {
+    const role = selected ? ROLE_BY_ID.get(selected) : undefined;
+    const ids = new Set(role?.defaults ?? []);
+    return {
+      record: PERMISSIONS.filter((p) => p.scope === "record" && ids.has(p.id)),
+      account: PERMISSIONS.filter((p) => p.scope === "account" && ids.has(p.id)),
+      total: ids.size,
+    };
+  }, [selected]);
 
-  // Keep chips and the summary in ROLES order rather than click order, so the
-  // same pair of roles always reads the same way.
-  const ordered = ROLES.filter((role) => selected.includes(role.id)).map(
-    (role) => role.id,
-  );
-  const unionCount = roleUnionCount(ordered);
+  const selectedRole = selected ? ROLE_BY_ID.get(selected) : undefined;
 
   return (
-    <Offcanvas open={open} onOpenChange={onOpenChange}>
-      <Offcanvas.Content side="right" style={{ maxWidth: 560 }}>
-        <Offcanvas.Header>
-          <Offcanvas.Title className="fs-5 fw-semibold mb-0">
-            Assign roles
-          </Offcanvas.Title>
-          <Offcanvas.Description className="text-muted mb-0">
-            A role decides what {firstName}&apos;s allowed to do. You can give
-            them more than one — they just add together.
-          </Offcanvas.Description>
-        </Offcanvas.Header>
+    <Modal open={open} onOpenChange={onOpenChange}>
+      <Modal.Content centered style={{ maxWidth: "33rem" }}>
+        <Modal.Header>
+          <Modal.Title>Assign role</Modal.Title>
+        </Modal.Header>
 
-        <Offcanvas.Body className="d-flex flex-column gap-3">
-          <div>
-            <div className="text-muted small fw-semibold text-uppercase mb-2">
-              Roles
-            </div>
-            <div className="border rounded p-2 d-flex align-items-center gap-1 flex-wrap">
-              {ordered.length === 0 ? (
-                <span className="text-muted px-1">No roles assigned</span>
-              ) : (
-                ordered.map((roleId) => (
-                  <span
-                    key={roleId}
-                    className="d-inline-flex align-items-center gap-1"
-                  >
-                    <RoleBadge roleId={roleId} />
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={`Remove ${roleId}`}
-                      onClick={() => toggle(roleId, false)}
-                    >
-                      <FontAwesomeIcon icon={faXmark} />
-                    </Button>
-                  </span>
-                ))
-              )}
-            </div>
-          </div>
+        {/* The body scrolls rather than the page: five roles plus the selected
+            role's permission list outgrows a viewport, and the footer's Save
+            should stay reachable. Matches AddContactsToListModal. */}
+        <Modal.Body
+          className="d-flex flex-column gap-4"
+          style={{ maxHeight: "60vh", overflowY: "auto" }}
+        >
+          <p className="text-muted mb-0">
+            A role decides what {firstName} is allowed to do. Each person has
+            one.
+          </p>
 
-          <div className="d-flex flex-column gap-2">
+          <RadioGroup
+            value={selected ?? ""}
+            onValueChange={(v) => v && setSelected(v as RoleId)}
+            className="d-flex flex-column gap-2"
+          >
             {ROLES.map((role) => {
-              const checked = selected.includes(role.id);
+              const checked = role.id === selected;
               return (
                 // eslint-disable-next-line jsx-a11y/label-has-associated-control
                 <label
@@ -108,81 +105,99 @@ export function AssignRolesPanel({
                   }`}
                   style={{ cursor: "pointer" }}
                 >
-                  <Checkbox
-                    checked={checked}
-                    onCheckedChange={(c) => toggle(role.id, c)}
-                    className="mt-1"
-                  />
+                  <RadioGroup.Item value={role.id} className="mt-1" />
                   <div className="flex-grow-1" style={{ minWidth: 0 }}>
                     <div className="fw-semibold">{role.name}</div>
                     <div className="text-muted small">{role.description}</div>
-                    {role.provisional && (
-                      <div className="text-muted small mt-1 d-flex align-items-center gap-1">
-                        <FontAwesomeIcon icon={faTriangleExclamation} />
-                        Preset defaults still provisional
-                      </div>
-                    )}
                   </div>
-                  <NeutralBadge className="flex-shrink-0">
-                    {ROLE_ACCESS_LABELS[role.accessKind]}
-                  </NeutralBadge>
+                  <div className="d-flex flex-column align-items-end gap-1 flex-shrink-0">
+                    {/* The badge says how the role relates to records; the icon
+                        beside it says what that means. "Works by sharing" is the
+                        one worth reading — those roles grant abilities but open
+                        nothing on their own. */}
+                    <span className="d-inline-flex align-items-center gap-1">
+                      <NeutralBadge>
+                        {ROLE_ACCESS_LABELS[role.accessKind]}
+                      </NeutralBadge>
+                      <Tooltip>
+                        <Tooltip.Trigger
+                          render={
+                            <span
+                              tabIndex={0}
+                              className="text-muted d-inline-flex align-items-center"
+                              style={{ cursor: "help" }}
+                              aria-label={`What "${
+                                ROLE_ACCESS_LABELS[role.accessKind]
+                              }" means`}
+                            />
+                          }
+                        >
+                          <FontAwesomeIcon icon={faCircleInfo} />
+                        </Tooltip.Trigger>
+                        <Tooltip.Content side="left" style={{ maxWidth: 260 }}>
+                          {ROLE_ACCESS_DETAIL[role.accessKind]}
+                        </Tooltip.Content>
+                      </Tooltip>
+                    </span>
+                    <span className="text-muted small">
+                      {role.defaults.length} of {PERMISSIONS.length}
+                    </span>
+                  </div>
                 </label>
               );
             })}
-          </div>
+          </RadioGroup>
 
-          <div className="border rounded p-3 d-flex flex-column gap-2">
-            <div className="d-flex align-items-center gap-2 flex-wrap">
-              {ordered.length === 0 ? (
-                <span className="text-muted">No roles selected</span>
-              ) : (
-                ordered.map((roleId, i) => (
-                  <span
-                    key={roleId}
-                    className="d-inline-flex align-items-center gap-2"
-                  >
-                    {i > 0 && <span className="text-muted">+</span>}
-                    <RoleBadge roleId={roleId} />
-                  </span>
-                ))
+          {selectedRole && (
+            <div className="border rounded p-3 d-flex flex-column gap-3">
+              <div>
+                <div className="fw-semibold">
+                  What {selectedRole.name} turns on
+                </div>
+                <div className="text-muted small">
+                  {granted.total} of {PERMISSIONS.length} permissions, before any
+                  per-person changes.
+                </div>
+              </div>
+
+              {(["record", "account"] as const).map((scope) =>
+                granted[scope].length === 0 ? null : (
+                  <div key={scope}>
+                    <div className="text-uppercase fw-semibold small text-muted mb-1">
+                      {SCOPE_META[scope].heading}
+                    </div>
+                    <ul className="list-unstyled mb-0 d-flex flex-column gap-1">
+                      {granted[scope].map((permission) => (
+                        <li
+                          key={permission.id}
+                          className="d-flex align-items-start gap-2 small"
+                        >
+                          <FontAwesomeIcon
+                            icon={faCheck}
+                            className="text-mountain-meadow-700 mt-1 flex-shrink-0"
+                          />
+                          {permission.label}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ),
               )}
-              <span className="text-muted">=</span>
-              <Badge
-                variant="secondary"
-                className="fw-semibold bg-buildout-blue-700 text-white"
-              >
-                {unionCount} things {firstName} can do
-              </Badge>
             </div>
-            <p className="text-muted small mb-0">
-              {ordered.length > 1 ? (
-                <>
-                  With more than one role, {firstName} simply gets{" "}
-                  <span className="fw-semibold">
-                    everything either role allows
-                  </span>{" "}
-                  — never less than either one on its own. You can then turn
-                  individual items on or off below.
-                </>
-              ) : (
-                <>
-                  Roles add together. Assign a second one and {firstName} gets
-                  everything either role allows — never less.
-                </>
-              )}
-            </p>
-          </div>
-        </Offcanvas.Body>
+          )}
+        </Modal.Body>
 
-        <Offcanvas.Footer className="settings-panel__footer d-flex justify-content-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+        <Modal.Footer>
+          <Modal.Close render={<Button variant="ghost" />}>Cancel</Modal.Close>
+          <Button
+            variant="primary"
+            disabled={!selected}
+            onClick={() => selected && onSave([selected])}
+          >
+            Save role
           </Button>
-          <Button variant="primary" onClick={() => onSave(ordered)}>
-            Save roles
-          </Button>
-        </Offcanvas.Footer>
-      </Offcanvas.Content>
-    </Offcanvas>
+        </Modal.Footer>
+      </Modal.Content>
+    </Modal>
   );
 }

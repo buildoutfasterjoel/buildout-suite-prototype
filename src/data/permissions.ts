@@ -9,16 +9,15 @@
  *      propagates to everyone who hasn't customized that permission.
  *   2. A record-scoped permission says what a person is *allowed* to do; it
  *      does not grant access to any record. Sharing decides which listings and
- *      deals they can open. Account-wide permissions have nothing to share
- *      into, so they take effect everywhere immediately.
+ *      deals they can open. Account-wide permissions need no record shared with
+ *      them, so they take effect everywhere immediately.
  *
  * Prototype data: the roster, assignments, and overrides are seeded here and
  * mutated in a session-scoped store (see `useRoster`), not persisted.
  */
 
 /**
- * Where a permission applies. Drives the two groups on the permissions page
- * and the dot color beside each heading.
+ * Where a permission applies. Drives the two groups on the permissions page.
  */
 export type PermissionScope = "record" | "account";
 
@@ -196,6 +195,21 @@ export const ROLE_ACCESS_LABELS: Record<RoleAccessKind, string> = {
   sharing: "Works by sharing",
 };
 
+/**
+ * What each access kind actually means, revealed on hover beside its badge.
+ *
+ * The `sharing` one is the load-bearing sentence in the whole panel: assigning
+ * one of those roles grants abilities but opens nothing, so an admin who expects
+ * it to give someone access to a deal needs to know to share the record too.
+ */
+export const ROLE_ACCESS_DETAIL: Record<RoleAccessKind, string> = {
+  owns: "Can be the primary or an additional broker on listings, so they have a book of their own.",
+  "firm-wide":
+    "Sees across the whole company by default, rather than one record at a time.",
+  sharing:
+    "No records of their own. They can only act on listings and deals that have been shared with them.",
+};
+
 export interface Role {
   id: RoleId;
   name: string;
@@ -203,11 +217,6 @@ export interface Role {
   accessKind: RoleAccessKind;
   /** Permission ids this role turns on by default. */
   defaults: string[];
-  /**
-   * Set where the default is a proposal rather than something the spec pins
-   * down — surfaced in the UI so it reads as provisional, not decided.
-   */
-  provisional?: boolean;
 }
 
 /**
@@ -220,8 +229,10 @@ export interface Role {
  * withhold `non-branded-changes`, the plan says the reverse. The mocks win here
  * because their counts reconcile.
  *
- * The remaining three roles are proposals drawn from the plan's per-permission
- * notes and are marked `provisional`.
+ * Marketing Assistant, Transaction Coordinator and Office Admin defaults are
+ * inferred from the plan's per-permission notes rather than taken from a settled
+ * spec. That used to be flagged in the UI; it now lives here and in the PR,
+ * since the assign-role panel lists each role's exact defaults for review.
  */
 export const ROLES: Role[] = [
   {
@@ -262,7 +273,6 @@ export const ROLES: Role[] = [
     name: "Marketing Assistant",
     description: "Builds OMs, flyers, listing sites, email blasts.",
     accessKind: "sharing",
-    provisional: true,
     defaults: [
       "edit-comps",
       "send-emails",
@@ -277,7 +287,6 @@ export const ROLES: Role[] = [
     name: "Transaction Coordinator",
     description: "Runs the close: escrow, title, wire, commission.",
     accessKind: "sharing",
-    provisional: true,
     defaults: ["change-deal-statuses", "edit-profile-photo"],
   },
   {
@@ -285,7 +294,6 @@ export const ROLES: Role[] = [
     name: "Office Admin",
     description: "General admin, scheduling, data entry.",
     accessKind: "sharing",
-    provisional: true,
     defaults: ["create-listings", "edit-profile-photo"],
   },
 ];
