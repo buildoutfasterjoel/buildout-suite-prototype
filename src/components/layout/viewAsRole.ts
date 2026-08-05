@@ -31,11 +31,11 @@ export type ViewAsStore = Pick<Storage, "getItem" | "setItem">;
 const STORAGE_KEY = "dev_role";
 
 /**
- * Tracks the signed-in user's seeded role (see `ASSIGNMENTS` in roster.ts):
- * Ethan is a Broker, which is the point of the demo — a Broker has Manage
- * Company off, so he can't edit anyone's permissions until you switch seats.
+ * Tracks the signed-in user's seeded role (see `ASSIGNMENTS` in roster.ts).
+ * Ethan is a Managing Director, so the admin screens are usable on arrival;
+ * switch to any other role to see the same screens locked down.
  */
-const DEFAULT_ROLE: RoleId = "broker";
+const DEFAULT_ROLE: RoleId = "managing-director";
 
 /** localStorage when there is a document, null during SSR. */
 function browserStore(): ViewAsStore | null {
@@ -46,7 +46,7 @@ function isRoleId(value: string | null): value is RoleId {
   return value !== null && VIEW_AS_ORDER.includes(value as RoleId);
 }
 
-/** The persisted role, or Broker when absent, unrecognized, or on the server. */
+/** The persisted role, or the default when absent, unrecognized, or on the server. */
 export function readViewAsRole(
   store: ViewAsStore | null = browserStore(),
 ): RoleId {

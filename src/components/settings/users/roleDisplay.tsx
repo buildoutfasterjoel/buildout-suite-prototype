@@ -1,7 +1,10 @@
-import { forwardRef, type ComponentProps, type ReactNode } from "react";
+import { forwardRef, type ComponentProps } from "react";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck } from "@fortawesome/pro-regular-svg-icons";
+import {
+  faCircleCheck,
+  faCircleMinus,
+} from "@fortawesome/pro-regular-svg-icons";
 import type { PermissionScope, RoleId } from "#/data/permissions";
 import { ROLE_BY_ID } from "#/data/permissions";
 import type { UserStatus } from "#/data/roster";
@@ -115,53 +118,48 @@ export function StatusIndicator({ status }: { status: UserStatus }) {
 }
 
 /**
- * The two permission groups. Blue means "needs a record to act on", orange
- * means "applies everywhere immediately" — the distinction the whole model
- * hangs on, so it gets a color and a subtitle, not just a heading.
+ * The two permission groups.
+ *
+ * The scope distinction is what the whole model hangs on, but it only needs
+ * explaining once per visit — so the heading carries the name and an info icon
+ * carries the rest, rather than a standing subtitle under each group.
  */
 export const SCOPE_META: Record<
   PermissionScope,
-  { heading: string; blurb: (name: string) => string; dotClass: string }
+  { heading: string; tooltip: string }
 > = {
   record: {
     heading: "On specific listings & deals",
-    blurb: (name) =>
-      `${name} can use these only on records they own or have been shared into.`,
-    dotClass: "bg-buildout-blue-500",
+    tooltip:
+      "Applies to records they own or that have been shared with them",
   },
   account: {
     heading: "Account-wide",
-    blurb: () => "No record to share into — these apply everywhere, right away.",
-    dotClass: "bg-harvest-gold-500",
+    tooltip: "Applies everywhere — no record sharing required",
   },
 };
 
-export function ScopeDot({ scope }: { scope: PermissionScope }) {
-  return (
-    <span
-      className={`rounded-circle flex-shrink-0 ${SCOPE_META[scope].dotClass}`}
-      style={{ width: 8, height: 8 }}
-      aria-hidden
-    />
-  );
-}
-
-/** The On/Off state pill, shown when the row isn't editable. */
+/**
+ * Read-only state for one permission.
+ *
+ * Follows the syndication channel cards: a muted badge carrying a small colored
+ * icon, never a colored fill. That's this app's status vocabulary — a filled
+ * green pill on twenty rows reads as twenty things demanding attention, and
+ * `syndicationDisplay` makes the same argument for its own states ("Grey, not
+ * green"). The switch appears in its place once editing starts.
+ */
 export function StatePill({ on }: { on: boolean }) {
-  return on ? (
+  return (
     <Badge
       variant="secondary"
-      className="fw-semibold bg-mountain-meadow-100 text-mountain-meadow-700 d-inline-flex align-items-center gap-1"
+      appearance="muted"
+      className="user-select-none d-inline-flex align-items-center gap-1"
     >
-      <FontAwesomeIcon icon={faCheck} />
-      On
-    </Badge>
-  ) : (
-    <Badge
-      variant="secondary"
-      className={`fw-semibold ${NEUTRAL_PILL}`}
-    >
-      Off
+      <FontAwesomeIcon
+        icon={on ? faCircleCheck : faCircleMinus}
+        style={{ color: on ? "var(--bp-success)" : "var(--stage-inactive)" }}
+      />
+      {on ? "On" : "Off"}
     </Badge>
   );
 }
@@ -170,8 +168,7 @@ export function StatePill({ on }: { on: boolean }) {
  * Marks a permission an admin has overridden. There's no counterpart badge for
  * the untouched ones: absence of this chip already means "whatever the roles
  * say", and a `Default` badge on seventeen of twenty rows was label noise on
- * the majority to flag the minority. The "· from Broker" attribution beside it
- * carries the same meaning with more information.
+ * the majority to flag the minority.
  */
 export function CustomChip({ custom }: { custom: boolean }) {
   if (!custom) return null;
@@ -180,23 +177,4 @@ export function CustomChip({ custom }: { custom: boolean }) {
       Custom
     </Badge>
   );
-}
-
-/**
- * Which assigned role granted this, as "· from Broker".
- *
- * Silent when no role grants it: an Off row with no attribution already says
- * "nothing turns this on", and spelling that out on every such row was a line of
- * text per row that told the reader what they could see.
- */
-export function Attribution({
-  grantedBy,
-  custom,
-}: {
-  grantedBy: RoleId[];
-  custom: boolean;
-}): ReactNode {
-  if (custom || grantedBy.length === 0) return null;
-  const names = grantedBy.map((id) => ROLE_BY_ID.get(id)?.name ?? id);
-  return <span className="text-muted small">· from {names.join(" + ")}</span>;
 }

@@ -1265,6 +1265,10 @@
 // customized rows color. Every row reserves the rule so nothing shifts.
 .permission-row {
   border-left: 3px solid transparent;
+  // A floor, not a fixed height: rows with a Custom chip or a wrapped label
+  // still grow, but the plain majority land on a consistent 40px so the list
+  // scans as an even rhythm.
+  min-height: 40px;
 
   + .permission-row {
     border-top: 1px solid var(--bp-border-color, #{colors.$storm-grey-200});

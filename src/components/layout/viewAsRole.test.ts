@@ -30,26 +30,29 @@ describe("view-as roles", () => {
 });
 
 describe("readViewAsRole", () => {
-  it("defaults to broker when nothing is stored", () => {
-    expect(readViewAsRole(fakeStore())).toBe("broker");
+  // Managing Director is the seeded seat, so the admin screens work on arrival.
+  it("defaults to managing-director when nothing is stored", () => {
+    expect(readViewAsRole(fakeStore())).toBe("managing-director");
   });
 
   it("returns the stored role", () => {
-    expect(readViewAsRole(fakeStore({ dev_role: "managing-director" }))).toBe(
+    expect(readViewAsRole(fakeStore({ dev_role: "broker" }))).toBe("broker");
+  });
+
+  it("falls back to the default when the stored value is not a role", () => {
+    expect(readViewAsRole(fakeStore({ dev_role: "wizard" }))).toBe(
       "managing-director",
     );
   });
 
-  it("falls back to broker when the stored value is not a role", () => {
-    expect(readViewAsRole(fakeStore({ dev_role: "wizard" }))).toBe("broker");
+  it("falls back to the default when the stored value is an inherited object key", () => {
+    expect(readViewAsRole(fakeStore({ dev_role: "toString" }))).toBe(
+      "managing-director",
+    );
   });
 
-  it("falls back to broker when the stored value is an inherited object key", () => {
-    expect(readViewAsRole(fakeStore({ dev_role: "toString" }))).toBe("broker");
-  });
-
-  it("falls back to broker when there is no store (SSR)", () => {
-    expect(readViewAsRole(null)).toBe("broker");
+  it("falls back to the default when there is no store (SSR)", () => {
+    expect(readViewAsRole(null)).toBe("managing-director");
   });
 });
 
