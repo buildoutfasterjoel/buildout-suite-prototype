@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
   resolveGate,
-  fieldSatisfied,
   canConfirm,
   publishReadiness,
   seedGateForm,
@@ -32,8 +31,8 @@ const EMPTY: GateFormState = {
 describe('space deal Approve & Publish gate', () => {
   const gate = resolveGate('proposal', 'active', 'Lease', 'space')
 
-  it('gates on the space own numbers plus a live building', () => {
-    expect(gate.required).toEqual(['leaseRate', 'availableSqFt', 'leaseTermMonths', 'shellActive'])
+  it('gates on the space own numbers and nothing else', () => {
+    expect(gate.required).toEqual(['leaseRate', 'availableSqFt', 'leaseTermMonths'])
   })
 
   it('does not require property-level fields the space cannot own', () => {
@@ -42,15 +41,27 @@ describe('space deal Approve & Publish gate', () => {
     }
   })
 
-  it('blocks until the shell is Active', () => {
-    const priced = { ...EMPTY, leaseRate: 28, availableSqFt: 4200, leaseTermMonths: 60 }
-    expect(canConfirm(gate, priced)).toBe(false)
-    expect(canConfirm(gate, { ...priced, shellActive: true })).toBe(true)
+  /**
+   * The building publishes the website, documents and campaigns; a space
+   * publishes its own availability. Those are different acts, so the parent's
+   * stage must not gate the child: once a shell's spaces carry the terms, the
+   * shell structurally cannot hold them, and blocking every space on the
+   * building's marketing content left a suite with no way to go live.
+   */
+  it('does not gate on the building stage', () => {
+    expect(gate.required).not.toContain('shellActive')
   })
 
-  it('satisfies shellActive only when true', () => {
-    expect(fieldSatisfied('shellActive', EMPTY)).toBe(false)
-    expect(fieldSatisfied('shellActive', { ...EMPTY, shellActive: true })).toBe(true)
+  it('confirms on the space own numbers alone, whatever the building is doing', () => {
+    const priced = { ...EMPTY, leaseRate: 28, availableSqFt: 4200, leaseTermMonths: 60 }
+    expect(canConfirm(gate, priced)).toBe(true)
+  })
+
+  it('still blocks when one of the space own numbers is missing', () => {
+    const priced = { ...EMPTY, leaseRate: 28, availableSqFt: 4200, leaseTermMonths: 60 }
+    expect(canConfirm(gate, { ...priced, leaseRate: null })).toBe(false)
+    expect(canConfirm(gate, { ...priced, availableSqFt: null })).toBe(false)
+    expect(canConfirm(gate, { ...priced, leaseTermMonths: null })).toBe(false)
   })
 })
 
@@ -241,5 +252,44 @@ describe('other shapes are unchanged', () => {
   it('defaults the shape from dealType when the argument is omitted', () => {
     expect(resolveGate('proposal', 'active', 'Lease').required)
       .toEqual(resolveGate('proposal', 'active', 'Lease', 'flat-lease').required)
+  })
+})
+
+/**
+ * The roster is a space's only terms editor, so whatever it writes has to be
+ * exactly what the publish gate reads. It briefly was not: the size field wrote
+ * `SpaceLeaseTerms.spaceSize`, which nothing in the app ever read, while the gate
+ * read `marketing.availableSqFt` — so a broker could fill in a size, see the terms
+ * save, and still be told Available SF was missing.
+ */
+describe('what the roster writes satisfies the space publish gate', () => {
+  it('is ready once rate, term and available SF are set — and not before', () => {
+    const parent = createProposalListing({ ...emptyDraft(), name: 'Mall', dealType: 'Lease' })
+    const unit = addPropertyUnit(parent.propertyId, { label: 'Suite 100', sqft: 4200, unitType: 'retail' })!
+    const child = addSpaceToDeal(parent.id, unit.id)!.deal
+
+    // A space is seeded with its unit's size, so only rate and term are open.
+    expect(publishReadiness(child, { shape: 'space' }).missing).toEqual([
+      'leaseRate', 'leaseTermMonths',
+    ])
+
+    updateDealMarketing(child.id, {
+      spaceLeaseTerms: [{ ...emptySpaceLeaseTerms(unit.id), leaseRate: 28, leaseTermMonths: 60 }],
+    })
+    expect(publishReadiness(getListing(child.id)!, { shape: 'space' }).ready).toBe(true)
+  })
+
+  it('reports Available SF missing when the size is cleared, not silently passing', () => {
+    const parent = createProposalListing({ ...emptyDraft(), name: 'Plaza', dealType: 'Lease' })
+    const unit = addPropertyUnit(parent.propertyId, { label: 'Suite 200', sqft: 1000, unitType: 'office' })!
+    const child = addSpaceToDeal(parent.id, unit.id)!.deal
+
+    updateDealMarketing(child.id, {
+      availableSqFt: 0,
+      spaceLeaseTerms: [{ ...emptySpaceLeaseTerms(unit.id), leaseRate: 30, leaseTermMonths: 36 }],
+    })
+    const { ready, missing } = publishReadiness(getListing(child.id)!, { shape: 'space' })
+    expect(ready).toBe(false)
+    expect(missing).toEqual(['availableSqFt'])
   })
 })

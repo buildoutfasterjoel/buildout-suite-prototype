@@ -5,6 +5,7 @@ import {
   EmptyContent,
 } from "@buildoutinc/blueprint-react/ui/Empty";
 import type { Listing } from "#/data/types";
+import { dealCardLinkProps } from "#/components/deals/dealCardLink";
 import { PropertyCard } from "./PropertyCard";
 
 export function PropertyGrid({ listings }: { listings: Listing[] }) {
@@ -28,8 +29,7 @@ export function PropertyGrid({ listings }: { listings: Listing[] }) {
         {listings.map((listing) => (
           <div key={listing.id} className="col-md-6 col-lg-4 col-xl-3">
             <Link
-              to="/listings/$listingId"
-              params={{ listingId: listing.id }}
+              {...dealCardLinkProps(listing)}
               className="text-decoration-none text-reset d-block h-100"
             >
               <PropertyCard listing={listing} />

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Breadcrumb } from "@buildoutinc/blueprint-react/ui/Breadcrumb";
@@ -15,8 +15,9 @@ import {
   faTrashAlt,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing } from "#/data/types";
-import { getProperty } from "#/data/store";
+import { getProperty, getListing } from "#/data/store";
 import { canAddSpaces } from "#/data/dealShape";
+import { dealBreadcrumbTrail } from "#/components/properties/dealNav";
 import { hash, getRefId, getPhotoUrl } from "./propertyDisplay";
 import { AvatarGroup } from "./AvatarGroup";
 import { SyndicationStatus } from "#/components/listings/SyndicationStatus";
@@ -34,6 +35,21 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
   const refId = getRefId(listing.id);
   const property = getProperty(listing.propertyId);
   const address = `${property?.street}, ${property?.city}, ${property?.state} ${property?.zip}`;
+  const { pathname } = useLocation();
+  const { sectionLabel, detailId } = dealBreadcrumbTrail(pathname, listing.id);
+  // The detail id is a space deal's id; its human name is the suite's label,
+  // which lives on this same property's units. Resolved here because
+  // dealBreadcrumbTrail is deliberately store-free.
+  const detailLabel = detailId
+    ? (() => {
+        const space = getListing(detailId);
+        return (
+          property?.units.find((u) => u.id === space?.unitId)?.label ??
+          space?.name ??
+          null
+        );
+      })()
+    : null;
   const [addSpaceOpen, setAddSpaceOpen] = useState(false);
 
   return (
@@ -76,8 +92,60 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
                 </Breadcrumb.Item>
                 <Breadcrumb.Separator />
                 <Breadcrumb.Item>
-                  <Breadcrumb.Page>{listing.name}</Breadcrumb.Page>
+                  {sectionLabel ? (
+                    <Breadcrumb.Link
+                      render={
+                        <Link
+                          to="/listings/$listingId"
+                          params={{ listingId: listing.id }}
+                        />
+                      }
+                    >
+                      {listing.name}
+                    </Breadcrumb.Link>
+                  ) : (
+                    <Breadcrumb.Page>{listing.name}</Breadcrumb.Page>
+                  )}
                 </Breadcrumb.Item>
+                {sectionLabel && (
+                  <>
+                    <Breadcrumb.Separator />
+                    <Breadcrumb.Item>
+                      {/* The section is a link only when a record sits below it —
+                          that link is how the detail view gets back to its index,
+                          which is why the detail has no back button of its own.
+                          Keyed on `detailId`, the structural fact, not on
+                          `detailLabel`, which is only whether we found a name: a
+                          stale space id renders an empty body (the route's own
+                          guard) and must still leave a way back. */}
+                      {detailId ? (
+                        <Breadcrumb.Link
+                          render={
+                            <Link
+                              to="/listings/$listingId/vouchers"
+                              params={{ listingId: listing.id }}
+                            />
+                          }
+                        >
+                          {sectionLabel}
+                        </Breadcrumb.Link>
+                      ) : (
+                        <Breadcrumb.Page>{sectionLabel}</Breadcrumb.Page>
+                      )}
+                    </Breadcrumb.Item>
+                  </>
+                )}
+                {/* Display, so keyed on the label: with an id we cannot name,
+                    show no crumb rather than a raw uuid. The section above stays
+                    a link either way. */}
+                {detailLabel && (
+                  <>
+                    <Breadcrumb.Separator />
+                    <Breadcrumb.Item>
+                      <Breadcrumb.Page>{detailLabel}</Breadcrumb.Page>
+                    </Breadcrumb.Item>
+                  </>
+                )}
               </Breadcrumb.List>
             </Breadcrumb>
             <h1

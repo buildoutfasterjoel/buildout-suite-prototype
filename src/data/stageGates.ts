@@ -292,16 +292,23 @@ export function resolveGate(
   // Forward field gates, keyed by target stage.
   switch (target) {
     case 'active':
-      // A space deal's publish gate is the moment the suite enters the building's
-      // marketing. It gates on the space's own numbers only — title, description,
-      // doc review, and the listing-agreement dates are property-level and belong
-      // to the shell, which must itself already be live.
+      // A space deal's publish gate is the moment the suite becomes available.
+      // It gates on the space's own numbers only — title, description, doc review
+      // and the listing-agreement dates are property-level and belong to the shell.
+      //
+      // Deliberately NOT gated on the shell's stage. Publishing a building's
+      // website, documents and campaigns is a different act from a suite becoming
+      // available, and the two do not have to happen in order. Once a lease deal
+      // splits into spaces, the children hold every term the building no longer
+      // can — so requiring a live shell first meant a suite waited on marketing
+      // content that, by design, the shell may never have. Availability is a fact
+      // about the space; publication is an act the building owns.
       if (shape === 'space') {
         return {
           ...base,
           kind: 'field',
           title: 'Publish space to the building listing',
-          required: ['leaseRate', 'availableSqFt', 'leaseTermMonths', 'shellActive'],
+          required: ['leaseRate', 'availableSqFt', 'leaseTermMonths'],
           publishes: true,
         }
       }

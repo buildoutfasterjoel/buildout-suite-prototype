@@ -53,13 +53,20 @@ function draftInvoice(listing: Listing): InvoiceRow {
   };
 }
 
-export function DealInvoices({ listing }: { listing: Listing }) {
+export function DealInvoices({
+  listing,
+  heading = "Invoices",
+}: {
+  listing: Listing;
+  /** Overridden on a shell's per-space voucher, so the suite is named. */
+  heading?: string;
+}) {
   const invoices: InvoiceRow[] = [draftInvoice(listing)];
 
   return (
     <div className="d-flex flex-column gap-3 p-4">
       <ListingPageHeader
-        title="Invoices"
+        title={heading}
         actions={
           <Button variant="ghost" size="sm">
             <FontAwesomeIcon icon={faClockRotateLeft} />

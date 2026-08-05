@@ -575,8 +575,8 @@ export function StageGate({
 
         <Modal.Footer>
           {/* Cancel aborts the move outright and stays put; "Back to editing"
-              keeps the publish intent alive and sends the broker to the editor.
-              Both are needed — they mean different things. */}
+              keeps the publish intent alive and sends the broker to wherever this
+              deal is edited. Both are needed — they mean different things. */}
           <Modal.Close render={<Button variant="ghost">Cancel</Button>} />
           {config.publishes && (
             <Button
@@ -584,10 +584,21 @@ export function StageGate({
               onClick={() => {
                 useStageGate.getState().setPendingPublish(deal.id);
                 onOpenChange(false);
-                navigate({
-                  to: "/listings/$listingId/edit",
-                  params: { listingId: deal.id },
-                });
+                // A space's terms live on its building's roster, not on an edit
+                // form — the space-terms section was removed from that form when
+                // spaces stopped having pages. Everything else still edits normally.
+                void navigate(
+                  deal.parentDealId
+                    ? {
+                        to: "/listings/$listingId/spaces",
+                        params: { listingId: deal.parentDealId },
+                        search: { space: deal.id },
+                      }
+                    : {
+                        to: "/listings/$listingId/edit",
+                        params: { listingId: deal.id },
+                      },
+                );
               }}
             >
               Back to editing

@@ -15,7 +15,9 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact, DealSummary } from "#/data/types";
 import { useCreateDeal } from "#/data/useCreateDeal";
+import { getListing } from "#/data/store";
 import { DealCardById } from "#/components/deals/DealCard";
+import { dealCardLinkProps } from "#/components/deals/dealCardLink";
 import { initials as nameInitials } from "#/components/deals/dealDisplay";
 
 function medDate(iso: string): string {
@@ -47,13 +49,15 @@ function DealCard({ deal, startedAt }: { deal: DealSummary; startedAt: string })
         }
       />
       <DropdownMenu.Content align="end">
+        {/* The card body routes through `DealCardById`; this menu item has to
+            resolve the same destination itself. A `DealSummary` doesn't carry
+            `parentDealId`, so the listing is re-read to ask `dealCardLinkProps`
+            — and if it isn't in the store the card wouldn't be rendering. */}
         <DropdownMenu.Item
-          onClick={() =>
-            void navigate({
-              to: "/listings/$listingId",
-              params: { listingId: deal.id },
-            })
-          }
+          onClick={() => {
+            const listing = getListing(deal.id);
+            if (listing) void navigate(dealCardLinkProps(listing));
+          }}
         >
           Open deal
         </DropdownMenu.Item>

@@ -20,6 +20,7 @@ import { isUmbrella, spacesStageBreakdown } from "#/data/leaseSpaces";
 import { dealShape } from "#/data/dealShape";
 import { DealStageBadge } from "./DealStageBadge";
 import { dealHeadlineLabel } from "./dealDisplay";
+import { dealCardLinkProps } from "#/components/deals/dealCardLink";
 import {
   TYPE_ICONS,
   TYPE_LABELS,
@@ -286,8 +287,7 @@ export function DealCardById({
   if (!listing) return null;
   return (
     <Link
-      to="/listings/$listingId"
-      params={{ listingId }}
+      {...dealCardLinkProps(listing)}
       className="text-decoration-none text-reset d-block"
     >
       <DealCardView
@@ -353,8 +353,7 @@ export function DealCard({ listing }: { listing: Listing }) {
       {...listeners}
     >
       <Link
-        to="/listings/$listingId"
-        params={{ listingId: listing.id }}
+        {...dealCardLinkProps(listing)}
         className="text-decoration-none text-reset d-block"
       >
         <BoardDealCard listing={listing} />

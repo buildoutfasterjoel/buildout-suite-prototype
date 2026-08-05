@@ -19,6 +19,10 @@ import { NewDealCard, type DealCardAction } from "#/components/deals/NewDealCard
 import { dealRelationshipFor } from "#/components/deals/newCardTokens";
 import { contactFullName } from "#/components/contacts/contactDisplay";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
+import {
+  buildingSectionListingId,
+  dealCardLinkProps,
+} from "#/components/deals/dealCardLink";
 
 /** "Jul 27, 2026" — the date the contact's inquiry came in. */
 function medDate(iso: string): string {
@@ -90,8 +94,7 @@ export function NewContactDealCard({
       if (run == null) setSetupOpen(true);
       else if (run.status === "generated")
         useBovFlow.getState().openPlacement(listingId);
-      else
-        void navigate({ to: "/listings/$listingId", params: { listingId } });
+      else void navigate(dealCardLinkProps(listing!));
     };
     switch (run?.status) {
       case "generating":
@@ -119,7 +122,7 @@ export function NewContactDealCard({
         onClick: () =>
           void navigate({
             to: "/listings/$listingId/leads",
-            params: { listingId },
+            params: { listingId: buildingSectionListingId(listingId) },
           }),
       };
     }
@@ -132,7 +135,7 @@ export function NewContactDealCard({
       className={highlight ? "contact-deal-card--spotlight" : undefined}
       onClick={(e) => {
         if (shouldIgnoreRowClick(e)) return;
-        void navigate({ to: "/listings/$listingId", params: { listingId } });
+        void navigate(dealCardLinkProps(listing));
       }}
     >
       <NewDealCard

@@ -928,11 +928,18 @@ function TransactionSummarySection({ listing }: { listing: Listing }) {
 }
 
 /** Financials tab: gross commission, its breakdown, commissions, and receivables/payables. */
-export function DealFinancials({ listing }: { listing: Listing }) {
+export function DealFinancials({
+  listing,
+  heading = "Voucher",
+}: {
+  listing: Listing;
+  /** Overridden on a shell's per-space voucher, so the suite is named. */
+  heading?: string;
+}) {
   return (
     <div className="d-flex flex-column gap-5 p-4">
       <ListingPageHeader
-        title="Voucher"
+        title={heading}
         actions={
           <div className="d-flex gap-2">
             <Button variant="outline">Deal Sheet</Button>

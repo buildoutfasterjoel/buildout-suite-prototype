@@ -12,6 +12,7 @@ import type {
   DealTask,
   DealUnderwriting,
   SpaceLeaseTerms,
+  PropertyUnit,
   Lot,
   Condo,
   UnitMixRow,
@@ -63,7 +64,6 @@ export function emptySpaceLeaseTerms(unitId: string): SpaceLeaseTerms {
     leaseRateMode: 'Flat',
     leaseRateTo: null,
     leaseRateUnitLabelOverride: '',
-    spaceSize: null,
     spaceSizeUnits: 'SF',
     leaseTypeLabelOverride: '',
     subleaseExpiration: null,
@@ -90,6 +90,31 @@ export function emptySpaceLeaseTerms(unitId: string): SpaceLeaseTerms {
     rentConcession: '',
     leaseTermsText: '',
     salePrice: null,
+  }
+}
+
+/**
+ * A new space's terms, started from what the building already knows about the
+ * unit. A broker opening a fresh suite should not retype facts the asset record
+ * holds — seeded units carry a suite number, floor, ceiling height, office and
+ * conference-room counts, and whether they are furnished.
+ *
+ * Space *type* is deliberately absent: `UnitType` is a coarse category ('office',
+ * 'retail') while `spaceType` is a fine-grained subtype ('Medical', 'Strip
+ * Center'), so deriving one from the other would invent a judgement that belongs
+ * to the broker. Size is absent too — a space's size is `availableSqFt` on its own
+ * marketing, not a field on this row.
+ */
+export function spaceTermsFromUnit(unit: PropertyUnit): SpaceLeaseTerms {
+  return {
+    ...emptySpaceLeaseTerms(unit.id),
+    spaceName: unit.label,
+    suite: unit.suite ?? undefined,
+    floor: unit.floor,
+    ceilingHeight: unit.ceilingHeight,
+    offices: unit.offices,
+    conferenceRooms: unit.conferenceRooms,
+    furnished: unit.furnished,
   }
 }
 

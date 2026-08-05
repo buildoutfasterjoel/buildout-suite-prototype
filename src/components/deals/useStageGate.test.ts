@@ -283,9 +283,14 @@ describe("requestStageChange wiring for a space deal", () => {
     // Active — but WHICH gate it resolved is only visible through this spy.
     const config = resolveGateSpy.mock.results.at(-1)?.value as {
       required: string[];
+      title: string;
     };
-    expect(config.required).toContain("shellActive");
+    // `leaseTermMonths` is required by the space gate and by no other publish
+    // gate, so it identifies the branch on its own; `saleTitle` is required by
+    // every other one. Together they pin the resolution from both directions.
+    expect(config.required).toContain("leaseTermMonths");
     expect(config.required).not.toContain("saleTitle");
+    expect(config.title).toBe("Publish space to the building listing");
     expect(useStageGate.getState().open).toBe(true);
 
     resolveGateSpy.mockRestore();

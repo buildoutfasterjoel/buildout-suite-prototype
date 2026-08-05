@@ -1,6 +1,6 @@
 import type { Listing, PropertyStatus } from './types'
 import { getListing, getProperty, addListing, getStore, addPropertyUnit } from './store'
-import { emptySpaceLeaseTerms } from './createListing'
+import { spaceTermsFromUnit } from './createListing'
 import { updateDealMarketing } from './actions'
 
 /** Re-exported so callers can spawn a unit + a bound space deal from one module. */
@@ -71,7 +71,7 @@ export function addSpaceToDeal(
     marketing: {
       ...parent.marketing,
       availableSqFt: unit.sqft,
-      spaceLeaseTerms: [existingRow ? { ...existingRow } : { ...emptySpaceLeaseTerms(unitId) }],
+      spaceLeaseTerms: [existingRow ? { ...existingRow } : spaceTermsFromUnit(unit)],
     },
     createdAt: now,
     updatedAt: now,

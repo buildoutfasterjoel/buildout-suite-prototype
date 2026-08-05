@@ -37,6 +37,10 @@ import { DealStageChip } from "#/components/deals/DealStageChip";
 import { dealShape } from "#/data/dealShape";
 import { ContactLinkButton } from "#/components/contacts/ContactLinkButton";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
+import {
+  buildingSectionListingId,
+  dealCardLinkProps,
+} from "#/components/deals/dealCardLink";
 
 function medDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
@@ -190,10 +194,7 @@ export function ContactDealCard({
       }`}
       onClick={(e) => {
         if (shouldIgnoreRowClick(e)) return;
-        void navigate({
-          to: "/listings/$listingId",
-          params: { listingId },
-        });
+        void navigate(dealCardLinkProps(listing));
       }}
     >
       {/* Actions menu */}
@@ -211,12 +212,7 @@ export function ContactDealCard({
           />
           <DropdownMenu.Content align="end">
             <DropdownMenu.Item
-              onClick={() =>
-                void navigate({
-                  to: "/listings/$listingId",
-                  params: { listingId },
-                })
-              }
+              onClick={() => void navigate(dealCardLinkProps(listing))}
             >
               Open deal
             </DropdownMenu.Item>
@@ -261,7 +257,7 @@ export function ContactDealCard({
         {/* `addSpaceToDeal` copies the parent's seller contacts onto every child,
             so a landlord's contact page lists the shell AND each space. Without
             the shape the chip would default to "sale" and offer both a full
-            ladder to a shell and "Pitching" where a space reads "Draft". */}
+            ladder to a shell and "Pitching" where a space reads "Inactive". */}
         <DealStageChip
           value={listing.status}
           shape={dealShape(listing)}
@@ -310,7 +306,7 @@ export function ContactDealCard({
               onClick={() =>
                 void navigate({
                   to: "/listings/$listingId/documents",
-                  params: { listingId },
+                  params: { listingId: buildingSectionListingId(listingId) },
                 })
               }
             />
@@ -322,7 +318,7 @@ export function ContactDealCard({
               onClick={() =>
                 void navigate({
                   to: "/listings/$listingId/leads",
-                  params: { listingId },
+                  params: { listingId: buildingSectionListingId(listingId) },
                 })
               }
             />
@@ -332,8 +328,9 @@ export function ContactDealCard({
 
       {/* Conditionally-visible AI next action. No run yet → open the Cactus
           setup dialog in place; a generated-but-unsaved run → reopen the save
-          step of the contact-page BOV flow; anything else → the deal overview,
-          where the planner row shows that run's state. */}
+          step of the contact-page BOV flow; anything else → the deal itself,
+          where the planner row shows that run's state (`dealCardLinkProps`, so
+          a space lands on its building's roster rather than a page of its own). */}
       {nextAction && (
         <Button
           variant="outline"
@@ -342,7 +339,7 @@ export function ContactDealCard({
             if (listing.underwriting == null) setSetupOpen(true);
             else if (listing.underwriting.status === "generated")
               useBovFlow.getState().openPlacement(listingId);
-            else void navigate({ to: "/listings/$listingId", params: { listingId } });
+            else void navigate(dealCardLinkProps(listing));
           }}
         >
           <FontAwesomeIcon icon={nextAction.icon} />

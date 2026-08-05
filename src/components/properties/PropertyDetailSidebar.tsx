@@ -3,83 +3,18 @@ import { useLocation, useParams, useNavigate } from "@tanstack/react-router";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
 import { Collapsible } from "@buildoutinc/blueprint-react/ui/Collapsible";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import {
-  faGaugeHigh,
-  faAddressBook,
-  faBolt,
-  faFileInvoiceDollar,
-  faFileLines,
-  faGlobe,
-  faEnvelope,
-  faImage,
-  faTableCells,
-  faMapLocationDot,
-  faFileChartColumn,
-  faVectorSquare,
-  faHardDrive,
-  faCalculator,
-  faClockRotateLeft,
-  faRulerCombined,
-  faReceipt,
-  faNoteSticky,
-  faChevronRight,
-} from "@fortawesome/pro-regular-svg-icons";
+import { faChevronRight } from "@fortawesome/pro-regular-svg-icons";
 import { useDataStore } from "#/data/dataStore";
 import { getListing, getProperty } from "#/data/store";
 import { propertyQualifiesForUnderwriting } from "#/components/deals/underwriting/eligibility";
 import { dealShape, isLeaseParent } from "#/data/dealShape";
-import { buildingSectionHref } from "#/data/suitePanelPath";
-
-type NavItem = { label: string; href: string; icon: IconDefinition };
-type NavGroup = { label?: string; items: NavItem[] };
+import {
+  dealBreadcrumbTrail,
+  visibleNavGroups,
+} from "#/components/properties/dealNav";
 
 /** localStorage key for which sidebar category groups are collapsed. */
 const COLLAPSED_STORAGE_KEY = "deal-sidebar-collapsed-groups";
-
-const NAV_GROUPS: NavGroup[] = [
-  {
-    label: "Deal",
-    items: [
-      { label: "Overview", href: "overview", icon: faGaugeHigh },
-      {
-        label: "Client Report",
-        href: "client-report",
-        icon: faFileChartColumn,
-      },
-      { label: "Activity", href: "activities", icon: faBolt },
-      { label: "History", href: "history", icon: faClockRotateLeft },
-      { label: "Spaces", href: "spaces", icon: faVectorSquare },
-      { label: "Files", href: "files", icon: faHardDrive },
-      { label: "Underwriting", href: "underwriting", icon: faCalculator },
-    ],
-  },
-  {
-    label: "Marketing",
-    items: [
-      { label: "Leads", href: "leads", icon: faAddressBook },
-      { label: "Documents", href: "documents", icon: faFileLines },
-      { label: "Website", href: "website", icon: faGlobe },
-      { label: "Email", href: "email", icon: faEnvelope },
-      { label: "Media", href: "media", icon: faImage },
-      { label: "Demographics", href: "demographics", icon: faMapLocationDot },
-      { label: "Grids", href: "grids", icon: faTableCells },
-      { label: "Plans", href: "plans", icon: faRulerCombined },
-    ],
-  },
-  {
-    label: "Back Office",
-    items: [
-      { label: "Voucher", href: "financials", icon: faFileInvoiceDollar },
-      {
-        label: "Invoices",
-        href: "financial-documents",
-        icon: faReceipt,
-      },
-      { label: "Notes", href: "notes", icon: faNoteSticky },
-    ],
-  },
-];
 
 export function PropertyDetailSidebar() {
   const { pathname } = useLocation();
@@ -125,44 +60,26 @@ export function PropertyDetailSidebar() {
   // from canAddSpaces, which governs only the Add-space buttons, not navigation.
   const leaseParent = isLeaseParent(listing);
 
-  const navGroups = NAV_GROUPS.map((group) => ({
-    ...group,
-    items: group.items.filter((item) => {
-      // Money is earned per space, so a shell has no voucher and no invoices.
-      if (
-        shape === "shell" &&
-        (item.href === "financials" || item.href === "financial-documents")
-      ) {
-        return false;
-      }
-      if (item.href === "spaces") return leaseParent;
-      if (item.href === "underwriting") return showsUnderwriting;
-      return true;
-    }),
-  })).filter((group) => group.items.length > 0);
+  const navGroups = visibleNavGroups(shape, { leaseParent, showsUnderwriting });
+  // Which section the URL is on — read the same way the breadcrumb reads it, so
+  // the two can't disagree. It takes the *first* segment after the listing id,
+  // which is what keeps a drill-down (…/vouchers/{spaceId}) highlighting its
+  // section rather than nothing at all. Hoisted: one call, not one per group.
+  const { sectionLabel } = dealBreadcrumbTrail(pathname, listingId);
 
   function handleTabChange(value: string) {
     const item = navGroups
       .flatMap((g) => g.items)
       .find((i) => i.label === value);
     if (!item) return;
-    void navigate({
-      to: `/listings/${listingId}/${item.href}`,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
+    void navigate({ to: `/listings/${listingId}/${item.href}` });
   }
-
-  // Which building section is live. Read from the first segment after the listing
-  // id rather than the last, because a suite panel appends its own leaf and those
-  // slugs mirror the building's own — matching the last segment made opening a
-  // panel jump the sidebar off Spaces and onto Overview, then back on close.
-  const sectionHref = buildingSectionHref(pathname, listingId);
 
   return (
     <nav className="px-3 py-1" aria-label="Property sections">
       {navGroups.map((group, i) => {
         const activeInGroup =
-          group.items.find((item) => item.href === sectionHref)?.label ?? "";
+          group.items.find((item) => item.label === sectionLabel)?.label ?? "";
         const isCollapsed = group.label ? collapsed.has(group.label) : false;
         const tabs = (
           <Tabs
