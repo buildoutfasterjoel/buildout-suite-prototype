@@ -26,7 +26,7 @@ const TIER_FOR_CHANNEL: Record<MarketingChannel, VisibilityTier> = {
 };
 
 /**
- * Listing tab — Marketing Visibility. Status-gated channel picker (Sale reads/
+ * Listing page — Marketing Visibility. Status-gated channel picker (Sale reads/
  * writes `saleMarketingChannel`, Lease reads/writes `leaseMarketingChannel`),
  * mirrored into the legacy `marketingChannel` field on every change so older
  * readers of that field keep working. Always rendered — the channel options

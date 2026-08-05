@@ -33,7 +33,7 @@ const LOT_PRICE_UNITS: Lot["priceUnits"][] = [
 const LOT_SIZE_UNITS = ["Acre", "SF", "SqM", "Hectare"];
 
 /**
- * Listing tab — Lots. Each lot is a collapsible accordion card (PRD §14).
+ * Listing page — Lots. Each lot is a collapsible accordion card (PRD §14).
  * Closing details (Close Date / Buyer-Referral Source) only appear once a
  * lot's status is set to Closed. A section-level "Re-Order" toggle switches the
  * list into drag-to-sort mode. Shown for land-type properties only (gated by

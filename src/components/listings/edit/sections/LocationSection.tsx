@@ -52,7 +52,7 @@ const YES_NO_NA_LABELS: Record<string, string> = {
 };
 
 /**
- * Listing tab — Location. Country/address/map fields live on `property`
+ * Listing page — Location. Country/address/map fields live on `property`
  * (persisted via `patchProperty`); the two location-description fields live on
  * `marketing` (persisted via `patchMarketing`) since they're syndication copy,
  * not property data. A collapsed "Additional Fields" accordion holds the

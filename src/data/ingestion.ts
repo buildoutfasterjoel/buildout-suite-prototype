@@ -58,9 +58,10 @@ const percent = (n: number) => `${Math.round(n)}%`
  * the broker picks leaves the field populated.
  *
  * A Sale raises all three (asking price, NOI, occupancy). A **Lease** raises
- * occupancy only: the editor hides its Financials section on a Lease, so an
- * asking-price or NOI conflict would show a tab badge with no arbitration row
- * behind it — unresolvable, which would strand the run in `needs-review`
+ * occupancy only: `DealEditor` renders its Financials section only when
+ * `isSale && shape !== 'shell'` — always false for a Lease — so an
+ * asking-price or NOI conflict would show a page badge with no arbitration
+ * row behind it — unresolvable, which would strand the run in `needs-review`
  * forever. Neither field is gate-required on a Lease, so they are dropped
  * rather than surfaced as a dead end.
  */
@@ -92,7 +93,7 @@ export function deriveConflicts(
   const noiCurrentSource = hasNoiOnRecord ? 'Property record' : 'Rent Roll.xlsx'
   const occCurrentSource = hasOccOnRecord ? 'Property record' : 'T-12.pdf'
 
-  // Same predicate the editor gates its Financials section on.
+  // Same predicate DealEditor gates its Financials section on.
   const isSale = deal.dealType !== 'Lease'
 
   const financialConflicts: IngestionConflict[] = [

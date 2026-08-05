@@ -6,9 +6,9 @@ import { Section } from "#/components/listings/listingWidgets";
 import type { DealMarketing } from "#/data/types";
 
 /**
- * Listing tab — Disclaimer & Notes. Override Disclaimer reveals a custom
+ * Disclaimer & Notes section. Override Disclaimer reveals a custom
  * disclaimer textarea; Internal Notes lives on `Listing` (not `marketing`),
- * so its state/setter come from the caller (`DealMarketingEditor`) rather
+ * so its state/setter come from the parent (`ListingEditor`) rather
  * than from `patchMarketing`.
  */
 export function DisclaimerNotesSection({

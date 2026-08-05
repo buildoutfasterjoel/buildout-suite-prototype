@@ -14,7 +14,6 @@ import { autoFillRentRow } from "#/data/listingFinancials";
 import { propertyTypeEffects } from "#/data/listingFormLogic";
 import type {
 	DealMarketing,
-	DealPitchFinancials,
 	Property,
 	PropertyType,
 	RentRollRow,
@@ -180,31 +179,35 @@ function EditableTable<T extends { id: string }>({
 }
 
 /**
- * Listing tab — Units. Number of Units (base property field) plus two optional,
+ * Listing page — Units. Number of Units (base property field) plus two optional,
  * independently-toggled marketing tables: Unit Mix (stored on `property.unitMix`)
- * and Rent Roll (stored on `financials.rentRoll`). Each Include toggle reveals its
- * table and a Syndicate switch. The Unit Mix column set changes with the primary
- * property type; the Rent Roll size/rate/annual trio auto-fills the third value.
- * Unit Mix is hidden for land; Rent Roll is hidden for hospitality.
+ * and Rent Roll (which lives on `financials.rentRoll`, passed in narrowed to
+ * `rentRoll`/`setRentRoll` — see savePatches.ts for why). Each Include toggle
+ * reveals its table and a Syndicate switch. The Unit Mix column set changes
+ * with the primary property type; the Rent Roll size/rate/annual trio
+ * auto-fills the third value. Unit Mix is hidden for land; Rent Roll is
+ * hidden for hospitality.
  */
 export function UnitsSection({
 	property,
 	patchProperty,
 	marketing,
 	patchMarketing,
-	financials,
-	patchFinancials,
+	rentRoll,
+	setRentRoll,
 }: {
 	property: Property;
 	patchProperty: (p: Partial<Property>) => void;
 	marketing: DealMarketing;
 	patchMarketing: (p: Partial<DealMarketing>) => void;
-	financials: DealPitchFinancials;
-	patchFinancials: (p: Partial<DealPitchFinancials>) => void;
+	/** Rent roll only. It lives on `financials.rentRoll`, but it is the sole
+	 *  financials field this form owns — the Deal page owns the rest, and taking
+	 *  the whole object here would let a stale draft revert it. */
+	rentRoll: RentRollRow[];
+	setRentRoll: (v: RentRollRow[]) => void;
 }) {
 	const effects = propertyTypeEffects(property.propertyType);
 	const unitMix = property.unitMix ?? [];
-	const rentRoll = financials.rentRoll ?? [];
 
 	const showUnitMix = property.propertyType !== "land";
 	const showRentRoll = property.propertyType !== "hospitality";
@@ -230,7 +233,7 @@ export function UnitsSection({
 				annualRent: filled.annualRent,
 			};
 		});
-		patchFinancials({ rentRoll: next });
+		setRentRoll(next);
 	};
 
 	const emptyRentRow = (): RentRollRow => ({
@@ -313,13 +316,9 @@ export function UnitsSection({
 								columns={RENT_ROLL_COLUMNS}
 								rows={rentRoll}
 								onEdit={editRentRow}
-								onAdd={() =>
-									patchFinancials({ rentRoll: [...rentRoll, emptyRentRow()] })
-								}
+								onAdd={() => setRentRoll([...rentRoll, emptyRentRow()])}
 								onRemove={(id) =>
-									patchFinancials({
-										rentRoll: rentRoll.filter((r) => r.id !== id),
-									})
+									setRentRoll(rentRoll.filter((r) => r.id !== id))
 								}
 								addLabel="Add rent roll row"
 								emptyLabel="No rent roll rows yet."

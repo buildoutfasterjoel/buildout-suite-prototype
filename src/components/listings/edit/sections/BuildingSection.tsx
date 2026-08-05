@@ -18,7 +18,7 @@ import type { Property } from "#/data/types";
 const TENANCY_OPTIONS: ("Single" | "Multiple")[] = ["Single", "Multiple"];
 
 /**
- * Listing tab — Building. Base structural stats always show; Building Class,
+ * Listing page — Building. Base structural stats always show; Building Class,
  * Retail Clientele, and the industrial-cluster fields (doors/bays/cranes) are
  * gated by the primary property type via `propertyTypeEffects`. A collapsed
  * "Additional Fields" accordion holds the long-tail construction/parking

@@ -56,6 +56,7 @@ import { Route as ShellListingsListingIdPlansRouteImport } from './routes/_shell
 import { Route as ShellListingsListingIdOverviewRouteImport } from './routes/_shell/listings/$listingId/overview'
 import { Route as ShellListingsListingIdNotesRouteImport } from './routes/_shell/listings/$listingId/notes'
 import { Route as ShellListingsListingIdMediaRouteImport } from './routes/_shell/listings/$listingId/media'
+import { Route as ShellListingsListingIdListingRouteImport } from './routes/_shell/listings/$listingId/listing'
 import { Route as ShellListingsListingIdLeadsRouteImport } from './routes/_shell/listings/$listingId/leads'
 import { Route as ShellListingsListingIdHistoryRouteImport } from './routes/_shell/listings/$listingId/history'
 import { Route as ShellListingsListingIdGridsRouteImport } from './routes/_shell/listings/$listingId/grids'
@@ -327,6 +328,12 @@ const ShellListingsListingIdMediaRoute =
     path: '/media',
     getParentRoute: () => ShellListingsListingIdRoute,
   } as any)
+const ShellListingsListingIdListingRoute =
+  ShellListingsListingIdListingRouteImport.update({
+    id: '/listing',
+    path: '/listing',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
 const ShellListingsListingIdLeadsRoute =
   ShellListingsListingIdLeadsRouteImport.update({
     id: '/leads',
@@ -503,6 +510,7 @@ export interface FileRoutesByFullPath {
   '/listings/$listingId/grids': typeof ShellListingsListingIdGridsRoute
   '/listings/$listingId/history': typeof ShellListingsListingIdHistoryRoute
   '/listings/$listingId/leads': typeof ShellListingsListingIdLeadsRoute
+  '/listings/$listingId/listing': typeof ShellListingsListingIdListingRoute
   '/listings/$listingId/media': typeof ShellListingsListingIdMediaRoute
   '/listings/$listingId/notes': typeof ShellListingsListingIdNotesRoute
   '/listings/$listingId/overview': typeof ShellListingsListingIdOverviewRoute
@@ -563,6 +571,7 @@ export interface FileRoutesByTo {
   '/listings/$listingId/grids': typeof ShellListingsListingIdGridsRoute
   '/listings/$listingId/history': typeof ShellListingsListingIdHistoryRoute
   '/listings/$listingId/leads': typeof ShellListingsListingIdLeadsRoute
+  '/listings/$listingId/listing': typeof ShellListingsListingIdListingRoute
   '/listings/$listingId/media': typeof ShellListingsListingIdMediaRoute
   '/listings/$listingId/notes': typeof ShellListingsListingIdNotesRoute
   '/listings/$listingId/overview': typeof ShellListingsListingIdOverviewRoute
@@ -633,6 +642,7 @@ export interface FileRoutesById {
   '/_shell/listings/$listingId/grids': typeof ShellListingsListingIdGridsRoute
   '/_shell/listings/$listingId/history': typeof ShellListingsListingIdHistoryRoute
   '/_shell/listings/$listingId/leads': typeof ShellListingsListingIdLeadsRoute
+  '/_shell/listings/$listingId/listing': typeof ShellListingsListingIdListingRoute
   '/_shell/listings/$listingId/media': typeof ShellListingsListingIdMediaRoute
   '/_shell/listings/$listingId/notes': typeof ShellListingsListingIdNotesRoute
   '/_shell/listings/$listingId/overview': typeof ShellListingsListingIdOverviewRoute
@@ -704,6 +714,7 @@ export interface FileRouteTypes {
     | '/listings/$listingId/grids'
     | '/listings/$listingId/history'
     | '/listings/$listingId/leads'
+    | '/listings/$listingId/listing'
     | '/listings/$listingId/media'
     | '/listings/$listingId/notes'
     | '/listings/$listingId/overview'
@@ -764,6 +775,7 @@ export interface FileRouteTypes {
     | '/listings/$listingId/grids'
     | '/listings/$listingId/history'
     | '/listings/$listingId/leads'
+    | '/listings/$listingId/listing'
     | '/listings/$listingId/media'
     | '/listings/$listingId/notes'
     | '/listings/$listingId/overview'
@@ -833,6 +845,7 @@ export interface FileRouteTypes {
     | '/_shell/listings/$listingId/grids'
     | '/_shell/listings/$listingId/history'
     | '/_shell/listings/$listingId/leads'
+    | '/_shell/listings/$listingId/listing'
     | '/_shell/listings/$listingId/media'
     | '/_shell/listings/$listingId/notes'
     | '/_shell/listings/$listingId/overview'
@@ -1191,6 +1204,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellListingsListingIdMediaRouteImport
       parentRoute: typeof ShellListingsListingIdRoute
     }
+    '/_shell/listings/$listingId/listing': {
+      id: '/_shell/listings/$listingId/listing'
+      path: '/listing'
+      fullPath: '/listings/$listingId/listing'
+      preLoaderRoute: typeof ShellListingsListingIdListingRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
     '/_shell/listings/$listingId/leads': {
       id: '/_shell/listings/$listingId/leads'
       path: '/leads'
@@ -1406,6 +1426,7 @@ interface ShellListingsListingIdRouteChildren {
   ShellListingsListingIdGridsRoute: typeof ShellListingsListingIdGridsRoute
   ShellListingsListingIdHistoryRoute: typeof ShellListingsListingIdHistoryRoute
   ShellListingsListingIdLeadsRoute: typeof ShellListingsListingIdLeadsRoute
+  ShellListingsListingIdListingRoute: typeof ShellListingsListingIdListingRoute
   ShellListingsListingIdMediaRoute: typeof ShellListingsListingIdMediaRoute
   ShellListingsListingIdNotesRoute: typeof ShellListingsListingIdNotesRoute
   ShellListingsListingIdOverviewRoute: typeof ShellListingsListingIdOverviewRoute
@@ -1437,6 +1458,7 @@ const ShellListingsListingIdRouteChildren: ShellListingsListingIdRouteChildren =
     ShellListingsListingIdGridsRoute: ShellListingsListingIdGridsRoute,
     ShellListingsListingIdHistoryRoute: ShellListingsListingIdHistoryRoute,
     ShellListingsListingIdLeadsRoute: ShellListingsListingIdLeadsRoute,
+    ShellListingsListingIdListingRoute: ShellListingsListingIdListingRoute,
     ShellListingsListingIdMediaRoute: ShellListingsListingIdMediaRoute,
     ShellListingsListingIdNotesRoute: ShellListingsListingIdNotesRoute,
     ShellListingsListingIdOverviewRoute: ShellListingsListingIdOverviewRoute,

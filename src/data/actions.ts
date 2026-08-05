@@ -333,7 +333,19 @@ export function resolveIngestionConflict(
 
   updateDealFinancials(dealId, patch.financials)
   const propPatch = resolvedPropertyPatch(next)
-  if (propPatch.occupancyPct !== undefined && listing.propertyId) {
+  // `propPatch.occupancyPct` is defined the moment an occupancy conflict exists
+  // at all, resolved or not — while unresolved it's an echo of the value
+  // captured back at `deriveConflicts` time, kept defined only so the filled-
+  // field count (which subtracts unresolvedCount to cancel the padding) stays
+  // symmetric with the financials patch. Writing that echo to the property on
+  // every resolution — including one for a completely different field — would
+  // revert a real occupancy edit made in between (e.g. a Save on the Listing
+  // page), so the actual write only happens once the occupancy conflict itself
+  // has been resolved.
+  const occupancyResolved = next.conflicts.find(
+    (c) => c.fieldKey === 'occupancyPct',
+  )?.resolution !== undefined
+  if (occupancyResolved && propPatch.occupancyPct !== undefined && listing.propertyId) {
     updateProperty(listing.propertyId, propPatch)
   }
 

@@ -41,9 +41,10 @@ const SPACE_SIZE_UNITS = ["SF", "RSF", "SqM"] as const;
 const COMMERCIAL_SUBTYPES = ALL_SUBTYPES.filter((s) => !isResidentialSubtype(s));
 
 /**
- * A single space's lease terms editor. Renders the fields only — each caller
- * supplies its own frame: the Spaces tab wraps one per unit in a `Collapsible`,
- * and a space deal's Listing tab drops it into a `Section` as the whole tab.
+ * A single space's lease terms editor. Renders the fields only — the caller
+ * supplies its own frame; today that's the Spaces roster, which wraps one per
+ * unit in a `Collapsible`. (A space deal has no page of its own to drop this
+ * into — see the space-deals-without-a-page design.)
  *
  * Size is passed separately from `terms` because it does not live on the terms
  * row: a space's size is `marketing.availableSqFt` on its own deal, which is what

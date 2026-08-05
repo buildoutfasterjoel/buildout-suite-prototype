@@ -16,17 +16,17 @@ import { DisclaimerNotesSection } from "#/components/listings/edit/sections/Disc
 import { propertyTypeEffects, showBuyerSection } from "#/data/listingFormLogic";
 import type {
 	DealMarketing,
-	DealPitchFinancials,
 	DealType,
 	Property,
 	PropertyStatus,
+	RentRollRow,
 } from "#/data/types";
 
 /**
- * The Listing-tab body of the two-tab edit shell. Renders the Listing-tab
- * sections (Location, Transit, and more added in later tasks). Receives the
- * shared working copy (marketing + property draft) plus their patchers so it
- * never owns state of its own.
+ * The Listing page's form body: every section, from Location and Transit
+ * through Disclaimer & Notes. Receives the shared working copy (marketing +
+ * property draft, plus the rent roll narrowed out of `financials` — see
+ * savePatches.ts) and their patchers, so it never owns state of its own.
  */
 export function ListingFormEditor({
 	dealType,
@@ -35,8 +35,8 @@ export function ListingFormEditor({
 	patchMarketing,
 	property,
 	patchProperty,
-	financials,
-	patchFinancials,
+	rentRoll,
+	setRentRoll,
 	internalNotes,
 	setInternalNotes,
 }: {
@@ -46,8 +46,8 @@ export function ListingFormEditor({
 	patchMarketing: (p: Partial<DealMarketing>) => void;
 	property: Property;
 	patchProperty: (p: Partial<Property>) => void;
-	financials: DealPitchFinancials;
-	patchFinancials: (p: Partial<DealPitchFinancials>) => void;
+	rentRoll: RentRollRow[];
+	setRentRoll: (v: RentRollRow[]) => void;
 	internalNotes: string;
 	setInternalNotes: (v: string) => void;
 }) {
@@ -73,8 +73,8 @@ export function ListingFormEditor({
 				patchProperty={patchProperty}
 				marketing={marketing}
 				patchMarketing={patchMarketing}
-				financials={financials}
-				patchFinancials={patchFinancials}
+				rentRoll={rentRoll}
+				setRentRoll={setRentRoll}
 			/>
 			{effects.landSections && (
 				<>

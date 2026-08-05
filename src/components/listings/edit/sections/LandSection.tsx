@@ -11,7 +11,7 @@ import { Section } from "#/components/listings/listingWidgets";
 import type { Property } from "#/data/types";
 
 /**
- * Listing tab — Land. Only rendered for the Land property type
+ * Listing page — Land. Only rendered for the Land property type
  * (`propertyTypeEffects(...).landSections`). Number of Lots and Best Use show
  * up front; utility availability, environmental, and site fields sit behind a
  * collapsed "Additional Fields" accordion.

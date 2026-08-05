@@ -27,7 +27,7 @@ const CONDO_PRICE_UNITS: Condo["priceUnits"][] = ["Total", "SF", "SqM"];
 const CONDO_SIZE_UNITS: Condo["sizeUnits"][] = ["Sq Ft", "Sq Meters"];
 
 /**
- * Listing tab — Condos. Each condo is a collapsible accordion card (PRD §14).
+ * Listing page — Condos. Each condo is a collapsible accordion card (PRD §14).
  * Close Date only appears once a condo's status is set to Closed; a Hide Price
  * toggle reveals its own display-label override. A section-level "Re-Order"
  * toggle switches the list into drag-to-sort mode. Shown for Sale deals only

@@ -18,6 +18,7 @@ import {
   faFileInvoiceDollar,
   faReceipt,
   faNoteSticky,
+  faSign,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { DealShape } from "#/data/dealShape";
 
@@ -47,6 +48,10 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Marketing",
     items: [
+      // The listing's own field data — the form that used to be the Listing tab
+      // of `/edit`. First in the group: it is the content every other Marketing
+      // section (Website, Documents, syndication) reads from.
+      { label: "Listing", href: "listing", icon: faSign },
       { label: "Leads", href: "leads", icon: faAddressBook },
       { label: "Documents", href: "documents", icon: faFileLines },
       { label: "Website", href: "website", icon: faGlobe },

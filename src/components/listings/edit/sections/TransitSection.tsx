@@ -27,7 +27,7 @@ const NEARBY_TRANSIT = [
 ];
 
 /**
- * Listing tab — Transit. A static, read-only rundown of representative
+ * Listing page — Transit. A static, read-only rundown of representative
  * nearby transit lines; there's no editable state to wire up here yet.
  */
 export function TransitSection() {
