@@ -186,22 +186,16 @@ function TasksPage() {
 
   // The list view is a fixed-height column so its rows scroll internally and
   // pagination stays pinned. The grouped view just lets the page scroll, so its
-  // accordion sections size to their content instead of bunching up. In that
-  // view the page padding sits INSIDE the scroll container (on an inner
-  // wrapper), so rows scrolling past the sticky section headers are clipped at
-  // the very top edge instead of peeking through the padding strip above them.
+  // section cards size to their content instead of bunching up. In that view
+  // the page padding sits INSIDE the scroll container (on an inner wrapper), so
+  // rows scrolling past the sticky section headers are clipped at the very top
+  // edge instead of peeking through the padding strip above them.
   const isList = view === "list";
 
-  const card = (
-      <Card
-        className={`panel-card mx-auto w-100${
-          isList ? " flex-grow-1 d-flex flex-column overflow-hidden" : ""
-        }`}
-        style={{ maxWidth: "48rem" }}
-      >
-        <Card.Body
-          className={`d-flex flex-column gap-4${isList ? " overflow-hidden" : ""}`}
-        >
+  // Title + toolbar + filters. Its own card in the grouped view (where each
+  // section is also a card); the head of the single card in the list view.
+  const toolbar = (
+    <>
             {/* Header */}
             <div className="d-flex align-items-start gap-3">
               <div className="flex-grow-1">
@@ -321,9 +315,10 @@ function TasksPage() {
               filters={filters}
               onChange={setFilters}
             />
+    </>
+  );
 
-            {/* Content */}
-            {filtered.length === 0 ? (
+  const empty = (
               <Empty className="py-6">
                 <Empty.Media>
                   <FontAwesomeIcon icon={faListCheck} />
@@ -333,23 +328,58 @@ function TasksPage() {
                   Try clearing filters or search, or add a new task.
                 </Empty.Content>
               </Empty>
-            ) : view === "grouped" ? (
-              // The page scrolls in this view, so sections size to content.
-              <div className="d-flex flex-column gap-4">
-                {sections.map((s) => (
-                  <TaskGroup
-                    key={s.key}
-                    title={s.title}
-                    tone={s.tone}
-                    tasks={s.tasks}
-                    truncateLabel={s.truncateLabel}
-                    open={!collapsedSections[s.key]}
-                    onOpenChange={(open) => setSectionOpen(s.key, open)}
-                    onToggle={toggleComplete}
-                    onOpen={openTask}
-                  />
-                ))}
-              </div>
+  );
+
+  // Grouped: a stack of cards — the toolbar, then one per section — matching
+  // the contact detail page, where each panel is its own card.
+  if (!isList) {
+    return (
+      <div className="h-100 overflow-auto">
+        <div
+          className="p-4 mx-auto w-100 d-flex flex-column gap-3"
+          style={{ maxWidth: "48rem" }}
+        >
+          <Card className="panel-card">
+            <Card.Body className="d-flex flex-column gap-4">{toolbar}</Card.Body>
+          </Card>
+
+          {filtered.length === 0 ? (
+            <Card className="panel-card">
+              <Card.Body>{empty}</Card.Body>
+            </Card>
+          ) : (
+            sections.map((s) => (
+              <TaskGroup
+                key={s.key}
+                title={s.title}
+                tone={s.tone}
+                tasks={s.tasks}
+                truncateLabel={s.truncateLabel}
+                open={!collapsedSections[s.key]}
+                onOpenChange={(open) => setSectionOpen(s.key, open)}
+                onToggle={toggleComplete}
+                onOpen={openTask}
+              />
+            ))
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // List: one card, since the rows are a single continuous surface whose
+  // scrolling is bounded so the pagination stays pinned under them.
+  return (
+    <div className="h-100 overflow-hidden p-4 d-flex">
+      <Card
+        className="panel-card mx-auto w-100 flex-grow-1 d-flex flex-column overflow-hidden"
+        style={{ maxWidth: "48rem" }}
+      >
+        <Card.Body className="d-flex flex-column gap-4 overflow-hidden">
+            {toolbar}
+
+            {filtered.length === 0 ? (
+              empty
             ) : (
               // The rows scroll inside a bounded box so pagination stays visible.
               <div className="d-flex flex-column gap-3 flex-grow-1 overflow-hidden">
@@ -415,21 +445,15 @@ function TasksPage() {
                 )}
               </div>
             )}
-          </Card.Body>
-        </Card>
-  );
-
-  return isList ? (
-    <div className="h-100 overflow-hidden p-4 d-flex">{card}</div>
-  ) : (
-    <div className="h-100 overflow-auto">
-      <div className="p-4">{card}</div>
+        </Card.Body>
+      </Card>
     </div>
   );
 }
 
 /**
- * A collapsible section for the grouped view. Uses Blueprint's Accordion so the
+ * A collapsible section for the grouped view — its own card, the same way each
+ * panel on the contact detail page is. Uses Blueprint's Accordion so the
  * chevron matches the Contact Details accordions; the title matches their
  * 20px / 26px sizing. The header sticks to the top of the scrolling page while
  * the section's rows pass under it.
@@ -461,11 +485,12 @@ function TaskGroup({
     !!truncateLabel && !showAll && tasks.length > COLLAPSED_ROWS;
   const visible = truncated ? tasks.slice(0, COLLAPSED_ROWS) : tasks;
   return (
+    <Card className="panel-card">
     <Accordion
       multiple
       value={open ? ["open"] : []}
       onValueChange={(value) => onOpenChange(value.includes("open"))}
-      className="tasks-group border rounded-3"
+      className="tasks-group"
     >
       <Accordion.Item value="open">
         <Accordion.Trigger>
@@ -505,5 +530,6 @@ function TaskGroup({
         </Accordion.Content>
       </Accordion.Item>
     </Accordion>
+    </Card>
   );
 }
