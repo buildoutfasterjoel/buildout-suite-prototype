@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "bunx",
+      "args": [
+        "@playwright/mcp@latest",
+        "--isolated",
+        "--viewport-size=1440,900",
+        "--output-dir=.playwright-mcp"
+      ]
+    }
+  }
+}

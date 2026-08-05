@@ -13,3 +13,6 @@ __unconfig*
 todos.json
 .zed
 .claude/settings.local.json
+
+# Playwright MCP scratch output (snapshots, console logs, screenshots)
+.playwright-mcp

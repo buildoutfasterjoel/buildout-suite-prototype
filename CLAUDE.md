@@ -6,9 +6,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This repo is the **Buildout Prototype Template** — use it to quickly build UI prototypes that match Buildout's branding and design system. New pages, components, and interactions should always use Blueprint React components and Buildout tokens.
 
-## Important
+## Important — browser verification
 
-DO NOT USE Playwright to test things. Run what you can, otherwise ask the user to test.
+Playwright **is** available, via the `playwright` MCP server (`.mcp.json`). Use it to verify
+that work actually renders before handing off.
+
+**Split of responsibility:** Claude verifies *breakage* — the page loads, no console or page
+errors, the right state renders, the flow completes. Joel reviews *design* — aesthetics,
+hierarchy, and UX judgment stay his call. Driving the browser is not license to make
+unsolicited visual changes.
+
+Do **not** add a committed E2E suite (`@playwright/test`, `playwright.config.ts`). This is a
+prototype repo where UI is rewritten on purpose, so pinned UI assertions mostly generate false
+failures. Logic stays in Vitest; the browser is for interactive verification.
+
+### Gotchas (each of these has already burned a session)
+
+- **Never `waitUntil: "networkidle"`.** Vite's HMR websocket holds a connection open forever, so
+  it always times out. Use `domcontentloaded` plus a wait for a specific element.
+- **Scope selectors to `main.app-shell__main`.** TanStack devtools inject their own DOM — a
+  hidden `<h3>Tanstack Router</h3>` will match a bare `h1,h2,h3` query and hang a visibility
+  wait. The devtools badge also appears in screenshots.
+- **Don't wait on generic "page has text" conditions during client-side nav.** The previous view
+  stays mounted, so the check passes instantly and you capture the *old* page. Wait for content
+  unique to the destination.
+- **Lists are Blueprint cards, not tables.** `tbody tr` matches nothing on `/listings`.
+- **`browser_navigate` returns before the app hydrates.** Its snapshot shows only
+  `main > status "Loading"`. Always follow it with `browser_wait_for` on text unique to the
+  destination (e.g. `"Displaying 20 of 20 Deals"`) before snapshotting or screenshotting.
+- **Snapshots are big** (~580 lines for `/listings`). They're written to `.playwright-mcp/` as
+  files rather than inlined — grep them for what you need instead of reading whole.
+
+Data lives in IndexedDB (`keyval-store`) and seeds on first load. The MCP server runs
+`--isolated`, so each session starts from a clean profile and re-seeds.
 
 ## Commands
 
