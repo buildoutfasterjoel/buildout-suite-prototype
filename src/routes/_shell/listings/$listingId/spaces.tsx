@@ -15,6 +15,7 @@ import { updateDealMarketing } from "#/data/actions";
 import { emptySpaceLeaseTerms } from "#/data/createListing";
 import { notify } from "#/lib/notify";
 import { AddSpaceModal } from "#/components/deals/AddSpaceModal";
+import { formatMonthYear } from "#/components/deals/dealDisplay";
 
 export const Route = createFileRoute("/_shell/listings/$listingId/spaces")({
   component: SpacesTab,
@@ -41,10 +42,18 @@ function SuiteTenant({ row, shellId }: { row: SuiteRow; shellId: string }) {
   const [value, setValue] = useState(row.tenantName ?? "");
 
   const commit = () => {
+    const next = value.trim();
+    // Nothing to do when the trimmed value matches what's already on record —
+    // opening the editor and blurring without typing must not write to the
+    // store or claim a save happened. A genuine change (including clearing a
+    // real override to blank, which reads as "" here too) still falls through.
+    if (next === (row.tenantName ?? "")) {
+      setEditing(false);
+      return;
+    }
     const shell = getListing(shellId);
     if (!shell) return;
     const rows = shell.marketing.spaceLeaseTerms ?? [];
-    const next = value.trim();
     // A blank override is removed rather than stored, so the shell never
     // accumulates rows holding nothing and the row falls back to the unit's own
     // tenant name. This is the only way a shell reacquires space terms, and it
@@ -69,10 +78,18 @@ function SuiteTenant({ row, shellId }: { row: SuiteRow; shellId: string }) {
         type="button"
         className="border-0 bg-transparent p-0 text-start text-muted"
         style={{ cursor: "pointer" }}
-        onClick={() => setEditing(true)}
+        onClick={() => {
+          // Seed from the current display value rather than trusting mount-time
+          // state: `row.tenantName` can change (e.g. a clear falling back to the
+          // unit's own name) while this component stays mounted at the same
+          // list position, and re-seeding only on open — not on every prop
+          // change — avoids fighting in-progress typing.
+          setValue(row.tenantName ?? "");
+          setEditing(true);
+        }}
       >
         {row.tenantName ?? "Add tenant name"}
-        {row.leaseExpiration ? ` · thru ${row.leaseExpiration}` : ""}
+        {row.leaseExpiration ? ` · thru ${formatMonthYear(row.leaseExpiration)}` : ""}
       </button>
     );
   }

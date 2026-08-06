@@ -39,6 +39,15 @@ export function formatLongDate(iso: string | null): string {
   });
 }
 
+/** "Mar 2027" from an ISO string, or a dash when absent — no day. */
+export function formatMonthYear(iso: string | null): string {
+  if (!iso) return "--";
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    year: "numeric",
+  });
+}
+
 /** "Jun 12, 2026 · 3:40 PM" from an ISO string, or a dash when absent. */
 export function formatDateTime(iso: string | null): string {
   if (!iso) return "--";
