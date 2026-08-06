@@ -3,13 +3,15 @@ import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 /**
- * A space deal has no page of its own. Nothing at the route level enforces that
- * — deliberately, and more than once: there is no redirect and no route guard,
- * so *the links are the enforcement*. That makes a link the whole invariant, and
- * links drift silently: the sweep that was supposed to fix them all grepped for
- * `to="/listings/$listingId"` and so missed every object-form navigate, every
- * template literal, every sub-route and every raw anchor — fourteen live sites,
- * two of them in the flow the change was about.
+ * A space deal has no page of its own. (Being changed: spaces are gaining their own
+ * pages nested under buildings — this premise and the guidance below are rewritten in
+ * full once every link site has moved. The allowlist stays correct either way.)
+ * Nothing at the route level enforces that — deliberately, and more than once: there
+ * is no redirect and no route guard, so *the links are the enforcement*. That makes a
+ * link the whole invariant, and links drift silently: the sweep that was supposed to
+ * fix them all grepped for `to="/listings/$listingId"` and so missed every
+ * object-form navigate, every template literal, every sub-route and every raw anchor
+ * — fourteen live sites, two of them in the flow the change was about.
  *
  * So this test reads the source. Any file that builds a deal-page target has to
  * be on the list below, with a reason. A new one fails here rather than in a

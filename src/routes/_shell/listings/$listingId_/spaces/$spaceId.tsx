@@ -4,7 +4,7 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faVectorSquare } from "@fortawesome/pro-regular-svg-icons";
-import { getListing } from "#/data/store";
+import { getListing, getStore } from "#/data/store";
 import { dealBreadcrumbTrail } from "#/components/properties/dealNav";
 import { PropertyDetailSidebar } from "#/components/properties/PropertyDetailSidebar";
 import { SpaceDetailHeader } from "#/components/deals/SpaceDetailHeader";
@@ -28,6 +28,12 @@ export const Route = createFileRoute("/_shell/listings/$listingId_/spaces/$space
   validateSearch: (search: Record<string, unknown>): { q?: string } => ({
     ...(typeof search.q === "string" && search.q ? { q: search.q } : {}),
   }),
+  head: ({ params }) => {
+    const space = getStore().listings.get(params.spaceId);
+    return {
+      meta: [{ title: `${space?.name ?? "Space"} | Buildout Suite` }],
+    };
+  },
   component: SpaceDetailLayout,
 });
 
