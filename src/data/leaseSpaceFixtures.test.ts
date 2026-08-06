@@ -99,6 +99,21 @@ describe('splitting shells into spaces', () => {
     }
   })
 
+  // Suite/Address is a required field on the roster, and the generator never
+  // wrote one — so a terms row carried over unrestated shows up blank and flagged.
+  it('restates every terms row against its suite', () => {
+    for (const spec of SHELL_SPECS) {
+      const { property } = shellFor(spec.dealId)
+      for (const child of childrenOf(spec.dealId)) {
+        const unit = property.units.find((u) => u.id === child.unitId)
+        const terms = child.marketing.spaceLeaseTerms?.[0]
+        expect(terms?.suite).toBe(unit?.suite ?? undefined)
+        expect(terms?.spaceName).toBe(unit?.label)
+        expect(terms?.maxContiguousSqFt).toBe(unit?.sqft)
+      }
+    }
+  })
+
   it('gives each child exactly one terms row, for its own unit', () => {
     for (const spec of SHELL_SPECS) {
       for (const child of childrenOf(spec.dealId)) {
@@ -179,6 +194,9 @@ describe('stage-scaled detail', () => {
     expect(child.transaction.leaseCommencementDate).not.toBeNull()
     expect(child.transaction.closeDate).not.toBeNull()
     expect(child.transaction.backOffice.receivables).toHaveLength(1)
+    // Both halves of "who leased it": the contact link the vouchers index reads,
+    // and the roster's own Tenant Name copy.
+    expect(child.marketing.spaceLeaseTerms?.[0].tenantName).toBeTruthy()
   })
 
   it('gives the under-contract suite a tenant and an executed date, but no commission yet', () => {

@@ -129,14 +129,15 @@ function rebuildRentRoll(shell: Listing, property: Property, spec: ShellSpec): v
 }
 
 /**
- * Lease terms for a suite that has none yet, cloned from a sibling row so the
- * fixture inherits realistic seeded values rather than a blank record. Mirrors
- * `spaceTermsFromUnit` in createListing.ts, which cannot be imported here without
- * closing the store → dataStore → seed cycle.
+ * Lease terms restated against a suite: the commercial values come from `base`
+ * (the row the suite already had, or a sibling's when it had none, so the fixture
+ * inherits realistic seeded numbers rather than a blank record), the physical
+ * ones from the unit. Mirrors `spaceTermsFromUnit` in createListing.ts, which
+ * cannot be imported here without closing the store → dataStore → seed cycle.
  */
-function termsForUnit(template: SpaceLeaseTerms, unit: PropertyUnit): SpaceLeaseTerms {
+function termsForUnit(base: SpaceLeaseTerms, unit: PropertyUnit): SpaceLeaseTerms {
   return {
-    ...template,
+    ...base,
     unitId: unit.id,
     spaceName: unit.label,
     suite: unit.suite ?? undefined,
@@ -149,13 +150,22 @@ function termsForUnit(template: SpaceLeaseTerms, unit: PropertyUnit): SpaceLease
   }
 }
 
-/** Extend the shell's terms so every suite — seeded or newly sliced — has exactly one row. */
+/**
+ * Give every suite — seeded or newly sliced — exactly one terms row, restated
+ * against its unit.
+ *
+ * Every row goes through `termsForUnit`, not just the new ones. The seeded rows
+ * carry no suite, space name or floor (the generator never wrote them), and
+ * Suite/Address is a required field on the roster — so a row left as seeded shows
+ * up blank and flagged. Re-deriving them all also keeps the sizes honest after
+ * the re-slice.
+ */
 function fillTermsForUnits(shell: Listing, property: Property): void {
   const existing = shell.marketing.spaceLeaseTerms ?? []
   const template = existing[0]
   if (!template) return
-  shell.marketing.spaceLeaseTerms = property.units.map(
-    (unit) => existing.find((t) => t.unitId === unit.id) ?? termsForUnit(template, unit),
+  shell.marketing.spaceLeaseTerms = property.units.map((unit) =>
+    termsForUnit(existing.find((t) => t.unitId === unit.id) ?? template, unit),
   )
 }
 
@@ -296,10 +306,14 @@ const TERMS_STATUS: Record<PropertyStatus, SpaceLeaseTerms['status']> = {
  * dates reads as broken, so each stage gets the dates, history and settlement
  * records a broker would have captured getting it there.
  */
-function applyStageDetail(child: Listing, suiteNumber: number): void {
+function applyStageDetail(child: Listing, suiteNumber: number, tenantName?: string): void {
   const stage = child.status
   const terms = child.marketing.spaceLeaseTerms?.[0]
   if (terms) terms.status = TERMS_STATUS[stage]
+  // The roster's Tenant Name is marketing copy on the terms row, separate from
+  // the `tenantContactIds` link the vouchers index reads. A Leased suite needs
+  // both, or the space reads as let to nobody.
+  if (terms && tenantName) terms.tenantName = tenantName
 
   const advance = (toStage: PropertyStatus, fromStage: PropertyStatus, days: number) => {
     child.history.push({
@@ -480,11 +494,19 @@ export function applyLeaseSpaces(
       // Past Available, a space has an accepted tenant — the lease-side
       // counterparty, which `stageGates` requires to reach Under Contract and
       // which `spaceVouchers` reads. Distinct from `buyerContactIds` on purpose.
+      let tenantName: string | undefined
       if (stage === 'under-contract' || stage === 'closed') {
         const tenantId = tenantPool[tenantIndex++]
-        if (tenantId) child.tenantContactIds = [tenantId]
+        if (tenantId) {
+          child.tenantContactIds = [tenantId]
+          const tenant = contacts.find((c) => c.id === tenantId)
+          // Person name, not company: `spaceVouchers` derives its Tenant column
+          // from the contact this way, and the roster and the vouchers index must
+          // not print two different tenants for the same suite.
+          tenantName = tenant ? `${tenant.firstName} ${tenant.lastName}`.trim() : undefined
+        }
       }
-      applyStageDetail(child, (i + 1) * 100)
+      applyStageDetail(child, (i + 1) * 100, tenantName)
       listings.push(child)
     })
 
