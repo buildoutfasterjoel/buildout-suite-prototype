@@ -142,7 +142,7 @@ gate here would be inventing a rule the feedback did not ask for.
 Everything that made it a control surface, because those things now have a page:
 
 - The inline `SpaceTermsSection` editor, its per-row draft/Save/Cancel machinery, and the "Unsaved
-  changes" affordances. Terms move to the space page's Terms section, so there is **one** editor for
+  changes" affordances. They move to the space page's Details section, so there is **one** editor for
   a suite's terms rather than two that can drift.
 - `?space=` and its `validateSearch`, the controlled `Collapsible`, and the `useEffect` that
   re-opened a named row. Nothing expands any more.
@@ -217,29 +217,31 @@ different paths, different layouts.
   not defensive URL handling: a suite rendering under the wrong building's frame paints the wrong
   landlord's voucher and commission. Render nothing, do not redirect (see the `cf5676c` constraint).
 
-### Every link, and the two that are not
+### Every link, and the three that are not
 
-Phase 1 brings every section. The two exclusions are mechanical, not judgement:
+Phase 1 brings every section. Two exclusions are mechanical; the third is the one deliberate
+judgement, and it is there to stop a data hazard rather than to tidy the nav.
 
 | Excluded | Why |
 |---|---|
 | `spaces` | A space has no spaces. `visibleNavGroups` already gates this on `leaseParent`, which a space is not. |
 | `vouchers` | The shell's rollup index. A space gets `financials` + `financial-documents`, which `visibleNavGroups` already gives every non-shell shape. |
+| `listing` | **Replaced by `details`** — the space's own form. See below. |
 
-Both fall out of `visibleNavGroups('space', { leaseParent: false, showsUnderwriting })` **as it
-already exists**. No new filtering rule. That leaves 18 existing sections:
+The first two fall out of `visibleNavGroups('space', { leaseParent: false, showsUnderwriting })` **as it
+already exists**. That leaves 17 existing sections:
 
-`overview` · `client-report` · `activities` · `history` · `files` · `underwriting` · `listing` ·
-`leads` · `documents` · `website` · `email` · `media` · `demographics` · `grids` · `plans` ·
-`financials` · `financial-documents` · `notes`
+`overview` · `client-report` · `activities` · `history` · `files` · `underwriting` · `leads` ·
+`documents` · `website` · `email` · `media` · `demographics` · `grids` · `plans` · `financials` ·
+`financial-documents` · `notes`
 
-Plus `terms`, which is new (see below) — 19 sections, so 19 route files.
+Plus `details`, which is new (see below) — 18 sections, so 18 route files.
 
-**The duplication is deliberate and is phase 2's whole subject.** A building's Documents render at
-both `/listings/{shellId}/documents` and `/listings/{shellId}/spaces/{spaceId}/documents`, showing the
-same content. Phase 1 accepts that; phase 2 decides which sections a space keeps.
+**The duplication that remains is deliberate and is phase 2's whole subject.** A building's Documents
+render at both `/listings/{shellId}/documents` and `/listings/{shellId}/spaces/{spaceId}/documents`,
+showing the same content. Phase 1 accepts that; phase 2 decides which sections a space keeps.
 
-### Nineteen route files, one per section
+### Eighteen route files, one per section
 
 Every existing section route is a thin wrapper: read the id, resolve the listing, render a component
 that takes a `Listing`. The space versions are the same wrapper reading `spaceId`:
@@ -262,7 +264,7 @@ A slug → component map behind a single `$section.tsx` route was considered and
 have collapsed the glue into one file and made phase 2 a one-file edit, but at the cost of an untyped
 `$section` param, per-section `validateSearch` collapsing into a union on the layout route, and
 sections becoming un-greppable. Typed routes and repo uniformity won. Phase 2 pays for it by touching
-19 files instead of one — a known, accepted cost.
+18 files instead of one — a known, accepted cost.
 
 What this buys:
 
@@ -272,8 +274,8 @@ What this buys:
 - The pattern matches every other section route in `src/routes/`, so nothing new has to be learned to
   read it.
 
-**The guard is duplicated, so it is extracted.** Each of the 19 needs the child-of-shell check, and 19
-hand-written copies is 19 chances to omit one — which is the `ab7b6be` bug (a suite painting one
+**The guard is duplicated, so it is extracted.** Each of the 18 needs the child-of-shell check, and 18
+hand-written copies is 18 chances to omit one — which is the `ab7b6be` bug (a suite painting one
 landlord's money under another's frame). A `useSpaceRoute(listingId, spaceId)` hook returns
 `{ listing, property, unit } | null`, doing the lookup and the guard in one place. Each route file
 calls it and returns `null` on null.
@@ -284,20 +286,71 @@ does not exist is a runtime blank page, not a compile error. That is equally tru
 building's own sidebar. A test pins `NAV_GROUPS` hrefs against the routes that actually exist (see
 Verification); per-section files do not remove the need for it.
 
-### Terms is a new section
+### Details is the space's own form, in the Listing slot
 
-The suite's own terms need a home now that the roster is a directory. `SpaceTermsSection` already
-exists and already edits a `SpaceLeaseTerms` row plus `marketing.availableSqFt`; it moves onto the
-space page behind the same Save/Cancel contract it has today (`b1aad55`), lifted out of the
-per-row draft machinery into ordinary page state.
+**The parallel is the point:** a parent deal's own marketing form is **Listing**. A space's own
+marketing form is **Details**. Same slot in the Marketing group, same job for a different record.
+`details` is therefore a *replacement*, not an addition — a space never shows both.
 
-`Terms` is added to `NAV_GROUPS` under Deal, and gated in `visibleNavGroups` to `shape === 'space'` —
-it is the one genuinely new nav rule this design adds.
+```
+PARENT DEAL              SPACE DEAL
+───────────              ──────────
+Deal                     Deal
+  Overview                 Overview
+  Spaces                   —
+Marketing                Marketing
+  Listing        →         Details          ← the space's own form
+  Leads                    Leads
+  Media                    Media
+  …                        …
+```
 
-**Terms is exactly the set of fields already editable per space today** — the ~70 `SpaceLeaseTerms`
-fields (space type, tenant name, rate and rate mode, lease type, term, date available, min/max
-divisible, TI, free rent, sublease, the utility and industrial clusters, and the additional-fields
-accordion), plus `marketing.availableSqFt`. Nothing is added or removed; the fields change address.
+Two rules in `visibleNavGroups`, which is a swap pair rather than a new mechanism — it mirrors exactly
+how a shell gets **Vouchers** while every other shape gets **Voucher** + **Invoices**:
+
+```ts
+if (item.href === "details") return shape === "space"
+if (item.href === "listing") return shape !== "space"
+```
+
+`Details` is added to `NAV_GROUPS` in the Marketing group, immediately before `Listing`, so the two
+occupy one position in display order.
+
+#### Why Listing is excluded, and what that does not fix
+
+`addSpaceToDeal` builds the child with `marketing: { ...parent.marketing, … }` — **the space clones the
+building's entire marketing blob at creation.** `ListingEditor` saves through `listingSavePatch` to the
+listing's *own* marketing. So rendering the building's Listing form on a space page would let a broker
+edit the space's divergent copy of the building's marketing: change the property description there and
+the building's stays as it was, silently, with no indication which one a public surface will read.
+
+That is a data hazard, not an aesthetic one, which is why this one section is decided now rather than
+deferred to phase 2. It is also the section a broker is most likely to open *expecting* to edit the
+building, which makes it the worst place to leave the ambiguity.
+
+**It does not fix the hazard everywhere, and the spec should not pretend otherwise.** Every other
+marketing-backed section a space now renders — `media`, `website`, `email`, `documents`, `grids`,
+`plans`, `demographics` — reads that same cloned `marketing`, so editing one on a space still diverges
+it from the building. Excluding `listing` removes the largest and most inviting instance; the rest are
+accepted for phase 1 and are precisely what phase 2 exists to resolve.
+
+#### What Details contains
+
+**Exactly the set of fields already editable per space today** — the ~70 `SpaceLeaseTerms` fields
+(space type, tenant name, rate and rate mode, lease type, term, date available, min/max divisible, TI,
+free rent, sublease, the utility and industrial clusters, and the additional-fields accordion), plus
+`marketing.availableSqFt`. Nothing is added or removed; the fields change address.
+
+`SpaceTermsSection` already renders all of them and already takes `{ unit, property, terms, onChange,
+availableSqFt, onAvailableSqFtChange }`. `SpaceDetails.tsx` wraps it with the page frame and the same
+Save/Cancel contract it has today (`b1aad55`), lifted out of the roster's per-row draft machinery into
+ordinary page state. The component keeps its name — it is the *section* that is called Details, and
+renaming a working component to match a nav label buys nothing.
+
+The fields arrive populated. `addSpaceToDeal` seeds the row with `spaceTermsFromUnit(unit)` (space
+name, suite, floor, ceiling height, offices, conference rooms, furnished) and `availableSqFt` from
+`unit.sqft` — or migrates the parent's existing row for that unit when the broker already priced it. A
+new space deal opens on a filled form, not a blank one.
 
 Two of those fields are not what they look like, and both are already true today:
 
@@ -310,13 +363,14 @@ Two of those fields are not what they look like, and both are already true today
   never rendered; the editor prints "Availability follows this space's deal stage" instead. That rule
   is `spaceAvailability`, and `suiteStatus` (§1) is built on it.
 
-**Terms is not folded into the space's Listing section.** They do not overlap: for a Lease deal the
-listing form renders `LeaseSection` ("Lease Marketing" — lease title, description, bullets, commission
-split, available-SF term, closing info), which is marketing copy for the listing and shares no field
+**The two forms do not overlap in fields**, which is why the swap loses nothing. For a Lease deal the
+listing form's lease content is `LeaseSection` ("Lease Marketing" — lease title, description, bullets,
+commission split, available-SF term, closing info): marketing copy for the listing, sharing no field
 with `SpaceLeaseTerms`. What 08-04 removed from that form was a section listing *every* unit's terms on
-the building's form, not the per-space editor. Keeping the two as separate nav items is also what makes
-phase 2 legible: Terms is definitively the space's, while Listing sits on the building's side of the
-ledger phase 2 has to draw.
+the building's form, not the per-space editor.
+
+**On the name:** `SpacePanelDetails` (`c8a84ca`) used "Details" for a suite's headline facts, but it was
+deleted in the `86990cc` revert, so there is no live collision. Slug `details`, label `Details`.
 
 ---
 
@@ -352,7 +406,7 @@ sweep is essentially one function.
 | `dealCardLinkProps` | A space returns `/listings/$listingId/spaces/$spaceId` (params `{ listingId: parentDealId, spaceId: id }`) instead of the roster + `?space=`. Its doc comment inverts. |
 | `buildingSectionListingId` | **Unchanged.** It answers "which page owns a building-level section for this deal", and in phase 1 that is still the building. Phase 2 may revisit it. |
 | `rewriteSpaceDealPath` (`src/ai/tools.ts`) | A model-supplied `/listings/{spaceId}` becomes `/listings/{shellId}/spaces/{spaceId}`; `/listings/{spaceId}/{section}` becomes `/listings/{shellId}/spaces/{spaceId}/{section}` instead of dropping the space. |
-| `StageGate.tsx` | "Back to editing" for a space goes to the space page's `terms` (what a publish gate flags on a suite) rather than the roster. |
+| `StageGate.tsx` | "Back to editing" for a space goes to the space page's `details` (the space's own form, where a publish gate's flagged fields live) rather than the roster. |
 | `dealCardLink.invariant.test.ts` | Its header comment asserts "a space deal has no page of its own" as the reason the allowlist exists. That premise inverts: the allowlist still matters — a link must resolve a space to *its* page rather than assuming `/listings/{id}` — but the reason is rewritten. `ALLOWED` entries stay. |
 | Roster rows, Vouchers index rows | Point at the space page. |
 
@@ -468,10 +522,10 @@ never appear — a failure that reads as a bug in the code (`reference_indexeddb
 | `src/data/buildingSuites.test.ts` | Its tests |
 | `src/routes/_shell/listings/$listingId_/spaces/$spaceId.tsx` | Layout: header, sidebar, `<Outlet />` |
 | `src/routes/_shell/listings/$listingId_/spaces/$spaceId/index.tsx` | Redirect to `overview` |
-| `src/routes/_shell/listings/$listingId_/spaces/$spaceId/*.tsx` | 19 section routes — `overview`, `terms`, `client-report`, `activities`, `history`, `files`, `underwriting`, `listing`, `leads`, `documents`, `website`, `email`, `media`, `demographics`, `grids`, `plans`, `financials`, `financial-documents`, `notes` |
-| `src/components/deals/useSpaceRoute.ts` | Lookup + child-of-shell guard, shared by all 19 |
+| `src/routes/_shell/listings/$listingId_/spaces/$spaceId/*.tsx` | 18 section routes — `overview`, `details`, `client-report`, `activities`, `history`, `files`, `underwriting`, `leads`, `documents`, `website`, `email`, `media`, `demographics`, `grids`, `plans`, `financials`, `financial-documents`, `notes`. No `listing`, no `spaces`, no `vouchers`. |
+| `src/components/deals/useSpaceRoute.ts` | Lookup + child-of-shell guard, shared by all 18 |
 | `src/components/deals/SpaceDetailHeader.tsx` | Suite title, building link, stage select, breadcrumb |
-| `src/components/deals/SpaceTerms.tsx` | `SpaceTermsSection` behind page-level Save/Cancel |
+| `src/components/deals/SpaceDetails.tsx` | `SpaceTermsSection` behind the page frame and its Save/Cancel |
 
 ### Change
 
@@ -480,7 +534,7 @@ never appear — a failure that reads as a bug in the code (`reference_indexeddb
 | `src/routes/_shell/listings/$listingId/spaces.tsx` | Becomes the directory: `buildingSuites` rows, links, Start-a-deal, inline tenant override. Drops terms, drafts, `?space=`, `Collapsible`, per-row stage select and voucher link |
 | `src/components/deals/AddSpaceModal.tsx` | New-suite form only; drop the existing-units checkbox list |
 | `src/components/properties/PropertyDetailSidebar.tsx` | `basePath` prop, defaulting to current behaviour |
-| `src/components/properties/dealNav.ts` | `Terms` item, gated to `shape === 'space'`; `dealBreadcrumbTrail` gains `subsectionLabel` |
+| `src/components/properties/dealNav.ts` | `Details` item in the Marketing group before `Listing`; the `details`/`listing` swap pair in `visibleNavGroups`; `dealBreadcrumbTrail` gains `subsectionLabel` |
 | `src/data/types.ts` | `PropertyUnit` occupancy fields |
 | `src/data/createListing.ts` | Three unit factories default the new fields |
 | `src/data/store.ts` | `addPropertyUnit` defaults them |
@@ -489,11 +543,11 @@ never appear — a failure that reads as a bug in the code (`reference_indexeddb
 | `src/data/persistence.ts` | `SEED_VERSION` → 38 |
 | `src/components/deals/dealCardLink.ts` | A space resolves to its page |
 | `src/ai/tools.ts` | `rewriteSpaceDealPath` targets the space page |
-| `src/components/deals/StageGate.tsx` | Space "Back to editing" → the space page's Terms |
+| `src/components/deals/StageGate.tsx` | Space "Back to editing" → the space page's Details |
 | `src/routes/_shell/listings/$listingId/vouchers.tsx` | Index rows link to the space page |
 | `src/components/deals/DealContextRail.tsx` | Restore `LinkedParentDeal` from `86990cc` |
 | `src/components/deals/dealCardLink.invariant.test.ts` | Premise rewritten; `ALLOWED` retained |
-| `src/components/properties/dealNav.test.ts` | Third-level crumb; `Terms` visibility |
+| `src/components/properties/dealNav.test.ts` | Third-level crumb; the `details`/`listing` swap |
 
 ### Delete
 
@@ -515,10 +569,10 @@ Data before UI, and nothing deleted before its replacement works.
    construction site surfaces as an error.
 2. `buildingSuites` + `suiteStatus` + tests. Pure data, no UI.
 3. Seed: `occupiedSuites`, coherent occupancy, `SEED_VERSION` → 38. Fixture tests updated.
-4. `dealNav.ts`: `Terms` item, `subsectionLabel`, tests.
+4. `dealNav.ts`: `Details` item, the `details`/`listing` swap, `subsectionLabel`, tests.
 5. `PropertyDetailSidebar` `basePath` prop — additive, nothing consumes it yet.
 6. The space page's frame: `useSpaceRoute`, the layout route, `SpaceDetailHeader`, and three section
-   routes wired end to end (`overview`, `terms` with `SpaceTerms`, `media`) — enough to prove the
+   routes wired end to end (`overview`, `details` with `SpaceDetails`, `media`) — enough to prove the
    nesting, the guard and the sidebar's `basePath` before repeating the pattern.
 7. The remaining 16 section routes, mechanically.
 8. Roster → directory, including Start-a-deal and the tenant override.
@@ -532,7 +586,7 @@ Data before UI, and nothing deleted before its replacement works.
 ## Non-goals
 
 - **No phase-2 marketing split.** Every section renders for a space, duplication included. Deciding
-  which are building-level is the next phase, and it will mean revisiting all 19 route files plus
+  which are building-level is the next phase, and it will mean revisiting all 18 route files plus
   `visibleNavGroups` — the cost accepted when per-section files won over a map.
 - **No hard rule against a deal on an occupied suite.** Unoffered, not forbidden.
 - **No change to the pipeline board.** Suite label, Space chip, and the parent's stage rollup stay.
@@ -550,9 +604,9 @@ Data before UI, and nothing deleted before its replacement works.
 | `buildingSuites` rows | `buildingSuites.test.ts`: a unit with a deal, a unit without; occupied vs vacant; the override preferred over the asset fact; label sort with numeric collation; empty for a non-lease-parent |
 | `suiteStatus` precedence | A deal at each stage outranks occupancy; occupancy answers only with no deal |
 | Breadcrumb derivation | `dealNav.test.ts`: three-deep space path, plus every existing case unchanged |
-| Nav rules | `Terms` visible only for `shape === 'space'`; a space still gets no `spaces` and no `vouchers` |
+| Nav rules | A space gets `details` and never `listing`; every other shape gets `listing` and never `details` — the two are never both shown, and never both absent. A space still gets no `spaces` and no `vouchers` |
 | Nav ↔ routes agree | A test asserting every href `visibleNavGroups('space', …)` emits has a matching route file under `$listingId_/spaces/$spaceId/`, and that no such route is unreachable from the nav. The sidebar interpolates its hrefs, so typing cannot catch this. |
-| Space scoping | `useSpaceRoute` returns null when `parentDealId !== listingId`, and every one of the 19 routes calls it |
+| Space scoping | `useSpaceRoute` returns null when `parentDealId !== listingId`, and every one of the 18 routes calls it |
 | Link invariant | `dealCardLink.invariant.test.ts` passes with its rewritten premise; `dealCardLinkProps` returns the space page for a child and `/listings/{id}` otherwise |
 | Seed determinism | `leaseSpaceFixtures.test.ts` + `seed.test.ts`; faker-free; `pricePerSf × sqft === price` still holds |
 | Route tree | `routeTree.gen.ts` regenerated — it carries `@ts-nocheck`, so neither `tsc` nor `vite build` catches a stale tree. Only regeneration does. |
