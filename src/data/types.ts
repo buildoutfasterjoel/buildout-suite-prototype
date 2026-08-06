@@ -329,6 +329,18 @@ export interface PropertyUnit {
   offices: number | null
   conferenceRooms: number | null
   furnished: boolean
+  /**
+   * Whether a tenant is in place. The asset's own fact — a suite's deal, when it
+   * has one, overrides this for display (see `suiteStatus` in buildingSuites.ts).
+   */
+  occupancy: 'vacant' | 'occupied'
+  /**
+   * In-place tenant, when occupied. Marketing may override this per deal via
+   * `SpaceLeaseTerms.tenantName`.
+   */
+  tenantName: string | null
+  /** ISO date (YYYY-MM-DD) the in-place lease ends. */
+  leaseExpiration: string | null
   /** Prior sale transactions on this unit, newest first — the asset's ownership history. */
   saleHistory: UnitSaleEvent[]
 }

@@ -92,6 +92,9 @@ function resliceUnits(property: Property, spec: ShellSpec, sizes: number[]): voi
       offices: template?.offices ?? 2,
       conferenceRooms: template?.conferenceRooms ?? 1,
       furnished: false,
+      occupancy: 'vacant',
+      tenantName: null,
+      leaseExpiration: null,
       saleHistory: [],
     })
   }

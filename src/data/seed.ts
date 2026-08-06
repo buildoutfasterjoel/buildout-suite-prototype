@@ -430,6 +430,9 @@ function generateUnits(
       offices: residential ? null : faker.number.int({ min: 0, max: 6 }),
       conferenceRooms: residential ? null : faker.number.int({ min: 0, max: 2 }),
       furnished: !residential && faker.datatype.boolean({ probability: 0.25 }),
+      occupancy: 'vacant',
+      tenantName: null,
+      leaseExpiration: null,
       saleHistory: generateUnitSaleHistory(per, pricePerSf),
     }
   })
