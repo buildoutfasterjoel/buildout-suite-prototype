@@ -206,8 +206,7 @@ Create `src/data/buildingSuites.test.ts`:
 import { describe, it, expect } from 'vitest'
 import { createProposalListing, emptyDraft, emptySpaceLeaseTerms } from './createListing'
 import { addPropertyUnit, addSpaceToDeal } from './leaseSpaces'
-import { commitStageTransition } from './actions'
-import { updateDealMarketing } from './actions'
+import { commitStageTransition, updateDealMarketing } from './actions'
 import { getProperty, updateProperty } from './store'
 import { buildingSuites, suiteStatus } from './buildingSuites'
 
