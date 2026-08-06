@@ -1,6 +1,7 @@
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
   faSnowflake,
+  faCircleQuestion,
   faComments,
   faMemoCircleCheck,
   faSign,
@@ -14,9 +15,9 @@ import {
 
 /**
  * "My Pipeline" — a fixed set of preset filter pages that model the pipeline's
- * two ladders (see the Pipeline & lifecycle reference). Cold and Nurturing live
- * on the contact (relationship temperature); Pitching, Active, Under Contract,
- * and Closed live on the deal (transaction stage).
+ * two ladders (see the Pipeline & lifecycle reference). Cold, Inquired, and
+ * Nurturing live on the contact (relationship temperature); Pitching, Active,
+ * Under Contract, and Closed live on the deal (transaction stage).
  *
  * Unlike user dynamic lists, these are NOT stored in the call-list store and are
  * not editable: their saved filter set is fixed. Landing on one loads its preset
@@ -46,12 +47,28 @@ export const PIPELINE_STAGES: PipelineStage[] = [
     preset: () => ({ ...emptyContactFilters(), relationship: new Set(["cold"]) }),
   },
   {
+    id: "pipeline-inquired",
+    label: "Inquired",
+    description:
+      "Leads who raised their hand on one of your listings and haven't been worked yet. Engaging one moves them to Nurturing automatically.",
+    // The same glyph the inquiry rows carry on the contact timeline, so the
+    // stage and the activity it's built from read as the same thing.
+    icon: faCircleQuestion,
+    color: "#ff5961", // solid-pink-400
+    preset: () => ({
+      ...emptyContactFilters(),
+      relationship: new Set(["inquired"]),
+    }),
+  },
+  {
     id: "pipeline-nurturing",
     label: "Nurturing",
     description:
       "You have an open follow-up scheduled (a planned next touch), but no deal yet.",
     icon: faComments,
-    color: "#ff5961", // solid-pink-400
+    // gold-500 rather than the badge's 400 — 400 is too light to hold up as a
+    // line-art glyph on white.
+    color: "#fd9a00", // harvest-gold-500
     preset: () => ({
       ...emptyContactFilters(),
       relationship: new Set(["nurturing"]),
