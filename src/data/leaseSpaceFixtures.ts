@@ -11,12 +11,13 @@ import { closeProbabilityForStage } from './commission'
 
 /**
  * A seeded lease deal to turn into an umbrella shell, and the suites to split it
- * across. `childStages` is the whole point: one entry per suite, in order, giving
- * the availability table a row in each state a broker actually sees.
+ * across.
  *
- * `suiteProportions` holds one fewer entry than `childStages` — the final suite
- * takes the remainder, so the suites always sum back to `buildingSqFt` no matter
- * what the seed produced.
+ * The suites are deliberately not all alike: the deal-bearing ones give the
+ * availability table a row in each state a broker actually sees, and the ones
+ * past them give the suite directory the two states a suite can be in without an
+ * engagement — occupied by a sitting tenant, and vacant and unworked. See
+ * `suiteProportions` below for how the three groups are laid out.
  */
 export interface ShellSpec {
   dealId: string
