@@ -57,6 +57,7 @@ export function GlobalNavbar() {
   const assistantOpen = useAssistant((s) => s.open);
   const toggleAssistant = useAssistant((s) => s.toggle);
   const openOmniSearch = useOmniSearch((s) => s.setOpen);
+  const omniSearchOpen = useOmniSearch((s) => s.open);
 
   // Navigate client-side so the persistent shell — and the open AI assistant
   // session — survives section changes. A plain <a> would full-reload the
@@ -117,7 +118,9 @@ export function GlobalNavbar() {
 
           {/* Omni search — a gradient "AI omnibar" trigger that opens the
               command palette. A div (not a button) so the nested voice button
-              is valid markup; it's keyboard-activatable via role + handlers. */}
+              is valid markup; it's keyboard-activatable via role + handlers.
+              While the palette is open it carries its own bar, so this one
+              hides — but keeps its footprint so the nav doesn't reflow. */}
           <Navbar.Item className="d-flex align-items-center ms-2">
             {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
             <div
@@ -131,7 +134,7 @@ export function GlobalNavbar() {
                 }
               }}
               aria-label="Search or ask AI"
-              className="omni-bar flex-shrink-0"
+              className={`omni-bar flex-shrink-0 ${omniSearchOpen ? "is-hidden" : ""}`}
             >
               <span className="omni-bar__icon">
                 <OmniSparkleIcon variant="navbar" />
