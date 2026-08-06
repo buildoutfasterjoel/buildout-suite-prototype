@@ -7,6 +7,7 @@ import type {
   RentRollRow,
   SpaceLeaseTerms,
 } from './types'
+import { closeProbabilityForStage } from './commission'
 
 /**
  * A seeded lease deal to turn into an umbrella shell, and the suites to split it
@@ -220,10 +221,194 @@ function buildChild(
       closeDate: null,
       leaseCommencementDate: null,
       nextCriticalDate: null,
+      // A space starts unmarketed no matter what the building was doing —
+      // `applyStageDetail` is the only thing that puts a date back on it.
+      listedOnDate: null,
       backOffice: { ...shell.transaction.backOffice, receivables: [], closeDate: null },
     },
     createdAt,
     updatedAt: createdAt,
+  }
+}
+
+/**
+ * Total lease commission over the term, replicating `buildRentSchedule`: base
+ * annual rent split into 12-month periods, escalated each year, commission taken
+ * at the deal's rate on each period.
+ *
+ * The math is inlined rather than imported because `rentSchedule.ts` pulls in
+ * `dealDisplay` → `propertyDisplay`, and this module is loaded from `seed.ts` at
+ * store-init time. `leaseSpaceFixtures.test.ts` pins the two together so the
+ * duplication cannot drift.
+ */
+export function leaseCommissionAmount(
+  annualRent: number,
+  termMonths: number,
+  escalatorPct: number,
+  commissionPct: number,
+): number {
+  if (annualRent <= 0 || termMonths <= 0) return 0
+  const baseMonthly = annualRent / 12
+  let remaining = termMonths
+  let year = 0
+  let total = 0
+  while (remaining > 0) {
+    const months = Math.min(12, remaining)
+    const monthlyRate = baseMonthly * (1 + escalatorPct / 100) ** year
+    total += monthlyRate * months * (commissionPct / 100)
+    remaining -= months
+    year += 1
+  }
+  return total
+}
+
+/** Leading percentage of an escalator string, e.g. "3% annual" → 3. Mirrors `rentSchedule`. */
+function parseEscalatorPct(escalators: string | null): number {
+  if (!escalators) return 0
+  const match = escalators.match(/([\d.]+)\s*%/)
+  return match ? Number.parseFloat(match[1]) : 0
+}
+
+/** Annual rent for a space, per `dealHeadlineValue`'s lease branch. */
+function annualRentFor(terms: SpaceLeaseTerms, sqft: number): number {
+  if (terms.leaseRate == null) return 0
+  switch (terms.leaseRateUnits) {
+    case 'Monthly':
+      return terms.leaseRate * 12
+    case 'SF/Mo':
+      return terms.leaseRate * 12 * sqft
+    default:
+      return terms.leaseRate * sqft
+  }
+}
+
+/** Terms `status` for a space, matching what its deal stage advertises. */
+const TERMS_STATUS: Record<PropertyStatus, SpaceLeaseTerms['status']> = {
+  proposal: 'Inactive',
+  active: 'Active',
+  'under-contract': 'Under Contract',
+  closed: 'Closed',
+  inactive: 'Inactive',
+}
+
+/**
+ * Fill in what a space's stage implies. A Leased suite with no commission and no
+ * dates reads as broken, so each stage gets the dates, history and settlement
+ * records a broker would have captured getting it there.
+ */
+function applyStageDetail(child: Listing, suiteNumber: number): void {
+  const stage = child.status
+  const terms = child.marketing.spaceLeaseTerms?.[0]
+  if (terms) terms.status = TERMS_STATUS[stage]
+
+  const advance = (toStage: PropertyStatus, fromStage: PropertyStatus, days: number) => {
+    child.history.push({
+      id: `hist-${child.id}-${toStage}`,
+      label: 'Stage updated from',
+      fromStage,
+      toStage,
+      actor: child.internalBrokers[0]?.name ?? 'You (Listing Broker)',
+      timestamp: isoTimestamp(-days),
+    })
+  }
+
+  if (stage === 'proposal') return
+
+  // Everything past proposal was marketed first.
+  child.transaction.listedOnDate = isoDate(-90)
+  child.publishedAt = isoTimestamp(-90)
+  advance('active', 'proposal', 90)
+
+  if (stage === 'active') {
+    child.transaction.closeProbability = closeProbabilityForStage('active')
+    child.tasks = [
+      {
+        id: `task-${child.id}-tour`,
+        label: 'Follow up on tour request',
+        date: isoDate(4),
+        relativeDue: null,
+        assigneeInitials: 'OW',
+        status: 'open',
+        hasAttachment: false,
+      },
+    ]
+    child.transaction.nextCriticalDate = child.tasks[0].date
+    return
+  }
+
+  // Under contract and beyond: a tenant was accepted (linked in applyLeaseSpaces).
+  child.transaction.contractExecutedDate = isoDate(-30)
+  advance('under-contract', 'active', 30)
+
+  if (stage === 'under-contract') {
+    child.transaction.closeProbability = closeProbabilityForStage('under-contract')
+    child.tasks = [
+      {
+        id: `task-${child.id}-lease`,
+        label: 'Collect countersigned lease',
+        date: isoDate(6),
+        relativeDue: null,
+        assigneeInitials: 'MT',
+        status: 'open',
+        hasAttachment: true,
+      },
+    ]
+    child.transaction.nextCriticalDate = child.tasks[0].date
+    return
+  }
+
+  if (stage !== 'closed') return
+
+  // Leased: the space transacted, so it carries money.
+  const sqft = child.marketing.availableSqFt || 0
+  const commissionAmount = terms
+    ? Math.round(
+        leaseCommissionAmount(
+          annualRentFor(terms, sqft),
+          terms.leaseTermMonths ?? 0,
+          parseEscalatorPct(terms.rentEscalators),
+          child.transaction.commissionPct,
+        ),
+      )
+    : 0
+
+  child.transaction.commissionAmount = commissionAmount
+  child.transaction.closeDate = isoDate(-10)
+  child.transaction.leaseCommencementDate = isoDate(-5)
+  child.transaction.closeProbability = closeProbabilityForStage('closed')
+  child.transaction.nextCriticalDate = null
+  if (terms) terms.closeDate = child.transaction.closeDate
+  advance('closed', 'under-contract', 10)
+
+  child.tasks = [
+    {
+      id: `task-${child.id}-voucher`,
+      label: 'Submit commission voucher',
+      date: isoDate(-8),
+      relativeDue: null,
+      assigneeInitials: 'KN',
+      status: 'complete',
+      hasAttachment: true,
+    },
+  ]
+
+  child.transaction.backOffice = {
+    ...child.transaction.backOffice,
+    name: child.name,
+    identifier: child.dealId,
+    status: 'Approved',
+    closeDate: child.transaction.closeDate,
+    receivables: [
+      {
+        id: `recv-${child.id}`,
+        payerName: child.transaction.backOffice.relatedContactsLabel,
+        payerEmail: 'ap@tenant.example.com',
+        dueDate: isoDate(20),
+        billingDescription: `Lease commission — Suite ${suiteNumber}`,
+        amount: commissionAmount,
+        credited: 0,
+      },
+    ],
   }
 }
 
@@ -299,6 +484,7 @@ export function applyLeaseSpaces(
         const tenantId = tenantPool[tenantIndex++]
         if (tenantId) child.tenantContactIds = [tenantId]
       }
+      applyStageDetail(child, (i + 1) * 100)
       listings.push(child)
     })
 

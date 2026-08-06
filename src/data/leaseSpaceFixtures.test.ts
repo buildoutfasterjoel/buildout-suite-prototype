@@ -3,6 +3,8 @@ import { getProperty, getStore } from './store'
 import { getChildDeals } from './leaseSpaces'
 import { buildingAvailability } from './buildingAvailability'
 import { canAddSpaces, dealShape } from './dealShape'
+import { spaceVouchers } from './spaceVouchers'
+import { buildRentSchedule } from '#/components/deals/rentSchedule'
 import { SHELL_SPECS } from './leaseSpaceFixtures'
 
 /**
@@ -158,5 +160,66 @@ describe('derived surfaces', () => {
     const rows = buildingAvailability(shell.id)
     expect(rows).toHaveLength(3)
     expect(rows.every((r) => r.advertised)).toBe(false)
+  })
+})
+
+describe('stage-scaled detail', () => {
+  const spec = SHELL_SPECS[0]
+
+  function childAtStage(stage: string) {
+    const child = childrenOf(spec.dealId).find((c) => c.status === stage)
+    if (!child) throw new Error(`no ${stage} child on ${spec.dealId}`)
+    return child
+  }
+
+  it('gives the leased suite a tenant, commission and commencement date', () => {
+    const child = childAtStage('closed')
+    expect(child.tenantContactIds).toHaveLength(1)
+    expect(child.transaction.commissionAmount).toBeGreaterThan(0)
+    expect(child.transaction.leaseCommencementDate).not.toBeNull()
+    expect(child.transaction.closeDate).not.toBeNull()
+    expect(child.transaction.backOffice.receivables).toHaveLength(1)
+  })
+
+  it('gives the under-contract suite a tenant and an executed date, but no commission yet', () => {
+    const child = childAtStage('under-contract')
+    expect(child.tenantContactIds).toHaveLength(1)
+    expect(child.transaction.contractExecutedDate).not.toBeNull()
+    expect(child.transaction.commissionAmount).toBe(0)
+  })
+
+  it('leaves the not-advertised suite bare', () => {
+    const child = childAtStage('proposal')
+    expect(child.tenantContactIds).toEqual([])
+    expect(child.transaction.commissionAmount).toBe(0)
+    expect(child.transaction.listedOnDate).toBeNull()
+    expect(child.tasks).toEqual([])
+  })
+
+  it('weights each suite by its stage for the commission forecast', () => {
+    for (const child of childrenOf(spec.dealId)) {
+      if (child.status === 'closed') expect(child.transaction.closeProbability).toBe(100)
+    }
+  })
+
+  it('computes the leased commission the way the rent schedule does', () => {
+    const child = childAtStage('closed')
+    const schedule = buildRentSchedule(child)
+    expect(schedule).not.toBeNull()
+    expect(Math.round(child.transaction.commissionAmount)).toBe(
+      Math.round(schedule!.total.commissionAmount),
+    )
+  })
+
+  it('reports the leased suite in the shell vouchers index', () => {
+    const { shell } = shellFor(spec.dealId)
+    const rows = spaceVouchers(shell.id)
+    expect(rows).toHaveLength(spec.childStages.length)
+    const leased = rows.find((r) => r.stage === 'closed')
+    expect(leased?.tenantName).toBeTruthy()
+    expect(leased?.commissionAmount).toBeGreaterThan(0)
+    const bare = rows.find((r) => r.stage === 'proposal')
+    expect(bare?.tenantName).toBeNull()
+    expect(bare?.commissionAmount).toBeNull()
   })
 })
