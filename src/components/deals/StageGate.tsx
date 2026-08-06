@@ -584,16 +584,13 @@ export function StageGate({
               onClick={() => {
                 useStageGate.getState().setPendingPublish(deal.id);
                 onOpenChange(false);
-                // A space's terms live on its building's roster, not on an edit
-                // form. Everything else goes to the listing form: what the publish
-                // gate flags is marketing content, which lives there now, not on
-                // the deal form.
                 void navigate(
                   deal.parentDealId
                     ? {
-                        to: "/listings/$listingId/spaces",
-                        params: { listingId: deal.parentDealId },
-                        search: { space: deal.id },
+                        // A space's marketing fields live on its own Details
+                        // page — the Listing slot's occupant for a space.
+                        to: "/listings/$listingId/spaces/$spaceId/details",
+                        params: { listingId: deal.parentDealId, spaceId: deal.id },
                       }
                     : {
                         to: "/listings/$listingId/listing",

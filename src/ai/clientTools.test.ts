@@ -26,20 +26,17 @@ describe("rewriteSpaceDealPath", () => {
     return { parent, child };
   }
 
-  it("sends a space's own path to its building's roster, with the row named", () => {
+  it("rewrites a space's bare deal path to its page under its building", () => {
     const { parent, child } = building();
     expect(rewriteSpaceDealPath(`/listings/${child.id}`)).toBe(
-      `/listings/${parent.id}/spaces?space=${child.id}`,
+      `/listings/${parent.id}/spaces/${child.id}/overview`,
     );
   });
 
-  it("keeps a section, and moves it to the building that owns it", () => {
+  it("keeps the section when rewriting a space's sectioned path", () => {
     const { parent, child } = building();
     expect(rewriteSpaceDealPath(`/listings/${child.id}/leads`)).toBe(
-      `/listings/${parent.id}/leads`,
-    );
-    expect(rewriteSpaceDealPath(`/listings/${child.id}/vouchers/${child.id}`)).toBe(
-      `/listings/${parent.id}/vouchers/${child.id}`,
+      `/listings/${parent.id}/spaces/${child.id}/leads`,
     );
   });
 

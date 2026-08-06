@@ -3,15 +3,17 @@ import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 /**
- * A space deal has no page of its own. (Being changed: spaces are gaining their own
- * pages nested under buildings — this premise and the guidance below are rewritten in
- * full once every link site has moved. The allowlist stays correct either way.)
- * Nothing at the route level enforces that — deliberately, and more than once: there
- * is no redirect and no route guard, so *the links are the enforcement*. That makes a
- * link the whole invariant, and links drift silently: the sweep that was supposed to
- * fix them all grepped for `to="/listings/$listingId"` and so missed every
- * object-form navigate, every template literal, every sub-route and every raw anchor
- * — fourteen live sites, two of them in the flow the change was about.
+ * A space deal's page lives under its building, at
+ * `/listings/{shellId}/spaces/{spaceId}`. Nothing at the route level enforces
+ * that a link uses it — so *the links are the enforcement*, and a link that
+ * assumes `/listings/{spaceId}` lands on a page that renders the space as though
+ * it were a building.
+ *
+ * That makes a link the whole invariant, and links drift silently: the sweep that
+ * was supposed to fix them all grepped for `to="/listings/$listingId"` and so
+ * missed every object-form navigate, every template literal, every sub-route and
+ * every raw anchor — fourteen live sites, two of them in the flow the change was
+ * about.
  *
  * So this test reads the source. Any file that builds a deal-page target has to
  * be on the list below, with a reason. A new one fails here rather than in a
@@ -52,9 +54,10 @@ const ALLOWED: Record<string, string> = {
   "src/components/deals/PublishPreview.tsx": "new-tab Documents anchor, id resolved",
   "src/features/editor/EditorRoot.tsx": "Save and close → Documents, id resolved",
 
-  // Pattern C — a space's terms moved to the roster, so the publish gate's
-  // "Back to editing" branches on `parentDealId` instead of assuming a page.
-  "src/components/deals/StageGate.tsx": "publish gate branches space → roster, deal → /listing",
+  // Pattern C — a space's marketing fields live on its own Details page, so the
+  // publish gate's "Back to editing" branches on `parentDealId` to reach it
+  // instead of assuming the building's /listing form.
+  "src/components/deals/StageGate.tsx": "publish gate branches space → its own Details, deal → /listing",
 
   // Within the deal whose page is already open: these link a deal to its own
   // sections, so the id is the URL's, never a card's.
@@ -71,6 +74,11 @@ const ALLOWED: Record<string, string> = {
   // Reads a pathname rather than building one.
   "src/components/properties/dealNav.ts": "parses the section out of a deal URL",
 
+  // The context rail's "Parent" card links up from a space to its building.
+  // `parentDealId` only ever points to a building — a space cannot itself have
+  // a child space — so the id it links with is guaranteed never a space's.
+  "src/components/deals/DealContextRail.tsx": "links a space up to its parent building, whose id can never be a space",
+
   // The space's own page (Task 7 of the space-deal-pages plan). `shell.id` always
   // resolves to the building — a space cannot itself be a shell, so this can never
   // receive a space id — and the `spaceId` link targets the space's own page,
@@ -83,11 +91,12 @@ const ALLOWED: Record<string, string> = {
 };
 
 const GUIDANCE = [
-  "This file builds a link to a deal page, and a space deal has no page of its own.",
-  "Route it through `dealCardLinkProps(listing)` to open a deal (a space opens its",
-  "building's roster instead), or `buildingSectionListingId(id)` for a building-level",
-  "section such as Documents or Leads. If the site genuinely cannot receive a space,",
-  "add it to ALLOWED in this file with the reason.",
+  "This file builds a link to a deal page, and a space deal's page lives under its",
+  "building at /listings/{shellId}/spaces/{spaceId}.",
+  "Route it through `dealCardLinkProps(listing)` to open a deal, or",
+  "`buildingSectionListingId(id)` for a building-level section such as Documents or",
+  "Leads. If the site genuinely cannot receive a space, add it to ALLOWED in this",
+  "file with the reason.",
 ].join("\n");
 
 /**

@@ -137,21 +137,16 @@ export function resolveContactByName(name: string): Contact | null {
 }
 
 /**
- * Keep a model-composed deal path off a space's page. A space has no page of
- * its own: its terms live on its building's Spaces roster and its voucher
- * behind the building's Vouchers section. `navigateTo` takes the path from the
- * model, which composes it from an id it looked up (see `navigateToDef`), so
- * there is no link to fix — the correction has to happen on the way out.
+ * Send a model-composed deal path to a space's own page, nested under its
+ * building. `navigateTo` takes the path from the model, which composes it from
+ * an id it looked up (see `navigateToDef`), so there is no link to fix — the
+ * correction has to happen on the way out.
  *
- *   /listings/{space}           → /listings/{building}/spaces?space={space}
- *   /listings/{space}/{section} → /listings/{building}/{section}
+ *   /listings/{space}           → /listings/{building}/spaces/{space}/overview
+ *   /listings/{space}/{section} → /listings/{building}/spaces/{space}/{section}
  *
  * Anything else passes through untouched: another route, a path already
  * carrying a query or hash, an unknown id, or a building.
- *
- * The `?space=` rides along inside the path string because the injected
- * `navigate` takes a pathname; the router splits the query off when it commits
- * the location.
  */
 export function rewriteSpaceDealPath(path: string): string {
   const match = /^\/listings\/([^/?#]+)(\/[^?#]*)?$/.exec(path);
@@ -159,10 +154,10 @@ export function rewriteSpaceDealPath(path: string): string {
   const [, listingId, section] = match;
   const buildingId = getListing(listingId)?.parentDealId;
   if (!buildingId) return path;
-  if (!section || section === "/") {
-    return `/listings/${buildingId}/spaces?space=${listingId}`;
-  }
-  return `/listings/${buildingId}${section}`;
+  // A space's sections live under its own page, so the section survives the
+  // rewrite rather than being handed to the building.
+  const leaf = !section || section === "/" ? "/overview" : section;
+  return `/listings/${buildingId}/spaces/${listingId}${leaf}`;
 }
 
 /**
