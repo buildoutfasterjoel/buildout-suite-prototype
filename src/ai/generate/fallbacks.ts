@@ -24,7 +24,7 @@ export function filterFallback(query: string): FilterSpecT {
 export function callListFallback(
   contacts: Array<{ id: string; lastContactedAt: string | null; relationship: string }>,
 ): CallListSpecT {
-  const stageWeight: Record<string, number> = { pitching: 5, active: 4, nurturing: 3, client: 2, cold: 1, past_client: 1 };
+  const stageWeight: Record<string, number> = { pitching: 5, active: 4, nurturing: 3, client: 2, inquired: 2, cold: 1, past_client: 1 };
   const ranked = [...contacts]
     .sort((a, b) => {
       const sw = (stageWeight[b.relationship] ?? 0) - (stageWeight[a.relationship] ?? 0);

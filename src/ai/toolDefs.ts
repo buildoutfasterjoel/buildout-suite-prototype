@@ -22,6 +22,7 @@ const PROPERTY_STATUSES = [
 
 const RELATIONSHIPS = [
   "cold",
+  "inquired",
   "nurturing",
   "active",
   "pitching",

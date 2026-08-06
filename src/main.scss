@@ -257,12 +257,18 @@
     background: var(--color-seagull-200, #a2f4ff);
     color: var(--color-seagull-950, #063346);
   }
-  &--nurturing {
+  // Inquired inherits the pink Nurturing used to carry; Nurturing and Pitching
+  // moved onto the gold family, one shade apart.
+  &--inquired {
     background: var(--color-solid-pink-200, #ffc1c4);
     color: var(--color-solid-pink-950, #500004);
   }
+  &--nurturing {
+    background: var(--color-harvest-gold-200, #ffe785);
+    color: var(--color-harvest-gold-950, #481800);
+  }
   &--pitching {
-    background: var(--color-harvest-gold-300, #ffd346);
+    background: var(--color-harvest-gold-400, #ffbf1b);
     color: var(--color-harvest-gold-950, #481800);
   }
   &--client {

@@ -97,6 +97,7 @@ type PropertyCardData = {
 
 const RELATIONSHIP_LABELS: Record<string, string> = {
   cold: "Cold",
+  inquired: "Inquired",
   nurturing: "Nurturing",
   active: "Active",
   pitching: "Pitching",

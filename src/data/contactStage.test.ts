@@ -3,6 +3,7 @@ import {
   dealStageFromStatus,
   deriveRelationship,
   furthestDealStage,
+  isEngaged,
   reconcileContactDealFields,
 } from './contactStage'
 import type { Contact, Listing } from './types'
@@ -85,6 +86,30 @@ describe('deriveRelationship', () => {
     expect(deriveRelationship('client', [])).toBe('nurturing')
     expect(deriveRelationship('past_client', [])).toBe('nurturing')
   })
+
+  it('holds an inquiry lead at Inquired until they have been engaged', () => {
+    expect(deriveRelationship('inquired', [])).toBe('inquired')
+    expect(deriveRelationship('inquired', [], false)).toBe('inquired')
+    // One real touch and they graduate — the automatic promotion Cold gets too.
+    expect(deriveRelationship('inquired', [], true)).toBe('nurturing')
+    // Cold, by contrast, is about having no next touch scheduled, so engaging
+    // doesn't move it on its own.
+    expect(deriveRelationship('cold', [], true)).toBe('cold')
+  })
+
+  it('lets a deal outrank Inquired either way', () => {
+    expect(deriveRelationship('inquired', ['pitching'])).toBe('pitching')
+    expect(deriveRelationship('inquired', ['active'], true)).toBe('client')
+  })
+})
+
+describe('isEngaged', () => {
+  it('is true only once a contact has been contacted', () => {
+    expect(isEngaged(contact('a', { lastContactedAt: null }))).toBe(false)
+    expect(
+      isEngaged(contact('b', { lastContactedAt: '2026-01-01T00:00:00.000Z' })),
+    ).toBe(true)
+  })
 })
 
 describe('reconcileContactDealFields', () => {
@@ -116,6 +141,17 @@ describe('reconcileContactDealFields', () => {
       relationship: 'client',
       side: 'buyer',
     })
+  })
+
+  it('graduates an engaged inquiry lead to Nurturing with no deal involved', () => {
+    const fresh = contact('fresh', { relationship: 'inquired', lastContactedAt: null })
+    const worked = contact('worked', {
+      relationship: 'inquired',
+      lastContactedAt: '2026-07-01T00:00:00.000Z',
+    })
+    const changed = reconcileContactDealFields([fresh, worked], [])
+    expect(changed.map((c) => c.id)).toEqual(['worked'])
+    expect(changed[0].relationship).toBe('nurturing')
   })
 
   it('drops a contact back to a temperature when their only deal is lost', () => {

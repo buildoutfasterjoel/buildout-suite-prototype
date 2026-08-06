@@ -70,20 +70,36 @@ export function furthestDealStage(
  * - a live won deal (active or under contract) → `client`
  * - an open pitch, nothing won yet → `pitching`
  * - only closed deals, nothing live → `past_client`
- * - no deals at all → a pure relationship temperature (`cold` / `nurturing`),
- *   so the stored value is kept (coercing any stale deal-derived value to
- *   `nurturing`, since a contact with no deal can't be pitching/client).
+ * - no deals at all → a pure relationship temperature (`cold` / `inquired` /
+ *   `nurturing`), so the stored value is kept (coercing any stale deal-derived
+ *   value to `nurturing`, since a contact with no deal can't be pitching/client).
+ *
+ * `inquired` is the one temperature that isn't sticky: it means "came in through
+ * a listing inquiry and we haven't worked them yet", so the moment there's a
+ * real touch on the record (`engaged`) they graduate to `nurturing` — the same
+ * automatic promotion `cold` gets when you start a relationship.
  */
 export function deriveRelationship(
   stored: RelationshipStage,
   stages: ContactDealStage[],
+  engaged = false,
 ): RelationshipStage {
   if (stages.includes('active') || stages.includes('under_contract')) {
     return 'client'
   }
   if (stages.includes('pitching')) return 'pitching'
   if (stages.includes('closed')) return 'past_client'
+  if (stored === 'inquired') return engaged ? 'nurturing' : 'inquired'
   return stored === 'cold' || stored === 'nurturing' ? stored : 'nurturing'
+}
+
+/**
+ * Has this contact actually been engaged? A real logged touch is what moves an
+ * inquiry-sourced lead off the Inquired page, so "engaged" is a recorded
+ * contact, not merely existing in the book.
+ */
+export function isEngaged(contact: Contact): boolean {
+  return contact.lastContactedAt != null
 }
 
 /** A contact's deal-derived fields, recomputed from the deals they're a party to. */
@@ -105,7 +121,11 @@ export function deriveContactDealFields(
   const stages = deals.map((d) => d.stage)
   return {
     dealStage: furthestDealStage(stages),
-    relationship: deriveRelationship(contact.relationship, stages),
+    relationship: deriveRelationship(
+      contact.relationship,
+      stages,
+      isEngaged(contact),
+    ),
     side:
       deals.length > 0
         ? deals.reduce((a, b) =>
