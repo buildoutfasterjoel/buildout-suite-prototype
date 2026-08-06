@@ -10,8 +10,9 @@ describe('useDataStore', () => {
     // 20 pipeline properties + Rosa's story-owned building (see applyHeroes).
     expect(s.properties.size).toBe(21)
     expect(s.contacts.size).toBe(80)
-    // One deal per pipeline property (see DEAL_PIPELINE).
-    expect(s.listings.size).toBe(20)
+    // One deal per pipeline property (see DEAL_PIPELINE), plus the 7 child space
+    // deals the two lease shells are split into (see leaseSpaceFixtures.ts).
+    expect(s.listings.size).toBe(27)
     expect(s.hydrated).toBe(false)
   })
 

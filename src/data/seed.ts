@@ -41,6 +41,7 @@ import type { SerializedContactFilters } from '#/components/contacts/contactFilt
 import { reconcileContactDealFields } from './contactStage'
 import { CURRENT_USER, TEAMMATES, type AccessTier, type ContactShare } from './teammates'
 import { DEFAULT_PERSONAL_SPLIT_PCT, STAGE_CLOSE_PROBABILITY } from './commission'
+import { applyLeaseSpaces } from './leaseSpaceFixtures'
 
 const SEED = 20240101
 const PROPERTY_COUNT = 20
@@ -2005,6 +2006,11 @@ export function generateDataset() {
   // Overwrite five generated contacts with the hand-authored hero personas and
   // wire their deals — before reconciliation so derived fields follow.
   applyHeroes(contacts, listings, properties)
+
+  // Turn two seeded lease deals into umbrella shells with child space deals.
+  // After applyHeroes so the heroes have already claimed their listings; before
+  // reconciliation so the children's tenants get their contact fields resolved.
+  applyLeaseSpaces(listings, properties, contacts, dealIdRef)
 
   // Reconcile each contact's deal-derived fields with the deals they're actually
   // a party to. The listings are the source of truth for the contact↔deal graph,

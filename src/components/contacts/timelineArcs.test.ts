@@ -451,14 +451,17 @@ describe("hero personas in the seed", () => {
     }
   });
 
-  it("keeps every progressed deal gate-coherent: buyer linked, no double-casting", () => {
-    // Mirrors the stage-gate `buyerLinked` requirement (stageGates.ts): a deal
-    // can't reach Under Contract / Closed without a buyer on it.
+  it("keeps every progressed deal gate-coherent: counterparty linked, no double-casting", () => {
+    // Mirrors the stage-gate counterparty requirement (stageGates.ts): a deal
+    // can't reach Under Contract / Closed without the other side linked. Which
+    // side that is depends on the deal — a sale gates on `buyerLinked`, a lease
+    // on `tenantLinked`, and `tenantContactIds` is a dedicated dataset rather
+    // than a rename of `buyerContactIds` (see the Listing type).
     for (const l of listings) {
       if (l.status === "under-contract" || l.status === "closed") {
         expect(
-          l.buyerContactIds.length,
-          `${l.name} [${l.status}] has no buyer`,
+          l.buyerContactIds.length + l.tenantContactIds.length,
+          `${l.name} [${l.status}] has no counterparty`,
         ).toBeGreaterThan(0);
       }
       for (const id of l.buyerContactIds) {
