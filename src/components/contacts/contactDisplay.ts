@@ -18,6 +18,7 @@ import { STATUS_LABELS } from "#/components/properties/propertyDisplay";
 
 export const RELATIONSHIP_STAGES: RelationshipStage[] = [
   "cold",
+  "inquired",
   "nurturing",
   "pitching",
   "client",
@@ -31,6 +32,7 @@ export const CONTACT_SOURCES: ContactSource[] = [
   "Prospect by Buildout",
   "Referral",
   "Networking event",
+  "Listing inquiry",
 ];
 
 export const DEAL_SIDES: DealSide[] = ["buyer", "seller"];
@@ -42,25 +44,36 @@ export const CONTACT_DEAL_STAGES: ContactDealStage[] = [
   "closed",
 ];
 
-/** Relationship pill: label, dot color, and soft-pill classes. */
+/**
+ * Relationship pill: label, dot color, and soft-pill classes. Families follow
+ * the Figma Contact-Stage palette (the same assignment `.contact-stage-badge`
+ * renders): Cold seagull · Inquired solid pink · Nurturing gold · Pitching a
+ * darker gold · Client blue · Past Client green.
+ */
 export const RELATIONSHIP_DISPLAY: Record<
   RelationshipStage,
   { label: string; dotClass: string; pillClass: string }
 > = {
   cold: {
     label: "Cold",
-    dotClass: "bg-storm-grey-500",
-    pillClass: "bg-storm-grey-100 text-storm-grey-700",
+    dotClass: "bg-seagull-500",
+    pillClass: "bg-seagull-100 text-seagull-700",
+  },
+  inquired: {
+    label: "Inquired",
+    dotClass: "bg-solid-pink-500",
+    pillClass: "bg-solid-pink-100 text-solid-pink-700",
   },
   nurturing: {
     label: "Nurturing",
-    dotClass: "bg-harvest-gold-500",
+    dotClass: "bg-harvest-gold-400",
     pillClass: "bg-harvest-gold-100 text-harvest-gold-700",
   },
+  // Same family as Nurturing, one step darker — Pitching is the hotter gold.
   pitching: {
     label: "Pitching",
-    dotClass: "bg-solid-pink-500",
-    pillClass: "bg-solid-pink-100 text-solid-pink-700",
+    dotClass: "bg-harvest-gold-600",
+    pillClass: "bg-harvest-gold-300 text-harvest-gold-950",
   },
   client: {
     label: "Client",
@@ -279,6 +292,8 @@ export function buildLastTouch(c: Contact): string {
  */
 const SITUATION_BY_RELATIONSHIP: Record<RelationshipStage, string> = {
   cold: "Sourced via {source} and still cold — no real relationship yet, so the first job is simply earning a genuine conversation.",
+  inquired:
+    "Came to us through a listing inquiry and hasn't been worked yet — they raised their hand first, which makes a fast, specific reply the whole job here.",
   nurturing:
     "Sourced via {source}; in active nurture with rapport building, but not yet ready to transact.",
   pitching:

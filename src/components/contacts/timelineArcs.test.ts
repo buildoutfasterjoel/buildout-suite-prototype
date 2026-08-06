@@ -97,6 +97,23 @@ describe("buildContactTimeline", () => {
     }
   });
 
+  it("inquired leads show the inquiry and nothing we've done since", () => {
+    const t = types(
+      fakeContact({
+        relationship: "inquired",
+        source: "Listing inquiry",
+        lastContactedAt: null,
+        inquiries: 1,
+      }),
+    );
+    expect(t.has("created")).toBe(true);
+    // The routing row is what an inbound lead gets instead of a first touch.
+    expect(t.has("assignment")).toBe(true);
+    for (const personal of ["call", "email", "note", "meeting", "tour"] as const) {
+      expect(t.has(personal)).toBe(false);
+    }
+  });
+
   it("nurturing contacts get paced touches but no live-deal beats", () => {
     const t = types(fakeContact({ relationship: "nurturing" }));
     expect(t.has("call")).toBe(true);
@@ -167,12 +184,23 @@ describe("buildContactTimeline", () => {
     expect(events.some((e) => e.title?.includes("Post-close"))).toBe(true);
   });
 
-  it.each(["cold", "nurturing", "pitching", "client", "past_client"] as RelationshipStage[])(
+  it.each([
+    "cold",
+    "inquired",
+    "nurturing",
+    "pitching",
+    "client",
+    "past_client",
+  ] as RelationshipStage[])(
     "%s: no event predates creation or postdates now",
     (relationship) => {
+      const dealless =
+        relationship === "cold" ||
+        relationship === "inquired" ||
+        relationship === "nurturing";
       const c = fakeContact({
         relationship,
-        side: relationship === "cold" || relationship === "nurturing" ? null : "seller",
+        side: dealless ? null : "seller",
         dealStage:
           relationship === "pitching"
             ? "pitching"

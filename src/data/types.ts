@@ -974,10 +974,19 @@ export type ContactSource =
   | 'Prospect by Buildout'
   | 'Referral'
   | 'Networking event'
+  | 'Listing inquiry'
 
-/** Relationship lifecycle — "from cold to client." */
+/**
+ * Relationship lifecycle — "from cold to client."
+ *
+ * `inquired` sits between `cold` and `nurturing`: a lead who came in through a
+ * listing inquiry rather than our own prospecting. Like `cold`, it's a holding
+ * state — the first real engagement graduates them to `nurturing`
+ * (see `deriveRelationship`).
+ */
 export type RelationshipStage =
   | 'cold'
+  | 'inquired'
   | 'nurturing'
   | 'pitching'
   | 'client'

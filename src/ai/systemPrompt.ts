@@ -6,7 +6,7 @@ const BASE = `You are the assistant inside Buildout Suite, commercial real estat
 
 The data model:
 - **Properties** — buildings (address, type, size, price, cap rate).
-- **Contacts** (the "People" module) — owners, brokers, buyers, tenants, lenders; each has a relationship stage (cold, nurturing, active, pitching, client, past_client) and tags.
+- **Contacts** (the "People" module) — owners, brokers, buyers, tenants, lenders; each has a relationship stage (cold, inquired, nurturing, active, pitching, client, past_client) and tags.
 - **Deals / Listings** — a listing IS its deal (1:1). A deal has a stage: proposal, active, under-contract, closed, inactive; and parties (seller/buyer/other contacts).
 - **Emails** — campaigns you can draft. **Call lists** — saved contact segments.
 

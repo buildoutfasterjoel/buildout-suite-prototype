@@ -2,7 +2,9 @@
  * Standalone mock data for the Suite home dashboard. The pipeline-stage summary
  * below is a lightweight "signal → close" snapshot distinct from the Listing
  * lifecycle (`PropertyStatus`) — it tracks pre-listing relationship stages
- * (seller signal, nurturing, pitching) that have no equivalent on a Listing.
+ * (seller signal, inquired, nurturing, pitching) that have no equivalent on a
+ * Listing. Inquired and Nurturing carry no dollar figure by design: neither has
+ * a deal behind it yet, so they don't roll into `FORECAST.openPipeline`.
  */
 import type { HeroKey } from "#/data/types";
 
@@ -25,6 +27,12 @@ export const PIPELINE_SUMMARY: PipelineStageSummary[] = [
     count: 1,
     subtext: "~$20.0M potential",
     accent: true,
+  },
+  {
+    id: "inquired",
+    label: "Inquired",
+    count: 4,
+    subtext: "Inbound · not yet worked",
   },
   {
     id: "nurturing",

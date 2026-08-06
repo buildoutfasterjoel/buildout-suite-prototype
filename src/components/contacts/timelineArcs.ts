@@ -24,6 +24,7 @@ const OWNER_FIRST = OWNER.name.split(" ")[0];
 // feed for everyone:
 //
 //   cold            → almost nothing. An empty timeline IS the cold story.
+//   inquired        → the inquiry that put them in the book, and nothing since.
 //   nurturing       → a few paced touches, months apart, ending on an open loop.
 //   pitching        → a recent 2–3 week flurry racing toward a listing decision.
 //   client·active   → won the pitch, then launch/tours/offers at weekly cadence.
@@ -62,6 +63,8 @@ function arcFor(ctx: ArcCtx): TimelineEvent[] {
   switch (ctx.c.relationship) {
     case "cold":
       return coldArc(ctx);
+    case "inquired":
+      return inquiredArc(ctx);
     case "nurturing":
       return nurturingArc(ctx);
     case "pitching":
@@ -210,7 +213,29 @@ function originBeats(ctx: ArcCtx): TimelineEvent[] {
       }),
     );
   }
+  if (ctx.c.source === "Listing inquiry") {
+    out.push(
+      mk(ctx, "assignment", createdDays, {
+        actor: { name: "Routing" },
+        title: `Assigned to ${ctx.c.assignedTo}`,
+        body: "Inbound listing inquiry · routed to the listing broker",
+        source: "automation",
+      }),
+    );
+  }
   return out;
+}
+
+// ── Inquired ─────────────────────────────────────────────────────────────────
+
+/**
+ * Inquired = they raised their hand and we haven't answered yet. The inquiry
+ * rows themselves are appended by `inquiryBeats`, so all this arc adds is how
+ * the record came to exist. No calls, emails, or notes on purpose: the first
+ * one of those is exactly what graduates them to Nurturing.
+ */
+function inquiredArc(ctx: ArcCtx): TimelineEvent[] {
+  return [...originBeats(ctx), createdEvent(ctx)];
 }
 
 /** A firm marketing blast — automation, not a personal touch. */
