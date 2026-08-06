@@ -134,10 +134,15 @@ Suite 400   1,900 SF                Vacant                     [Start a deal]
 | Vacant, no deal | **Start a deal** — calls the existing `addSpaceToDeal`, then navigates to the new space page |
 | Occupied, no deal | No action. Shows tenant and lease expiration |
 
-**Occupied is not forbidden, only unoffered.** An occupied row gets no Start-a-deal button, because
-working an occupied suite is not the normal case. Nothing blocks it: `Add space` does not filter
-occupied units out, and pre-marketing a suite whose lease expires next year is real work. Inventing a
-gate here would be inventing a rule the feedback did not ask for.
+**An occupied suite gets no Start-a-deal button**, because working one is not the normal case and the
+feedback was explicit that deals belong on unoccupied spaces.
+
+Note the second-order effect, since it is easy to miss: once `Add space` narrows to suites not yet on
+the building (§1, *Add space*), the button is not merely the *preferred* path to a deal on an occupied
+suite — it is the only one. So phase 1 effectively **forbids** it rather than merely declining to offer
+it. That is consistent with the stated intent, and no gate or guard is written to enforce it: it falls
+out of which affordances exist. Whether it should be a real rule — or whether pre-marketing a suite
+whose lease expires next year deserves a path — is the Phase 2 backlog item on blockability.
 
 ### What the roster loses
 
@@ -590,7 +595,8 @@ Data before UI, and nothing deleted before its replacement works.
 - **No phase-2 marketing split.** Every section renders for a space, duplication included. Deciding
   which are building-level is the next phase, and it will mean revisiting all 18 route files plus
   `visibleNavGroups` — the cost accepted when per-section files won over a map.
-- **No hard rule against a deal on an occupied suite.** Unoffered, not forbidden.
+- **No gate or guard against a deal on an occupied suite.** Phase 1 offers no path to one, but that
+  falls out of which affordances exist rather than from a rule anything enforces. See §1.
 - **No change to the pipeline board.** Suite label, Space chip, and the parent's stage rollup stay.
 - **No shell commission of its own.** The Vouchers index total stays a sum of its spaces.
 - **No revival of `MarketingScopeBar` / `PropertyMarketingHub` / the `from` param.**
