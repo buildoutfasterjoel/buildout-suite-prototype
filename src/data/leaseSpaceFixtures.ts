@@ -20,25 +20,41 @@ import { closeProbabilityForStage } from './commission'
  */
 export interface ShellSpec {
   dealId: string
+  /**
+   * Suite sizes as proportions of the building; the array yields
+   * `length + 1` units, the last taking the remainder.
+   *
+   * The first `childStages.length` units get child deals. The next
+   * `occupiedSuites.length` are occupied with no deal. Anything after that is
+   * vacant with no deal — which is what makes Start-a-deal reachable from a
+   * fresh seed.
+   */
   suiteProportions: number[]
   childStages: PropertyStatus[]
+  /** Suites after the deal-bearing ones: on the building, occupied, no deal. */
+  occupiedSuites: { tenant: string; expiresInDays: number }[]
 }
 
 export const SHELL_SPECS: ShellSpec[] = [
   // Meridian Business Park — an active office building mid-lease-up. One suite in
-  // each of the four states `spaceAvailability` can report.
+  // each of the four states `spaceAvailability` can report, plus the two a suite
+  // can be in without a deal: occupied by a sitting tenant, and vacant and
+  // unworked. Six units, four children.
   {
     dealId: '107',
-    suiteProportions: [0.32, 0.25, 0.23],
+    suiteProportions: [0.26, 0.2, 0.18, 0.14, 0.12],
     childStages: ['closed', 'under-contract', 'active', 'proposal'],
+    occupiedSuites: [{ tenant: 'Calloway Freight', expiresInDays: 240 }],
   },
-  // Patriot Commerce Park — just split, nothing marketed yet. Every suite reads
-  // "Not advertised", which is what a broker sees the moment they break a
-  // building out.
+  // Patriot Commerce Park — just split, nothing marketed yet. Every worked suite
+  // reads "Not advertised", which is what a broker sees the moment they break a
+  // building out; one suite is occupied and was never part of the assignment.
+  // Four units, three children.
   {
     dealId: '104',
-    suiteProportions: [0.4, 0.33],
+    suiteProportions: [0.32, 0.26, 0.22],
     childStages: ['proposal', 'proposal', 'proposal'],
+    occupiedSuites: [{ tenant: 'Sunbelt Fabrication', expiresInDays: 620 }],
   },
 ]
 
@@ -489,10 +505,17 @@ export function applyLeaseSpaces(
     ].filter((id) => !shell.sellerContactIds.includes(id))
     let tenantIndex = 0
 
+    // Tenant names for suites whose deal has closed — captured here so occupancy
+    // can be set truthfully below without recomputing the tenant pool.
+    const closedTenantByUnit = new Map<string, string>()
+
     property.units.forEach((unit, i) => {
       const terms = termsByUnit.get(unit.id)
       if (!terms) return
       const stage = spec.childStages[i]
+      // Past the deal-bearing suites: this one lives on the building without an
+      // engagement. No child, and its occupancy is set below.
+      if (stage === undefined) return
       const child = buildChild(shell, unit, terms, stage, i, spec, dealIdRef)
       // Past Available, a space has an accepted tenant — the lease-side
       // counterparty, which `stageGates` requires to reach Under Contract and
@@ -509,8 +532,31 @@ export function applyLeaseSpaces(
           tenantName = tenant ? `${tenant.firstName} ${tenant.lastName}`.trim() : undefined
         }
       }
+      if (stage === 'closed' && tenantName) closedTenantByUnit.set(unit.id, tenantName)
       applyStageDetail(child, (i + 1) * 100, tenantName)
       listings.push(child)
+    })
+
+    // Occupancy is the asset's own fact. `suiteStatus` reads a suite's deal
+    // first, so these values only answer for the suites that have no deal — but
+    // a Leased suite must not have its unit claiming to be vacant either, so the
+    // closed ones are set too.
+    property.units.forEach((unit, i) => {
+      const occupied = spec.occupiedSuites[i - spec.childStages.length]
+      const closedTenant = closedTenantByUnit.get(unit.id)
+      if (occupied) {
+        unit.occupancy = 'occupied'
+        unit.tenantName = occupied.tenant
+        unit.leaseExpiration = isoDate(occupied.expiresInDays)
+      } else if (closedTenant) {
+        unit.occupancy = 'occupied'
+        unit.tenantName = closedTenant
+        unit.leaseExpiration = isoDate(1825)
+      } else {
+        unit.occupancy = 'vacant'
+        unit.tenantName = null
+        unit.leaseExpiration = null
+      }
     })
 
     // The shell holds no space terms and is scoped to no single unit — its spaces

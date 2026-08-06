@@ -6,6 +6,7 @@ import { canAddSpaces, dealShape } from './dealShape'
 import { spaceVouchers } from './spaceVouchers'
 import { buildRentSchedule } from '#/components/deals/rentSchedule'
 import { SHELL_SPECS } from './leaseSpaceFixtures'
+import { buildingSuites } from './buildingSuites'
 
 /**
  * Read through the live store, not a fresh `generateDataset()` call. The Zustand
@@ -21,10 +22,10 @@ function shellFor(dealId: string) {
 }
 
 describe('shell preparation', () => {
-  it('re-slices each shell property into one suite per child stage', () => {
+  it('re-slices each shell property into one suite per proportion, plus the remainder', () => {
     for (const spec of SHELL_SPECS) {
       const { property } = shellFor(spec.dealId)
-      expect(property.units).toHaveLength(spec.childStages.length)
+      expect(property.units).toHaveLength(spec.suiteProportions.length + 1)
     }
   })
 
@@ -46,18 +47,24 @@ describe('shell preparation', () => {
     }
   })
 
-  // Every suite keeps exactly one terms row — but after the split that row lives
-  // on the suite's own child deal, not on the shell. This is the building-wide
-  // version of the per-child check below: no suite loses its terms in the move,
-  // and none ends up with two homes.
-  it('gives every suite exactly one lease terms row across the building', () => {
+  // Every deal-bearing suite keeps exactly one terms row — but after the split
+  // that row lives on the suite's own child deal, not on the shell. This is the
+  // building-wide version of the per-child check below: no suite loses its terms
+  // in the move, and none ends up with two homes. Suites past `childStages` have
+  // no deal, so they carry no terms row at all — that is `occupiedSuites`/vacant
+  // territory, checked separately in "suites without deals".
+  it('gives every deal-bearing suite exactly one lease terms row across the building', () => {
     for (const spec of SHELL_SPECS) {
       const { shell, property } = shellFor(spec.dealId)
       const termUnitIds = [shell, ...getChildDeals(shell.id)]
         .flatMap((l) => l.marketing.spaceLeaseTerms ?? [])
         .map((t) => t.unitId)
         .sort()
-      expect(termUnitIds).toEqual(property.units.map((u) => u.id).sort())
+      const dealBearingUnitIds = property.units
+        .slice(0, spec.childStages.length)
+        .map((u) => u.id)
+        .sort()
+      expect(termUnitIds).toEqual(dealBearingUnitIds)
     }
   })
 
@@ -239,5 +246,58 @@ describe('stage-scaled detail', () => {
     const bare = rows.find((r) => r.stage === 'proposal')
     expect(bare?.tenantName).toBeNull()
     expect(bare?.commissionAmount).toBeNull()
+  })
+})
+
+describe('suites without deals', () => {
+  it('gives every shell at least one occupied suite that has no deal', () => {
+    for (const spec of SHELL_SPECS) {
+      const shell = [...getStore().listings.values()].find((l) => l.dealId === spec.dealId)!
+      const rows = buildingSuites(shell.id)
+      const occupied = rows.filter((r) => r.status === 'Occupied')
+
+      expect(occupied.length).toBeGreaterThanOrEqual(1)
+      for (const row of occupied) {
+        expect(row.dealId).toBeNull()
+        expect(row.tenantName).not.toBeNull()
+        expect(row.leaseExpiration).not.toBeNull()
+      }
+    }
+  })
+
+  it('gives Meridian a vacant suite with no deal, so Start-a-deal is reachable from a fresh seed', () => {
+    const shell = [...getStore().listings.values()].find((l) => l.dealId === '107')!
+    const vacant = buildingSuites(shell.id).filter((r) => r.status === 'Vacant' && r.dealId === null)
+
+    expect(vacant.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('keeps every spec self-consistent: units cover the deals, the occupied and the rest', () => {
+    for (const spec of SHELL_SPECS) {
+      const unitCount = spec.suiteProportions.length + 1
+      expect(unitCount).toBeGreaterThanOrEqual(
+        spec.childStages.length + spec.occupiedSuites.length,
+      )
+    }
+  })
+
+  it('still creates exactly one child per stage in childStages, and no more', () => {
+    for (const spec of SHELL_SPECS) {
+      const shell = [...getStore().listings.values()].find((l) => l.dealId === spec.dealId)!
+      expect(getChildDeals(shell.id)).toHaveLength(spec.childStages.length)
+    }
+  })
+
+  it('never lets a unit claim it is vacant while its deal says Leased', () => {
+    for (const spec of SHELL_SPECS) {
+      const shell = [...getStore().listings.values()].find((l) => l.dealId === spec.dealId)!
+      const property = getStore().properties.get(shell.propertyId)!
+      for (const child of getChildDeals(shell.id)) {
+        if (child.status !== 'closed') continue
+        const unit = property.units.find((u) => u.id === child.unitId)!
+        expect(unit.occupancy).toBe('occupied')
+        expect(unit.tenantName).not.toBeNull()
+      }
+    }
   })
 })
