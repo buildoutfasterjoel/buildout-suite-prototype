@@ -1,112 +1,122 @@
-import { useEffect, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
-import { Collapsible } from "@buildoutinc/blueprint-react/ui/Collapsible";
+import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faVectorSquare,
-  faPlus,
-  faAngleRight,
-} from "@fortawesome/pro-regular-svg-icons";
+import { faVectorSquare, faPlus, faAngleRight } from "@fortawesome/pro-regular-svg-icons";
 import { useDataStore } from "#/data/dataStore";
-import { getListing, getProperty } from "#/data/store";
-import { buildingAvailability } from "#/data/buildingAvailability";
+import { getListing } from "#/data/store";
+import { buildingSuites, type SuiteRow } from "#/data/buildingSuites";
 import { canAddSpaces, isLeaseParent } from "#/data/dealShape";
-import { emptySpaceLeaseTerms } from "#/data/createListing";
+import { addSpaceToDeal } from "#/data/leaseSpaces";
 import { updateDealMarketing } from "#/data/actions";
-import type { SpaceLeaseTerms } from "#/data/types";
+import { emptySpaceLeaseTerms } from "#/data/createListing";
 import { notify } from "#/lib/notify";
-import { SpaceTermsSection } from "#/components/listings/edit/sections/SpaceTermsSection";
 import { AddSpaceModal } from "#/components/deals/AddSpaceModal";
-import { DealStageSelect } from "#/components/deals/DealStageSelect";
 
 export const Route = createFileRoute("/_shell/listings/$listingId/spaces")({
-  // `space` names which row opens on arrival — a space card on the pipeline
-  // board links straight here rather than to a page of its own.
-  validateSearch: (search: Record<string, unknown>): { space?: string } => ({
-    ...(typeof search.space === "string" && search.space
-      ? { space: search.space }
-      : {}),
-  }),
   component: SpacesTab,
 });
 
+/**
+ * Blueprint's Badge offers exactly three variants — "primary" | "secondary" |
+ * "outline" — so this maps six states onto them by how actionable the row is
+ * rather than by inventing a colour per state.
+ *
+ * Available is the one state the broker is actively working, so it takes the
+ * emphasis. Vacant and Not advertised are dormant — nothing is happening yet —
+ * so they read as an outline. Everything else is settled or belongs to someone
+ * else and reads muted.
+ */
+function statusVariant(status: SuiteRow["status"]) {
+  if (status === "Available") return "primary" as const;
+  if (status === "Vacant" || status === "Not advertised") return "outline" as const;
+  return "secondary" as const;
+}
+
+function SuiteTenant({ row, shellId }: { row: SuiteRow; shellId: string }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(row.tenantName ?? "");
+
+  const commit = () => {
+    const shell = getListing(shellId);
+    if (!shell) return;
+    const rows = shell.marketing.spaceLeaseTerms ?? [];
+    const next = value.trim();
+    // A blank override is removed rather than stored, so the shell never
+    // accumulates rows holding nothing and the row falls back to the unit's own
+    // tenant name. This is the only way a shell reacquires space terms, and it
+    // holds exactly one field's worth.
+    const withoutUnit = rows.filter((t) => t.unitId !== row.unitId);
+    const existing = rows.find((t) => t.unitId === row.unitId);
+    updateDealMarketing(shellId, {
+      spaceLeaseTerms: next
+        ? [
+            ...withoutUnit,
+            { ...(existing ?? emptySpaceLeaseTerms(row.unitId)), tenantName: next },
+          ]
+        : withoutUnit,
+    });
+    setEditing(false);
+    notify({ title: "Tenant name saved" });
+  };
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        className="border-0 bg-transparent p-0 text-start text-muted"
+        style={{ cursor: "pointer" }}
+        onClick={() => setEditing(true)}
+      >
+        {row.tenantName ?? "Add tenant name"}
+        {row.leaseExpiration ? ` · thru ${row.leaseExpiration}` : ""}
+      </button>
+    );
+  }
+
+  return (
+    <span className="d-inline-flex align-items-center gap-2">
+      <Input
+        autoFocus
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") setEditing(false);
+        }}
+        style={{ width: 220 }}
+      />
+    </span>
+  );
+}
+
 function SpacesTab() {
   const { listingId } = Route.useParams();
-  // Reactive: re-render when a child is added (store map is replaced).
-  const version = useDataStore((s) => s.listings);
-  void version;
+  const navigate = useNavigate();
+  // Subscribe to both maps: a row is a join of a unit (properties) and its deal
+  // (listings), so either changing must re-render.
+  void useDataStore((s) => s.listings);
+  void useDataStore((s) => s.properties);
   const listing = getListing(listingId);
-  // Whether this deal has a Spaces tab at all — a top-level lease deal, regardless
-  // of stage. Separate from canAddSpaces: a Lost shell still has this tab, it just
-  // can't accept new spaces (see below).
+  // Whether this deal has a Spaces section at all — a top-level lease deal,
+  // regardless of stage. Separate from canAddSpaces: a Lost shell keeps the
+  // section, it just cannot accept new suites.
   const leaseParent = isLeaseParent(listing);
   const canAddSpace = listing ? canAddSpaces(listing) : false;
-  const { space: spaceParam } = Route.useSearch();
-  const rows = [...buildingAvailability(listingId)].sort((a, b) =>
-    a.label.localeCompare(b.label, "en", { numeric: true }),
-  );
-  const property = listing ? getProperty(listing.propertyId) : undefined;
+  const rows = buildingSuites(listingId);
   const [addOpen, setAddOpen] = useState(false);
-  // Which rows are expanded. Controlled rather than left to each Collapsible so
-  // the row's angle can point at its own state.
-  // Seeded once, from the URL. Local state owns it afterwards, so a broker can
-  // open several rows. Deterministic on server and client, so no hydration
-  // mismatch. `buildingAvailability` is left unsorted for its marketing
-  // consumers; the sort above keeps this page and the Vouchers index in step.
-  const [openRows, setOpenRows] = useState<Set<string>>(
-    () => new Set(spaceParam ? [spaceParam] : []),
-  );
-  const setRowOpen = (dealId: string, open: boolean) =>
-    setOpenRows((prev) => {
-      const next = new Set(prev);
-      if (open) next.add(dealId);
-      else next.delete(dealId);
-      return next;
-    });
-  // Arriving at a *different* `?space=` while already on this roster reuses the
-  // component, so the initialiser above never runs again — the AI rail's deal
-  // cards make that a two-click journey. Additive on purpose: it opens the named
-  // row without closing the ones the broker opened themselves.
-  useEffect(() => {
-    if (spaceParam) setRowOpen(spaceParam, true);
-  }, [spaceParam]);
 
-  // One working copy per space, behind that row's own Save/Cancel — the same
-  // contract as the deal edit form, which holds a draft and commits it on Save.
-  // The roster used to write straight through on every keystroke, so the two
-  // editors for the same terms behaved differently and neither confirmed
-  // anything had happened.
-  //
-  // Keyed by deal id rather than held per-row, because several rows can be open
-  // at once. A draft deliberately survives collapsing the row: the header is a
-  // big click target and silently discarding typing would be worse than keeping
-  // it, so only Save and Cancel resolve a draft.
-  // A draft covers both halves of a space's terms: the terms row, and the size,
-  // which lives on `marketing.availableSqFt` rather than on the row (see
-  // SpaceLeaseTerms). Save commits them together so the two cannot drift.
-  type SpaceDraft = { terms: SpaceLeaseTerms; availableSqFt: number | null };
-  const [drafts, setDrafts] = useState<Record<string, SpaceDraft>>({});
-  const patchDraft = (dealId: string, base: SpaceDraft, patch: Partial<SpaceDraft>) =>
-    setDrafts((prev) => ({ ...prev, [dealId]: { ...(prev[dealId] ?? base), ...patch } }));
-  const clearDraft = (dealId: string) =>
-    setDrafts((prev) => {
-      const next = { ...prev };
-      delete next[dealId];
-      return next;
+  const startDeal = (unitId: string) => {
+    const created = addSpaceToDeal(listingId, unitId);
+    if (!created) return;
+    void navigate({
+      to: "/listings/$listingId/spaces/$spaceId/details",
+      params: { listingId, spaceId: created.deal.id },
     });
-  const saveDraft = (dealId: string) => {
-    const draft = drafts[dealId];
-    if (!draft) return;
-    updateDealMarketing(dealId, {
-      spaceLeaseTerms: [draft.terms],
-      // 0 rather than null: `DealMarketing.availableSqFt` is a number, and a
-      // cleared field means "no size on record", which the gate reads as unmet.
-      availableSqFt: draft.availableSqFt ?? 0,
-    });
-    clearDraft(dealId);
-    notify({ title: "Space terms saved" });
   };
 
   if (!leaseParent) {
@@ -117,9 +127,7 @@ function SpacesTab() {
             <FontAwesomeIcon icon={faVectorSquare} aria-label="Not eligible" />
           </Empty.Media>
           <Empty.Content>
-            <Empty.Title>
-              Spaces are only for lease representation deals
-            </Empty.Title>
+            <Empty.Title>Spaces are only for lease representation deals</Empty.Title>
             Only top-level landlord-rep lease deals can be split into spaces.
           </Empty.Content>
         </Empty>
@@ -141,12 +149,11 @@ function SpacesTab() {
       {rows.length === 0 ? (
         <Empty>
           <Empty.Media>
-            <FontAwesomeIcon icon={faVectorSquare} aria-label="No spaces" />
+            <FontAwesomeIcon icon={faVectorSquare} aria-label="No suites" />
           </Empty.Media>
           <Empty.Content>
-            <Empty.Title>No spaces yet</Empty.Title>
-            Add a space to spin an individual unit into its own deal. The
-            building&apos;s marketing is shared by every space.
+            <Empty.Title>No suites on this property yet</Empty.Title>
+            Add a space to put a suite on the building and start its deal.
           </Empty.Content>
           {canAddSpace && (
             <Empty.Actions>
@@ -159,128 +166,58 @@ function SpacesTab() {
       ) : (
         <div className="d-flex flex-column gap-2">
           {rows.map((row) => {
-            const child = getListing(row.dealId);
-            const unit = property?.units.find((u) => u.id === row.unitId);
-            if (!child || !unit || !property) return null;
-            // What is on record: the terms row, plus the size from the space's
-            // own marketing. `addSpaceToDeal` seeds that size from the unit, so an
-            // untouched row already shows the suite's real square footage.
-            const saved: SpaceDraft = {
-              terms:
-                child.marketing.spaceLeaseTerms?.[0] ??
-                emptySpaceLeaseTerms(row.unitId),
-              availableSqFt: child.marketing.availableSqFt || null,
-            };
-            // The row edits its draft when one exists and the stored values
-            // otherwise, so an untouched row shows exactly what is persisted.
-            const draft = drafts[row.dealId];
-            const current = draft ?? saved;
-            const dirty = draft != null;
-            const rowOpen = openRows.has(row.dealId);
+            const shared = (
+              <>
+                <span className="fw-semibold">{row.label}</span>
+                <span className="text-muted">{row.sqft.toLocaleString()} SF</span>
+                <span className="text-muted">
+                  {row.leaseRate != null
+                    ? `$${row.leaseRate} ${row.leaseRateUnits}`
+                    : ""}
+                </span>
+                <span className="ms-auto d-flex align-items-center gap-3">
+                  <Badge variant={statusVariant(row.status)}>{row.status}</Badge>
+                </span>
+              </>
+            );
+
+            // A suite with a deal is a link to that deal's page. A suite without
+            // one is not — there is nowhere to go, so the row carries whatever
+            // action it does support instead.
+            if (row.dealId) {
+              return (
+                <Link
+                  key={row.unitId}
+                  to="/listings/$listingId/spaces/$spaceId/overview"
+                  params={{ listingId, spaceId: row.dealId }}
+                  className="d-flex align-items-center gap-3 border rounded p-3 text-decoration-none text-body"
+                >
+                  {shared}
+                  <FontAwesomeIcon icon={faAngleRight} className="text-muted" />
+                </Link>
+              );
+            }
+
             return (
-              <Collapsible
-                key={row.dealId}
-                className="border rounded"
-                open={rowOpen}
-                onOpenChange={(open) => setRowOpen(row.dealId, open)}
+              <div
+                key={row.unitId}
+                className="d-flex align-items-center gap-3 border rounded p-3"
               >
-                <div className="d-flex align-items-center gap-2 pe-3">
-                  {/* The whole row header is the trigger — the terms editor below
-                  is the row's main act, so clicking anywhere but the row's
-                  controls expands it. */}
-                  <Collapsible.Trigger
-                    className="flex-grow-1 d-flex align-items-center gap-3 border-0 bg-transparent p-3 text-start text-body"
-                    style={{ cursor: "pointer" }}
-                  >
-                    <span className="d-flex align-items-center gap-2 fw-semibold">
-                      <FontAwesomeIcon
-                        icon={faAngleRight}
-                        className="text-muted"
-                        style={{
-                          transform: rowOpen ? "rotate(90deg)" : undefined,
-                          transition: "transform 0.15s ease",
-                        }}
-                      />
-                      {unit.label}
-                      <span className="text-muted fw-normal">
-                        {row.sqft.toLocaleString()} SF
-                      </span>
-                    </span>
-                    <span className="d-flex align-items-center gap-3 ms-auto">
-                      {/* A draft outlives collapsing the row, so say so here —
-                          otherwise the unsaved edits are invisible once closed. */}
-                      {dirty && !rowOpen && (
-                        <span className="text-warning fw-normal">
-                          Unsaved changes
-                        </span>
-                      )}
-                      <span className="text-muted fw-normal">
-                        {row.leaseRate != null
-                          ? `$${row.leaseRate} ${row.leaseRateUnits}`
-                          : "Rate TBD"}
-                      </span>
-                      <span className="text-muted fw-normal">
-                        {row.availability}
-                      </span>
-                    </span>
-                  </Collapsible.Trigger>
-                  {/* Outside the Trigger on purpose: inside it, opening the
-                      select would toggle the row. The gate it opens is the
-                      globally-mounted GlobalStageGateModal, so no wiring here. */}
-                  <DealStageSelect listing={child} />
-                  <Button
-                    variant="ghost"
-                    nativeButton={false}
-                    render={
-                      <Link
-                        to="/listings/$listingId/vouchers/$spaceId"
-                        params={{ listingId, spaceId: row.dealId }}
-                      />
-                    }
-                  >
-                    Voucher
-                  </Button>
-                </div>
-                <Collapsible.Content className="border-top p-3">
-                  <SpaceTermsSection
-                    unit={unit}
-                    property={property}
-                    terms={current.terms}
-                    onChange={(patch) =>
-                      patchDraft(row.dealId, saved, {
-                        terms: { ...current.terms, ...patch },
-                      })
-                    }
-                    availableSqFt={current.availableSqFt}
-                    onAvailableSqFtChange={(v) =>
-                      patchDraft(row.dealId, saved, { availableSqFt: v })
-                    }
-                  />
-                  {/* Cancel ghost, Save primary, in that order — the same bar the
-                      deal edit form ends with, so the two editors for these terms
-                      behave identically. Disabled until something changes, since a
-                      Save that does nothing teaches nothing. */}
-                  <div className="d-flex justify-content-end align-items-center gap-2 border-top mt-3 pt-3">
-                    {dirty && (
-                      <span className="text-muted me-auto">Unsaved changes</span>
-                    )}
+                {shared}
+                {row.status === "Occupied" ? (
+                  <SuiteTenant row={row} shellId={listingId} />
+                ) : (
+                  canAddSpace && (
                     <Button
-                      variant="ghost"
-                      disabled={!dirty}
-                      onClick={() => clearDraft(row.dealId)}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => startDeal(row.unitId)}
                     >
-                      Cancel
+                      Start a deal
                     </Button>
-                    <Button
-                      variant="primary"
-                      disabled={!dirty}
-                      onClick={() => saveDraft(row.dealId)}
-                    >
-                      Save
-                    </Button>
-                  </div>
-                </Collapsible.Content>
-              </Collapsible>
+                  )
+                )}
+              </div>
             );
           })}
         </div>
