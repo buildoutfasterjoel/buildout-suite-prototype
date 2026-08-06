@@ -2,6 +2,7 @@ import type { LeaseRateUnits, Listing, PropertyStatus, PropertyUnit } from './ty
 import { getListing, getProperty } from './store'
 import { getChildDeals } from './leaseSpaces'
 import { spaceAvailability, type SpaceAvailability } from './dealShape'
+import { WHOLE_PROPERTY_LABEL } from './createListing'
 
 /**
  * What a directory row reports. The deal-derived states come from
@@ -61,7 +62,12 @@ export function buildingSuites(shellDealId: string): SuiteRow[] {
   }
 
   return property.units
-    .filter((unit) => unit.label !== 'Whole Property')
+    // The whole-property stub is the flat-lease deal itself, not a suite of the
+    // building: a lease deal with no children markets the whole property, and
+    // adding a child space is what makes it a shell (`dealShape`). Excluded here
+    // so a fresh deal's directory shows an honest empty state rather than one row
+    // standing for the deal you are already looking at.
+    .filter((unit) => unit.label !== WHOLE_PROPERTY_LABEL)
     .map((unit): SuiteRow => {
       const deal = dealByUnit.get(unit.id) ?? null
       // Terms live on the child once a deal exists. Before that the shell may

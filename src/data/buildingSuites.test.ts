@@ -109,6 +109,13 @@ describe('buildingSuites', () => {
   it('returns nothing for a listing that does not exist', () => {
     expect(buildingSuites('no-such-deal')).toEqual([])
   })
+
+  it('excludes the whole-property stub, which stands for the deal rather than a suite', () => {
+    // `createProposalListing` seeds exactly this one unit, so a deal that has had
+    // no suites added to it has an empty directory — not a row for itself.
+    const shell = makeShell()
+    expect(buildingSuites(shell.id)).toEqual([])
+  })
 })
 
 describe('suiteStatus', () => {
