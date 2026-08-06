@@ -77,7 +77,12 @@ import { Route as ShellSettingsUsersUserIdPermissionsRouteImport } from './route
 import { Route as ShellSettingsUsersUserIdNotificationsRouteImport } from './routes/_shell/settings/users/$userId/notifications'
 import { Route as ShellSettingsUsersUserIdIntegrationsRouteImport } from './routes/_shell/settings/users/$userId/integrations'
 import { Route as ShellSettingsUsersUserIdEmailRouteImport } from './routes/_shell/settings/users/$userId/email'
+import { Route as ShellListingsListingIdSpacesSpaceIdRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId'
 import { Route as ShellListingsListingIdVouchersSpaceIdRouteImport } from './routes/_shell/listings/$listingId/vouchers/$spaceId'
+import { Route as ShellListingsListingIdSpacesSpaceIdIndexRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/index'
+import { Route as ShellListingsListingIdSpacesSpaceIdOverviewRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/overview'
+import { Route as ShellListingsListingIdSpacesSpaceIdMediaRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/media'
+import { Route as ShellListingsListingIdSpacesSpaceIdDetailsRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/details'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -454,11 +459,41 @@ const ShellSettingsUsersUserIdEmailRoute =
     path: '/email',
     getParentRoute: () => ShellSettingsUsersUserIdRoute,
   } as any)
+const ShellListingsListingIdSpacesSpaceIdRoute =
+  ShellListingsListingIdSpacesSpaceIdRouteImport.update({
+    id: '/$listingId_/spaces/$spaceId',
+    path: '/$listingId/spaces/$spaceId',
+    getParentRoute: () => ShellListingsRoute,
+  } as any)
 const ShellListingsListingIdVouchersSpaceIdRoute =
   ShellListingsListingIdVouchersSpaceIdRouteImport.update({
     id: '/vouchers/$spaceId',
     path: '/vouchers/$spaceId',
     getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdSpacesSpaceIdIndexRoute =
+  ShellListingsListingIdSpacesSpaceIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
+  } as any)
+const ShellListingsListingIdSpacesSpaceIdOverviewRoute =
+  ShellListingsListingIdSpacesSpaceIdOverviewRouteImport.update({
+    id: '/overview',
+    path: '/overview',
+    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
+  } as any)
+const ShellListingsListingIdSpacesSpaceIdMediaRoute =
+  ShellListingsListingIdSpacesSpaceIdMediaRouteImport.update({
+    id: '/media',
+    path: '/media',
+    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
+  } as any)
+const ShellListingsListingIdSpacesSpaceIdDetailsRoute =
+  ShellListingsListingIdSpacesSpaceIdDetailsRouteImport.update({
+    id: '/details',
+    path: '/details',
+    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -523,6 +558,7 @@ export interface FileRoutesByFullPath {
   '/listings/$listingId/': typeof ShellListingsListingIdIndexRoute
   '/settings/users/': typeof ShellSettingsUsersIndexRoute
   '/listings/$listingId/vouchers/$spaceId': typeof ShellListingsListingIdVouchersSpaceIdRoute
+  '/listings/$listingId/spaces/$spaceId': typeof ShellListingsListingIdSpacesSpaceIdRouteWithChildren
   '/settings/users/$userId/email': typeof ShellSettingsUsersUserIdEmailRoute
   '/settings/users/$userId/integrations': typeof ShellSettingsUsersUserIdIntegrationsRoute
   '/settings/users/$userId/notifications': typeof ShellSettingsUsersUserIdNotificationsRoute
@@ -530,6 +566,10 @@ export interface FileRoutesByFullPath {
   '/settings/users/$userId/profile': typeof ShellSettingsUsersUserIdProfileRoute
   '/listings/$listingId/vouchers/': typeof ShellListingsListingIdVouchersIndexRoute
   '/settings/users/$userId/': typeof ShellSettingsUsersUserIdIndexRoute
+  '/listings/$listingId/spaces/$spaceId/details': typeof ShellListingsListingIdSpacesSpaceIdDetailsRoute
+  '/listings/$listingId/spaces/$spaceId/media': typeof ShellListingsListingIdSpacesSpaceIdMediaRoute
+  '/listings/$listingId/spaces/$spaceId/overview': typeof ShellListingsListingIdSpacesSpaceIdOverviewRoute
+  '/listings/$listingId/spaces/$spaceId/': typeof ShellListingsListingIdSpacesSpaceIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -590,6 +630,10 @@ export interface FileRoutesByTo {
   '/settings/users/$userId/profile': typeof ShellSettingsUsersUserIdProfileRoute
   '/listings/$listingId/vouchers': typeof ShellListingsListingIdVouchersIndexRoute
   '/settings/users/$userId': typeof ShellSettingsUsersUserIdIndexRoute
+  '/listings/$listingId/spaces/$spaceId/details': typeof ShellListingsListingIdSpacesSpaceIdDetailsRoute
+  '/listings/$listingId/spaces/$spaceId/media': typeof ShellListingsListingIdSpacesSpaceIdMediaRoute
+  '/listings/$listingId/spaces/$spaceId/overview': typeof ShellListingsListingIdSpacesSpaceIdOverviewRoute
+  '/listings/$listingId/spaces/$spaceId': typeof ShellListingsListingIdSpacesSpaceIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -655,6 +699,7 @@ export interface FileRoutesById {
   '/_shell/listings/$listingId/': typeof ShellListingsListingIdIndexRoute
   '/_shell/settings/users/': typeof ShellSettingsUsersIndexRoute
   '/_shell/listings/$listingId/vouchers/$spaceId': typeof ShellListingsListingIdVouchersSpaceIdRoute
+  '/_shell/listings/$listingId_/spaces/$spaceId': typeof ShellListingsListingIdSpacesSpaceIdRouteWithChildren
   '/_shell/settings/users/$userId/email': typeof ShellSettingsUsersUserIdEmailRoute
   '/_shell/settings/users/$userId/integrations': typeof ShellSettingsUsersUserIdIntegrationsRoute
   '/_shell/settings/users/$userId/notifications': typeof ShellSettingsUsersUserIdNotificationsRoute
@@ -662,6 +707,10 @@ export interface FileRoutesById {
   '/_shell/settings/users/$userId/profile': typeof ShellSettingsUsersUserIdProfileRoute
   '/_shell/listings/$listingId/vouchers/': typeof ShellListingsListingIdVouchersIndexRoute
   '/_shell/settings/users/$userId/': typeof ShellSettingsUsersUserIdIndexRoute
+  '/_shell/listings/$listingId_/spaces/$spaceId/details': typeof ShellListingsListingIdSpacesSpaceIdDetailsRoute
+  '/_shell/listings/$listingId_/spaces/$spaceId/media': typeof ShellListingsListingIdSpacesSpaceIdMediaRoute
+  '/_shell/listings/$listingId_/spaces/$spaceId/overview': typeof ShellListingsListingIdSpacesSpaceIdOverviewRoute
+  '/_shell/listings/$listingId_/spaces/$spaceId/': typeof ShellListingsListingIdSpacesSpaceIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -727,6 +776,7 @@ export interface FileRouteTypes {
     | '/listings/$listingId/'
     | '/settings/users/'
     | '/listings/$listingId/vouchers/$spaceId'
+    | '/listings/$listingId/spaces/$spaceId'
     | '/settings/users/$userId/email'
     | '/settings/users/$userId/integrations'
     | '/settings/users/$userId/notifications'
@@ -734,6 +784,10 @@ export interface FileRouteTypes {
     | '/settings/users/$userId/profile'
     | '/listings/$listingId/vouchers/'
     | '/settings/users/$userId/'
+    | '/listings/$listingId/spaces/$spaceId/details'
+    | '/listings/$listingId/spaces/$spaceId/media'
+    | '/listings/$listingId/spaces/$spaceId/overview'
+    | '/listings/$listingId/spaces/$spaceId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -794,6 +848,10 @@ export interface FileRouteTypes {
     | '/settings/users/$userId/profile'
     | '/listings/$listingId/vouchers'
     | '/settings/users/$userId'
+    | '/listings/$listingId/spaces/$spaceId/details'
+    | '/listings/$listingId/spaces/$spaceId/media'
+    | '/listings/$listingId/spaces/$spaceId/overview'
+    | '/listings/$listingId/spaces/$spaceId'
   id:
     | '__root__'
     | '/'
@@ -858,6 +916,7 @@ export interface FileRouteTypes {
     | '/_shell/listings/$listingId/'
     | '/_shell/settings/users/'
     | '/_shell/listings/$listingId/vouchers/$spaceId'
+    | '/_shell/listings/$listingId_/spaces/$spaceId'
     | '/_shell/settings/users/$userId/email'
     | '/_shell/settings/users/$userId/integrations'
     | '/_shell/settings/users/$userId/notifications'
@@ -865,6 +924,10 @@ export interface FileRouteTypes {
     | '/_shell/settings/users/$userId/profile'
     | '/_shell/listings/$listingId/vouchers/'
     | '/_shell/settings/users/$userId/'
+    | '/_shell/listings/$listingId_/spaces/$spaceId/details'
+    | '/_shell/listings/$listingId_/spaces/$spaceId/media'
+    | '/_shell/listings/$listingId_/spaces/$spaceId/overview'
+    | '/_shell/listings/$listingId_/spaces/$spaceId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1351,12 +1414,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellSettingsUsersUserIdEmailRouteImport
       parentRoute: typeof ShellSettingsUsersUserIdRoute
     }
+    '/_shell/listings/$listingId_/spaces/$spaceId': {
+      id: '/_shell/listings/$listingId_/spaces/$spaceId'
+      path: '/$listingId/spaces/$spaceId'
+      fullPath: '/listings/$listingId/spaces/$spaceId'
+      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdRouteImport
+      parentRoute: typeof ShellListingsRoute
+    }
     '/_shell/listings/$listingId/vouchers/$spaceId': {
       id: '/_shell/listings/$listingId/vouchers/$spaceId'
       path: '/vouchers/$spaceId'
       fullPath: '/listings/$listingId/vouchers/$spaceId'
       preLoaderRoute: typeof ShellListingsListingIdVouchersSpaceIdRouteImport
       parentRoute: typeof ShellListingsListingIdRoute
+    }
+    '/_shell/listings/$listingId_/spaces/$spaceId/': {
+      id: '/_shell/listings/$listingId_/spaces/$spaceId/'
+      path: '/'
+      fullPath: '/listings/$listingId/spaces/$spaceId/'
+      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdIndexRouteImport
+      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
+    }
+    '/_shell/listings/$listingId_/spaces/$spaceId/overview': {
+      id: '/_shell/listings/$listingId_/spaces/$spaceId/overview'
+      path: '/overview'
+      fullPath: '/listings/$listingId/spaces/$spaceId/overview'
+      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdOverviewRouteImport
+      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
+    }
+    '/_shell/listings/$listingId_/spaces/$spaceId/media': {
+      id: '/_shell/listings/$listingId_/spaces/$spaceId/media'
+      path: '/media'
+      fullPath: '/listings/$listingId/spaces/$spaceId/media'
+      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdMediaRouteImport
+      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
+    }
+    '/_shell/listings/$listingId_/spaces/$spaceId/details': {
+      id: '/_shell/listings/$listingId_/spaces/$spaceId/details'
+      path: '/details'
+      fullPath: '/listings/$listingId/spaces/$spaceId/details'
+      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdDetailsRouteImport
+      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
     }
   }
 }
@@ -1479,14 +1577,41 @@ const ShellListingsListingIdRouteWithChildren =
     ShellListingsListingIdRouteChildren,
   )
 
+interface ShellListingsListingIdSpacesSpaceIdRouteChildren {
+  ShellListingsListingIdSpacesSpaceIdDetailsRoute: typeof ShellListingsListingIdSpacesSpaceIdDetailsRoute
+  ShellListingsListingIdSpacesSpaceIdMediaRoute: typeof ShellListingsListingIdSpacesSpaceIdMediaRoute
+  ShellListingsListingIdSpacesSpaceIdOverviewRoute: typeof ShellListingsListingIdSpacesSpaceIdOverviewRoute
+  ShellListingsListingIdSpacesSpaceIdIndexRoute: typeof ShellListingsListingIdSpacesSpaceIdIndexRoute
+}
+
+const ShellListingsListingIdSpacesSpaceIdRouteChildren: ShellListingsListingIdSpacesSpaceIdRouteChildren =
+  {
+    ShellListingsListingIdSpacesSpaceIdDetailsRoute:
+      ShellListingsListingIdSpacesSpaceIdDetailsRoute,
+    ShellListingsListingIdSpacesSpaceIdMediaRoute:
+      ShellListingsListingIdSpacesSpaceIdMediaRoute,
+    ShellListingsListingIdSpacesSpaceIdOverviewRoute:
+      ShellListingsListingIdSpacesSpaceIdOverviewRoute,
+    ShellListingsListingIdSpacesSpaceIdIndexRoute:
+      ShellListingsListingIdSpacesSpaceIdIndexRoute,
+  }
+
+const ShellListingsListingIdSpacesSpaceIdRouteWithChildren =
+  ShellListingsListingIdSpacesSpaceIdRoute._addFileChildren(
+    ShellListingsListingIdSpacesSpaceIdRouteChildren,
+  )
+
 interface ShellListingsRouteChildren {
   ShellListingsListingIdRoute: typeof ShellListingsListingIdRouteWithChildren
   ShellListingsIndexRoute: typeof ShellListingsIndexRoute
+  ShellListingsListingIdSpacesSpaceIdRoute: typeof ShellListingsListingIdSpacesSpaceIdRouteWithChildren
 }
 
 const ShellListingsRouteChildren: ShellListingsRouteChildren = {
   ShellListingsListingIdRoute: ShellListingsListingIdRouteWithChildren,
   ShellListingsIndexRoute: ShellListingsIndexRoute,
+  ShellListingsListingIdSpacesSpaceIdRoute:
+    ShellListingsListingIdSpacesSpaceIdRouteWithChildren,
 }
 
 const ShellListingsRouteWithChildren = ShellListingsRoute._addFileChildren(

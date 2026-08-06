@@ -69,6 +69,12 @@ const ALLOWED: Record<string, string> = {
   // Reads a pathname rather than building one.
   "src/components/properties/dealNav.ts": "parses the section out of a deal URL",
 
+  // The space's own page (Task 7 of the space-deal-pages plan). `shell.id` always
+  // resolves to the building — a space cannot itself be a shell, so this can never
+  // receive a space id — and the `spaceId` link targets the space's own page,
+  // which is the thing this file exists to render the header for.
+  "src/components/deals/SpaceDetailHeader.tsx": "the open space's own crumbs: shell.id is always a building, spaceId is the page this task adds",
+
   // The model composes its own path, so there is no link to fix: both of these
   // resolve a space id on the way out. See `rewriteSpaceDealPath`.
   "src/ai/tools.ts": "rewrites a model-supplied deal path",
