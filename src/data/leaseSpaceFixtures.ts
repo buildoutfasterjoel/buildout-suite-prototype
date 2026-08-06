@@ -158,6 +158,75 @@ function fillTermsForUnits(shell: Listing, property: Property): void {
   )
 }
 
+/** Full ISO timestamp, `days` from now (negative = past). */
+export function isoTimestamp(days: number): string {
+  return new Date(Date.now() + days * 86_400_000).toISOString()
+}
+
+/**
+ * A child space deal for one suite. Matches `addSpaceToDeal` field for field —
+ * inherited marketing, own pipeline state, one terms row — so a seeded space and
+ * a clicked-through one are the same record.
+ */
+function buildChild(
+  shell: Listing,
+  unit: PropertyUnit,
+  terms: SpaceLeaseTerms,
+  stage: PropertyStatus,
+  index: number,
+  spec: ShellSpec,
+  dealIdRef: { n: number },
+): Listing {
+  const suiteNumber = (index + 1) * 100
+  const createdAt = isoTimestamp(-120)
+  return {
+    ...shell,
+    id: `space-${spec.dealId}-${suiteNumber}`,
+    dealId: String(dealIdRef.n++),
+    parentDealId: shell.id,
+    unitId: unit.id,
+    name: `${shell.name} — ${unit.label}`,
+    slug: `${shell.slug}-space-${index + 1}`,
+    status: stage,
+    publishedAt: null,
+    // Own pipeline state — a space does not inherit the shell's parties or history.
+    sellerContactIds: [...shell.sellerContactIds],
+    buyerContactIds: [],
+    tenantContactIds: [],
+    otherContactIds: [],
+    tasks: [],
+    messages: [],
+    activities: [],
+    history: [
+      {
+        id: `hist-${spec.dealId}-${suiteNumber}-created`,
+        label: 'Created under',
+        fromStage: null,
+        toStage: 'proposal',
+        actor: 'You (Listing Broker)',
+        timestamp: createdAt,
+      },
+    ],
+    documents: [],
+    marketing: {
+      ...shell.marketing,
+      availableSqFt: unit.sqft,
+      spaceLeaseTerms: [{ ...terms }],
+    },
+    transaction: {
+      ...shell.transaction,
+      commissionAmount: 0,
+      contractExecutedDate: null,
+      closeDate: null,
+      leaseCommencementDate: null,
+      nextCriticalDate: null,
+      backOffice: { ...shell.transaction.backOffice, receivables: [], closeDate: null },
+    },
+    createdAt,
+    updatedAt: createdAt,
+  }
+}
+
 /**
  * Turn the seeded lease deals named in {@link SHELL_SPECS} into umbrella shells
  * with child space deals.
@@ -173,8 +242,8 @@ function fillTermsForUnits(shell: Listing, property: Property): void {
 export function applyLeaseSpaces(
   listings: Listing[],
   properties: Property[],
-  _contacts: Contact[],
-  _dealIdRef: { n: number },
+  contacts: Contact[],
+  dealIdRef: { n: number },
 ): void {
   for (const spec of SHELL_SPECS) {
     const shell = listings.find((l) => l.dealId === spec.dealId)
@@ -183,14 +252,62 @@ export function applyLeaseSpaces(
     if (!shell || !property || shell.dealType !== 'Lease' || property.units.length === 0) continue
 
     // A tenant-rep deal does not own a building's spaces, so a shell is always
-    // landlord-side. `104` is seeded buyer-side; its (currently empty) buyer
-    // contacts move to the landlord side so the flip stays correct either way.
+    // landlord-side. What happens to the seeded `buyerContactIds` depends on
+    // which side the deal started on: on a tenant-rep deal they ARE the
+    // represented party and move to the landlord side with the flip; on a deal
+    // already landlord-side they are the lease counterparties, so they become
+    // the tenant pool instead. Merging them unconditionally would hand the
+    // building's would-be tenants to the landlord and leave the spaces without one.
+    const wasBuyerSide = shell.dealSide === 'buyer'
+    const formerBuyerIds = [...shell.buyerContactIds]
     shell.dealSide = 'seller'
-    shell.sellerContactIds = [...shell.sellerContactIds, ...shell.buyerContactIds]
     shell.buyerContactIds = []
+    if (wasBuyerSide) {
+      shell.sellerContactIds = [...shell.sellerContactIds, ...formerBuyerIds]
+    }
 
     resliceUnits(property, spec, suiteSizes(property.buildingSqFt, spec.suiteProportions))
     rebuildRentRoll(shell, property, spec)
     fillTermsForUnits(shell, property)
+
+    // Split: each suite's terms row moves down onto its own child deal.
+    const termsByUnit = new Map(
+      (shell.marketing.spaceLeaseTerms ?? []).map((t) => [t.unitId, t]),
+    )
+
+    // Tenants for the transacting suites: the deal's own former counterparties
+    // first, then any other contact linked to this property who is not on the
+    // landlord side. If the pool ever runs short, later suites go without a
+    // tenant rather than two suites sharing one.
+    const tenantPool = [
+      ...new Set([
+        ...formerBuyerIds,
+        ...contacts.filter((c) => c.propertyIds.includes(property.id)).map((c) => c.id),
+      ]),
+    ].filter((id) => !shell.sellerContactIds.includes(id))
+    let tenantIndex = 0
+
+    property.units.forEach((unit, i) => {
+      const terms = termsByUnit.get(unit.id)
+      if (!terms) return
+      const stage = spec.childStages[i]
+      const child = buildChild(shell, unit, terms, stage, i, spec, dealIdRef)
+      // Past Available, a space has an accepted tenant — the lease-side
+      // counterparty, which `stageGates` requires to reach Under Contract and
+      // which `spaceVouchers` reads. Distinct from `buyerContactIds` on purpose.
+      if (stage === 'under-contract' || stage === 'closed') {
+        const tenantId = tenantPool[tenantIndex++]
+        if (tenantId) child.tenantContactIds = [tenantId]
+      }
+      listings.push(child)
+    })
+
+    // The shell holds no space terms and is scoped to no single unit — its spaces
+    // own both. This is `addSpaceToDeal`'s "one editable home per unit" rule.
+    shell.marketing.spaceLeaseTerms = []
+    shell.unitId = null
+    shell.transaction.commissionAmount = 0
+    shell.transaction.closeDate = null
+    shell.transaction.leaseCommencementDate = null
   }
 }
