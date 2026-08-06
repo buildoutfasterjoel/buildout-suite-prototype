@@ -78,7 +78,6 @@ import { Route as ShellSettingsUsersUserIdNotificationsRouteImport } from './rou
 import { Route as ShellSettingsUsersUserIdIntegrationsRouteImport } from './routes/_shell/settings/users/$userId/integrations'
 import { Route as ShellSettingsUsersUserIdEmailRouteImport } from './routes/_shell/settings/users/$userId/email'
 import { Route as ShellListingsListingIdSpacesSpaceIdRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId'
-import { Route as ShellListingsListingIdVouchersSpaceIdRouteImport } from './routes/_shell/listings/$listingId/vouchers/$spaceId'
 import { Route as ShellListingsListingIdSpacesSpaceIdIndexRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/index'
 import { Route as ShellListingsListingIdSpacesSpaceIdWebsiteRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/website'
 import { Route as ShellListingsListingIdSpacesSpaceIdUnderwritingRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/underwriting'
@@ -480,12 +479,6 @@ const ShellListingsListingIdSpacesSpaceIdRoute =
     path: '/$listingId/spaces/$spaceId',
     getParentRoute: () => ShellListingsRoute,
   } as any)
-const ShellListingsListingIdVouchersSpaceIdRoute =
-  ShellListingsListingIdVouchersSpaceIdRouteImport.update({
-    id: '/vouchers/$spaceId',
-    path: '/vouchers/$spaceId',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
 const ShellListingsListingIdSpacesSpaceIdIndexRoute =
   ShellListingsListingIdSpacesSpaceIdIndexRouteImport.update({
     id: '/',
@@ -662,7 +655,6 @@ export interface FileRoutesByFullPath {
   '/backoffice/contacts/': typeof ShellBackofficeContactsIndexRoute
   '/listings/$listingId/': typeof ShellListingsListingIdIndexRoute
   '/settings/users/': typeof ShellSettingsUsersIndexRoute
-  '/listings/$listingId/vouchers/$spaceId': typeof ShellListingsListingIdVouchersSpaceIdRoute
   '/listings/$listingId/spaces/$spaceId': typeof ShellListingsListingIdSpacesSpaceIdRouteWithChildren
   '/settings/users/$userId/email': typeof ShellSettingsUsersUserIdEmailRoute
   '/settings/users/$userId/integrations': typeof ShellSettingsUsersUserIdIntegrationsRoute
@@ -742,7 +734,6 @@ export interface FileRoutesByTo {
   '/backoffice/contacts': typeof ShellBackofficeContactsIndexRoute
   '/listings/$listingId': typeof ShellListingsListingIdIndexRoute
   '/settings/users': typeof ShellSettingsUsersIndexRoute
-  '/listings/$listingId/vouchers/$spaceId': typeof ShellListingsListingIdVouchersSpaceIdRoute
   '/settings/users/$userId/email': typeof ShellSettingsUsersUserIdEmailRoute
   '/settings/users/$userId/integrations': typeof ShellSettingsUsersUserIdIntegrationsRoute
   '/settings/users/$userId/notifications': typeof ShellSettingsUsersUserIdNotificationsRoute
@@ -833,7 +824,6 @@ export interface FileRoutesById {
   '/_shell/backoffice/contacts/': typeof ShellBackofficeContactsIndexRoute
   '/_shell/listings/$listingId/': typeof ShellListingsListingIdIndexRoute
   '/_shell/settings/users/': typeof ShellSettingsUsersIndexRoute
-  '/_shell/listings/$listingId/vouchers/$spaceId': typeof ShellListingsListingIdVouchersSpaceIdRoute
   '/_shell/listings/$listingId_/spaces/$spaceId': typeof ShellListingsListingIdSpacesSpaceIdRouteWithChildren
   '/_shell/settings/users/$userId/email': typeof ShellSettingsUsersUserIdEmailRoute
   '/_shell/settings/users/$userId/integrations': typeof ShellSettingsUsersUserIdIntegrationsRoute
@@ -925,7 +915,6 @@ export interface FileRouteTypes {
     | '/backoffice/contacts/'
     | '/listings/$listingId/'
     | '/settings/users/'
-    | '/listings/$listingId/vouchers/$spaceId'
     | '/listings/$listingId/spaces/$spaceId'
     | '/settings/users/$userId/email'
     | '/settings/users/$userId/integrations'
@@ -1005,7 +994,6 @@ export interface FileRouteTypes {
     | '/backoffice/contacts'
     | '/listings/$listingId'
     | '/settings/users'
-    | '/listings/$listingId/vouchers/$spaceId'
     | '/settings/users/$userId/email'
     | '/settings/users/$userId/integrations'
     | '/settings/users/$userId/notifications'
@@ -1095,7 +1083,6 @@ export interface FileRouteTypes {
     | '/_shell/backoffice/contacts/'
     | '/_shell/listings/$listingId/'
     | '/_shell/settings/users/'
-    | '/_shell/listings/$listingId/vouchers/$spaceId'
     | '/_shell/listings/$listingId_/spaces/$spaceId'
     | '/_shell/settings/users/$userId/email'
     | '/_shell/settings/users/$userId/integrations'
@@ -1616,13 +1603,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdRouteImport
       parentRoute: typeof ShellListingsRoute
     }
-    '/_shell/listings/$listingId/vouchers/$spaceId': {
-      id: '/_shell/listings/$listingId/vouchers/$spaceId'
-      path: '/vouchers/$spaceId'
-      fullPath: '/listings/$listingId/vouchers/$spaceId'
-      preLoaderRoute: typeof ShellListingsListingIdVouchersSpaceIdRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
-    }
     '/_shell/listings/$listingId_/spaces/$spaceId/': {
       id: '/_shell/listings/$listingId_/spaces/$spaceId/'
       path: '/'
@@ -1833,7 +1813,6 @@ interface ShellListingsListingIdRouteChildren {
   ShellListingsListingIdUnderwritingRoute: typeof ShellListingsListingIdUnderwritingRoute
   ShellListingsListingIdWebsiteRoute: typeof ShellListingsListingIdWebsiteRoute
   ShellListingsListingIdIndexRoute: typeof ShellListingsListingIdIndexRoute
-  ShellListingsListingIdVouchersSpaceIdRoute: typeof ShellListingsListingIdVouchersSpaceIdRoute
   ShellListingsListingIdVouchersIndexRoute: typeof ShellListingsListingIdVouchersIndexRoute
 }
 
@@ -1866,8 +1845,6 @@ const ShellListingsListingIdRouteChildren: ShellListingsListingIdRouteChildren =
       ShellListingsListingIdUnderwritingRoute,
     ShellListingsListingIdWebsiteRoute: ShellListingsListingIdWebsiteRoute,
     ShellListingsListingIdIndexRoute: ShellListingsListingIdIndexRoute,
-    ShellListingsListingIdVouchersSpaceIdRoute:
-      ShellListingsListingIdVouchersSpaceIdRoute,
     ShellListingsListingIdVouchersIndexRoute:
       ShellListingsListingIdVouchersIndexRoute,
   }
