@@ -57,7 +57,6 @@ const ALLOWED: Record<string, string> = {
   // Within the deal whose page is already open: these link a deal to its own
   // sections, so the id is the URL's, never a card's.
   "src/components/properties/PropertyDetailHeader.tsx": "sections of the open deal",
-  "src/components/properties/PropertyDetailSidebar.tsx": "sections of the open deal",
   "src/components/deals/edit/DealEditor.tsx": "the open deal's own edit form, back to its overview",
   "src/components/listings/edit/ListingEditor.tsx": "the open deal's own edit form, cross-links to the Deal page when conflicts remain there",
   "src/components/deals/IngestionBanner.tsx": "rendered on the open deal's overview, links to whichever edit page holds the first unresolved conflict",

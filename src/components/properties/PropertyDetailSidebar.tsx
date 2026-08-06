@@ -1,24 +1,40 @@
 import { useEffect, useState } from "react";
-import { useLocation, useParams, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
 import { Collapsible } from "@buildoutinc/blueprint-react/ui/Collapsible";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronRight } from "@fortawesome/pro-regular-svg-icons";
-import { useDataStore } from "#/data/dataStore";
-import { getListing, getProperty } from "#/data/store";
+import { getProperty } from "#/data/store";
+import type { Listing } from "#/data/types";
 import { propertyQualifiesForUnderwriting } from "#/components/deals/underwriting/eligibility";
 import { dealShape, isLeaseParent } from "#/data/dealShape";
-import {
-  dealBreadcrumbTrail,
-  visibleNavGroups,
-} from "#/components/properties/dealNav";
+import { visibleNavGroups } from "#/components/properties/dealNav";
 
 /** localStorage key for which sidebar category groups are collapsed. */
 const COLLAPSED_STORAGE_KEY = "deal-sidebar-collapsed-groups";
 
-export function PropertyDetailSidebar() {
-  const { pathname } = useLocation();
-  const { listingId } = useParams({ from: "/_shell/listings/$listingId" });
+export function PropertyDetailSidebar({
+  listing,
+  basePath,
+  activeLabel,
+}: {
+  /** The record whose sections these are — a building or a space. */
+  listing: Listing;
+  /**
+   * URL prefix each item's href is appended to, no trailing slash. A building
+   * passes `/listings/{id}`; a space passes
+   * `/listings/{shellId}/spaces/{spaceId}`. Taken as a prop because this
+   * component renders under two different routes, and the route id a
+   * `useParams({ from })` would need differs between them.
+   */
+  basePath: string;
+  /**
+   * Which item is current, by label. Derived by the caller: a building reads
+   * `sectionLabel` off the path, a space reads `subsectionLabel`, and this
+   * component cannot tell which it is rendering for.
+   */
+  activeLabel: string | null;
+}) {
   const navigate = useNavigate();
   // Collapsed category labels. Starts empty → all groups expanded, so SSR and
   // the first client render match; the persisted set is restored in an effect
@@ -46,40 +62,31 @@ export function PropertyDetailSidebar() {
       JSON.stringify([...next]),
     );
   }
-  // Reactive: re-render when the listing changes (e.g. promoted to an umbrella).
-  const version = useDataStore((s) => s.listings);
-  void version;
-  const listing = getListing(listingId);
-  const property = listing ? getProperty(listing.propertyId) : undefined;
+  const property = getProperty(listing.propertyId);
   const showsUnderwriting =
-    listing?.underwriting != null || propertyQualifiesForUnderwriting(property);
+    listing.underwriting != null || propertyQualifiesForUnderwriting(property);
 
-  const shape = listing ? dealShape(listing) : "sale";
+  const shape = dealShape(listing);
   // Whether this deal has a Spaces tab at all — a top-level lease deal, regardless
   // of stage. Shares one predicate with the tab itself (spaces.tsx): separate
   // from canAddSpaces, which governs only the Add-space buttons, not navigation.
   const leaseParent = isLeaseParent(listing);
 
   const navGroups = visibleNavGroups(shape, { leaseParent, showsUnderwriting });
-  // Which section the URL is on — read the same way the breadcrumb reads it, so
-  // the two can't disagree. It takes the *first* segment after the listing id,
-  // which is what keeps a drill-down (…/vouchers/{spaceId}) highlighting its
-  // section rather than nothing at all. Hoisted: one call, not one per group.
-  const { sectionLabel } = dealBreadcrumbTrail(pathname, listingId);
 
   function handleTabChange(value: string) {
     const item = navGroups
       .flatMap((g) => g.items)
       .find((i) => i.label === value);
     if (!item) return;
-    void navigate({ to: `/listings/${listingId}/${item.href}` });
+    void navigate({ to: `${basePath}/${item.href}` });
   }
 
   return (
     <nav className="px-3 py-1" aria-label="Property sections">
       {navGroups.map((group, i) => {
         const activeInGroup =
-          group.items.find((item) => item.label === sectionLabel)?.label ?? "";
+          group.items.find((item) => item.label === activeLabel)?.label ?? "";
         const isCollapsed = group.label ? collapsed.has(group.label) : false;
         const tabs = (
           <Tabs

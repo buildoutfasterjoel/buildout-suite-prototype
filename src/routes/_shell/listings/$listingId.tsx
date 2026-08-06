@@ -1,4 +1,9 @@
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  Outlet,
+  useLocation,
+} from "@tanstack/react-router";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
@@ -8,6 +13,7 @@ import { getStore } from "#/data/store";
 import { useDataStore } from "#/data/dataStore";
 import { PropertyDetailHeader } from "#/components/properties/PropertyDetailHeader";
 import { PropertyDetailSidebar } from "#/components/properties/PropertyDetailSidebar";
+import { dealBreadcrumbTrail } from "#/components/properties/dealNav";
 
 export const Route = createFileRoute("/_shell/listings/$listingId")({
   component: PropertyDetail,
@@ -57,8 +63,15 @@ function PropertyDetail() {
   // ladder on a deal that can no longer go past Active. Also covers the original
   // reason for a reactive selector — commitStageTransition replaces both.
   const listing = useDataStore((s) => s.listings).get(listingId);
+  // Hoisted above the not-found guard: hooks can't be called conditionally,
+  // and this component doesn't remount on a listingId change alone.
+  const { pathname } = useLocation();
 
   if (!listing) return <ListingNotFound />;
+
+  // The building's current section is the first segment after its id. A space
+  // page computes its own active label from `subsectionLabel` instead.
+  const { sectionLabel } = dealBreadcrumbTrail(pathname, listingId);
 
   return (
     <div className="h-100 overflow-y-auto overflow-x-hidden">
@@ -70,7 +83,11 @@ function PropertyDetail() {
           className="shadow flex-shrink-0 position-sticky"
           style={{ width: 180, top: 0 }}
         >
-          <PropertyDetailSidebar />
+          <PropertyDetailSidebar
+            listing={listing}
+            basePath={`/listings/${listingId}`}
+            activeLabel={sectionLabel}
+          />
         </Card>
 
         {/* Detail content — each tab renders its own layout, including
