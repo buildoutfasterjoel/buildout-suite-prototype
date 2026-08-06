@@ -1395,6 +1395,8 @@
   box-shadow:
     0 12px 20px 0 rgba(54, 7, 100, 0.1),
     0 8px 10px 0 rgba(33, 83, 212, 0.1);
+  // No opacity/visibility here on purpose: coming back from the palette, the
+  // bar snaps in with no transition at all.
   transition:
     background 0.2s ease,
     box-shadow 0.2s ease;
@@ -1403,6 +1405,30 @@
     box-shadow:
       0 0 0 3px rgba(159, 85, 247, 0.45),
       0 8px 10px 0 rgba(33, 83, 212, 0.1);
+  }
+
+  // While the palette is open its own bar stands in for this one. The handoff is
+  // deliberately asymmetric: it fades *out* over 200ms — just under the palette's
+  // 250ms fade-in, so the two read as one motion rather than a hole opening in
+  // the nav — but snaps straight back in on close, per the base rule above.
+  // Kept in the layout (not `display: none`) so the nav keeps its 288px and
+  // nothing shifts, and `visibility` — flipped only once the fade lands — takes
+  // it out of the tab order and the a11y tree while it's invisible.
+  &.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity 0.2s ease,
+      visibility 0s linear 0.2s;
+  }
+
+  // Cut instead of fading, matching the rest of the shell.
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+
+    &.is-hidden {
+      transition: none;
+    }
   }
 
   &:hover {
@@ -1513,11 +1539,31 @@
 }
 
 // ── Omni-search: command palette (open menu) ─────────────────────────────────
-// Top-aligned with the navbar omnibar and horizontally centered. Widen past the
-// Blueprint default and round the corners per the popover design.
+// Vertically centered, but *stably* so: the popup grows and shrinks as you type,
+// and truly centering it would make it jump on every keystroke. Instead the
+// dialog is a fixed-height container the size of the popup's tallest state — it
+// is what gets centered — and the popup sits pinned to the top of it. The
+// container height doubles as the popup's max height (the popup is capped to
+// 100% of it), so one number defines both and they can't drift apart.
+.modal:has(.omni-search-popup) {
+  --omni-popup-max-height: 544px;
+  /** Breathing room kept between the container and the viewport edges. */
+  --omni-popup-inset: 16px;
+}
+
 .modal:has(.omni-search-popup) .modal-dialog {
-  margin-top: 8px;
   max-width: 540px;
+  height: min(
+    var(--omni-popup-max-height),
+    calc(100dvh - var(--omni-popup-inset) * 2)
+  );
+  // Center the container; on short viewports fall back to pinning it inset from
+  // the top rather than letting it run off-screen.
+  margin-top: max(
+    var(--omni-popup-inset),
+    calc((100dvh - var(--omni-popup-max-height)) / 2)
+  );
+  margin-bottom: var(--omni-popup-inset);
 }
 
 .omni-search-popup.omni-search-popup {
@@ -1529,8 +1575,17 @@
   overflow: hidden;
 }
 
+// Everything inside the popup — carries the popup's flex column down a level so
+// the results body is the part that gives when height runs out.
+.omni-menu__panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 // The gradient AI omnibar inside the popover header.
 .omni-menu__bar-wrap {
+  flex: 0 0 auto;
   padding: 8px;
 }
 .omni-menu__bar {
@@ -1618,6 +1673,8 @@
 
 // Tab track — underline tabs matching the popover spec.
 .omni-tabs {
+  flex: 0 0 auto;
+
   .nav {
     padding: 0 8px;
     border-bottom: 1px solid var(--color-storm-grey-100, #eceef2);
@@ -1642,9 +1699,13 @@
   }
 }
 
-// Results body.
+// Results body — takes whatever height the container has left over and scrolls
+// past it, so the popup never grows beyond its centered container.
 .omni-menu__body {
+  flex: 0 1 auto;
+  min-height: 0;
   padding: 8px;
+  overflow-y: auto;
 }
 
 // Group divider label (Contacts / Properties / Deals).

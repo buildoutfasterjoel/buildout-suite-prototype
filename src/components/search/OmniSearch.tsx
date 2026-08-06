@@ -294,7 +294,11 @@ export function OmniSearch() {
           Search contacts, properties, and deals
         </Modal.Title>
 
-        <div ref={contentRef} onKeyDown={handleKeyDown}>
+        <div
+          ref={contentRef}
+          className="omni-menu__panel"
+          onKeyDown={handleKeyDown}
+        >
           {/* Search field — the gradient "AI omnibar" */}
           <div className="omni-menu__bar-wrap">
             <div className="omni-menu__bar">
@@ -341,8 +345,8 @@ export function OmniSearch() {
             </Tabs.List>
           </Tabs>
 
-          {/* Results */}
-          <div className="omni-menu__body overflow-auto" style={{ maxHeight: 440 }}>
+          {/* Results — height comes from the popup's centered container. */}
+          <div className="omni-menu__body">
             {entries.length === 0 ? (
               <div className="text-muted small px-3 py-4 text-center">
                 No matches. Try a different search, or ask the assistant.
