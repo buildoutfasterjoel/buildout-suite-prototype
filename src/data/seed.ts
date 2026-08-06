@@ -822,11 +822,15 @@ const LAST_TOUCH_BY_SOURCE: Record<ContactSource, string> = {
   'Prospect by Buildout': 'Imported from Prospect',
   Referral: 'Intro email sent',
   'Networking event': 'Met at a networking event',
+  'Listing inquiry': 'Inquired on a listing',
 }
 
 /** Likelihood a contact is tied to a deal, by relationship stage. */
 const DEAL_PROBABILITY: Record<RelationshipStage, number> = {
   cold: 0.15,
+  // An inquiry that has already produced a deal isn't Inquired any more — the
+  // reconciler would move them onto the deal ladder.
+  inquired: 0,
   nurturing: 0.25,
   pitching: 1,
   client: 1,
@@ -852,30 +856,50 @@ function pickDealStage(relationship: RelationshipStage): ContactDealStage {
 }
 
 function generateContact(allPropertyIds: string[]): Contact {
-  const role: ContactRole = faker.helpers.weightedArrayElement([
-    { weight: 30, value: 'broker' as const },
-    { weight: 25, value: 'owner' as const },
-    { weight: 20, value: 'buyer' as const },
-    { weight: 15, value: 'tenant' as const },
-    { weight: 10, value: 'lender' as const },
-  ])
-
   const relationship: RelationshipStage = faker.helpers.weightedArrayElement([
-    { weight: 42, value: 'cold' as const },
-    { weight: 20, value: 'nurturing' as const },
+    { weight: 34, value: 'cold' as const },
+    { weight: 10, value: 'inquired' as const },
+    { weight: 18, value: 'nurturing' as const },
     { weight: 12, value: 'pitching' as const },
     { weight: 16, value: 'client' as const },
     { weight: 10, value: 'past_client' as const },
   ])
 
-  const source: ContactSource = faker.helpers.weightedArrayElement([
-    { weight: 40, value: 'Public records' as const },
-    { weight: 12, value: 'Manual entry' as const },
-    { weight: 18, value: 'Referral' as const },
-    { weight: 13, value: 'Cold outreach' as const },
-    { weight: 10, value: 'Networking event' as const },
-    { weight: 7, value: 'Prospect by Buildout' as const },
-  ])
+  /**
+   * Leads who arrived through a listing inquiry. Everyone on the Inquired stage
+   * did by definition; a slice of the Nurturing book got there the same way and
+   * has since been engaged, so the "Inquired → Nurturing" graduation has real
+   * examples in the seed rather than only in the rules.
+   */
+  const fromListingInquiry =
+    relationship === 'inquired' ||
+    (relationship === 'nurturing' && faker.datatype.boolean(0.3))
+
+  const role: ContactRole = fromListingInquiry
+    ? // An inquiry on a marketed listing comes from the demand side.
+      faker.helpers.weightedArrayElement([
+        { weight: 65, value: 'buyer' as const },
+        { weight: 25, value: 'tenant' as const },
+        { weight: 10, value: 'broker' as const },
+      ])
+    : faker.helpers.weightedArrayElement([
+        { weight: 30, value: 'broker' as const },
+        { weight: 25, value: 'owner' as const },
+        { weight: 20, value: 'buyer' as const },
+        { weight: 15, value: 'tenant' as const },
+        { weight: 10, value: 'lender' as const },
+      ])
+
+  const source: ContactSource = fromListingInquiry
+    ? 'Listing inquiry'
+    : faker.helpers.weightedArrayElement([
+        { weight: 40, value: 'Public records' as const },
+        { weight: 12, value: 'Manual entry' as const },
+        { weight: 18, value: 'Referral' as const },
+        { weight: 13, value: 'Cold outreach' as const },
+        { weight: 10, value: 'Networking event' as const },
+        { weight: 7, value: 'Prospect by Buildout' as const },
+      ])
 
   // Real last-contacted timestamp (or null = never contacted), spread across
   // recency buckets so the pre-defined lists return meaningful results.
@@ -889,7 +913,9 @@ function generateContact(allPropertyIds: string[]): Contact {
     { weight: 15, value: 'old' as const }, // > 1 year
   ])
   const lastContactedAt: string | null =
-    contactedBucket === 'never'
+    // Never engaged is what *makes* them Inquired — one logged touch and the
+    // reconciler graduates them to Nurturing.
+    relationship === 'inquired' || contactedBucket === 'never'
       ? null
       : faker.date
           .between(
@@ -917,9 +943,14 @@ function generateContact(allPropertyIds: string[]): Contact {
   const dealStage: ContactDealStage | null =
     side !== null ? pickDealStage(relationship) : null
 
-  // Inquiries come from the buy side actively searching.
-  const inquiries =
-    side === 'buyer'
+  // Inquiries come from the buy side actively searching — and an inquiry-sourced
+  // lead always has at least one, since that inquiry is why the record exists.
+  const inquiries = fromListingInquiry
+    ? faker.helpers.weightedArrayElement([
+        { weight: 70, value: 1 },
+        { weight: 30, value: 2 },
+      ])
+    : side === 'buyer'
       ? faker.helpers.weightedArrayElement([
           { weight: 55, value: 0 },
           { weight: 30, value: 1 },
@@ -2069,6 +2100,32 @@ export function generateDataset() {
         }
       }
       c.inquiryDetails = details
+
+      // A lead the inquiry *created* begins at that inquiry: the record starts on
+      // the earliest thing that happened to it, so `createdAt` moves to the first
+      // inquiry (or to an even earlier conversation, for one we've since worked).
+      // Otherwise a lead sourced "Listing inquiry" reads as having sat in the
+      // book for months before the inquiry that put them there.
+      //
+      // The newest inquiry is also genuine inbound activity, so it feeds
+      // `lastActivityAt` the way Rosa's voicemail does: the Last Active column
+      // shows the inquiry even though we've never contacted them back.
+      if (c.source === 'Listing inquiry') {
+        const dates = Object.values(details)
+          .map((d) => d.date)
+          .filter((d): d is string => !!d)
+          .sort()
+        const first = dates[0]
+        const newest = dates[dates.length - 1]
+        if (first) {
+          c.createdAt =
+            c.lastContactedAt && c.lastContactedAt < first
+              ? c.lastContactedAt
+              : first
+        }
+        const current = c.lastActivityAt ?? c.lastContactedAt
+        if (newest && (!current || newest > current)) c.lastActivityAt = newest
+      }
     }
   }
 
