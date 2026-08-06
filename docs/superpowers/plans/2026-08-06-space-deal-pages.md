@@ -1811,13 +1811,20 @@ export const Route = createFileRoute("/_shell/listings/$listingId/spaces")({
   component: SpacesTab,
 });
 
-/** Status colour: what the building can still transact reads neutral; a suite
- *  someone else is sitting in reads muted, because it is not actionable here. */
+/**
+ * Blueprint's Badge offers exactly three variants — "primary" | "secondary" |
+ * "outline" — so this maps six states onto them by how actionable the row is
+ * rather than by inventing a colour per state.
+ *
+ * Available is the one state the broker is actively working, so it takes the
+ * emphasis. Vacant and Not advertised are dormant — nothing is happening yet —
+ * so they read as an outline. Everything else is settled or belongs to someone
+ * else and reads muted.
+ */
 function statusVariant(status: SuiteRow["status"]) {
-  if (status === "Available") return "success" as const;
-  if (status === "Under Contract") return "warning" as const;
-  if (status === "Leased" || status === "Occupied") return "secondary" as const;
-  return "outline" as const;
+  if (status === "Available") return "primary" as const;
+  if (status === "Vacant" || status === "Not advertised") return "outline" as const;
+  return "secondary" as const;
 }
 
 function SuiteTenant({ row, shellId }: { row: SuiteRow; shellId: string }) {
