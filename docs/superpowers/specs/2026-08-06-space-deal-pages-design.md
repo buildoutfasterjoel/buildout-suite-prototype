@@ -5,8 +5,10 @@
 only page") is reversed by stakeholder feedback. What that design built and this one keeps is listed
 under *What survives* below.
 **Scope:** Landlord rep lease only. Sale deals and buy-side are untouched.
-**Phase:** 1 of 2. Phase 2 decides which sections are building-level and which are per-space; this
-phase deliberately gives a space **every** section and accepts the duplication that creates.
+**Phase:** 1 of 2. Phase 1 makes the space page exist and be walkable. Phase 2 decides which sections
+are building-level and which are per-space, and fixes the marketing divergence that comes with giving a
+space **every** section — see *Phase 2 backlog* for the full deferred list, which is accepted scope for
+a later pass rather than an oversight.
 
 ---
 
@@ -594,6 +596,43 @@ Data before UI, and nothing deleted before its replacement works.
 - **No revival of `MarketingScopeBar` / `PropertyMarketingHub` / the `from` param.**
 - **No new occupancy source of truth beyond the unit.** Rent roll stays deal-scoped pitch data.
 - **Sale and buy-side deals are untouched.**
+
+---
+
+## Phase 2 backlog
+
+Deferred deliberately, not overlooked. Phase 1 is meant to make the space page exist and be walkable;
+these are what turn it into a flow that holds up. Recorded here so the next session inherits the list
+rather than rediscovering it.
+
+**1. Marketing divergence — the one with teeth.** A space holds a *clone* of the building's marketing
+(`addSpaceToDeal` spreads `...parent.marketing`), and seven sections a space now renders read and write
+that clone: `media`, `website`, `email`, `documents`, `grids`, `plans`, `demographics`. Editing any of
+them on a space silently diverges it from the building, with nothing indicating which copy a public
+surface reads. Excluding `listing` (§2) removed the largest instance; these seven ship as-is in phase 1.
+
+Three shapes a fix could take, in rough order of cost:
+
+- Render them read-only on a space, with a link up to the building to edit.
+- Drop them from a space's nav entirely, so the building is the only place they exist.
+- Make a space's marketing a *reference* to its parent's rather than a clone, so there is one copy.
+  The real fix, and the one that touches the data model.
+
+**2. The building-vs-space scope table.** The full version of the above: for each of the 17 inherited
+sections, decide whether it is the building's, the space's, or genuinely both. `2026-07-31-lease-space-marketing-scope-design.md`
+has a first attempt at this table; it needs redoing against a space that has a page. Output is edits to
+`visibleNavGroups` plus deletions among the 18 route files.
+
+**3. Duplicate URLs for the same content.** While a section renders at both
+`/listings/{shellId}/documents` and `/listings/{shellId}/spaces/{spaceId}/documents`, two URLs show the
+same thing. Resolved as a consequence of (2), but worth naming separately because it also affects
+`buildingSectionListingId`, whose contract ("a building-level section belongs to the building") may
+change.
+
+**4. Smaller, once the flow is walkable:** whether an occupied suite should be blockable rather than
+merely unoffered; whether the Vouchers index survives now that each space has its own Voucher section,
+or becomes redundant; and whether `dealShape`'s `flat-lease` → `shell` flip still reads correctly when
+the directory lists units that have no deals.
 
 ---
 
