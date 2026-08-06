@@ -51,10 +51,15 @@ export const NAV_GROUPS: NavGroup[] = [
       // A space's own form. It occupies the Listing slot rather than sitting
       // beside it: a parent deal's own marketing form is Listing, a space's is
       // Details, and `visibleNavGroups` shows exactly one of the two.
-      { label: "Details", href: "details", icon: faRulerCombined },
+      //
+      // Shares `faSign` with Listing on purpose, for the same reason Vouchers and
+      // Voucher share theirs below: a swap pair is never rendered together, so one
+      // icon for one slot is right. (It must not share with `Plans`, which has no
+      // shape rule and so renders alongside Details for a space.)
+      { label: "Details", href: "details", icon: faSign },
       // The listing's own field data — the form that used to be the Listing tab
-      // of `/edit`. First in the group: it is the content every other Marketing
-      // section (Website, Documents, syndication) reads from.
+      // of `/edit`. It is the content every other Marketing section (Website,
+      // Documents, syndication) reads from.
       { label: "Listing", href: "listing", icon: faSign },
       { label: "Leads", href: "leads", icon: faAddressBook },
       { label: "Documents", href: "documents", icon: faFileLines },
