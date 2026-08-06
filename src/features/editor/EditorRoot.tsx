@@ -54,8 +54,9 @@ export function EditorRoot({
 
   function handleSaveAndClose() {
     markSaved();
-    // Documents is a building-level section, and a space has no page of its own,
-    // so closing the editor on a space's doc lands on its building's Documents.
+    // Documents is a building-level section — a space's own page has no
+    // Documents route — so closing the editor on a space's doc lands on its
+    // building's Documents.
     void navigate({
       to: "/listings/$listingId/documents",
       params: { listingId: buildingSectionListingId(listingId) },

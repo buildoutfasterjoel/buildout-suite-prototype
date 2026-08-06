@@ -489,7 +489,9 @@ export function applyLeaseSpaces(
     rebuildRentRoll(shell, property, spec)
     fillTermsForUnits(shell, property)
 
-    // Split: each suite's terms row moves down onto its own child deal.
+    // Split: each deal-bearing suite's terms row moves down onto its own child
+    // deal. A `stage` of `undefined` (below) marks a suite that stays on the
+    // building with no engagement, so the loop leaves those rows where they are.
     const termsByUnit = new Map(
       (shell.marketing.spaceLeaseTerms ?? []).map((t) => [t.unitId, t]),
     )
@@ -549,6 +551,11 @@ export function applyLeaseSpaces(
         unit.occupancy = 'occupied'
         unit.tenantName = occupied.tenant
         unit.leaseExpiration = isoDate(occupied.expiresInDays)
+        // Keep the rent roll naming the same tenant for the same unit — it is
+        // built above from `FIXTURE_TENANTS`, which knows nothing about the
+        // occupancy this loop is setting.
+        const rentRow = shell.financials.rentRoll.find((r) => r.unitId === unit.id)
+        if (rentRow) rentRow.tenant = occupied.tenant
       } else if (closedTenant) {
         unit.occupancy = 'occupied'
         unit.tenantName = closedTenant

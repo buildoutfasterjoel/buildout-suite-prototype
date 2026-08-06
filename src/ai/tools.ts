@@ -40,6 +40,7 @@ import {
   buildActivitySummaryText,
 } from "#/data/listingClientReport";
 import { buildingSectionListingId } from "#/components/deals/dealCardLink";
+import { visibleNavGroups } from "#/components/properties/dealNav";
 import {
   searchAllDef,
   listDealsDef,
@@ -136,14 +137,29 @@ export function resolveContactByName(name: string): Contact | null {
   );
 }
 
+/** The section slugs a space's own page actually has routes for. */
+const SPACE_SECTIONS = new Set(
+  visibleNavGroups("space", { leaseParent: false, showsUnderwriting: true }).flatMap((group) =>
+    group.items.map((item) => item.href),
+  ),
+);
+
 /**
  * Send a model-composed deal path to a space's own page, nested under its
- * building. `navigateTo` takes the path from the model, which composes it from
- * an id it looked up (see `navigateToDef`), so there is no link to fix — the
- * correction has to happen on the way out.
+ * building — but only for a section a space's page actually has. `navigateTo`
+ * takes the path from the model, which composes it from an id it looked up
+ * (see `navigateToDef`), so there is no link to fix — the correction has to
+ * happen on the way out.
  *
  *   /listings/{space}           → /listings/{building}/spaces/{space}/overview
  *   /listings/{space}/{section} → /listings/{building}/spaces/{space}/{section}
+ *     (only when {section} is one of `SPACE_SECTIONS`)
+ *
+ * A space has no `listing`, `spaces`, `vouchers`, or `edit` route, so a
+ * section outside `SPACE_SECTIONS` falls back to the pre-space-page behaviour
+ * instead: hand the section straight to the building, e.g.
+ * /listings/{space}/listing → /listings/{building}/listing. That keeps every
+ * model-composed path landing on a real page instead of a dead end.
  *
  * Anything else passes through untouched: another route, a path already
  * carrying a query or hash, an unknown id, or a building.
@@ -154,6 +170,8 @@ export function rewriteSpaceDealPath(path: string): string {
   const [, listingId, section] = match;
   const buildingId = getListing(listingId)?.parentDealId;
   if (!buildingId) return path;
+  const slug = !section || section === "/" ? "overview" : section.replace(/^\//, "").split("/")[0];
+  if (!SPACE_SECTIONS.has(slug)) return `/listings/${buildingId}${section ?? ""}`;
   // A space's sections live under its own page, so the section survives the
   // rewrite rather than being handed to the building.
   const leaf = !section || section === "/" ? "/overview" : section;

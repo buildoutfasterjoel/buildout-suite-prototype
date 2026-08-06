@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { visibleNavGroups } from "./dealNav";
 
@@ -47,10 +47,23 @@ describe("a space's nav and its routes", () => {
   });
 
   it("finds the routes it is looking for at all", () => {
-    // A guard on the guard: if the directory moved, both assertions above would
-    // pass on empty sets.
-    expect(routeSlugs.length).toBe(18);
+    // A guard on the guard: `readdirSync` throws on a missing directory, so this
+    // isn't protecting against the directory moving — it's protecting against
+    // one of the two sets above going empty (e.g. `visibleNavGroups` filtering
+    // everything out for "space") while the other still has entries, which
+    // would let both assertions above pass without actually comparing anything.
+    expect(routeSlugs.length).toBeGreaterThan(10);
     expect(routeSlugs).toContain("details");
     expect(routeSlugs).not.toContain("listing");
+  });
+
+  it("guards every section route", () => {
+    // A suite must never render another landlord's voucher under the wrong
+    // building's frame — see ab7b6be. Every route file under a space must call
+    // `useSpaceRoute` to enforce that.
+    const unguarded = readdirSync(SPACE_ROUTES_DIR)
+      .filter((f) => f.endsWith(".tsx") && f !== "index.tsx")
+      .filter((f) => !readFileSync(`${SPACE_ROUTES_DIR}${f}`, "utf8").includes("useSpaceRoute("));
+    expect(unguarded, "A space section route must call useSpaceRoute — see ab7b6be.").toEqual([]);
   });
 });

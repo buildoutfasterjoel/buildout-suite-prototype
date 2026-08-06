@@ -50,8 +50,8 @@ export function ContactTaskCard({
   // red — "this was overdue when you finished it", not a live warning.
   const isOverdue = !!task.date && task.date < todayISO();
   const type = taskTypeKey(task);
-  // A space deal has no page of its own, so the badge links wherever
-  // `dealCardLinkProps` sends it (the building's roster, for a space).
+  // The badge links wherever `dealCardLinkProps` sends it — a space's own page,
+  // nested under its building, for a space; the deal's own page otherwise.
   const dealListing = task.dealId ? getListing(task.dealId) : undefined;
 
   return (

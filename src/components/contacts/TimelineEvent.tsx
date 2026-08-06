@@ -209,8 +209,8 @@ export function TimelineEvent({
                   |
                 </span>
                 {event.associations.map((a, i) => {
-                  // A space deal has no page of its own, so the destination has
-                  // to be resolved from the deal rather than assumed.
+                  // A space opens its own page, nested under its building, so the
+                  // destination has to be resolved from the deal rather than assumed.
                   const deal = a.id ? getListing(a.id) : undefined;
                   return deal ? (
                     <Link

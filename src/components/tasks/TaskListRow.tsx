@@ -50,9 +50,10 @@ export function TaskListRow({
   const type = task.type as TaskTypeKey | null;
   const typeLabel = type ? TASK_TYPE_LABELS[type] : null;
 
-  // Where the source chip goes. A space deal has no page of its own, so deals
-  // route through `dealCardLinkProps`. Falls back to a plain chip if the record
-  // is gone — a dangling badge beats a dead link.
+  // Where the source chip goes. Deals route through `dealCardLinkProps`, which
+  // resolves a space to its own page, nested under its building, rather than
+  // assuming the deal's. Falls back to a plain chip if the record is gone — a
+  // dangling badge beats a dead link.
   const sourceListing =
     task.sourceKind === "deal" && task.dealId ? getListing(task.dealId) : undefined;
   const sourceLink = sourceListing

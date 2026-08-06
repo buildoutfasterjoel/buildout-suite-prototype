@@ -43,23 +43,30 @@ function SuiteTenant({ row, shellId }: { row: SuiteRow; shellId: string }) {
 
   const commit = () => {
     const next = value.trim();
+    const shell = getListing(shellId);
+    const rows = shell?.marketing.spaceLeaseTerms ?? [];
+    const existing = rows.find((t) => t.unitId === row.unitId);
     // Nothing to do when the trimmed value matches what's already on record —
     // opening the editor and blurring without typing must not write to the
     // store or claim a save happened. A genuine change (including clearing a
     // real override to blank, which reads as "" here too) still falls through.
-    if (next === (row.tenantName ?? "")) {
+    //
+    // `row.tenantName` is the *resolved* value (override, else the unit's own
+    // fact), so comparing a blank against it isn't enough: blanking a row whose
+    // name comes only from the unit's own fact — no shell override present —
+    // would look like a change even though there is nothing to clear, writing
+    // an identical array and toasting a save that never happened.
+    const noOverrideToClear = next === "" && !existing;
+    if (next === (row.tenantName ?? "") || noOverrideToClear) {
       setEditing(false);
       return;
     }
-    const shell = getListing(shellId);
     if (!shell) return;
-    const rows = shell.marketing.spaceLeaseTerms ?? [];
     // A blank override is removed rather than stored, so the shell never
     // accumulates rows holding nothing and the row falls back to the unit's own
     // tenant name. This is the only way a shell reacquires space terms, and it
     // holds exactly one field's worth.
     const withoutUnit = rows.filter((t) => t.unitId !== row.unitId);
-    const existing = rows.find((t) => t.unitId === row.unitId);
     updateDealMarketing(shellId, {
       spaceLeaseTerms: next
         ? [

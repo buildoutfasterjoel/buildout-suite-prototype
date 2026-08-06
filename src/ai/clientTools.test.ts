@@ -40,6 +40,15 @@ describe("rewriteSpaceDealPath", () => {
     );
   });
 
+  it("falls back to the building for a section a space's page does not have", () => {
+    const { parent, child } = building();
+    // A space has no `listing` route of its own — this is the pre-space-page
+    // behaviour, not a rewrite onto the space's page.
+    expect(rewriteSpaceDealPath(`/listings/${child.id}/listing`)).toBe(
+      `/listings/${parent.id}/listing`,
+    );
+  });
+
   it("leaves a building's own paths alone", () => {
     const { parent } = building();
     expect(rewriteSpaceDealPath(`/listings/${parent.id}`)).toBe(`/listings/${parent.id}`);
