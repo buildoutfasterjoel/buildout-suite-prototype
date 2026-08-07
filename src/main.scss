@@ -846,8 +846,28 @@
     word-break: break-word;
   }
 
+  // Assignee avatar (Figma "Avatar"). 20px, and the initials fallback is a
+  // soft grey gradient rather than a flat fill, so a photo-less assignee still
+  // reads as a portrait slot instead of a blank chip.
   &__avatar {
+    --bp-avatar-size: 20px;
+
     flex-shrink: 0;
+
+    .avatar-fallback {
+      padding: 3px 2px;
+      background-image: linear-gradient(
+        225deg,
+        var(--color-storm-grey-100, #eceef2) 0%,
+        var(--color-storm-grey-200, #d5dae2) 72.115%,
+        var(--color-storm-grey-300, #afb9ca) 100%
+      );
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 16px;
+      letter-spacing: 0.2px;
+      color: var(--color-storm-grey-600, #506079); // avatar/color
+    }
   }
 
   // Bottom row: badges (left, wrap) + due date (right).
@@ -902,50 +922,65 @@
       padding: 4px;
     }
 
-    // The associated record (deal or contact) on both task surfaces: the accent
-    // ghost badge — no fill, no border, so it reads as the hyperlink it is.
-    &--ghost {
+    // ── Association badges (the deal or contact a task hangs off) ───────────
+    //
+    // Two resting weights, one interaction. The rule is about information
+    // hierarchy, not decoration:
+    //
+    //   accent ghost  — when the association is the *differentiating* fact.
+    //                   On a contact's page every task is theirs, so the deal
+    //                   name is the thing that tells rows apart.
+    //   muted outline — when the association is *secondary* metadata. The Tasks
+    //                   page and the dashboard show dozens of rows at once, and
+    //                   a full column of hyperlink-blue outshouts the titles
+    //                   you're actually scanning.
+    //
+    // What must NOT differ is the affordance. Both are links, so both share the
+    // hover below: underline + shift to accent. Left to drift, the bordered
+    // chip reads as a tag and signals clickability *least* on the surfaces that
+    // have the most of them — backwards. Keep these two in lockstep; if you
+    // restyle one variant's hover, restyle both.
+    &--ghost,
+    &--source-muted {
       max-width: 100%;
-      padding: 4px;
-      color: var(--root-accent, #2042a7);
       text-decoration: none;
 
       svg {
-        color: var(--root-accent, #2042a7);
+        color: inherit; // so the icon follows the text through the hover shift
+      }
+
+      .text-truncate {
+        max-width: 200px;
+      }
+
+      &:is(a) {
+        transition:
+          color 0.12s ease,
+          border-color 0.12s ease;
       }
 
       &:is(a):hover {
         color: var(--root-accent, #2042a7);
         text-decoration: underline;
       }
-
-      .text-truncate {
-        max-width: 200px;
-      }
     }
 
-    // The associated record on the Tasks page: the muted outline badge. Same
-    // chip, turned down — a whole column of hyperlink-blue ghosts competes with
-    // the task titles at this density. Matches the property card's outline
-    // badge above, which encodes the same `badge/muted/outline` tokens.
+    // Contact column. Already sits at the hover color, so hovering adds only
+    // the underline.
+    &--ghost {
+      color: var(--root-accent, #2042a7);
+    }
+
+    // Tasks page + dashboard. Matches the property card's `__badge--outline`
+    // above, which encodes the same `badge/muted/outline` tokens. The border
+    // warms to accent alongside the text so the whole chip moves together on
+    // hover rather than the label alone.
     &--source-muted {
-      max-width: 100%;
       border: 1px solid var(--color-storm-grey-200, #d5dae2); // badge/muted/outline/border-color
       color: var(--color-storm-grey-800, #333a47); // badge/muted/outline/color
-      text-decoration: none;
-      transition: background-color 0.12s ease;
-
-      svg {
-        color: inherit;
-      }
-
-      .text-truncate {
-        max-width: 200px;
-      }
 
       &:is(a):hover {
-        background: var(--color-storm-grey-50, #f6f7f9);
-        color: var(--color-storm-grey-800, #333a47);
+        border-color: var(--color-buildout-blue-200, #c0dcfd);
       }
     }
   }
@@ -967,18 +1002,14 @@
       font-size: 14px;
     }
 
-    // Overdue reads as a filled pink badge rather than red text, so it carries
-    // the same weight as the other chips in the row instead of shouting.
+    // Overdue: red text and a 14px alarm icon, no fill. Tried as a filled pink
+    // chip; it read as heavier than the row deserved, so this is the design
+    // it went back to.
     &--overdue {
-      gap: 4px;
-      padding: 4px;
-      border-radius: var(--bp-border-radius-md, 6px);
-      background: var(--color-solid-pink-50, #fff0f1);
       font-weight: 600;
       color: var(--color-solid-pink-900, #900c12);
 
       svg {
-        font-size: 10px;
         color: var(--color-solid-pink-800, #af050d);
       }
     }

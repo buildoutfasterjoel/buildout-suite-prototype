@@ -31,8 +31,12 @@ import {
  * This page has room to spell things out, so the type badge carries its icon
  * *and* label (the contact column shows icon only). Everything else is turned
  * down instead: the assignee is an avatar with its name in a tooltip, and the
- * source badge is muted rather than the contact column's hyperlink-blue ghost
- * — at this density, a column of blue links pulls the eye off the task titles.
+ * source badge is the muted outline variant rather than the contact column's
+ * accent ghost — here the association is secondary metadata, so at this density
+ * a column of blue links pulls the eye off the task titles.
+ *
+ * Both variants share one hover (underline + accent) so "this is a link" is
+ * learned once across surfaces — see the association-badge block in main.scss.
  */
 export function TaskListRow({
   task,
@@ -92,20 +96,14 @@ export function TaskListRow({
             <Tooltip>
               <Tooltip.Trigger
                 render={
-                  <Avatar
-                    size="sm"
-                    className="contact-task-card__avatar"
-                    style={{ width: 18, height: 18 }}
-                  >
+                  <Avatar size="sm" className="contact-task-card__avatar">
                     {task.assigneeAvatarUrl && (
                       <Avatar.Image
                         src={task.assigneeAvatarUrl}
                         alt={task.assigneeName}
                       />
                     )}
-                    <Avatar.Fallback style={{ fontSize: 8 }}>
-                      {task.assigneeInitials}
-                    </Avatar.Fallback>
+                    <Avatar.Fallback>{task.assigneeInitials}</Avatar.Fallback>
                   </Avatar>
                 }
               />
