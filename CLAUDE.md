@@ -191,3 +191,4 @@ Use these skills when working in this prototype:
 - `/blueprint` — get component guidance and usage examples, use this always first for UI before doing custom elements.
 - `/icons` — find the right FontAwesome icon for a use case
 - `/prototype-review` — check consistency and branding before shipping
+- `/ship` — run the gates, push the branch, open the PR. Never merges.
