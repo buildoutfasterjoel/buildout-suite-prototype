@@ -1078,12 +1078,13 @@
 
 // The expanded "Contact Details" panel in the hero: a bordered, rounded
 // container (no fill) that sets the details apart from the white card behind it.
+// The expanded "Contact Details" panel in the hero. No border and no inset of
+// its own: the internal dividers between the record block, the fields and the
+// do-not-call switch already group the content, and a box around all of it read
+// as a second card sitting inside the first.
 .contact-details-panel {
-  border: 1px solid var(--color-storm-grey-100, #eceef2);
-  border-radius: var(--bp-border-radius-lg, 8px);
-  // Tighter at the top: the first row is a 28px icon button whose own padding
-  // already reads as inset, so a full 12px above it looked like a gap.
-  padding: 8px 12px 12px;
+  border: 0;
+  padding: 0;
 }
 
 // The hero's reach-out records (phone / email / address). Every measurement is
