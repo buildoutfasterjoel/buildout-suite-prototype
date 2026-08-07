@@ -8,6 +8,7 @@ describe("dealBreadcrumbTrail", () => {
     expect(dealBreadcrumbTrail(`/listings/${ID}`, ID)).toEqual({
       sectionLabel: null,
       detailId: null,
+      subsectionLabel: null,
     });
   });
 
@@ -15,6 +16,7 @@ describe("dealBreadcrumbTrail", () => {
     expect(dealBreadcrumbTrail(`/listings/${ID}/`, ID)).toEqual({
       sectionLabel: null,
       detailId: null,
+      subsectionLabel: null,
     });
   });
 
@@ -22,6 +24,7 @@ describe("dealBreadcrumbTrail", () => {
     expect(dealBreadcrumbTrail(`/listings/${ID}/leads`, ID)).toEqual({
       sectionLabel: "Leads",
       detailId: null,
+      subsectionLabel: null,
     });
   });
 
@@ -29,6 +32,7 @@ describe("dealBreadcrumbTrail", () => {
     expect(dealBreadcrumbTrail(`/listings/${ID}/leads/`, ID)).toEqual({
       sectionLabel: "Leads",
       detailId: null,
+      subsectionLabel: null,
     });
   });
 
@@ -40,6 +44,7 @@ describe("dealBreadcrumbTrail", () => {
     expect(dealBreadcrumbTrail(`/listings/${ID}/financials/space-9`, ID)).toEqual({
       sectionLabel: "Voucher",
       detailId: "space-9",
+      subsectionLabel: null,
     });
   });
 
@@ -47,6 +52,7 @@ describe("dealBreadcrumbTrail", () => {
     expect(dealBreadcrumbTrail(`/listings/${ID}/vouchers/space-9`, ID)).toEqual({
       sectionLabel: "Vouchers",
       detailId: "space-9",
+      subsectionLabel: null,
     });
   });
 
@@ -54,6 +60,7 @@ describe("dealBreadcrumbTrail", () => {
     expect(dealBreadcrumbTrail(`/listings/${ID}/edit`, ID)).toEqual({
       sectionLabel: null,
       detailId: null,
+      subsectionLabel: null,
     });
   });
 
@@ -61,6 +68,7 @@ describe("dealBreadcrumbTrail", () => {
     expect(dealBreadcrumbTrail("/listings/other/leads", ID)).toEqual({
       sectionLabel: null,
       detailId: null,
+      subsectionLabel: null,
     });
   });
 
@@ -68,6 +76,7 @@ describe("dealBreadcrumbTrail", () => {
     expect(dealBreadcrumbTrail(`/listings/${ID}/listing`, ID)).toEqual({
       sectionLabel: "Listing",
       detailId: null,
+      subsectionLabel: null,
     });
   });
 });
@@ -78,9 +87,15 @@ describe("NAV_GROUPS", () => {
     expect(new Set(hrefs).size).toBe(hrefs.length);
   });
 
-  it("leads Marketing with the Listing page", () => {
+  it("leads Marketing with the Details/Listing swap pair, Details first", () => {
+    // NAV_GROUPS is the full, shape-agnostic list — both items are always
+    // present here; `visibleNavGroups` is what shows exactly one per shape.
     const marketing = NAV_GROUPS.find((g) => g.label === "Marketing");
     expect(marketing?.items[0]).toMatchObject({
+      label: "Details",
+      href: "details",
+    });
+    expect(marketing?.items[1]).toMatchObject({
       label: "Listing",
       href: "listing",
     });
@@ -161,5 +176,70 @@ describe("visibleNavGroups", () => {
         }
       }
     }
+  });
+});
+
+describe("the details / listing swap", () => {
+  const opts = { leaseParent: false, showsUnderwriting: false };
+
+  it("gives a space Details and never Listing", () => {
+    const hrefs = visibleNavGroups("space", opts).flatMap((g) => g.items.map((i) => i.href));
+    expect(hrefs).toContain("details");
+    expect(hrefs).not.toContain("listing");
+  });
+
+  it("gives every other shape Listing and never Details", () => {
+    for (const shape of ["sale", "flat-lease", "shell"] as const) {
+      const hrefs = visibleNavGroups(shape, opts).flatMap((g) => g.items.map((i) => i.href));
+      expect(hrefs).toContain("listing");
+      expect(hrefs).not.toContain("details");
+    }
+  });
+
+  it("shows exactly one of the two for every shape — never both, never neither", () => {
+    for (const shape of ["sale", "flat-lease", "shell", "space"] as const) {
+      const hrefs = visibleNavGroups(shape, opts).flatMap((g) => g.items.map((i) => i.href));
+      const present = hrefs.filter((h) => h === "details" || h === "listing");
+      expect(present).toHaveLength(1);
+    }
+  });
+
+  it("gives a space no Spaces and no Vouchers index", () => {
+    const hrefs = visibleNavGroups("space", opts).flatMap((g) => g.items.map((i) => i.href));
+    expect(hrefs).not.toContain("spaces");
+    expect(hrefs).not.toContain("vouchers");
+    // A space still earns its own commission, so it keeps the single pair.
+    expect(hrefs).toContain("financials");
+    expect(hrefs).toContain("financial-documents");
+  });
+});
+
+describe("dealBreadcrumbTrail — the space page's third level", () => {
+  it("names the section, the space and the subsection", () => {
+    expect(dealBreadcrumbTrail("/listings/L1/spaces/S9/leads", "L1")).toEqual({
+      sectionLabel: "Spaces",
+      detailId: "S9",
+      subsectionLabel: "Leads",
+    });
+  });
+
+  it("reports no subsection on the space's own root", () => {
+    expect(dealBreadcrumbTrail("/listings/L1/spaces/S9", "L1")).toEqual({
+      sectionLabel: "Spaces",
+      detailId: "S9",
+      subsectionLabel: null,
+    });
+  });
+
+  it("labels the space's Details subsection", () => {
+    expect(dealBreadcrumbTrail("/listings/L1/spaces/S9/details", "L1").subsectionLabel).toBe("Details");
+  });
+
+  it("reports no subsection for a third segment absent from NAV_GROUPS", () => {
+    expect(dealBreadcrumbTrail("/listings/L1/spaces/S9/nonsense", "L1").subsectionLabel).toBeNull();
+  });
+
+  it("tolerates a trailing slash after the space id", () => {
+    expect(dealBreadcrumbTrail("/listings/L1/spaces/S9/", "L1").subsectionLabel).toBeNull();
   });
 });

@@ -55,8 +55,8 @@ export function ContactInquiryCard({
     listingId,
   );
 
-  // Leads are a building-level section, so a space's inquiry opens its
-  // building's Leads list — a space has no page of its own.
+  // Leads are a building-level section — a space's own page has no Leads
+  // route — so a space's inquiry opens its building's Leads list.
   const openLeadsRow = () =>
     void navigate({
       to: "/listings/$listingId/leads",

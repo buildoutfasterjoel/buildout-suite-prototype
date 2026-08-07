@@ -63,14 +63,14 @@ function VouchersIndexRoute() {
               onClick={(e) => {
                 if (shouldIgnoreRowClick(e)) return;
                 void navigate({
-                  to: "/listings/$listingId/vouchers/$spaceId",
+                  to: "/listings/$listingId/spaces/$spaceId/financials",
                   params: { listingId, spaceId: row.dealId },
                 });
               }}
             >
               <Table.Cell className="fw-medium">
                 <Link
-                  to="/listings/$listingId/vouchers/$spaceId"
+                  to="/listings/$listingId/spaces/$spaceId/financials"
                   params={{ listingId, spaceId: row.dealId }}
                   className="text-reset"
                 >

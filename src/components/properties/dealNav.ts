@@ -48,9 +48,18 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Marketing",
     items: [
+      // A space's own form. It occupies the Listing slot rather than sitting
+      // beside it: a parent deal's own marketing form is Listing, a space's is
+      // Details, and `visibleNavGroups` shows exactly one of the two.
+      //
+      // Shares `faSign` with Listing on purpose, for the same reason Vouchers and
+      // Voucher share theirs below: a swap pair is never rendered together, so one
+      // icon for one slot is right. (It must not share with `Plans`, which has no
+      // shape rule and so renders alongside Details for a space.)
+      { label: "Details", href: "details", icon: faSign },
       // The listing's own field data — the form that used to be the Listing tab
-      // of `/edit`. First in the group: it is the content every other Marketing
-      // section (Website, Documents, syndication) reads from.
+      // of `/edit`. It is the content every other Marketing section (Website,
+      // Documents, syndication) reads from.
       { label: "Listing", href: "listing", icon: faSign },
       { label: "Leads", href: "leads", icon: faAddressBook },
       { label: "Documents", href: "documents", icon: faFileLines },
@@ -90,20 +99,35 @@ export const NAV_GROUPS: NavGroup[] = [
 export function dealBreadcrumbTrail(
   pathname: string,
   listingId: string,
-): { sectionLabel: string | null; detailId: string | null } {
-  const none = { sectionLabel: null, detailId: null };
+): {
+  sectionLabel: string | null;
+  detailId: string | null;
+  subsectionLabel: string | null;
+} {
+  const none = { sectionLabel: null, detailId: null, subsectionLabel: null };
   const prefix = `/listings/${listingId}`;
   if (pathname !== prefix && !pathname.startsWith(`${prefix}/`)) return none;
 
-  const [section, detail] = pathname.slice(prefix.length).replace(/^\//, "").split("/");
+  const [section, detail, subsection] = pathname
+    .slice(prefix.length)
+    .replace(/^\//, "")
+    .split("/");
   if (!section) return none;
 
-  const item = NAV_GROUPS.flatMap((g) => g.items).find((i) => i.href === section);
+  const items = NAV_GROUPS.flatMap((g) => g.items);
+  const item = items.find((i) => i.href === section);
   if (!item) return none;
 
   // `||`, not `??`: a trailing slash splits to an empty string, which is no more
-  // a detail id than a missing segment is.
-  return { sectionLabel: item.label, detailId: detail || null };
+  // a detail id or a subsection than a missing segment is.
+  return {
+    sectionLabel: item.label,
+    detailId: detail || null,
+    // The third segment is a section of the *drilled-into record* — a space's own
+    // nav — so it is looked up in the same NAV_GROUPS rather than a second list.
+    // An unknown slug yields null rather than inventing a label from it.
+    subsectionLabel: items.find((i) => i.href === (subsection || null))?.label ?? null,
+  };
 }
 
 /**
@@ -120,6 +144,11 @@ export function visibleNavGroups(
   return NAV_GROUPS.map((group) => ({
     ...group,
     items: group.items.filter((item) => {
+      // A space's own marketing form is Details; every other shape's is Listing.
+      // Exactly one of the two is ever shown — the same swap the Vouchers /
+      // Voucher pair below uses.
+      if (item.href === "details") return shape === "space";
+      if (item.href === "listing") return shape !== "space";
       // A shell's spaces each earn their own commission, so it gets the Vouchers
       // index; every other shape keeps the single Voucher + Invoices pair. The
       // two are mutually exclusive — never show both.

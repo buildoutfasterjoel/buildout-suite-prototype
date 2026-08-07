@@ -100,6 +100,9 @@ export function addPropertyUnit(
     offices: null,
     conferenceRooms: null,
     furnished: false,
+    occupancy: 'vacant',
+    tenantName: null,
+    leaseExpiration: null,
     saleHistory: [],
   }
   updateProperty(propertyId, { units: [...existing.units, created] })

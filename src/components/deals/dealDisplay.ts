@@ -39,6 +39,25 @@ export function formatLongDate(iso: string | null): string {
   });
 }
 
+/**
+ * "Mar 2027" from an ISO string, or a dash when absent — no day.
+ *
+ * Parses the `YYYY-MM-DD` parts directly rather than handing the string to
+ * `Date`: `new Date('2027-04-01')` parses as UTC midnight, so in any
+ * negative-offset timezone `toLocaleDateString` renders the month before —
+ * "Mar 2027" instead of "Apr 2027". Building the `Date` from local parts (the
+ * way `localISO` in `stageGates.ts` goes the other direction, `Date` → parts)
+ * keeps this on the month the string actually names.
+ */
+export function formatMonthYear(iso: string | null): string {
+  if (!iso) return "--";
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString("en-US", {
+    month: "short",
+    year: "numeric",
+  });
+}
+
 /** "Jun 12, 2026 · 3:40 PM" from an ISO string, or a dash when absent. */
 export function formatDateTime(iso: string | null): string {
   if (!iso) return "--";

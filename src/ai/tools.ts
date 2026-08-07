@@ -40,6 +40,7 @@ import {
   buildActivitySummaryText,
 } from "#/data/listingClientReport";
 import { buildingSectionListingId } from "#/components/deals/dealCardLink";
+import { visibleNavGroups } from "#/components/properties/dealNav";
 import {
   searchAllDef,
   listDealsDef,
@@ -136,22 +137,32 @@ export function resolveContactByName(name: string): Contact | null {
   );
 }
 
+/** The section slugs a space's own page actually has routes for. */
+const SPACE_SECTIONS = new Set(
+  visibleNavGroups("space", { leaseParent: false, showsUnderwriting: true }).flatMap((group) =>
+    group.items.map((item) => item.href),
+  ),
+);
+
 /**
- * Keep a model-composed deal path off a space's page. A space has no page of
- * its own: its terms live on its building's Spaces roster and its voucher
- * behind the building's Vouchers section. `navigateTo` takes the path from the
- * model, which composes it from an id it looked up (see `navigateToDef`), so
- * there is no link to fix — the correction has to happen on the way out.
+ * Send a model-composed deal path to a space's own page, nested under its
+ * building — but only for a section a space's page actually has. `navigateTo`
+ * takes the path from the model, which composes it from an id it looked up
+ * (see `navigateToDef`), so there is no link to fix — the correction has to
+ * happen on the way out.
  *
- *   /listings/{space}           → /listings/{building}/spaces?space={space}
- *   /listings/{space}/{section} → /listings/{building}/{section}
+ *   /listings/{space}           → /listings/{building}/spaces/{space}/overview
+ *   /listings/{space}/{section} → /listings/{building}/spaces/{space}/{section}
+ *     (only when {section} is one of `SPACE_SECTIONS`)
+ *
+ * A space has no `listing`, `spaces`, `vouchers`, or `edit` route, so a
+ * section outside `SPACE_SECTIONS` falls back to the pre-space-page behaviour
+ * instead: hand the section straight to the building, e.g.
+ * /listings/{space}/listing → /listings/{building}/listing. That keeps every
+ * model-composed path landing on a real page instead of a dead end.
  *
  * Anything else passes through untouched: another route, a path already
  * carrying a query or hash, an unknown id, or a building.
- *
- * The `?space=` rides along inside the path string because the injected
- * `navigate` takes a pathname; the router splits the query off when it commits
- * the location.
  */
 export function rewriteSpaceDealPath(path: string): string {
   const match = /^\/listings\/([^/?#]+)(\/[^?#]*)?$/.exec(path);
@@ -159,10 +170,12 @@ export function rewriteSpaceDealPath(path: string): string {
   const [, listingId, section] = match;
   const buildingId = getListing(listingId)?.parentDealId;
   if (!buildingId) return path;
-  if (!section || section === "/") {
-    return `/listings/${buildingId}/spaces?space=${listingId}`;
-  }
-  return `/listings/${buildingId}${section}`;
+  const slug = !section || section === "/" ? "overview" : section.replace(/^\//, "").split("/")[0];
+  if (!SPACE_SECTIONS.has(slug)) return `/listings/${buildingId}${section ?? ""}`;
+  // A space's sections live under its own page, so the section survives the
+  // rewrite rather than being handed to the building.
+  const leaf = !section || section === "/" ? "/overview" : section;
+  return `/listings/${buildingId}/spaces/${listingId}${leaf}`;
 }
 
 /**

@@ -19,6 +19,15 @@ import type {
   VisualMediaLink,
 } from './types'
 
+/**
+ * The single stub unit `createProposalListing` seeds. It stands for the whole
+ * building — the thing a `flat-lease` deal markets before any space is split off
+ * — so it is deliberately not a suite. `buildingSuites` excludes it by this
+ * constant rather than by a literal, so renaming the label cannot silently start
+ * listing it as a suite.
+ */
+export const WHOLE_PROPERTY_LABEL = 'Whole Property'
+
 /** A blank per-unit lease-terms record — used as a default for units without terms yet. */
 export function emptySpaceLeaseTerms(unitId: string): SpaceLeaseTerms {
   return {
@@ -408,7 +417,7 @@ function buildStubProperty(draft: NewListingDraft, now: string): Property {
     units: [
       {
         id: crypto.randomUUID(),
-        label: 'Whole Property',
+        label: WHOLE_PROPERTY_LABEL,
         unitType:
           draft.propertyType === 'multifamily'
             ? 'residential'
@@ -426,6 +435,9 @@ function buildStubProperty(draft: NewListingDraft, now: string): Property {
         offices: null,
         conferenceRooms: null,
         furnished: false,
+        occupancy: 'vacant',
+        tenantName: null,
+        leaseExpiration: null,
         saleHistory: [],
       },
     ],

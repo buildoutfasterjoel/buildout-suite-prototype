@@ -26,20 +26,26 @@ describe("rewriteSpaceDealPath", () => {
     return { parent, child };
   }
 
-  it("sends a space's own path to its building's roster, with the row named", () => {
+  it("rewrites a space's bare deal path to its page under its building", () => {
     const { parent, child } = building();
     expect(rewriteSpaceDealPath(`/listings/${child.id}`)).toBe(
-      `/listings/${parent.id}/spaces?space=${child.id}`,
+      `/listings/${parent.id}/spaces/${child.id}/overview`,
     );
   });
 
-  it("keeps a section, and moves it to the building that owns it", () => {
+  it("keeps the section when rewriting a space's sectioned path", () => {
     const { parent, child } = building();
     expect(rewriteSpaceDealPath(`/listings/${child.id}/leads`)).toBe(
-      `/listings/${parent.id}/leads`,
+      `/listings/${parent.id}/spaces/${child.id}/leads`,
     );
-    expect(rewriteSpaceDealPath(`/listings/${child.id}/vouchers/${child.id}`)).toBe(
-      `/listings/${parent.id}/vouchers/${child.id}`,
+  });
+
+  it("falls back to the building for a section a space's page does not have", () => {
+    const { parent, child } = building();
+    // A space has no `listing` route of its own — this is the pre-space-page
+    // behaviour, not a rewrite onto the space's page.
+    expect(rewriteSpaceDealPath(`/listings/${child.id}/listing`)).toBe(
+      `/listings/${parent.id}/listing`,
     );
   });
 

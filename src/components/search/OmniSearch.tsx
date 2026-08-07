@@ -132,9 +132,9 @@ export function OmniSearch() {
 
   /**
    * Open a deal row. Where that lands is `dealCardLinkProps`' call, not this
-   * palette's — a space has no page of its own, so it opens its building's
-   * roster instead. Needs route params (and search), so it can't go through the
-   * plain-path `navigate` above.
+   * palette's — a space opens its own page, nested under its building. Needs
+   * route params (and search), so it can't go through the plain-path
+   * `navigate` above.
    */
   const openDeal = (deal: Listing) => {
     router.navigate(dealCardLinkProps(deal));

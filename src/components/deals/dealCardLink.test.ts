@@ -12,16 +12,17 @@ describe("dealCardLinkProps", () => {
     });
   });
 
-  it("sends a space deal to its building roster with its row named", () => {
-    const parent = createProposalListing({ ...emptyDraft(), name: "Mall", dealType: "Lease" });
-    const unit = addPropertyUnit(parent.propertyId, { label: "Suite 100", sqft: 900, unitType: "retail" })!;
-    const child = addSpaceToDeal(parent.id, unit.id)!.deal;
-
-    expect(dealCardLinkProps(child)).toEqual({
-      to: "/listings/$listingId/spaces",
-      params: { listingId: parent.id },
-      search: { space: child.id },
+  it("sends a space to its own page under its building", () => {
+    const props = dealCardLinkProps({ id: "S9", parentDealId: "L1" } as never);
+    expect(props).toEqual({
+      to: "/listings/$listingId/spaces/$spaceId/overview",
+      params: { listingId: "L1", spaceId: "S9" },
     });
+  });
+
+  it("sends a non-space to its own deal page", () => {
+    const props = dealCardLinkProps({ id: "L1", parentDealId: null } as never);
+    expect(props).toEqual({ to: "/listings/$listingId", params: { listingId: "L1" } });
   });
 });
 

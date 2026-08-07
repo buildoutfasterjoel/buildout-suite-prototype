@@ -165,8 +165,8 @@ export function PublishPreview({
                       Review
                     </Badge>
                   </label>
-                  {/* Documents belong to the building, and a space has no page
-                      of its own — so the id is resolved, not assumed. A raw
+                  {/* Documents belong to the building — a space's own page has no
+                      Documents route — so the id is resolved, not assumed. A raw
                       anchor on purpose: this opens a new tab. */}
                   <a
                     href={`/listings/${buildingSectionListingId(deal.id)}/documents`}
