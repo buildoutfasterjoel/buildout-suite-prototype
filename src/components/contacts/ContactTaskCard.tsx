@@ -27,8 +27,11 @@ import {
  *    — muted with no icon normally, red + bold with an alarm icon when overdue.
  *
  * The type badge is icon-only here (the Tasks page shows icon + label) and the
- * deal reads as a hyperlink rather than a chip, keeping this narrow column
- * legible.
+ * deal takes the accent ghost badge rather than the Tasks page's muted outline:
+ * every task on this page belongs to the same contact, so the deal name is what
+ * tells the rows apart and earns the emphasis. Both variants share one hover
+ * (underline + accent) so the link affordance reads the same on either surface
+ * — see the association-badge block in main.scss.
  *
  * Self-contained until Blueprint ships a Task component. Completion is
  * controlled by the parent panel, so `done`/`onToggle` come in as props.
@@ -81,20 +84,14 @@ export function ContactTaskCard({
               <Tooltip>
                 <Tooltip.Trigger
                   render={
-                    <Avatar
-                      size="sm"
-                      className="contact-task-card__avatar"
-                      style={{ width: 18, height: 18 }}
-                    >
+                    <Avatar size="sm" className="contact-task-card__avatar">
                       {task.assigneeAvatarUrl && (
                         <Avatar.Image
                           src={task.assigneeAvatarUrl}
                           alt={task.assigneeName ?? task.assigneeInitials}
                         />
                       )}
-                      <Avatar.Fallback style={{ fontSize: 8 }}>
-                        {task.assigneeInitials}
-                      </Avatar.Fallback>
+                      <Avatar.Fallback>{task.assigneeInitials}</Avatar.Fallback>
                     </Avatar>
                   }
                 />

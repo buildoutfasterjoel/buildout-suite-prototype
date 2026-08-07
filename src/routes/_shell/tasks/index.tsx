@@ -381,8 +381,14 @@ function TasksPage() {
             {filtered.length === 0 ? (
               empty
             ) : (
-              // The rows scroll inside a bounded box so pagination stays visible.
-              <div className="d-flex flex-column gap-3 flex-grow-1 overflow-hidden">
+              // The rows scroll inside a bounded box so pagination stays
+              // visible. `minHeight: 0` (not overflow-hidden) is what bounds
+              // this flex child — clipping here would shave the focus ring off
+              // the pagination links sitting flush against its bottom edge.
+              <div
+                className="d-flex flex-column gap-3 flex-grow-1"
+                style={{ minHeight: 0 }}
+              >
                 <div className="border rounded-3 overflow-auto flex-grow-1">
                   <div className="px-3">
                     {paged.map((t) => (
