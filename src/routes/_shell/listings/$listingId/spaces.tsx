@@ -200,11 +200,7 @@ function SuiteRowItem({
         <SuiteTenant row={row} shellId={listingId} />
       ) : (
         canAddSpace && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onStartDeal(row.unitId)}
-          >
+          <Button variant="outline" onClick={() => onStartDeal(row.unitId)}>
             Start a deal
           </Button>
         )

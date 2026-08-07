@@ -144,7 +144,7 @@ describe('groupSuites', () => {
        stage: null, status: 'Vacant', leaseRate: null, leaseRateUnits: 'SF/Yr',
        tenantName: null, leaseExpiration: null, ...over }) as SuiteRow
 
-  it('sorts each suite into deals, available and occupied, keeping label order', () => {
+  it('sorts each suite into deals, available and occupied', () => {
     const { deals, available, occupied } = groupSuites([
       row({ label: 'Suite 100', status: 'Vacant' }),
       row({ label: 'Suite 200', dealId: 'd1', stage: 'active', status: 'Active' }),
@@ -153,9 +153,37 @@ describe('groupSuites', () => {
       row({ label: 'Suite 500', status: 'Vacant' }),
     ])
 
-    expect(deals.map((r) => r.label)).toEqual(['Suite 200', 'Suite 400'])
+    // Suite 400 leads on stage, not on label: Inactive precedes Active.
+    expect(deals.map((r) => r.label)).toEqual(['Suite 400', 'Suite 200'])
+    // The groups with no ladder to run down keep the incoming label order.
     expect(available.map((r) => r.label)).toEqual(['Suite 100', 'Suite 500'])
     expect(occupied.map((r) => r.label)).toEqual(['Suite 300'])
+  })
+
+  it('runs the deals down the ladder rather than by suite number', () => {
+    const { deals } = groupSuites([
+      row({ label: 'Suite 100', dealId: 'd1', stage: 'closed', status: 'Closed' }),
+      row({ label: 'Suite 200', dealId: 'd2', stage: 'inactive', status: 'Lost' }),
+      row({ label: 'Suite 300', dealId: 'd3', stage: 'proposal', status: 'Inactive' }),
+      row({ label: 'Suite 400', dealId: 'd4', stage: 'under-contract', status: 'Under Contract' }),
+      row({ label: 'Suite 500', dealId: 'd5', stage: 'active', status: 'Active' }),
+    ])
+
+    expect(deals.map((r) => r.status)).toEqual([
+      'Inactive', 'Active', 'Under Contract', 'Closed', 'Lost',
+    ])
+  })
+
+  it('keeps suites at one stage in the label order they arrived in', () => {
+    // Stable sort, so the numeric collation `buildingSuites` applied survives
+    // inside each stage — three Inactive suites still read 100, 200, 300.
+    const { deals } = groupSuites([
+      row({ label: 'Suite 100', dealId: 'd1', stage: 'proposal', status: 'Inactive' }),
+      row({ label: 'Suite 200', dealId: 'd2', stage: 'proposal', status: 'Inactive' }),
+      row({ label: 'Suite 300', dealId: 'd3', stage: 'proposal', status: 'Inactive' }),
+    ])
+
+    expect(deals.map((r) => r.label)).toEqual(['Suite 100', 'Suite 200', 'Suite 300'])
   })
 
   it('keeps a closed deal with the deals — its row still behaves like one', () => {

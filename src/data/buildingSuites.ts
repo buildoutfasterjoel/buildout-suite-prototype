@@ -1,7 +1,7 @@
 import type { LeaseRateUnits, Listing, PropertyStatus, PropertyUnit } from './types'
 import { getListing, getProperty } from './store'
 import { getChildDeals } from './leaseSpaces'
-import { dealStageLabel, type DealStageLabel } from './dealShape'
+import { availableStages, dealStageLabel, type DealStageLabel } from './dealShape'
 import { WHOLE_PROPERTY_LABEL } from './createListing'
 
 /**
@@ -122,17 +122,27 @@ export function buildingSuites(shellDealId: string): SuiteRow[] {
  * Occupancy never pulls a suite out of `deals` — same rule as `suiteStatus`,
  * where a deal outranks the unit's own occupancy.
  *
- * A grouping, not a re-sort: `buildingSuites` keeps one order because the
- * Vouchers index shares it, and each group here preserves it. Which suites bunch
- * together is a fact about how the directory reads, not about the building.
+ * The deals run down the ladder — Inactive, Active, Under Contract, Closed, then
+ * Lost — reading as the progression a suite makes rather than as suite numbers.
+ * The order comes from `availableStages`, the same list that fills the stage
+ * dropdown on each row, so the section and the menu inside it cannot disagree.
+ * Sorting is stable, so suites at one stage keep the label order below.
+ *
+ * The other two groups are a grouping, not a re-sort: `buildingSuites` holds one
+ * order because the Vouchers index shares it, and both preserve it.
  */
 export function groupSuites(rows: SuiteRow[]): {
   deals: SuiteRow[]
   available: SuiteRow[]
   occupied: SuiteRow[]
 } {
+  const ladder = availableStages('space')
+  // A row in this group always has a stage — it is there because it has a deal.
+  // The fallback sorts an impossible row last rather than to the front on -1.
+  const rank = (r: SuiteRow) => (r.stage ? ladder.indexOf(r.stage) : ladder.length)
+
   return {
-    deals: rows.filter((r) => r.dealId),
+    deals: rows.filter((r) => r.dealId).sort((a, b) => rank(a) - rank(b)),
     available: rows.filter((r) => !r.dealId && r.status !== 'Occupied'),
     occupied: rows.filter((r) => !r.dealId && r.status === 'Occupied'),
   }
