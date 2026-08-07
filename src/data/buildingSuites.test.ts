@@ -3,7 +3,7 @@ import { createProposalListing, emptyDraft, emptySpaceLeaseTerms } from './creat
 import { addPropertyUnit, addSpaceToDeal } from './leaseSpaces'
 import { commitStageTransition, updateDealMarketing } from './actions'
 import { getProperty, updateProperty } from './store'
-import { buildingSuites, suiteStatus } from './buildingSuites'
+import { buildingSuites, groupSuites, suiteStatus, type SuiteRow } from './buildingSuites'
 
 function makeShell() {
   return createProposalListing({ ...emptyDraft(), name: 'Tower Assignment', dealType: 'Lease' })
@@ -59,7 +59,27 @@ describe('buildingSuites', () => {
     const child = addSpaceToDeal(shell.id, unit.id)!.deal
     commitStageTransition({ dealId: child.id, targetStage: 'active', actor: 'T' })
 
-    expect(buildingSuites(shell.id)[0].status).toBe('Available')
+    expect(buildingSuites(shell.id)[0].status).toBe('Active')
+  })
+
+  it("reports the deal's own stage, not what the building advertises", () => {
+    const shell = makeShell()
+    const unit = addPropertyUnit(shell.propertyId, { label: 'Suite 100', sqft: 1000, unitType: 'office' })!
+    const child = addSpaceToDeal(shell.id, unit.id)!.deal
+
+    // A fresh space deal sits at `proposal`, which the directory must report as
+    // the space ladder's own label — not the marketing translation the building's
+    // availability table uses.
+    expect(buildingSuites(shell.id)[0].status).toBe('Inactive')
+
+    for (const [stage, label] of [
+      ['active', 'Active'],
+      ['under-contract', 'Under Contract'],
+      ['closed', 'Closed'],
+    ] as const) {
+      commitStageTransition({ dealId: child.id, targetStage: stage, actor: 'T' })
+      expect(buildingSuites(shell.id)[0].status).toBe(label)
+    }
   })
 
   it("carries the deal's rate onto the row", () => {
@@ -115,6 +135,55 @@ describe('buildingSuites', () => {
     // no suites added to it has an empty directory — not a row for itself.
     const shell = makeShell()
     expect(buildingSuites(shell.id)).toEqual([])
+  })
+})
+
+describe('groupSuites', () => {
+  const row = (over: Partial<SuiteRow>): SuiteRow =>
+    ({ unitId: over.label ?? 'u', label: 'Suite 1', sqft: 0, dealId: null,
+       stage: null, status: 'Vacant', leaseRate: null, leaseRateUnits: 'SF/Yr',
+       tenantName: null, leaseExpiration: null, ...over }) as SuiteRow
+
+  it('sorts each suite into deals, available and occupied, keeping label order', () => {
+    const { deals, available, occupied } = groupSuites([
+      row({ label: 'Suite 100', status: 'Vacant' }),
+      row({ label: 'Suite 200', dealId: 'd1', stage: 'active', status: 'Active' }),
+      row({ label: 'Suite 300', status: 'Occupied', tenantName: 'Acme' }),
+      row({ label: 'Suite 400', dealId: 'd2', stage: 'proposal', status: 'Inactive' }),
+      row({ label: 'Suite 500', status: 'Vacant' }),
+    ])
+
+    expect(deals.map((r) => r.label)).toEqual(['Suite 200', 'Suite 400'])
+    expect(available.map((r) => r.label)).toEqual(['Suite 100', 'Suite 500'])
+    expect(occupied.map((r) => r.label)).toEqual(['Suite 300'])
+  })
+
+  it('keeps a closed deal with the deals — its row still behaves like one', () => {
+    // A closed space is leased, so it resembles the occupied suites. It groups
+    // with the deals anyway: the row links to its deal and carries a stage
+    // control, which is what these sections are cut by.
+    const { deals, occupied } = groupSuites([
+      row({ label: 'Suite 100', dealId: 'd1', stage: 'closed', status: 'Closed' }),
+    ])
+
+    expect(deals.map((r) => r.label)).toEqual(['Suite 100'])
+    expect(occupied).toEqual([])
+  })
+
+  it('keeps a worked suite with the deals even when the unit is still occupied', () => {
+    // The same rule `suiteStatus` states: a deal outranks the asset's occupancy.
+    // Such a row reports its stage, never 'Occupied', so it must not sink.
+    const { deals, available, occupied } = groupSuites([
+      row({ label: 'Suite 100', dealId: 'd1', stage: 'active', status: 'Active' }),
+    ])
+
+    expect(deals.map((r) => r.label)).toEqual(['Suite 100'])
+    expect(available).toEqual([])
+    expect(occupied).toEqual([])
+  })
+
+  it('returns three empty groups for an empty directory', () => {
+    expect(groupSuites([])).toEqual({ deals: [], available: [], occupied: [] })
   })
 })
 
