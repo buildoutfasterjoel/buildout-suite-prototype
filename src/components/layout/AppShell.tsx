@@ -3,6 +3,7 @@ import { useHotkey } from "@tanstack/react-hotkeys";
 import { CircularProgress } from "@buildoutinc/blueprint-react/ui/Progress";
 import { ToasterProvider } from "@buildoutinc/blueprint-react/ui/Toast";
 import { ToastBridge } from "#/components/layout/ToastBridge";
+import { UndoHotkey } from "#/components/layout/UndoHotkey";
 import { GlobalNavbar } from "#/components/layout/GlobalNavbar";
 import { AssistantSidebar } from "#/components/ai/AssistantSidebar";
 import { OmniSearch } from "#/components/search/OmniSearch";
@@ -28,6 +29,7 @@ export function AppShell() {
   return (
     <ToasterProvider>
       <ToastBridge />
+      <UndoHotkey />
       <div className="app-shell vh-100 d-flex flex-column overflow-hidden">
         <GlobalNavbar />
         <div className="flex-grow-1 d-flex overflow-hidden">

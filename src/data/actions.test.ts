@@ -21,7 +21,7 @@ import { closeProbabilityForStage, commissionForecast } from './commission'
 import { publishReadiness } from './stageGates'
 import { getContactDetailClient, listContactsForDeal } from './selectors'
 import { TEAMMATES } from './teammates'
-import { setNotifier } from '#/lib/notify'
+import { setNotifier, type NotifyItem } from '#/lib/notify'
 
 describe('actions', () => {
   it('linkContactToDeal attaches a contact and shows in the reverse selector', () => {
@@ -181,8 +181,14 @@ describe('actions', () => {
   })
 
   it('commitStageTransition notifies on every successful move', () => {
-    const items: { title: string; description?: string }[] = []
-    setNotifier((i) => items.push(i))
+    const items: NotifyItem[] = []
+    setNotifier({
+      show: (i) => {
+        items.push(i)
+        return `toast-${items.length}`
+      },
+      dismiss: () => {},
+    })
     try {
       const { deal } = createDeal({ ...emptyDraft(), name: 'Notify Test', address: '3 Bell Rd' })
       // A non-publishing move announces the target stage.
