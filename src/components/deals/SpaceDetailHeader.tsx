@@ -1,10 +1,12 @@
 import { Link, useLocation } from "@tanstack/react-router";
+import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Breadcrumb } from "@buildoutinc/blueprint-react/ui/Breadcrumb";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faHandshake } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing, Property } from "#/data/types";
 import { dealBreadcrumbTrail } from "#/components/properties/dealNav";
-import { getPhotoUrl } from "#/components/properties/propertyDisplay";
+import { hash, getRefId, getPhotoUrl } from "#/components/properties/propertyDisplay";
+import { AvatarGroup } from "#/components/properties/AvatarGroup";
 import { DealStageSelect } from "#/components/deals/DealStageSelect";
 
 /**
@@ -31,6 +33,11 @@ export function SpaceDetailHeader({
   // /listings/{shellId}/spaces/{spaceId}/{section}, so the shell is the prefix
   // and the space's own section is the third segment.
   const { subsectionLabel } = dealBreadcrumbTrail(pathname, shell.id);
+  // Both seeded on the space, not the building: access is granted per space deal
+  // — a broker can be on one suite of a building and not its neighbours — and the
+  // ref id names this deal, not its parent.
+  const seed = hash(space.id);
+  const refId = getRefId(space.id);
 
   return (
     <div className="bg-card border-bottom">
@@ -39,14 +46,17 @@ export function SpaceDetailHeader({
             PropertyDetailHeader uses, so a space header and a building header
             read as the same kind of page. */}
         <div className="d-flex align-items-center gap-3">
-          {/* Seeded on the SPACE's id, not the building's, so each suite gets its
-              own photo instead of repeating the building's on every one. Photos
-              are not modelled on a Listing yet — `getPhotoUrl` derives a stable
-              one from the curated CRE pool — so when spaces gain real media this
-              is the one place that changes. The building's access avatars are
-              deliberately absent: access is granted on the building. */}
+          {/* Thumbnail with the access avatars overlaid in the corner.
+              Everything here is seeded on the SPACE's id, not the building's:
+              each suite gets its own photo instead of six copies of the
+              building's, and the avatars show who can see *this* suite, since a
+              broker may hold one space deal in a building and not its
+              neighbours. Photos are not modelled on a Listing yet —
+              `getPhotoUrl` derives a stable one from the curated CRE pool — so
+              this is the one call site that changes when spaces gain real
+              media. */}
           <div
-            className="flex-shrink-0 d-none d-sm-block align-self-stretch"
+            className="flex-shrink-0 d-none d-sm-block align-self-stretch position-relative"
             style={{ width: 164 }}
           >
             <img
@@ -60,6 +70,9 @@ export function SpaceDetailHeader({
                 display: "block",
               }}
             />
+            <div className="position-absolute" style={{ right: 6, bottom: 6 }}>
+              <AvatarGroup seed={seed} size="default" />
+            </div>
           </div>
 
           {/* `minWidth: 0` lets the truncation below actually engage — a flex
@@ -141,6 +154,20 @@ export function SpaceDetailHeader({
             </h1>
             <div className="text-muted text-truncate">
               {property.street}, {property.city}, {property.state} {property.zip}
+            </div>
+            {/* The building's fourth row, with this suite's own values. It is
+                also what makes the two headers line up: `align-items-center`
+                centres this column against the thumbnail, so without a fourth
+                row the column is shorter than the image and the breadcrumb sits
+                below the building's. No SyndicationStatus — syndication is a
+                building-level listing concept in phase 1. */}
+            <div className="d-flex align-items-center gap-2 mt-2">
+              <Badge variant="secondary" appearance="muted">
+                {space.dealType}
+              </Badge>
+              <Badge variant="secondary" appearance="muted">
+                #{refId}
+              </Badge>
             </div>
           </div>
 
