@@ -3685,44 +3685,73 @@
 // The "tabs" option puts all three panes in one card. The strip owns the card's
 // top row on its own, so the Timeline's filter controls drop to a second row.
 .contact-pane-tabs {
-  padding-bottom: 0;
+  // The pill track is taller than any pane's controls, so it — not the controls —
+  // sets the row height. That's what keeps the row from resizing as you switch
+  // between a pane with a filter dropdown, one with a single icon button, and one
+  // with nothing at all.
+  padding-bottom: 12px;
+  // Sticks to the top of the scrolling column: the feed behind it runs long, and
+  // scrolling back up to change a filter or switch panes is the whole cost this
+  // avoids. Needs a background of its own now that content passes underneath.
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--bp-card-bg, #fff);
+  // The card's own radius is 12px; without this the header's fill squares off the
+  // top corners as soon as it has something behind it.
+  border-radius: 12px 12px 0 0;
+  // The divider spans the whole row, so it separates both the tabs and the
+  // controls from the content below. (The underline variant drew it on
+  // `.nav-tabs`, which stopped where the tabs stopped; pills draw none at all.)
+  border-bottom: 1px solid var(--color-storm-grey-100, #eceef2);
 
-  // The strip is the only thing in this header row, so it takes the full width
-  // rather than being squeezed by `.compose-header`'s first-child rule.
-  > * {
-    flex: 1 1 auto;
+  // The strip hugs its pills rather than stretching: the track is a visible grey
+  // surface, so filling the row left a slab of it running out past the last tab.
+  // `.compose-header`'s space-between then pushes the controls to the far edge.
+  > :first-child {
+    flex: 0 1 auto;
     min-width: 0;
+  }
+
+
+  // The active pane's controls, at the trailing edge of the strip.
+  &__actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 12px;
   }
 
   // Blueprint stacks a tab's label children in a column (for a label + sublabel
   // pattern), which drops the count badge onto its own line. These tabs want the
   // count beside the word, so the label row goes horizontal.
+  //
+  // `display: flex` is set explicitly: the underline variant supplies it, the pill
+  // variant leaves the label a block, and a `gap` on a block does nothing — which
+  // is why the count sat flush against the label.
   // TODO(blueprint): a "tab with count" variant belongs on the Tabs component.
   .nav-link-text {
+    display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
+  }
+
+  // Count badges match the ones in the section headers: same muted grey fill,
+  // same dark label. Set here rather than via Badge's `style` prop — the DS Badge
+  // doesn't forward it — and the colour has to be pinned because the active pill
+  // recolours its own text purple and the badge sits inside that text node.
+  .nav-link .badge {
+    background: var(--color-storm-grey-100, #eceef2);
+    color: var(--color-storm-grey-950, #22262f);
   }
 }
 
-// The filter row under the tab strip: right-aligned, since the tabs above already
-// occupy the left and a left-aligned control would read as a fourth tab.
-.compose-header--filters {
-  justify-content: flex-end;
-}
-
-// A tab pane's Tasks list: no card, no collapse — just the Add action and the
-// rows. The action is pushed right so it lands where the section header's own
-// Add button sits in the wide layout.
+// A tab pane's Tasks list: no card, no collapse, no header — the tab strip
+// carries the name, the count and the Add action, so only the rows remain.
 .contact-tasks-bare {
   display: flex;
   flex-direction: column;
-
-  &__actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: -8px;
-  }
 }
 
 // A tab pane's Briefing: the gradient wash belongs to the card, so a bare

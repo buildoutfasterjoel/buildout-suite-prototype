@@ -32,6 +32,7 @@ import { buildContactTimeline } from "#/components/contacts/timelineArcs";
 import { TimelineEvent } from "#/components/contacts/TimelineEvent";
 import { TimelineFilterBar } from "#/components/contacts/TimelineFilterBar";
 import { TimelineFilterDropdown } from "#/components/contacts/TimelineFilterDropdown";
+import { AddTaskAction } from "#/components/contacts/ContactTasksPanel";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
 import {
   selectResolved,
@@ -388,48 +389,59 @@ export function ContactEngagementPanel({
       {narrowSlot}
 
       {sideTabs ? (
-        /* "Tabs" narrow layout: one card, three panes. The filter row moves below
-           the tab strip — it belongs to the Timeline pane, not to the card. */
-        <Card className="panel-card overflow-hidden">
+        /* "Tabs" narrow layout: one card, three panes. The tab strip *is* this
+           card's header, so the active pane's controls sit at its trailing edge
+           rather than claiming a row of their own — a row that was empty on the
+           left for Timeline and Tasks, and empty outright for Briefing.
+           
+           No `overflow-hidden` here, unlike the other cards: it would make the
+           card the containment context for the sticky header and stop it sticking
+           as the column scrolls. */
+        <Card className="panel-card">
           <div className="compose-header contact-pane-tabs">
-            <Tabs value={pane} onValueChange={(v) => v && setPane(v as PaneKey)}>
-              <Tabs.List>
-                <Tabs.Tab
-                  value="timeline"
-                  icon={<FontAwesomeIcon icon={faWavePulse} />}
-                >
-                  Timeline
-                  <Badge variant="secondary" appearance="muted">
-                    {timelineCount}
-                  </Badge>
-                </Tabs.Tab>
-                <Tabs.Tab
-                  value="briefing"
-                  icon={<FontAwesomeIcon icon={faSparkles} />}
-                >
-                  Briefing
-                </Tabs.Tab>
-                <Tabs.Tab
-                  value="tasks"
-                  icon={<FontAwesomeIcon icon={faListCheck} />}
-                >
-                  Tasks
-                  <Badge variant="secondary" appearance="muted">
-                    {sideTabs.taskCount}
-                  </Badge>
-                </Tabs.Tab>
-              </Tabs.List>
-            </Tabs>
+            {/* Same pill track the compose tabs use: it's taller than any of the
+                panes' controls, so the track sets the row height and switching
+                panes can't shift the layout. `.compose-tabs` carries the pill
+                styling and the enclosing `.tabtrack--*` the track fill. */}
+            <div className="compose-tabs">
+              <Tabs value={pane} onValueChange={(v) => v && setPane(v as PaneKey)}>
+                <Tabs.List variant="pills">
+                  <Tabs.Tab
+                    value="timeline"
+                    icon={<FontAwesomeIcon icon={faWavePulse} />}
+                  >
+                    Timeline
+                    <Badge variant="secondary" appearance="muted">
+                      {timelineCount}
+                    </Badge>
+                  </Tabs.Tab>
+                  <Tabs.Tab
+                    value="tasks"
+                    icon={<FontAwesomeIcon icon={faListCheck} />}
+                  >
+                    Tasks
+                    <Badge variant="secondary" appearance="muted">
+                      {sideTabs.taskCount}
+                    </Badge>
+                  </Tabs.Tab>
+                  <Tabs.Tab
+                    value="briefing"
+                    icon={<FontAwesomeIcon icon={faSparkles} />}
+                  >
+                    Briefing
+                  </Tabs.Tab>
+                </Tabs.List>
+              </Tabs>
+            </div>
+            {/* Contextual to the pane: the feed's filters, the Add action, or —
+                on Briefing, which has neither — nothing at all. */}
+            <div className="contact-pane-tabs__actions">
+              {pane === "timeline" && filterControl}
+              {pane === "tasks" && <AddTaskAction contactId={contact.id} />}
+            </div>
           </div>
 
-          {pane === "timeline" && (
-            <>
-              <div className="compose-header compose-header--filters">
-                {filterControl}
-              </div>
-              {feed}
-            </>
-          )}
+          {pane === "timeline" && feed}
           {pane === "briefing" && <div className="p-4">{sideTabs.briefing}</div>}
           {pane === "tasks" && <div className="p-4">{sideTabs.tasks}</div>}
         </Card>

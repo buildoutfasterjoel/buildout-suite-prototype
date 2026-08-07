@@ -47,9 +47,9 @@ interface ContactUiPrefs {
   dealCards: "current" | "new";
   /**
    * Where the Briefing and Tasks cards go once the viewport is too narrow for
-   * three columns: "stacked" drops them into the middle column between Activity
-   * and the Timeline; "tabs" folds all three into one tabbed card. Only takes
-   * effect below the breakpoint (see CONTACT_NARROW_QUERY).
+   * three columns: "tabs" (the default) folds all three into one tabbed card;
+   * "stacked" drops them into the middle column between Activity and the
+   * Timeline. Only takes effect below the breakpoint (see CONTACT_NARROW_QUERY).
    */
   narrowLayout: "stacked" | "tabs";
 
@@ -85,7 +85,7 @@ export const useContactUiPrefs = create<ContactUiPrefs>((set) => ({
   // The redesigned cards are the default now; flip the switch to compare
   // against the shipped look.
   dealCards: "new",
-  narrowLayout: "stacked",
+  narrowLayout: "tabs",
 
   setOverviewSections: (overviewSections) => set({ overviewSections }),
   setShowDetails: (showDetails) => set({ showDetails }),

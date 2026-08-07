@@ -13,8 +13,12 @@ import { useAddTask } from "#/data/useAddTask";
 import { todayISO } from "#/components/contacts/contactDisplay";
 import type { ComposedDraft } from "#/components/contacts/ContactComposeModule";
 
-/** The section header's "+". Icon-only, so the tooltip carries the meaning. */
-function AddTaskAction({ contactId }: { contactId: string }) {
+/**
+ * The section header's "+". Icon-only, so the tooltip carries the meaning.
+ * Exported because the narrow "tabs" layout hangs it off the tab strip instead —
+ * there the strip is the header, so that's where the action belongs.
+ */
+export function AddTaskAction({ contactId }: { contactId: string }) {
   return (
     <Tooltip>
       <Tooltip.Trigger
@@ -186,18 +190,10 @@ export function ContactTasksPanel({
     </div>
   );
 
-  // Inside a tab the tab strip already names the section and carries the count,
-  // so the card, the collapse and the header all come off — but the Add action
-  // has to survive, since it's the only way to create a task from here.
+  // Inside a tab the tab strip already names the section, carries the count and
+  // hosts the Add action, so the card, the collapse and the header all come off.
   if (bare) {
-    return (
-      <div className="contact-tasks-bare">
-        <div className="contact-tasks-bare__actions">
-          <AddTaskAction contactId={contact.id} />
-        </div>
-        {body}
-      </div>
-    );
+    return <div className="contact-tasks-bare">{body}</div>;
   }
 
   return (
