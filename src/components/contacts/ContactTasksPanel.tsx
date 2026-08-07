@@ -10,6 +10,8 @@ import { ContactSection } from "#/components/contacts/ContactSection";
 import { ContactTaskCard } from "#/components/contacts/ContactTaskCard";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
 import { useAddTask } from "#/data/useAddTask";
+import { useContactSession } from "#/components/contacts/useContactSession";
+import { offerUndo } from "#/lib/undo";
 import { todayISO } from "#/components/contacts/contactDisplay";
 import type { ComposedDraft } from "#/components/contacts/ContactComposeModule";
 
@@ -67,8 +69,11 @@ export function ContactTasksPanel({
   contact: Contact;
   tasks: ContactTask[];
   completedTasks: ContactTask[];
-  /** Logs the completion to the timeline. Checking a task off is real activity. */
-  onLog?: (draft: ComposedDraft) => void;
+  /**
+   * Logs the completion to the timeline. Checking a task off is real activity.
+   * Returns the activity's id so an undo can pull the row back out again.
+   */
+  onLog?: (draft: ComposedDraft) => string | void;
   /** Drop the card + collapsible header — used as the body of a tab. */
   bare?: boolean;
 }) {
@@ -92,13 +97,27 @@ export function ContactTasksPanel({
     // in development, so a side-effect in there posts the activity twice.
     // Only completing is activity — un-checking is a correction, and logging that
     // would leave a "Task completed" row for a task that isn't.
-    if (!currentlyDone) {
-      onLog?.({ kind: "task", body: task.label, date: todayISO() });
-    }
+    const logId = currentlyDone
+      ? undefined
+      : onLog?.({ kind: "task", body: task.label, date: todayISO() });
     setOverrides((prev) => ({
       ...prev,
       [task.id]: { done: !(prev[task.id]?.done ?? baseDone), seq },
     }));
+    if (currentlyDone) return;
+    // Undo has to walk back both halves of the completion: the checkbox and the
+    // timeline row it wrote.
+    offerUndo({
+      title: "Task completed",
+      description: task.label,
+      onUndo: () => {
+        setOverrides((prev) => ({
+          ...prev,
+          [task.id]: { done: false, seq: seqRef.current++ },
+        }));
+        if (logId) useContactSession.getState().removeLog(contact.id, logId);
+      },
+    });
   };
 
   // Resolve every task's current done state from its base status + overrides.
