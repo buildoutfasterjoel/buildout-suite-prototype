@@ -1,15 +1,15 @@
 import type { LeaseRateUnits, Listing, PropertyStatus, PropertyUnit } from './types'
 import { getListing, getProperty } from './store'
 import { getChildDeals } from './leaseSpaces'
-import { spaceAvailability, type SpaceAvailability } from './dealShape'
+import { availableStages, dealStageLabel, type DealStageLabel } from './dealShape'
 import { WHOLE_PROPERTY_LABEL } from './createListing'
 
 /**
- * What a directory row reports. The deal-derived states come from
- * `spaceAvailability`; `Occupied` and `Vacant` are the asset's own answer for a
+ * What a directory row reports. A suite with a deal reports that deal's own
+ * stage, verbatim; `Occupied` and `Vacant` are the asset's own answer for a
  * suite nobody is working.
  */
-export type SuiteStatus = SpaceAvailability | 'Occupied' | 'Vacant'
+export type SuiteStatus = DealStageLabel | 'Occupied' | 'Vacant'
 
 export interface SuiteRow {
   unitId: string
@@ -36,9 +36,18 @@ export interface SuiteRow {
  * This is why occupancy on a suite that has a deal is never read. The seed still
  * sets it truthfully so the asset record holds no lie, but the directory does not
  * consult it.
+ *
+ * The stage is reported as the deal's own label — deliberately *not* through
+ * `spaceAvailability`, which answers the different question "what does the
+ * building advertise for this space" and so collapses two distinct stages
+ * (Inactive and Lost) into one "Not advertised". This is a directory of deals: a
+ * broker reading a row needs the stage they would see on the space's own page,
+ * and occupancy is the only state here that isn't a stage.
  */
 export function suiteStatus(deal: Listing | null, unit: PropertyUnit): SuiteStatus {
-  if (deal) return spaceAvailability(deal.status)
+  // 'space' is not a guess: every deal reaching here came from `getChildDeals`,
+  // and a child of a lease shell is always shape `space`.
+  if (deal) return dealStageLabel(deal.status, 'space')
   return unit.occupancy === 'occupied' ? 'Occupied' : 'Vacant'
 }
 
@@ -95,4 +104,46 @@ export function buildingSuites(shellDealId: string): SuiteRow[] {
     // `property.units` is insertion-ordered. Numeric collation so Suite 100 does
     // not sort before Suite 20.
     .sort((a, b) => a.label.localeCompare(b.label, 'en', { numeric: true }))
+}
+
+/**
+ * Splits a directory into its three kinds of row.
+ *
+ * - **deals** — every suite carrying a space deal, at any stage.
+ * - **available** — no deal and nobody in it: a suite a deal could start on.
+ * - **occupied** — no deal, sitting tenant: nothing to do until the lease runs out.
+ *
+ * The cut is by what a row *does*, not by what a suite is worth: a deal row
+ * links to its deal and carries a stage control, an available row carries Start
+ * a deal, an occupied row carries the tenant-name editor. One section, one
+ * behaviour — which is why a Closed deal groups with the deals rather than with
+ * the occupied suites it resembles. Its row still behaves like a deal.
+ *
+ * Occupancy never pulls a suite out of `deals` — same rule as `suiteStatus`,
+ * where a deal outranks the unit's own occupancy.
+ *
+ * The deals run down the ladder — Inactive, Active, Under Contract, Closed, then
+ * Lost — reading as the progression a suite makes rather than as suite numbers.
+ * The order comes from `availableStages`, the same list that fills the stage
+ * dropdown on each row, so the section and the menu inside it cannot disagree.
+ * Sorting is stable, so suites at one stage keep the label order below.
+ *
+ * The other two groups are a grouping, not a re-sort: `buildingSuites` holds one
+ * order because the Vouchers index shares it, and both preserve it.
+ */
+export function groupSuites(rows: SuiteRow[]): {
+  deals: SuiteRow[]
+  available: SuiteRow[]
+  occupied: SuiteRow[]
+} {
+  const ladder = availableStages('space')
+  // A row in this group always has a stage — it is there because it has a deal.
+  // The fallback sorts an impossible row last rather than to the front on -1.
+  const rank = (r: SuiteRow) => (r.stage ? ladder.indexOf(r.stage) : ladder.length)
+
+  return {
+    deals: rows.filter((r) => r.dealId).sort((a, b) => rank(a) - rank(b)),
+    available: rows.filter((r) => !r.dealId && r.status !== 'Occupied'),
+    occupied: rows.filter((r) => !r.dealId && r.status === 'Occupied'),
+  }
 }

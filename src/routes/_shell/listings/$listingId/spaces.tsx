@@ -1,20 +1,21 @@
 import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
-import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faVectorSquare, faPlus, faAngleRight } from "@fortawesome/pro-regular-svg-icons";
 import { useDataStore } from "#/data/dataStore";
 import { getListing } from "#/data/store";
-import { buildingSuites, type SuiteRow } from "#/data/buildingSuites";
+import { buildingSuites, groupSuites, type SuiteRow } from "#/data/buildingSuites";
 import { canAddSpaces, isLeaseParent } from "#/data/dealShape";
 import { addSpaceToDeal } from "#/data/leaseSpaces";
 import { updateDealMarketing } from "#/data/actions";
 import { emptySpaceLeaseTerms } from "#/data/createListing";
 import { notify } from "#/lib/notify";
 import { AddSpaceModal } from "#/components/deals/AddSpaceModal";
+import { StatusPill } from "#/components/deals/DealStageBadge";
+import { DealStageSelect } from "#/components/deals/DealStageSelect";
 import { formatMonthYear } from "#/components/deals/dealDisplay";
 
 export const Route = createFileRoute("/_shell/listings/$listingId/spaces")({
@@ -22,19 +23,41 @@ export const Route = createFileRoute("/_shell/listings/$listingId/spaces")({
 });
 
 /**
- * Blueprint's Badge offers exactly three variants — "primary" | "secondary" |
- * "outline" — so this maps six states onto them by how actionable the row is
- * rather than by inventing a colour per state.
+ * What a directory row shows for its status.
  *
- * Available is the one state the broker is actively working, so it takes the
- * emphasis. Vacant and Not advertised are dormant — nothing is happening yet —
- * so they read as an outline. Everything else is settled or belongs to someone
- * else and reads muted.
+ * A suite with a running deal gets the stage control itself — the same
+ * `DealStageSelect` mounted in this building's page header and in the space
+ * deal's own header — so a stage is not just read the same way down the whole
+ * tree, it is *changed* the same way, through the same gate. A broker working
+ * lease-up moves a suite from the directory without opening it.
+ *
+ * A suite with no deal has no stage to pick, so occupancy stays a muted, dot-less
+ * pill: it is a fact about the asset, not a position on the ladder.
  */
-function statusVariant(status: SuiteRow["status"]) {
-  if (status === "Available") return "primary" as const;
-  if (status === "Vacant" || status === "Not advertised") return "outline" as const;
-  return "secondary" as const;
+function SuiteStatusControl({ row }: { row: SuiteRow }) {
+  const deal = row.dealId ? getListing(row.dealId) : null;
+  if (!deal) {
+    return (
+      // 14px, not the pill's 12px default: this sits in the same column as the
+      // stage control on the deal rows above, and those read at body size.
+      <StatusPill color="var(--stage-inactive)" dot={false} fontSize={14}>
+        {row.status}
+      </StatusPill>
+    );
+  }
+  return (
+    // The row itself is a Link to the space, so a click meant for the stage
+    // control must not also navigate. Same guard `DealCard` puts around its
+    // action slot. The menu renders in a portal, so item clicks never reach here.
+    <span
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+    >
+      <DealStageSelect listing={deal} />
+    </span>
+  );
 }
 
 function SuiteTenant({ row, shellId }: { row: SuiteRow; shellId: string }) {
@@ -118,6 +141,74 @@ function SuiteTenant({ row, shellId }: { row: SuiteRow; shellId: string }) {
   );
 }
 
+/**
+ * A group heading inside the directory. Every group is a subset of one section,
+ * so they sit one step below its "Spaces" heading rather than beside it, and the
+ * rows below sit one step below them again: 20 → 17 → 14. Body colour, not muted
+ * — muted would read as disabled rather than subordinate.
+ *
+ * `fs-large` and not `fs-7`: this theme's numeric scale stops at `fs-6` (20px)
+ * and continues as named steps — `fs-large` 17, `fs-body` 14 (the default the
+ * rows already inherit), `fs-small` 12. `fs-7` silently does nothing.
+ */
+const GROUP_HEADING = "fs-large fw-semibold mb-2";
+
+function SuiteRowItem({
+  row,
+  listingId,
+  canAddSpace,
+  onStartDeal,
+}: {
+  row: SuiteRow;
+  listingId: string;
+  canAddSpace: boolean;
+  onStartDeal: (unitId: string) => void;
+}) {
+  const shared = (
+    <>
+      <span className="fw-semibold">{row.label}</span>
+      <span className="text-muted">{row.sqft.toLocaleString()} SF</span>
+      <span className="text-muted">
+        {row.leaseRate != null ? `$${row.leaseRate} ${row.leaseRateUnits}` : ""}
+      </span>
+      <span className="ms-auto d-flex align-items-center gap-3">
+        <SuiteStatusControl row={row} />
+      </span>
+    </>
+  );
+
+  // A suite with a deal is a link to that deal's page. A suite without one is
+  // not — there is nowhere to go, so the row carries whatever action it does
+  // support instead.
+  if (row.dealId) {
+    return (
+      <Link
+        to="/listings/$listingId/spaces/$spaceId/overview"
+        params={{ listingId, spaceId: row.dealId }}
+        className="d-flex align-items-center gap-3 border rounded p-3 text-decoration-none text-body"
+      >
+        {shared}
+        <FontAwesomeIcon icon={faAngleRight} className="text-muted" />
+      </Link>
+    );
+  }
+
+  return (
+    <div className="d-flex align-items-center gap-3 border rounded p-3">
+      {shared}
+      {row.status === "Occupied" ? (
+        <SuiteTenant row={row} shellId={listingId} />
+      ) : (
+        canAddSpace && (
+          <Button variant="outline" onClick={() => onStartDeal(row.unitId)}>
+            Start a deal
+          </Button>
+        )
+      )}
+    </div>
+  );
+}
+
 function SpacesTab() {
   const { listingId } = Route.useParams();
   const navigate = useNavigate();
@@ -132,6 +223,15 @@ function SpacesTab() {
   const leaseParent = isLeaseParent(listing);
   const canAddSpace = listing ? canAddSpaces(listing) : false;
   const rows = buildingSuites(listingId);
+  const { deals, available, occupied } = groupSuites(rows);
+  // Empty groups are dropped rather than rendered as a bare heading, so a
+  // building with nothing vacant simply has no "Available spaces" — and the
+  // top-margin rule below stays right whichever section happens to lead.
+  const sections = [
+    { title: "Active deals", rows: deals },
+    { title: "Available spaces", rows: available },
+    { title: "Occupied spaces", rows: occupied },
+  ].filter((section) => section.rows.length > 0);
   const [addOpen, setAddOpen] = useState(false);
 
   const startDeal = (unitId: string) => {
@@ -188,63 +288,22 @@ function SpacesTab() {
           )}
         </Empty>
       ) : (
-        <div className="d-flex flex-column gap-2">
-          {rows.map((row) => {
-            const shared = (
-              <>
-                <span className="fw-semibold">{row.label}</span>
-                <span className="text-muted">{row.sqft.toLocaleString()} SF</span>
-                <span className="text-muted">
-                  {row.leaseRate != null
-                    ? `$${row.leaseRate} ${row.leaseRateUnits}`
-                    : ""}
-                </span>
-                <span className="ms-auto d-flex align-items-center gap-3">
-                  <Badge variant={statusVariant(row.status)}>{row.status}</Badge>
-                </span>
-              </>
-            );
-
-            // A suite with a deal is a link to that deal's page. A suite without
-            // one is not — there is nowhere to go, so the row carries whatever
-            // action it does support instead.
-            if (row.dealId) {
-              return (
-                <Link
+        sections.map((section, i) => (
+          <div key={section.title} className={i > 0 ? "mt-4" : undefined}>
+            <h3 className={GROUP_HEADING}>{section.title}</h3>
+            <div className="d-flex flex-column gap-2">
+              {section.rows.map((row) => (
+                <SuiteRowItem
                   key={row.unitId}
-                  to="/listings/$listingId/spaces/$spaceId/overview"
-                  params={{ listingId, spaceId: row.dealId }}
-                  className="d-flex align-items-center gap-3 border rounded p-3 text-decoration-none text-body"
-                >
-                  {shared}
-                  <FontAwesomeIcon icon={faAngleRight} className="text-muted" />
-                </Link>
-              );
-            }
-
-            return (
-              <div
-                key={row.unitId}
-                className="d-flex align-items-center gap-3 border rounded p-3"
-              >
-                {shared}
-                {row.status === "Occupied" ? (
-                  <SuiteTenant row={row} shellId={listingId} />
-                ) : (
-                  canAddSpace && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => startDeal(row.unitId)}
-                    >
-                      Start a deal
-                    </Button>
-                  )
-                )}
-              </div>
-            );
-          })}
-        </div>
+                  row={row}
+                  listingId={listingId}
+                  canAddSpace={canAddSpace}
+                  onStartDeal={startDeal}
+                />
+              ))}
+            </div>
+          </div>
+        ))
       )}
 
       <AddSpaceModal

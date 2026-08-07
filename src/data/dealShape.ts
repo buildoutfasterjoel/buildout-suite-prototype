@@ -1,7 +1,7 @@
 import type { Listing, PropertyStatus } from './types'
 import { getChildDeals } from './leaseSpaces'
 import { getListing } from './store'
-import { STAGE_LABEL } from './stageGates'
+import { STAGE_LABEL, type StageLabel } from './stageGates'
 
 /** The full ladder, in display order. Stated explicitly rather than derived from
  *  an object's key order, because the order is load-bearing for the stage select. */
@@ -39,7 +39,9 @@ export function availableStages(shape: DealShape): PropertyStatus[] {
  * it does need a pre-market state, so `proposal` reads as Inactive there: a suite
  * that exists on the building without being advertised yet.
  */
-export function dealStageLabel(status: PropertyStatus, shape: DealShape): string {
+export type DealStageLabel = StageLabel | 'Inactive'
+
+export function dealStageLabel(status: PropertyStatus, shape: DealShape): DealStageLabel {
   if (shape === 'space' && status === 'proposal') return 'Inactive'
   return STAGE_LABEL[status]
 }
