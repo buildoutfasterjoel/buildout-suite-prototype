@@ -6,6 +6,58 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This repo is the **Buildout Prototype Template** — use it to quickly build UI prototypes that match Buildout's branding and design system. New pages, components, and interactions should always use Blueprint React components and Buildout tokens.
 
+## How we work
+
+### Which lane a change takes
+
+Default to the **fast lane**: state the approach in a sentence or two, then build. Bug
+fixes, copy, styling, single-component changes, and anything with an obvious correct
+answer go straight to work with no spec.
+
+A change earns a **spec** only if it trips one of four wires:
+
+1. **It touches the data model or seed fixtures** — a new entity, a changed shape, anything
+   that moves `SEED_VERSION`.
+2. **It adds or moves a route.** Moving a TanStack route silently breaks hardcoded
+   `useParams({ from })` and full-reload `<a href>` navigation, and `vite build` catches
+   neither.
+3. **It introduces new vocabulary** — a stage, status, or concept other surfaces must agree
+   with.
+4. **The shape is genuinely unsettled** — if the approach can't be stated in a sentence, the
+   design dialogue earns its cost.
+
+Joel overrides either direction: "just do it" on a change that tripped a wire, "spec this
+first" on one that didn't. If a fast-lane change turns out mid-flight to be bigger than it
+looked, stop and say so — don't quietly write a spec nobody asked for.
+
+### Specs are in-flight only
+
+**If a spec is in `docs/superpowers/specs/`, the work is live.** A spec is a working
+document, not a standing record. When the work ships, the spec and its plan are deleted in a
+`chore(docs):` commit that goes out with the branch.
+
+Anything worth keeping that isn't already in a commit or PR body — chiefly "we tried X and
+reverted it" — gets written into the PR body *before* the delete. Deleting loses nothing
+else: `git show <commit>^:docs/superpowers/specs/<file>.md` recovers any of it.
+
+Never cite a spec as a current constraint without checking it's still there. A design from
+last week may have been reversed this week.
+
+### Where design rationale lives
+
+In commit bodies and PR descriptions — not in a decisions file. They're already written,
+they're permanently bound to the diff they describe, and they cost nothing at runtime
+because they never enter the working tree.
+
+To find why something is the way it is:
+
+```bash
+gh pr list --search "space deal" --state merged   # find the PR
+gh pr view 130                                    # read the reasoning
+git log --grep "suite status"                     # search commit bodies
+git log -S "spaceAvailability" --oneline          # find when a symbol changed
+```
+
 ## Important — browser verification
 
 Playwright **is** available, via the `playwright` MCP server (`.mcp.json`). Use it to verify
