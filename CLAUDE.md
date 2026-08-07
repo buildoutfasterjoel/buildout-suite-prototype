@@ -133,6 +133,29 @@ Both are consumed by `bunfig.toml` to authenticate private registries.
 
 **Server functions:** Use `createServerFn` from `@tanstack/start` to colocate server-side logic with routes. Nitro bundles a portable Node.js server into `dist/`.
 
+### Space/suite routing is settled — don't re-derive it
+
+Four passes were made at how a leased suite relates to its building. Three were reverted or
+superseded. The current shape — a space has its own page on a **nested typed route**,
+`/listings/{shellId}/spaces/{spaceId}/{section}`, escaping the building's frame rather than
+rendering inside it — shipped in #128 and #130. Before changing it, read those PRs.
+
+What the failed passes cost, so nobody repeats them:
+
+- **A space *is* the shared deal page** (`/listings/{spaceId}`) — needed a `from` param threaded
+  through 8 routes plus `PROPERTY_ONLY`/`SHELL_ONLY` sidebar filters to fake building-level
+  marketing on a space page. Reverted in `86990cc`.
+- **Nested tree rendered in an Offcanvas over the building** (`c8a84ca`) — the suite became a
+  rival page *inside* the building's frame: two navs stacked, and the building's sidebar had to
+  hide whatever the suite claimed. Reverted in `86990cc`.
+- **No space page at all; the roster is the control surface** (#116) — superseded because
+  stakeholders wanted a page brokers could link to.
+
+Also rejected, deliberately: a slug → component map behind a single `$section.tsx` route. It
+would collapse the glue into one file, but at the cost of an untyped `$section` param,
+per-section `validateSearch` collapsing into a union, and sections becoming un-greppable. Typed
+routes and repo uniformity won; touching 18 files is the known, accepted cost.
+
 ## Prototype index
 
 `src/routes/index.tsx` is the **prototype directory** — it lists every prototype in the project as a navigable card. Whenever a new prototype page is added, also add a card to the index that links to it. The card should show the prototype's name and a short description of what it demonstrates.
