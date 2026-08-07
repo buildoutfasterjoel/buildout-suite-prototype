@@ -23,10 +23,10 @@ import {
 import type { TaskView } from "#/data/types";
 import { useDataStore } from "#/data/dataStore";
 import { listAllTasks } from "#/data/selectors";
-import { setTaskCompleted, updateDealTask } from "#/data/actions";
 import { useAddTask } from "#/data/useAddTask";
 import { todayISO } from "#/components/contacts/contactDisplay";
 import { TaskListRow } from "#/components/tasks/TaskListRow";
+import { toggleTaskCompleted } from "#/components/tasks/taskCompletion";
 import { TaskFilters } from "#/components/tasks/TaskFilters";
 import { TaskFilterBar } from "#/components/tasks/TaskFilterBar";
 import { useTaskUiPrefs } from "#/components/tasks/useTaskUiPrefs";
@@ -111,15 +111,6 @@ function TasksPage() {
   const activeFilterCount = countActiveTaskFilters(filters);
   const openCount = filtered.filter((t) => !t.completed).length;
 
-  const toggleComplete = (t: TaskView) => {
-    if (t.kind === "deal" && t.dealId) {
-      updateDealTask(t.dealId, t.id, {
-        status: t.completed ? "open" : "complete",
-      });
-    } else {
-      setTaskCompleted(t.id, !t.completed);
-    }
-  };
   const openTask = (t: TaskView) => {
     if (t.kind === "deal" && t.dealId) {
       useAddTask.getState().openEditDeal(t.dealId, t.id);
@@ -357,7 +348,7 @@ function TasksPage() {
                 truncateLabel={s.truncateLabel}
                 open={!collapsedSections[s.key]}
                 onOpenChange={(open) => setSectionOpen(s.key, open)}
-                onToggle={toggleComplete}
+                onToggle={toggleTaskCompleted}
                 onOpen={openTask}
               />
             ))
@@ -395,7 +386,7 @@ function TasksPage() {
                       <TaskListRow
                         key={t.id}
                         task={t}
-                        onToggle={() => toggleComplete(t)}
+                        onToggle={() => toggleTaskCompleted(t)}
                         onOpen={() => openTask(t)}
                       />
                     ))}

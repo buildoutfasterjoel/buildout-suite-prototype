@@ -21,7 +21,9 @@ interface ContactSessionState {
   /** Story-arc flags (e.g. "rosa-callback-armed"), keyed by contact id. */
   flags: Record<string, string[]>;
 
-  addLog: (contactId: string, draft: ComposedDraft) => void;
+  /** Returns the new activity's id, so an undo can retract exactly this row. */
+  addLog: (contactId: string, draft: ComposedDraft) => string;
+  removeLog: (contactId: string, activityId: string) => void;
   addSimEvent: (contactId: string, event: TimelineEvent) => void;
   resolve: (contactId: string, eventId: string) => void;
   setFlag: (contactId: string, flag: string) => void;
@@ -37,22 +39,33 @@ export const useContactSession = create<ContactSessionState>((set) => ({
   resolved: {},
   flags: {},
 
-  addLog: (contactId, draft) =>
-    set((s) => {
-      const seq = _seq++;
-      const activity: ComposedActivity = {
-        ...draft,
-        id: `logged-${seq}`,
-        seq,
-        createdAt: new Date().toISOString(),
-      };
-      return {
-        logged: {
-          ...s.logged,
-          [contactId]: [activity, ...(s.logged[contactId] ?? [])],
-        },
-      };
-    }),
+  addLog: (contactId, draft) => {
+    // Built outside the updater so the caller can be handed the id back.
+    const seq = _seq++;
+    const activity: ComposedActivity = {
+      ...draft,
+      id: `logged-${seq}`,
+      seq,
+      createdAt: new Date().toISOString(),
+    };
+    set((s) => ({
+      logged: {
+        ...s.logged,
+        [contactId]: [activity, ...(s.logged[contactId] ?? [])],
+      },
+    }));
+    return activity.id;
+  },
+
+  removeLog: (contactId, activityId) =>
+    set((s) => ({
+      logged: {
+        ...s.logged,
+        [contactId]: (s.logged[contactId] ?? []).filter(
+          (a) => a.id !== activityId,
+        ),
+      },
+    })),
 
   addSimEvent: (contactId, event) =>
     set((s) => {

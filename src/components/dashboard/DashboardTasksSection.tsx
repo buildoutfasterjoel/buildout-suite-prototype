@@ -8,10 +8,10 @@ import { faArrowRight } from "@fortawesome/pro-regular-svg-icons";
 import type { TaskView } from "#/data/types";
 import { useDataStore } from "#/data/dataStore";
 import { listAllTasks } from "#/data/selectors";
-import { setTaskCompleted, updateDealTask } from "#/data/actions";
 import { useAddTask } from "#/data/useAddTask";
 import { todayISO } from "#/components/contacts/contactDisplay";
 import { TaskListRow } from "#/components/tasks/TaskListRow";
+import { toggleTaskCompleted } from "#/components/tasks/taskCompletion";
 import { dueBucket } from "#/components/tasks/taskFilterModel";
 
 /** Nulls-last ascending by due date. */
@@ -49,15 +49,6 @@ export function DashboardTasksSection() {
   );
   const shown = dueNow.slice(0, MAX_ROWS);
 
-  const toggleComplete = (t: TaskView) => {
-    if (t.kind === "deal" && t.dealId) {
-      updateDealTask(t.dealId, t.id, {
-        status: t.completed ? "open" : "complete",
-      });
-    } else {
-      setTaskCompleted(t.id, !t.completed);
-    }
-  };
   const openTask = (t: TaskView) => {
     if (t.kind === "deal" && t.dealId) {
       useAddTask.getState().openEditDeal(t.dealId, t.id);
@@ -94,7 +85,7 @@ export function DashboardTasksSection() {
             <TaskListRow
               key={task.id}
               task={task}
-              onToggle={() => toggleComplete(task)}
+              onToggle={() => toggleTaskCompleted(task)}
               onOpen={() => openTask(task)}
             />
           ))
