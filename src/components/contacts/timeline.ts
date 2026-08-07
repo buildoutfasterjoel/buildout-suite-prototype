@@ -28,7 +28,7 @@ import {
   faCalendar,
   faBinoculars,
 } from "@fortawesome/pro-regular-svg-icons";
-import type { Contact } from "#/data/types";
+import type { Contact, RelationshipStage } from "#/data/types";
 import { CURRENT_USER } from "#/data/teammates";
 import type { ComposedActivity } from "#/components/contacts/contactDisplay";
 import { contactFullName } from "#/components/contacts/contactDisplay";
@@ -81,10 +81,12 @@ export interface TimelineActor {
   avatarUrl?: string;
 }
 
-/** A labeled bullet group (Call summary, Next steps, To…). */
+/**
+ * A group of body lines. Deliberately unlabelled: the uppercase "CALL SUMMARY" /
+ * "NEXT STEPS" subheads used to sit here, but call logging is a plain textarea —
+ * it can't produce headed sections, so showing them invented a capability.
+ */
 export interface TimelineBlock {
-  /** Optional uppercase subhead; omit to show the items with no label. */
-  kicker?: string;
   items: string[];
   /**
    * Render the (single) item as a 2-line-clamped paragraph with a "Show
@@ -93,9 +95,11 @@ export interface TimelineBlock {
   clamp?: boolean;
 }
 
-/** An inbound reply nested under a sent message (PR2 renders the ReplyCard). */
+/** An inbound reply nested under a sent message, rendered as a thread of one. */
 export interface TimelineReply {
   replier: string;
+  /** When the reply landed. Falls back to the parent event's timestamp. */
+  timestamp?: string;
   delay?: string;
   sentiment?: string;
   sentimentTone?: "positive" | "neutral" | "negative";
@@ -108,14 +112,28 @@ export interface TimelineThreadMessage {
   sender: string;
   timestamp: string;
   body: string;
+  /**
+   * Files this specific message carried. Attachments belong to the email they
+   * arrived on, not to the conversation — hoisting them to the row put Rosa's
+   * rent roll next to a reply that never contained it.
+   */
+  attachments?: TimelineAttachment[];
 }
 
-/** Conversation (email thread) payload — collapsed preview + ordered messages. */
+/**
+ * Conversation (email thread) payload. `messages` is ordered oldest → newest and
+ * the last one is the "latest" — it's rendered as the row's own content, so the
+ * expanded thread below shows only the older ones and the toggle counts those.
+ */
 export interface TimelineThread {
-  count: number;
   latestSender: string;
   latestBody: string;
   messages: TimelineThreadMessage[];
+}
+
+/** How many messages sit behind the "View full thread" toggle. */
+export function hiddenMessageCount(thread: TimelineThread): number {
+  return Math.max(0, thread.messages.length - 1);
 }
 
 export interface TimelineAssociation {
@@ -170,6 +188,11 @@ export interface TimelineEvent {
   attachments?: TimelineAttachment[];
   /** Voicemail / missed flag — what holds an inbound call in needs-attention. */
   attempted?: boolean;
+  /**
+   * Stage badges rendered after the headline. One badge (`to` only) on a creation
+   * row says which stage the contact arrived as; two say what changed.
+   */
+  stageChange?: { from?: RelationshipStage; to: RelationshipStage };
   /**
    * Per-event action bar — overrides the type's default labels when this one
    * row needs a special action (e.g. "Start a Deal" on an email that arrived
@@ -409,6 +432,227 @@ export function visibleEvents(
   });
 }
 
+/** A reply the broker sent from the timeline this session. */
+export interface SessionReply {
+  id: string;
+  body: string;
+  timestamp: string;
+  sender: string;
+}
+
+/** The one message a non-thread email row represents. */
+function ownMessage(e: TimelineEvent): TimelineThreadMessage {
+  return {
+    id: e.messageId ?? `${e.id}-msg`,
+    direction: e.direction ?? (e.type === "inbound-email" ? "in" : "out"),
+    sender: e.actor.name,
+    timestamp: e.timestamp,
+    body: e.body ?? "",
+    attachments: e.attachments,
+  };
+}
+
+/**
+ * The broker and the counterparty, read off an event whichever way round it was
+ * authored (`mk` flips actor/contact for inbound rows).
+ */
+function partiesOf(e: TimelineEvent): {
+  broker: { name: string; id: string };
+  other: { name: string; id: string };
+} {
+  const inbound = (e.direction ?? "out") === "in";
+  const actor = { name: e.actor.name, id: "me" };
+  const counter = { name: e.contact?.name ?? "", id: e.contact?.id ?? "" };
+  return inbound
+    ? { broker: counter, other: { name: actor.name, id: counter.id } }
+    : { broker: actor, other: counter };
+}
+
+/**
+ * Actor and recipient for a conversation row, from whoever sent the newest
+ * message — a thread reads as "who spoke last, to whom", so it flips when the
+ * other side answers.
+ */
+function actorsFor(
+  latest: TimelineThreadMessage,
+  parties: ReturnType<typeof partiesOf>,
+): Pick<TimelineEvent, "actor" | "contact"> {
+  return latest.direction === "in"
+    ? { actor: { name: parties.other.name }, contact: parties.broker }
+    : { actor: { name: parties.broker.name }, contact: parties.other };
+}
+
+function threadOf(messages: TimelineThreadMessage[]): TimelineThread {
+  const ordered = [...messages].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+  );
+  const latest = ordered.at(-1)!;
+  return {
+    latestSender: latest.sender,
+    latestBody: latest.body,
+    messages: ordered,
+  };
+}
+
+/**
+ * Arc threads were authored with their files on the row. Attach them to the newest
+ * message, which is where they already appeared, so every thread follows the one
+ * rule: attachments belong to a message.
+ */
+function withHoistedAttachments(e: TimelineEvent): TimelineThreadMessage[] {
+  const messages = e.thread!.messages;
+  if (!e.attachments?.length || messages.some((m) => m.attachments?.length)) {
+    return messages;
+  }
+  return messages.map((m, i) =>
+    i === messages.length - 1 ? { ...m, attachments: e.attachments } : m,
+  );
+}
+
+/**
+ * Collapse an email that has more than one message into the conversation row that
+ * represents it.
+ *
+ * A reply doesn't create a second entry on the record — it advances the exchange
+ * that was already there. So an email that received an inbound reply, or one the
+ * broker answered from the timeline, stops standing alone: it keeps its place as a
+ * *member* of a thread (which is what the Emails filter lists), and a conversation
+ * row appears carrying the newest message, dated to it. `visibleEvents` then shows
+ * whichever of the two the current filter asks for.
+ */
+export function foldThreads(
+  events: TimelineEvent[],
+  sessionReplies: Record<string, SessionReply[]> = {},
+): TimelineEvent[] {
+  const out: TimelineEvent[] = [];
+
+  for (const e of events) {
+    // An existing conversation just gains the new messages. It looks replies up by
+    // thread as well as by id, because a synthesized conversation's own id shifts
+    // as the thread grows — but *only* a conversation may do that. The members of
+    // an arc's thread carry the same threadId, and letting them match it folded
+    // every one of them into a conversation of its own.
+    if (e.type === "conversation" && e.thread) {
+      const added =
+        sessionReplies[e.id] ??
+        (e.threadId ? sessionReplies[e.threadId] : undefined) ??
+        [];
+      if (!added.length) {
+        out.push({
+          ...e,
+          thread: { ...e.thread, messages: withHoistedAttachments(e) },
+          attachments: undefined,
+        });
+        continue;
+      }
+      const thread = threadOf([
+        ...withHoistedAttachments(e),
+        ...added.map((r) => ({
+          id: r.id,
+          direction: "out" as const,
+          sender: r.sender,
+          timestamp: r.timestamp,
+          body: r.body,
+        })),
+      ]);
+      const latest = thread.messages.at(-1)!;
+      out.push({
+        ...e,
+        ...actorsFor(latest, partiesOf(e)),
+        thread,
+        timestamp: latest.timestamp,
+        // Attachments now live on the messages that carried them.
+        attachments: undefined,
+      });
+      continue;
+    }
+
+    // A standalone email answers to its own id *and* to the thread key it will be
+    // folded under — a reply to the resulting conversation is stored against that
+    // key, and reading only `e.id` here silently dropped it.
+    //
+    // An email that already belongs to an arc thread is deliberately excluded: its
+    // members share the conversation's `threadId`, and letting them match it folded
+    // every one of them into a conversation of its own.
+    const ownThreadKey = `${e.id}-thread`;
+    const added = e.threadId
+      ? (sessionReplies[e.id] ?? [])
+      : (sessionReplies[e.id] ?? sessionReplies[ownThreadKey] ?? []);
+    const isEmail =
+      e.type === "email" || e.type === "inbound-email" || e.type === "email-reply";
+    if (!isEmail || (!e.reply && !added.length)) {
+      out.push(e);
+      continue;
+    }
+
+    // One email plus at least one reply: becomes a member of its own new thread.
+    const threadId = e.threadId ?? ownThreadKey;
+    const messages: TimelineThreadMessage[] = [ownMessage(e)];
+    if (e.reply) {
+      messages.push({
+        id: `${e.id}-reply`,
+        direction: "in",
+        sender: e.reply.replier,
+        timestamp: e.reply.timestamp ?? e.timestamp,
+        body: e.reply.body,
+      });
+    }
+    for (const r of added) {
+      messages.push({
+        id: r.id,
+        direction: "out",
+        sender: r.sender,
+        timestamp: r.timestamp,
+        body: r.body,
+      });
+    }
+    const thread = threadOf(messages);
+    const latest = thread.messages.at(-1)!;
+
+    // The original, now a thread member — `reply` is folded in, so it doesn't
+    // also render as a nested block.
+    out.push({ ...e, threadId, reply: undefined });
+
+    // Each reply becomes its own member row, so the Emails filter lists the
+    // exchange message by message rather than hiding half of it.
+    for (const m of thread.messages.slice(1)) {
+      out.push({
+        id: m.id,
+        type: m.direction === "in" ? "inbound-email" : "email",
+        actor: { name: m.sender },
+        contact: e.contact,
+        direction: m.direction,
+        timestamp: m.timestamp,
+        seq: e.seq,
+        subject: e.subject,
+        body: m.body,
+        threadId,
+        messageId: m.id,
+        associations: e.associations,
+        source: "user",
+      });
+    }
+
+    out.push({
+      id: `${threadId}-convo`,
+      type: "conversation",
+      ...actorsFor(latest, partiesOf(e)),
+      timestamp: latest.timestamp,
+      seq: e.seq,
+      subject: e.subject,
+      thread,
+      threadId,
+      associations: e.associations,
+      // The paperclip still flags that the exchange carries files; which message
+      // they came on is what the thread shows.
+      hasAttachment: thread.messages.some((m) => m.attachments?.length),
+      source: "user",
+    });
+  }
+
+  return out;
+}
+
 /** Counts match the rows each tab actually renders (post thread-grouping). */
 export function filterCounts(events: TimelineEvent[]): Record<FilterKey, number> {
   const out = {} as Record<FilterKey, number>;
@@ -420,7 +664,17 @@ export function filterCounts(events: TimelineEvent[]): Record<FilterKey, number>
 
 // ── Time grouping ──────────────────────────────────────────────────────────––
 
-export type TimeBucket = "This week" | "This month" | "Earlier this year" | "Earlier";
+/**
+ * A feed heading. "Pinned" isn't a time range — it's a section above all of them,
+ * because a pinned row's whole point is that it stops being sorted by when it
+ * happened.
+ */
+export type TimeBucket =
+  | "Pinned"
+  | "This week"
+  | "This month"
+  | "Earlier this year"
+  | "Earlier";
 
 const DAY = 86_400_000;
 
@@ -433,13 +687,19 @@ export function bucketFor(iso: string, now = Date.now()): TimeBucket {
 }
 
 const BUCKET_ORDER: TimeBucket[] = [
+  "Pinned",
   "This week",
   "This month",
   "Earlier this year",
   "Earlier",
 ];
 
-/** Sort newest-first, then split into ordered time-bucket groups (pinned first). */
+/**
+ * Sort newest-first, then split into ordered headings. Pinned rows leave their time
+ * bucket entirely and collect under a "Pinned" heading at the top — a row pinned
+ * from last year was otherwise filed under "Earlier", which is the one place the
+ * reader wasn't going to look for it.
+ */
 export function groupByBucket(
   events: TimelineEvent[],
   now = Date.now(),
@@ -451,7 +711,7 @@ export function groupByBucket(
   });
   const groups = new Map<TimeBucket, TimelineEvent[]>();
   for (const e of sorted) {
-    const b = bucketFor(e.timestamp, now);
+    const b = e.pinned ? "Pinned" : bucketFor(e.timestamp, now);
     (groups.get(b) ?? groups.set(b, []).get(b)!).push(e);
   }
   return BUCKET_ORDER.filter((b) => groups.has(b)).map((bucket) => ({
@@ -523,6 +783,7 @@ const COMPOSE_TYPE: Record<ComposedActivity["kind"], TimelineEventType> = {
   email: "email",
   meeting: "meeting",
   tour: "tour",
+  task: "task",
 };
 
 /** Maps a session-logged compose/live-call activity into a timeline event. */
@@ -543,13 +804,16 @@ export function composedToEvent(a: ComposedActivity, c: Contact): TimelineEvent 
     seq: 1_000_000 + a.seq,
     subject: isEmail ? a.subject : undefined,
     body: a.body || undefined,
-    // "Connected" is the default/assumed call outcome, so it adds nothing; the
-    // outcomes that carry information (No Answer, Left Voicemail…) ride in the
-    // headline, since the row no longer has a badge to put them in.
+    // A completed task names itself. Otherwise: "Connected" is the default call
+    // outcome so it adds nothing, but the ones that carry information (No Answer,
+    // Left Voicemail…) ride in the headline, since the row no longer has a badge
+    // to put them in.
     title:
-      a.outcome && a.outcome !== "Connected"
-        ? `${TYPE_CONFIG[type].defaultTitle} — ${a.outcome}`
-        : undefined,
+      a.kind === "task"
+        ? "Task completed"
+        : a.outcome && a.outcome !== "Connected"
+          ? `${TYPE_CONFIG[type].defaultTitle} — ${a.outcome}`
+          : undefined,
     associations: a.relatedDeal
       ? [{ type: "deal", label: a.relatedDeal }]
       : undefined,

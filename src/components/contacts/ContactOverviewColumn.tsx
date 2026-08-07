@@ -4,9 +4,10 @@ import { Accordion } from "@buildoutinc/blueprint-react/ui/Accordion";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
+import { Switch } from "@buildoutinc/blueprint-react/ui/Switch";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faBan,
   faPlus,
   faChevronDown,
   faChevronRight,
@@ -57,6 +58,37 @@ function medDate(iso: string): string {
     day: "numeric",
     year: "numeric",
   });
+}
+
+/**
+ * The "+" in a section header. Icon-only, so it needs the tooltip to say what it
+ * creates — and the tooltip label doubles as the accessible name.
+ */
+function SectionAction({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick?: () => void;
+}) {
+  return (
+    <Tooltip>
+      <Tooltip.Trigger
+        render={
+          <Button
+            variant="ghost"
+            appearance="muted"
+            size="icon-sm"
+            aria-label={label}
+            onClick={onClick}
+          >
+            <FontAwesomeIcon icon={faPlus} />
+          </Button>
+        }
+      />
+      <Tooltip.Content>{label}</Tooltip.Content>
+    </Tooltip>
+  );
 }
 
 /** A "Label value" row used in the expanded contact details. Hidden when the
@@ -137,10 +169,12 @@ export function ContactOverviewColumn({
   // doesn't remount. Re-seed from the record whenever the contact underneath it
   // changes, or the previous person's tags stay on screen.
   const [tags, setTags] = useState(contact.tags);
+  const [doNotCall, setDoNotCall] = useState(!!contact.doNotCall);
   const [tagsContactId, setTagsContactId] = useState(contact.id);
   if (tagsContactId !== contact.id) {
     setTagsContactId(contact.id);
     setTags(contact.tags);
+    setDoNotCall(!!contact.doNotCall);
   }
   const [newDealOpen, setNewDealOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -204,7 +238,7 @@ export function ContactOverviewColumn({
     return () => clearTimeout(t);
   }, [spotlightDealId]);
 
-  // One card per property in "Properties Owned" — group the contact's deals by
+  // One card per property in "Properties" — group the contact's deals by
   // property so a property with several deals shows a single card, not one per
   // deal. Order follows first appearance in `deals`. Owned properties without
   // a deal (e.g. a building the contact holds but hasn't listed) still get a
@@ -229,16 +263,23 @@ export function ContactOverviewColumn({
 
       {/* Contact hero */}
       <div className="p-4 d-flex flex-column gap-3 position-relative">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Edit contact"
-          className="position-absolute"
-          style={{ top: 8, right: 8 }}
-          onClick={() => setEditOpen(true)}
-        >
-          <FontAwesomeIcon icon={faPencil} />
-        </Button>
+        <Tooltip>
+          <Tooltip.Trigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Edit contact details"
+                className="position-absolute"
+                style={{ top: 8, right: 8 }}
+                onClick={() => setEditOpen(true)}
+              >
+                <FontAwesomeIcon icon={faPencil} />
+              </Button>
+            }
+          />
+          <Tooltip.Content>Edit Contact Details</Tooltip.Content>
+        </Tooltip>
 
         <EditContactModal
           open={editOpen}
@@ -354,28 +395,36 @@ export function ContactOverviewColumn({
                     }
                   />
                 ))}
-                <Button
-                  variant="ghost"
-                  appearance="muted"
-                  size="icon-sm"
-                  aria-label="Add tag"
-                >
-                  <FontAwesomeIcon icon={faPlus} />
-                </Button>
+                <Tooltip>
+                  <Tooltip.Trigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        appearance="muted"
+                        size="icon-sm"
+                        aria-label="Add tags"
+                      >
+                        <FontAwesomeIcon icon={faPlus} />
+                      </Button>
+                    }
+                  />
+                  <Tooltip.Content>Add Tags</Tooltip.Content>
+                </Tooltip>
               </div>
             </div>
 
-            {/* TODO: wire up — flagging a contact do-not-call has to suppress
-                them across call lists and campaigns, not just here. */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="align-self-start"
-              onClick={() => {}}
+            {/* A switch, not a button: do-not-call is a state the record is in,
+                and the control should show which way it's currently set.
+                TODO: wire up — flagging a contact has to suppress them across
+                call lists and campaigns, not just here. */}
+            <label
+              className="d-flex align-items-center gap-2 mb-0 align-self-start"
+              style={{ cursor: "pointer" }}
             >
-              <FontAwesomeIcon icon={faBan} />
-              Mark as Do Not Call
-            </Button>
+              {/* Blueprint's Switch ships only md and lg — md is the small one. */}
+              <Switch checked={doNotCall} onCheckedChange={setDoNotCall} />
+              <span>Do Not Call</span>
+            </label>
           </div>
         )}
       </div>
@@ -394,15 +443,10 @@ export function ContactOverviewColumn({
           label="Deals"
           count={activeDeals.length}
           action={
-            <Button
-              variant="ghost"
-              appearance="muted"
-              size="icon-sm"
-              aria-label="New deal"
+            <SectionAction
+              label="Create New Deal"
               onClick={() => setNewDealOpen(true)}
-            >
-              <FontAwesomeIcon icon={faPlus} />
-            </Button>
+            />
           }
         >
           <div className="d-flex flex-column gap-2">
@@ -490,18 +534,9 @@ export function ContactOverviewColumn({
 
         <ContactSection
           value="properties"
-          label="Properties Owned"
+          label="Properties"
           count={propertyGroups.length}
-          action={
-            <Button
-              variant="ghost"
-              appearance="muted"
-              size="icon-sm"
-              aria-label="Add property"
-            >
-              <FontAwesomeIcon icon={faPlus} />
-            </Button>
-          }
+          action={<SectionAction label="Create New Property" />}
         >
           <div className="d-flex flex-column gap-2">
             {propertyGroups.length === 0 ? (
@@ -531,6 +566,7 @@ export function ContactOverviewColumn({
           value="lists"
           label="Lists"
           count={memberLists.length}
+          action={<SectionAction label="Add to List" />}
         >
           {memberLists.length === 0 ? (
             <span className="text-muted fs-small">

@@ -1078,12 +1078,13 @@
 
 // The expanded "Contact Details" panel in the hero: a bordered, rounded
 // container (no fill) that sets the details apart from the white card behind it.
+// The expanded "Contact Details" panel in the hero. No border and no inset of
+// its own: the internal dividers between the record block, the fields and the
+// do-not-call switch already group the content, and a box around all of it read
+// as a second card sitting inside the first.
 .contact-details-panel {
-  border: 1px solid var(--color-storm-grey-100, #eceef2);
-  border-radius: var(--bp-border-radius-lg, 8px);
-  // Tighter at the top: the first row is a 28px icon button whose own padding
-  // already reads as inset, so a full 12px above it looked like a gap.
-  padding: 8px 12px 12px;
+  border: 0;
+  padding: 0;
 }
 
 // The hero's reach-out records (phone / email / address). Every measurement is
@@ -3235,19 +3236,13 @@
 
 // ── Labeled bullet blocks (Call summary / Next steps / Notes) ──
 .tl-block {
-  &__kicker {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--color-storm-grey-600, #506079);
-    margin-bottom: 2px;
-  }
   &__list {
     margin: 0;
     padding-left: 18px;
     font-size: 14px;
-    color: var(--color-storm-grey-700, #424e62);
+    // Same muted colour as `.tl-row__text` and a thread message body — bullets and
+    // paragraphs are the same event content, so they shouldn't read as two tiers.
+    color: var(--bp-secondary-color, #506079);
     line-height: 1.5;
   }
 }
@@ -3475,79 +3470,6 @@
   }
 }
 
-// Inline reply composer.
-.tl-reply {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 10px;
-  padding-top: 12px;
-  border-top: 1px dashed var(--color-storm-grey-200, #d5dae2);
-
-  &__quote {
-    font-size: 12px;
-    color: var(--color-storm-grey-600, #506079);
-  }
-  &__actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-  }
-}
-
-// Reply card — inbound reply nested under a sent message.
-.tl-replycard {
-  margin-top: 4px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: var(--color-storm-grey-50, #f6f7f9);
-  border-left: 3px solid var(--color-mountain-meadow-500, #00bc7d);
-
-  &__head {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 6px;
-    font-size: 13px;
-    color: var(--color-storm-grey-900, #22262f);
-  }
-  &__icon {
-    color: var(--color-storm-grey-400, #8495ac);
-    font-size: 11px;
-  }
-  &__delay {
-    color: var(--color-storm-grey-600, #506079);
-    font-weight: 400;
-  }
-  &__body {
-    margin: 4px 0 0;
-    font-size: 14px;
-    color: var(--color-storm-grey-700, #424e62);
-    line-height: 1.5;
-  }
-}
-
-// Sentiment tag inside the reply card.
-.tl-sentiment {
-  padding: 1px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-
-  &--positive {
-    background: #e3f7ef;
-    color: var(--color-mountain-meadow-700, #007a52);
-  }
-  &--neutral {
-    background: var(--color-storm-grey-100, #eceef2);
-    color: var(--color-storm-grey-700, #424e62);
-  }
-  &--negative {
-    background: #fce4e2;
-    color: #b42318;
-  }
-}
-
 // ── Expanded email thread ──
 // Plain attributed blocks rather than chat bubbles: inside a thread the reader
 // wants to read, and alternating fills turn a four-message exchange into a
@@ -3558,7 +3480,10 @@
   flex-direction: column;
   gap: 16px;
   margin-top: 4px;
-  padding-left: 12px;
+  // A left rule carries the same idea as the timeline's own connector: everything
+  // to the right of it belongs to the exchange above, not to the feed.
+  padding-left: 16px;
+  border-left: 2px solid var(--color-storm-grey-100, #eceef2);
 
   &__msg {
     position: relative;
@@ -3590,6 +3515,138 @@
     font-size: 14px;
     line-height: 19px;
     color: var(--bp-secondary-color, #506079);
+  }
+}
+
+// Stage badges trailing a timeline subject: one on a creation row (the stage the
+// contact arrived as), two with an arrow when a stage moved.
+.tl-row__stages {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+}
+.tl-row__stages-arrow {
+  color: var(--bp-secondary-color, #62748e);
+}
+
+// ── Inline reply editor ──
+// The same fields the Email tab offers, because a reply from the timeline is a
+// real email. Sits where the action bar was, so the row doesn't jump.
+.tl-reply {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  // A white card that breaks out of the row's padding, so the editor reads as its
+  // own surface against the grey the row takes on hover — otherwise the fields
+  // sat in the hover tint and looked disabled.
+  margin: 0 -8px -8px;
+  padding: 16px 8px 8px;
+  border-radius: 8px;
+  background: var(--bp-card-bg, #fff);
+
+  &__quote {
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--bp-secondary-color, #506079);
+  }
+
+  &__box {
+    border: 1px solid var(--color-storm-grey-200, #d5dae2);
+    border-radius: var(--bp-border-radius, 6px);
+    overflow: hidden;
+  }
+
+  &__to {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--color-storm-grey-200, #d5dae2);
+  }
+  &__to-left {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+  &__to-label {
+    flex-shrink: 0;
+    color: var(--bp-secondary-color, #506079);
+  }
+  &__to-right {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 4px;
+  }
+
+  // The recipient chip: avatar + name + address, as a pill.
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    height: 28px;
+    padding: 4px 8px 4px 4px;
+    border: 1px solid var(--color-storm-grey-200, #d5dae2);
+    border-radius: 999px;
+    background: var(--color-storm-grey-50, #f6f7f9);
+  }
+  &__chip-avatar {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    background-image: linear-gradient(
+      225deg,
+      var(--color-storm-grey-100, #eceef2) 0%,
+      var(--color-storm-grey-200, #d5dae2) 72%,
+      var(--color-storm-grey-300, #afb9ca) 100%
+    );
+    color: var(--bp-secondary-color, #506079);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+  }
+  &__chip-email {
+    overflow: hidden;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  &__chip-caret {
+    flex-shrink: 0;
+    font-size: 12px;
+  }
+
+  // The toolbar borrows the composer's own styles; only its edges differ here.
+  &__toolbar {
+    border-bottom: 1px solid var(--color-storm-grey-200, #d5dae2);
+    border-radius: 0;
+  }
+
+  // The box already draws the border, so the textarea inside it shouldn't.
+  &__textarea.form-control {
+    border: 0;
+    border-radius: 0;
+
+    &:focus {
+      box-shadow: none;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
   }
 }
 

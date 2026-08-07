@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { Accordion } from "@buildoutinc/blueprint-react/ui/Accordion";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact, ContactTask } from "#/data/types";
@@ -9,6 +10,30 @@ import { ContactSection } from "#/components/contacts/ContactSection";
 import { ContactTaskCard } from "#/components/contacts/ContactTaskCard";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
 import { useAddTask } from "#/data/useAddTask";
+import { todayISO } from "#/components/contacts/contactDisplay";
+import type { ComposedDraft } from "#/components/contacts/ContactComposeModule";
+
+/** The section header's "+". Icon-only, so the tooltip carries the meaning. */
+function AddTaskAction({ contactId }: { contactId: string }) {
+  return (
+    <Tooltip>
+      <Tooltip.Trigger
+        render={
+          <Button
+            variant="ghost"
+            appearance="muted"
+            size="icon-sm"
+            aria-label="Create New Task"
+            onClick={() => useAddTask.getState().openFor(contactId)}
+          >
+            <FontAwesomeIcon icon={faPlus} />
+          </Button>
+        }
+      />
+      <Tooltip.Content>Create New Task</Tooltip.Content>
+    </Tooltip>
+  );
+}
 
 /** A task plus its resolved completion state and completion order for sorting. */
 interface TaskRow {
@@ -32,11 +57,14 @@ export function ContactTasksPanel({
   contact,
   tasks,
   completedTasks,
+  onLog,
   bare = false,
 }: {
   contact: Contact;
   tasks: ContactTask[];
   completedTasks: ContactTask[];
+  /** Logs the completion to the timeline. Checking a task off is real activity. */
+  onLog?: (draft: ComposedDraft) => void;
   /** Drop the card + collapsible header — used as the body of a tab. */
   bare?: boolean;
 }) {
@@ -55,10 +83,18 @@ export function ContactTasksPanel({
 
   const toggle = (task: ContactTask, baseDone: boolean) => {
     const seq = seqRef.current++;
-    setOverrides((prev) => {
-      const currentlyDone = prev[task.id]?.done ?? baseDone;
-      return { ...prev, [task.id]: { done: !currentlyDone, seq } };
-    });
+    const currentlyDone = overrides[task.id]?.done ?? baseDone;
+    // Logged outside the state updater on purpose: React invokes updaters twice
+    // in development, so a side-effect in there posts the activity twice.
+    // Only completing is activity — un-checking is a correction, and logging that
+    // would leave a "Task completed" row for a task that isn't.
+    if (!currentlyDone) {
+      onLog?.({ kind: "task", body: task.label, date: todayISO() });
+    }
+    setOverrides((prev) => ({
+      ...prev,
+      [task.id]: { done: !(prev[task.id]?.done ?? baseDone), seq },
+    }));
   };
 
   // Resolve every task's current done state from its base status + overrides.
@@ -157,15 +193,7 @@ export function ContactTasksPanel({
     return (
       <div className="contact-tasks-bare">
         <div className="contact-tasks-bare__actions">
-          <Button
-            variant="ghost"
-            appearance="muted"
-            size="icon-sm"
-            aria-label="Add task"
-            onClick={() => useAddTask.getState().openFor(contact.id)}
-          >
-            <FontAwesomeIcon icon={faPlus} />
-          </Button>
+          <AddTaskAction contactId={contact.id} />
         </div>
         {body}
       </div>
@@ -187,17 +215,7 @@ export function ContactTasksPanel({
           label="Tasks"
           count={active.length}
           primaryCount
-          action={
-            <Button
-              variant="ghost"
-              appearance="muted"
-              size="icon-sm"
-              aria-label="Add task"
-              onClick={() => useAddTask.getState().openFor(contact.id)}
-            >
-              <FontAwesomeIcon icon={faPlus} />
-            </Button>
-          }
+          action={<AddTaskAction contactId={contact.id} />}
         >
           {body}
         </ContactSection>

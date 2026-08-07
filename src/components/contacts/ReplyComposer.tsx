@@ -1,23 +1,45 @@
 import { useState } from "react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Textarea } from "@buildoutinc/blueprint-react/ui/Textarea";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faBold,
+  faItalic,
+  faUnderline,
+  faLink,
+  faListUl,
+  faListOl,
+  faPaperclip,
+  faPaperPlane,
+  faCaretDown,
+} from "@fortawesome/pro-regular-svg-icons";
 
 /**
- * The inline reply composer that expands beneath a row (never a modal). It
- * quotes the thread subject and, on send, posts back to the same thread via the
- * parent's dispatch. Cancel collapses it with no side-effect.
+ * The inline reply composer that expands beneath a row (never a modal) — the same
+ * fields the full Email tab offers, because a reply from the timeline is still a
+ * real email: a To chip, CC/BCC, a formatting toolbar and the message body.
+ *
+ * Send stays secondary until there's something to send; Cancel collapses with no
+ * side-effect, and the caller restores whatever the editor displaced.
  */
 export function ReplyComposer({
   subject,
+  recipientName,
+  recipientEmail,
+  recipientInitials,
   onSend,
   onCancel,
 }: {
   subject?: string;
+  recipientName: string;
+  recipientEmail?: string;
+  recipientInitials: string;
   onSend: (text: string) => void;
   onCancel: () => void;
 }) {
   const [text, setText] = useState("");
   const canSend = text.trim().length > 0;
+
   return (
     <div className="tl-reply">
       {subject && (
@@ -25,25 +47,75 @@ export function ReplyComposer({
           Replying to <span className="fw-semibold">{subject}</span>
         </div>
       )}
-      <Textarea
-        autoFocus
-        rows={3}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Write a reply…"
-      />
+
+      <div className="tl-reply__box">
+        <div className="tl-reply__to">
+          <div className="tl-reply__to-left">
+            <span className="tl-reply__to-label">To:</span>
+            <span className="tl-reply__chip">
+              <span className="tl-reply__chip-avatar">{recipientInitials}</span>
+              <span className="fw-semibold">{recipientName}</span>
+              {recipientEmail && (
+                <span className="tl-reply__chip-email">&lt;{recipientEmail}&gt;</span>
+              )}
+              <FontAwesomeIcon icon={faCaretDown} className="tl-reply__chip-caret" />
+            </span>
+          </div>
+          <div className="tl-reply__to-right">
+            {/* Unwired, like the composer's own CC/BCC — the prototype has no
+                second recipient to add. */}
+            <Button variant="ghost" size="sm">
+              CC
+            </Button>
+            <Button variant="ghost" size="sm">
+              BCC
+            </Button>
+          </div>
+        </div>
+
+        <div className="compose-toolbar tl-reply__toolbar">
+          {[faBold, faItalic, faUnderline, faLink, faListUl, faListOl].map(
+            (icon, i) => (
+              <button
+                key={i}
+                type="button"
+                className="compose-toolbar__btn"
+                onClick={(e) => e.preventDefault()}
+              >
+                <FontAwesomeIcon icon={icon} />
+              </button>
+            ),
+          )}
+        </div>
+
+        <Textarea
+          autoFocus
+          rows={4}
+          className="tl-reply__textarea"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Write your email message here..."
+        />
+      </div>
+
       <div className="tl-reply__actions">
-        <Button variant="ghost" size="sm" onClick={onCancel}>
-          Cancel
+        <Button variant="ghost" appearance="muted" size="sm">
+          <FontAwesomeIcon icon={faPaperclip} />
+          Attachments
         </Button>
-        <Button
-          variant="primary"
-          size="sm"
-          disabled={!canSend}
-          onClick={() => canSend && onSend(text.trim())}
-        >
-          Send
-        </Button>
+        <div className="d-flex align-items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button
+            variant={canSend ? "primary" : "secondary"}
+            size="sm"
+            onClick={() => canSend && onSend(text.trim())}
+          >
+            Send Email
+            <FontAwesomeIcon icon={faPaperPlane} />
+          </Button>
+        </div>
       </div>
     </div>
   );
