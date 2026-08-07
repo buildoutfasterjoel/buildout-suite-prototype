@@ -75,8 +75,6 @@ const PLACEHOLDER: Record<ComposeKind, (name: string) => string> = {
 
 // Kinds that reveal a date button next to the primary CTA (email is "now").
 const DATED: ComposeKind[] = ["note", "call", "meeting", "tour"];
-// Kinds that offer a "related deal" select in the footer.
-const WITH_DEAL: ComposeKind[] = ["call", "meeting", "tour"];
 
 const EMPTY: Record<ComposeKind, string> = {
   note: "",
@@ -228,9 +226,7 @@ export function ContactComposeModule({
       outcome: tab === "call" ? outcome : undefined,
       subject: tab === "email" ? subject.trim() : undefined,
       to: tab === "email" ? contact.email : undefined,
-      relatedDeal: WITH_DEAL.includes(tab)
-        ? relatedDeal[tab] || undefined
-        : undefined,
+      relatedDeal: relatedDeal[tab] || undefined,
     });
     // Reset the just-submitted tab back to a clean slate.
     setTabBody(tab, "");
@@ -256,14 +252,11 @@ export function ContactComposeModule({
               onChange={(v) => setDates((d) => ({ ...d, [tab]: v }))}
             />
           )}
-          {/* Note/Meeting/Tour log buttons are always primary so they read as
-              the compose action and don't compete with the active tab pill.
-              Call keeps its conditional treatment (Call is the primary until a
-              log draft is started, then Log Call takes over). */}
+          {/* Secondary until the draft has something in it — an empty composer
+              has nothing to submit, so a primary button there is an invitation
+              to click a no-op. Same treatment the Call tab already used. */}
           <Button
-            variant={
-              tab === "call" ? (hasValue ? "primary" : "secondary") : "primary"
-            }
+            variant={hasValue ? "primary" : "secondary"}
             onClick={handleSubmit}
           >
             {CTA_LABEL[tab]}
@@ -276,7 +269,6 @@ export function ContactComposeModule({
   function renderBody() {
     if (tab === "email") return renderEmail();
 
-    const withDeal = WITH_DEAL.includes(tab);
     return (
       <div className="d-flex flex-column gap-4 p-4">
         {tab === "call" && renderCallControls()}
@@ -296,18 +288,15 @@ export function ContactComposeModule({
           <OutcomeChips value={outcome} onChange={setOutcome} />
         )}
 
+        {/* Every kind of activity can belong to a deal, so the selector leads
+            the footer on all of them — on Note it takes the slot the "private
+            to you" helper used to hold. */}
         {ctaRow(
-          withDeal ? (
-            <RelatedDealSelect
-              deals={deals}
-              value={relatedDeal[tab]}
-              onChange={(v) => setRelatedDeal((r) => ({ ...r, [tab]: v }))}
-            />
-          ) : (
-            <span className="text-muted fs-small">
-              Private to you and anyone you're sharing with
-            </span>
-          ),
+          <RelatedDealSelect
+            deals={deals}
+            value={relatedDeal[tab]}
+            onChange={(v) => setRelatedDeal((r) => ({ ...r, [tab]: v }))}
+          />,
         )}
       </div>
     );
@@ -425,11 +414,21 @@ export function ContactComposeModule({
           </div>
 
           <div className="d-flex align-items-center justify-content-between gap-2">
-            <button type="button" className="compose-attach-btn">
-              <FontAwesomeIcon icon={faPaperclip} />
-              Attachments
-            </button>
-            <Button variant="primary" onClick={handleSubmit}>
+            <div className="d-flex align-items-center gap-2 min-w-0">
+              <RelatedDealSelect
+                deals={deals}
+                value={relatedDeal.email}
+                onChange={(v) => setRelatedDeal((r) => ({ ...r, email: v }))}
+              />
+              <button type="button" className="compose-attach-btn">
+                <FontAwesomeIcon icon={faPaperclip} />
+                Attachments
+              </button>
+            </div>
+            <Button
+              variant={hasValue ? "primary" : "secondary"}
+              onClick={handleSubmit}
+            >
               {CTA_LABEL.email}
               <FontAwesomeIcon icon={faPaperPlane} />
             </Button>
