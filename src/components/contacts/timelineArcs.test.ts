@@ -3,6 +3,7 @@ import "fake-indexeddb/auto";
 import type { Contact, DealSummary, RelationshipStage } from "#/data/types";
 import { generateDataset } from "#/data/seed";
 import { useDataStore } from "#/data/dataStore";
+import { hiddenMessageCount } from "./timeline";
 import { buildContactTimeline } from "#/components/contacts/timelineArcs";
 import {
   needsAttention,
@@ -430,8 +431,11 @@ describe("hero personas in the seed", () => {
     const thread = convo.thread!;
 
     expect(thread.messages.length).toBeGreaterThanOrEqual(5);
-    // The toggle label reads off `count`, so it has to match what it opens.
-    expect(thread.count).toBe(thread.messages.length);
+    // The latest message is the row's own content, so the toggle opens everything
+    // behind it — one fewer than the thread holds.
+    expect(hiddenMessageCount(thread)).toBe(thread.messages.length - 1);
+    // And the preview has to be that latest message, not an arbitrary one.
+    expect(thread.latestBody).toBe(thread.messages.at(-1)!.body);
 
     // Both directions, and at least one same-sender pair — the two shapes a
     // two-message thread can't produce.

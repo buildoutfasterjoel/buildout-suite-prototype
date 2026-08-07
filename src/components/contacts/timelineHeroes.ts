@@ -3,6 +3,7 @@ import {
   assoc,
   createdEvent,
   mk,
+  stageChanged,
   OWNER,
   type ArcCtx,
 } from "#/components/contacts/timelineKit";
@@ -55,7 +56,6 @@ function rosa(ctx: ArcCtx): TimelineEvent[] {
       attempted: true,
       blocks: [
         {
-          kicker: "Voicemail Transcript",
           clamp: true,
           items: [
             '"Hi, it\'s Rosa. I was going through Miguel\'s papers this weekend and found the loan documents — the ones with the balloon date we talked about. I think… I think I\'d like to understand my options. Nothing decided. Call me when you have a quiet minute, no rush."',
@@ -69,25 +69,18 @@ function rosa(ctx: ArcCtx): TimelineEvent[] {
       title: "Check-in with Rosa",
       blocks: [
         {
-          kicker: "Call summary",
           items: [
             "Warmest call yet — she asked, unprompted, what an operator buyer might actually pay.",
             "Not a decision, but it's the first time she's asked a forward-looking question.",
           ],
         },
         {
-          kicker: "Next steps",
           items: [
             "Prepare a quiet, no-pressure BOV — hold it until she asks again",
             "Circle back in about three weeks",
           ],
         },
       ],
-    }),
-    mk(ctx, "task", 7, {
-      title: "Created task",
-      body: "Gentle check-in with Rosa — bring the operator-buyer examples, no ask",
-      source: "user",
     }),
     mk(ctx, "note", 45, {
       body: 'She said "next spring, maybe." From Rosa that\'s not a brush-off — it\'s a plan forming. Do not bring a contract to the next call.',
@@ -111,14 +104,12 @@ function rosa(ctx: ArcCtx): TimelineEvent[] {
       title: "Call with Rosa",
       blocks: [
         {
-          kicker: "Call summary",
           items: [
             "She opened up — the refi balloon hits August 2027, and the stress is real but she has runway.",
             "If she ever sells, the buyer has to \"get it\": an operator who keeps the building, not a flipper.",
           ],
         },
         {
-          kicker: "Next steps",
           items: ["Start a quiet operator-profile buyer list — no timeline, no pressure"],
         },
       ],
@@ -133,14 +124,12 @@ function rosa(ctx: ArcCtx): TimelineEvent[] {
       title: "First call with Rosa",
       blocks: [
         {
-          kicker: "Call summary",
           items: [
             "Guarded. She lost her husband last year — the building was their first joint investment.",
             "Not ready to talk selling. I didn't push. Just listened.",
           ],
         },
         {
-          kicker: "Next steps",
           items: ["No ask. Circle back in a few weeks."],
         },
       ],
@@ -170,14 +159,12 @@ function earl(ctx: ArcCtx): TimelineEvent[] {
       title: "Follow-up with Earl",
       blocks: [
         {
-          kicker: "Call summary",
           items: [
             "One open question stands between us and the signature: whether a preservation easement could lower a buyer's basis.",
             "He's talking to us and his nephew's broker friend. He said, kindly, that we're ahead.",
           ],
         },
         {
-          kicker: "Next steps",
           items: [
             "Get the preservation-easement consult scheduled this week",
             "Have the engagement agreement ready to sign",
@@ -223,7 +210,6 @@ function earl(ctx: ArcCtx): TimelineEvent[] {
       title: "First call with Earl",
       blocks: [
         {
-          kicker: "Call summary",
           items: [
             "Owned the building since 1979 — the emotional attachment is real, and it's the whole negotiation.",
             "His wife painted the storefront in '92; the painting hangs in his living room.",
@@ -232,7 +218,6 @@ function earl(ctx: ArcCtx): TimelineEvent[] {
           ],
         },
         {
-          kicker: "Next steps",
           items: [
             "Research preservation-easement options",
             "Sketch the preservation-minded buyer profile (boutique hotel? heritage retailer?)",
@@ -241,11 +226,7 @@ function earl(ctx: ArcCtx): TimelineEvent[] {
       ],
       associations: assoc(ctx.deal),
     }),
-    mk(ctx, "stage-change", 19, {
-      title: "Stage changed",
-      body: "Nurturing → Pitching",
-      source: "user",
-    }),
+    stageChanged(ctx, 19, "nurturing", "pitching"),
     createdEvent(ctx),
   ];
 }
@@ -357,14 +338,12 @@ function victor(ctx: ArcCtx): TimelineEvent[] {
       title: "Weekly status with Victor",
       blocks: [
         {
-          kicker: "Call summary",
           items: [
             "Second buyer confirmed they're drafting — two live parties, exactly the position we wanted.",
             "He re-ran my fallback math himself overnight and got the same answer. Counter goes out after his sign-off.",
           ],
         },
         {
-          kicker: "Next steps",
           items: ["Send the counter at ask", "Keep the second group's tour feedback warm"],
         },
       ],
@@ -375,7 +354,6 @@ function victor(ctx: ArcCtx): TimelineEvent[] {
     mk(ctx, "conversation", newest.day, {
       subject,
       thread: {
-        count: messages.length,
         latestSender: latest.sender,
         latestBody: latest.body,
         messages,
@@ -398,7 +376,7 @@ function victor(ctx: ArcCtx): TimelineEvent[] {
       }),
     ),
     mk(ctx, "task", 20, {
-      title: "Completed task",
+      title: "Task completed",
       body: "Assemble the diligence data room — leases, T12, service contracts",
       source: "user",
       associations: assoc(ctx.deal),
@@ -427,14 +405,12 @@ function victor(ctx: ArcCtx): TimelineEvent[] {
       title: "OM review with Victor",
       blocks: [
         {
-          kicker: "Call summary",
           items: [
             "OM approved — leads with the in-place cap rate, no vision section. His words: \"finally, a broker who can read a rent roll.\"",
             "Green light on the quiet launch to the vetted list.",
           ],
         },
         {
-          kicker: "Next steps",
           items: ["Open the pre-market", "Report interest as it lands, in writing"],
         },
       ],
@@ -447,11 +423,7 @@ function victor(ctx: ArcCtx): TimelineEvent[] {
       hasAttachment: true,
       associations: assoc(ctx.deal),
     }),
-    mk(ctx, "stage-change", 62, {
-      title: "Stage changed",
-      body: "Pitching → Client",
-      source: "user",
-    }),
+    stageChanged(ctx, 62, "pitching", "client"),
     mk(ctx, "email", 70, {
       direction: "out",
       subject: `${dealName}: pricing analysis (BOV)`,
@@ -472,14 +444,12 @@ function victor(ctx: ArcCtx): TimelineEvent[] {
       title: "Discovery call with Victor",
       blocks: [
         {
-          kicker: "Call summary",
           items: [
             "Testing the market while cap rates hold — he sold his own comp two blocks away last year, so he knows this submarket cold.",
             "A numbers guy, not a story guy. He wants the pricing case before committing to list.",
           ],
         },
         {
-          kicker: "Next steps",
           items: ["Build the BOV anchored to his own comp"],
         },
       ],
@@ -509,23 +479,15 @@ function margaret(ctx: ArcCtx): TimelineEvent[] {
       title: "Diligence status with Margaret",
       blocks: [
         {
-          kicker: "Call summary",
           items: [
             "Appraisal lands Friday — the last real gate. Financing is otherwise clear.",
             "She thanked me for the weekly written summaries: \"I never once had to ask what was happening.\"",
           ],
         },
         {
-          kicker: "Next steps",
           items: ["Send the appraisal the hour it arrives", "Confirm the closing date with title"],
         },
       ],
-      associations: assoc(ctx.deal),
-    }),
-    mk(ctx, "task", 1, {
-      title: "Created task",
-      body: "Confirm appraisal delivery Friday — forward to Margaret + her CPA immediately",
-      source: "user",
       associations: assoc(ctx.deal),
     }),
     mk(ctx, "note", 8, {
@@ -538,14 +500,12 @@ function margaret(ctx: ArcCtx): TimelineEvent[] {
       title: "Diligence check-in with Margaret",
       blocks: [
         {
-          kicker: "Call summary",
           items: [
             "Inspection came back clean — nothing structural, two small credits worth requesting.",
             "She approved requesting both credits without a second call. Decisions in minutes, always.",
           ],
         },
         {
-          kicker: "Next steps",
           items: ["Submit the credit request", "Order the appraisal"],
         },
       ],
@@ -563,14 +523,12 @@ function margaret(ctx: ArcCtx): TimelineEvent[] {
       title: "Identification call with Margaret",
       blocks: [
         {
-          kicker: "Call summary",
           items: [
             `Locked the 1031 identification list: ${dealName} as primary, two backups held open.`,
             "Offer accepted the same week — her clock stops being the enemy the day we're under contract.",
           ],
         },
         {
-          kicker: "Next steps",
           items: ["Open escrow", "Build the diligence calendar around her deadline"],
         },
       ],
@@ -620,11 +578,7 @@ function margaret(ctx: ArcCtx): TimelineEvent[] {
       subject: "Your search, in writing",
       body: `Margaret,\n\nGood speaking today. Recapping so we're precise: you're exchanging out of the family estate, the identification window is the constraint that matters, and you want income-stable retail you never have to think about. Everything I send will be measured against those three sentences.\n\n${ME}`,
     }),
-    mk(ctx, "stage-change", 86, {
-      title: "Stage changed",
-      body: "Pitching → Client",
-      source: "user",
-    }),
+    stageChanged(ctx, 86, "pitching", "client"),
     createdEvent(ctx),
   ];
 }
@@ -653,14 +607,12 @@ function patricia(ctx: ArcCtx): TimelineEvent[] {
       title: "Post-close check-in with Patricia",
       blocks: [
         {
-          kicker: "Call summary",
           items: [
             "Deal funded clean; her board flagged the process as the template for future dispositions.",
             "She has a second asset to bring to market next year — and offered an intro to a peer who's disposing in Q1.",
           ],
         },
         {
-          kicker: "Next steps",
           items: ["Calendar a Q4 prep call on the next asset", "Send the referral a market one-pager"],
         },
       ],
@@ -691,14 +643,12 @@ function patricia(ctx: ArcCtx): TimelineEvent[] {
       title: "Clear-to-close call with Patricia",
       blocks: [
         {
-          kicker: "Call summary",
           items: [
             "Appraisal at value; buyer waived remaining contingencies.",
             "Clear to close next week.",
           ],
         },
         {
-          kicker: "Next steps",
           items: ["Coordinate closing logistics with title and buyer counsel"],
         },
       ],
@@ -710,14 +660,12 @@ function patricia(ctx: ArcCtx): TimelineEvent[] {
       title: "Buyer selection with Patricia",
       blocks: [
         {
-          kicker: "Call summary",
           items: [
             "Board approved the regional buyer — slightly lower headline, but all cash, 21-day close, no financing out.",
             "Certainty beat price by a visible margin. Logged for the next board memo.",
           ],
         },
         {
-          kicker: "Next steps",
           items: ["Open escrow", "Lock the diligence and estoppel schedule"],
         },
       ],
@@ -736,14 +684,12 @@ function patricia(ctx: ArcCtx): TimelineEvent[] {
       title: "Tour debrief with Patricia",
       blocks: [
         {
-          kicker: "Call summary",
           items: [
             "Three institutional tours complete; two signaling LOIs.",
             "She wants the side-by-side weighted on execution risk, not just price. Board reads it Friday.",
           ],
         },
         {
-          kicker: "Next steps",
           items: ["Collect both LOIs", "Build the certainty-weighted comparison"],
         },
       ],
@@ -755,11 +701,7 @@ function patricia(ctx: ArcCtx): TimelineEvent[] {
       source: "automation",
       associations: assoc(ctx.deal),
     }),
-    mk(ctx, "stage-change", 145, {
-      title: "Stage changed",
-      body: "Pitching → Client",
-      source: "user",
-    }),
+    stageChanged(ctx, 145, "pitching", "client"),
     mk(ctx, "email", 150, {
       direction: "out",
       subject: `${dealName}: BOV + disposition plan`,
@@ -780,7 +722,6 @@ function patricia(ctx: ArcCtx): TimelineEvent[] {
       title: "Discovery call with Patricia",
       blocks: [
         {
-          kicker: "Call summary",
           items: [
             "The REIT is disposing — capital recycling, not distress. She was precise about that distinction.",
             "She runs a tight process: defensible BOV, vetted buyer pool, clean timeline. No theatrics.",
@@ -788,7 +729,6 @@ function patricia(ctx: ArcCtx): TimelineEvent[] {
           ],
         },
         {
-          kicker: "Next steps",
           items: ["Build the cap-rate-led BOV off the rent roll and T12", "Pull the submarket comps"],
         },
       ],

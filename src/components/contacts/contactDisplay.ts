@@ -187,12 +187,19 @@ export interface ContactActivityEntry {
 export type ComposeKind = "note" | "call" | "email" | "meeting" | "tour";
 
 /**
+ * Everything that can land in the session log. A completed task isn't something
+ * the composer can produce — it comes from the Tasks panel — but it belongs in
+ * the same feed, so the logged-activity kind is wider than the compose tabs.
+ */
+export type LoggedKind = ComposeKind | "task";
+
+/**
  * An activity logged from the compose module, prepended to the timeline. Held in
  * component state (prototype — not persisted).
  */
 export interface ComposedActivity {
   id: string;
-  kind: ComposeKind;
+  kind: LoggedKind;
   /** Free-text body (note/call/meeting/tour) or email message. */
   body: string;
   /** `yyyy-mm-dd` when the activity took place — editable via the date picker. */
@@ -223,12 +230,13 @@ export interface ComposedActivity {
 }
 
 /** Timeline headline per logged activity kind. */
-export const COMPOSE_TIMELINE_TITLE: Record<ComposeKind, string> = {
+export const COMPOSE_TIMELINE_TITLE: Record<LoggedKind, string> = {
   note: "You logged a note",
   call: "You logged a call",
   email: "You sent an email",
   meeting: "You logged a meeting",
   tour: "You logged a tour",
+  task: "Task completed",
 };
 
 /** Local `yyyy-mm-dd` for today (no timezone drift). */

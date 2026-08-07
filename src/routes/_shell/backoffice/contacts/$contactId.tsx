@@ -111,6 +111,7 @@ function ContactDetailPage() {
       contact={contact}
       tasks={tasks}
       completedTasks={completedTasks}
+      onLog={addLog}
     />
   );
 
@@ -169,6 +170,7 @@ function ContactDetailPage() {
                         contact={contact}
                         tasks={tasks}
                         completedTasks={completedTasks}
+                        onLog={addLog}
                         bare
                       />
                     ),

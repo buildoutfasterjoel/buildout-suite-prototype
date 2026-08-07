@@ -12,16 +12,20 @@ import {
   type ComposedDraft,
 } from "#/components/contacts/ContactComposeModule";
 import {
-  todayISO,
+  contactFullName,
+  contactInitials,
   type ComposedActivity,
 } from "#/components/contacts/contactDisplay";
 import { notify } from "#/lib/notify";
+import { CURRENT_USER } from "#/data/teammates";
 import {
   composedToEvent,
+  foldThreads,
   groupByBucket,
   needsAttention,
   visibleEvents,
   type FilterKey,
+  type SessionReply,
   type TimelineEvent as TimelineEventData,
 } from "#/components/contacts/timeline";
 import { buildContactTimeline } from "#/components/contacts/timelineArcs";
@@ -87,7 +91,17 @@ export function ContactEngagementPanel({
     Record<string, { pinned?: boolean }>
   >({});
   const [deleted, setDeleted] = useState<Set<string>>(new Set());
+  // Replies the broker sent from the timeline this session, keyed by the event
+  // they answered. `foldThreads` merges them into that exchange rather than
+  // adding a row, and the conversation takes the new message's date — which is
+  // what carries it back to the top of the feed.
+  const [threadReplies, setThreadReplies] = useState<
+    Record<string, SessionReply[]>
+  >({});
   const [replyOpenId, setReplyOpenId] = useState<string | null>(null);
+  // Inside an expanded thread the editor hangs under one specific message, so
+  // the row needs to know which — null means "at the end of the row".
+  const [replyMessageId, setReplyMessageId] = useState<string | null>(null);
   const [threadOpenId, setThreadOpenId] = useState<string | null>(null);
   // Rows the broker has acted on (replied / responded / called back) and the
   // simulated inbound events — both live in the contact-session store so
@@ -185,13 +199,23 @@ export function ContactEngagementPanel({
       ...simEvents,
       ...buildContactTimeline(contact, deals),
     ];
-    return base
+    return foldThreads(base, threadReplies)
       .filter((e) => !deleted.has(e.id))
       .map((e) => ({
         ...e,
         pinned: overrides[e.id]?.pinned ?? e.pinned,
       }));
-  }, [logged, simEvents, contact, deals, overrides, deleted]);
+  }, [logged, simEvents, contact, deals, overrides, deleted, threadReplies]);
+
+  // Every reply from this record goes to the contact — the timeline is theirs.
+  const replyTo = useMemo(
+    () => ({
+      name: contactFullName(contact),
+      email: contact.email,
+      initials: contactInitials(contact),
+    }),
+    [contact],
+  );
 
   const isUnhandled = (e: TimelineEventData) =>
     needsAttention(e) && !resolved.has(e.id);
@@ -215,14 +239,21 @@ export function ContactEngagementPanel({
   );
 
   // Single action dispatch for every row — the row itself has no side-effects.
-  function handleAction(event: TimelineEventData, id: string) {
+  function handleAction(
+    event: TimelineEventData,
+    id: string,
+    messageId?: string,
+  ) {
     if (id === "Pin to top") {
       setOverrides((o) => ({
         ...o,
         [event.id]: { ...o[event.id], pinned: !(o[event.id]?.pinned ?? event.pinned) },
       }));
     } else if (/^(Reply|Reply all|Forward|Respond)$/.test(id)) {
-      setReplyOpenId((cur) => (cur === event.id ? null : event.id));
+      const sameTarget =
+        replyOpenId === event.id && (replyMessageId ?? null) === (messageId ?? null);
+      setReplyOpenId(sameTarget ? null : event.id);
+      setReplyMessageId(sameTarget ? null : (messageId ?? null));
     } else if (id === "Call back" || id === "Call") {
       // Calling back runs the real simulated call flow (calling → ringing →
       // connected → mandatory log) — the hang-up recap is what drives the
@@ -258,19 +289,22 @@ export function ContactEngagementPanel({
   }
 
   function handleReplySend(event: TimelineEventData, text: string) {
-    const subj = event.subject
-      ? event.subject.startsWith("Re:")
-        ? event.subject
-        : `Re: ${event.subject}`
-      : `Re: ${contact.firstName}`;
-    onLog({
-      kind: "email",
-      body: text,
-      subject: subj,
-      to: contact.email,
-      date: todayISO(),
-    });
+    // A reply advances an exchange; it isn't a separate thing that happened. So
+    // it attaches to the event it answers (see foldThreads) rather than going
+    // through onLog, which would leave a second row saying the same thing.
+    const now = new Date().toISOString();
+    // A conversation row is synthesized from its members, so its own id changes
+    // as the thread grows — anchor the reply to the thread instead.
+    const key = event.threadId ?? event.id;
+    setThreadReplies((prev) => ({
+      ...prev,
+      [key]: [
+        ...(prev[key] ?? []),
+        { id: `${key}-reply-${(prev[key]?.length ?? 0) + 1}`, body: text, timestamp: now, sender: CURRENT_USER.name },
+      ],
+    }));
     setReplyOpenId(null);
+    setReplyMessageId(null);
     // Replying handles the inbound email/thread — drop its attention state.
     resolve(event.id);
   }
@@ -307,10 +341,17 @@ export function ContactEngagementPanel({
                     pinned={!!event.pinned}
                     arriving={arrivingIds.has(event.id)}
                     replyOpen={replyOpenId === event.id}
+                    replyMessageId={replyMessageId}
                     threadOpen={threadOpenId === event.id}
-                    onAction={(id) => handleAction(event, id)}
+                    replyTo={replyTo}
+                    onAction={(id, messageId) =>
+                      handleAction(event, id, messageId)
+                    }
                     onReplySend={(text) => handleReplySend(event, text)}
-                    onReplyCancel={() => setReplyOpenId(null)}
+                    onReplyCancel={() => {
+                      setReplyOpenId(null);
+                      setReplyMessageId(null);
+                    }}
                   />
                 ))}
               </section>

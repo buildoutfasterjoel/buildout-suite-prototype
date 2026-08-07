@@ -1,4 +1,4 @@
-import type { Contact, DealSummary } from "#/data/types";
+import type { Contact, DealSummary, RelationshipStage } from "#/data/types";
 import { CURRENT_USER } from "#/data/teammates";
 import { contactFullName } from "#/components/contacts/contactDisplay";
 import type {
@@ -121,6 +121,58 @@ export function mk(
   };
 }
 
+/**
+ * The stage a contact is recorded as arriving at. An inquiry-sourced record shows
+ * up already having raised a hand; everyone else starts cold.
+ */
+export function arrivalStage(c: Contact): RelationshipStage {
+  return (c.inquiredListingIds?.length ?? 0) > 0 ? "inquired" : "cold";
+}
+
+/** Why a stage moved, phrased against the deal that caused it. */
+function stageReason(to: RelationshipStage, dealName?: string): string {
+  const deal = dealName ?? "the associated deal";
+  switch (to) {
+    case "inquired":
+      return `An inquiry came in on ${deal}, moving this contact to Inquired.`;
+    case "nurturing":
+      return dealName
+        ? `Follow-up began on ${deal}, moving this contact to Nurturing.`
+        : "First contact was made, moving this contact to Nurturing.";
+    case "pitching":
+      return `A proposal went out on ${deal}, moving this contact to Pitching.`;
+    case "client":
+      return `The associated deal ${deal} has been updated to Active, making this contact officially a Client.`;
+    case "past_client":
+      return `${deal} closed, moving this contact to Past Client.`;
+    default:
+      return `${deal} was updated, moving this contact to Cold.`;
+  }
+}
+
+/**
+ * A stage transition. Attributed to System rather than a person — the stage is
+ * derived from what the deals are doing, not set by hand (see contactStage.ts) —
+ * and it carries the reason, because "Nurturing → Pitching" on its own leaves
+ * the reader to guess what moved.
+ */
+export function stageChanged(
+  ctx: ArcCtx,
+  daysAgo: number,
+  from: RelationshipStage,
+  to: RelationshipStage,
+): TimelineEvent {
+  return mk(ctx, "stage-change", daysAgo, {
+    actor: { name: "System" },
+    contact: ctx.ref,
+    title: "Updated contact stage:",
+    stageChange: { from, to },
+    body: stageReason(to, ctx.deal?.name),
+    associations: assoc(ctx.deal),
+    source: "system",
+  });
+}
+
 /** The system "Contact created" row every arc ends with. */
 export function createdEvent(ctx: ArcCtx): TimelineEvent {
   return {
@@ -131,6 +183,7 @@ export function createdEvent(ctx: ArcCtx): TimelineEvent {
     timestamp: ctx.c.createdAt,
     seq: ctx.next(),
     title: "Contact created",
+    stageChange: { to: arrivalStage(ctx.c) },
     body: `Source: ${ctx.c.source}`,
     source: "system",
   };

@@ -1,25 +1,24 @@
+import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faLock,
-  faUsers,
   faThumbtack,
   faPaperclip,
   faChevronDown,
   faChevronRight,
-  faDownload,
-  faFile,
-  faFilePdf,
-  faFileSpreadsheet,
 } from "@fortawesome/pro-regular-svg-icons";
+import { AttachmentChip } from "#/components/contacts/AttachmentChip";
 import { getListing } from "#/data/store";
 import { dealCardLinkProps } from "#/components/deals/dealCardLink";
 import { IconBadge } from "#/components/contacts/IconBadge";
+import { ContactStageBadge } from "#/components/contacts/ContactStageBadge";
 import { ClampText } from "#/components/contacts/ClampText";
-import { ReplyCard } from "#/components/contacts/ReplyCard";
 import { ReplyComposer } from "#/components/contacts/ReplyComposer";
-import { ConversationThread } from "#/components/contacts/ConversationThread";
+import {
+  ConversationThread,
+  ThreadMessage,
+} from "#/components/contacts/ConversationThread";
 import {
   TimelineActionBar,
   TimelineFab,
@@ -30,47 +29,32 @@ import {
   relativeTime,
   exactTime,
   durationLabel,
-  type TimelineAttachment,
+  hiddenMessageCount,
   type TimelineEvent as TimelineEventData,
 } from "#/components/contacts/timeline";
 
-/** Pick a file-type icon from the attachment's extension. */
-function attachmentIcon(name: string) {
-  if (/\.pdf$/i.test(name)) return faFilePdf;
-  if (/\.(xlsx?|csv)$/i.test(name)) return faFileSpreadsheet;
-  return faFile;
-}
-
 /**
- * One attached document: type glyph, name over a size/format line, and a
- * download affordance. A deal-linked attachment (e.g. a sent BOV) opens that
- * deal's document editor instead.
+ * A stage-change reason names the deal that caused it ("The associated deal
+ * Sunridge Plaza has been updated to Active…"). Link that name in place rather
+ * than repeating it as a separate association chip — the sentence is where it
+ * belongs, and two copies of the same link on one row reads as a mistake.
  */
-function AttachmentChip({ attachment }: { attachment: TimelineAttachment }) {
-  const inner = (
+function linkifyDeal(
+  text: string,
+  assoc?: { label: string; id?: string },
+): ReactNode {
+  if (!assoc?.id || !text.includes(assoc.label)) return text;
+  const deal = getListing(assoc.id);
+  if (!deal) return text;
+  const [before, ...rest] = text.split(assoc.label);
+  return (
     <>
-      <FontAwesomeIcon
-        icon={attachmentIcon(attachment.name)}
-        className="tl-attach__icon"
-      />
-      <span className="tl-attach__label">
-        <span className="tl-attach__name">{attachment.name}</span>
-        {attachment.meta && <span className="tl-attach__meta">{attachment.meta}</span>}
-      </span>
-      <FontAwesomeIcon icon={faDownload} className="tl-attach__end" />
+      {before}
+      <Link {...dealCardLinkProps(deal)} className="tl-row__deal-link">
+        {assoc.label}
+      </Link>
+      {rest.join(assoc.label)}
     </>
-  );
-  return attachment.dealId ? (
-    <Link
-      to="/editor/$listingId"
-      params={{ listingId: attachment.dealId }}
-      search={{ focus: "underwriting" }}
-      className="tl-attach__chip tl-attach__chip--link"
-    >
-      {inner}
-    </Link>
-  ) : (
-    <div className="tl-attach__chip">{inner}</div>
   );
 }
 
@@ -92,7 +76,9 @@ export function TimelineEvent({
   attention,
   pinned,
   replyOpen,
+  replyMessageId,
   threadOpen,
+  replyTo,
   arriving = false,
   onAction,
   onReplySend,
@@ -103,7 +89,11 @@ export function TimelineEvent({
   attention: boolean;
   pinned: boolean;
   replyOpen: boolean;
+  /** Which thread message the editor hangs under, when the row is a thread. */
+  replyMessageId?: string | null;
   threadOpen: boolean;
+  /** Who a reply from this row would go to — fills the composer's To chip. */
+  replyTo: { name: string; email?: string; initials: string };
   /** Just landed (simulated inbound) — plays a one-shot entrance highlight. */
   arriving?: boolean;
   onAction: ActionDispatch;
@@ -121,6 +111,7 @@ export function TimelineEvent({
   const isActionable = !config.readOnly && !!actionBar?.primary && attention;
 
   const isThread = event.type === "conversation" && !!event.thread;
+  const latestMessage = event.thread?.messages.at(-1);
   // Everything the row has to say, as one clamped block. Bullet blocks, a plain
   // body and a thread's latest message all read as content, so they clamp
   // together rather than each growing the row on its own.
@@ -128,7 +119,6 @@ export function TimelineEvent({
     <>
       {event.blocks?.map((block, i) => (
         <div key={i} className="tl-block">
-          {block.kicker && <div className="tl-block__kicker">{block.kicker}</div>}
           {block.items.length === 1 ? (
             <p className="tl-row__text">{block.items[0]}</p>
           ) : (
@@ -140,7 +130,11 @@ export function TimelineEvent({
           )}
         </div>
       ))}
-      {event.body && <p className="tl-row__text">{event.body}</p>}
+      {event.body && (
+        <p className="tl-row__text">
+          {linkifyDeal(event.body, event.associations?.[0])}
+        </p>
+      )}
     </>
   );
   const hasContent = isThread || !!event.body || !!event.blocks?.length;
@@ -200,10 +194,22 @@ export function TimelineEvent({
                 <FontAwesomeIcon icon={faPaperclip} className="tl-row__clip" />
               )}
               <span>{headline}</span>
+              {/* One badge = the stage a contact arrived as; two = what changed. */}
+              {event.stageChange && (
+                <span className="tl-row__stages">
+                  {event.stageChange.from && (
+                    <>
+                      <ContactStageBadge relationship={event.stageChange.from} />
+                      <span className="tl-row__stages-arrow">›</span>
+                    </>
+                  )}
+                  <ContactStageBadge relationship={event.stageChange.to} />
+                </span>
+              )}
             </span>
             {/* Deal / property links, separated from the subject by a rule so the
                 two read as one line without either claiming the other's weight. */}
-            {event.associations && event.associations.length > 0 && (
+            {event.associations && event.associations.length > 0 && !event.stageChange && (
               <span className="tl-row__assoc">
                 <span className="tl-row__assoc-sep" aria-hidden="true">
                   |
@@ -235,16 +241,26 @@ export function TimelineEvent({
           <div className="tl-row__content">
             {isThread && event.thread ? (
               <>
-                {/* Collapsed, the thread shows only its latest message — the same
-                    two-line clamp every other row gets. */}
-                {!threadOpen && <ClampText>{event.thread.latestBody}</ClampText>}
-                {event.attachments && event.attachments.length > 0 && (
+                {/* The latest message is the row's content and stays put whether
+                    the thread is open or shut — expanding reveals what came
+                    *before* it, so hiding it there took away the message the
+                    reader was actually looking at. Clamped while collapsed; once
+                    open, the whole exchange reads unclamped. */}
+                {threadOpen ? (
+                  <p className="tl-row__text">{event.thread.latestBody}</p>
+                ) : (
+                  <ClampText>{event.thread.latestBody}</ClampText>
+                )}
+                {/* Only the latest message's files — the row is that message.
+                    Older attachments travel with their own message in the thread,
+                    so you can tell which email something arrived on. */}
+                {latestMessage?.attachments?.length ? (
                   <div className="tl-attach">
-                    {event.attachments.map((a) => (
+                    {latestMessage.attachments.map((a) => (
                       <AttachmentChip key={a.name} attachment={a} />
                     ))}
                   </div>
-                )}
+                ) : null}
                 <button
                   type="button"
                   className="tl-link tl-link--toggle"
@@ -254,16 +270,43 @@ export function TimelineEvent({
                   <FontAwesomeIcon
                     icon={threadOpen ? faChevronDown : faChevronRight}
                   />
-                  {threadOpen ? "Hide thread" : `View full thread (${event.thread.count})`}
+                  {threadOpen
+                    ? "Hide thread"
+                    : `View full thread (${hiddenMessageCount(event.thread)})`}
                 </button>
                 {threadOpen && (
-                  <ConversationThread thread={event.thread} onAction={onAction} />
+                  <ConversationThread
+                    thread={event.thread}
+                    onAction={onAction}
+                    replyingToId={replyOpen ? replyMessageId : null}
+                    replyEditor={
+                      <ReplyComposer
+                        subject={event.subject ?? event.title}
+                        recipientName={replyTo.name}
+                        recipientEmail={replyTo.email}
+                        recipientInitials={replyTo.initials}
+                        onSend={onReplySend}
+                        onCancel={onReplyCancel}
+                      />
+                    }
+                  />
                 )}
               </>
             ) : (
               <>
                 {hasContent && <ClampText>{content}</ClampText>}
-                {event.reply && <ReplyCard reply={event.reply} />}
+                {/* A lone inbound reply reads as a thread of one, not as a
+                    differently-shaped card. */}
+                {event.reply && (
+                  <div className="tl-thread">
+                    <ThreadMessage
+                      sender={event.reply.replier}
+                      timestamp={event.reply.timestamp ?? event.timestamp}
+                      body={event.reply.body}
+                      onAction={onAction}
+                    />
+                  </div>
+                )}
                 {event.attachments && event.attachments.length > 0 && (
                   <div className="tl-attach">
                     {event.attachments.map((a) => (
@@ -274,28 +317,27 @@ export function TimelineEvent({
               </>
             )}
 
-            {event.visibility && (
-              <div className="tl-row__visibility">
-                <FontAwesomeIcon
-                  icon={event.visibility === "private" ? faLock : faUsers}
-                />
-                {event.visibility === "private"
-                  ? "Private to you"
-                  : event.visibility === "team"
-                    ? "Visible to your team"
-                    : "Private to you and anyone you're sharing with"}
-              </div>
-            )}
           </div>
         )}
 
-        {isActionable && actionBar && (
+        {/* The editor replaces the action bar rather than stacking under it —
+            once you're writing the reply, "Reply" is no longer an offer. Cancel
+            brings the bar back. */}
+        {isActionable && actionBar && !replyOpen && (
           <TimelineActionBar actionBar={actionBar} onAction={onAction} />
         )}
 
-        {replyOpen && (
+        {/* Anchored replies render under their message inside the thread (see
+            ConversationThread); an un-anchored one — from the action bar or the
+            row's FAB — sits at the end of the row, which puts it below the thread
+            when that's expanded. Keying this on `threadOpen` instead made the
+            editor vanish the moment you opened the thread you were replying to. */}
+        {replyOpen && !replyMessageId && (
           <ReplyComposer
             subject={event.subject ?? event.title}
+            recipientName={replyTo.name}
+            recipientEmail={replyTo.email}
+            recipientInitials={replyTo.initials}
             onSend={onReplySend}
             onCancel={onReplyCancel}
           />

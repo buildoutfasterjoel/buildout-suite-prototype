@@ -9,6 +9,7 @@ import {
   mk,
   OWNER,
   pick,
+  stageChanged,
   type ArcCtx,
 } from "#/components/contacts/timelineKit";
 import { heroTimeline } from "#/components/contacts/timelineHeroes";
@@ -302,8 +303,8 @@ function nurturingArc(ctx: ArcCtx): TimelineEvent[] {
       durationSecs: firstCall.voicemail ? 42 : 4 * 60 + 30,
       title: `Cold call to ${first}`,
       blocks: [
-        { kicker: "Call summary", items: firstCall.summary },
-        { kicker: "Next steps", items: firstCall.next },
+        { items: firstCall.summary },
+        { items: firstCall.next },
       ],
     }),
   );
@@ -354,7 +355,6 @@ function nurturingArc(ctx: ArcCtx): TimelineEvent[] {
       title: `Check-in with ${first}`,
       blocks: [
         {
-          kicker: "Call summary",
           items: pick(rng, [
             [
               "Warmer this time — asked what the building would actually fetch.",
@@ -366,22 +366,12 @@ function nurturingArc(ctx: ArcCtx): TimelineEvent[] {
           ]),
         },
         {
-          kicker: "Next steps",
           items: ["Send an updated one-page BOV teaser", "Circle back in 3–4 weeks"],
         },
       ],
     }),
   );
 
-  if (rng() > 0.4) {
-    events.push(
-      mk(ctx, "task", Math.max(anchor - 1, 0), {
-        title: "Created task",
-        body: `Follow up with ${first} — bring fresh comps`,
-        source: "user",
-      }),
-    );
-  }
   if (rng() > 0.5) {
     events.push(marketingBeat(ctx, back(0.65)));
   }
@@ -424,7 +414,6 @@ function pitchingArc(ctx: ArcCtx): TimelineEvent[] {
       title: `Discovery call with ${first}`,
       blocks: [
         {
-          kicker: "Call summary",
           items: seller
             ? pick(rng, [
                 [
@@ -447,7 +436,6 @@ function pitchingArc(ctx: ArcCtx): TimelineEvent[] {
               ]),
         },
         {
-          kicker: "Next steps",
           items: seller
             ? [`Build the ${term} analysis on ${dealName}`, "Send engagement terms"]
             : ["Curate the first candidate set", "Confirm proof of funds"],
@@ -535,7 +523,6 @@ function pitchingArc(ctx: ArcCtx): TimelineEvent[] {
       title: `Follow-up with ${first}`,
       blocks: [
         {
-          kicker: "Call summary",
           items: [
             seller
               ? "Wants the weekend to decide. Down to us and one other firm."
@@ -543,7 +530,6 @@ function pitchingArc(ctx: ArcCtx): TimelineEvent[] {
           ],
         },
         {
-          kicker: "Next steps",
           items: seller
             ? ["Send the engagement agreement so it's ready to sign", "Call Monday 9am"]
             : ["Send rent roll + expense history", "Hold Thursday for a second tour"],
@@ -554,11 +540,7 @@ function pitchingArc(ctx: ArcCtx): TimelineEvent[] {
   );
 
   events.push(
-    mk(ctx, "stage-change", f(15), {
-      title: "Stage changed",
-      body: "Nurturing → Pitching",
-      source: "user",
-    }),
+    stageChanged(ctx, f(15), "nurturing", "pitching"),
   );
 
   events.push(...originBeats(ctx), createdEvent(ctx));
@@ -577,11 +559,7 @@ function activeClientArc(ctx: ArcCtx): TimelineEvent[] {
 
   // Winning the business (older beats).
   events.push(
-    mk(ctx, "stage-change", back(0.8), {
-      title: "Stage changed",
-      body: "Pitching → Client",
-      source: "user",
-    }),
+    stageChanged(ctx, back(0.8), "pitching", "client"),
     mk(ctx, "email", back(0.78), {
       direction: "out",
       subject: seller
@@ -604,13 +582,12 @@ function activeClientArc(ctx: ArcCtx): TimelineEvent[] {
         title: `OM review with ${first}`,
         blocks: [
           {
-            kicker: "Call summary",
             items: [
               `Walked the OM page by page — ${first} signed off with two edits.`,
               "Green light to open the quiet pre-market.",
             ],
           },
-          { kicker: "Next steps", items: ["Send to the vetted buyer list", "Report interest as it lands"] },
+          { items: ["Send to the vetted buyer list", "Report interest as it lands"] },
         ],
         associations: assoc(deal),
       }),
@@ -688,7 +665,6 @@ function activeClientArc(ctx: ArcCtx): TimelineEvent[] {
     mk(ctx, "conversation", back(0.1), {
       subject: seller ? `${dealName}: offer strategy` : `${dealName}: making our move`,
       thread: {
-        count: 2,
         latestSender: ctx.ref.name,
         latestBody: inMsg,
         messages: [
@@ -738,13 +714,11 @@ function activeClientArc(ctx: ArcCtx): TimelineEvent[] {
       title: `Weekly status with ${first}`,
       blocks: [
         {
-          kicker: "Call summary",
           items: seller
             ? ["Two parties active; one drafting an offer now.", "Holding pricing discipline — no reason to blink first."]
             : ["Aligned on the number and terms.", `${first} is ready to sign the LOI this week.`],
         },
         {
-          kicker: "Next steps",
           items: seller
             ? ["Circulate the offer summary the moment it lands", "Keep the second group warm"]
             : ["Draft the LOI", "Confirm lender timeline"],
@@ -757,7 +731,7 @@ function activeClientArc(ctx: ArcCtx): TimelineEvent[] {
   if (rng() > 0.5) {
     events.push(
       mk(ctx, "task", back(0.3), {
-        title: "Completed task",
+        title: "Task completed",
         body: seller ? "Assemble diligence data room" : "Collect proof of funds",
         source: "user",
       }),
@@ -780,11 +754,7 @@ function underContractArc(ctx: ArcCtx): TimelineEvent[] {
 
   // Compressed history of how we got here.
   events.push(
-    mk(ctx, "stage-change", back(0.85), {
-      title: "Stage changed",
-      body: "Pitching → Client",
-      source: "user",
-    }),
+    stageChanged(ctx, back(0.85), "pitching", "client"),
     mk(ctx, "email", back(0.7), {
       direction: "out",
       subject: seller ? `${dealName}: launch recap` : `${dealName}: our offer is in`,
@@ -800,12 +770,11 @@ function underContractArc(ctx: ArcCtx): TimelineEvent[] {
       title: `Offer review with ${first}`,
       blocks: [
         {
-          kicker: "Call summary",
           items: seller
             ? ["Accepted the stronger offer — certainty over the marginal bump.", "Terms agreed in principle."]
             : ["Seller countered light; we accepted.", "Deal agreed — moving to paper."],
         },
-        { kicker: "Next steps", items: ["Open escrow", "Lock the diligence schedule"] },
+        { items: ["Open escrow", "Lock the diligence schedule"] },
       ],
       associations: assoc(deal),
     }),
@@ -825,13 +794,12 @@ function underContractArc(ctx: ArcCtx): TimelineEvent[] {
       title: `Diligence check-in with ${first}`,
       blocks: [
         {
-          kicker: "Call summary",
           items: [
             "Inspection done — nothing structural, two small credits to negotiate.",
             "Appraisal ordered; back within two weeks.",
           ],
         },
-        { kicker: "Next steps", items: ["Circulate the inspection summary", "Chase the estoppels"] },
+        { items: ["Circulate the inspection summary", "Chase the estoppels"] },
       ],
       associations: assoc(deal),
     }),
@@ -848,14 +816,12 @@ function underContractArc(ctx: ArcCtx): TimelineEvent[] {
       title: `Weekly diligence status with ${first}`,
       blocks: [
         {
-          kicker: "Call summary",
           items: [
             "All contingency dates on track.",
             "Title clean; closing checklist started.",
           ],
         },
         {
-          kicker: "Next steps",
           items: ["Confirm appraisal delivery date", "Draft the closing timeline"],
         },
       ],
@@ -863,15 +829,6 @@ function underContractArc(ctx: ArcCtx): TimelineEvent[] {
     }),
   );
 
-  if (rng() > 0.4) {
-    events.push(
-      mk(ctx, "task", Math.max(anchor - 1, 0), {
-        title: "Created task",
-        body: "Confirm estoppel returns with tenant counsel",
-        source: "user",
-      }),
-    );
-  }
 
   events.push(...originBeats(ctx), createdEvent(ctx));
   return events;
@@ -894,7 +851,6 @@ function pastClientArc(ctx: ArcCtx): TimelineEvent[] {
       title: `Discovery call with ${first}`,
       blocks: [
         {
-          kicker: "Call summary",
           items: [
             `First real conversation on ${dealName} — clear goals, realistic on pricing.`,
           ],
@@ -923,7 +879,6 @@ function pastClientArc(ctx: ArcCtx): TimelineEvent[] {
       title: `Offer review with ${first}`,
       blocks: [
         {
-          kicker: "Call summary",
           items: ["Two offers on the table; took the cleaner terms.", "Under contract shortly after."],
         },
       ],
@@ -962,7 +917,6 @@ function pastClientArc(ctx: ArcCtx): TimelineEvent[] {
       title: `Post-close check-in with ${first}`,
       blocks: [
         {
-          kicker: "Call summary",
           items: pick(rng, [
             [
               "All settled post-close; no loose ends.",
@@ -974,7 +928,6 @@ function pastClientArc(ctx: ArcCtx): TimelineEvent[] {
           ]),
         },
         {
-          kicker: "Next steps",
           items: ["Calendar a Q4 prep call", "Send the market one-pager for the next asset"],
         },
       ],

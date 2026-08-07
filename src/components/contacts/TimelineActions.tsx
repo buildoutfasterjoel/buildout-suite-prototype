@@ -22,7 +22,12 @@ import {
   type TypeConfig,
 } from "#/components/contacts/timeline";
 
-export type ActionDispatch = (id: string) => void;
+/**
+ * Every row action funnels through one dispatch. `messageId` is set only when the
+ * action came from a specific message inside an expanded thread, so the caller
+ * knows which message to hang the reply editor under.
+ */
+export type ActionDispatch = (id: string, messageId?: string) => void;
 
 /**
  * The needs-attention action bar: one filled primary, the type's outlined

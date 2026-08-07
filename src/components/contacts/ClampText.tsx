@@ -32,8 +32,23 @@ export function ClampText({
   const measure = useCallback(() => {
     const el = ref.current;
     if (!el || expanded) return;
-    setOverflows(el.scrollHeight - el.clientHeight > 1);
-  }, [expanded]);
+    // Ask the actual question — "is anything hidden?" — by measuring the element
+    // clamped, then again with the clamp lifted. Both reads happen inside a layout
+    // effect, so nothing paints in between.
+    //
+    // The proxies don't survive real content. `scrollHeight` on a `-webkit-box`
+    // reports the box's own idea of height, not the text's. And comparing against
+    // `lines × line-height` uses the *container's* line-height, which is wrong the
+    // moment the content is a bullet list: `.tl-block__list` sets 1.5 (21px), so
+    // two bullets measured 42px against a 38px allowance and every such row
+    // offered a "Show more" that revealed nothing.
+    const clamped = el.getBoundingClientRect().height;
+    const prev = el.style.display;
+    el.style.display = "block";
+    const natural = el.getBoundingClientRect().height;
+    el.style.display = prev;
+    setOverflows(natural - clamped > 1);
+  }, [expanded, lines]);
 
   useLayoutEffect(() => {
     measure();
