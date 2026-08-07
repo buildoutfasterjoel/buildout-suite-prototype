@@ -36,6 +36,9 @@ failures. Logic stays in Vitest; the browser is for interactive verification.
   destination (e.g. `"Displaying 20 of 20 Deals"`) before snapshotting or screenshotting.
 - **Snapshots are big** (~580 lines for `/listings`). They're written to `.playwright-mcp/` as
   files rather than inlined — grep them for what you need instead of reading whole.
+- **Always `browser_close` when finished.** The browser does not exit on its own — it outlives
+  the session and orphans ~8 Chrome processes plus a temp profile in `/var/folders/`. Leave the
+  MCP server running (that one is meant to be long-lived); it's the browser that must be closed.
 
 Data lives in IndexedDB (`keyval-store`) and seeds on first load. The MCP server runs
 `--isolated`, so each session starts from a clean profile and re-seeds.
@@ -54,10 +57,14 @@ bun --bun run test       # Run tests (Vitest)
 ## Environment Setup
 
 Copy `.env.sample` → `.env` and fill in before installing:
-- `GITHUB_TOKEN` — GitHub PAT for `@buildoutinc` packages via GitHub npm registry
+- `BLUEPRINT_GH_TOKEN` — GitHub PAT for `@buildoutinc` packages via GitHub npm registry
 - `FONTAWESOME_PRO_TOKEN` — FontAwesome Pro token for `@fortawesome` Pro packages
 
 Both are consumed by `bunfig.toml` to authenticate private registries.
+
+> Deliberately **not** named `GITHUB_TOKEN`: that name is read by the `gh` CLI and outranks its
+> stored credentials, so a registry-only token would silently shadow your real `gh auth login`.
+> The PAT here only needs `read:packages`.
 
 ## Architecture
 
