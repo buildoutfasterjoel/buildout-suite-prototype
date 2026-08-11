@@ -18,15 +18,17 @@ import type {
  * from outside either page (the stage gate, the Spaces roster, seeding) made
  * mid-edit.
  *
- * Five keys are shared this way: `financials.rentRoll` (Listing page's Units
+ * Seven keys are shared this way: `financials.rentRoll` (Listing page's Units
  * section, inside a `financials` object the Deal page owns the rest of),
  * `marketing.spaceLeaseTerms` / `marketing.availableSqFt` (the stage gate,
  * inside a `marketing` object the Listing page owns the rest of),
  * `marketing.occupancySnapshot` (written only at seed/creation today, same
- * reasoning), and `Property.units` (`addPropertyUnit`, off the property
- * record the Listing page otherwise owns). `listingSavePatch` and
- * `propertySavePatch` cover the two record types the Listing page saves;
- * `dealSavePatch` covers the one the Deal page saves.
+ * reasoning), `marketing.photos` / `marketing.links` (the Media page and a
+ * suite's Media tab, same reasoning — see `listingSavePatch` below), and
+ * `Property.units` (`addPropertyUnit`, off the property record the Listing
+ * page otherwise owns). `listingSavePatch` and `propertySavePatch` cover the
+ * two record types the Listing page saves; `dealSavePatch` covers the one the
+ * Deal page saves.
  */
 
 /** The Listing page's draft (`/listings/:id/listing`). */
@@ -63,6 +65,16 @@ export function listingSavePatch(
       // nothing else touches it yet. Excluded anyway so a future roster-side
       // write can't be reverted by this draft's mount-time snapshot.
       occupancySnapshot: current.marketing.occupancySnapshot,
+      // Owned exclusively by the Media page (and a suite's Media tab, which
+      // patches this same building record) — not this form. This draft's
+      // mount-time snapshot would otherwise revert a media edit made in
+      // another tab while this page sat open.
+      photos: current.marketing.photos,
+      links: current.marketing.links,
+      // `visualMedia` is deliberately NOT carved out here, unlike `photos` and
+      // `links` above: this form's own `VisualMediaSection` legitimately edits
+      // it too, so `draft.marketing.visualMedia` must win. Carving it out would
+      // make this form's own visual-media edits unsavable.
     },
     internalNotes: draft.internalNotes,
     // Only `rentRoll` is ours; the rest of financials comes off the record.
