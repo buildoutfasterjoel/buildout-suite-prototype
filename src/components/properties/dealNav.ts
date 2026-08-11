@@ -54,8 +54,8 @@ export const NAV_GROUPS: NavGroup[] = [
       //
       // Shares `faSign` with Listing on purpose, for the same reason Vouchers and
       // Voucher share theirs below: a swap pair is never rendered together, so one
-      // icon for one slot is right. (It must not share with `Plans`, which has no
-      // shape rule and so renders alongside Details for a space.)
+      // icon for one slot is right. (No collision risk with `Plans` either: Plans
+      // is building-owned now, so it never renders for a space alongside Details.)
       { label: "Details", href: "details", icon: faSign },
       // The listing's own field data — the form that used to be the Listing tab
       // of `/edit`. It is the content every other Marketing section (Website,
@@ -131,6 +131,52 @@ export function dealBreadcrumbTrail(
 }
 
 /**
+ * Every section a building owns outright — never shown on a space, regardless of
+ * which nav group the section lives in.
+ *
+ * This spans two of NAV_GROUPS' groups, for two different reasons:
+ *
+ * - Six are Marketing sections (Documents, Website, Email, Demographics, Grids,
+ *   Plans). A leased space is marketed as part of its building, so these are
+ *   edited on the building and nowhere else. Showing them on a space was not
+ *   merely redundant: a space holds a *clone* of its parent's `marketing` (see
+ *   `addSpaceToDeal`), so a suite's copy of these sections presented the
+ *   building's cloned data as though it were the suite's own, with nothing
+ *   indicating which copy a public surface reads.
+ * - Two are Deal-group sections that are building-owned for reasons that have
+ *   nothing to do with marketing:
+ *   - Client Report reports on the *building's* listing performance — leads,
+ *     views, syndication reach — not a single suite's, so a space has no report
+ *     of its own to show.
+ *   - Underwriting's payoff is a document, and `documents` is a top-level
+ *     `Listing` field rather than part of `DealMarketing`; `addSpaceToDeal` sets
+ *     a space's `documents` to `[]`. Underwriting is gated further still — see
+ *     the dedicated branch below — but its presence in this list is the same
+ *     "documents are building-only" rule the other six sections follow.
+ *
+ * A space's sidebar points at the building instead for the marketing six — see
+ * `buildingLink` in `PropertyDetailSidebar`.
+ *
+ * Consolidated into one list on purpose: this used to be expressed as three
+ * separate rules (this constant, a standalone `underwriting` check, and no rule
+ * at all for `client-report`), and three copies of "not on a space" is exactly
+ * how a reviewer misses the case that isn't covered.
+ *
+ * Typed `readonly string[]` rather than a `const` tuple so `.includes(item.href)`
+ * accepts an arbitrary href without a cast.
+ */
+export const BUILDING_OWNED_HREFS: readonly string[] = [
+  "documents",
+  "website",
+  "email",
+  "demographics",
+  "grids",
+  "plans",
+  "underwriting",
+  "client-report",
+];
+
+/**
  * The sections this deal actually shows, by shape. Lives beside NAV_GROUPS so a
  * rule and the item it governs cannot drift apart, and so the rules are testable
  * without rendering a sidebar.
@@ -149,6 +195,9 @@ export function visibleNavGroups(
       // Voucher pair below uses.
       if (item.href === "details") return shape === "space";
       if (item.href === "listing") return shape !== "space";
+      // These sections are the building's alone — see BUILDING_OWNED_HREFS for
+      // why each one qualifies.
+      if (shape === "space" && BUILDING_OWNED_HREFS.includes(item.href)) return false;
       // A shell's spaces each earn their own commission, so it gets the Vouchers
       // index; every other shape keeps the single Voucher + Invoices pair. The
       // two are mutually exclusive — never show both.
@@ -161,6 +210,12 @@ export function visibleNavGroups(
         return false;
       }
       if (item.href === "spaces") return opts.leaseParent;
+      // Underwriting is building-owned (see BUILDING_OWNED_HREFS above, which
+      // already excludes it for a space) but it carries a second, independent
+      // gate on top: even on a shape that's allowed to have it, it only shows
+      // once the property qualifies. The `shape === "space"` exclusion is
+      // covered by the BUILDING_OWNED_HREFS branch above; this branch only adds
+      // the qualification gate for every other shape.
       if (item.href === "underwriting") return opts.showsUnderwriting;
       return true;
     }),

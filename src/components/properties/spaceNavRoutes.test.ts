@@ -52,7 +52,10 @@ describe("a space's nav and its routes", () => {
     // one of the two sets above going empty (e.g. `visibleNavGroups` filtering
     // everything out for "space") while the other still has entries, which
     // would let both assertions above pass without actually comparing anything.
-    expect(routeSlugs.length).toBeGreaterThan(10);
+    // `5` is a floor, not a count that tracks the current section list — it only
+    // needs to be clearly non-empty, so removing another space section in the
+    // future does not require touching this number.
+    expect(routeSlugs.length).toBeGreaterThan(5);
     expect(routeSlugs).toContain("details");
     expect(routeSlugs).not.toContain("listing");
   });
