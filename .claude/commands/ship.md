@@ -16,6 +16,39 @@ continuing:
 2. **Confirm there is something to ship.** `git log origin/main..HEAD --oneline`. If empty,
    stop: there are no commits to open a PR for.
 
+2b. **Check `gh` auth before running the gates**, so a 10-minute test run isn't wasted on a
+   step that can't finish: `gh auth status`. If it reports logged in, continue.
+
+   If it says "not logged into any GitHub hosts", **do not conclude there is no
+   credential** — that exact wording bit us once. `gh` keeps its token in the macOS
+   keychain and uses `~/.config/gh/hosts.yml` only as the index of which hosts exist. If
+   that file is missing, gh never looks in the keychain and reports not-logged-in while a
+   perfectly good token sits there. Check with:
+
+   ```
+   security dump-keychain 2>/dev/null | grep -c 'GitHub - https://api.github.com'
+   ```
+
+   If that returns 1, the token is intact and only the index is gone. Writing
+   `~/.config/gh/hosts.yml` is blocked by the permission classifier (it is
+   credentials-adjacent), so give Joel this to run himself with the `!` prefix:
+
+   ```
+   ! mkdir -p ~/.config/gh && printf 'github.com:\n    user: buildoutfasterjoel\n    git_protocol: ssh\n' > ~/.config/gh/hosts.yml && gh auth status
+   ```
+
+   Only if that still fails is `gh auth login` needed. Tell him to choose **Skip** at the
+   "upload your SSH public key" prompt — he already has `buildoutfasterjoel-GitHub` on the
+   account, and that step is unrelated to authenticating gh.
+
+   **Do not offer `BLUEPRINT_GH_TOKEN` / `BLUEPRINT_GITHUB_TOKEN` as a substitute.** Those
+   are registry PATs with `read:packages` only; they cannot open a PR, and they are
+   deliberately not named `GITHUB_TOKEN` so they cannot shadow real gh credentials.
+
+   Useful distinction to state plainly if it comes up: an SSH key authenticates **git
+   transport**, which is why `git push` succeeds while `gh` fails. The GitHub API takes a
+   token and never a key, so `git push` working is not evidence that `gh` will.
+
 3. **Type-check.** `bunx tsc --noEmit`. Must exit 0. Do NOT substitute `vite build` — it
    does not type-check.
 
