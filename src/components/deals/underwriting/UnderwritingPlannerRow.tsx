@@ -6,7 +6,7 @@ import { faWandMagicSparkles } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing, Property } from "#/data/types";
 import { updateListingUnderwriting, generateUnderwritingResult } from "#/data/store";
 import { notify } from "#/lib/notify";
-import { propertyQualifiesForUnderwriting } from "./eligibility";
+import { dealSupportsUnderwriting, propertyQualifiesForUnderwriting } from "./eligibility";
 import { PlannerRow, TaskMarker } from "../TodayPlanner";
 import {
   defaultSelectionFor,
@@ -32,6 +32,13 @@ export function showsUnderwritingRow(
   listing: Listing,
   property: Property | undefined,
 ): boolean {
+  // Underwriting's payoff is a document, and documents belong to the building,
+  // never a space — see `dealSupportsUnderwriting`. A space inherits
+  // `underwriting` from its parent through `addSpaceToDeal`'s `...parent`
+  // spread, so without this a suite under a building that has run underwriting
+  // would show the row and its terminal step would try to save into the
+  // suite's own (unread) document list.
+  if (!dealSupportsUnderwriting(listing)) return false;
   const hasUwTask = listing.tasks.some((t) => t.label === "Underwriting");
   if (hasUwTask) return false;
   if (listing.underwriting != null) return true;

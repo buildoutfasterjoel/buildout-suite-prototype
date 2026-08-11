@@ -20,6 +20,7 @@ import {
 import { useDataStore } from "#/data/dataStore";
 import { requestStageChange } from "#/components/deals/useStageGate";
 import { UnderwritingSetupModal } from "#/components/deals/underwriting/UnderwritingSetupModal";
+import { dealSupportsUnderwriting } from "#/components/deals/underwriting/eligibility";
 import {
   underwritingFromSelection,
   type UnderwritingStrategyId,
@@ -62,6 +63,12 @@ function dealNextAction(
   listing: Listing,
   bovSent: boolean,
 ): { label: string; icon: IconDefinition } | null {
+  // Underwriting doesn't belong to a suite — see `dealSupportsUnderwriting`.
+  // Without this, a space (in `proposal` status, a party contact carried over
+  // from its parent via `addSpaceToDeal`) would offer "Build Underwriting" and
+  // route through `ContactBovFlow` into the same document write the space's
+  // own Underwriting tab was removed for.
+  if (!dealSupportsUnderwriting(listing)) return null;
   if (listing.status !== "proposal") return null;
   switch (listing.underwriting?.status) {
     case "generating":
