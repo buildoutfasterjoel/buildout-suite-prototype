@@ -125,6 +125,36 @@ export interface VisualMediaLink {
   unitId: string | null
 }
 
+export type MediaAssetKind = 'photo' | 'floorPlan'
+
+/**
+ * An uploaded image or document. Real file upload is not modelled anywhere in
+ * this prototype, so `url` points at an already-hosted image — the same shape
+ * `VisualMediaLink` uses.
+ */
+export interface MediaAsset {
+  id: string
+  url: string
+  kind: MediaAssetKind
+  caption: string
+  /** The space this asset depicts, when it depicts one. Null = whole building. */
+  unitId: string | null
+}
+
+/**
+ * One of the three named marketing destinations. Modelled as a list rather than
+ * three fields so it needs no per-unit grain of its own — the UI renders exactly
+ * one row per `kind` per scope, so singularity is a presentation rule, not a
+ * type-level one.
+ */
+export interface MediaLink {
+  id: string
+  url: string
+  kind: 'video' | 'matterport' | 'virtualTour'
+  /** The space this destination is for, when it is for one. Null = whole building. */
+  unitId: string | null
+}
+
 export interface Property {
   id: string
   name: string
@@ -930,6 +960,10 @@ export interface DealMarketing {
   referralSource?: string
   // Visual media + disclaimer/notes
   visualMedia?: VisualMediaLink[]
+  /** Uploaded photos and floor plans, building-wide and per suite. */
+  photos?: MediaAsset[]
+  /** Video / Matterport / virtual-tour destinations, building-wide and per suite. */
+  links?: MediaLink[]
   overrideDisclaimer?: boolean
   customDisclaimer?: string
   adminNotes?: string

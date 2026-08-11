@@ -1,13 +1,17 @@
 import type {
   Contact,
   Listing,
+  MediaAsset,
+  MediaLink,
   Property,
   PropertyStatus,
   PropertyUnit,
   RentRollRow,
   SpaceLeaseTerms,
+  VisualMediaType,
 } from './types'
 import { closeProbabilityForStage } from './commission'
+import { listingGallery } from '#/components/properties/propertyDisplay'
 
 /**
  * A seeded lease deal to turn into an umbrella shell, and the suites to split it
@@ -243,6 +247,13 @@ function buildChild(
       ...shell.marketing,
       availableSqFt: unit.sqft,
       spaceLeaseTerms: [{ ...terms }],
+      // A unit's media has exactly ONE home: the building's marketing. A space's
+      // Media tab is a filtered editor onto its parent, not an owner of its own
+      // copy — so the child starts with all three lists empty and nothing ever
+      // writes to them. Mirrors `addSpaceToDeal`'s child construction.
+      photos: [],
+      links: [],
+      visualMedia: [],
     },
     transaction: {
       ...shell.transaction,
@@ -447,6 +458,111 @@ function applyStageDetail(child: Listing, suiteNumber: number, tenantName?: stri
 }
 
 /**
+ * Seed a shell's media library: building-wide photos and visual media, plus an
+ * uneven scatter of per-unit photos, floor plans and links.
+ *
+ * Deliberately uneven — every third unit gets photos, a floor plan and a link,
+ * the next gets photos only, the next gets nothing — so a demo reaches a full
+ * grid, a partial one and an empty state without anyone editing first.
+ *
+ * Photo URLs come from `listingGallery`, which is deterministic, so the modelled
+ * library agrees with the photos already shown on deal cards, in the publish
+ * preview and on `SpaceDetailHeader` by construction rather than by coincidence.
+ * `listingGallery` keeps all its current callers; this adds a library beside it.
+ *
+ * Ids are derived from the unit and kind rather than random, so a snapshot of the
+ * seed is stable across runs.
+ *
+ * Takes NO faker draws, for the reason given on `applyLeaseSpaces`: the dataset
+ * keeps drawing after this point and a draw here shifts every downstream value
+ * the seed tests pin. `listingGallery` is deterministic, not faker.
+ */
+function applyShellMedia(shell: Listing, property: Property): void {
+  const photos: MediaAsset[] = []
+  const links: MediaLink[] = []
+
+  // Building-wide: the four photos the building's own gallery already shows.
+  listingGallery(shell.id, 4, 480, 280).forEach((url, i) => {
+    photos.push({
+      id: `${shell.id}-photo-${i}`,
+      url,
+      kind: 'photo',
+      caption: i === 0 ? 'Building exterior' : '',
+      unitId: null,
+    })
+  })
+  links.push({
+    id: `${shell.id}-video`,
+    url: 'https://videos.example.com/tour/building',
+    kind: 'video',
+    unitId: null,
+  })
+
+  // Building-wide visual media, appended to whatever the listing already has so
+  // a hero's seeded embeds are not discarded.
+  const visualMedia = [
+    ...(shell.marketing.visualMedia ?? []),
+    {
+      id: `${shell.id}-vm-matterport`,
+      url: 'https://tours.example.com/matterport/building',
+      mediaType: 'Matterport Tour' as VisualMediaType,
+      unitId: null,
+    },
+    {
+      id: `${shell.id}-vm-siteplan`,
+      url: 'https://tours.example.com/siteplan/building',
+      mediaType: 'Interactive Site Plan' as VisualMediaType,
+      unitId: null,
+    },
+  ]
+
+  property.units.forEach((unit, i) => {
+    const bucket = i % 3
+    // bucket 2 gets nothing at all — the empty state has to be reachable.
+    if (bucket === 2) return
+
+    listingGallery(unit.id, 2, 480, 280).forEach((url, j) => {
+      photos.push({
+        id: `${unit.id}-photo-${j}`,
+        url,
+        kind: 'photo',
+        caption: j === 0 ? `${unit.label} interior` : '',
+        unitId: unit.id,
+      })
+    })
+
+    if (bucket !== 0) return
+    // A floor plan is its own kind, and only ever scoped to a unit — a
+    // building-wide floor plan has no section to render in.
+    photos.push({
+      id: `${unit.id}-floorplan`,
+      // A distinct derivation from the unit's photos, so the plan is not simply
+      // the first interior shot again.
+      url: listingGallery(`${unit.id}-plan`, 1, 480, 280)[0],
+      kind: 'floorPlan',
+      caption: `${unit.label} floor plan`,
+      unitId: unit.id,
+    })
+    links.push({
+      id: `${unit.id}-matterport`,
+      url: `https://tours.example.com/matterport/${unit.id}`,
+      kind: 'matterport',
+      unitId: unit.id,
+    })
+    visualMedia.push({
+      id: `${unit.id}-vm-tour`,
+      url: `https://tours.example.com/360/${unit.id}`,
+      mediaType: '360 Tour' as VisualMediaType,
+      unitId: unit.id,
+    })
+  })
+
+  shell.marketing.photos = photos
+  shell.marketing.links = links
+  shell.marketing.visualMedia = visualMedia
+}
+
+/**
  * Turn the seeded lease deals named in {@link SHELL_SPECS} into umbrella shells
  * with child space deals.
  *
@@ -488,6 +604,11 @@ export function applyLeaseSpaces(
     resliceUnits(property, spec, suiteSizes(property.buildingSqFt, spec.suiteProportions))
     rebuildRentRoll(shell, property, spec)
     fillTermsForUnits(shell, property)
+
+    // Must run after resliceUnits: property.units is still the pre-slice
+    // placeholder pair until then, so seeding media any earlier would scatter
+    // assets across two units nobody ever sees instead of the final ten suites.
+    applyShellMedia(shell, property)
 
     // Split: each deal-bearing suite's terms row moves down onto its own child
     // deal. A `stage` of `undefined` (below) marks a suite that stays on the

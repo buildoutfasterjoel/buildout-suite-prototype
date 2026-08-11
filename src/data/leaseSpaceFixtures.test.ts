@@ -301,3 +301,101 @@ describe('suites without deals', () => {
     }
   })
 })
+
+describe('seeded media', () => {
+  // Wired to this file's existing `shellFor`/`getChildDeals` setup rather than a
+  // second dataset: `shells` and their properties come from the live store via
+  // `shellFor`, and `childSpaces` is every child deal across both shells.
+  const shellPairs = SHELL_SPECS.map((spec) => shellFor(spec.dealId))
+  const shells = shellPairs.map((p) => p.shell)
+  const propertyFor = (shell: (typeof shells)[number]) =>
+    shellPairs.find((p) => p.shell === shell)!.property
+  const childSpaces = shells.flatMap((shell) => getChildDeals(shell.id))
+
+  it('gives each lease shell building-wide photos and visual media', () => {
+    for (const shell of shells) {
+      const photos = (shell.marketing.photos ?? []).filter((p) => p.unitId == null)
+      expect(photos.length, shell.name).toBeGreaterThan(0)
+      expect(photos.every((p) => p.kind === 'photo'), shell.name).toBe(true)
+
+      const media = (shell.marketing.visualMedia ?? []).filter((v) => v.unitId == null)
+      expect(media.length, shell.name).toBeGreaterThan(0)
+    }
+  })
+
+  it('never seeds a building-wide floor plan, which has no section to render in', () => {
+    for (const shell of shells) {
+      const strayPlans = (shell.marketing.photos ?? []).filter(
+        (p) => p.kind === 'floorPlan' && p.unitId == null,
+      )
+      expect(strayPlans, shell.name).toEqual([])
+    }
+  })
+
+  it('pins the i % 3 bucket for every unit: photos+plan+link, photos-only, or nothing', () => {
+    // Pinned per index rather than `.some(...)`/`.some(...)`, which is true
+    // whether or not the bucketing landed on the right units — that vacuous
+    // shape is exactly what let the pre-reslice-ordering bug through review.
+    for (const shell of shells) {
+      const property = propertyFor(shell)
+      property.units.forEach((unit, i) => {
+        const label = `${shell.name} / unit ${i} (${unit.id})`
+        const photos = (shell.marketing.photos ?? []).filter(
+          (p) => p.unitId === unit.id && p.kind === 'photo',
+        )
+        const floorPlans = (shell.marketing.photos ?? []).filter(
+          (p) => p.unitId === unit.id && p.kind === 'floorPlan',
+        )
+        const matterportLinks = (shell.marketing.links ?? []).filter(
+          (l) => l.unitId === unit.id && l.kind === 'matterport',
+        )
+        const bucket = i % 3
+        if (bucket === 0) {
+          expect(photos.length, label).toBeGreaterThan(0)
+          expect(floorPlans.length, label).toBe(1)
+          expect(matterportLinks.length, label).toBe(1)
+        } else if (bucket === 1) {
+          expect(photos.length, label).toBeGreaterThan(0)
+          expect(floorPlans.length, label).toBe(0)
+          expect(matterportLinks.length, label).toBe(0)
+        } else {
+          expect(photos.length, label).toBe(0)
+          expect(floorPlans.length, label).toBe(0)
+          expect(matterportLinks.length, label).toBe(0)
+        }
+      })
+    }
+  })
+
+  it('gives at least one unit a floor plan', () => {
+    const anyPlan = shells.some((s) =>
+      (s.marketing.photos ?? []).some((p) => p.kind === 'floorPlan' && p.unitId != null),
+    )
+    expect(anyPlan).toBe(true)
+  })
+
+  it('scopes every seeded asset to a real unit of its own property', () => {
+    // A dangling unitId would render nowhere and be invisible in the UI.
+    for (const shell of shells) {
+      const ids = new Set(propertyFor(shell).units.map((u) => u.id))
+      const scoped = [
+        ...(shell.marketing.photos ?? []),
+        ...(shell.marketing.links ?? []),
+        ...(shell.marketing.visualMedia ?? []),
+      ].filter((a) => a.unitId != null)
+      for (const a of scoped) {
+        expect(ids.has(a.unitId!), `${shell.name} / ${a.unitId}`).toBe(true)
+      }
+    }
+  })
+
+  it('leaves every child space holding no media of its own', () => {
+    // The one-home rule, verified against the seeded data rather than only the
+    // factory — a fixture that populated a child directly would bypass Task 2.
+    for (const child of childSpaces) {
+      expect(child.marketing.photos ?? [], child.name).toEqual([])
+      expect(child.marketing.links ?? [], child.name).toEqual([])
+      expect(child.marketing.visualMedia ?? [], child.name).toEqual([])
+    }
+  })
+})

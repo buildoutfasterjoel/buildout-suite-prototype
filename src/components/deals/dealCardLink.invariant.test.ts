@@ -95,6 +95,12 @@ const ALLOWED: Record<string, string> = {
   // segment, so this can never be a space id.
   "src/components/properties/PropertyDetailSidebar.tsx": "space sidebar links up to the building, whose id can never be a space",
 
+  // The space's Media page's "Manage" link out of its read-only inherited block,
+  // up to the building's own Media page. It links with `shell.id`, which is
+  // always the building the space's route is nested under — a space cannot
+  // itself be a shell, so this can never be handed a space id.
+  "src/components/listings/media/SpaceMedia.tsx": "space Media's read-only block links up to the building's Media page, whose id can never be a space",
+
   // The model composes its own path, so there is no link to fix: both of these
   // resolve a space id on the way out. See `rewriteSpaceDealPath`.
   "src/ai/tools.ts": "rewrites a model-supplied deal path",
