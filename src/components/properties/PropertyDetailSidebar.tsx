@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { Collapsible } from "@buildoutinc/blueprint-react/ui/Collapsible";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronRight } from "@fortawesome/pro-regular-svg-icons";
+import { faArrowUpRight, faBuilding, faChevronRight } from "@fortawesome/pro-regular-svg-icons";
 import { getProperty } from "#/data/store";
 import type { Listing } from "#/data/types";
 import { propertyQualifiesForUnderwriting } from "#/components/deals/underwriting/eligibility";
@@ -17,6 +18,7 @@ export function PropertyDetailSidebar({
   listing,
   basePath,
   activeLabel,
+  buildingLink,
 }: {
   /** The record whose sections these are — a building or a space. */
   listing: Listing;
@@ -34,6 +36,26 @@ export function PropertyDetailSidebar({
    * component cannot tell which it is rendering for.
    */
   activeLabel: string | null;
+  /**
+   * The building that owns this record's marketing sections, when there is one.
+   *
+   * A space passes its shell here and this renders a link out to the building's
+   * Documents at the foot of the Marketing group. The building owns the sections
+   * in `BUILDING_OWNED_HREFS`, which `visibleNavGroups` hides for a space — so
+   * the suite points at them rather than holding a second, divergent copy.
+   *
+   * Takes the shell's id rather than a URL so the `Link` target stays a typed
+   * route literal; `basePath` above is an interpolated string only because
+   * `navigate({ to })` accepts one and `Link`'s `to` does not.
+   *
+   * `name` is the building's own name, used in the row's tooltip so the warning
+   * that you are leaving the suite can say where you land. Separate from `label`
+   * because the row itself reads "Building" — the 180px sidebar cannot fit a
+   * property name.
+   *
+   * Omitted by a building, which has no parent to point at.
+   */
+  buildingLink?: { label: string; listingId: string; name: string };
 }) {
   const navigate = useNavigate();
   // Collapsed category labels. Starts empty → all groups expanded, so SSR and
@@ -88,6 +110,55 @@ export function PropertyDetailSidebar({
         const activeInGroup =
           group.items.find((item) => item.label === activeLabel)?.label ?? "";
         const isCollapsed = group.label ? collapsed.has(group.label) : false;
+        // The link out sits as the last row of the tab list whose sections it
+        // replaces, so it reads as one continuous list rather than something
+        // stranded beneath it. Matched by label because Marketing is the group
+        // whose items `BUILDING_OWNED_HREFS` removes.
+        //
+        // A `Link`, not a `Tabs.Tab`: the enclosing `Tabs` keys `value` off the
+        // active item's *label*, and an item that targets a different record can
+        // never match it — as a Tab it would sit in the value space permanently
+        // inactive, and `handleTabChange` would not find it in `navGroups` at all.
+        //
+        // It mirrors `Tabs.Tab`'s internal markup (`nav-link` > `nav-link-icon` +
+        // `nav-link-text`) so it lines up with the pills above it. Note the theme's
+        // `.nav-link` is already `display: flex` with its own `gap` and a
+        // fixed-width icon slot, so it must NOT also carry `d-flex gap-*` — that
+        // doubles the gap and fights the icon column. The trailing arrow gets
+        // `ms-auto` instead of a flex-grow spacer.
+        // The tooltip carries what the row cannot: that following it leaves the
+        // suite, and where it lands. `Tooltip.Provider` is mounted app-wide in
+        // `__root.tsx`, so there is none here. `Tooltip.Root` renders no DOM and
+        // `Trigger`'s `render` prop reuses the `Link` itself rather than wrapping
+        // it, which is what keeps the row aligned with the pills above it.
+        const linkRow =
+          buildingLink && group.label === "Marketing" ? (
+            <Tooltip key="building-link">
+              <Tooltip.Trigger
+                render={
+                  <Link
+                    to="/listings/$listingId/documents"
+                    params={{ listingId: buildingLink.listingId }}
+                    className="nav-link text-decoration-none"
+                  >
+                    <span className="nav-link-icon">
+                      <FontAwesomeIcon icon={faBuilding} />
+                    </span>
+                    <span className="nav-link-text">{buildingLink.label}</span>
+                    <FontAwesomeIcon
+                      icon={faArrowUpRight}
+                      className="ms-auto"
+                      style={{ fontSize: 12 }}
+                    />
+                  </Link>
+                }
+              />
+              <Tooltip.Content side="right">
+                Takes you to {buildingLink.name}, where this suite's marketing is
+                managed.
+              </Tooltip.Content>
+            </Tooltip>
+          ) : null;
         const tabs = (
           <Tabs
             value={activeInGroup}
@@ -104,6 +175,7 @@ export function PropertyDetailSidebar({
                   {item.label}
                 </Tabs.Tab>
               ))}
+              {linkRow}
             </Tabs.List>
           </Tabs>
         );
