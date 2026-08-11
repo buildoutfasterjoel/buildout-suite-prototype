@@ -130,3 +130,60 @@ describe('a new space inherits what its unit already knows', () => {
     expect(terms.spaceName).toBe('Corner unit')
   })
 })
+
+describe('a space never holds its own copy of the building s media', () => {
+  it('starts with all three media lists empty even when the parent has all three', () => {
+    const parent = createProposalListing({ ...emptyDraft(), name: 'Plaza', dealType: 'Lease' })
+    const unit = addPropertyUnit(parent.propertyId, {
+      label: 'Suite 200',
+      sqft: 1200,
+      unitType: 'office',
+    })!
+
+    // Populate every media list on the parent, so a plain `...parent.marketing`
+    // spread would visibly carry all three onto the child.
+    updateDealMarketing(parent.id, {
+      photos: [
+        { id: 'p1', url: 'https://example.com/a.jpg', kind: 'photo', caption: '', unitId: null },
+      ],
+      links: [
+        { id: 'l1', url: 'https://example.com/tour', kind: 'video', unitId: null },
+      ],
+      visualMedia: [
+        {
+          id: 'v1',
+          url: 'https://example.com/matterport',
+          mediaType: 'Matterport Tour',
+          unitId: null,
+        },
+      ],
+    })
+
+    const child = addSpaceToDeal(parent.id, unit.id)!.deal
+
+    // A unit's media has exactly one home — the building's marketing. If a space
+    // held a clone, editing it on the suite would diverge from the building and
+    // nothing would say which copy a public surface reads.
+    expect(child.marketing.photos).toEqual([])
+    expect(child.marketing.links).toEqual([])
+    expect(child.marketing.visualMedia).toEqual([])
+  })
+
+  it('leaves the parent s own media untouched', () => {
+    const parent = createProposalListing({ ...emptyDraft(), name: 'Center', dealType: 'Lease' })
+    const unit = addPropertyUnit(parent.propertyId, {
+      label: 'Suite 300',
+      sqft: 900,
+      unitType: 'office',
+    })!
+    updateDealMarketing(parent.id, {
+      photos: [
+        { id: 'p9', url: 'https://example.com/b.jpg', kind: 'photo', caption: '', unitId: null },
+      ],
+    })
+
+    addSpaceToDeal(parent.id, unit.id)
+
+    expect(getListing(parent.id)!.marketing.photos).toHaveLength(1)
+  })
+})

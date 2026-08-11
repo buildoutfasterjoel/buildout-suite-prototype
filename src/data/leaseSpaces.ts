@@ -72,6 +72,15 @@ export function addSpaceToDeal(
       ...parent.marketing,
       availableSqFt: unit.sqft,
       spaceLeaseTerms: [existingRow ? { ...existingRow } : spaceTermsFromUnit(unit)],
+      // A unit's media has exactly ONE home: the building's marketing. A space's
+      // Media tab is a filtered editor onto its parent, not an owner of its own
+      // copy — so the child starts with all three lists empty and nothing ever
+      // writes to them. Left populated, an edit made on the suite would diverge
+      // from the building, and the building's Media -> Spaces section (which reads
+      // the building's lists) would never see it.
+      photos: [],
+      links: [],
+      visualMedia: [],
     },
     createdAt: now,
     updatedAt: now,
