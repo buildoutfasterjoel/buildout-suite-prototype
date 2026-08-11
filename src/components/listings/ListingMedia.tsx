@@ -1,42 +1,66 @@
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUpload } from "@fortawesome/pro-regular-svg-icons";
-import { Button } from "@buildoutinc/blueprint-react/ui/Button";
-import type { Listing } from "#/data/types";
-import { listingGallery } from "#/components/properties/propertyDisplay";
+import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
+import type { DealMarketing, Listing, Property } from "#/data/types";
+import { updateDealMarketing } from "#/data/actions";
 import { ListingPageHeader } from "./ListingPageHeader";
+import { MediaAssetGrid } from "./media/MediaAssetGrid";
+import { MediaLinksSection } from "./media/MediaLinksSection";
+import { VisualMediaGallery } from "./media/VisualMediaGallery";
+import { BuildingMediaSpaces } from "./media/BuildingMediaSpaces";
+import type { MediaScope } from "./media/mediaScope";
 
 /**
- * Media library for a listing. Uploads aren't modeled yet — the gallery is
- * derived from the listing id (see `listingGallery`) so it matches the photos
- * shown on the deal card and in the publish preview.
+ * A building's Media library: its own photos and embeds, its suites' media, and
+ * its three named destinations.
+ *
+ * This page owns the write path for EVERY asset on the property, including each
+ * suite's — a unit's media lives in the building's `marketing` and nowhere else.
+ * A space's Media tab is a filtered editor onto this same data (see `SpaceMedia`).
  */
-export function ListingMedia({ listing }: { listing: Listing }) {
-  const photos = listingGallery(listing.id, 8, 480, 280);
+export function ListingMedia({
+  listing,
+  property,
+}: {
+  listing: Listing;
+  property: Property;
+}) {
+  const patchMarketing = (patch: Partial<DealMarketing>) => {
+    updateDealMarketing(listing.id, patch);
+  };
+  const buildingScope: MediaScope = {
+    marketing: listing.marketing,
+    patchMarketing,
+    unitId: null,
+  };
 
   return (
     <div className="d-flex flex-column gap-4 p-4">
-      <ListingPageHeader
-        title="Media"
-        actions={
-          <Button variant="outline">
-            <FontAwesomeIcon icon={faUpload} />
-            Upload Media
-          </Button>
-        }
+      <ListingPageHeader title="Media" />
+
+      <MediaAssetGrid
+        scope={buildingScope}
+        kind="photo"
+        title="Property Photos"
+        emptyHint="No property photos yet."
       />
 
-      <div className="row g-3">
-        {photos.map((src) => (
-          <div key={src} className="col-6 col-md-4 col-xl-3">
-            <img
-              src={src}
-              alt="Listing photo"
-              className="w-100 rounded border"
-              style={{ aspectRatio: "4 / 3", objectFit: "cover" }}
-            />
-          </div>
-        ))}
-      </div>
+      <Separator />
+      <VisualMediaGallery scope={buildingScope} />
+
+      {/* Only when the property is actually divided. A listing with no units has
+          no suites to show, and an empty "Spaces" heading reads as a bug. */}
+      {property.units.length > 0 && (
+        <>
+          <Separator />
+          <BuildingMediaSpaces
+            property={property}
+            marketing={listing.marketing}
+            patchMarketing={patchMarketing}
+          />
+        </>
+      )}
+
+      <Separator />
+      <MediaLinksSection scope={buildingScope} />
     </div>
   );
 }
