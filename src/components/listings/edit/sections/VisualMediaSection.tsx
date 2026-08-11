@@ -12,17 +12,8 @@ import {
 import { Section } from "#/components/listings/listingWidgets";
 import { emptyVisualMediaLink } from "#/data/createListing";
 import { mediaForUnit } from "#/data/unitScopedMarketing";
-import type { DealMarketing, VisualMediaType } from "#/data/types";
-
-const VISUAL_MEDIA_TYPES: VisualMediaType[] = [
-	"Interactive Site Plan",
-	"Aerial 360 Map",
-	"Aerial 360 Rendering",
-	"360 Rendering",
-	"Property Marketing Video",
-	"Matterport Tour",
-	"360 Tour",
-];
+import type { DealMarketing } from "#/data/types";
+import { VISUAL_MEDIA_TYPES } from "#/components/listings/media/visualMediaTypes";
 
 /**
  * Listing page — Visual Media. Repeatable rows of virtual-tour / rendering
