@@ -48,11 +48,15 @@ const ALLOWED: Record<string, string> = {
   // Pattern B — a building-level section, with the id resolved through
   // `buildingSectionListingId` before it is interpolated.
   "src/components/contacts/ContactDealCard.tsx": "Documents/Leads quick links, id resolved",
-  "src/components/contacts/NewContactDealCard.tsx": "Leads quick link, id resolved",
-  "src/components/contacts/ContactInquiryCard.tsx": "Leads deep link, id resolved",
-  "src/components/contacts/NewContactInquiryCard.tsx": "Leads deep link, id resolved",
   "src/components/deals/PublishPreview.tsx": "new-tab Documents anchor, id resolved",
   "src/features/editor/EditorRoot.tsx": "Save and close → Documents, id resolved",
+
+  // Leads is NOT a building-level section — a space's Leads page is the
+  // building's list filtered to that suite, so it stays on the space. These
+  // three cards used to route through `buildingSectionListingId` (wrong, and
+  // now fixed); they now share `useOpenLeadsRow`, which resolves the id through
+  // `spaceLeadsTarget` instead.
+  "src/components/contacts/useOpenLeadsRow.ts": "Leads deep link, id resolved via spaceLeadsTarget",
 
   // Pattern C — a space's marketing fields live on its own Details page, so the
   // publish gate's "Back to editing" branches on `parentDealId` to reach it
@@ -85,6 +89,12 @@ const ALLOWED: Record<string, string> = {
   // which is the thing this file exists to render the header for.
   "src/components/deals/SpaceDetailHeader.tsx": "the open space's own crumbs: shell.id is always a building, spaceId is the page this task adds",
 
+  // The sidebar's "Building" link out of a space's Marketing group. The id it
+  // links with is `buildingLink.listingId`, which the caller always sets to the
+  // shell's own id from the URL — a space's route is nested under its shell's id
+  // segment, so this can never be a space id.
+  "src/components/properties/PropertyDetailSidebar.tsx": "space sidebar links up to the building, whose id can never be a space",
+
   // The model composes its own path, so there is no link to fix: both of these
   // resolve a space id on the way out. See `rewriteSpaceDealPath`.
   "src/ai/tools.ts": "rewrites a model-supplied deal path",
@@ -93,10 +103,11 @@ const ALLOWED: Record<string, string> = {
 const GUIDANCE = [
   "This file builds a link to a deal page, and a space deal's page lives under its",
   "building at /listings/{shellId}/spaces/{spaceId}.",
-  "Route it through `dealCardLinkProps(listing)` to open a deal, or",
+  "Route it through `dealCardLinkProps(listing)` to open a deal,",
   "`buildingSectionListingId(id)` for a building-level section such as Documents or",
-  "Leads. If the site genuinely cannot receive a space, add it to ALLOWED in this",
-  "file with the reason.",
+  "Website, or `spaceLeadsTarget(id)` for Leads specifically — Leads is a filtered",
+  "view that stays on the space, not a building-owned section. If the site",
+  "genuinely cannot receive a space, add it to ALLOWED in this file with the reason.",
 ].join("\n");
 
 /**
