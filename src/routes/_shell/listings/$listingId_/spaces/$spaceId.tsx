@@ -92,6 +92,9 @@ function SpaceDetailLayout() {
             listing={record.space}
             basePath={`/listings/${listingId}/spaces/${spaceId}`}
             activeLabel={subsectionLabel}
+            // `listingId` here is the shell's — the space's route is nested under
+            // it — which is exactly the building that owns its marketing.
+            buildingLink={{ label: "Building", listingId, name: shell.name }}
           />
         </Card>
 

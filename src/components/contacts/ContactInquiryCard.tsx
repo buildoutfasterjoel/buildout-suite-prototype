@@ -1,4 +1,3 @@
-import { useNavigate } from "@tanstack/react-router";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faFileContract } from "@fortawesome/pro-regular-svg-icons";
@@ -8,7 +7,7 @@ import { getPhotoUrl } from "#/components/properties/propertyDisplay";
 import { contactFullName } from "#/components/contacts/contactDisplay";
 import { inquiryFacts } from "#/components/contacts/inquiryFacts";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
-import { buildingSectionListingId } from "#/components/deals/dealCardLink";
+import { useOpenLeadsRow } from "#/components/contacts/useOpenLeadsRow";
 
 function medDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
@@ -44,8 +43,11 @@ export function ContactInquiryCard({
   listingId: string;
   contact: Contact;
 }) {
-  const navigate = useNavigate();
   const listing = useDataStore((s) => s.listings.get(listingId));
+  // An inquiry recorded against a suite opens that suite's own Leads, where the
+  // inquiry actually appears — a space's Leads is the building's list filtered to
+  // it. See `spaceLeadsTarget`.
+  const openLeadsRow = useOpenLeadsRow(listingId, contactFullName(contact));
   if (!listing) return null;
 
   // Shared with the new-style card so one contact × listing reads the same in
@@ -54,15 +56,6 @@ export function ContactInquiryCard({
     contact,
     listingId,
   );
-
-  // Leads are a building-level section — a space's own page has no Leads
-  // route — so a space's inquiry opens its building's Leads list.
-  const openLeadsRow = () =>
-    void navigate({
-      to: "/listings/$listingId/leads",
-      params: { listingId: buildingSectionListingId(listingId) },
-      search: { q: contactFullName(contact) },
-    });
 
   return (
     <div

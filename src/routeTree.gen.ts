@@ -79,23 +79,15 @@ import { Route as ShellSettingsUsersUserIdIntegrationsRouteImport } from './rout
 import { Route as ShellSettingsUsersUserIdEmailRouteImport } from './routes/_shell/settings/users/$userId/email'
 import { Route as ShellListingsListingIdSpacesSpaceIdRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId'
 import { Route as ShellListingsListingIdSpacesSpaceIdIndexRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/index'
-import { Route as ShellListingsListingIdSpacesSpaceIdWebsiteRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/website'
-import { Route as ShellListingsListingIdSpacesSpaceIdUnderwritingRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/underwriting'
-import { Route as ShellListingsListingIdSpacesSpaceIdPlansRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/plans'
 import { Route as ShellListingsListingIdSpacesSpaceIdOverviewRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/overview'
 import { Route as ShellListingsListingIdSpacesSpaceIdNotesRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/notes'
 import { Route as ShellListingsListingIdSpacesSpaceIdMediaRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/media'
 import { Route as ShellListingsListingIdSpacesSpaceIdLeadsRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/leads'
 import { Route as ShellListingsListingIdSpacesSpaceIdHistoryRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/history'
-import { Route as ShellListingsListingIdSpacesSpaceIdGridsRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/grids'
 import { Route as ShellListingsListingIdSpacesSpaceIdFinancialsRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/financials'
 import { Route as ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/financial-documents'
 import { Route as ShellListingsListingIdSpacesSpaceIdFilesRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/files'
-import { Route as ShellListingsListingIdSpacesSpaceIdEmailRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/email'
-import { Route as ShellListingsListingIdSpacesSpaceIdDocumentsRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/documents'
 import { Route as ShellListingsListingIdSpacesSpaceIdDetailsRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/details'
-import { Route as ShellListingsListingIdSpacesSpaceIdDemographicsRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/demographics'
-import { Route as ShellListingsListingIdSpacesSpaceIdClientReportRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/client-report'
 import { Route as ShellListingsListingIdSpacesSpaceIdActivitiesRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/activities'
 
 const LoginRoute = LoginRouteImport.update({
@@ -485,24 +477,6 @@ const ShellListingsListingIdSpacesSpaceIdIndexRoute =
     path: '/',
     getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
   } as any)
-const ShellListingsListingIdSpacesSpaceIdWebsiteRoute =
-  ShellListingsListingIdSpacesSpaceIdWebsiteRouteImport.update({
-    id: '/website',
-    path: '/website',
-    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
-  } as any)
-const ShellListingsListingIdSpacesSpaceIdUnderwritingRoute =
-  ShellListingsListingIdSpacesSpaceIdUnderwritingRouteImport.update({
-    id: '/underwriting',
-    path: '/underwriting',
-    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
-  } as any)
-const ShellListingsListingIdSpacesSpaceIdPlansRoute =
-  ShellListingsListingIdSpacesSpaceIdPlansRouteImport.update({
-    id: '/plans',
-    path: '/plans',
-    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
-  } as any)
 const ShellListingsListingIdSpacesSpaceIdOverviewRoute =
   ShellListingsListingIdSpacesSpaceIdOverviewRouteImport.update({
     id: '/overview',
@@ -533,12 +507,6 @@ const ShellListingsListingIdSpacesSpaceIdHistoryRoute =
     path: '/history',
     getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
   } as any)
-const ShellListingsListingIdSpacesSpaceIdGridsRoute =
-  ShellListingsListingIdSpacesSpaceIdGridsRouteImport.update({
-    id: '/grids',
-    path: '/grids',
-    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
-  } as any)
 const ShellListingsListingIdSpacesSpaceIdFinancialsRoute =
   ShellListingsListingIdSpacesSpaceIdFinancialsRouteImport.update({
     id: '/financials',
@@ -557,34 +525,10 @@ const ShellListingsListingIdSpacesSpaceIdFilesRoute =
     path: '/files',
     getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
   } as any)
-const ShellListingsListingIdSpacesSpaceIdEmailRoute =
-  ShellListingsListingIdSpacesSpaceIdEmailRouteImport.update({
-    id: '/email',
-    path: '/email',
-    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
-  } as any)
-const ShellListingsListingIdSpacesSpaceIdDocumentsRoute =
-  ShellListingsListingIdSpacesSpaceIdDocumentsRouteImport.update({
-    id: '/documents',
-    path: '/documents',
-    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
-  } as any)
 const ShellListingsListingIdSpacesSpaceIdDetailsRoute =
   ShellListingsListingIdSpacesSpaceIdDetailsRouteImport.update({
     id: '/details',
     path: '/details',
-    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
-  } as any)
-const ShellListingsListingIdSpacesSpaceIdDemographicsRoute =
-  ShellListingsListingIdSpacesSpaceIdDemographicsRouteImport.update({
-    id: '/demographics',
-    path: '/demographics',
-    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
-  } as any)
-const ShellListingsListingIdSpacesSpaceIdClientReportRoute =
-  ShellListingsListingIdSpacesSpaceIdClientReportRouteImport.update({
-    id: '/client-report',
-    path: '/client-report',
     getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
   } as any)
 const ShellListingsListingIdSpacesSpaceIdActivitiesRoute =
@@ -664,23 +608,15 @@ export interface FileRoutesByFullPath {
   '/listings/$listingId/vouchers/': typeof ShellListingsListingIdVouchersIndexRoute
   '/settings/users/$userId/': typeof ShellSettingsUsersUserIdIndexRoute
   '/listings/$listingId/spaces/$spaceId/activities': typeof ShellListingsListingIdSpacesSpaceIdActivitiesRoute
-  '/listings/$listingId/spaces/$spaceId/client-report': typeof ShellListingsListingIdSpacesSpaceIdClientReportRoute
-  '/listings/$listingId/spaces/$spaceId/demographics': typeof ShellListingsListingIdSpacesSpaceIdDemographicsRoute
   '/listings/$listingId/spaces/$spaceId/details': typeof ShellListingsListingIdSpacesSpaceIdDetailsRoute
-  '/listings/$listingId/spaces/$spaceId/documents': typeof ShellListingsListingIdSpacesSpaceIdDocumentsRoute
-  '/listings/$listingId/spaces/$spaceId/email': typeof ShellListingsListingIdSpacesSpaceIdEmailRoute
   '/listings/$listingId/spaces/$spaceId/files': typeof ShellListingsListingIdSpacesSpaceIdFilesRoute
   '/listings/$listingId/spaces/$spaceId/financial-documents': typeof ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRoute
   '/listings/$listingId/spaces/$spaceId/financials': typeof ShellListingsListingIdSpacesSpaceIdFinancialsRoute
-  '/listings/$listingId/spaces/$spaceId/grids': typeof ShellListingsListingIdSpacesSpaceIdGridsRoute
   '/listings/$listingId/spaces/$spaceId/history': typeof ShellListingsListingIdSpacesSpaceIdHistoryRoute
   '/listings/$listingId/spaces/$spaceId/leads': typeof ShellListingsListingIdSpacesSpaceIdLeadsRoute
   '/listings/$listingId/spaces/$spaceId/media': typeof ShellListingsListingIdSpacesSpaceIdMediaRoute
   '/listings/$listingId/spaces/$spaceId/notes': typeof ShellListingsListingIdSpacesSpaceIdNotesRoute
   '/listings/$listingId/spaces/$spaceId/overview': typeof ShellListingsListingIdSpacesSpaceIdOverviewRoute
-  '/listings/$listingId/spaces/$spaceId/plans': typeof ShellListingsListingIdSpacesSpaceIdPlansRoute
-  '/listings/$listingId/spaces/$spaceId/underwriting': typeof ShellListingsListingIdSpacesSpaceIdUnderwritingRoute
-  '/listings/$listingId/spaces/$spaceId/website': typeof ShellListingsListingIdSpacesSpaceIdWebsiteRoute
   '/listings/$listingId/spaces/$spaceId/': typeof ShellListingsListingIdSpacesSpaceIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -742,23 +678,15 @@ export interface FileRoutesByTo {
   '/listings/$listingId/vouchers': typeof ShellListingsListingIdVouchersIndexRoute
   '/settings/users/$userId': typeof ShellSettingsUsersUserIdIndexRoute
   '/listings/$listingId/spaces/$spaceId/activities': typeof ShellListingsListingIdSpacesSpaceIdActivitiesRoute
-  '/listings/$listingId/spaces/$spaceId/client-report': typeof ShellListingsListingIdSpacesSpaceIdClientReportRoute
-  '/listings/$listingId/spaces/$spaceId/demographics': typeof ShellListingsListingIdSpacesSpaceIdDemographicsRoute
   '/listings/$listingId/spaces/$spaceId/details': typeof ShellListingsListingIdSpacesSpaceIdDetailsRoute
-  '/listings/$listingId/spaces/$spaceId/documents': typeof ShellListingsListingIdSpacesSpaceIdDocumentsRoute
-  '/listings/$listingId/spaces/$spaceId/email': typeof ShellListingsListingIdSpacesSpaceIdEmailRoute
   '/listings/$listingId/spaces/$spaceId/files': typeof ShellListingsListingIdSpacesSpaceIdFilesRoute
   '/listings/$listingId/spaces/$spaceId/financial-documents': typeof ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRoute
   '/listings/$listingId/spaces/$spaceId/financials': typeof ShellListingsListingIdSpacesSpaceIdFinancialsRoute
-  '/listings/$listingId/spaces/$spaceId/grids': typeof ShellListingsListingIdSpacesSpaceIdGridsRoute
   '/listings/$listingId/spaces/$spaceId/history': typeof ShellListingsListingIdSpacesSpaceIdHistoryRoute
   '/listings/$listingId/spaces/$spaceId/leads': typeof ShellListingsListingIdSpacesSpaceIdLeadsRoute
   '/listings/$listingId/spaces/$spaceId/media': typeof ShellListingsListingIdSpacesSpaceIdMediaRoute
   '/listings/$listingId/spaces/$spaceId/notes': typeof ShellListingsListingIdSpacesSpaceIdNotesRoute
   '/listings/$listingId/spaces/$spaceId/overview': typeof ShellListingsListingIdSpacesSpaceIdOverviewRoute
-  '/listings/$listingId/spaces/$spaceId/plans': typeof ShellListingsListingIdSpacesSpaceIdPlansRoute
-  '/listings/$listingId/spaces/$spaceId/underwriting': typeof ShellListingsListingIdSpacesSpaceIdUnderwritingRoute
-  '/listings/$listingId/spaces/$spaceId/website': typeof ShellListingsListingIdSpacesSpaceIdWebsiteRoute
   '/listings/$listingId/spaces/$spaceId': typeof ShellListingsListingIdSpacesSpaceIdIndexRoute
 }
 export interface FileRoutesById {
@@ -833,23 +761,15 @@ export interface FileRoutesById {
   '/_shell/listings/$listingId/vouchers/': typeof ShellListingsListingIdVouchersIndexRoute
   '/_shell/settings/users/$userId/': typeof ShellSettingsUsersUserIdIndexRoute
   '/_shell/listings/$listingId_/spaces/$spaceId/activities': typeof ShellListingsListingIdSpacesSpaceIdActivitiesRoute
-  '/_shell/listings/$listingId_/spaces/$spaceId/client-report': typeof ShellListingsListingIdSpacesSpaceIdClientReportRoute
-  '/_shell/listings/$listingId_/spaces/$spaceId/demographics': typeof ShellListingsListingIdSpacesSpaceIdDemographicsRoute
   '/_shell/listings/$listingId_/spaces/$spaceId/details': typeof ShellListingsListingIdSpacesSpaceIdDetailsRoute
-  '/_shell/listings/$listingId_/spaces/$spaceId/documents': typeof ShellListingsListingIdSpacesSpaceIdDocumentsRoute
-  '/_shell/listings/$listingId_/spaces/$spaceId/email': typeof ShellListingsListingIdSpacesSpaceIdEmailRoute
   '/_shell/listings/$listingId_/spaces/$spaceId/files': typeof ShellListingsListingIdSpacesSpaceIdFilesRoute
   '/_shell/listings/$listingId_/spaces/$spaceId/financial-documents': typeof ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRoute
   '/_shell/listings/$listingId_/spaces/$spaceId/financials': typeof ShellListingsListingIdSpacesSpaceIdFinancialsRoute
-  '/_shell/listings/$listingId_/spaces/$spaceId/grids': typeof ShellListingsListingIdSpacesSpaceIdGridsRoute
   '/_shell/listings/$listingId_/spaces/$spaceId/history': typeof ShellListingsListingIdSpacesSpaceIdHistoryRoute
   '/_shell/listings/$listingId_/spaces/$spaceId/leads': typeof ShellListingsListingIdSpacesSpaceIdLeadsRoute
   '/_shell/listings/$listingId_/spaces/$spaceId/media': typeof ShellListingsListingIdSpacesSpaceIdMediaRoute
   '/_shell/listings/$listingId_/spaces/$spaceId/notes': typeof ShellListingsListingIdSpacesSpaceIdNotesRoute
   '/_shell/listings/$listingId_/spaces/$spaceId/overview': typeof ShellListingsListingIdSpacesSpaceIdOverviewRoute
-  '/_shell/listings/$listingId_/spaces/$spaceId/plans': typeof ShellListingsListingIdSpacesSpaceIdPlansRoute
-  '/_shell/listings/$listingId_/spaces/$spaceId/underwriting': typeof ShellListingsListingIdSpacesSpaceIdUnderwritingRoute
-  '/_shell/listings/$listingId_/spaces/$spaceId/website': typeof ShellListingsListingIdSpacesSpaceIdWebsiteRoute
   '/_shell/listings/$listingId_/spaces/$spaceId/': typeof ShellListingsListingIdSpacesSpaceIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -924,23 +844,15 @@ export interface FileRouteTypes {
     | '/listings/$listingId/vouchers/'
     | '/settings/users/$userId/'
     | '/listings/$listingId/spaces/$spaceId/activities'
-    | '/listings/$listingId/spaces/$spaceId/client-report'
-    | '/listings/$listingId/spaces/$spaceId/demographics'
     | '/listings/$listingId/spaces/$spaceId/details'
-    | '/listings/$listingId/spaces/$spaceId/documents'
-    | '/listings/$listingId/spaces/$spaceId/email'
     | '/listings/$listingId/spaces/$spaceId/files'
     | '/listings/$listingId/spaces/$spaceId/financial-documents'
     | '/listings/$listingId/spaces/$spaceId/financials'
-    | '/listings/$listingId/spaces/$spaceId/grids'
     | '/listings/$listingId/spaces/$spaceId/history'
     | '/listings/$listingId/spaces/$spaceId/leads'
     | '/listings/$listingId/spaces/$spaceId/media'
     | '/listings/$listingId/spaces/$spaceId/notes'
     | '/listings/$listingId/spaces/$spaceId/overview'
-    | '/listings/$listingId/spaces/$spaceId/plans'
-    | '/listings/$listingId/spaces/$spaceId/underwriting'
-    | '/listings/$listingId/spaces/$spaceId/website'
     | '/listings/$listingId/spaces/$spaceId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -1002,23 +914,15 @@ export interface FileRouteTypes {
     | '/listings/$listingId/vouchers'
     | '/settings/users/$userId'
     | '/listings/$listingId/spaces/$spaceId/activities'
-    | '/listings/$listingId/spaces/$spaceId/client-report'
-    | '/listings/$listingId/spaces/$spaceId/demographics'
     | '/listings/$listingId/spaces/$spaceId/details'
-    | '/listings/$listingId/spaces/$spaceId/documents'
-    | '/listings/$listingId/spaces/$spaceId/email'
     | '/listings/$listingId/spaces/$spaceId/files'
     | '/listings/$listingId/spaces/$spaceId/financial-documents'
     | '/listings/$listingId/spaces/$spaceId/financials'
-    | '/listings/$listingId/spaces/$spaceId/grids'
     | '/listings/$listingId/spaces/$spaceId/history'
     | '/listings/$listingId/spaces/$spaceId/leads'
     | '/listings/$listingId/spaces/$spaceId/media'
     | '/listings/$listingId/spaces/$spaceId/notes'
     | '/listings/$listingId/spaces/$spaceId/overview'
-    | '/listings/$listingId/spaces/$spaceId/plans'
-    | '/listings/$listingId/spaces/$spaceId/underwriting'
-    | '/listings/$listingId/spaces/$spaceId/website'
     | '/listings/$listingId/spaces/$spaceId'
   id:
     | '__root__'
@@ -1092,23 +996,15 @@ export interface FileRouteTypes {
     | '/_shell/listings/$listingId/vouchers/'
     | '/_shell/settings/users/$userId/'
     | '/_shell/listings/$listingId_/spaces/$spaceId/activities'
-    | '/_shell/listings/$listingId_/spaces/$spaceId/client-report'
-    | '/_shell/listings/$listingId_/spaces/$spaceId/demographics'
     | '/_shell/listings/$listingId_/spaces/$spaceId/details'
-    | '/_shell/listings/$listingId_/spaces/$spaceId/documents'
-    | '/_shell/listings/$listingId_/spaces/$spaceId/email'
     | '/_shell/listings/$listingId_/spaces/$spaceId/files'
     | '/_shell/listings/$listingId_/spaces/$spaceId/financial-documents'
     | '/_shell/listings/$listingId_/spaces/$spaceId/financials'
-    | '/_shell/listings/$listingId_/spaces/$spaceId/grids'
     | '/_shell/listings/$listingId_/spaces/$spaceId/history'
     | '/_shell/listings/$listingId_/spaces/$spaceId/leads'
     | '/_shell/listings/$listingId_/spaces/$spaceId/media'
     | '/_shell/listings/$listingId_/spaces/$spaceId/notes'
     | '/_shell/listings/$listingId_/spaces/$spaceId/overview'
-    | '/_shell/listings/$listingId_/spaces/$spaceId/plans'
-    | '/_shell/listings/$listingId_/spaces/$spaceId/underwriting'
-    | '/_shell/listings/$listingId_/spaces/$spaceId/website'
     | '/_shell/listings/$listingId_/spaces/$spaceId/'
   fileRoutesById: FileRoutesById
 }
@@ -1610,27 +1506,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdIndexRouteImport
       parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
     }
-    '/_shell/listings/$listingId_/spaces/$spaceId/website': {
-      id: '/_shell/listings/$listingId_/spaces/$spaceId/website'
-      path: '/website'
-      fullPath: '/listings/$listingId/spaces/$spaceId/website'
-      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdWebsiteRouteImport
-      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
-    }
-    '/_shell/listings/$listingId_/spaces/$spaceId/underwriting': {
-      id: '/_shell/listings/$listingId_/spaces/$spaceId/underwriting'
-      path: '/underwriting'
-      fullPath: '/listings/$listingId/spaces/$spaceId/underwriting'
-      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdUnderwritingRouteImport
-      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
-    }
-    '/_shell/listings/$listingId_/spaces/$spaceId/plans': {
-      id: '/_shell/listings/$listingId_/spaces/$spaceId/plans'
-      path: '/plans'
-      fullPath: '/listings/$listingId/spaces/$spaceId/plans'
-      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdPlansRouteImport
-      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
-    }
     '/_shell/listings/$listingId_/spaces/$spaceId/overview': {
       id: '/_shell/listings/$listingId_/spaces/$spaceId/overview'
       path: '/overview'
@@ -1666,13 +1541,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdHistoryRouteImport
       parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
     }
-    '/_shell/listings/$listingId_/spaces/$spaceId/grids': {
-      id: '/_shell/listings/$listingId_/spaces/$spaceId/grids'
-      path: '/grids'
-      fullPath: '/listings/$listingId/spaces/$spaceId/grids'
-      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdGridsRouteImport
-      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
-    }
     '/_shell/listings/$listingId_/spaces/$spaceId/financials': {
       id: '/_shell/listings/$listingId_/spaces/$spaceId/financials'
       path: '/financials'
@@ -1694,39 +1562,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdFilesRouteImport
       parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
     }
-    '/_shell/listings/$listingId_/spaces/$spaceId/email': {
-      id: '/_shell/listings/$listingId_/spaces/$spaceId/email'
-      path: '/email'
-      fullPath: '/listings/$listingId/spaces/$spaceId/email'
-      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdEmailRouteImport
-      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
-    }
-    '/_shell/listings/$listingId_/spaces/$spaceId/documents': {
-      id: '/_shell/listings/$listingId_/spaces/$spaceId/documents'
-      path: '/documents'
-      fullPath: '/listings/$listingId/spaces/$spaceId/documents'
-      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdDocumentsRouteImport
-      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
-    }
     '/_shell/listings/$listingId_/spaces/$spaceId/details': {
       id: '/_shell/listings/$listingId_/spaces/$spaceId/details'
       path: '/details'
       fullPath: '/listings/$listingId/spaces/$spaceId/details'
       preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdDetailsRouteImport
-      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
-    }
-    '/_shell/listings/$listingId_/spaces/$spaceId/demographics': {
-      id: '/_shell/listings/$listingId_/spaces/$spaceId/demographics'
-      path: '/demographics'
-      fullPath: '/listings/$listingId/spaces/$spaceId/demographics'
-      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdDemographicsRouteImport
-      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
-    }
-    '/_shell/listings/$listingId_/spaces/$spaceId/client-report': {
-      id: '/_shell/listings/$listingId_/spaces/$spaceId/client-report'
-      path: '/client-report'
-      fullPath: '/listings/$listingId/spaces/$spaceId/client-report'
-      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdClientReportRouteImport
       parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
     }
     '/_shell/listings/$listingId_/spaces/$spaceId/activities': {
@@ -1856,23 +1696,15 @@ const ShellListingsListingIdRouteWithChildren =
 
 interface ShellListingsListingIdSpacesSpaceIdRouteChildren {
   ShellListingsListingIdSpacesSpaceIdActivitiesRoute: typeof ShellListingsListingIdSpacesSpaceIdActivitiesRoute
-  ShellListingsListingIdSpacesSpaceIdClientReportRoute: typeof ShellListingsListingIdSpacesSpaceIdClientReportRoute
-  ShellListingsListingIdSpacesSpaceIdDemographicsRoute: typeof ShellListingsListingIdSpacesSpaceIdDemographicsRoute
   ShellListingsListingIdSpacesSpaceIdDetailsRoute: typeof ShellListingsListingIdSpacesSpaceIdDetailsRoute
-  ShellListingsListingIdSpacesSpaceIdDocumentsRoute: typeof ShellListingsListingIdSpacesSpaceIdDocumentsRoute
-  ShellListingsListingIdSpacesSpaceIdEmailRoute: typeof ShellListingsListingIdSpacesSpaceIdEmailRoute
   ShellListingsListingIdSpacesSpaceIdFilesRoute: typeof ShellListingsListingIdSpacesSpaceIdFilesRoute
   ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRoute: typeof ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRoute
   ShellListingsListingIdSpacesSpaceIdFinancialsRoute: typeof ShellListingsListingIdSpacesSpaceIdFinancialsRoute
-  ShellListingsListingIdSpacesSpaceIdGridsRoute: typeof ShellListingsListingIdSpacesSpaceIdGridsRoute
   ShellListingsListingIdSpacesSpaceIdHistoryRoute: typeof ShellListingsListingIdSpacesSpaceIdHistoryRoute
   ShellListingsListingIdSpacesSpaceIdLeadsRoute: typeof ShellListingsListingIdSpacesSpaceIdLeadsRoute
   ShellListingsListingIdSpacesSpaceIdMediaRoute: typeof ShellListingsListingIdSpacesSpaceIdMediaRoute
   ShellListingsListingIdSpacesSpaceIdNotesRoute: typeof ShellListingsListingIdSpacesSpaceIdNotesRoute
   ShellListingsListingIdSpacesSpaceIdOverviewRoute: typeof ShellListingsListingIdSpacesSpaceIdOverviewRoute
-  ShellListingsListingIdSpacesSpaceIdPlansRoute: typeof ShellListingsListingIdSpacesSpaceIdPlansRoute
-  ShellListingsListingIdSpacesSpaceIdUnderwritingRoute: typeof ShellListingsListingIdSpacesSpaceIdUnderwritingRoute
-  ShellListingsListingIdSpacesSpaceIdWebsiteRoute: typeof ShellListingsListingIdSpacesSpaceIdWebsiteRoute
   ShellListingsListingIdSpacesSpaceIdIndexRoute: typeof ShellListingsListingIdSpacesSpaceIdIndexRoute
 }
 
@@ -1880,24 +1712,14 @@ const ShellListingsListingIdSpacesSpaceIdRouteChildren: ShellListingsListingIdSp
   {
     ShellListingsListingIdSpacesSpaceIdActivitiesRoute:
       ShellListingsListingIdSpacesSpaceIdActivitiesRoute,
-    ShellListingsListingIdSpacesSpaceIdClientReportRoute:
-      ShellListingsListingIdSpacesSpaceIdClientReportRoute,
-    ShellListingsListingIdSpacesSpaceIdDemographicsRoute:
-      ShellListingsListingIdSpacesSpaceIdDemographicsRoute,
     ShellListingsListingIdSpacesSpaceIdDetailsRoute:
       ShellListingsListingIdSpacesSpaceIdDetailsRoute,
-    ShellListingsListingIdSpacesSpaceIdDocumentsRoute:
-      ShellListingsListingIdSpacesSpaceIdDocumentsRoute,
-    ShellListingsListingIdSpacesSpaceIdEmailRoute:
-      ShellListingsListingIdSpacesSpaceIdEmailRoute,
     ShellListingsListingIdSpacesSpaceIdFilesRoute:
       ShellListingsListingIdSpacesSpaceIdFilesRoute,
     ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRoute:
       ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRoute,
     ShellListingsListingIdSpacesSpaceIdFinancialsRoute:
       ShellListingsListingIdSpacesSpaceIdFinancialsRoute,
-    ShellListingsListingIdSpacesSpaceIdGridsRoute:
-      ShellListingsListingIdSpacesSpaceIdGridsRoute,
     ShellListingsListingIdSpacesSpaceIdHistoryRoute:
       ShellListingsListingIdSpacesSpaceIdHistoryRoute,
     ShellListingsListingIdSpacesSpaceIdLeadsRoute:
@@ -1908,12 +1730,6 @@ const ShellListingsListingIdSpacesSpaceIdRouteChildren: ShellListingsListingIdSp
       ShellListingsListingIdSpacesSpaceIdNotesRoute,
     ShellListingsListingIdSpacesSpaceIdOverviewRoute:
       ShellListingsListingIdSpacesSpaceIdOverviewRoute,
-    ShellListingsListingIdSpacesSpaceIdPlansRoute:
-      ShellListingsListingIdSpacesSpaceIdPlansRoute,
-    ShellListingsListingIdSpacesSpaceIdUnderwritingRoute:
-      ShellListingsListingIdSpacesSpaceIdUnderwritingRoute,
-    ShellListingsListingIdSpacesSpaceIdWebsiteRoute:
-      ShellListingsListingIdSpacesSpaceIdWebsiteRoute,
     ShellListingsListingIdSpacesSpaceIdIndexRoute:
       ShellListingsListingIdSpacesSpaceIdIndexRoute,
   }

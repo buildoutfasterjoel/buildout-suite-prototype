@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { dealBreadcrumbTrail, NAV_GROUPS, visibleNavGroups } from "./dealNav";
+import { BUILDING_OWNED_HREFS, dealBreadcrumbTrail, NAV_GROUPS, visibleNavGroups } from "./dealNav";
 
 const ID = "deal-1";
 
@@ -150,6 +150,18 @@ describe("visibleNavGroups", () => {
     expect(hrefs("sale", { leaseParent: false, showsUnderwriting: false })).not.toContain("underwriting");
   });
 
+  it("never gives a space Underwriting, even when showsUnderwriting is true", () => {
+    // Underwriting's output is a document, and documents are the building's
+    // alone — see the dedicated branch in `visibleNavGroups` (not
+    // `BUILDING_OWNED_HREFS`: that constant is for marketing sections, and this
+    // exclusion's reason is different). A space must never get this tab
+    // regardless of `showsUnderwriting`, so this pins `shape !== "space"` as an
+    // unconditional AND rather than something `showsUnderwriting` could overrule.
+    expect(
+      hrefs("space", { leaseParent: false, showsUnderwriting: true }),
+    ).not.toContain("underwriting");
+  });
+
   it("shows Listing for every shape that has a page", () => {
     // Not filtered by shape: the listing fields are the deal's marketing content
     // whatever the deal's shape. A space has no page at all, so it never asks.
@@ -241,5 +253,85 @@ describe("dealBreadcrumbTrail — the space page's third level", () => {
 
   it("tolerates a trailing slash after the space id", () => {
     expect(dealBreadcrumbTrail("/listings/L1/spaces/S9/", "L1").subsectionLabel).toBeNull();
+  });
+});
+
+describe("the building-owned sections", () => {
+  const opts = { leaseParent: false, showsUnderwriting: true };
+
+  function shown(shape: Parameters<typeof visibleNavGroups>[0], o = opts) {
+    return visibleNavGroups(shape, o).flatMap((g) => g.items.map((i) => i.href));
+  }
+
+  it("names the eight sections a building owns, across both Deal and Marketing", () => {
+    // Asserted explicitly rather than trusting the constant, so widening the
+    // list is a deliberate edit to a test rather than a silent behaviour change.
+    // Client Report and Underwriting live in the Deal group; the other six are
+    // Marketing — see BUILDING_OWNED_HREFS' doc comment for why each qualifies.
+    expect([...BUILDING_OWNED_HREFS].sort()).toEqual([
+      "client-report",
+      "demographics",
+      "documents",
+      "email",
+      "grids",
+      "plans",
+      "underwriting",
+      "website",
+    ]);
+  });
+
+  it("hides every one of them from a space", () => {
+    const hrefs = shown("space");
+    for (const href of BUILDING_OWNED_HREFS) {
+      expect(hrefs, href).not.toContain(href);
+    }
+  });
+
+  it("keeps every one of them on a shell, which owns them", () => {
+    const hrefs = shown("shell", { leaseParent: true, showsUnderwriting: true });
+    for (const href of BUILDING_OWNED_HREFS) {
+      expect(hrefs, href).toContain(href);
+    }
+  });
+
+  it("keeps them on a sale and on a flat lease", () => {
+    for (const shape of ["sale", "flat-lease"] as const) {
+      const hrefs = shown(shape);
+      for (const href of BUILDING_OWNED_HREFS) {
+        expect(hrefs, `${shape} / ${href}`).toContain(href);
+      }
+    }
+  });
+
+  it("gives a space no Client Report, even when it has no route of its own", () => {
+    // Distinct from the loop above: this pins the specific href a reader would
+    // otherwise have to infer from the sorted list, and is the one this task
+    // added — Client Report reports on the building's listing performance, not
+    // a suite's, so a space must never offer it regardless of other options.
+    expect(shown("space")).not.toContain("client-report");
+  });
+
+  it("leaves a space exactly the three marketing sections it does own", () => {
+    // Exact contents and order: Details is the space's own form, Leads and Media
+    // are filtered views of the building's. Anything else appearing here is a
+    // section that escaped the ownership rule.
+    const marketing = visibleNavGroups("space", opts).find((g) => g.label === "Marketing");
+    expect(marketing?.items.map((i) => i.href)).toEqual(["details", "leads", "media"]);
+  });
+
+  it("leaves a space exactly this set of Deal-group sections", () => {
+    // Worked out from NAV_GROUPS' Deal group (Overview, Client Report, Activity,
+    // History, Spaces, Files, Underwriting) minus what a space never gets:
+    // Client Report and Underwriting (BUILDING_OWNED_HREFS) and Spaces (a space
+    // has no children of its own, so `opts.leaseParent` is irrelevant to it).
+    const deal = visibleNavGroups("space", opts).find((g) => g.label === "Deal");
+    expect(deal?.items.map((i) => i.href)).toEqual(["overview", "activities", "history", "files"]);
+  });
+
+  it("does not empty the Marketing group for a space", () => {
+    // `visibleNavGroups` drops groups that filter down to nothing. Removing six
+    // of Marketing's ten items must not trip that.
+    const labels = visibleNavGroups("space", opts).map((g) => g.label);
+    expect(labels).toContain("Marketing");
   });
 });

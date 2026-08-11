@@ -6,9 +6,11 @@ import {
   getLeadsForProperty,
   updateListingUnderwriting,
 } from "#/data/store";
+import { leadsForSpaceDeal } from "#/data/unitScopedMarketing";
 import { useDataStore } from "#/data/dataStore";
 import { requestStageChange } from "#/components/deals/useStageGate";
 import { UnderwritingSetupModal } from "#/components/deals/underwriting/UnderwritingSetupModal";
+import { dealSupportsUnderwriting } from "#/components/deals/underwriting/eligibility";
 import {
   underwritingFromSelection,
   type UnderwritingStrategyId,
@@ -19,10 +21,8 @@ import { NewDealCard, type DealCardAction } from "#/components/deals/NewDealCard
 import { dealRelationshipFor } from "#/components/deals/newCardTokens";
 import { contactFullName } from "#/components/contacts/contactDisplay";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
-import {
-  buildingSectionListingId,
-  dealCardLinkProps,
-} from "#/components/deals/dealCardLink";
+import { dealCardLinkProps, spaceLeadsTarget } from "#/components/deals/dealCardLink";
+import { useOpenLeadsRow } from "#/components/contacts/useOpenLeadsRow";
 
 /** "Jul 27, 2026" — the date the contact's inquiry came in. */
 function medDate(iso: string): string {
@@ -57,6 +57,12 @@ export function NewContactDealCard({
   const listing = useDataStore((s) => s.listings.get(listingId));
   // The leads count is read off the contacts map, so track it for re-renders.
   useDataStore((s) => s.contacts);
+  // The "View Leads" CTA on an active deal opens that deal's own Leads — the
+  // suite's own filtered list when it's a space, not the building's unfiltered
+  // one. See `spaceLeadsTarget`. Called here at the top level, not inside
+  // `action()` below, because `action()` runs outside render, where hooks
+  // aren't allowed.
+  const openLeadsRow = useOpenLeadsRow(listingId);
   const cardRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (highlight) {
@@ -89,6 +95,12 @@ export function NewContactDealCard({
 
   /** The underwriting step still open on a Pitching deal, if any. */
   function underwritingAction(): DealCardAction | null {
+    // Underwriting doesn't belong to a suite — see `dealSupportsUnderwriting`.
+    // Without this, a space (in `proposal` status, a party contact carried
+    // over from its parent via `addSpaceToDeal`) would offer "Build
+    // Underwriting" and route through `ContactBovFlow` into the same document
+    // write the space's own Underwriting tab was removed for.
+    if (!dealSupportsUnderwriting(listing!)) return null;
     const run = listing!.underwriting;
     const open = () => {
       if (run == null) setSetupOpen(true);
@@ -115,15 +127,21 @@ export function NewContactDealCard({
     if (inquired) return null;
     if (listing!.status === "proposal") return underwritingAction();
     if (listing!.status === "active") {
+      // The count must agree with what the click opens — see the comment on
+      // this in ContactDealCard.tsx. `openLeadsRow` sends a suite to its own
+      // filtered Leads (see `spaceLeadsTarget`), so the badge counts against
+      // that same filter rather than the building's unfiltered list. Passing
+      // `null` when this isn't a space leaves `leadsForSpaceDeal` a no-op, so
+      // the count is unchanged for every other shape.
+      const target = spaceLeadsTarget(listingId);
       return {
         icon: faAddressBook,
         label: "View Leads",
-        count: getLeadsForProperty(listing!.propertyId).length,
-        onClick: () =>
-          void navigate({
-            to: "/listings/$listingId/leads",
-            params: { listingId: buildingSectionListingId(listingId) },
-          }),
+        count: leadsForSpaceDeal(
+          getLeadsForProperty(listing!.propertyId),
+          target ? target.spaceId : null,
+        ).length,
+        onClick: openLeadsRow,
       };
     }
     return null;

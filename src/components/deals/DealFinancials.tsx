@@ -942,8 +942,7 @@ export function DealFinancials({
         title={heading}
         actions={
           <div className="d-flex gap-2">
-            <Button variant="outline">Deal Sheet</Button>
-            <Button variant="primary">Submit Financials</Button>
+            <Button variant="primary">Submit</Button>
           </div>
         }
       />

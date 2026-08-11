@@ -49,6 +49,18 @@ describe("rewriteSpaceDealPath", () => {
     );
   });
 
+  it("falls back to the building for a section this branch removed from a space", () => {
+    const { parent, child } = building();
+    // `documents` is one of the six sections this branch removed from a space's
+    // nav (`BUILDING_OWNED_HREFS`), plus `underwriting` (removed for a different
+    // reason — see `dealNav.ts`). `SPACE_SECTIONS` is derived from
+    // `visibleNavGroups`, so this pins that the derivation actually tracks that
+    // removal rather than the fallback only being exercised by `listing`.
+    expect(rewriteSpaceDealPath(`/listings/${child.id}/documents`)).toBe(
+      `/listings/${parent.id}/documents`,
+    );
+  });
+
   it("leaves a building's own paths alone", () => {
     const { parent } = building();
     expect(rewriteSpaceDealPath(`/listings/${parent.id}`)).toBe(`/listings/${parent.id}`);
