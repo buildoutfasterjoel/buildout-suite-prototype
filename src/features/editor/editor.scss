@@ -76,6 +76,29 @@
   color: tokens.$purple-heart-950;
   font-weight: tokens.$font-weight-semibold;
 }
+/* Otto: the one rail entry that opens a conversation rather than controls, so
+   it carries the assistant's purple mark instead of the flat document icon.
+   Same gradient as the navbar's assistant launcher (see main.scss). */
+.bo-editor-rail-btn--otto .bo-editor-rail-icon {
+  color: tokens.$purple-heart-100;
+  background: linear-gradient(
+    222.88deg,
+    tokens.$purple-heart-500 1.85%,
+    tokens.$purple-heart-950 98.15%
+  );
+  border: 1px solid tokens.$purple-heart-600;
+}
+.bo-editor-rail-btn--otto:hover .bo-editor-rail-icon,
+.bo-editor-rail-btn--otto.is-active .bo-editor-rail-icon {
+  /* The gradient already reads as active — the shared purple-50 fill would sit
+     behind it and do nothing, so lift it with a ring instead. */
+  background: linear-gradient(
+    222.88deg,
+    tokens.$purple-heart-500 1.85%,
+    tokens.$purple-heart-950 98.15%
+  );
+  box-shadow: 0 0 0 3px tokens.$purple-heart-100;
+}
 
 /* ---- Custom slider ---- */
 .bo-editor-slider {
@@ -650,6 +673,120 @@
   font-size: tokens.$font-size-body;
   font-weight: tokens.$font-weight-semibold;
   color: tokens.$body-color;
+}
+
+/* ---- Otto panel (agent chat) ----
+   Unlike the other nav panels — which are content inside .bo-editor-panel-scroll
+   — Otto replaces that wrapper entirely so it can pin its composer to the
+   panel's bottom edge and scroll only the thread above it. */
+.bo-editor-otto {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 0;
+  min-height: 0;
+}
+.bo-editor-otto-head {
+  display: flex;
+  align-items: center;
+  gap: tokens.$spacing-2;
+  padding: tokens.$spacing-3;
+  border-bottom: 1px solid tokens.$card-border-color;
+}
+.bo-editor-otto-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: tokens.$border-radius-full;
+  border: 1px solid tokens.$purple-heart-600;
+  background: linear-gradient(
+    222.88deg,
+    tokens.$purple-heart-500 1.85%,
+    tokens.$purple-heart-950 98.15%
+  );
+  color: tokens.$purple-heart-100;
+}
+.bo-editor-otto-context {
+  font-size: tokens.$font-size-small;
+  color: tokens.$body-text-muted;
+}
+.bo-editor-otto-scroll {
+  flex: 1 0 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: tokens.$spacing-3;
+}
+.bo-editor-otto-intro {
+  font-size: tokens.$font-size-small;
+  color: tokens.$body-text-muted;
+}
+
+/* Starter rows. A single-line variant of the assistant rail's two-line cards
+   (main.scss `.assistant-starter-row`): at 280px minus the panel's padding
+   there isn't room for a subtitle that doesn't truncate to nothing. */
+.bo-editor-otto-starter {
+  display: flex;
+  align-items: center;
+  gap: tokens.$spacing-2;
+  width: 100%;
+  padding: tokens.$spacing-2;
+  border: 1px solid tokens.$card-border-color;
+  border-radius: tokens.$border-radius-md;
+  background: tokens.$white;
+  font-size: tokens.$font-size-small;
+  color: tokens.$body-color;
+  cursor: pointer;
+  transition:
+    background-color motion.$short2 ease,
+    border-color motion.$short2 ease;
+}
+.bo-editor-otto-starter:hover {
+  background: tokens.$purple-heart-50;
+  border-color: tokens.$purple-heart-600;
+}
+.bo-editor-otto-starter-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: tokens.$border-radius-full;
+  background: tokens.$purple-heart-50;
+  color: tokens.$purple-heart-600;
+}
+
+.bo-editor-otto-bubble {
+  max-width: 85%;
+  padding: tokens.$spacing-2 tokens.$spacing-3;
+  border-radius: tokens.$border-radius-md;
+  background: tokens.$storm-grey-100;
+  color: tokens.$body-color;
+  font-size: tokens.$font-size-small;
+  white-space: pre-wrap;
+}
+.bo-editor-otto-reply {
+  width: 100%;
+  color: tokens.$body-color;
+  font-size: tokens.$font-size-small;
+}
+.bo-editor-otto-thinking {
+  display: inline-flex;
+  align-items: center;
+  gap: tokens.$spacing-2;
+  font-size: tokens.$font-size-small;
+  color: tokens.$purple-heart-600;
+}
+
+.bo-editor-otto-composer {
+  display: flex;
+  align-items: center;
+  gap: tokens.$spacing-2;
+  padding: tokens.$spacing-3;
+  border-top: 1px solid tokens.$card-border-color;
+  flex-shrink: 0;
 }
 
 /* ---- Layers panel rows ---- */
