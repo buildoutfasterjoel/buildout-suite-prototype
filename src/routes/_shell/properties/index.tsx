@@ -2,19 +2,24 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { ButtonGroup } from "@buildoutinc/blueprint-react/ui/ButtonGroup";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faMagnifyingGlass,
   faBuilding,
   faBuildings,
+  faCaretDown,
   faFilter,
+  faLocationDot,
   faRadar,
+  faTableList,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Property, PropertyType } from "#/data/types";
 import { useDataStore } from "#/data/dataStore";
@@ -85,6 +90,8 @@ function PropertiesIndex() {
   const [facets, setFacets] = useState<PropertyFacetState>(EMPTY_FACETS);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  // Visual only — the table view isn't built yet (see `viewSwitcher`).
+  const [resultsView, setResultsView] = useState<"map" | "table">("map");
 
   const headerStyle = usePropertyUiPrefs((s) => s.headerStyle);
   const hydratePrefs = usePropertyUiPrefs((s) => s.hydrate);
@@ -235,6 +242,86 @@ function PropertiesIndex() {
     </InputGroup>
   );
 
+  /**
+   * The page header, shared by both styles.
+   *
+   * The switch sits under the title with the description beside it, which is
+   * what makes the description read as a caption on the switch rather than on
+   * the page — it changes when you flip, and now it changes next to the thing
+   * you flipped. It also puts the switch on its own line, which is more
+   * presence than it had opposite the title.
+   */
+  const headerBlock = (
+    <div className="d-flex flex-column gap-2">
+      <div className="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+        <h1 className="fs-4 fw-semibold mb-0">Properties</h1>
+        {/* Record actions belong to your own book — there's nothing to action
+            on a public record you haven't added yet. Placeholders for now. */}
+        {mode === "owned" && (
+          <div className="d-flex align-items-center gap-2">
+            <Button variant="outline">
+              Actions
+              <FontAwesomeIcon icon={faCaretDown} />
+            </Button>
+            <Button variant="primary">
+              New Property
+              <FontAwesomeIcon icon={faCaretDown} />
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <div className="d-flex align-items-center gap-3 flex-wrap">
+        {modeTabs}
+        <span className="text-muted">{subtitle}</span>
+      </div>
+    </div>
+  );
+
+  /**
+   * Map / table switcher, mirroring the Deals toolbar's group. Selection is
+   * local and visual only — the table view isn't built, so this changes which
+   * button reads as active and nothing else.
+   */
+  const viewSwitcher = (
+    <ButtonGroup aria-label="Results view">
+      <Tooltip>
+        <Tooltip.Trigger
+          render={
+            <Button
+              variant="outline"
+              size="icon"
+              className={resultsView === "map" ? "active" : ""}
+              aria-pressed={resultsView === "map"}
+              aria-label="Map view"
+              onClick={() => setResultsView("map")}
+            >
+              <FontAwesomeIcon icon={faLocationDot} />
+            </Button>
+          }
+        />
+        <Tooltip.Content>Map</Tooltip.Content>
+      </Tooltip>
+      <Tooltip>
+        <Tooltip.Trigger
+          render={
+            <Button
+              variant="outline"
+              size="icon"
+              className={resultsView === "table" ? "active" : ""}
+              aria-pressed={resultsView === "table"}
+              aria-label="Table view"
+              onClick={() => setResultsView("table")}
+            >
+              <FontAwesomeIcon icon={faTableList} />
+            </Button>
+          }
+        />
+        <Tooltip.Content>Table</Tooltip.Content>
+      </Tooltip>
+    </ButtonGroup>
+  );
+
   /** The results rail + map, shared by both header styles. */
   const results_ = (
     <>
@@ -302,17 +389,7 @@ function PropertiesIndex() {
     <div className="d-flex h-100 p-4 overflow-hidden w-100">
       <Card className="panel-card flex-grow-1 d-flex flex-column overflow-hidden">
         <Card.Body className="d-flex flex-column gap-4 overflow-hidden">
-          {/* Title, description and mode switch on one line, with the switch
-              pushed to the right edge. Stacking the description under the title
-              and clustering the tabs beside it left everything crowded into the
-              left third with the right half empty; spanning the row uses the
-              full-bleed width and still keeps the switch above the toolbar it
-              governs. */}
-          <div className="d-flex align-items-center gap-3 flex-wrap">
-            <h1 className="fs-4 fw-semibold mb-0">Properties</h1>
-            <span className="text-muted">{subtitle}</span>
-            <div className="ms-auto">{modeTabs}</div>
-          </div>
+          {headerBlock}
 
           <div className="d-flex flex-column gap-3">
             <div className="d-flex align-items-center gap-3 flex-wrap">
@@ -327,6 +404,7 @@ function PropertiesIndex() {
                 {activeFilterCount > 0 && ` (${activeFilterCount})`}
               </Button>
               <span className="text-muted">{countLabel}</span>
+              <div className="ms-auto">{viewSwitcher}</div>
             </div>
 
             <PropertyFilterPills
@@ -347,13 +425,7 @@ function PropertiesIndex() {
   const bannerLayout = (
     <div className="d-flex flex-column h-100 overflow-hidden">
       <div className="border-bottom bg-card">
-        <div className="container-fluid px-4 py-4 d-flex flex-column gap-1">
-          <div className="d-flex align-items-center gap-3 flex-wrap">
-            <h1 className="fs-4 fw-semibold mb-0">Properties</h1>
-            {modeTabs}
-          </div>
-          <span className="text-muted">{subtitle}</span>
-        </div>
+        <div className="container-fluid px-4 py-4">{headerBlock}</div>
       </div>
 
       <div className="container-fluid px-4 py-3">
@@ -445,6 +517,7 @@ function PropertiesIndex() {
             )}
 
             <span className="text-muted text-nowrap ms-auto">{countLabel}</span>
+            {viewSwitcher}
           </Card.Body>
         </Card>
       </div>
