@@ -4040,3 +4040,20 @@
 .collapsible-card-trigger[data-panel-open] .collapsible-card-chevron {
   transform: rotate(90deg);
 }
+
+// Calendar — today's date. blueprint-react already classes today's cell
+// `.blueprint-calendar-today` (Calendar/index.tsx), and the docs advertise the
+// class, but blueprint-theme 1.1.0 never defines a rule for it, so today renders
+// identically to every other day. Fill the gap locally: a semibold label inside
+// a ring drawn with an inset shadow, so it costs no layout space and can't
+// shift the grid. The `:not()` guard keeps it out of the way when today is also
+// the selected day (or a range endpoint) — those already own the solid fill.
+// TODO(blueprint): promote this into the theme with a `$calendar-day-today-*`
+// setup variable so every consumer gets it.
+.blueprint-calendar-today:not(.blueprint-calendar-day-selected):not(
+    .blueprint-calendar-day-range-middle
+  )
+  .blueprint-calendar-day-button {
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px var(--bp-calendar-day-active-bg);
+}
