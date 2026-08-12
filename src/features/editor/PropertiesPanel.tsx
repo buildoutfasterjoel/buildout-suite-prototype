@@ -15,6 +15,7 @@ import {
   ImagesPanel,
   SettingsPanel,
 } from "./panels/NavPanels";
+import { OttoPanel } from "./panels/OttoPanel";
 
 /**
  * 280px left properties panel. Shows contextual style controls when an element
@@ -37,6 +38,9 @@ export function PropertiesPanel() {
   const { block, cell } = useSelectedEntities();
 
   const showStyles = block !== null;
+  // Otto owns the panel's whole body so its composer can sit against the bottom
+  // edge — the shared scroll wrapper below would scroll it away with the thread.
+  const showOtto = !showStyles && activeNavPanel === "otto";
   const isOpen = sidebarPinned || sidebarPoppedOpen;
   const panelClassName = [
     "bo-editor-panel",
@@ -75,13 +79,17 @@ export function PropertiesPanel() {
         </Tooltip>
       </div>
 
-      <div className="bo-editor-panel-scroll p-3">
-        {showStyles ? (
-          <StyleControls block={block} cell={cell} />
-        ) : (
-          <NavPanelContent panel={activeNavPanel} />
-        )}
-      </div>
+      {showOtto ? (
+        <OttoPanel />
+      ) : (
+        <div className="bo-editor-panel-scroll p-3">
+          {showStyles ? (
+            <StyleControls block={block} cell={cell} />
+          ) : (
+            <NavPanelContent panel={activeNavPanel} />
+          )}
+        </div>
+      )}
     </div>
   );
 }

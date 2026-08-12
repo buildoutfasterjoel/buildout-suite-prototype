@@ -6,6 +6,7 @@ import {
   faImages,
   faLayerGroup,
   faCubes,
+  faSparkles,
 } from "@fortawesome/pro-regular-svg-icons";
 import { useEditorStore } from "./store";
 import type { NavPanel } from "./types";
@@ -16,6 +17,7 @@ const ITEMS: { panel: NavPanel; icon: IconDefinition; label: string }[] = [
   { panel: "images", icon: faImages, label: "Images" },
   { panel: "layers", icon: faLayerGroup, label: "Layers" },
   { panel: "blocks", icon: faCubes, label: "Blocks" },
+  { panel: "otto", icon: faSparkles, label: "Otto" },
 ];
 
 /** Far-left vertical icon rail that switches the active properties panel. */

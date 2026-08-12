@@ -188,7 +188,7 @@ export interface EditorDocument {
 }
 
 /** Which left-rail panel is active. */
-export type NavPanel = "settings" | "pages" | "images" | "layers" | "blocks";
+export type NavPanel = "settings" | "pages" | "images" | "layers" | "blocks" | "otto";
 
 /** A selection points at a page, optionally a block, optionally a cell. */
 export interface Selection {

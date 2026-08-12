@@ -652,6 +652,116 @@
   color: tokens.$body-color;
 }
 
+/* ---- Otto panel (agent chat) ----
+   Unlike the other nav panels — which are content inside .bo-editor-panel-scroll
+   — Otto replaces that wrapper entirely so it can pin its composer to the
+   panel's bottom edge and scroll only the thread above it. */
+.bo-editor-otto {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 0;
+  min-height: 0;
+}
+.bo-editor-otto-head {
+  display: flex;
+  align-items: center;
+  gap: tokens.$spacing-2;
+  padding: tokens.$spacing-3;
+  border-bottom: 1px solid tokens.$card-border-color;
+}
+.bo-editor-otto-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  /* Rounded square, matching the rail's icon tiles rather than an avatar. */
+  border-radius: tokens.$border-radius-md;
+  background: tokens.$purple-heart-50;
+  color: tokens.$purple-heart-950;
+}
+.bo-editor-otto-context {
+  font-size: tokens.$font-size-small;
+  color: tokens.$body-text-muted;
+}
+.bo-editor-otto-scroll {
+  flex: 1 0 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: tokens.$spacing-3;
+}
+.bo-editor-otto-intro {
+  font-size: tokens.$font-size-small;
+  color: tokens.$body-text-muted;
+}
+
+/* Starter rows. A single-line variant of the assistant rail's two-line cards
+   (main.scss `.assistant-starter-row`): at 280px minus the panel's padding
+   there isn't room for a subtitle that doesn't truncate to nothing. */
+.bo-editor-otto-starter {
+  display: flex;
+  align-items: center;
+  gap: tokens.$spacing-2;
+  width: 100%;
+  padding: tokens.$spacing-2;
+  border: 1px solid tokens.$card-border-color;
+  border-radius: tokens.$border-radius-md;
+  background: tokens.$white;
+  font-size: tokens.$font-size-small;
+  color: tokens.$body-color;
+  cursor: pointer;
+  transition:
+    background-color motion.$short2 ease,
+    border-color motion.$short2 ease;
+}
+.bo-editor-otto-starter:hover {
+  background: tokens.$purple-heart-50;
+  border-color: tokens.$purple-heart-600;
+}
+.bo-editor-otto-starter-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: tokens.$border-radius-full;
+  background: tokens.$purple-heart-50;
+  color: tokens.$purple-heart-600;
+}
+
+.bo-editor-otto-bubble {
+  max-width: 85%;
+  padding: tokens.$spacing-2 tokens.$spacing-3;
+  border-radius: tokens.$border-radius-md;
+  background: tokens.$storm-grey-100;
+  color: tokens.$body-color;
+  font-size: tokens.$font-size-small;
+  white-space: pre-wrap;
+}
+.bo-editor-otto-reply {
+  width: 100%;
+  color: tokens.$body-color;
+  font-size: tokens.$font-size-small;
+}
+.bo-editor-otto-thinking {
+  display: inline-flex;
+  align-items: center;
+  gap: tokens.$spacing-2;
+  font-size: tokens.$font-size-small;
+  color: tokens.$purple-heart-600;
+}
+
+.bo-editor-otto-composer {
+  display: flex;
+  align-items: center;
+  gap: tokens.$spacing-2;
+  padding: tokens.$spacing-3;
+  border-top: 1px solid tokens.$card-border-color;
+  flex-shrink: 0;
+}
+
 /* ---- Layers panel rows ---- */
 .bo-editor-layer-grip {
   border: 0;
