@@ -76,29 +76,6 @@
   color: tokens.$purple-heart-950;
   font-weight: tokens.$font-weight-semibold;
 }
-/* Otto: the one rail entry that opens a conversation rather than controls, so
-   it carries the assistant's purple mark instead of the flat document icon.
-   Same gradient as the navbar's assistant launcher (see main.scss). */
-.bo-editor-rail-btn--otto .bo-editor-rail-icon {
-  color: tokens.$purple-heart-100;
-  background: linear-gradient(
-    222.88deg,
-    tokens.$purple-heart-500 1.85%,
-    tokens.$purple-heart-950 98.15%
-  );
-  border: 1px solid tokens.$purple-heart-600;
-}
-.bo-editor-rail-btn--otto:hover .bo-editor-rail-icon,
-.bo-editor-rail-btn--otto.is-active .bo-editor-rail-icon {
-  /* The gradient already reads as active — the shared purple-50 fill would sit
-     behind it and do nothing, so lift it with a ring instead. */
-  background: linear-gradient(
-    222.88deg,
-    tokens.$purple-heart-500 1.85%,
-    tokens.$purple-heart-950 98.15%
-  );
-  box-shadow: 0 0 0 3px tokens.$purple-heart-100;
-}
 
 /* ---- Custom slider ---- */
 .bo-editor-slider {
@@ -700,13 +677,8 @@
   height: 32px;
   flex-shrink: 0;
   border-radius: tokens.$border-radius-full;
-  border: 1px solid tokens.$purple-heart-600;
-  background: linear-gradient(
-    222.88deg,
-    tokens.$purple-heart-500 1.85%,
-    tokens.$purple-heart-950 98.15%
-  );
-  color: tokens.$purple-heart-100;
+  background: tokens.$purple-heart-50;
+  color: tokens.$purple-heart-950;
 }
 .bo-editor-otto-context {
   font-size: tokens.$font-size-small;

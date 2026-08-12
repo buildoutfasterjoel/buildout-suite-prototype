@@ -11,11 +11,6 @@ import {
 import { useEditorStore } from "./store";
 import type { NavPanel } from "./types";
 
-/**
- * Otto sits last and carries a purple mark rather than the rail's flat icon:
- * the others are document tooling, and it's the one entry that opens a
- * conversation instead of a set of controls.
- */
 const ITEMS: { panel: NavPanel; icon: IconDefinition; label: string }[] = [
   { panel: "settings", icon: faGear, label: "Settings" },
   { panel: "pages", icon: faFileLines, label: "Pages" },
@@ -39,13 +34,7 @@ export function DocsNavRail() {
         <button
           key={item.panel}
           type="button"
-          className={[
-            "bo-editor-rail-btn",
-            item.panel === "otto" ? "bo-editor-rail-btn--otto" : "",
-            activeNavPanel === item.panel ? "is-active" : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
+          className={`bo-editor-rail-btn${activeNavPanel === item.panel ? " is-active" : ""}`}
           onClick={() => setNavPanel(item.panel)}
         >
           <span className="bo-editor-rail-icon">
