@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Table } from "@buildoutinc/blueprint-react/ui/Table";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
@@ -21,8 +21,11 @@ import {
   faPenToSquare,
   faTrashCan,
   faCircleInfo,
+  faFile,
+  faFolder,
 } from "@fortawesome/pro-regular-svg-icons";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
+import { NewDocumentModal } from "./NewDocumentModal";
 import { getListing } from "#/data/store";
 
 type Document = {
@@ -48,6 +51,8 @@ const CHECKBOX_COL_W = 44;
 export function PropertyDetailDocuments({ listingId }: { listingId: string }) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [newDocumentOpen, setNewDocumentOpen] = useState(false);
+  const navigate = useNavigate();
 
   // The Documents page shows what Buildout drafts for the deal — the
   // AI-generated documents chosen in the create flow. The broker's own uploads
@@ -124,9 +129,14 @@ export function PropertyDetailDocuments({ listingId }: { listingId: string }) {
                 }
               />
               <DropdownMenu.Content align="end">
-                <DropdownMenu.Item>Upload File</DropdownMenu.Item>
-                <DropdownMenu.Item>Create Folder</DropdownMenu.Item>
-                <DropdownMenu.Item>Request Document</DropdownMenu.Item>
+                <DropdownMenu.Item onClick={() => setNewDocumentOpen(true)}>
+                  <FontAwesomeIcon icon={faFile} />
+                  New Document
+                </DropdownMenu.Item>
+                <DropdownMenu.Item>
+                  <FontAwesomeIcon icon={faFolder} />
+                  New Folder
+                </DropdownMenu.Item>
               </DropdownMenu.Content>
             </DropdownMenu>
           </>
@@ -299,6 +309,16 @@ export function PropertyDetailDocuments({ listingId }: { listingId: string }) {
         </Table.Footer>
       </Table>
       )}
+
+      {/* Picking a template drops the broker straight into the editor, the same
+          destination as editing an existing document. */}
+      <NewDocumentModal
+        open={newDocumentOpen}
+        onOpenChange={setNewDocumentOpen}
+        onSelectTemplate={() =>
+          navigate({ to: "/editor/$listingId", params: { listingId } })
+        }
+      />
     </div>
   );
 }

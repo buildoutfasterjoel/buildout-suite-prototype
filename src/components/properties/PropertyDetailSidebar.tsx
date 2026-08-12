@@ -4,7 +4,11 @@ import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { Collapsible } from "@buildoutinc/blueprint-react/ui/Collapsible";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowUpRight, faBuilding, faChevronRight } from "@fortawesome/pro-regular-svg-icons";
+import {
+  faArrowUpRight,
+  faBuilding,
+  faChevronRight,
+} from "@fortawesome/pro-regular-svg-icons";
 import { getProperty } from "#/data/store";
 import type { Listing } from "#/data/types";
 import { propertyQualifiesForUnderwriting } from "#/components/deals/underwriting/eligibility";
@@ -154,8 +158,7 @@ export function PropertyDetailSidebar({
                 }
               />
               <Tooltip.Content side="right">
-                Takes you to {buildingLink.name}, where this suite's marketing is
-                managed.
+                Marketing settings and documents are at the parent level.
               </Tooltip.Content>
             </Tooltip>
           ) : null;
