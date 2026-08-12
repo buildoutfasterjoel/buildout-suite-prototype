@@ -30,7 +30,9 @@ import {
   createCallList,
   addNote,
   createTask,
+  createContact,
 } from "#/data/actions";
+import { buildDayPlan, emptyDayPlanHeadline } from "#/ai/dayPlan";
 import { parseDueDate } from "#/ai/dueDate";
 import { buildAssistantContext } from "#/ai/context";
 import { emptyDraft } from "#/data/createListing";
@@ -68,6 +70,7 @@ import {
   addNoteDef,
   createTaskDef,
   findContactDef,
+  createContactDef,
   planMyDayDef,
   startCallDef,
 } from "./toolDefs";
@@ -562,15 +565,78 @@ export function createClientTools({
       return { contacts: searchAll(query).contacts.slice(0, 6).map(contactSummary) };
     }),
 
+    createContactDef.client(async (args) => {
+      const {
+        first_name,
+        last_name,
+        email,
+        phone,
+        company,
+        title,
+        notes,
+        contact_info_unavailable,
+      } = args as {
+        first_name: string;
+        last_name?: string;
+        email?: string;
+        phone?: string;
+        company?: string;
+        title?: string;
+        notes?: string;
+        contact_info_unavailable?: boolean;
+      };
+      // Enforce the "ask for a phone or email" turn here rather than trusting the
+      // prompt: a contact with no way to reach them is the one record the broker
+      // can't act on. `contact_info_unavailable` is the deliberate escape hatch,
+      // so a broker who genuinely has neither can't get stuck in a loop.
+      if (!email?.trim() && !phone?.trim() && !contact_info_unavailable) {
+        const name = [first_name, last_name].filter(Boolean).join(" ");
+        return {
+          created: false,
+          needs: "phone_or_email",
+          ask: `Got it, ${name}. What's the best phone or email for them?`,
+        };
+      }
+      const { contact } = createContact({
+        firstName: first_name,
+        // NewContactInput requires a last name; the broker often gives only a
+        // first ("add a contact named Rosa"), so default it rather than refuse.
+        lastName: last_name ?? "",
+        email,
+        phone,
+        company,
+        title,
+        notes,
+      });
+      return {
+        created: true,
+        contactId: contact.id,
+        contactName: `${contact.firstName} ${contact.lastName}`.trim(),
+        email: contact.email || null,
+        // A single contact renders as a clickable card, so the broker can open
+        // the record they just created without another turn.
+        contacts: [contactSummary(contact)],
+      };
+    }),
+
     planMyDayDef.client(async () => {
-      const ctx = buildAssistantContext();
-      const headline =
-        ctx.tasks.overdue > 0
-          ? `You have ${ctx.tasks.overdue} overdue task${ctx.tasks.overdue === 1 ? "" : "s"} — clear those first.`
-          : ctx.tasks.dueToday > 0
-            ? `${ctx.tasks.dueToday} task${ctx.tasks.dueToday === 1 ? "" : "s"} due today. Start at the top of your list.`
-            : "Nothing overdue — good time to prospect. Want me to build a call list?";
-      return { headline, action: "Open tasks" };
+      const { items, totalDue } = buildDayPlan();
+      if (items.length === 0) {
+        const ctx = buildAssistantContext();
+        return {
+          headline: emptyDayPlanHeadline(),
+          openDeals: ctx.pipeline.openDeals,
+          dayPlan: null,
+        };
+      }
+      return {
+        // The card renders the queue; these are grounding for the model's
+        // one-line framing (see the tool description). `totalDue` is the honest
+        // total so the reply can't imply the queue is the whole backlog.
+        queued: items.length,
+        totalDue,
+        dayPlan: { items },
+      };
     }),
 
     startCallDef.client(async (args) => {

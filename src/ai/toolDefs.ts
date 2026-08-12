@@ -382,10 +382,35 @@ export const findContactDef = toolDefinition({
   },
 });
 
+export const createContactDef = toolDefinition({
+  name: "create_contact",
+  description:
+    "Add a NEW person to the broker's book. Use for 'add a contact …' / 'create a contact' / 'add X to my book'. To FIND someone who already exists, use find_contact instead.\n\nGather in this order, one short question per turn, and do NOT call this tool until you have both. Use these exact phrasings — warm and conversational, acknowledging what you just got before asking for the next thing:\n1. Their name — if the broker just said \"add a contact\" with no name, reply \"Sure, let's add a contact. What's their name?\" and stop.\n2. A phone or email — once you have a name, reply \"Got it, <their name>. What's the best phone or email for them?\" and stop.\nOnly then call this tool. If the broker says they don't have a phone or email, call it with contact_info_unavailable: true. Never invent an email or phone.\n\nAfterwards confirm in one short line naming them, e.g. \"Done — added Jane Doe to your book.\"; their record renders as a clickable card, so don't restate the details.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      first_name: { type: "string" },
+      last_name: { type: "string" },
+      email: { type: "string" },
+      phone: { type: "string" },
+      company: { type: "string" },
+      title: { type: "string", description: "Job title, e.g. 'Managing Partner'." },
+      notes: { type: "string" },
+      contact_info_unavailable: {
+        type: "boolean",
+        description:
+          "Set true ONLY when the broker has said they have no phone or email for this person. Creates the record without either.",
+      },
+    },
+    required: ["first_name"],
+    additionalProperties: false,
+  },
+});
+
 export const planMyDayDef = toolDefinition({
   name: "plan_my_day",
   description:
-    "Name the broker's single most important next move right now (headline + action) from their live book. Use for 'what should I do' / 'plan my day' / 'what's next'.",
+    "Build the broker's ranked queue of moves to work right now, from their live book. Use for 'what should I do today' / 'plan my day' / 'what's next' / 'recommend my next actions' / 'walk me through my day'. Returns an interactive co-pilot card the broker steps through — so give ONE short sentence of framing and let the card do the work; never re-list the items in prose.",
   inputSchema: { type: "object", properties: {}, additionalProperties: false },
 });
 
@@ -443,6 +468,7 @@ export const TOOL_DEFS = [
   addNoteDef,
   createTaskDef,
   findContactDef,
+  createContactDef,
   planMyDayDef,
   startCallDef,
 ];

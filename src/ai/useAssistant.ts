@@ -21,6 +21,17 @@ interface AssistantUIState {
   ask: (prompt: string) => void;
   /** Read and clear the queued prompt (null if none). */
   consumePrompt: () => string | null;
+  /**
+   * An assistant line queued from another surface (e.g. the day-plan card's
+   * "Call X" hand-off) to be appended to the transcript. Unlike `ask`, this is
+   * the assistant *speaking*, not a prompt to answer — so it never hits the
+   * model. The sidebar consumes and clears it.
+   */
+  pendingLine: string | null;
+  /** Queue an assistant line into the transcript. */
+  say: (line: string) => void;
+  /** Read and clear the queued assistant line (null if none). */
+  consumeLine: () => string | null;
   /** Bumped whenever a surface requests the composer input be focused. */
   focusNonce: number;
   /** True once Otto has greeted the broker this session (greeting fires once). */
@@ -39,6 +50,13 @@ export const useAssistant = create<AssistantUIState>((set, get) => ({
     const prompt = get().pendingPrompt;
     if (prompt !== null) set({ pendingPrompt: null });
     return prompt;
+  },
+  pendingLine: null,
+  say: (pendingLine) => set({ open: true, pendingLine }),
+  consumeLine: () => {
+    const line = get().pendingLine;
+    if (line !== null) set({ pendingLine: null });
+    return line;
   },
   focusNonce: 0,
   greetedThisSession: false,

@@ -343,11 +343,29 @@ function buildLeftOff(c: Contact): string {
 }
 
 /**
+ * Opening beat: who they are. Title and company are both optional — a contact
+ * added straight from the assistant ("add a contact named Bob Buyer") often has
+ * neither — so each combination gets its own phrasing rather than interpolating
+ * blanks into a fixed template and reading "Bob Buyer, at .".
+ */
+function buildIdentity(c: Contact): string {
+  // Trimmed here rather than in `contactFullName`, which other callers rely on:
+  // a contact added with only a first name would otherwise trail a space.
+  const name = contactFullName(c).trim();
+  const title = c.title?.trim();
+  const company = c.company?.trim();
+  if (title && company) return `${name}, ${title} at ${company}.`;
+  if (company) return `${name} at ${company}.`;
+  if (title) return `${name}, ${title}.`;
+  return `${name}.`;
+}
+
+/**
  * A short, narrative AI-style briefing for the contact, built in four beats:
  * identity · situation · why-now · where-we-left-off.
  */
 export function buildBriefing(c: Contact, deals: DealSummary[]): string {
-  const identity = `${contactFullName(c)}, ${c.title} at ${c.company}.`;
+  const identity = buildIdentity(c);
   const situation = SITUATION_BY_RELATIONSHIP[c.relationship].replace(
     "{source}",
     c.source.toLowerCase(),

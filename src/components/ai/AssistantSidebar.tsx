@@ -1,21 +1,25 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useRouterState } from "@tanstack/react-router";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "@tanstack/react-router";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { useChat, type UIMessage } from "@tanstack/ai-react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
+import { Accordion } from "@buildoutinc/blueprint-react/ui/Accordion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faSparkles,
   faPaperPlaneTop,
   faStop,
   faXmark,
-  faPenNib,
-  faListCheck,
   faFileLines,
+  faListCheck,
+  faPhone,
+  faUserPlus,
+  faPenNib,
   faScrewdriverWrench,
   faChevronRight,
+  faChevronDown,
   faMicrophone,
   faVolumeHigh,
   faVolumeXmark,
@@ -43,6 +47,9 @@ import { CallRecapCard } from "#/components/call/CallRecapCard";
 import { composeRecapReport, recapSpeechText } from "#/components/call/callRecap";
 import { DealCardById } from "#/components/deals/DealCard";
 import { EmailDraftCard, type EmailDraftCardData } from "#/components/ai/EmailDraftCard";
+import { DayPlanCard } from "#/components/ai/DayPlanCard";
+import { ActionPlanChecklist } from "#/components/ai/ActionPlanChecklist";
+import { matchesPlanIntent, type DayPlanItem } from "#/ai/dayPlan";
 import { formatCurrency } from "#/components/deals/dealDisplay";
 import { useHeroOffer, matchOfferIntent } from "#/ai/heroOffer";
 import { getContact } from "#/data/store";
@@ -57,8 +64,11 @@ import { useBovDraft, bovSummaryText } from "#/components/call/useBovDraft";
 const NOT_CONFIGURED_MESSAGE =
   "The assistant isn't configured — no API key — so I can't run AI actions right now.";
 
-/** Human label for the context chip, derived from the current route. */
-function scopeLabel(pathname: string): string {
+/**
+ * Human label for the context chip, derived from the current route. Exported
+ * only to keep the mapping while the badge itself is parked — see the header.
+ */
+export function scopeLabel(pathname: string): string {
   if (pathname.startsWith("/listings")) return "Listings";
   if (pathname.startsWith("/backoffice/contacts")) return "People";
   if (pathname.startsWith("/backoffice")) return "Back office";
@@ -68,11 +78,133 @@ function scopeLabel(pathname: string): string {
   return "Buildout Suite";
 }
 
+/**
+ * Starter prompts, shown until the broker sends their first message. Ordered
+ * prescriptive-first: the whole point of the rail is that it can tell the broker
+ * what to do, not just wait to be asked. Every chip maps to a tool that actually
+ * runs — no chip advertises a capability the prototype doesn't have.
+ */
 const SUGGESTIONS = [
-  { icon: faPenNib, label: "Draft email", prompt: "Draft a price-reduction email to the Investors list." },
-  { icon: faListCheck, label: "Create call list", prompt: "Create a call list of my cold prospects to warm up." },
-  { icon: faFileLines, label: "Generate doc", prompt: "Generate a client-report summary for one of my active listings." },
+  {
+    icon: faListCheck,
+    label: "Recommend my next actions",
+    sublabel: "Walk my whole day, top move first",
+    prompt: "What should I do today?",
+  },
+  {
+    icon: faPhone,
+    label: "Build my call list",
+    sublabel: "Rank the warmest prospects to call now",
+    prompt: "Build my call list.",
+  },
+  {
+    icon: faUserPlus,
+    label: "Add a contact",
+    sublabel: "Add someone new to your book",
+    prompt: "Add a contact",
+  },
+  {
+    icon: faPenNib,
+    label: "Draft an email",
+    sublabel: "Outreach to a list, in your voice",
+    prompt: "Draft a price-reduction email to the Investors list.",
+    // Parked while the drafting flow gets a fresh look. The `draft_email` tool
+    // still works if asked for directly — this only pulls the starter row.
+    hidden: true,
+  },
+  {
+    icon: faFileLines,
+    label: "Generate a doc",
+    sublabel: "Client reports and marketing packages",
+    prompt: "Generate a client-report summary for one of my active listings.",
+  },
+  {
+    icon: faSparkles,
+    label: "What can you do?",
+    sublabel: "See everything I can help with",
+    prompt: "What can you do?",
+  },
 ];
+
+/**
+ * The starter prompts, as a collapsible column of two-line rows. Sends on click
+ * rather than filling the composer: every prompt is a complete question, so
+ * making the broker press enter again is friction for no gain.
+ *
+ * Controlled open state so the first ask can fold them away (see
+ * `startersOpen`) while leaving them one click from coming back.
+ */
+function StarterPrompts({
+  onPick,
+  open,
+  onOpenChange,
+}: {
+  onPick: (prompt: string) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Accordion
+      // `assistant-starters` suppresses Bootstrap's own right-edge ::after
+      // chevron so the caret below is the only one (see main.scss).
+      className="assistant-starters"
+      variant="inline"
+      value={open ? ["starters"] : []}
+      onValueChange={(v: unknown[]) => onOpenChange(v.includes("starters"))}
+    >
+      <Accordion.Item value="starters">
+        <Accordion.Trigger>
+          <span className="d-flex align-items-center gap-2 fw-semibold">
+            <FontAwesomeIcon
+              icon={open ? faChevronDown : faChevronRight}
+              className="text-muted"
+              fixedWidth
+            />
+            Suggested prompts
+            <FontAwesomeIcon icon={faSparkles} className="text-purple-heart-600" />
+          </span>
+        </Accordion.Trigger>
+        <Accordion.Content>
+          <StarterRows onPick={onPick} />
+        </Accordion.Content>
+      </Accordion.Item>
+    </Accordion>
+  );
+}
+
+/**
+ * One row per starter prompt, per the Otto AI Chat Rail design (Figma 44:665):
+ * a round purple token badge, a title over a muted subtitle, and a trailing
+ * chevron; hover shifts the card to a light purple fill with a purple border.
+ * Layout and both states live in `.assistant-starter-row` (see main.scss).
+ */
+function StarterRows({ onPick }: { onPick: (prompt: string) => void }) {
+  return (
+    <div className="d-flex flex-column gap-2">
+      {SUGGESTIONS.filter((s) => !s.hidden).map((s) => (
+        <button
+          key={s.label}
+          type="button"
+          className="assistant-starter-row"
+          onClick={() => onPick(s.prompt)}
+        >
+          <span className="assistant-starter-row__icon">
+            <FontAwesomeIcon icon={s.icon} />
+          </span>
+          <span className="flex-grow-1" style={{ minWidth: 0 }}>
+            <span className="assistant-starter-row__title d-block fw-semibold text-truncate">
+              {s.label}
+            </span>
+            <span className="assistant-starter-row__subtitle d-block text-muted text-truncate">
+              {s.sublabel}
+            </span>
+          </span>
+          <FontAwesomeIcon icon={faChevronRight} className="assistant-starter-row__chevron" />
+        </button>
+      ))}
+    </div>
+  );
+}
 
 type DealCardData = {
   id: string;
@@ -165,6 +297,14 @@ function answerOf(output: unknown): string | null {
   return typeof o.answer === "string" ? o.answer : null;
 }
 
+/** Extract the ranked day queue from `plan_my_day`'s output, if present. */
+function dayPlanOf(output: unknown): DayPlanItem[] | null {
+  const o = (output ?? {}) as { dayPlan?: unknown };
+  const plan = o.dayPlan as { items?: unknown } | null | undefined;
+  if (!plan || !Array.isArray(plan.items) || plan.items.length === 0) return null;
+  return plan.items as DayPlanItem[];
+}
+
 type MarketingPackageData = {
   doc: { tagline: string; summary: string; highlights: string[]; callToAction: string };
   email: { subject: string; to: string[]; body: string; signature: string };
@@ -234,22 +374,23 @@ function ResultCard({
     <button
       type="button"
       onClick={onOpen}
-      className="btn p-0 border rounded text-start w-100 bg-white"
+      // `d-block` + `w-100` on the button and `w-100` on the row: Blueprint's
+      // .btn is a centering flex container, so without these the content
+      // collapses to its intrinsic width and floats in the middle of the card.
+      className="btn d-block p-0 border rounded text-start w-100 bg-white"
     >
-      <div className="d-flex align-items-center gap-2 p-2">
-        <div className="flex-grow-1" style={{ minWidth: 0 }}>
-          <div className="fw-semibold text-truncate">{title}</div>
-          <div className="text-muted small text-truncate">
-            {badge && (
-              <Badge variant="secondary" appearance="muted" className="me-1">
-                {badge}
-              </Badge>
-            )}
-            {meta}
-          </div>
-        </div>
+      <div className="d-flex align-items-center gap-2 p-2 w-100">
+        <span className="flex-grow-1 d-flex align-items-center gap-2" style={{ minWidth: 0 }}>
+          <span className="fw-semibold text-truncate">{title}</span>
+          {badge && (
+            <Badge variant="secondary" appearance="muted" className="flex-shrink-0">
+              {badge}
+            </Badge>
+          )}
+        </span>
         <FontAwesomeIcon icon={faChevronRight} className="text-muted flex-shrink-0" />
       </div>
+      {meta && <div className="text-muted small text-truncate px-2 pb-2">{meta}</div>}
     </button>
   );
 }
@@ -312,13 +453,23 @@ function ToolResultCards({ output }: { output: unknown }) {
   const brief = briefOf(output);
   const answer = answerOf(output);
   const marketingPackage = marketingPackageOf(output);
-  const hasRich = !!(emailDraft || marketingPackage || brief || answer);
+  const dayPlan = dayPlanOf(output);
+  const hasRich = !!(emailDraft || marketingPackage || brief || answer || dayPlan);
   const total = deals.length + contacts.length + properties.length;
 
   if (total === 0 && !hasRich) return null;
 
   const rich = (
     <>
+      {dayPlan && (
+        <>
+          <ActionPlanChecklist
+            done
+            summary={`Prioritized your day, ${dayPlan.length} move${dayPlan.length === 1 ? "" : "s"} queued. Starting you on the first one.`}
+          />
+          <DayPlanCard items={dayPlan} slot="inline" />
+        </>
+      )}
       {emailDraft && <EmailDraftCard draft={emailDraft} />}
       {marketingPackage && <MarketingPackageCard pkg={marketingPackage} />}
       {brief && (
@@ -389,7 +540,19 @@ function MarkdownMessage({ content }: { content: string }) {
 }
 
 /** Render a message: text bubble + a tool chip for actions, or interactive cards for lists. */
-function MessageBubble({ message }: { message: UIMessage }) {
+function MessageBubble({
+  message,
+  suppressPlanText = false,
+}: {
+  message: UIMessage;
+  /**
+   * True while this message is the in-flight half of a "plan my day" turn. The
+   * model streams its lead-in *before* the tool call lands, so the day-plan card
+   * isn't there yet to suppress against — without this the duplicative line
+   * ("You've got a handful of moves…") flashes up and then vanishes.
+   */
+  suppressPlanText?: boolean;
+}) {
   const isUser = message.role === "user";
   const text = message.parts
     .filter((p): p is Extract<typeof p, { type: "text" }> => p.type === "text")
@@ -408,22 +571,42 @@ function MessageBubble({ message }: { message: UIMessage }) {
       emailDraftOf(p.output) !== null ||
       briefOf(p.output) !== null ||
       answerOf(p.output) !== null ||
-      marketingPackageOf(p.output) !== null
+      marketingPackageOf(p.output) !== null ||
+      dayPlanOf(p.output) !== null ||
+      // Claim plan_my_day by name, before its output arrives: otherwise it spends
+      // the streaming window classified as a chip and the tool's raw name flashes
+      // above the card that replaces it.
+      p.name === "plan_my_day"
     );
   });
   const chipCalls = toolCalls.filter((p) => !cardCalls.includes(p));
+
+  /**
+   * The day-plan card carries its own "Prioritized your day, N moves queued"
+   * summary, so the model's lead-in to it ("You've got a queue ready — starting
+   * with …") only says the same thing twice. Drop the text on the message that
+   * carries the card; the model's follow-up message, which adds detail the card
+   * doesn't have, still renders.
+   */
+  const suppressText =
+    suppressPlanText || cardCalls.some((p) => dayPlanOf(p.output) !== null);
+  const showText = !!text && !suppressText;
 
   if (!text && toolCalls.length === 0) return null;
 
   return (
     <div className="d-flex flex-column gap-2">
-      {(text || chipCalls.length > 0) && (
+      {(showText || chipCalls.length > 0) && (
         <div className={`d-flex ${isUser ? "justify-content-end" : "justify-content-start"}`}>
           <div
-            className={`rounded px-3 py-2 ${isUser ? "bg-buildout-blue-600 text-white" : "bg-body-tertiary"}`}
-            style={{ maxWidth: "85%" }}
+            // Modern-chat convention: the user's turn is a grey bubble, the
+            // assistant's is unadorned text that runs the full width.
+            className={
+              isUser ? "rounded px-3 py-2 bg-body-secondary text-body" : "text-body w-100"
+            }
+            style={isUser ? { maxWidth: "85%" } : undefined}
           >
-            {text &&
+            {showText &&
               (isUser ? (
                 <div style={{ whiteSpace: "pre-wrap" }}>{text}</div>
               ) : (
@@ -432,7 +615,7 @@ function MessageBubble({ message }: { message: UIMessage }) {
             {chipCalls.map((p, i) => (
               <div
                 key={i}
-                className={`d-inline-flex align-items-center gap-1 mt-1 small ${isUser ? "text-white-50" : "text-muted"}`}
+                className="d-inline-flex align-items-center gap-1 mt-1 small text-muted"
               >
                 <FontAwesomeIcon icon={faScrewdriverWrench} />
                 {p.name}
@@ -456,7 +639,9 @@ function HeroOfferChips({ onCall, onBrief }: { onCall: () => void; onBrief: () =
   const offer = useHeroOffer((s) => s.pendingOffer);
   if (!offer) return null;
   return (
-    <div className="d-flex gap-2 px-3 pb-2">
+    // No horizontal padding: these sit inside the already-padded message flow,
+    // so they line up with the greeting bubble and the starter rows.
+    <div className="d-flex gap-2">
       <Button variant="primary" size="sm" onClick={onCall}>
         Yes, call now
       </Button>
@@ -472,6 +657,8 @@ export function AssistantSidebar() {
   const setOpen = useAssistant((s) => s.setOpen);
   const pendingPrompt = useAssistant((s) => s.pendingPrompt);
   const consumePrompt = useAssistant((s) => s.consumePrompt);
+  const pendingLine = useAssistant((s) => s.pendingLine);
+  const consumeLine = useAssistant((s) => s.consumeLine);
   const focusNonce = useAssistant((s) => s.focusNonce);
   const [draft, setDraft] = useState("");
   const [brief, setBrief] = useState<{ spec: CallBriefSpecT; name: string; contactId: string } | null>(
@@ -480,7 +667,6 @@ export function AssistantSidebar() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   const tools = useMemo(
     () => createClientTools({ navigate: (to) => router.navigate({ to: to as never }) }),
@@ -638,6 +824,74 @@ export function AssistantSidebar() {
     });
   }, [isLoading, messages, voiceEnabled, startHandsFree]);
 
+  /**
+   * Keep the newest message in view.
+   *
+   * A brand-new message always scrolls — that's the point. Mid-message updates
+   * (the reply streaming in, or a card mounting under it) only scroll when the
+   * broker is already parked at the bottom, so scrolling up to re-read history
+   * isn't yanked back by the next token.
+   */
+  const prevMessageCountRef = useRef(0);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const isNewMessage = messages.length > prevMessageCountRef.current;
+    prevMessageCountRef.current = messages.length;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+    if (!isNewMessage && !atBottom) return;
+    // After paint, so the just-rendered message is included in scrollHeight.
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+  }, [messages]);
+
+  /**
+   * Starter prompts start expanded and fold away on the broker's first ask, but
+   * stay one click from returning. Collapsed exactly once, via the ref: after
+   * that the accordion is the broker's to control, so re-expanding it mid-chat
+   * isn't immediately undone by the next message.
+   */
+  const [startersOpen, setStartersOpen] = useState(true);
+  const startersCollapsedRef = useRef(false);
+  const hasUserMessage = messages.some((m) => m.role === "user");
+  useEffect(() => {
+    if (!hasUserMessage || startersCollapsedRef.current) return;
+    startersCollapsedRef.current = true;
+    setStartersOpen(false);
+  }, [hasUserMessage]);
+
+  /**
+   * Whether the in-flight turn is a "plan my day" ask, so the progress checklist
+   * replaces the generic "Working…" line. Read off the last user message rather
+   * than tracked on send, so it survives re-renders and stays correct on replay.
+   */
+  const planPending = useMemo(() => {
+    let lastUser = -1;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "user") {
+        lastUser = i;
+        break;
+      }
+    }
+    if (lastUser === -1) return false;
+    const text = messages[lastUser].parts
+      .filter((p): p is Extract<typeof p, { type: "text" }> => p.type === "text")
+      .map((p) => p.content)
+      .join("");
+    if (!matchesPlanIntent(text)) return false;
+    // Stop as soon as the queue itself lands: the card ships its own settled
+    // checklist, but `isLoading` stays true while the model finishes its closing
+    // sentence — so without this the in-flight copy renders again *below* the
+    // card and then vanishes.
+    const arrived = messages
+      .slice(lastUser + 1)
+      .some((m) =>
+        m.parts.some((p) => p.type === "tool-call" && dayPlanOf(p.output) !== null),
+      );
+    return !arrived;
+  }, [messages]);
+
   // Speak the hang-up recap once when it appears (Otto reports, §6.1). This is a
   // one-way report — it must NOT enter conversationMode or re-arm the mic.
   const recap = useCallStore((s) => s.recap);
@@ -685,6 +939,23 @@ export function AssistantSidebar() {
     if (prompt) send(prompt);
   }, [pendingPrompt, consumePrompt, send]);
 
+  // An assistant line queued from another surface (the day-plan card's "Call X"
+  // hand-off) is appended straight to the transcript — it's the assistant
+  // narrating an action it already took, so it never round-trips to the model.
+  useEffect(() => {
+    if (pendingLine === null) return;
+    const line = consumeLine();
+    if (!line) return;
+    setMessages([
+      ...messages,
+      {
+        id: `said-${line.slice(0, 24)}-${messages.length}`,
+        role: "assistant",
+        parts: [{ type: "text", content: line }],
+      } as UIMessage,
+    ]);
+  }, [pendingLine, consumeLine, setMessages, messages]);
+
   // A focus request from another surface (e.g. omni search "Ask AI") focuses the
   // composer input, so once the queued prompt auto-sends the user is already
   // positioned to type a follow-up. Keyed off a nonce so repeat requests re-fire.
@@ -707,7 +978,7 @@ export function AssistantSidebar() {
     >
       {/* Header */}
       <div className="d-flex align-items-center gap-2 px-3 py-3 border-bottom">
-        <FontAwesomeIcon icon={faSparkles} className="text-buildout-blue-700" />
+        <FontAwesomeIcon icon={faSparkles} className="text-purple-heart-600" />
         <div className="d-flex flex-column lh-sm flex-grow-1" style={{ minWidth: 0 }}>
           <span className="fw-semibold">Assistant</span>
           <span className="text-muted small text-truncate">Your Buildout assistant</span>
@@ -729,9 +1000,9 @@ export function AssistantSidebar() {
         >
           <FontAwesomeIcon icon={voiceEnabled ? faVolumeHigh : faVolumeXmark} />
         </Button>
-        <Badge variant="secondary" appearance="muted" className="flex-shrink-0">
-          {scopeLabel(pathname)}
-        </Badge>
+        {/* Route-scope badge ("People", "Buildout Suite", …) parked for now.
+            `scopeLabel` is kept exported so the mapping survives; restoring the
+            badge means putting a <Badge> back here with the current pathname. */}
         <Button
           variant="ghost"
           size="icon-sm"
@@ -743,21 +1014,56 @@ export function AssistantSidebar() {
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-grow-1 overflow-auto p-3 d-flex flex-column gap-2">
+      <div ref={scrollRef} className="flex-grow-1 overflow-auto p-3 d-flex flex-column gap-4">
         {messages.length === 0 && !recap ? (
           <div className="text-muted small">
             Ask about your properties, contacts, and deals — or have me draft an email, build a
             call list, or move a deal along.
           </div>
         ) : (
-          messages.map((m) => <MessageBubble key={m.id} message={m} />)
+          messages.map((m, i) => (
+            <Fragment key={m.id}>
+              <MessageBubble
+                message={m}
+                suppressPlanText={
+                  planPending && m.role === "assistant" && i === messages.length - 1
+                }
+              />
+              {/* The offer + starters belong to the greeting, so they sit directly
+                  under the first message rather than pinned above the composer. */}
+              {i === 0 && (
+                // Grouped tighter than the flow's own gap: the offer and the
+                // starters are one block belonging to the greeting.
+                <div className="d-flex flex-column gap-2">
+                  <HeroOfferChips
+                    onCall={() => send("yes")}
+                    onBrief={() => send("brief me first")}
+                  />
+                  {/* Kept in place after the first ask rather than retired, so the
+                      starters stay reachable mid-conversation — collapsed once
+                      the broker is under way. Deliberately NOT gated on `recap`:
+                      these sit at the top of the flow attached to the greeting,
+                      so a call recap arriving at the bottom is unrelated. That
+                      guard is what made them vanish for good after a call. */}
+                  <StarterPrompts
+                    onPick={send}
+                    open={startersOpen}
+                    onOpenChange={setStartersOpen}
+                  />
+                </div>
+              )}
+            </Fragment>
+          ))
         )}
-        {isLoading && (
-          <div className="text-muted small d-inline-flex align-items-center gap-2">
-            <FontAwesomeIcon icon={faSparkles} beatFade />
-            Working…
-          </div>
-        )}
+        {isLoading &&
+          (planPending ? (
+            <ActionPlanChecklist done={false} />
+          ) : (
+            <div className="text-muted small d-inline-flex align-items-center gap-2">
+              <FontAwesomeIcon icon={faSparkles} beatFade className="text-purple-heart-600" />
+              Working…
+            </div>
+          ))}
         {listening && (
           <div className="text-buildout-blue-700 small d-inline-flex align-items-center gap-2">
             <FontAwesomeIcon icon={faMicrophone} beatFade />
@@ -771,6 +1077,9 @@ export function AssistantSidebar() {
             flow (after the messages), not the top, so the conversation reads
             chronologically. */}
         {recap && <CallRecapCard />}
+        {/* The queue, once a call detached it from its place in the transcript —
+            it belongs below the recap it was interrupted by, not above it. */}
+        <DayPlanCard slot="bottom" />
         {/* The BOV draft self-arrives after the underwriting result is ready
             (§Phase 4C) — render it at the bottom of the flow too. */}
         <BovCard />
@@ -792,20 +1101,6 @@ export function AssistantSidebar() {
           />
         </div>
       )}
-      <HeroOfferChips onCall={() => send("yes")} onBrief={() => send("brief me first")} />
-
-      {/* Suggested actions (only before the first message, and not under a recap) */}
-      {messages.length === 0 && !recap && (
-        <div className="px-3 pb-2 d-flex flex-wrap gap-2">
-          {SUGGESTIONS.map((s) => (
-            <Button key={s.label} variant="outline" size="sm" onClick={() => setDraft(s.prompt)}>
-              <FontAwesomeIcon icon={s.icon} />
-              {s.label}
-            </Button>
-          ))}
-        </div>
-      )}
-
       {/* Input */}
       <form
         ref={formRef}
@@ -820,6 +1115,10 @@ export function AssistantSidebar() {
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Ask the assistant…"
           aria-label="Message the assistant"
+          // Without this the browser offers its own form-history dropdown of
+          // previously-typed prompts the moment the composer takes focus, which
+          // reads as a stray suggestion bubble floating over the rail.
+          autoComplete="off"
         />
         <Button
           type="button"
