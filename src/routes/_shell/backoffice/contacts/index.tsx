@@ -469,10 +469,7 @@ function PeoplePage() {
   const paged = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
 
   return (
-    <div
-      className="d-flex gap-4 h-100 p-4 overflow-hidden mx-auto w-100"
-      style={{ maxWidth: "96rem" }}
-    >
+    <div className="d-flex gap-4 h-100 p-4 overflow-hidden w-100">
       <ContactListsSidebar
         contacts={contacts}
         userLists={userLists}
