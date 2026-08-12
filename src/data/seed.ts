@@ -44,7 +44,15 @@ import { DEFAULT_PERSONAL_SPLIT_PCT, STAGE_CLOSE_PROBABILITY } from './commissio
 import { applyLeaseSpaces } from './leaseSpaceFixtures'
 
 const SEED = 20240101
+/** Properties that carry a deal — must stay equal to `DEAL_PIPELINE.length`. */
 const PROPERTY_COUNT = 20
+/**
+ * Properties with no deal on them at all. A brokerage's database is mostly
+ * these: buildings it tracks, owns a relationship on, or picked up from
+ * prospecting. They exist so "no deal" is a visible, ordinary state in the
+ * Properties list rather than an edge case you only reach by adding a prospect.
+ */
+const TRACKED_PROPERTY_COUNT = 8
 const CONTACT_COUNT = 80
 
 /**
@@ -99,15 +107,6 @@ const TYPE_LABEL: Record<PropertyType, string> = {
   hospitality: 'Hospitality',
   'special-purpose': 'Special Purpose',
 }
-
-// Unified listing + deal lifecycle. Weighted toward the active middle.
-const STAGE_WEIGHTS = [
-  { weight: 12, value: 'proposal' as const },
-  { weight: 40, value: 'active' as const },
-  { weight: 22, value: 'under-contract' as const },
-  { weight: 16, value: 'closed' as const },
-  { weight: 10, value: 'inactive' as const },
-]
 
 // ── Market lookup tables ──────────────────────────────────────────────────────
 
@@ -543,7 +542,14 @@ function generateFinancialRecords(current: {
 
 // ── Property generator ────────────────────────────────────────────────────────
 
-function generateProperty(): Property {
+/**
+ * Exported so `prospects.ts` can mint Buildout Insights records off the same
+ * generator the seed uses. A prospect is a full `Property` that simply hasn't
+ * been added to the store yet — which is what makes "Add Property" a plain
+ * `addProperty(record)` instead of a thin-record → full-record conversion.
+ * Callers must `faker.seed(...)` first; this reads the module-global faker.
+ */
+export function generateProperty(): Property {
   const id = faker.string.uuid()
   const market = faker.helpers.arrayElement(CRE_MARKETS)
   const propertyType = faker.helpers.arrayElement(Object.keys(PROPERTY_CONFIGS) as PropertyType[])
@@ -642,7 +648,10 @@ function generateProperty(): Property {
     id,
     name: baseName,
     slug,
-    status: faker.helpers.weightedArrayElement(STAGE_WEIGHTS),
+    // A bare property record has no deal on it, so it has no stage. Stage is
+    // conferred by `generateDataset` on the properties that get a deal, and by
+    // the deal pipeline at runtime thereafter.
+    status: null,
 
     propertyType,
     propertySubtype: faker.helpers.arrayElement(config.subtypes),
@@ -1859,8 +1868,9 @@ function applyHeroes(
       p.slug =
         p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + p.id.slice(0, 6)
       p.photoId = h.ownedProperty.photoId
-      // Owned, not on the market — no listing exists for it.
-      p.status = 'inactive'
+      // Owned, not on the market — no listing exists for it, so no stage
+      // either. `generateProperty` already leaves `status` null; this is the
+      // case that used to say `inactive` and read as "Lost".
       properties.push(p)
       host.propertyIds = [p.id]
       host.ownedPropertyIds = [p.id]
@@ -1994,7 +2004,16 @@ function applyHeroes(
 export function generateDataset() {
   faker.seed(SEED)
 
-  const properties = Array.from({ length: PROPERTY_COUNT }, () => generateProperty())
+  // Two populations, and the split is the point: `dealProperties` are the ones
+  // the pipeline transacts on, `trackedProperties` are records the company
+  // simply keeps — no deal, no stage. Only the first list is handed to
+  // `generateListings`, which is what keeps "a property doesn't need a deal"
+  // true in the data rather than just in the types.
+  const dealProperties = Array.from({ length: PROPERTY_COUNT }, () => generateProperty())
+  const trackedProperties = Array.from({ length: TRACKED_PROPERTY_COUNT }, () =>
+    generateProperty(),
+  )
+  const properties = [...dealProperties, ...trackedProperties]
 
   const allPropertyIds = properties.map((p) => p.id)
 
@@ -2027,11 +2046,13 @@ export function generateDataset() {
     contactsByProperty.set(p.id, linked)
   }
 
-  // One deal per property, at the stage assigned by DEAL_PIPELINE. The property's
-  // own status is aligned to its deal so property cards and the deal read the
-  // same stage (PROPERTY_COUNT matches DEAL_PIPELINE.length).
+  // One deal per deal-property, at the stage assigned by DEAL_PIPELINE. The
+  // property's own status is aligned to its deal so property cards and the deal
+  // read the same stage (PROPERTY_COUNT matches DEAL_PIPELINE.length). The
+  // tracked properties are deliberately not in this list — they keep the null
+  // status `generateProperty` gave them.
   const dealIdRef = { n: 100 }
-  const listings = properties.flatMap((p, i) => {
+  const listings = dealProperties.flatMap((p, i) => {
     const spec = DEAL_PIPELINE[i % DEAL_PIPELINE.length]
     p.status = spec.stage
     return generateListings(p, contactsByProperty.get(p.id) ?? contacts, dealIdRef, spec)

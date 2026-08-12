@@ -34,19 +34,22 @@ export function PropertyRecordCard({
             className="w-100 h-100"
             style={{ objectFit: "cover", display: "block" }}
           />
-          <span
-            className="position-absolute d-inline-flex align-items-center gap-1 fw-semibold text-white"
-            style={{
-              left: 12,
-              bottom: 12,
-              backgroundColor: STATUS_COLORS[property.status],
-              borderRadius: 6,
-              padding: "3px 6px",
-              fontSize: 10,
-            }}
-          >
-            {STATUS_LABELS[property.status]}
-          </span>
+          {/* Only a property with a deal on it carries a stage chip. */}
+          {property.status && (
+            <span
+              className="position-absolute d-inline-flex align-items-center gap-1 fw-semibold text-white"
+              style={{
+                left: 12,
+                bottom: 12,
+                backgroundColor: STATUS_COLORS[property.status],
+                borderRadius: 6,
+                padding: "3px 6px",
+                fontSize: 10,
+              }}
+            >
+              {STATUS_LABELS[property.status]}
+            </span>
+          )}
         </div>
 
         <div className="d-flex flex-column" style={{ gap: 2 }}>

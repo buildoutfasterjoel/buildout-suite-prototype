@@ -159,7 +159,18 @@ export interface Property {
   id: string
   name: string
   slug: string
-  status: PropertyStatus
+  /**
+   * The stage of the deal on this property, or `null` when there is no deal.
+   *
+   * A property is a record of a building — owning one implies nothing about
+   * whether you're transacting on it. Most of the database is properties you
+   * simply track: added from prospecting, owned by a contact you know, or
+   * carried over from a closed deal. Those have no stage, and `null` is how
+   * they say so; every display site must omit the stage chip rather than
+   * inventing one. `inactive` means a deal that was lost, not the absence of a
+   * deal.
+   */
+  status: PropertyStatus | null
   /**
    * Hand-pinned Unsplash photo id (see `CRE_PHOTO_IDS`) for story properties
    * whose imagery must match their asset class — e.g. Rosa's multifamily

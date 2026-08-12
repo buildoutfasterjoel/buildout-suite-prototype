@@ -111,6 +111,33 @@ describe('generateTasks', () => {
   })
 })
 
+describe('property stage seed', () => {
+  const { properties, listings } = generateDataset()
+  const dealPropertyIds = new Set(listings.map((l) => l.propertyId))
+
+  it('gives a property a stage only when a deal sits on it', () => {
+    for (const p of properties) {
+      if (dealPropertyIds.has(p.id)) expect(p.status).not.toBeNull()
+      // No deal means no stage — not `inactive`, which means a deal was lost.
+      else expect(p.status).toBeNull()
+    }
+  })
+
+  it('seeds a meaningful population of properties with no deal at all', () => {
+    const noDeal = properties.filter((p) => p.status === null)
+    expect(noDeal.length).toBeGreaterThanOrEqual(8)
+    // And they must be ordinary records, not degenerate ones.
+    for (const p of noDeal) expect(p.buildingSqFt).toBeGreaterThan(0)
+  })
+
+  it("matches each deal-bearing property's stage to a deal on it", () => {
+    for (const l of listings) {
+      const p = properties.find((x) => x.id === l.propertyId)
+      expect(p?.status).not.toBeNull()
+    }
+  })
+})
+
 describe('property units + financial records seed', () => {
   const { properties } = generateDataset()
 

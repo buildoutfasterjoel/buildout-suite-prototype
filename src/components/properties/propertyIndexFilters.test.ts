@@ -39,4 +39,21 @@ describe('filterProperties', () => {
       filterProperties(props, { query: '', types: emptyTypes, statuses: new Set<PropertyStatus>(['closed']) }).map((p) => p.id),
     ).toEqual(['p3'])
   })
+
+  it('filters by building-size band, half-open at the upper bound', () => {
+    const props = [
+      { ...base(), id: 'small', buildingSqFt: 9_999 },
+      { ...base(), id: 'mid', buildingSqFt: 10_000 },
+      { ...base(), id: 'large', buildingSqFt: 250_000 },
+    ]
+    const bandIds = (size: Parameters<typeof filterProperties>[1]['size']) =>
+      filterProperties(props, { query: '', types: emptyTypes, statuses: emptyStatuses, size }).map((p) => p.id)
+
+    expect(bandIds('lt10k')).toEqual(['small'])
+    expect(bandIds('10k-50k')).toEqual(['mid'])
+    expect(bandIds('gt100k')).toEqual(['large'])
+    expect(bandIds('all')).toHaveLength(3)
+    // Omitted is the same as 'all' — the toolbar's default.
+    expect(bandIds(undefined)).toHaveLength(3)
+  })
 })
