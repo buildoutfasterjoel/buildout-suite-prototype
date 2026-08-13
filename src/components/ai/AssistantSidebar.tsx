@@ -784,7 +784,7 @@ export function AssistantSidebar() {
 
   // Hands-free: submit final transcript to Otto, and mark that the reply should
   // be spoken back so the loop can re-arm after Otto finishes.
-  const { start: startHandsFree, stopForCall } = useHandsFree({
+  const { start: startHandsFree, stop: stopHandsFree, stopForCall } = useHandsFree({
     onSubmit: (text) => {
       speakNextReplyRef.current = true;
       send(text);
@@ -1127,8 +1127,11 @@ export function AssistantSidebar() {
           aria-label={listening ? "Listening — tap to stop" : "Speak to the assistant"}
           onClick={() => {
             if (listening) {
+              // `voiceEngine.cancel()` only silences speech *synthesis* — the
+              // recognizer lives in useHandsFree, so without stopHandsFree() the
+              // mic stayed hot and `listening` never cleared: on, with no way off.
+              stopHandsFree();
               voiceEngine.cancel();
-              setConversationMode(false);
             } else {
               // Starting the mic turns voice on so Otto talks back — unless the
               // user deliberately muted it (then stay silent, STT only).
