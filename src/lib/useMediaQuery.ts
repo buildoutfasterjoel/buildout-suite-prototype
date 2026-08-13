@@ -35,3 +35,17 @@ export function useMediaQuery(query: string): boolean {
  * so the right column's cards relocate (see the narrowLayout preference).
  */
 export const CONTACT_NARROW_QUERY = "(max-width: 1279.98px)";
+
+/**
+ * Whether the contact page should use its narrow arrangement, given the viewport
+ * and whether the assistant rail is taking its 380px.
+ *
+ * The rail counts as narrow outright, at any width. The page is capped at 96rem
+ * and the rail comes off the top of that, so three columns never really survive
+ * it — even at 1700px the middle column ends up clipping its own Log Activity
+ * tab row. A width threshold was tried here first and let that case through.
+ */
+export function useContactNarrow(railOpen: boolean): boolean {
+  const viewportNarrow = useMediaQuery(CONTACT_NARROW_QUERY);
+  return viewportNarrow || railOpen;
+}

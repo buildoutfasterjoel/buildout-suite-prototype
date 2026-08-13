@@ -5,7 +5,6 @@ import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faListCheck, faWavePulse } from "@fortawesome/pro-regular-svg-icons";
-import { faSparkles } from "@fortawesome/pro-solid-svg-icons";
 import type { Contact, DealSummary } from "#/data/types";
 import {
   ContactComposeModule,
@@ -47,8 +46,8 @@ import { createRosaProposalDeal } from "#/components/call/rosaDeal";
 import { ROSA_FINANCIAL_DOCS } from "#/components/call/rosaDocs";
 import { ROSA_AGREEMENT_EMAIL_ID } from "#/components/call/rosaClosing";
 
-/** The three panes the "tabs" narrow layout folds into one card. */
-type PaneKey = "timeline" | "briefing" | "tasks";
+/** The panes the "tabs" narrow layout folds into one card. */
+type PaneKey = "timeline" | "tasks";
 
 export function ContactEngagementPanel({
   contact,
@@ -72,12 +71,15 @@ export function ContactEngagementPanel({
    */
   narrowSlot?: ReactNode;
   /**
-   * The "tabs" narrow layout: Briefing and Tasks become tabs alongside the
-   * Timeline in one card rather than cards of their own. The timeline state all
-   * lives here, so the panel owns the tab strip and the route just supplies the
-   * two panels.
+   * The "tabs" narrow layout: Tasks becomes a tab alongside the Timeline in one
+   * card rather than a card of its own. The timeline state all lives here, so the
+   * panel owns the tab strip and the route just supplies the Tasks panel.
+   *
+   * Briefing is deliberately NOT a tab — it arrives through `narrowSlot` above
+   * the feed in both arrangements, because it's read on the way past rather than
+   * navigated to.
    */
-  sideTabs?: { briefing: ReactNode; tasks: ReactNode; taskCount: number };
+  sideTabs?: { tasks: ReactNode; taskCount: number };
 }) {
   const tabTrack = useContactUiPrefs((s) => s.tabTrack);
   const timelineFilter = useContactUiPrefs((s) => s.timelineFilter);
@@ -389,10 +391,10 @@ export function ContactEngagementPanel({
       {narrowSlot}
 
       {sideTabs ? (
-        /* "Tabs" narrow layout: one card, three panes. The tab strip *is* this
-           card's header, so the active pane's controls sit at its trailing edge
-           rather than claiming a row of their own — a row that was empty on the
-           left for Timeline and Tasks, and empty outright for Briefing.
+        /* "Tabs" narrow layout: one card, Timeline and Tasks as panes. The tab
+           strip *is* this card's header, so the active pane's controls sit at its
+           trailing edge rather than claiming a row of their own — a row that was
+           empty on the left in both panes.
            
            No `overflow-hidden` here, unlike the other cards: it would make the
            card the containment context for the sticky header and stop it sticking
@@ -424,17 +426,10 @@ export function ContactEngagementPanel({
                       {sideTabs.taskCount}
                     </Badge>
                   </Tabs.Tab>
-                  <Tabs.Tab
-                    value="briefing"
-                    icon={<FontAwesomeIcon icon={faSparkles} />}
-                  >
-                    Briefing
-                  </Tabs.Tab>
                 </Tabs.List>
               </Tabs>
             </div>
-            {/* Contextual to the pane: the feed's filters, the Add action, or —
-                on Briefing, which has neither — nothing at all. */}
+            {/* Contextual to the pane: the feed's filters, or the Add action. */}
             <div className="contact-pane-tabs__actions">
               {pane === "timeline" && filterControl}
               {pane === "tasks" && <AddTaskAction contactId={contact.id} />}
@@ -442,7 +437,6 @@ export function ContactEngagementPanel({
           </div>
 
           {pane === "timeline" && feed}
-          {pane === "briefing" && <div className="p-4">{sideTabs.briefing}</div>}
           {pane === "tasks" && <div className="p-4">{sideTabs.tasks}</div>}
         </Card>
       ) : (
