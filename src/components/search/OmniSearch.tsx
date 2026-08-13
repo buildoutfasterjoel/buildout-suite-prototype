@@ -84,7 +84,7 @@ type Entry = {
   icon: IconDefinition;
   title: string;
   meta?: string;
-  /** Right-aligned entity/action label (e.g. "Contact", "Ask AI"). */
+  /** Right-aligned entity/action label (e.g. "Contact", "Ask Otto"). */
   typeLabel: string;
   activate: () => void;
 };
@@ -149,7 +149,7 @@ export function OmniSearch() {
   /**
    * Dictation for the bar: interim speech types straight into the input so the
    * broker can see it land, and the finished sentence is handed to the assistant
-   * — which opens the rail and sends it, the same path the "Ask AI" row uses.
+   * — which opens the rail and sends it, the same path the "Ask Otto" row uses.
    *
    * Deliberately does NOT call `enableVoiceForMic()`: this is dictation, and
    * speaking into a search bar shouldn't quietly switch on the assistant's voice.
@@ -256,8 +256,8 @@ export function OmniSearch() {
         key: "ai",
         iconVariant: "ai",
         icon: faSparkles,
-        title: `Ask AI: “${q}”`,
-        typeLabel: "Ask AI",
+        title: `Ask Otto: “${q}”`,
+        typeLabel: "Ask Otto",
         activate: () => {
           askAssistant(q);
           close();
@@ -341,7 +341,7 @@ export function OmniSearch() {
                 className="omni-menu__input"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search or ask AI"
+                placeholder="Search or ask Otto"
                 aria-label="Search"
               />
               <button
