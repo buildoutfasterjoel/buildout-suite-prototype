@@ -114,16 +114,27 @@ function PropertiesIndex() {
 
   // Saving an owner contact takes the action directly rather than through a
   // confirm step: the roster row turns into "View Contact" on the spot, which
-  // says what happened better than a modal would have.
+  // says what happened better than a modal would have. The toast carries the
+  // same jump, so the new record is reachable without hunting back down the
+  // roster for the row you just saved — and it works for the already-saved case
+  // too, where the roster row is the only other way through.
   const onSaveContact = useCallback(
     (property: Property, owner: ProspectOwnerContact) => {
       const { contact, alreadySaved } = saveProspectContact(property, owner);
       notify({
         title: alreadySaved ? "Already in your contacts" : "Contact saved",
         description: `${contact.firstName} ${contact.lastName} is linked to ${property.street || property.name}.`,
+        action: {
+          label: "View Contact",
+          onClick: () =>
+            navigate({
+              to: "/backoffice/contacts/$contactId",
+              params: { contactId: contact.id },
+            }),
+        },
       });
     },
-    [],
+    [navigate],
   );
 
   const flyoutProperty = useMemo(
