@@ -73,6 +73,9 @@ export const PROPERTY_STATUSES = Object.keys(STATUS_LABELS) as PropertyStatus[];
 
 export function formatPrice(value: number | null | undefined): string {
   if (value == null) return "—";
+  // Portfolio-level totals (an owner's national holdings) run past a billion,
+  // where "$1282.6M" stops being readable as a number.
+  if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(2)}B`;
   if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 1_000) return `$${(value / 1_000).toFixed(0)}K`;
   return `$${value.toLocaleString()}`;

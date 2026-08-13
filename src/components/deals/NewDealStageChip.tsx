@@ -7,6 +7,31 @@ import { availableStages, dealStageLabel, type DealShape } from "#/data/dealShap
 import { STAGE_DOT } from "#/components/deals/newCardTokens";
 
 /**
+ * The read-only twin of {@link NewDealStageChip}: same neutral outlined pill,
+ * no caret and no menu. For surfaces that report a stage rather than set one —
+ * the Properties list, where a property's stage is derived from its deals and
+ * changing it there would mean editing a deal you can't see.
+ */
+export function DealStageBadge({
+  value,
+  shape = "sale",
+}: {
+  value: PropertyStatus;
+  shape?: DealShape;
+}) {
+  return (
+    <span className="deal-tile__stage-chip">
+      <FontAwesomeIcon
+        icon={faCircleSmall}
+        className="deal-tile__stage-dot"
+        style={{ color: STAGE_DOT[value] }}
+      />
+      {dealStageLabel(value, shape)}
+    </span>
+  );
+}
+
+/**
  * The redesigned deal-stage chip: a neutral outlined pill where only the dot
  * carries the stage color, instead of the tinted-per-stage fill of
  * `DealStageChip`. Reads quieter next to the side and relationship badges, which

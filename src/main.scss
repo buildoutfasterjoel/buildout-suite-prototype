@@ -462,6 +462,44 @@
     0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
+// ── Muted secondary badge ──
+// storm-grey-100 instead of the theme's current near-white. This belongs in
+// Blueprint as a change to the `badge-muted-secondary-bg` token — it's a
+// design-system fix, not a prototype one, and every muted secondary badge in
+// every product should move together. Overridden here so the prototype can show
+// the intended value now; delete this block once the token ships.
+.badge.badge-secondary.badge-muted {
+  background-color: #eceef2; // storm-grey-100
+}
+
+// ── Prospect flyout tabs ──
+// Each tab's icon gets a fixed box so glyphs of different widths (faFileLines on
+// Records is noticeably wider than faHouseBuilding) can't render at different
+// apparent sizes down the row.
+.prospect-flyout__tabs {
+  svg {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+  }
+}
+
+// ── Properties toolbar filter controls ──
+// One neutral border across the whole facet row — storm-grey-200 rather than
+// Blueprint's outline-button ink, so a bar of six or seven dropdowns reads as a
+// quiet band of controls instead of a row competing with the results. Chained
+// with `.btn` for specificity over `.btn-outline-*`, and the hover keeps the
+// border put so only the fill responds.
+.btn.property-filter-btn {
+  border-color: var(--color-storm-grey-200, #d5dae2);
+
+  &:hover,
+  &:focus-visible,
+  &[aria-pressed="true"] {
+    border-color: var(--color-storm-grey-200, #d5dae2);
+  }
+}
+
 // ── Redesigned deal / property card ("deal-tile" in Figma) ──
 // Every measurement here is transcribed from the Figma frames rather than
 // approximated, because the card is dense enough that a 1px drift shows: 12px
@@ -673,12 +711,13 @@
     background: transparent;
     font-size: 12px; // font/size/small — matches the badges beside it
     font-weight: 600;
-    line-height: 13px;
+    line-height: 16px;
     white-space: nowrap;
     color: var(--color-storm-grey-950, #22262f);
   }
   &__stage-dot {
     font-size: 14px;
+    width: 12px;
   }
   &__stage-caret {
     font-size: 12px;

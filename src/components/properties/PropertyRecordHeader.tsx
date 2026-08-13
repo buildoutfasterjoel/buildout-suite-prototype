@@ -19,7 +19,13 @@ export function PropertyRecordHeader({ property }: { property: Property }) {
           <div className="d-flex align-items-center gap-2 text-muted fs-small">
             <FontAwesomeIcon icon={TYPE_ICONS[property.propertyType]} />
             {TYPE_LABELS[property.propertyType]}
-            <Badge variant="secondary" appearance="muted">{STATUS_LABELS[property.status]}</Badge>
+            {/* A property with no deal shows no stage — the Create Deal button
+                to the right is the thing that would give it one. */}
+            {property.status && (
+              <Badge variant="secondary" appearance="muted">
+                {STATUS_LABELS[property.status]}
+              </Badge>
+            )}
           </div>
           <h1 className="h4 mb-0 text-truncate">{property.name}</h1>
           <div className="text-muted text-truncate">

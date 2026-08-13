@@ -10,6 +10,7 @@ import type { Contact, ContactRole, ContactSource, DealHistoryEntry, DealIngesti
 import { CURRENT_USER, TEAMMATES } from './teammates'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
 import { reconcileContactDealFields } from './contactStage'
+import { reconcilePropertyStage } from './store'
 import { generateTasks } from './seed'
 import { nextCloseProbability } from './commission'
 import { notify } from '#/lib/notify'
@@ -59,6 +60,9 @@ function patchListing(dealId: string, patch: (l: Listing) => Listing): Listing |
   // single write path covers every stage move and contact (un)link; the scan is
   // cheap at prototype scale and a no-op when nothing moved.
   reconcileContactStages()
+  // The property's stage is derived from its deals for the same reason — a
+  // stage move here must not leave the property record showing the old one.
+  reconcilePropertyStage(updated.propertyId)
   useDataStore.getState().persist()
   return updated
 }

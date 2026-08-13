@@ -15,6 +15,7 @@ import type {
 } from './types'
 import type { Email } from './emails'
 import { useDataStore } from './dataStore'
+import { propertyStageFromDeals } from './propertyStage'
 import {
   DEFAULT_CONTACT_SHARES,
   TEAMMATES,
@@ -141,7 +142,26 @@ export function addListing(listing: Listing): void {
     listings.set(listing.id, listing)
     return { listings }
   })
+  reconcilePropertyStage(listing.propertyId)
   useDataStore.getState().persist()
+}
+
+/**
+ * Re-derive a property's stage from the deals currently on it. Called wherever
+ * the deal graph moves — a deal created, re-staged, or removed — so a property
+ * never claims a stage its deals don't support, and drops back to `null` when
+ * it has no deals at all.
+ */
+export function reconcilePropertyStage(propertyId: string): void {
+  const property = useDataStore.getState().properties.get(propertyId)
+  if (!property) return
+  const status = propertyStageFromDeals(getListingsForProperty(propertyId))
+  if (status === property.status) return
+  useDataStore.setState((s) => {
+    const properties = new Map(s.properties)
+    properties.set(propertyId, { ...property, status })
+    return { properties }
+  })
 }
 
 /** Persist a patch to a listing (clone map → setState → persist). */

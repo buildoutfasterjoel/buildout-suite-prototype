@@ -7,8 +7,9 @@ import * as persistence from './persistence'
 describe('useDataStore', () => {
   it('seeds all four entity maps deterministically on creation', () => {
     const s = useDataStore.getState()
-    // 20 pipeline properties + Rosa's story-owned building (see applyHeroes).
-    expect(s.properties.size).toBe(21)
+    // 20 pipeline properties + 8 tracked (no-deal) properties + Rosa's
+    // story-owned building (see applyHeroes).
+    expect(s.properties.size).toBe(29)
     expect(s.contacts.size).toBe(80)
     // One deal per pipeline property (see DEAL_PIPELINE), plus the 7 child space
     // deals the two lease shells are split into (see leaseSpaceFixtures.ts).
@@ -44,9 +45,9 @@ describe('hydrate / reset', () => {
       tasks: new Map(),
     })
     await useDataStore.getState().reset()
-    expect(useDataStore.getState().properties.size).toBe(21)
+    expect(useDataStore.getState().properties.size).toBe(29)
     const snap = await loadSnapshot()
-    expect(snap?.properties.size).toBe(21)
+    expect(snap?.properties.size).toBe(29)
   })
 
   it('hydrate loads a prior snapshot over the seed', async () => {
