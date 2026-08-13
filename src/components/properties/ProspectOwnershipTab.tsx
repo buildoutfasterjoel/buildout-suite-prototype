@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faUserCircle,
@@ -96,10 +97,14 @@ export function ProspectOwnershipTab({
             className="text-muted d-flex align-items-center gap-2"
             style={{ fontSize: 12 }}
           >
-            <FontAwesomeIcon icon={faUserCircle} className="text-primary" />
+            <FontAwesomeIcon
+              icon={faUserCircle}
+              className="text-primary"
+              style={{ fontSize: 14 }}
+            />
             Owner of record
           </div>
-          <div className="fs-4 fw-semibold">{ownership.ownerName}</div>
+          <div className="fs-5 fw-semibold">{ownership.ownerName}</div>
           <div className="d-flex flex-wrap align-items-center gap-2 mt-1">
             <Badge variant="secondary" appearance="muted">
               {ownership.ownerType}
@@ -157,7 +162,7 @@ export function ProspectOwnershipTab({
                 property, it will cost 1 credit.
               </div>
             </div>
-            <div className="d-flex flex-column gap-2">
+            <div className="d-flex flex-row align-items-center gap-2">
               <Button variant="outline" onClick={() => runLookup("quick")}>
                 Quick Lookup
               </Button>
@@ -288,20 +293,22 @@ export function ProspectOwnershipTab({
                       // with rows in mixed states the buttons still line up on
                       // the right regardless of which label they carry.
                       <div className="d-flex align-items-center gap-2 flex-shrink-0">
-                        {/* A native title, not Blueprint's Tooltip: inside the
-                            Offcanvas the Tooltip portals to document.body and
-                            the panel paints over it, so it renders washed out
-                            and unreadable. The browser's own tooltip always
-                            paints above overlays. */}
-                        <span
-                          className="text-muted d-inline-flex"
-                          tabIndex={0}
-                          role="note"
-                          aria-label={SAVE_CONTACT_EXPLAINER}
-                          title={SAVE_CONTACT_EXPLAINER}
-                        >
-                          <FontAwesomeIcon icon={faCircleInfo} />
-                        </span>
+                        <Tooltip>
+                          <Tooltip.Trigger
+                            render={
+                              <button
+                                type="button"
+                                className="btn btn-link text-muted p-0 d-inline-flex"
+                                aria-label={SAVE_CONTACT_EXPLAINER}
+                              >
+                                <FontAwesomeIcon icon={faCircleInfo} />
+                              </button>
+                            }
+                          />
+                          <Tooltip.Content side="top" style={{ maxWidth: 280 }}>
+                            {SAVE_CONTACT_EXPLAINER}
+                          </Tooltip.Content>
+                        </Tooltip>
                         <Button
                           variant="outline"
                           size="sm"

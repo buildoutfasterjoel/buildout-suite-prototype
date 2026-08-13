@@ -16,6 +16,7 @@ import {
   faBuildings,
   faCaretDown,
   faFilter,
+  faFolder,
   faLocationDot,
   faRadar,
   faTableList,
@@ -34,7 +35,6 @@ import { PropertyFilterPills } from "#/components/properties/PropertyFilterPills
 import {
   PropertyFiltersFlyout,
   EMPTY_FACETS,
-  countActiveFacets,
   type PropertyFacetState,
 } from "#/components/properties/PropertyFiltersFlyout";
 import { filterProperties } from "#/components/properties/propertyIndexFilters";
@@ -178,8 +178,6 @@ function PropertiesIndex() {
       ? "Search by name, address, city, zip"
       : "Search records by address, city, zip";
 
-  const activeFilterCount = countActiveFacets(appliedFacets);
-
   /** The mode switch — identical in both header styles. */
   const modeTabs = (
     <Tabs value={mode} onValueChange={(v) => selectMode(v as Mode)}>
@@ -296,7 +294,39 @@ function PropertiesIndex() {
     </ButtonGroup>
   );
 
-  /** The results rail + map, shared by both header styles. */
+  /**
+   * The toolbar's facet dropdowns, one set per mode, matching each product's
+   * own filter bar. Placeholders — they carry a caret but open nothing. Real
+   * ones raise questions this prototype hasn't answered (Prospecting's would
+   * have to filter the national record set rather than the loaded page), so
+   * they're shown for layout and nothing more.
+   */
+  const facetPlaceholders = (
+    mode === "owned"
+      ? [
+          // The saved-view selector leads the row and carries a real count —
+          // it's free, and a fake one next to a live result count would clash.
+          { label: `All Properties (${owned.length})`, icon: faFolder },
+          { label: "Property & Building" },
+          { label: "Availability" },
+          { label: "Location" },
+          { label: "Sale/Lease" },
+        ]
+      : [
+          { label: "Property Type" },
+          { label: "Number of Units" },
+          { label: "Building Size" },
+          { label: "Lot Size" },
+        ]
+  ).map(({ label, icon }) => (
+    <Button key={label} variant="outline" className="property-filter-btn">
+      {icon && <FontAwesomeIcon icon={icon} />}
+      {label}
+      <FontAwesomeIcon icon={faCaretDown} />
+    </Button>
+  ));
+
+  /** The results rail + map. */
   const results_ = (
     <>
       <div
@@ -368,15 +398,22 @@ function PropertiesIndex() {
           <div className="d-flex flex-column gap-3">
             <div className="d-flex align-items-center gap-3 flex-wrap">
               <div style={{ minWidth: 340 }}>{searchBox}</div>
-              <Button
-                variant="outline"
-                onClick={() => setShowFilters((v) => !v)}
-                aria-pressed={showFilters}
-              >
-                <FontAwesomeIcon icon={faFilter} />
-                Filters
-                {activeFilterCount > 0 && ` (${activeFilterCount})`}
-              </Button>
+
+              {/* The facets are one cluster, tighter within than the gaps
+                  separating them from the search box and the count — so the row
+                  reads as three groups rather than eight loose controls. */}
+              <div className="d-flex align-items-center gap-2 flex-wrap">
+                {facetPlaceholders}
+
+                {/* Inert in both modes: a working flyout beside a row of dead
+                    dropdowns reads as the dropdowns being broken. The flyout
+                    itself still exists and works — see `PropertyFiltersFlyout`
+                    — it just has nothing opening it for now. */}
+                <Button variant="outline" className="property-filter-btn">
+                  <FontAwesomeIcon icon={faFilter} />
+                  {mode === "prospect" ? "All Filters" : "Filters"}
+                </Button>
+              </div>
               <span className="text-muted">{countLabel}</span>
               <div className="ms-auto">{viewSwitcher}</div>
             </div>

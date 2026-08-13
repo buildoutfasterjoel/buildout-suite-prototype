@@ -6,12 +6,61 @@ import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCircleCheck,
+  faCircleNotch,
   faBuilding,
   faUser,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact, Property } from "#/data/types";
 import { addProspectWithOwner } from "#/data/prospectActions";
 import { useOwnerCredits } from "#/data/ownerCredits";
+
+/** How long each result line spins before it settles. */
+const SETTLE_MS = 600;
+
+/**
+ * One line of the result step: spinner until it settles, then a green check.
+ *
+ * The work behind both lines is synchronous and already finished by the time
+ * this renders — same as the assistant's action checklist, the pacing is
+ * presentational. It earns its place by sequencing: the property is filed, then
+ * the owner is looked up, and watching them resolve in that order is what tells
+ * you the credit was spent on a second, separate step rather than bundled into
+ * the save.
+ */
+function ResultLine({
+  settled,
+  title,
+  detail,
+}: {
+  settled: boolean;
+  title: React.ReactNode;
+  detail: React.ReactNode;
+}) {
+  return (
+    <div className="d-flex align-items-start gap-2">
+      <span
+        className="flex-shrink-0 mt-1"
+        style={{ width: 16, textAlign: "center" }}
+      >
+        {settled ? (
+          <FontAwesomeIcon icon={faCircleCheck} className="text-success" />
+        ) : (
+          <FontAwesomeIcon
+            icon={faCircleNotch}
+            spin
+            className="text-purple-heart-600"
+          />
+        )}
+      </span>
+      <div>
+        <div className="fw-semibold">{title}</div>
+        <div className="text-muted" style={{ fontSize: 13 }}>
+          {detail}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /**
  * Add Property — the tile CTA's dialog.
@@ -38,6 +87,9 @@ export function AddProspectDialog({
     creditSpent: boolean;
   } | null>(null);
 
+  /** How many result lines have settled. Drives the spinner → check flip. */
+  const [settled, setSettled] = useState(0);
+
   const balance = useOwnerCredits((s) => s.balance);
   const alreadyUnlocked = useOwnerCredits((s) =>
     property ? s.unlocked.has(property.id) : false,
@@ -48,9 +100,19 @@ export function AddProspectDialog({
   useEffect(() => {
     if (open) {
       setSaved(null);
+      setSettled(0);
       setIncludeOwner(true);
     }
   }, [open, property?.id]);
+
+  // Settle the result lines one at a time, in the order the work happened.
+  useEffect(() => {
+    if (!saved) return;
+    const lines = saved.contact ? 2 : 1;
+    if (settled >= lines) return;
+    const t = setTimeout(() => setSettled((n) => n + 1), SETTLE_MS);
+    return () => clearTimeout(t);
+  }, [saved, settled]);
 
   if (!property) return null;
 
@@ -77,41 +139,37 @@ export function AddProspectDialog({
         <Modal.Body className="d-flex flex-column gap-3" style={{ padding: 24 }}>
           {saved ? (
             <>
-              <div className="d-flex align-items-start gap-2">
-                <FontAwesomeIcon
-                  icon={faCircleCheck}
-                  className="text-success mt-1"
-                />
-                <div>
-                  <div className="fw-semibold">
-                    {address} is now in your properties.
-                  </div>
-                  <div className="text-muted" style={{ fontSize: 13 }}>
-                    No deal was created — the record is yours to work when
-                    you&apos;re ready.
-                  </div>
-                </div>
-              </div>
+              <ResultLine
+                settled={settled >= 1}
+                title={
+                  settled >= 1
+                    ? `${address} is now in your properties.`
+                    : `Adding ${address}…`
+                }
+                detail="No deal was created — the record is yours to work when you're ready."
+              />
 
               {saved.contact && (
-                <div className="d-flex align-items-start gap-2">
-                  <FontAwesomeIcon
-                    icon={faCircleCheck}
-                    className="text-success mt-1"
-                  />
-                  <div>
-                    <div className="fw-semibold">
-                      Owner contact found: {saved.contact.firstName}{" "}
-                      {saved.contact.lastName}
-                    </div>
-                    <div className="text-muted" style={{ fontSize: 13 }}>
-                      {saved.creditSpent
-                        ? "1 owner unlock credit used. "
-                        : "No credit used — this owner was already unlocked. "}
-                      Saved to your contacts and linked to the property.
-                    </div>
-                  </div>
-                </div>
+                <ResultLine
+                  settled={settled >= 2}
+                  title={
+                    settled >= 2
+                      ? `Owner contact found: ${saved.contact.firstName} ${saved.contact.lastName}`
+                      : "Looking up owner contact…"
+                  }
+                  detail={
+                    settled >= 2 ? (
+                      <>
+                        {saved.creditSpent
+                          ? "1 owner unlock credit used. "
+                          : "No credit used — this owner was already unlocked. "}
+                        Saved to your contacts and linked to the property.
+                      </>
+                    ) : (
+                      "Searching public records and researched sources."
+                    )
+                  }
+                />
               )}
             </>
           ) : (

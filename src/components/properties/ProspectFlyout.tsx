@@ -136,7 +136,9 @@ export function ProspectFlyout({
 
         <Offcanvas.Body>
           <Tabs value={tab} onValueChange={(v) => v && setTab(v as TabKey)}>
-            <Tabs.List>
+            {/* The class pins each tab's icon box so Records' wider glyph
+                can't render larger than the rest — spacing is the theme's. */}
+            <Tabs.List className="prospect-flyout__tabs">
               <Tabs.Tab
                 value="summary"
                 icon={<FontAwesomeIcon icon={faHouseBuilding} />}
