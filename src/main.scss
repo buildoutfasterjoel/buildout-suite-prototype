@@ -462,6 +462,16 @@
     0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
+// ── Muted secondary badge ──
+// storm-grey-100 instead of the theme's current near-white. This belongs in
+// Blueprint as a change to the `badge-muted-secondary-bg` token — it's a
+// design-system fix, not a prototype one, and every muted secondary badge in
+// every product should move together. Overridden here so the prototype can show
+// the intended value now; delete this block once the token ships.
+.badge.badge-secondary.badge-muted {
+  background-color: #eceef2; // storm-grey-100
+}
+
 // ── Redesigned deal / property card ("deal-tile" in Figma) ──
 // Every measurement here is transcribed from the Figma frames rather than
 // approximated, because the card is dense enough that a 1px drift shows: 12px
@@ -673,12 +683,13 @@
     background: transparent;
     font-size: 12px; // font/size/small — matches the badges beside it
     font-weight: 600;
-    line-height: 13px;
+    line-height: 16px;
     white-space: nowrap;
     color: var(--color-storm-grey-950, #22262f);
   }
   &__stage-dot {
     font-size: 14px;
+    width: 12px;
   }
   &__stage-caret {
     font-size: 12px;
