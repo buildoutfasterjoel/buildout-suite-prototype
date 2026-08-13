@@ -6,7 +6,6 @@ import { ButtonGroup } from "@buildoutinc/blueprint-react/ui/ButtonGroup";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
-import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
@@ -21,7 +20,7 @@ import {
   faRadar,
   faTableList,
 } from "@fortawesome/pro-regular-svg-icons";
-import type { Property, PropertyType } from "#/data/types";
+import type { Property } from "#/data/types";
 import { useDataStore } from "#/data/dataStore";
 import { getProspectProperties, INSIGHTS_RECORD_TOTAL } from "#/data/prospects";
 import type { ProspectOwnerContact } from "#/data/prospectOwners";
@@ -31,7 +30,6 @@ import { PropertyListRow } from "#/components/properties/PropertyListRow";
 import { PropertyRecordMap } from "#/components/properties/PropertyRecordMap";
 import { AddProspectDialog } from "#/components/properties/AddProspectDialog";
 import { ProspectFlyout } from "#/components/properties/ProspectFlyout";
-import { PropertyDesignToggles } from "#/components/properties/PropertyDesignToggles";
 import { PropertyFilterPills } from "#/components/properties/PropertyFilterPills";
 import {
   PropertyFiltersFlyout,
@@ -39,20 +37,7 @@ import {
   countActiveFacets,
   type PropertyFacetState,
 } from "#/components/properties/PropertyFiltersFlyout";
-import { usePropertyUiPrefs } from "#/components/properties/usePropertyUiPrefs";
-import {
-  filterProperties,
-  SIZE_BANDS,
-  SIZE_BAND_LABELS,
-  type SizeBand,
-  type StageFacetValue,
-} from "#/components/properties/propertyIndexFilters";
-import {
-  PROPERTY_TYPES,
-  TYPE_LABELS,
-  PROPERTY_STATUSES,
-  STATUS_LABELS,
-} from "#/components/properties/propertyDisplay";
+import { filterProperties } from "#/components/properties/propertyIndexFilters";
 
 export const Route = createFileRoute("/_shell/properties/")({
   component: PropertiesIndex,
@@ -76,13 +61,6 @@ const MODES: Mode[] = ["owned", "prospect"];
  */
 const MODE_STORAGE_KEY = "properties:mode";
 
-/** Trigger labels for the Stage facet, including its two non-stage entries. */
-const STAGE_FACET_LABELS: Record<StageFacetValue | "all", string> = {
-  all: "Stage",
-  none: "No deal",
-  ...STATUS_LABELS,
-};
-
 function PropertiesIndex() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>("owned");
@@ -92,9 +70,6 @@ function PropertiesIndex() {
   const [showFilters, setShowFilters] = useState(false);
   // Visual only — the table view isn't built yet (see `viewSwitcher`).
   const [resultsView, setResultsView] = useState<"map" | "table">("map");
-
-  const headerStyle = usePropertyUiPrefs((s) => s.headerStyle);
-  const hydratePrefs = usePropertyUiPrefs((s) => s.hydrate);
 
   // Subscribed rather than read once: adding a prospect writes here, and both
   // the owned list and the prospect rows' "Added" state must follow.
@@ -156,13 +131,12 @@ function PropertiesIndex() {
     [prospects, flyoutId],
   );
 
-  // Restore the last-used mode and header style on mount. Reading in an effect
-  // keeps SSR rendering the defaults, avoiding a hydration mismatch.
+  // Restore the last-used mode on mount. Reading in an effect keeps SSR
+  // rendering the default, avoiding a hydration mismatch.
   useEffect(() => {
     const stored = window.localStorage.getItem(MODE_STORAGE_KEY);
     if (stored && MODES.includes(stored as Mode)) setMode(stored as Mode);
-    hydratePrefs();
-  }, [hydratePrefs]);
+  }, []);
 
   const selectMode = useCallback((next: Mode) => {
     setMode(next);
@@ -381,11 +355,11 @@ function PropertiesIndex() {
   );
 
   /**
-   * Card header — the People index's structure: headline and subtext, then one
-   * toolbar line (search · Filters · count · tabs pushed right), then the active
-   * filters as pills, all inside a single panel card with the results.
+   * The page, on the People index's structure: headline and subtext, then one
+   * toolbar line (search · Filters · count · view switcher), then the active
+   * filters as pills, with the results in the same panel card.
    */
-  const cardLayout = (
+  const pageLayout = (
     <div className="d-flex h-100 p-4 overflow-hidden w-100">
       <Card className="panel-card flex-grow-1 d-flex flex-column overflow-hidden">
         <Card.Body className="d-flex flex-column gap-4 overflow-hidden">
@@ -421,116 +395,9 @@ function PropertiesIndex() {
     </div>
   );
 
-  /** Banner header — the full-bleed band above the content, matching Deals. */
-  const bannerLayout = (
-    <div className="d-flex flex-column h-100 overflow-hidden">
-      <div className="border-bottom bg-card">
-        <div className="container-fluid px-4 py-4">{headerBlock}</div>
-      </div>
-
-      <div className="container-fluid px-4 py-3">
-        <Card className="shadow">
-          <Card.Body className="d-flex align-items-center gap-2 p-3 flex-wrap">
-            <div className="flex-grow-1" style={{ maxWidth: 320 }}>
-              {searchBox}
-            </div>
-
-            {/* Each Select is wrapped so it sizes to its own width — the
-                trigger fills its parent, and unwrapped it stretches the row. */}
-            <div style={{ width: 170 }}>
-              <Select
-                value={facets.type}
-                onValueChange={(v) =>
-                  setFacets({ ...facets, type: v as PropertyType | "all" })
-                }
-              >
-                <Select.Trigger>
-                  <Select.Value>
-                    {(v) =>
-                      v === "all"
-                        ? "Property Type"
-                        : TYPE_LABELS[v as PropertyType]
-                    }
-                  </Select.Value>
-                </Select.Trigger>
-                <Select.Content>
-                  <Select.Item value="all">All types</Select.Item>
-                  {PROPERTY_TYPES.map((t) => (
-                    <Select.Item key={t} value={t}>
-                      {TYPE_LABELS[t]}
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select>
-            </div>
-
-            <div style={{ width: 180 }}>
-              <Select
-                value={facets.size}
-                onValueChange={(v) =>
-                  setFacets({ ...facets, size: v as SizeBand })
-                }
-              >
-                <Select.Trigger>
-                  <Select.Value>
-                    {(v) =>
-                      v === "all"
-                        ? "Building Size"
-                        : SIZE_BAND_LABELS[v as SizeBand]
-                    }
-                  </Select.Value>
-                </Select.Trigger>
-                <Select.Content>
-                  {SIZE_BANDS.map((b) => (
-                    <Select.Item key={b} value={b}>
-                      {SIZE_BAND_LABELS[b]}
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select>
-            </div>
-
-            {mode === "owned" && (
-              <div style={{ width: 150 }}>
-                <Select
-                  value={facets.status}
-                  onValueChange={(v) =>
-                    setFacets({ ...facets, status: v as StageFacetValue | "all" })
-                  }
-                >
-                  <Select.Trigger>
-                    <Select.Value>
-                      {(v) => STAGE_FACET_LABELS[v as StageFacetValue | "all"]}
-                    </Select.Value>
-                  </Select.Trigger>
-                  <Select.Content>
-                    <Select.Item value="all">All stages</Select.Item>
-                    <Select.Item value="none">No deal</Select.Item>
-                    {PROPERTY_STATUSES.map((s) => (
-                      <Select.Item key={s} value={s}>
-                        {STATUS_LABELS[s]}
-                      </Select.Item>
-                    ))}
-                  </Select.Content>
-                </Select>
-              </div>
-            )}
-
-            <span className="text-muted text-nowrap ms-auto">{countLabel}</span>
-            {viewSwitcher}
-          </Card.Body>
-        </Card>
-      </div>
-
-      <div className="container-fluid px-4 flex-grow-1 d-flex overflow-hidden gap-3 pb-3">
-        {results_}
-      </div>
-    </div>
-  );
-
   return (
     <>
-      {headerStyle === "card" ? cardLayout : bannerLayout}
+      {pageLayout}
 
       {/* Prospecting overlays. Both flows reach both dialogs — the tile CTA
           opens Add Property directly, the flyout opens it from its header and
@@ -560,8 +427,6 @@ function PropertiesIndex() {
         onChange={setFacets}
         showStage={mode === "owned"}
       />
-
-      <PropertyDesignToggles />
     </>
   );
 }
