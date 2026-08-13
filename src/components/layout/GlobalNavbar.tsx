@@ -57,6 +57,7 @@ export function GlobalNavbar() {
   const assistantOpen = useAssistant((s) => s.open);
   const toggleAssistant = useAssistant((s) => s.toggle);
   const openOmniSearch = useOmniSearch((s) => s.setOpen);
+  const openOmniSearchWithVoice = useOmniSearch((s) => s.openWithVoice);
   const omniSearchOpen = useOmniSearch((s) => s.open);
 
   // Navigate client-side so the persistent shell — and the open AI assistant
@@ -148,7 +149,9 @@ export function GlobalNavbar() {
                   aria-label="Voice search"
                   onClick={(e) => {
                     e.stopPropagation();
-                    openOmniSearch(true);
+                    // Open the overlay already listening, so one tap starts
+                    // dictating instead of just revealing a second mic button.
+                    openOmniSearchWithVoice();
                   }}
                 >
                   <FontAwesomeIcon icon={faMicrophone} />

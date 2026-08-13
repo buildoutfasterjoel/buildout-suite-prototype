@@ -28,9 +28,16 @@ function getRecognitionCtor(): SpeechRecognitionCtor | null {
 /**
  * Hands-free mic loop (voice-foundation design §6.2). Own silence timer, never
  * a perpetually-hot mic. The caller submits via onSubmit; interim text is NOT
- * sent — only the final transcript, after a silence pause.
+ * submitted — only the final transcript, after a silence pause.
+ *
+ * `onInterim` is offered separately for surfaces that want to *show* speech as
+ * it lands (the omni bar types into its own input) without that text counting as
+ * a submission.
  */
-export function useHandsFree(opts: { onSubmit: (text: string) => void }) {
+export function useHandsFree(opts: {
+  onSubmit: (text: string) => void;
+  onInterim?: (text: string) => void;
+}) {
   const setListening = useVoice((s) => s.setListening);
   const setConversationMode = useVoice((s) => s.setConversationMode);
   const recRef = useRef<InstanceType<SpeechRecognitionCtor> | null>(null);
@@ -85,6 +92,7 @@ export function useHandsFree(opts: { onSubmit: (text: string) => void }) {
     rec.onresult = (e) => {
       const segs = Array.from({ length: e.results.length }, (_, i) => ({ transcript: e.results[i][0].transcript }));
       transcriptRef.current = assembleTranscript(segs);
+      opts.onInterim?.(transcriptRef.current);
       if (startTimer.current) { clearTimeout(startTimer.current); startTimer.current = null; }
       if (silenceTimer.current) clearTimeout(silenceTimer.current);
       silenceTimer.current = setTimeout(finish, SILENCE_MS);
@@ -105,13 +113,20 @@ export function useHandsFree(opts: { onSubmit: (text: string) => void }) {
     try { rec.start(); } catch { teardown(); }
   }, [clearTimers, opts, setConversationMode, setListening, teardown]);
 
-  /** Hard stop for when a live call opens (Phase 3) — no mic over call audio. */
-  const stopForCall = useCallback(() => {
+  /**
+   * Stop listening and drop whatever was captured. Deliberately does NOT submit:
+   * this is the user cancelling, not finishing, so a half-spoken sentence
+   * shouldn't be sent.
+   */
+  const stop = useCallback(() => {
     teardown();
     setConversationMode(false);
   }, [teardown, setConversationMode]);
 
+  /** Hard stop for when a live call opens (Phase 3) — no mic over call audio. */
+  const stopForCall = stop;
+
   useEffect(() => () => teardown(), [teardown]); // cleanup on unmount
 
-  return { start, stopForCall, supported };
+  return { start, stop, stopForCall, supported };
 }
