@@ -9,7 +9,7 @@ interface AssistantUIState {
   setOpen: (open: boolean) => void;
   toggle: () => void;
   /**
-   * A message queued from another surface (e.g. omni search "Ask AI") to be
+   * A message queued from another surface (e.g. omni search "Ask Otto") to be
    * sent as soon as the sidebar mounts. The sidebar consumes and clears it.
    */
   pendingPrompt: string | null;

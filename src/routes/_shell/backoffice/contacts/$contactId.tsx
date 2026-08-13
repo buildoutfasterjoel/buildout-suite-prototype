@@ -16,7 +16,8 @@ import { ContactDesignToggles } from "#/components/contacts/ContactDesignToggles
 import { ShareContactModal } from "#/components/contacts/ShareContactModal";
 import { useContactShares } from "#/components/contacts/useContactShares";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
-import { CONTACT_NARROW_QUERY, useMediaQuery } from "#/lib/useMediaQuery";
+import { useContactNarrow } from "#/lib/useMediaQuery";
+import { useAssistant } from "#/ai/useAssistant";
 import { callFlow } from "#/components/call/callFlow";
 import type { ComposedDraft } from "#/components/contacts/ContactComposeModule";
 import {
@@ -90,8 +91,18 @@ function ContactDetailPage() {
   // breakpoint the right column goes away and its two cards move — either into
   // the middle column's stack or into a tab strip beside the Timeline (the
   // `narrowLayout` design option decides which).
-  const isNarrow = useMediaQuery(CONTACT_NARROW_QUERY);
-  const narrowLayout = useContactUiPrefs((s) => s.narrowLayout);
+  //
+  // The assistant rail counts as narrow on its own: it takes 380px off a page
+  // that's already capped, so the squeeze is the same whether the viewport
+  // shrank or the rail opened (see `useContactNarrow`).
+  const assistantOpen = useAssistant((s) => s.open);
+  const isNarrow = useContactNarrow(assistantOpen);
+  const narrowLayoutPref = useContactUiPrefs((s) => s.narrowLayout);
+  // Stacking the cards into the middle column only works when that column has
+  // the page to itself — with the rail open it's a third surface competing for
+  // the same eye, and the page reads as noise. Tabs put one thing in view at a
+  // time, so the rail forces them; the preference governs again once it closes.
+  const narrowLayout = assistantOpen ? "tabs" : narrowLayoutPref;
 
   if (!detail) return <ContactNotFound />;
 
@@ -118,7 +129,10 @@ function ContactDetailPage() {
   return (
     <div
       className="d-flex flex-column h-100 overflow-hidden p-4 gap-3 mx-auto w-100"
-      style={{ maxWidth: "96rem" }}
+      // The rail pulls the cap in with it: at 96rem the two remaining columns
+      // just absorb the freed width and the middle one stretches past a
+      // comfortable measure, which reads as sprawl rather than breathing room.
+      style={{ maxWidth: assistantOpen ? "72rem" : "96rem" }}
     >
       {/* Fixed top bar */}
       <ContactDetailTopBar contact={contact} />
@@ -147,24 +161,24 @@ function ContactDetailPage() {
             onLog={addLog}
             onStartCall={(phone) => callFlow.open(contact, phone)}
             narrowSlot={
-              isNarrow && narrowLayout === "stacked" ? (
-                <>
-                  {briefingCard}
-                  {tasksCard}
-                </>
+              // Briefing sits in the column in BOTH narrow arrangements — it's
+              // the thing you read before the feed, not a place you navigate to,
+              // so burying it behind a tab meant it went unread. Only Tasks
+              // trades places with the Timeline.
+              isNarrow ? (
+                narrowLayout === "stacked" ? (
+                  <>
+                    {briefingCard}
+                    {tasksCard}
+                  </>
+                ) : (
+                  briefingCard
+                )
               ) : undefined
             }
             sideTabs={
               isNarrow && narrowLayout === "tabs"
                 ? {
-                    briefing: (
-                      <ContactBriefingSection
-                        briefing={buildBriefing(contact, deals)}
-                        open
-                        onToggle={() => {}}
-                        bare
-                      />
-                    ),
                     tasks: (
                       <ContactTasksPanel
                         contact={contact}

@@ -2,6 +2,22 @@
 @import "@fortawesome/fontawesome-svg-core/styles.css" layer(components);
 @import "@buildoutinc/blueprint-theme/scss/theme";
 
+// Otto's surfaces share one fill recipe: a purple → periwinkle → sky sweep read
+// through a flat white wash. Only the sweep's angle and the wash's opacity move
+// between them, so the family holds together — a lower $wash is a more saturated
+// disc. The designs stack an opaque base colour under the sweep too; it can
+// never show through, so it's left out here.
+//
+// The first mixin in this file, deliberately: five call sites (the rail's avatar,
+// the starter rows' discs, and both hover states) would otherwise repeat the same
+// stop list. It lives up here rather than beside them because Sass resolves
+// mixins in source order, and its callers sit in two separate sections below.
+@mixin otto-sweep($angle, $wash) {
+  background-image:
+    linear-gradient(90deg, rgba(255, 255, 255, $wash), rgba(255, 255, 255, $wash)),
+    linear-gradient($angle, #b88cf2 0%, #8ca6f7 50%, #61c2ff 100%);
+}
+
 // Deal stage colors — sourced from Blueprint palette tokens, exposed as CSS
 // variables so components reference the tokens rather than hard-coded hex.
 // One canonical stage palette, matching the People module's pipeline colors:
@@ -1472,8 +1488,6 @@
   box-shadow:
     0 12px 20px 0 rgba(54, 7, 100, 0.1),
     0 8px 10px 0 rgba(33, 83, 212, 0.1);
-  // No opacity/visibility here on purpose: coming back from the palette, the
-  // bar snaps in with no transition at all.
   transition:
     background 0.2s ease,
     box-shadow 0.2s ease;
@@ -1484,29 +1498,11 @@
       0 8px 10px 0 rgba(33, 83, 212, 0.1);
   }
 
-  // While the palette is open its own bar stands in for this one. The handoff is
-  // deliberately asymmetric: it fades *out* over 200ms — just under the palette's
-  // 250ms fade-in, so the two read as one motion rather than a hole opening in
-  // the nav — but snaps straight back in on close, per the base rule above.
-  // Kept in the layout (not `display: none`) so the nav keeps its 288px and
-  // nothing shifts, and `visibility` — flipped only once the fade lands — takes
-  // it out of the tab order and the a11y tree while it's invisible.
-  &.is-hidden {
-    opacity: 0;
-    visibility: hidden;
-    transition:
-      opacity 0.2s ease,
-      visibility 0s linear 0.2s;
-  }
-
-  // Cut instead of fading, matching the rest of the shell.
-  @media (prefers-reduced-motion: reduce) {
-    transition: none;
-
-    &.is-hidden {
-      transition: none;
-    }
-  }
+  // The bar used to fade out while the palette was open, handing off to the
+  // palette's own bar — reviewers read that as the search box being taken away
+  // the moment they engaged with it, so it now stays put behind the overlay.
+  // Nothing to hide means nothing to animate: the fade-out and its
+  // reduced-motion counterpart came out with it.
 
   &:hover {
     background:
@@ -4166,13 +4162,24 @@
     background-color 0.12s ease,
     border-color 0.12s ease;
 
+  // Hover (Figma node 94:3701): the flat purple fill gives way to the same sweep
+  // the avatar wears, read through a heavier wash so it stays a background. The
+  // fill swap is instant — CSS can't interpolate between gradients — while the
+  // border still eases.
   &:hover,
   &:focus-visible {
-    background-color: colors.$purple-heart-50;
+    @include otto-sweep(9.26deg, 0.85);
     border-color: colors.$purple-heart-300;
+
+    // The disc deepens as the card lightens, so it holds its edge against the
+    // new fill rather than dissolving into it.
+    .assistant-starter-row__icon {
+      @include otto-sweep(45deg, 0.55);
+    }
   }
 
-  // Round token badge holding the glyph: 36px outer, 14px glyph, centred.
+  // Round token badge holding the glyph: 36px outer, 14px glyph, centred
+  // (Figma node 94:3678).
   &__icon {
     display: inline-flex;
     align-items: center;
@@ -4181,9 +4188,14 @@
     width: 36px;
     height: 36px;
     border-radius: 99px;
-    background-color: colors.$purple-heart-100;
+    @include otto-sweep(45deg, 0.75);
+    // Fallback for the gradient fill below (see `.assistant-rail__avatar`).
     color: colors.$purple-heart-800;
     font-size: 14px;
+
+    svg path {
+      fill: url("#otto-glyph-gradient");
+    }
   }
 
   // font/size/body over font/line-height/body.
@@ -4202,5 +4214,349 @@
     flex-shrink: 0;
     font-size: 14px;
     color: colors.$storm-grey-300;
+  }
+}
+
+// Assistant rail — header (Figma node 25:178). Otto's avatar is the ONE place
+// the mark appears in the rail; the replies below stay avatar-less. Sizes are
+// the design's tokens as explicit px (12/16 padding, 28px controls, 14/11 type)
+// — the Bootstrap scale has no 12px step and its `small` is not 11px.
+.assistant-rail__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background-color: #fff;
+  border-bottom: 1px solid var(--card-border-color, #{colors.$storm-grey-100});
+}
+
+// Otto's mark (Figma node 94:3570): a pale disc carrying a gradient-filled
+// otter, with no ring and no shadow — this variant carries neither.
+.assistant-rail__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  @include otto-sweep(90deg, 0.65);
+  font-size: 14px;
+
+  // The glyph is gradient-filled in the design, and an SVG icon can't take a CSS
+  // gradient — so the path's fill points at a `<linearGradient>` def rendered
+  // once at the top of the rail. The flat fallback is the gradient's dark end,
+  // for when that def can't resolve.
+  svg {
+    color: colors.$purple-heart-800;
+  }
+
+  svg path {
+    fill: url("#otto-glyph-gradient");
+  }
+}
+
+.assistant-rail__title {
+  font-size: 14px;
+  line-height: 18px;
+  font-weight: 600;
+  color: colors.$storm-grey-950;
+}
+
+.assistant-rail__subtitle {
+  font-size: 11px;
+  line-height: 14px;
+  color: colors.$storm-grey-600;
+}
+
+// Header controls (voice, close). Bespoke rather than a Blueprint ghost Button:
+// the design specifies a 28px box with a 14px glyph and no resting fill, and
+// every Button variant brings padding and colors that would be overridden back
+// out.
+.assistant-rail__control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background-color: transparent;
+  color: colors.$storm-grey-500;
+  font-size: 14px;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
+
+  &:hover,
+  &:focus-visible {
+    background-color: colors.$storm-grey-50;
+    color: colors.$storm-grey-900;
+  }
+}
+
+// Assistant rail — the running-tool chip (Figma node 102:3967). A pill wearing
+// the same sweep as Otto's mark, so "Otto is doing something" is one visual
+// language across the rail. Replaces a bare wrench + raw tool name.
+.assistant-tool-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 8px;
+  border: 1px solid colors.$purple-heart-200;
+  border-radius: 999px;
+  @include otto-sweep(90deg, 0.85);
+  color: colors.$purple-heart-800;
+  font-size: 14px;
+  line-height: 16px;
+  font-weight: 600;
+
+  &__icon {
+    font-size: 12px;
+  }
+
+  // 14px in the design — a size the FA spinner hits exactly.
+  &__spinner {
+    font-size: 14px;
+  }
+}
+
+// Assistant rail — the broker's own turn (Figma node 5:29). Grey fill with the
+// bottom-right corner clipped to 4px, so the bubble points back at the composer
+// it came from. Otto's replies stay unadorned full-width text.
+.assistant-bubble--user {
+  max-width: 280px;
+  padding: 8px 12px;
+  background-color: colors.$storm-grey-50;
+  color: colors.$storm-grey-950;
+  font-size: 14px;
+  line-height: 19px;
+  border-radius: 12px 12px 4px 12px;
+}
+
+// Assistant rail — the composer (Figma node 12:108). One bordered box that owns
+// the field and its controls, in three states: resting (placeholder sits inline
+// *between* the attach and mic buttons), filled (the value lifts to its own row
+// above the controls, and the send button appears), and with attachments (file
+// chips above the value).
+//
+// The state switch is a grid-template swap, NOT a DOM move: the textarea keeps
+// one position in the tree, so typing the first character can't re-parent it and
+// steal focus mid-keystroke.
+.otto-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background-color: #fff;
+  border: 1px solid var(--input-border-color, #{colors.$storm-grey-200});
+  // The theme's `rounded` is 6px; the design specifies border/radius-xl = 12.
+  border-radius: 12px;
+  transition:
+    border-color 0.12s ease,
+    box-shadow 0.12s ease;
+
+  // Purple edge once the composer is live — focused, or holding a value.
+  &:focus-within,
+  &--filled {
+    border-color: colors.$purple-heart-300;
+  }
+
+  // Focus lifts the bar off the rail (Figma node 12:69). Tied to focus rather
+  // than to holding a value, so a composer you've walked away from settles back
+  // down instead of floating for the rest of the session.
+  &:focus-within {
+    box-shadow:
+      0 12px 20px -8px rgba(54, 7, 100, 0.1),
+      0 8px 10px -6px rgba(33, 83, 212, 0.1);
+  }
+
+  &__body {
+    display: grid;
+    align-items: center;
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas: "left field right";
+    row-gap: 12px;
+  }
+
+  // Filled: the value takes a full-width row of its own, controls sit beneath.
+  &--filled &__body {
+    grid-template-areas:
+      "field field field"
+      "left  .     right";
+  }
+
+  &__field {
+    grid-area: field;
+    width: 100%;
+    // 12px of lead-in only while the placeholder is inline between the controls
+    // (the design's "Placeholder Wrap"); once lifted, the value aligns with the
+    // box's own padding edge.
+    padding: 0 12px;
+    border: 0;
+    background-color: transparent;
+    color: colors.$storm-grey-950;
+    font-size: 14px;
+    line-height: 19px;
+    resize: none;
+    // Height is driven from JS (auto-grow); overflow only bites at the cap.
+    overflow-y: auto;
+
+    &::placeholder {
+      color: colors.$storm-grey-600;
+    }
+
+    &:focus {
+      outline: 0;
+      box-shadow: none;
+    }
+  }
+
+  &--filled &__field {
+    padding: 0;
+  }
+
+  &__left {
+    grid-area: left;
+    display: flex;
+    align-items: center;
+  }
+
+  &__right {
+    grid-area: right;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  // Attach (+): 28px outlined box with a 12px glyph.
+  &__attach {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid colors.$storm-grey-200;
+    border-radius: 6px;
+    background-color: #fff;
+    color: colors.$storm-grey-700;
+    font-size: 12px;
+    transition:
+      background-color 0.12s ease,
+      border-color 0.12s ease;
+
+    &:hover,
+    &:focus-visible {
+      background-color: colors.$storm-grey-50;
+      border-color: colors.$storm-grey-300;
+    }
+  }
+
+  // Voice: a ghost button — no fill, no border, no shadow, so the composer's own
+  // focus shadow is the only thing lifting off the rail. Goes purple while the
+  // mic is hot so the live state is visible without a fill swap.
+  &__mic {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background-color: transparent;
+    color: colors.$storm-grey-900;
+    font-size: 14px;
+
+    &:hover,
+    &:focus-visible {
+      background-color: colors.$storm-grey-50;
+    }
+
+    &.is-live {
+      background-color: colors.$purple-heart-50;
+      color: colors.$purple-heart-700;
+    }
+  }
+
+  // Send / stop: the same purple gradient as Otto's mark. Only mounted once
+  // there's something to send (or a turn to stop), per the design.
+  &__send {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: linear-gradient(
+      222.88deg,
+      colors.$purple-heart-500 1.85%,
+      colors.$purple-heart-950 98.15%
+    );
+    color: colors.$purple-heart-50;
+    font-size: 12px;
+
+    &:hover,
+    &:focus-visible {
+      filter: brightness(1.08);
+    }
+  }
+
+  // Attachment chips (Figma node 10:62), above the value.
+  &__files {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  &__file {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 100%;
+    padding: 8px;
+    background-color: colors.$storm-grey-50;
+    border: 1px solid var(--card-border-color, #{colors.$storm-grey-100});
+    border-radius: 6px;
+    color: colors.$storm-grey-500;
+    font-size: 14px;
+  }
+
+  &__file-label {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  &__file-name {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 600;
+    color: colors.$storm-grey-950;
+  }
+
+  &__file-meta {
+    font-size: 10px;
+    line-height: 13px;
+    color: colors.$storm-grey-600;
+  }
+
+  &__file-remove {
+    display: inline-flex;
+    padding: 0;
+    border: 0;
+    background-color: transparent;
+    color: colors.$storm-grey-500;
+    font-size: 14px;
+
+    &:hover,
+    &:focus-visible {
+      color: colors.$storm-grey-900;
+    }
   }
 }

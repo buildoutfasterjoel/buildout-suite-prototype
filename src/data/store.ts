@@ -15,6 +15,7 @@ import type {
 } from './types'
 import type { Email } from './emails'
 import { useDataStore } from './dataStore'
+import { matchRecipient } from './recipientMatch'
 import { propertyStageFromDeals } from './propertyStage'
 import {
   DEFAULT_CONTACT_SHARES,
@@ -257,6 +258,17 @@ export function addDealActivity(
 
 export function getContact(contactId: string): Contact | undefined {
   return getStore().contacts.get(contactId)
+}
+
+/**
+ * Resolve an email recipient line (`Name <addr@host>`, a bare address, or a bare
+ * name) to the contact it refers to — the matching rules, and why the name
+ * fallback matters, live in `matchRecipient`. Used to turn a generated email's
+ * recipient back into the record it belongs to, so a one-off draft can open in
+ * that contact's composer instead of the campaign module.
+ */
+export function findContactForRecipient(raw: string): Contact | undefined {
+  return matchRecipient(raw, [...getStore().contacts.values()])
 }
 
 /** The (single) hero-persona contact for a given key — e.g. Rosa for 'rosa'. */

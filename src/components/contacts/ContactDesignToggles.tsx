@@ -5,7 +5,8 @@ import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaintbrush } from "@fortawesome/pro-regular-svg-icons";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
-import { CONTACT_NARROW_QUERY, useMediaQuery } from "#/lib/useMediaQuery";
+import { useContactNarrow } from "#/lib/useMediaQuery";
+import { useAssistant } from "#/ai/useAssistant";
 
 /** A single labeled switch row inside the design menu. */
 function ToggleRow({
@@ -58,8 +59,12 @@ export function ContactDesignToggles() {
   const narrowLayout = useContactUiPrefs((s) => s.narrowLayout);
   const setNarrowLayout = useContactUiPrefs((s) => s.setNarrowLayout);
   // The narrow-layout switch only changes anything below the breakpoint, so say
-  // so rather than letting it read as broken on a wide screen.
-  const isNarrow = useMediaQuery(CONTACT_NARROW_QUERY);
+  // so rather than letting it read as broken on a wide screen. An open assistant
+  // rail pins the arrangement to tabs at any width, which the row has to admit
+  // too, or the switch looks stuck.
+  const assistantOpen = useAssistant((s) => s.open);
+  const isNarrow = useContactNarrow(assistantOpen);
+  const pinnedByRail = assistantOpen;
 
   return (
     <Popover>
@@ -114,10 +119,14 @@ export function ContactDesignToggles() {
           <Separator />
           <ToggleRow
             title="Narrow layout"
-            value={`${narrowLayout === "tabs" ? "Tabs" : "Stacked"}${
-              isNarrow ? "" : " · needs < 1280px"
-            }`}
-            checked={narrowLayout === "tabs"}
+            value={
+              pinnedByRail
+                ? "Tabs · while the assistant is open"
+                : `${narrowLayout === "tabs" ? "Tabs" : "Stacked"}${
+                    isNarrow ? "" : " · needs < 1280px"
+                  }`
+            }
+            checked={pinnedByRail || narrowLayout === "tabs"}
             onCheckedChange={(c) => setNarrowLayout(c ? "tabs" : "stacked")}
           />
         </Popover.Body>

@@ -35,6 +35,7 @@ import {
   SparkleButton,
 } from "#/components/contacts/callLogFields";
 import { useComposeFocus } from "#/components/contacts/useComposeFocus";
+import { registerComposerSend, setPendingEmail } from "#/components/contacts/composerSend";
 
 /** The payload emitted on submit — the panel stamps `id`/`seq`. */
 // `createdAt` is stamped centrally by the page's `addLog`, not by composers.
@@ -178,11 +179,48 @@ export function ContactComposeModule({
   const [pendingFocus, setPendingFocus] = useState<ComposeKind | null>(null);
   useEffect(() => {
     if (focusSeq === 0) return;
-    const kind = useComposeFocus.getState().kind;
+    const { kind, draft } = useComposeFocus.getState();
     if (!kind) return;
     setTab(kind);
     setPendingFocus(kind);
-  }, [focusSeq]);
+    // An AI draft rides along on the same signal. Guarded on the contact so a
+    // draft written for one person can't land in another's composer — the store
+    // is module-level and outlives navigation between contacts.
+    //
+    // Applied on every request, which is what makes revision work: asking the
+    // assistant to shorten the email raises a new draft, and the composer's
+    // fields follow. It does overwrite hand edits, but that's the instruction —
+    // the broker asked for a rewrite.
+    if (draft && draft.contactId === contact.id) {
+      setSubject(draft.subject);
+      setBody((b) => ({ ...b, email: draft.body }));
+    }
+  }, [focusSeq, contact.id]);
+  // Publish this composer's send so the assistant can hit it on an explicit
+  // "send it" (see `composerSend.ts`). Registered every render because the
+  // closure has to see the current subject/body — the whole point is that the
+  // assistant sends what the broker is looking at, hand edits and all.
+  useEffect(() => {
+    registerComposerSend(() => {
+      if (tab !== "email") {
+        return { sent: false, reason: "The composer isn't on the Email tab." };
+      }
+      if (!subject.trim() && !body.email.trim()) {
+        return { sent: false, reason: "The email draft is empty." };
+      }
+      const sent = {
+        sent: true as const,
+        subject: subject.trim(),
+        to: contact.email,
+        contactId: contact.id,
+        contactName: contactFullName(contact),
+      };
+      handleSubmit();
+      return sent;
+    });
+    return () => registerComposerSend(null);
+  });
+
   // Deliberately a second pass: the requested tab's textarea doesn't exist until
   // the tab switch above commits, so focusing in that same effect would land on
   // whichever tab was open before. Waiting for `tab` to match is what makes the
@@ -230,7 +268,12 @@ export function ContactComposeModule({
     });
     // Reset the just-submitted tab back to a clean slate.
     setTabBody(tab, "");
-    if (tab === "email") setSubject("");
+    if (tab === "email") {
+      setSubject("");
+      // Whatever the assistant was holding as sendable has now gone out by hand;
+      // clearing it stops a later "send it" from posting the same email twice.
+      setPendingEmail(null);
+    }
     if (tab === "call") setOutcome("Connected");
     setDates((d) => ({ ...d, [tab]: todayISO() }));
     setRelatedDeal((r) => ({ ...r, [tab]: "" }));

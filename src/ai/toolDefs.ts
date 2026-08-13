@@ -306,15 +306,36 @@ export const analyzeBookDef = toolDefinition({
 export const draftEmailDef = toolDefinition({
   name: "draft_email",
   description:
-    "Draft a professional broker outreach email about a specific property or deal. Resolve the property with searchAll first. Optionally target named recipients. Produces subject + body the broker can edit before sending.",
+    "Draft a professional broker outreach email about a specific property or deal. ALWAYS establish the recipient before calling: if the broker names a person ('email Rosa'), resolve them with find_contact/searchAll and pass contactId — that person is the recipient even when someone else's page is open. Only fall back to the open contact's page when no one is named ('draft him a follow-up'). Resolve the property with searchAll too. Produces subject + body the broker can edit before sending. This is a ONE-OFF email to a person, not a campaign. The draft renders as a card in the chat with an 'Open in Email' button — the broker decides when to take it to the contact's composer, so do NOT navigate anywhere after calling this. Call it again to revise a draft.",
   inputSchema: {
     type: "object",
     properties: {
+      contactId: {
+        type: "string",
+        description:
+          "Resolved id of the person the email is TO. Look them up first (find_contact or searchAll) whenever the broker names someone — 'email Rosa' means pass Rosa's id, even if a different contact's page is open.",
+      },
+      contact_name: {
+        type: "string",
+        description:
+          "The recipient's name, when you have it but couldn't resolve an id. Used to look them up.",
+      },
       propertyId: { type: "string", description: "Resolved property id." },
       listingId: { type: "string", description: "Resolved listing/deal id (alternative to propertyId)." },
       intent: { type: "string", description: "What the email is about, e.g. 'price reduction' or 'introduce myself as the listing broker'." },
     },
     required: ["intent"],
+    additionalProperties: false,
+  },
+});
+
+export const sendEmailDef = toolDefinition({
+  name: "send_email",
+  description:
+    "Send the email the broker means: the one open in a contact's composer if there is one — exactly as it reads on screen, including their own edits — otherwise the draft you wrote last. Works from anywhere; they do NOT need to be on the contact's page first, so never ask them to go open it. ONLY call this when the broker explicitly tells you to send ('send it', 'send that', 'go ahead and send'). Never send on your own initiative, never as a follow-up to drafting, and never to 'save time': hitting send is irreversible and the permission has to be given each time. Logs the email to the contact's timeline.",
+  inputSchema: {
+    type: "object",
+    properties: {},
     additionalProperties: false,
   },
 });
@@ -459,6 +480,7 @@ export const TOOL_DEFS = [
   generateDocDef,
   filterListingsDef,
   draftEmailDef,
+  sendEmailDef,
   buildCallListDef,
   buildMarketingPackageDef,
   researchContactDef,

@@ -120,13 +120,15 @@ export function GlobalNavbar() {
           {/* Omni search — a gradient "AI omnibar" trigger that opens the
               command palette. A div (not a button) so the nested voice button
               is valid markup; it's keyboard-activatable via role + handlers.
-              While the palette is open it carries its own bar, so this one
-              hides — but keeps its footprint so the nav doesn't reflow. */}
+              Stays put while the palette is open: it used to fade out and hand
+              off to the palette's own bar, which read as the search box being
+              yanked away mid-thought. Only the tab stop goes, since the palette
+              traps focus and the backdrop swallows clicks. */}
           <Navbar.Item className="d-flex align-items-center ms-2">
             {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
             <div
               role="button"
-              tabIndex={0}
+              tabIndex={omniSearchOpen ? -1 : 0}
               onClick={() => openOmniSearch(true)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
@@ -134,13 +136,13 @@ export function GlobalNavbar() {
                   openOmniSearch(true);
                 }
               }}
-              aria-label="Search or ask AI"
-              className={`omni-bar flex-shrink-0 ${omniSearchOpen ? "is-hidden" : ""}`}
+              aria-label="Search or ask Otto"
+              className="omni-bar flex-shrink-0"
             >
               <span className="omni-bar__icon">
                 <OmniSparkleIcon variant="navbar" />
               </span>
-              <span className="omni-bar__label">Search or ask AI</span>
+              <span className="omni-bar__label">Search or ask Otto</span>
               <span className="omni-bar__end">
                 <span className="omni-bar__kbd">{SEARCH_HINT}</span>
                 <button

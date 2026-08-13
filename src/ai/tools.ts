@@ -1,7 +1,7 @@
 import type { AnyClientTool } from "@tanstack/ai";
 import type { Contact, Listing, Property, PropertyStatus } from "#/data/types";
 import { useDataStore } from "#/data/dataStore";
-import { getListing, getProperty } from "#/data/store";
+import { getContact, getListing, getProperty } from "#/data/store";
 import {
   generateFilter,
   generateEmail,
@@ -37,6 +37,13 @@ import { parseDueDate } from "#/ai/dueDate";
 import { buildAssistantContext } from "#/ai/context";
 import { emptyDraft } from "#/data/createListing";
 import { callFlow } from "#/components/call/callFlow";
+import { useComposeFocus } from "#/components/contacts/useComposeFocus";
+import {
+  requestComposerSend,
+  getPendingEmail,
+  setPendingEmail,
+} from "#/components/contacts/composerSend";
+import { useContactSession } from "#/components/contacts/useContactSession";
 import {
   getClientReportKpis,
   buildActivitySummaryText,
@@ -61,6 +68,7 @@ import {
   generateDocDef,
   filterListingsDef,
   draftEmailDef,
+  sendEmailDef,
   buildCallListDef,
   buildMarketingPackageDef,
   researchContactDef,
@@ -427,7 +435,9 @@ export function createClientTools({
     }),
 
     draftEmailDef.client(async (args) => {
-      const { propertyId, listingId, intent } = args as {
+      const { contactId, contact_name, propertyId, listingId, intent } = args as {
+        contactId?: string;
+        contact_name?: string;
         propertyId?: string;
         listingId?: string;
         intent: string;
@@ -441,9 +451,119 @@ export function createClientTools({
       const propPayload = property
         ? propertySummary(property)
         : { name: listing?.name ?? "the property" };
-      const draft = await generateEmail({ data: { property: propPayload, intent, recipients: [] } });
+      // WHO the email is to, in strict order of authority:
+      //   1. the contact the model resolved from what the broker said
+      //   2. that name, resolved here as a fallback
+      //   3. only then whoever's page is open
+      //
+      // The order is the whole fix: an earlier pass took the open page as the
+      // recipient unconditionally, so "email Rosa" while reading Earl's record
+      // drafted to Earl and left the model apologising for it in the body. A
+      // named person always outranks the current route.
+      const onContact = window.location.pathname.match(
+        /^\/backoffice\/contacts\/([^/]+)/,
+      );
+      const pageContact = onContact ? getContact(onContact[1]) : undefined;
+      let recipient: Contact | undefined = contactId ? getContact(contactId) : undefined;
+      if (!recipient && contact_name) {
+        recipient = resolveContactByName(contact_name) ?? undefined;
+      }
+      if (!recipient) recipient = pageContact;
+
+      // Hand the real recipient over rather than letting the model invent one.
+      // Without this it writes a plausible stranger into the To: line — a draft
+      // to "Earl Whitman at Colliers" when the broker means Earl Pettigrew —
+      // which is wrong on the card and wrong to send.
+      const recipients = recipient
+        ? [
+            {
+              name: `${recipient.firstName} ${recipient.lastName}`.trim(),
+              email: recipient.email,
+              company: recipient.company,
+              title: recipient.title,
+            },
+          ]
+        : [];
+      const draft = await generateEmail({ data: { property: propPayload, intent, recipients } });
       const { email } = createEmailDraft({ subject: draft.subject });
-      return { emailDraft: { ...draft, id: email.id } };
+      // Trust the record over the generated line: the model still sometimes
+      // rewrites the address it was handed.
+      const to = recipient
+        ? [`${recipient.firstName} ${recipient.lastName}`.trim() + ` <${recipient.email}>`]
+        : draft.to;
+      // Fill the composer only when the broker is already on the recipient's own
+      // page — that's the composer this draft belongs in, and revisions land
+      // there too. Drafting to someone else from this page must NOT touch it:
+      // writing Rosa's email into Earl's composer is the same bug wearing a
+      // different hat. The card's "Open in Email" carries it to her page.
+      if (recipient && recipient.id === pageContact?.id) {
+        useComposeFocus.getState().requestEmailDraft({
+          contactId: recipient.id,
+          subject: draft.subject,
+          body: draft.body,
+        });
+      }
+      // Hold the draft as sendable wherever the broker happens to be. Without
+      // this, "send it" only worked from the recipient's own page — and the card
+      // deliberately doesn't take them there, so it usually failed.
+      if (recipient) {
+        setPendingEmail({
+          contactId: recipient.id,
+          contactName: `${recipient.firstName} ${recipient.lastName}`.trim(),
+          to: recipient.email,
+          subject: draft.subject,
+          body: draft.body,
+        });
+      }
+      return { emailDraft: { ...draft, to, id: email.id } };
+    }),
+
+    sendEmailDef.client(async () => {
+      // Prefer the open composer: it holds whatever the broker has edited by
+      // hand, and going through its own submit keeps "send it" and the Send
+      // Email button the same action (see `composerSend.ts`).
+      const fromComposer = requestComposerSend();
+      if (fromComposer?.sent) {
+        setPendingEmail(null);
+        return {
+          sentEmail: {
+            subject: fromComposer.subject,
+            to: fromComposer.to,
+            contactId: fromComposer.contactId,
+            contactName: fromComposer.contactName,
+          },
+        };
+      }
+
+      // No composer open — send the draft itself. It's a complete email to a
+      // real record, so making the broker go open it first was busywork.
+      const pending = getPendingEmail();
+      if (!pending) {
+        // A composer that's open but empty (or on another tab) gets to explain
+        // itself; otherwise there is simply nothing drafted.
+        return {
+          error:
+            fromComposer?.sent === false
+              ? fromComposer.reason
+              : "There's no draft to send — ask me to write one first.",
+        };
+      }
+      useContactSession.getState().addLog(pending.contactId, {
+        kind: "email",
+        body: pending.body,
+        subject: pending.subject,
+        to: pending.to,
+        date: new Date().toISOString().slice(0, 10),
+      });
+      setPendingEmail(null);
+      return {
+        sentEmail: {
+          subject: pending.subject,
+          to: pending.to,
+          contactId: pending.contactId,
+          contactName: pending.contactName,
+        },
+      };
     }),
 
     buildCallListDef.client(async (args) => {

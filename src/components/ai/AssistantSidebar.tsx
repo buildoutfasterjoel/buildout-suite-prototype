@@ -3,13 +3,16 @@ import { useRouter } from "@tanstack/react-router";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { useChat, type UIMessage } from "@tanstack/ai-react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
-import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Accordion } from "@buildoutinc/blueprint-react/ui/Accordion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faSparkles,
+  faArrowUp,
   faPaperPlaneTop,
+  faUser,
+  faPlus,
+  faPaperclip,
   faStop,
   faXmark,
   faFileLines,
@@ -18,6 +21,8 @@ import {
   faUserPlus,
   faPenNib,
   faScrewdriverWrench,
+  faCircleNotch,
+  faCheck,
   faChevronRight,
   faChevronDown,
   faMicrophone,
@@ -27,6 +32,9 @@ import {
   faUsers,
   faBuilding,
 } from "@fortawesome/pro-regular-svg-icons";
+// Solid, deliberately: the avatar's glyph is a silhouette on a pale disc, and
+// the regular weight reads as a hairline outline at 14px.
+import { faOtter } from "@fortawesome/pro-solid-svg-icons";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { createClientTools } from "#/ai/tools";
@@ -297,6 +305,58 @@ function answerOf(output: unknown): string | null {
   return typeof o.answer === "string" ? o.answer : null;
 }
 
+type SentEmailData = {
+  subject: string;
+  to: string;
+  contactId: string;
+  contactName: string;
+};
+
+/** Extract a just-sent email (from `send_email`) from a tool-call's output. */
+function sentEmailOf(output: unknown): SentEmailData | null {
+  const o = (output ?? {}) as { sentEmail?: unknown };
+  return o.sentEmail ? (o.sentEmail as SentEmailData) : null;
+}
+
+/**
+ * Receipt for an email the assistant sent. Sending is the one irreversible
+ * thing it does, so the confirmation is a card rather than a line of prose —
+ * and it carries the way through to the record, which is where the broker goes
+ * next to see it on the timeline.
+ */
+function SentEmailCard({ sent }: { sent: SentEmailData }) {
+  const router = useRouter();
+  return (
+    <div className="border rounded p-3 bg-white d-flex flex-column gap-2">
+      <div className="d-flex align-items-center gap-2">
+        <FontAwesomeIcon icon={faPaperPlaneTop} className="text-purple-heart-600" />
+        <span className="fw-semibold small text-uppercase text-muted">Email sent</span>
+      </div>
+      <div>
+        <div className="fw-semibold">{sent.subject}</div>
+        <div className="small text-muted text-truncate">
+          To {sent.contactName} · {sent.to}
+        </div>
+      </div>
+      <div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() =>
+            router.navigate({
+              to: "/backoffice/contacts/$contactId",
+              params: { contactId: sent.contactId },
+            })
+          }
+        >
+          <FontAwesomeIcon icon={faUser} />
+          View {sent.contactName.split(" ")[0]}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /** Extract the ranked day queue from `plan_my_day`'s output, if present. */
 function dayPlanOf(output: unknown): DayPlanItem[] | null {
   const o = (output ?? {}) as { dayPlan?: unknown };
@@ -327,7 +387,9 @@ function MarketingPackageCard({ pkg }: { pkg: MarketingPackageData }) {
     <div className="d-flex flex-column gap-2">
       <div className="border rounded p-3 bg-white d-flex flex-column gap-2">
         <div className="d-flex align-items-center gap-2">
-          <FontAwesomeIcon icon={faFileLines} className="text-buildout-blue-700" />
+          {/* Purple, like every other generated-artifact header (see the day
+              plan's and the email draft's) — blue is the app's entity colour. */}
+          <FontAwesomeIcon icon={faFileLines} className="text-purple-heart-600" />
           <span className="fw-semibold small text-uppercase text-muted">Marketing flyer</span>
         </div>
         <div className="fw-semibold">{doc.tagline}</div>
@@ -446,7 +508,17 @@ function ResultSummaryCard({ nav, onGo }: { nav: ResultNav; onGo: () => void }) 
  * single-payload results (email draft, brief, marketing package, book answer)
  * always render in full.
  */
-function ToolResultCards({ output }: { output: unknown }) {
+function ToolResultCards({
+  output,
+  latestDraftId,
+}: {
+  output: unknown;
+  /**
+   * The id of the newest email draft in the whole conversation. Anything older
+   * renders collapsed — see `EmailDraftCard`'s `superseded`.
+   */
+  latestDraftId?: string | null;
+}) {
   const router = useRouter();
   const { deals, contacts, properties } = entitiesOf(output);
   const emailDraft = emailDraftOf(output);
@@ -454,7 +526,8 @@ function ToolResultCards({ output }: { output: unknown }) {
   const answer = answerOf(output);
   const marketingPackage = marketingPackageOf(output);
   const dayPlan = dayPlanOf(output);
-  const hasRich = !!(emailDraft || marketingPackage || brief || answer || dayPlan);
+  const sentEmail = sentEmailOf(output);
+  const hasRich = !!(emailDraft || marketingPackage || brief || answer || dayPlan || sentEmail);
   const total = deals.length + contacts.length + properties.length;
 
   if (total === 0 && !hasRich) return null;
@@ -470,7 +543,13 @@ function ToolResultCards({ output }: { output: unknown }) {
           <DayPlanCard items={dayPlan} slot="inline" />
         </>
       )}
-      {emailDraft && <EmailDraftCard draft={emailDraft} />}
+      {emailDraft && (
+        <EmailDraftCard
+          draft={emailDraft}
+          superseded={!!latestDraftId && emailDraft.id !== latestDraftId}
+        />
+      )}
+      {sentEmail && <SentEmailCard sent={sentEmail} />}
       {marketingPackage && <MarketingPackageCard pkg={marketingPackage} />}
       {brief && (
         <div className="assistant-markdown" style={{ whiteSpace: "pre-wrap" }}>
@@ -539,11 +618,99 @@ function MarkdownMessage({ content }: { content: string }) {
   );
 }
 
+/**
+ * Human labels for the tools that surface as chips — "Drafting email", not
+ * `draft_email`. Present participle while running, which is when the broker
+ * actually reads them. A tool missing from this map falls back to a de-snaked
+ * version of its own name, so a new tool reads as prose rather than as code.
+ */
+const TOOL_LABELS: Record<string, string> = {
+  draft_email: "Drafting email",
+  send_email: "Sending email",
+  create_email_draft: "Creating draft",
+  searchAll: "Searching your book",
+  find_contact: "Finding contact",
+  get_contact_detail: "Reading the record",
+  list_deals: "Pulling deals",
+  list_contacts: "Pulling contacts",
+  list_deals_for_contact: "Pulling their deals",
+  list_deals_for_property: "Pulling deals",
+  list_contacts_for_deal: "Pulling contacts",
+  get_property: "Reading the property",
+  get_listing: "Reading the deal",
+  create_deal: "Creating deal",
+  update_deal_stage: "Updating stage",
+  link_contact_to_deal: "Linking contact",
+  create_contact: "Adding contact",
+  create_call_list: "Saving call list",
+  build_call_list: "Building call list",
+  build_marketing_package: "Building package",
+  generate_doc: "Generating document",
+  filter_listings: "Filtering deals",
+  research_contact: "Researching contact",
+  answer_about_contact: "Looking that up",
+  analyze_book: "Reviewing your book",
+  add_note: "Logging note",
+  create_task: "Setting reminder",
+  start_call: "Starting call",
+  plan_my_day: "Planning your day",
+  navigate_to: "Taking you there",
+};
+
+function toolLabel(name: string): string {
+  const known = TOOL_LABELS[name];
+  if (known) return known;
+  const words = name.replace(/[_-]+/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/**
+ * A running (or finished) tool call, as a gradient pill (Figma node 102:3967).
+ * The design specifies the in-flight state; a settled call keeps the pill and
+ * swaps the spinner for a check, so the chip reads as a completed step rather
+ * than one still spinning forever.
+ */
+function ToolChip({ name, running }: { name: string; running: boolean }) {
+  return (
+    <span className="assistant-tool-chip">
+      <FontAwesomeIcon icon={faScrewdriverWrench} className="assistant-tool-chip__icon" />
+      {toolLabel(name)}
+      <FontAwesomeIcon
+        icon={running ? faCircleNotch : faCheck}
+        spin={running}
+        className="assistant-tool-chip__spinner"
+      />
+    </span>
+  );
+}
+
+/**
+ * Read-only tools the model uses to resolve what the broker meant — the CRM
+ * equivalent of looking something up before acting. Named here so the rail can
+ * tell "the record is the answer" apart from "the record was a step on the way"
+ * (see `producesArtifact` in `MessageBubble`).
+ */
+const LOOKUP_TOOLS = new Set([
+  "searchAll",
+  "find_contact",
+  "get_contact_detail",
+  "get_property",
+  "get_listing",
+  "list_deals",
+  "list_contacts",
+  "list_deals_for_contact",
+  "list_deals_for_property",
+  "list_contacts_for_deal",
+]);
+
 /** Render a message: text bubble + a tool chip for actions, or interactive cards for lists. */
 function MessageBubble({
   message,
   suppressPlanText = false,
+  latestDraftId,
 }: {
+  /** Newest email draft in the conversation; older ones render collapsed. */
+  latestDraftId?: string | null;
   message: UIMessage;
   /**
    * True while this message is the in-flight half of a "plan my day" turn. The
@@ -561,7 +728,32 @@ function MessageBubble({
   const toolCalls = message.parts.filter(
     (p): p is Extract<typeof p, { type: "tool-call" }> => p.type === "tool-call",
   );
+  /**
+   * A lookup the model ran to answer something else is a step, not a result. When
+   * the same turn also produced a real artifact, its record cards are noise — a
+   * "Delgado Building, Austin TX" property card wedged above the email draft it
+   * was looked up for, which reads like the assistant answered a question nobody
+   * asked. Those calls fall back to chips ("Searching your book ✓"), which say
+   * the same thing in one line.
+   *
+   * A lookup on its own still renders cards: "find me the Delgado Building" is a
+   * turn where the record IS the answer.
+   */
+  const isLookup = (name: string) => LOOKUP_TOOLS.has(name);
+  const producesArtifact = toolCalls.some(
+    (p) =>
+      !isLookup(p.name) &&
+      (emailDraftOf(p.output) !== null ||
+        briefOf(p.output) !== null ||
+        answerOf(p.output) !== null ||
+        marketingPackageOf(p.output) !== null ||
+        dayPlanOf(p.output) !== null ||
+        sentEmailOf(p.output) !== null ||
+        p.name === "plan_my_day"),
+  );
+
   const cardCalls = toolCalls.filter((p) => {
+    if (producesArtifact && isLookup(p.name)) return false;
     const { deals, contacts, properties } = entitiesOf(p.output);
     return (
       deals.length > 0 ||
@@ -573,6 +765,7 @@ function MessageBubble({
       answerOf(p.output) !== null ||
       marketingPackageOf(p.output) !== null ||
       dayPlanOf(p.output) !== null ||
+      sentEmailOf(p.output) !== null ||
       // Claim plan_my_day by name, before its output arrives: otherwise it spends
       // the streaming window classified as a chip and the tool's raw name flashes
       // above the card that replaces it.
@@ -600,11 +793,10 @@ function MessageBubble({
         <div className={`d-flex ${isUser ? "justify-content-end" : "justify-content-start"}`}>
           <div
             // Modern-chat convention: the user's turn is a grey bubble, the
-            // assistant's is unadorned text that runs the full width.
-            className={
-              isUser ? "rounded px-3 py-2 bg-body-secondary text-body" : "text-body w-100"
-            }
-            style={isUser ? { maxWidth: "85%" } : undefined}
+            // assistant's is unadorned text that runs the full width. The
+            // bubble's fill, radius and max width are the design's — see
+            // `.assistant-bubble--user` (Figma node 5:29).
+            className={isUser ? "assistant-bubble--user" : "text-body w-100"}
           >
             {showText &&
               (isUser ? (
@@ -612,20 +804,18 @@ function MessageBubble({
               ) : (
                 <MarkdownMessage content={text} />
               ))}
-            {chipCalls.map((p, i) => (
-              <div
-                key={i}
-                className="d-inline-flex align-items-center gap-1 mt-1 small text-muted"
-              >
-                <FontAwesomeIcon icon={faScrewdriverWrench} />
-                {p.name}
+            {chipCalls.length > 0 && (
+              <div className="d-flex flex-wrap gap-2 mt-1">
+                {chipCalls.map((p, i) => (
+                  <ToolChip key={i} name={p.name} running={p.output === undefined} />
+                ))}
               </div>
-            ))}
+            )}
           </div>
         </div>
       )}
       {cardCalls.map((p, i) => (
-        <ToolResultCards key={i} output={p.output} />
+        <ToolResultCards key={i} output={p.output} latestDraftId={latestDraftId} />
       ))}
     </div>
   );
@@ -652,6 +842,23 @@ function HeroOfferChips({ onCall, onBrief }: { onCall: () => void; onBrief: () =
   );
 }
 
+/**
+ * A picked file, as the composer's chip shows it (Figma node 10:62): name over
+ * an extension + size meta line.
+ *
+ * Attachments are presentational — the prototype's relay sends text only, so
+ * chips demonstrate the affordance and clear on send rather than riding along
+ * with the message.
+ */
+type ComposerAttachment = { id: string; name: string; meta: string };
+
+function describeFile(file: File): ComposerAttachment {
+  const ext = file.name.includes(".") ? file.name.split(".").pop()!.toUpperCase() : "FILE";
+  const kb = Math.max(1, Math.round(file.size / 1024));
+  const size = kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`;
+  return { id: `${file.name}-${file.size}-${file.lastModified}`, name: file.name, meta: `${ext} · ${size}` };
+}
+
 export function AssistantSidebar() {
   const open = useAssistant((s) => s.open);
   const setOpen = useAssistant((s) => s.setOpen);
@@ -664,9 +871,24 @@ export function AssistantSidebar() {
   const [brief, setBrief] = useState<{ spec: CallBriefSpecT; name: string; contactId: string } | null>(
     null,
   );
+  const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const fieldRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+
+  /**
+   * Auto-grow the composer: one line at rest, growing with the value to a cap
+   * (roughly six lines) after which it scrolls, so a long prompt can't push the
+   * transcript off the top of the rail.
+   */
+  useEffect(() => {
+    const el = fieldRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+  }, [draft]);
 
   const tools = useMemo(
     () => createClientTools({ navigate: (to) => router.navigate({ to: to as never }) }),
@@ -707,6 +929,7 @@ export function AssistantSidebar() {
       const content = text.trim();
       if (!content || isLoading) return;
       setDraft("");
+      setAttachments([]);
 
       // A pending hero offer (§Phase 4A) takes priority over the normal agent
       // turn: "yes" opens the live call, "brief me first" generates a call
@@ -862,6 +1085,27 @@ export function AssistantSidebar() {
   }, [hasUserMessage]);
 
   /**
+   * The newest email draft in the transcript. Every older draft card collapses
+   * against it, so a revision leaves one open version in view and the history
+   * folded above it rather than a stack of near-identical emails.
+   *
+   * Scoped to drafts that arrived as `draft_email` results: the marketing
+   * package's launch email is part of a different artifact and shouldn't fold
+   * away because someone later revised an unrelated one.
+   */
+  const latestDraftId = useMemo(() => {
+    let latest: string | null = null;
+    for (const m of messages) {
+      for (const p of m.parts) {
+        if (p.type !== "tool-call") continue;
+        const d = emailDraftOf(p.output);
+        if (d?.id) latest = d.id;
+      }
+    }
+    return latest;
+  }, [messages]);
+
+  /**
    * Whether the in-flight turn is a "plan my day" ask, so the progress checklist
    * replaces the generic "Working…" line. Read off the last user message rather
    * than tracked on send, so it survives re-renders and stays correct on replay.
@@ -930,7 +1174,7 @@ export function AssistantSidebar() {
     setConversationMode(false);
   });
 
-  // A prompt queued from another surface (e.g. omni search "Ask AI") is sent as
+  // A prompt queued from another surface (e.g. omni search "Ask Otto") is sent as
   // soon as it lands. This effect runs before the early return below, so the
   // hook order stays stable whether or not the panel is visible.
   useEffect(() => {
@@ -956,13 +1200,15 @@ export function AssistantSidebar() {
     ]);
   }, [pendingLine, consumeLine, setMessages, messages]);
 
-  // A focus request from another surface (e.g. omni search "Ask AI") focuses the
+  // A focus request from another surface (e.g. omni search "Ask Otto") focuses the
   // composer input, so once the queued prompt auto-sends the user is already
   // positioned to type a follow-up. Keyed off a nonce so repeat requests re-fire.
   useEffect(() => {
     if (focusNonce === 0) return;
     const id = requestAnimationFrame(() => {
-      formRef.current?.querySelector("input")?.focus();
+      // The composer is a textarea, so `querySelector("input")` here would find
+      // only the hidden file picker.
+      fieldRef.current?.focus();
     });
     return () => cancelAnimationFrame(id);
   }, [focusNonce]);
@@ -976,41 +1222,58 @@ export function AssistantSidebar() {
       className="border-start bg-white d-flex flex-column flex-shrink-0 h-100"
       style={{ width: 380 }}
     >
-      {/* Header */}
-      <div className="d-flex align-items-center gap-2 px-3 py-3 border-bottom">
-        <FontAwesomeIcon icon={faSparkles} className="text-purple-heart-600" />
-        <div className="d-flex flex-column lh-sm flex-grow-1" style={{ minWidth: 0 }}>
-          <span className="fw-semibold">Assistant</span>
-          <span className="text-muted small text-truncate">Your Buildout assistant</span>
+      {/* Otto's glyphs — the header otter and the starter rows' icons — are
+          gradient-filled in the design, which an SVG icon can't express in CSS.
+          Their `fill` points at this def instead (see main.scss). One per rail,
+          hoisted here rather than living inside the header, because two
+          components now reference it. Zero-sized and aria-hidden: it paints
+          nothing itself. */}
+      <svg width="0" height="0" aria-hidden="true" focusable="false" className="position-absolute">
+        <linearGradient id="otto-glyph-gradient" x1="1" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#9f55f7" />
+          <stop offset="100%" stopColor="#360764" />
+        </linearGradient>
+      </svg>
+
+      {/* Header (Figma node 25:178) */}
+      <div className="assistant-rail__header">
+        <span className="assistant-rail__avatar">
+          <FontAwesomeIcon icon={faOtter} />
+        </span>
+        <div className="d-flex flex-column flex-grow-1" style={{ minWidth: 0 }}>
+          <span className="assistant-rail__title text-truncate">Otto</span>
+          <span className="assistant-rail__subtitle text-truncate">Your Buildout assistant</span>
         </div>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={voiceEnabled ? "Turn voice off" : "Turn voice on"}
-          onClick={() => {
-            const next = !voiceEnabled;
-            // Sticky manual off: toggleVoice records the intent so starting the
-            // mic later won't silently turn voice back on.
-            toggleVoice(next);
-            if (!next) {
-              voiceEngine.cancel();
-              setConversationMode(false);
-            }
-          }}
-        >
-          <FontAwesomeIcon icon={voiceEnabled ? faVolumeHigh : faVolumeXmark} />
-        </Button>
         {/* Route-scope badge ("People", "Buildout Suite", …) parked for now.
             `scopeLabel` is kept exported so the mapping survives; restoring the
             badge means putting a <Badge> back here with the current pathname. */}
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Close assistant"
-          onClick={() => setOpen(false)}
-        >
-          <FontAwesomeIcon icon={faXmark} />
-        </Button>
+        <div className="d-flex align-items-start gap-1 flex-shrink-0">
+          <button
+            type="button"
+            className="assistant-rail__control"
+            aria-label={voiceEnabled ? "Turn voice off" : "Turn voice on"}
+            onClick={() => {
+              const next = !voiceEnabled;
+              // Sticky manual off: toggleVoice records the intent so starting the
+              // mic later won't silently turn voice back on.
+              toggleVoice(next);
+              if (!next) {
+                voiceEngine.cancel();
+                setConversationMode(false);
+              }
+            }}
+          >
+            <FontAwesomeIcon icon={voiceEnabled ? faVolumeHigh : faVolumeXmark} />
+          </button>
+          <button
+            type="button"
+            className="assistant-rail__control"
+            aria-label="Close assistant"
+            onClick={() => setOpen(false)}
+          >
+            <FontAwesomeIcon icon={faXmark} />
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
@@ -1025,6 +1288,7 @@ export function AssistantSidebar() {
             <Fragment key={m.id}>
               <MessageBubble
                 message={m}
+                latestDraftId={latestDraftId}
                 suppressPlanText={
                   planPending && m.role === "assistant" && i === messages.length - 1
                 }
@@ -1101,58 +1365,132 @@ export function AssistantSidebar() {
           />
         </div>
       )}
-      {/* Input */}
-      <form
-        ref={formRef}
-        className="d-flex align-items-center gap-2 p-3 border-top"
-        onSubmit={(e) => {
-          e.preventDefault();
-          send(draft);
-        }}
-      >
-        <Input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="Ask the assistant…"
-          aria-label="Message the assistant"
-          // Without this the browser offers its own form-history dropdown of
-          // previously-typed prompts the moment the composer takes focus, which
-          // reads as a stray suggestion bubble floating over the rail.
-          autoComplete="off"
-        />
-        <Button
-          type="button"
-          variant={listening ? "primary" : "outline"}
-          size="icon"
-          aria-label={listening ? "Listening — tap to stop" : "Speak to the assistant"}
-          onClick={() => {
-            if (listening) {
-              // `voiceEngine.cancel()` only silences speech *synthesis* — the
-              // recognizer lives in useHandsFree, so without stopHandsFree() the
-              // mic stayed hot and `listening` never cleared: on, with no way off.
-              stopHandsFree();
-              voiceEngine.cancel();
-            } else {
-              // Starting the mic turns voice on so Otto talks back — unless the
-              // user deliberately muted it (then stay silent, STT only).
-              enableVoiceForMic();
-              setConversationMode(true);
-              startHandsFree();
-            }
+      {/* Input (Figma node 12:108) */}
+      <div className="px-3 pb-3">
+        <form
+          ref={formRef}
+          // `--filled` swaps the grid template so the value lifts to its own row
+          // above the controls; empty, the placeholder sits inline between them.
+          className={`otto-composer${draft ? " otto-composer--filled" : ""}`}
+          onSubmit={(e) => {
+            e.preventDefault();
+            send(draft);
           }}
         >
-          <FontAwesomeIcon icon={faMicrophone} />
-        </Button>
-        {isLoading ? (
-          <Button type="button" variant="outline" size="icon" aria-label="Stop" onClick={stop}>
-            <FontAwesomeIcon icon={faStop} />
-          </Button>
-        ) : (
-          <Button type="submit" variant="primary" size="icon" aria-label="Send" disabled={!draft.trim()}>
-            <FontAwesomeIcon icon={faPaperPlaneTop} />
-          </Button>
-        )}
-      </form>
+          {attachments.length > 0 && (
+            <div className="otto-composer__files">
+              {attachments.map((f) => (
+                <span key={f.id} className="otto-composer__file">
+                  <FontAwesomeIcon icon={faPaperclip} className="flex-shrink-0" />
+                  <span className="otto-composer__file-label">
+                    <span className="otto-composer__file-name text-truncate">{f.name}</span>
+                    <span className="otto-composer__file-meta">{f.meta}</span>
+                  </span>
+                  <button
+                    type="button"
+                    className="otto-composer__file-remove"
+                    aria-label={`Remove ${f.name}`}
+                    onClick={() => setAttachments((prev) => prev.filter((a) => a.id !== f.id))}
+                  >
+                    <FontAwesomeIcon icon={faXmark} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="otto-composer__body">
+            {/* A textarea, not an Input: the value wraps onto as many lines as it
+                needs (auto-grown below, to a cap) and the box, not the field,
+                carries the border. Its position in the tree is FIXED — the
+                resting/filled switch is CSS only, so typing the first character
+                can't re-parent it and drop focus. */}
+            <textarea
+              ref={fieldRef}
+              className="otto-composer__field"
+              rows={1}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                // Enter sends; Shift+Enter is a newline.
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  send(draft);
+                }
+              }}
+              placeholder="Ask Otto for assistance"
+              aria-label="Message Otto"
+              // Without this the browser offers its own form-history dropdown of
+              // previously-typed prompts the moment the composer takes focus,
+              // which reads as a stray suggestion bubble floating over the rail.
+              autoComplete="off"
+            />
+            <div className="otto-composer__left">
+              <button
+                type="button"
+                className="otto-composer__attach"
+                aria-label="Attach a file"
+                onClick={() => fileRef.current?.click()}
+              >
+                <FontAwesomeIcon icon={faPlus} />
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                multiple
+                className="d-none"
+                onChange={(e) => {
+                  const picked = Array.from(e.target.files ?? []);
+                  if (picked.length) setAttachments((prev) => [...prev, ...picked.map(describeFile)]);
+                  // Reset, so picking the same file twice still fires a change.
+                  e.target.value = "";
+                }}
+              />
+            </div>
+            <div className="otto-composer__right">
+              <button
+                type="button"
+                className={`otto-composer__mic${listening ? " is-live" : ""}`}
+                aria-label={listening ? "Listening — tap to stop" : "Speak to Otto"}
+                onClick={() => {
+                  if (listening) {
+                    // `voiceEngine.cancel()` only silences speech *synthesis* — the
+                    // recognizer lives in useHandsFree, so without stopHandsFree() the
+                    // mic stayed hot and `listening` never cleared: on, with no way off.
+                    stopHandsFree();
+                    voiceEngine.cancel();
+                  } else {
+                    // Starting the mic turns voice on so Otto talks back — unless the
+                    // user deliberately muted it (then stay silent, STT only).
+                    enableVoiceForMic();
+                    setConversationMode(true);
+                    startHandsFree();
+                  }
+                }}
+              >
+                <FontAwesomeIcon icon={faMicrophone} />
+              </button>
+              {/* Send only exists once there's something to send (per the
+                  design); mid-turn it's the stop button in the same slot. */}
+              {isLoading ? (
+                <button
+                  type="button"
+                  className="otto-composer__send"
+                  aria-label="Stop"
+                  onClick={stop}
+                >
+                  <FontAwesomeIcon icon={faStop} />
+                </button>
+              ) : (
+                draft.trim() && (
+                  <button type="submit" className="otto-composer__send" aria-label="Send">
+                    <FontAwesomeIcon icon={faArrowUp} />
+                  </button>
+                )
+              )}
+            </div>
+          </div>
+        </form>
+      </div>
     </aside>
   );
 }
