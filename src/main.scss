@@ -1707,6 +1707,22 @@
 }
 .omni-menu__voice {
   border-radius: var(--bp-border-radius-lg, 8px);
+
+  // Live mic: filled, so "tap again to stop" is obviously available. Matches the
+  // assistant rail's mic, which switches to the primary button variant.
+  &.is-listening {
+    background: colors.$purple-heart-600;
+    color: #fff;
+
+    &:hover {
+      background: colors.$purple-heart-700;
+    }
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
 }
 
 // Tab track — underline tabs matching the popover spec.

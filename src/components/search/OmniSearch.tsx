@@ -19,6 +19,8 @@ import { getProperty } from "#/data/store";
 import { useDataStore } from "#/data/dataStore";
 import type { Property, Listing, Contact } from "#/data/types";
 import { useAssistant } from "#/ai/useAssistant";
+import { useVoice } from "#/ai/voice/useVoice";
+import { useHandsFree } from "#/ai/voice/useHandsFree";
 import { useCreateDeal } from "#/data/useCreateDeal";
 import { useOmniSearch } from "#/components/search/useOmniSearch";
 import { dealCardLinkProps } from "#/components/deals/dealCardLink";
@@ -105,7 +107,9 @@ function OmniItemIcon({
 export function OmniSearch() {
   const open = useOmniSearch((s) => s.open);
   const setOpen = useOmniSearch((s) => s.setOpen);
+  const consumeAutoVoice = useOmniSearch((s) => s.consumeAutoVoice);
   const askAssistant = useAssistant((s) => s.ask);
+  const listening = useVoice((s) => s.listening);
   const router = useRouter();
 
   // Reactive entity maps power the empty-query "browse" state (before the user
@@ -120,6 +124,7 @@ export function OmniSearch() {
   const contentRef = useRef<HTMLDivElement>(null);
 
   function close() {
+    stopVoice();
     setOpen(false);
     setQuery("");
     setTab("all");
@@ -140,6 +145,33 @@ export function OmniSearch() {
     router.navigate(dealCardLinkProps(deal));
     close();
   };
+
+  /**
+   * Dictation for the bar: interim speech types straight into the input so the
+   * broker can see it land, and the finished sentence is handed to the assistant
+   * — which opens the rail and sends it, the same path the "Ask AI" row uses.
+   *
+   * Deliberately does NOT call `enableVoiceForMic()`: this is dictation, and
+   * speaking into a search bar shouldn't quietly switch on the assistant's voice.
+   */
+  const {
+    start: startVoice,
+    stop: stopVoice,
+    supported: voiceSupported,
+  } = useHandsFree({
+    onInterim: (text) => setQuery(text),
+    onSubmit: (text) => {
+      askAssistant(text);
+      close();
+    },
+  });
+
+  // Opened from the navbar's mic → start listening as the overlay mounts.
+  useEffect(() => {
+    if (!open) return;
+    if (!consumeAutoVoice()) return;
+    startVoice();
+  }, [open, consumeAutoVoice, startVoice]);
 
   const entries = useMemo<Entry[]>(() => {
     const q = query.trim();
@@ -314,8 +346,12 @@ export function OmniSearch() {
               />
               <button
                 type="button"
-                className="omni-menu__icon-btn omni-menu__voice"
-                aria-label="Voice search"
+                className={`omni-menu__icon-btn omni-menu__voice${
+                  listening ? " is-listening" : ""
+                }`}
+                aria-label={listening ? "Listening — tap to stop" : "Voice search"}
+                onClick={() => (listening ? stopVoice() : startVoice())}
+                disabled={!voiceSupported}
               >
                 <FontAwesomeIcon icon={faMicrophone} />
               </button>
