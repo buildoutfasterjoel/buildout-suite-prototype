@@ -51,6 +51,20 @@
     min-width: 40rem; // 640px
   }
 
+  // ── Coordinate picker ─────────────────────────────────────────────────────
+  // Half the cluster's width, square. `flex: 1 1 0` rather than a fixed size so
+  // it splits evenly with the coordinate column beside it — basis 0 is what
+  // makes the halves equal, since growing from `auto` would leave each side its
+  // unequal intrinsic width.
+  //
+  // Height comes from `aspect-ratio`, not a percentage: Leaflet measures its
+  // container when it initialises, and a percentage height against an
+  // auto-height parent resolves to zero, which leaves the map a blank strip.
+  &__coord-map {
+    flex: 1 1 0;
+    aspect-ratio: 1;
+  }
+
   // ── Disclosure ────────────────────────────────────────────────────────────
   // Deliberately not a heading: it used to be an <h3>, the same level as the
   // group titles it sat among.

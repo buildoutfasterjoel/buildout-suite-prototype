@@ -8,6 +8,7 @@ import {
 	TextField,
 } from "#/components/listings/edit/fieldWidgets";
 import { US_STATES, stateLabel } from "#/components/contacts/usStates";
+import { CoordinatePickerMap } from "#/components/listings/edit/CoordinatePickerMap";
 import type { DealMarketing, Property, YesNoNA } from "#/data/types";
 
 // ── Local option constants ───────────────────────────────────────────────────
@@ -180,22 +181,34 @@ export function LocationSection({
 					onChange={(v) => patchProperty({ overrideMapLocation: v })}
 				/>
 				{property.overrideMapLocation && (
-					<FieldGrid>
-						<Col span={6}>
+					// Stacked pair on the left, square map on the right. The two are
+					// one control in two forms: the map reports every click back
+					// through the same patch the inputs use, so neither can drift
+					// from the other. Deliberately not a `FieldGrid` — side-by-side
+					// coordinates would each land under the ~330px an inline label
+					// needs, which is the squeeze the span-6 rule exists to prevent.
+					<div className="d-flex align-items-start gap-3">
+						<div
+							className="d-flex flex-column gap-2"
+							style={{ flexBasis: 0, flexGrow: 1 }}
+						>
 							<NumberField
 								label="Latitude"
 								value={property.lat ?? null}
 								onChange={(v) => patchProperty({ lat: v ?? 0 })}
 							/>
-						</Col>
-						<Col span={6}>
 							<NumberField
 								label="Longitude"
 								value={property.lng ?? null}
 								onChange={(v) => patchProperty({ lng: v ?? 0 })}
 							/>
-						</Col>
-					</FieldGrid>
+						</div>
+						<CoordinatePickerMap
+							lat={property.lat ?? null}
+							lng={property.lng ?? null}
+							onPick={(lat, lng) => patchProperty({ lat, lng })}
+						/>
+					</div>
 				)}
 			</SubGroup>
 
