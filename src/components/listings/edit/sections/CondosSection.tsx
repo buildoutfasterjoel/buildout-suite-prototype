@@ -116,14 +116,14 @@ export function CondosSection({
 								/>
 
 								<FieldGrid>
-									<Col span={3}>
+									<Col span={6}>
 										<NumberField
 											label="Sale Price"
 											value={condo.salePrice ?? null}
 											onChange={(v) => update(condo.id, { salePrice: v })}
 										/>
 									</Col>
-									<Col span={3}>
+									<Col span={6}>
 										<SelectField
 											label="Price Units"
 											value={condo.priceUnits ?? "Total"}
@@ -131,14 +131,14 @@ export function CondosSection({
 											onChange={(v) => update(condo.id, { priceUnits: v })}
 										/>
 									</Col>
-									<Col span={3}>
+									<Col span={6}>
 										<NumberField
 											label="Size"
 											value={condo.size ?? null}
 											onChange={(v) => update(condo.id, { size: v })}
 										/>
 									</Col>
-									<Col span={3}>
+									<Col span={6}>
 										<SelectField
 											label="Size Units"
 											value={condo.sizeUnits ?? "Sq Ft"}

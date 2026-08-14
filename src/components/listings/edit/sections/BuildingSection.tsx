@@ -40,14 +40,14 @@ export function BuildingSection({
 		<>
 			<SubGroup label="Size & Age">
 				<FieldGrid>
-					<Col span={3}>
+					<Col span={6}>
 						<NumberField
 							label="Building Size"
 							value={property.buildingSqFt}
 							onChange={(v) => patchProperty({ buildingSqFt: v ?? 0 })}
 						/>
 					</Col>
-					<Col span={3}>
+					<Col span={6}>
 						<NumberField
 							label="Occupancy %"
 							value={property.occupancyPct}
@@ -55,14 +55,14 @@ export function BuildingSection({
 							fieldKey="occupancyPct"
 						/>
 					</Col>
-					<Col span={3}>
+					<Col span={6}>
 						<NumberField
 							label="Year Built"
 							value={property.yearBuilt}
 							onChange={(v) => patchProperty({ yearBuilt: v ?? 0 })}
 						/>
 					</Col>
-					<Col span={3}>
+					<Col span={6}>
 						<NumberField
 							label="Year Renovated"
 							value={property.yearRenovated ?? null}
@@ -74,35 +74,35 @@ export function BuildingSection({
 
 			<SubGroup label="Structure">
 				<FieldGrid>
-					<Col span={3}>
+					<Col span={6}>
 						<NumberField
 							label="Number of Floors"
 							value={property.stories}
 							onChange={(v) => patchProperty({ stories: v ?? 0 })}
 						/>
 					</Col>
-					<Col span={3}>
+					<Col span={6}>
 						<NumberField
 							label="Average Floor Size"
 							value={property.avgFloorSize ?? null}
 							onChange={(v) => patchProperty({ avgFloorSize: v })}
 						/>
 					</Col>
-					<Col span={3}>
+					<Col span={6}>
 						<NumberField
 							label="Ceiling Height"
 							value={property.ceilingHeight ?? null}
 							onChange={(v) => patchProperty({ ceilingHeight: v })}
 						/>
 					</Col>
-					<Col span={3}>
+					<Col span={6}>
 						<NumberField
 							label="Min Ceiling Height"
 							value={property.minCeilingHeight ?? null}
 							onChange={(v) => patchProperty({ minCeilingHeight: v })}
 						/>
 					</Col>
-					<Col span={3}>
+					<Col span={6}>
 						<NumberField
 							label="Office Space"
 							value={property.officeSpaceSqFt ?? null}
@@ -144,28 +144,28 @@ export function BuildingSection({
 			{effects.industrialCluster && (
 				<SubGroup label="Loading">
 					<FieldGrid>
-						<Col span={3}>
+						<Col span={6}>
 							<NumberField
 								label="Grade Level Doors"
 								value={property.gradeLevelDoors ?? null}
 								onChange={(v) => patchProperty({ gradeLevelDoors: v })}
 							/>
 						</Col>
-						<Col span={3}>
+						<Col span={6}>
 							<NumberField
 								label="Dock High Doors"
 								value={property.dockHighDoors ?? null}
 								onChange={(v) => patchProperty({ dockHighDoors: v })}
 							/>
 						</Col>
-						<Col span={3}>
+						<Col span={6}>
 							<NumberField
 								label="Drive-in Bays"
 								value={property.driveInBays ?? null}
 								onChange={(v) => patchProperty({ driveInBays: v })}
 							/>
 						</Col>
-						<Col span={3}>
+						<Col span={6}>
 							<NumberField
 								label="Number of Cranes"
 								value={property.numberOfCranes ?? null}
@@ -217,28 +217,28 @@ export function BuildingAdditionalFields({
 		<AdditionalFields label="Show 19 more building fields">
 			<SubGroup label="Measurements">
 				<FieldGrid>
-					<Col span={3}>
+					<Col span={6}>
 						<NumberField
 							label="Overhead Door Height"
 							value={property.overheadDoorHeight ?? null}
 							onChange={(v) => patchProperty({ overheadDoorHeight: v })}
 						/>
 					</Col>
-					<Col span={3}>
+					<Col span={6}>
 						<TextField
 							label="Column Space"
 							value={property.columnSpace ?? ""}
 							onChange={(v) => patchProperty({ columnSpace: v })}
 						/>
 					</Col>
-					<Col span={3}>
+					<Col span={6}>
 						<NumberField
 							label="Gross Leasable Area"
 							value={property.grossLeasableArea ?? null}
 							onChange={(v) => patchProperty({ grossLeasableArea: v })}
 						/>
 					</Col>
-					<Col span={3}>
+					<Col span={6}>
 						<NumberField
 							label="Load Factor"
 							value={property.loadFactor ?? null}
@@ -250,28 +250,28 @@ export function BuildingAdditionalFields({
 
 			<SubGroup label="Parking & Construction">
 				<FieldGrid>
-					<Col span={3}>
+					<Col span={6}>
 						<TextField
 							label="Construction Status"
 							value={property.constructionStatus ?? ""}
 							onChange={(v) => patchProperty({ constructionStatus: v })}
 						/>
 					</Col>
-					<Col span={3}>
+					<Col span={6}>
 						<NumberField
 							label="Parking Ratio"
 							value={property.parkingRatio ?? null}
 							onChange={(v) => patchProperty({ parkingRatio: v })}
 						/>
 					</Col>
-					<Col span={3}>
+					<Col span={6}>
 						<TextField
 							label="Parking Type"
 							value={property.parkingType ?? ""}
 							onChange={(v) => patchProperty({ parkingType: v })}
 						/>
 					</Col>
-					<Col span={3}>
+					<Col span={6}>
 						<NumberField
 							label="Warehouse %"
 							value={property.warehousePct ?? null}
@@ -283,7 +283,7 @@ export function BuildingAdditionalFields({
 				<FieldGrid>
 					<Col span={12}>
 						<TextField
-							label="Construction Description"
+							label="Construction Notes"
 							textarea
 							value={property.constructionDescription ?? ""}
 							onChange={(v) =>
@@ -304,21 +304,21 @@ export function BuildingAdditionalFields({
 
 			<SubGroup label="Systems & Condition">
 				<FieldGrid>
-					<Col span={4}>
+					<Col span={6}>
 						<TextField
 							label="Condition"
 							value={property.condition ?? ""}
 							onChange={(v) => patchProperty({ condition: v })}
 						/>
 					</Col>
-					<Col span={4}>
+					<Col span={6}>
 						<NumberField
 							label="Number of Elevators"
 							value={property.numberOfElevators ?? null}
 							onChange={(v) => patchProperty({ numberOfElevators: v })}
 						/>
 					</Col>
-					<Col span={4}>
+					<Col span={6}>
 						<TextField
 							label="Roof"
 							value={property.roof ?? ""}

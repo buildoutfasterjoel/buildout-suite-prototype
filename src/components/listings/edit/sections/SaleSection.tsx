@@ -172,14 +172,14 @@ export function SaleSection({
 				{marketing.auction && (
 					<>
 						<FieldGrid>
-							<Col span={3}>
+							<Col span={6}>
 								<DateField
 									label="Auction Date"
 									value={marketing.auctionDate ?? null}
 									onChange={(v) => patchMarketing({ auctionDate: v })}
 								/>
 							</Col>
-							<Col span={3}>
+							<Col span={6}>
 								<TextField
 									label="Auction Time"
 									value={marketing.auctionTime ?? ""}
@@ -270,14 +270,14 @@ export function SaleAdditionalFields({
 				/>
 
 				<FieldGrid>
-					<Col span={4}>
+					<Col span={6}>
 						<NumberField
 							label="Tax Value - Land"
 							value={marketing.taxValueLand ?? null}
 							onChange={(v) => patchMarketing({ taxValueLand: v })}
 						/>
 					</Col>
-					<Col span={4}>
+					<Col span={6}>
 						<NumberField
 							label="Tax Value - Improvements"
 							value={marketing.taxValueImprovements ?? null}
@@ -286,7 +286,7 @@ export function SaleAdditionalFields({
 							}
 						/>
 					</Col>
-					<Col span={4}>
+					<Col span={6}>
 						<NumberField
 							label="Tax Value - Personal"
 							value={marketing.taxValuePersonal ?? null}

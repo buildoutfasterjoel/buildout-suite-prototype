@@ -71,7 +71,7 @@ export function LeaseSection({
 				</FieldGrid>
 
 				<TextField
-					label="Lease Closing Information"
+					label="Closing Info"
 					textarea
 					value={marketing.leaseClosingInformation ?? ""}
 					onChange={(v) => patchMarketing({ leaseClosingInformation: v })}

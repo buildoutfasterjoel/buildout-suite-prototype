@@ -73,7 +73,7 @@ export function LandAdditionalFields({
 		<AdditionalFields label="Show 13 more land fields">
 			<SubGroup label="Utilities">
 				<FieldGrid>
-					<Col span={3}>
+					<Col span={6}>
 						<YesNoNaField
 							label="Irrigation"
 							value={property.irrigation}
@@ -89,7 +89,7 @@ export function LandAdditionalFields({
 							}
 						/>
 					</Col>
-					<Col span={3}>
+					<Col span={6}>
 						<YesNoNaField
 							label="Water"
 							value={property.water}
@@ -103,7 +103,7 @@ export function LandAdditionalFields({
 							onChange={(v) => patchProperty({ waterDescription: v })}
 						/>
 					</Col>
-					<Col span={3}>
+					<Col span={6}>
 						<YesNoNaField
 							label="Telephone"
 							value={property.telephone}
@@ -119,7 +119,7 @@ export function LandAdditionalFields({
 							}
 						/>
 					</Col>
-					<Col span={3}>
+					<Col span={6}>
 						<YesNoNaField
 							label="Cable"
 							value={property.cable}
@@ -133,7 +133,7 @@ export function LandAdditionalFields({
 							onChange={(v) => patchProperty({ cableDescription: v })}
 						/>
 					</Col>
-					<Col span={3}>
+					<Col span={6}>
 						<YesNoNaField
 							label="Sewer"
 							value={property.sewer}
@@ -145,7 +145,7 @@ export function LandAdditionalFields({
 
 			<SubGroup label="Site Conditions">
 				<FieldGrid>
-					<Col span={4}>
+					<Col span={6}>
 						<TextField
 							label="Environmental Issues"
 							value={property.environmentalIssues ?? ""}
@@ -154,14 +154,14 @@ export function LandAdditionalFields({
 							}
 						/>
 					</Col>
-					<Col span={4}>
+					<Col span={6}>
 						<TextField
 							label="Topography"
 							value={property.topography ?? ""}
 							onChange={(v) => patchProperty({ topography: v })}
 						/>
 					</Col>
-					<Col span={4}>
+					<Col span={6}>
 						<TextField
 							label="Soil Type"
 							value={property.soilType ?? ""}

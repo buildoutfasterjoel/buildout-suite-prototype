@@ -78,9 +78,17 @@ function AdditionalTypesEditor({
 					<FontAwesomeIcon icon={faPlus} /> Add type
 				</Button>
 			</div>
+			{/* Flex, not a 5/6/1 grid. The remove button used to sit in its own
+			    grid column with `justify-content-end`, which parked it at the far
+			    edge of that column and left a gap wide enough that it read as
+			    detached from the row it deletes. Here it hugs at the same 8px as
+			    the bullet rows in `BulletsField` — the bound tier. `flexBasis: 0`
+			    is what makes the two fields split evenly: `flex-grow-1` alone only
+			    shares out the *leftover* space, so the pair inherited their unequal
+			    intrinsic widths and Type kept a 128px control. */}
 			{rows.map((r, i) => (
-				<div key={i} className="row g-2 align-items-end">
-					<div className="col-md-5">
+				<div key={i} className="d-flex align-items-end gap-2">
+					<div className="flex-grow-1" style={{ flexBasis: 0 }}>
 						<SelectField
 							label="Type"
 							value={r.type}
@@ -91,7 +99,7 @@ function AdditionalTypesEditor({
 							}
 						/>
 					</div>
-					<div className="col-md-6">
+					<div className="flex-grow-1" style={{ flexBasis: 0 }}>
 						<SelectField
 							label="Subtype"
 							value={r.subtype}
@@ -103,16 +111,15 @@ function AdditionalTypesEditor({
 							}
 						/>
 					</div>
-					<div className="col-md-1 d-flex justify-content-end pb-1">
-						<Button
-							variant="ghost"
-							size="icon"
-							aria-label="Remove type"
-							onClick={() => onChange(rows.filter((_, j) => j !== i))}
-						>
-							<FontAwesomeIcon icon={faTrashCan} />
-						</Button>
-					</div>
+					<Button
+						variant="ghost"
+						size="icon"
+						className="flex-shrink-0"
+						aria-label="Remove type"
+						onClick={() => onChange(rows.filter((_, j) => j !== i))}
+					>
+						<FontAwesomeIcon icon={faTrashCan} />
+					</Button>
 				</div>
 			))}
 		</div>
@@ -148,7 +155,7 @@ export function PropertySection({
 				<FieldGrid>
 					<Col>
 						<SelectField
-							label="Primary Property Type"
+							label="Property Type"
 							value={property.propertyType}
 							options={PROPERTY_TYPES}
 							labels={TYPE_LABELS}
@@ -157,7 +164,7 @@ export function PropertySection({
 					</Col>
 					<Col>
 						<SelectField
-							label="Primary Property Subtype"
+							label="Subtype"
 							value={property.propertySubtype}
 							options={ALL_SUBTYPES}
 							onChange={(v) => patchProperty({ propertySubtype: v })}
@@ -202,28 +209,28 @@ export function PropertySection({
 
 			<SubGroup label="Parcel">
 				<FieldGrid>
-					<Col span={3}>
+					<Col span={6}>
 						<TextField
 							label="Zoning"
 							value={property.zoning}
 							onChange={(v) => patchProperty({ zoning: v })}
 						/>
 					</Col>
-					<Col span={3}>
+					<Col span={6}>
 						<TextField
 							label="APN#"
 							value={property.apn}
 							onChange={(v) => patchProperty({ apn: v })}
 						/>
 					</Col>
-					<Col span={3}>
+					<Col span={6}>
 						<NumberField
 							label={lotSizeRequired ? "Lot Size *" : "Lot Size"}
 							value={property.lotSqFt}
 							onChange={(v) => patchProperty({ lotSqFt: v ?? 0 })}
 						/>
 					</Col>
-					<Col span={3}>
+					<Col span={6}>
 						<SelectField
 							label="Lot Size Unit"
 							value={property.lotSizeUnit ?? "Sq Ft"}
@@ -333,7 +340,7 @@ export function PropertyAdditionalFields({
 				</FieldGrid>
 
 				<TextField
-					label="Power Description"
+					label="Power"
 					value={property.powerDescription ?? ""}
 					onChange={(v) => patchProperty({ powerDescription: v })}
 				/>
@@ -345,7 +352,7 @@ export function PropertyAdditionalFields({
 				/>
 
 				<TextField
-					label="Gas/Propane Description"
+					label="Gas/Propane"
 					value={property.gasPropaneDescription ?? ""}
 					onChange={(v) => patchProperty({ gasPropaneDescription: v })}
 				/>

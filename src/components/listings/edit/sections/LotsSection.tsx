@@ -96,7 +96,7 @@ export function LotsSection({
 						renderContent={(lot) => (
 							<>
 								<FieldGrid>
-									<Col span={4}>
+									<Col span={6}>
 										<SelectField
 											label="Status"
 											value={lot.status}
@@ -107,14 +107,14 @@ export function LotsSection({
 									</Col>
 									{lot.status === "closed" && (
 										<>
-											<Col span={4}>
+											<Col span={6}>
 												<DateField
 													label="Close Date"
 													value={lot.closeDate ?? null}
 													onChange={(v) => update(lot.id, { closeDate: v })}
 												/>
 											</Col>
-											<Col span={4}>
+											<Col span={6}>
 												<TextField
 													label="Buyer / Referral Source"
 													value={lot.buyerReferralSource ?? ""}
@@ -138,7 +138,7 @@ export function LotsSection({
 											onChange={(v) => update(lot.id, { address: v })}
 										/>
 									</Col>
-									<Col span={4}>
+									<Col span={6}>
 										<TextField
 											label="Zoning"
 											value={lot.zoning ?? ""}
@@ -148,21 +148,21 @@ export function LotsSection({
 								</FieldGrid>
 
 								<FieldGrid>
-									<Col span={4}>
+									<Col span={6}>
 										<TextField
 											label="Lot Number"
 											value={lot.lotNumber ?? ""}
 											onChange={(v) => update(lot.id, { lotNumber: v })}
 										/>
 									</Col>
-									<Col span={4}>
+									<Col span={6}>
 										<TextField
 											label="APN"
 											value={lot.apn ?? ""}
 											onChange={(v) => update(lot.id, { apn: v })}
 										/>
 									</Col>
-									<Col span={4}>
+									<Col span={6}>
 										<SelectField
 											label="Subtype"
 											value={lot.subtype ?? "Vacant Land"}
@@ -173,14 +173,14 @@ export function LotsSection({
 								</FieldGrid>
 
 								<FieldGrid>
-									<Col span={3}>
+									<Col span={6}>
 										<NumberField
 											label="Sale Price"
 											value={lot.salePrice ?? null}
 											onChange={(v) => update(lot.id, { salePrice: v })}
 										/>
 									</Col>
-									<Col span={3}>
+									<Col span={6}>
 										<SelectField
 											label="Price Units"
 											value={lot.priceUnits ?? "Total"}
@@ -188,14 +188,14 @@ export function LotsSection({
 											onChange={(v) => update(lot.id, { priceUnits: v })}
 										/>
 									</Col>
-									<Col span={3}>
+									<Col span={6}>
 										<NumberField
 											label="Size"
 											value={lot.size ?? null}
 											onChange={(v) => update(lot.id, { size: v })}
 										/>
 									</Col>
-									<Col span={3}>
+									<Col span={6}>
 										<SelectField
 											label="Size Units"
 											value={lot.sizeUnits ?? "Acre"}

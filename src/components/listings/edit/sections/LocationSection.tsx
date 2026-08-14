@@ -181,14 +181,14 @@ export function LocationSection({
 				/>
 				{property.overrideMapLocation && (
 					<FieldGrid>
-						<Col span={3}>
+						<Col span={6}>
 							<NumberField
 								label="Latitude"
 								value={property.lat ?? null}
 								onChange={(v) => patchProperty({ lat: v ?? 0 })}
 							/>
 						</Col>
-						<Col span={3}>
+						<Col span={6}>
 							<NumberField
 								label="Longitude"
 								value={property.lng ?? null}
@@ -239,7 +239,7 @@ export function LocationSection({
 				<FieldGrid>
 					<Col span={12}>
 						<TextField
-							label="Location Description"
+							label="Description"
 							textarea
 							value={marketing.locationDescription}
 							onChange={(v) => patchMarketing({ locationDescription: v })}
