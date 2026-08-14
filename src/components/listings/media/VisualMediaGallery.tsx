@@ -11,8 +11,8 @@ import type { MediaScope } from "./mediaScope";
 /**
  * Visual Media for one scope: repeatable rows of preset embed types.
  *
- * Shares `VISUAL_MEDIA_TYPES` with the listing form's `VisualMediaSection` so the
- * two dropdowns cannot offer different subsets of the same union.
+ * Shares `VISUAL_MEDIA_TYPES` to ensure consistent embed-type options across
+ * all surfaces that render them.
  */
 export function VisualMediaGallery({ scope }: { scope: MediaScope }) {
   const all = scope.marketing.visualMedia ?? [];

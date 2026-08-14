@@ -1,30 +1,38 @@
 import { describe, it, expect } from 'vitest'
 import {
-  saleChannelsFor, leaseChannelsFor, isLandLikeSubtype, propertyTypeEffects,
+  channelsFor, isLandLikeSubtype, propertyTypeEffects,
   buildingClassOptions, showBuyerSection,
 } from './listingFormLogic'
 
-describe('marketing channel availability by status', () => {
-  it('Active offers all four sale channels', () => {
-    expect(saleChannelsFor('active')).toEqual([
-      'None', 'Buildout Buyer Network', 'My Brokerage Website', 'Buildout Syndication Network',
-    ])
-  })
-  it('Under Contract drops Syndication', () => {
-    expect(saleChannelsFor('under-contract')).toEqual([
-      'None', 'Buildout Buyer Network', 'My Brokerage Website',
-    ])
-  })
-  it('Proposal/Inactive/Closed offer only None', () => {
-    for (const s of ['proposal', 'inactive', 'closed'] as const) {
-      expect(saleChannelsFor(s)).toEqual(['None'])
+describe('marketing channel availability', () => {
+  const IN_PLAY = ['proposal', 'active', 'under-contract'] as const
+  const SETTLED = ['closed', 'inactive'] as const
+
+  it('offers every channel while the deal is still in play', () => {
+    for (const status of IN_PLAY) {
+      expect(channelsFor(status)).toEqual([
+        'None', 'My Brokerage Website', 'Buildout Syndication Network',
+      ])
     }
   })
-  it('lease Active offers Website + Syndication (no Buyer Network)', () => {
-    expect(leaseChannelsFor('active')).toEqual([
-      'None', 'My Brokerage Website', 'Buildout Syndication Network',
-    ])
-    expect(leaseChannelsFor('proposal')).toEqual(['None'])
+
+  // Setup happens before a deal is active, which is exactly when a broker picks
+  // where the listing should go once it is live. Narrowing the list there hid
+  // the decision at the moment it was being made.
+  it('does not narrow between Pitching and Active', () => {
+    expect(channelsFor('proposal')).toEqual(channelsFor('active'))
+  })
+
+  it('collapses to None once the deal is Closed or Lost', () => {
+    for (const status of SETTLED) {
+      expect(channelsFor(status)).toEqual(['None'])
+    }
+  })
+
+  it('never offers the deprecated Buyer Network', () => {
+    for (const status of [...IN_PLAY, ...SETTLED]) {
+      expect(channelsFor(status)).not.toContain('Buildout Buyer Network')
+    }
   })
 })
 

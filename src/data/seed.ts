@@ -1475,7 +1475,7 @@ function generateListings(
         auction: false,
         saleTerms: 'All cash or conventional financing.',
         reimbursement: 'NNN',
-        marketingChannel: faker.helpers.arrayElement(['None', 'Buildout Buyer Network', 'My Brokerage Website', 'Buildout Syndication Network'] as const),
+        marketingChannel: faker.helpers.arrayElement(['None', 'My Brokerage Website', 'Buildout Syndication Network'] as const),
         visibilityTier: faker.helpers.arrayElement(['Fully Private', 'Private', 'Semi-Public', 'Fully Public'] as const),
         publishFlags: { title: true, description: true, bullets: true, financials: false, photos: true },
         occupancySnapshot: status === 'proposal' ? null : property.occupancyPct,

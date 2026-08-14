@@ -1,0 +1,140 @@
+// src/components/listings/edit/listingForm.scss
+//
+// The Listing form's structure. Hierarchy is drawn, not spaced — an earlier pass
+// tried to carry all four tiers on whitespace alone and the form still read as
+// one wall, because every cluster looked identical no matter how far apart it
+// sat. Each tier now has its own device:
+//
+//   group     a card (`bg-body` panel) under an icon + 17px title
+//   cluster   a name in a left gutter, fields right, hairline rule between
+//   bound     8px — a control and the field it reveals (`gap-2`, in the TSX)
+//   peer      16px — fields sharing a FieldGrid (`g-4`, in the TSX)
+//
+// The gutter is what makes the cluster tier work. Stacking the name above its
+// fields failed twice: as a 17px heading it competed with the group title, and
+// as a 14px muted line it read as floating text attached to nothing. Beside the
+// fields it is attached by position, in a column no field label occupies.
+//
+// Every value resolves to a Blueprint token — `tokens.*` for spacing, type, and
+// borders, `motion.*` for the disclosure (same precedent as editor.scss).
+//
+// Scoped under `.listing-form` so no other form in the app is affected.
+@use "@buildoutinc/blueprint-tokens/scss/semantic" as tokens;
+@use "@buildoutinc/blueprint-theme/scss/bridge/vars" as motion;
+
+.listing-form {
+  // ── Cluster tier ──────────────────────────────────────────────────────────
+  // No rules and no margins here. Each cluster is its own `bg-body` tile (see
+  // FieldGroup.tsx) and the 4px between tiles comes from the group body's
+  // `gap-1`, so the boundary is the tile's own edge. A rule *and* a tile edge
+  // would draw the same boundary twice.
+
+  // The gutter label. Semibold body text — in a gutter it does not need caps or
+  // a size change to separate from field labels, because it never shares a
+  // column with one.
+  &__subgroup-label {
+    font-weight: tokens.$font-weight-semibold;
+  }
+
+  &__subgroup-desc {
+    margin-top: tokens.$spacing-1;
+    margin-bottom: 0;
+  }
+
+  // ── Editable grids (Unit Mix, Rent Roll) ──────────────────────────────────
+  // A floor width so the columns keep their inputs legible instead of crushing
+  // — the Unit Mix multifamily set runs to ten columns. Below this the table
+  // scrolls inside Blueprint's own `.table-container`, which already supplies
+  // the overflow. Deliberately not a token: this is a content measurement (ten
+  // number inputs plus a remove button), not a step on the spacing scale.
+  &__grid-table {
+    min-width: 40rem; // 640px
+  }
+
+  // ── Coordinate picker ─────────────────────────────────────────────────────
+  // Half the cluster's width, square. `flex: 1 1 0` rather than a fixed size so
+  // it splits evenly with the coordinate column beside it — basis 0 is what
+  // makes the halves equal, since growing from `auto` would leave each side its
+  // unequal intrinsic width.
+  //
+  // Height comes from `aspect-ratio`, not a percentage: Leaflet measures its
+  // container when it initialises, and a percentage height against an
+  // auto-height parent resolves to zero, which leaves the map a blank strip.
+  &__coord-map {
+    flex: 1 1 0;
+    aspect-ratio: 1;
+  }
+
+  // ── Marketing channel cards ───────────────────────────────────────────────
+  // Buildout blue, deliberately not `border-primary` / `--bp-primary`: those are
+  // the theme's purple, which would have left a purple edge around a blue fill.
+  // Blue is also the right register here — the card marks a state the broker
+  // chose, not an action to take, and purple is what the form's buttons use.
+  //
+  // The radio inside each card is visually hidden (selection is drawn by the
+  // card's own accent), so focus has to be shown by the card or a keyboard user
+  // gets no ring at all — hence `:focus-within`.
+  &__channel-card {
+    cursor: pointer;
+
+    &--selected {
+      border-color: tokens.$buildout-blue-600;
+      background: tokens.$buildout-blue-50;
+    }
+
+    &:focus-within {
+      outline: tokens.$spacing-0-5 solid tokens.$buildout-blue-600;
+      outline-offset: tokens.$spacing-0-5;
+    }
+  }
+
+  // Tinted square behind the channel glyph, sized to the type rather than to a
+  // round number so it stays square as the icon inherits font-size. Grey by
+  // default: the card is `bg-card`, so the square is what gives the glyph a
+  // ground of its own rather than letting it float on white.
+  &__channel-icon {
+    width: tokens.$spacing-8; // 32px
+    height: tokens.$spacing-8;
+    background: tokens.$body-bg;
+
+    // Selected takes the accent on both the glyph and its square — blue-100 is
+    // a step up from the card's blue-50 fill, so the square keeps the same
+    // figure/ground separation there that the grey gives it everywhere else.
+    // `text-primary` would have put the theme purple inside a blue card.
+    &--selected {
+      color: tokens.$buildout-blue-600;
+      background: tokens.$buildout-blue-100;
+    }
+  }
+
+  // ── Disclosure ────────────────────────────────────────────────────────────
+  // Deliberately not a heading: it used to be an <h3>, the same level as the
+  // group titles it sat among.
+  &__more-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: tokens.$spacing-2;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: tokens.$font-size-body;
+    // Semibold so the disclosure reads as a control rather than prose. 500 was
+    // off Blueprint's weight scale (300/400/600/700/800/900) and the Typekit
+    // kit has no 500 face, so it was painting as 400 regardless.
+    font-weight: tokens.$font-weight-semibold;
+  }
+
+  &__more-chevron {
+    transition: transform motion.$short3 motion.$standard;
+  }
+
+  // base-ui sets data-panel-open on the trigger button (same precedent as
+  // .collapsible-card-trigger[data-panel-open] in main.scss).
+  &__more-toggle[data-panel-open] &__more-chevron {
+    transform: rotate(90deg);
+  }
+
+  &__more-body {
+    margin-top: tokens.$spacing-6;
+  }
+}

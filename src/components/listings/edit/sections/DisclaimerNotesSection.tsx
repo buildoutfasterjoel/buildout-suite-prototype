@@ -1,8 +1,12 @@
 import { Field } from "@buildoutinc/blueprint-react/ui/Field";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
-import { faNoteSticky } from "@fortawesome/pro-regular-svg-icons";
-import { SwitchRow, TextField } from "#/components/listings/edit/fieldWidgets";
-import { Section } from "#/components/listings/listingWidgets";
+import { SubGroup } from "#/components/listings/edit/FieldGroup";
+import {
+	Col,
+	FieldGrid,
+	SwitchRow,
+	TextField,
+} from "#/components/listings/edit/fieldWidgets";
 import type { DealMarketing } from "#/data/types";
 
 /**
@@ -10,6 +14,8 @@ import type { DealMarketing } from "#/data/types";
  * disclaimer textarea; Internal Notes lives on `Listing` (not `marketing`),
  * so its state/setter come from the parent (`ListingEditor`) rather
  * than from `patchMarketing`.
+ *
+ * Emits subgroups only — `ListingFormEditor` owns the group heading.
  */
 export function DisclaimerNotesSection({
 	marketing,
@@ -23,38 +29,54 @@ export function DisclaimerNotesSection({
 	setInternalNotes: (v: string) => void;
 }) {
 	return (
-		<Section title="Disclaimer & Notes" icon={faNoteSticky}>
-			<div style={{ maxWidth: 360 }}>
+		<>
+			<SubGroup label="Disclaimer">
 				<SwitchRow
 					label="Override Disclaimer"
 					checked={marketing.overrideDisclaimer ?? false}
 					onChange={(v) => patchMarketing({ overrideDisclaimer: v })}
 				/>
-			</div>
-			{marketing.overrideDisclaimer && (
-				<TextField
-					label="Custom Disclaimer"
-					textarea
-					value={marketing.customDisclaimer ?? ""}
-					onChange={(v) => patchMarketing({ customDisclaimer: v })}
-				/>
-			)}
-			<TextField
-				label="Internal Notes"
-				textarea
-				value={internalNotes ?? ""}
-				onChange={setInternalNotes}
-			/>
-			<TextField
-				label="Admin Notes"
-				textarea
-				value={marketing.adminNotes ?? ""}
-				onChange={(v) => patchMarketing({ adminNotes: v })}
-			/>
-			<Field>
-				<Field.Label>External ID</Field.Label>
-				<Input readOnly value={marketing.externalId ?? ""} />
-			</Field>
-		</Section>
+				{marketing.overrideDisclaimer && (
+					<FieldGrid>
+						<Col span={12}>
+							<TextField
+								label="Custom Disclaimer"
+								textarea
+								value={marketing.customDisclaimer ?? ""}
+								onChange={(v) => patchMarketing({ customDisclaimer: v })}
+							/>
+						</Col>
+					</FieldGrid>
+				)}
+			</SubGroup>
+
+			<SubGroup label="Internal">
+				<FieldGrid>
+					<Col span={12}>
+						<TextField
+							label="Internal Notes"
+							textarea
+							value={internalNotes ?? ""}
+							onChange={setInternalNotes}
+						/>
+					</Col>
+					<Col span={12}>
+						<TextField
+							label="Admin Notes"
+							textarea
+							value={marketing.adminNotes ?? ""}
+							onChange={(v) => patchMarketing({ adminNotes: v })}
+						/>
+					</Col>
+				</FieldGrid>
+
+				{/* External ID isn't in the plan's width table — kept unchanged,
+				    grouped here as the section's other back-office/internal field. */}
+				<Field>
+					<Field.Label>External ID</Field.Label>
+					<Input readOnly value={marketing.externalId ?? ""} />
+				</Field>
+			</SubGroup>
+		</>
 	);
 }

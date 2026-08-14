@@ -97,13 +97,11 @@ export function SpaceTermsSection({
 				</Col>
 			</FieldGrid>
 
-			<div style={{ maxWidth: 360 }}>
-				<SwitchRow
-					label="Major tenant"
-					checked={terms.majorTenant ?? false}
-					onChange={(v) => onChange({ majorTenant: v })}
-				/>
-			</div>
+			<SwitchRow
+				label="Major tenant"
+				checked={terms.majorTenant ?? false}
+				onChange={(v) => onChange({ majorTenant: v })}
+			/>
 			<TextField
 				label="Tenant Name"
 				required={terms.majorTenant ?? false}
@@ -289,13 +287,11 @@ export function SpaceTermsSection({
 			</FieldGrid>
 
 			{/* ── Sublease ── */}
-			<div style={{ maxWidth: 360 }}>
-				<SwitchRow
-					label="Sublease"
-					checked={terms.sublease}
-					onChange={(v) => onChange({ sublease: v })}
-				/>
-			</div>
+			<SwitchRow
+				label="Sublease"
+				checked={terms.sublease}
+				onChange={(v) => onChange({ sublease: v })}
+			/>
 			{terms.sublease && (
 				<div style={{ maxWidth: 360 }}>
 					<DateField
@@ -315,7 +311,7 @@ export function SpaceTermsSection({
 			/>
 
 			{/* ── Flags ── */}
-			<div className="d-flex flex-column gap-1" style={{ maxWidth: 360 }}>
+			<div className="d-flex flex-column gap-1">
 				<SwitchRow
 					label="Hide rate"
 					checked={terms.hideLeaseRate}
@@ -460,13 +456,11 @@ export function SpaceTermsSection({
 								</Col>
 							</FieldGrid>
 
-							<div style={{ maxWidth: 360 }}>
-								<SwitchRow
-									label="Furnished"
-									checked={terms.furnished ?? false}
-									onChange={(v) => onChange({ furnished: v })}
-								/>
-							</div>
+							<SwitchRow
+								label="Furnished"
+								checked={terms.furnished ?? false}
+								onChange={(v) => onChange({ furnished: v })}
+							/>
 
 							{/* Heating / cooling / lighting — Y/N/NA + description */}
 							<FieldGrid>

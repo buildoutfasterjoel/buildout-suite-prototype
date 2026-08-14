@@ -801,7 +801,7 @@ export interface DealPitchFinancials {
 
 export type PropertyUse = 'Net Leased Investment' | 'Investment' | 'Owner/User' | 'Business for Sale' | 'Development'
 export type InvestmentType = 'Core' | 'Core Plus' | 'Value Add' | 'Opportunistic' | 'Distressed'
-export type MarketingChannel = 'None' | 'Buildout Buyer Network' | 'My Brokerage Website' | 'Buildout Syndication Network'
+export type MarketingChannel = 'None' | 'My Brokerage Website' | 'Buildout Syndication Network'
 export type VisibilityTier = 'Fully Private' | 'Private' | 'Semi-Public' | 'Fully Public'
 export type LeaseRateUnits = 'SF/Yr' | 'SF/Mo' | 'Monthly'
 export type SpaceLeaseType = 'Gross' | 'Modified Gross' | 'NNN' | 'Modified Net' | 'Full Service' | 'Ground Lease'
