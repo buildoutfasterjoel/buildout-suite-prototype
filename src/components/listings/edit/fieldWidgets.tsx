@@ -309,6 +309,7 @@ export function ComboField<T extends string>({
   value,
   options,
   onChange,
+  labels,
   placeholder,
   required,
 }: {
@@ -316,14 +317,20 @@ export function ComboField<T extends string>({
   value: T | null;
   options: readonly T[];
   onChange: (v: T | null) => void;
+  /** Display text per option, when the stored value is not what a broker would
+   *  type. Same shape as `SelectField`'s. The stored value stays the option
+   *  itself — only the rendering and the typeahead's haystack change, so "TX"
+   *  is still what lands on the record while "Texas" still finds it. */
+  labels?: Record<string, string>;
   /** Shown when nothing is selected. Defaults to "Search…". */
   placeholder?: string;
   required?: boolean;
 }) {
+  const labelFor = (item: T) => labels?.[item] ?? item;
   return (
     <Field>
       <InputGroup>
-        <InputGroup.Addon asText>
+        <InputGroup.Addon asText style={{ width: 164 }}>
           <Field.Label>
             {label}
             {required && <span className="text-danger ms-1">*</span>}
@@ -333,16 +340,26 @@ export function ComboField<T extends string>({
           items={options as T[]}
           value={value}
           onValueChange={(v) => onChange((v as T | null) ?? null)}
+          // base-ui filters and renders the selected value through this, so it
+          // has to be set for `labels` to reach the input and the match logic —
+          // without it, typing "Texas" against items of `["TX", …]` finds
+          // nothing. Blueprint's Combobox root is a direct alias of base-ui's,
+          // so the prop passes straight through.
+          itemToStringLabel={(item: T) => labelFor(item)}
         >
           <Combobox.InputGroup>
-            <Combobox.Input placeholder={placeholder ?? "Search…"} showClear />
+            <Combobox.Input
+              className="flex-grow-0"
+              placeholder={placeholder ?? "Search…"}
+              showClear
+            />
           </Combobox.InputGroup>
           <Combobox.Content>
             <Combobox.Empty className="text-muted">No match</Combobox.Empty>
             <Combobox.List>
               {(item: T) => (
                 <Combobox.Item key={item} value={item}>
-                  {item}
+                  {labelFor(item)}
                 </Combobox.Item>
               )}
             </Combobox.List>

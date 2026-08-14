@@ -7,6 +7,7 @@ import {
 	SwitchRow,
 	TextField,
 } from "#/components/listings/edit/fieldWidgets";
+import { US_STATES, stateLabel } from "#/components/contacts/usStates";
 import type { DealMarketing, Property, YesNoNA } from "#/data/types";
 
 // ── Local option constants ───────────────────────────────────────────────────
@@ -32,6 +33,20 @@ const NO_POSTAL_CODE_COUNTRIES = new Set<string>(["United Arab Emirates"]);
 
 /** Countries with no county-level administrative division — County is hidden. */
 const NO_COUNTY_COUNTRIES = new Set<string>(["Mexico", "United Arab Emirates"]);
+
+/**
+ * State is a picker only for the US, where the set is closed, official, and
+ * already stored as the 2-letter code the rest of the app uses (seed listings
+ * carry "TX", "IL", …; `NewContactModal` uses the same list). Every other
+ * supported country keeps a free-text field — the form serves six countries
+ * whose subdivisions are provinces, emirates, and counties, and shipping a
+ * gazetteer for all of them is not what this asks for. Same country-conditional
+ * shape as `hasPostalCode` and `hasCounty` below.
+ */
+const STATE_CODES = US_STATES.map((s) => s.code);
+const STATE_LABELS: Record<string, string> = Object.fromEntries(
+	STATE_CODES.map((code) => [code, stateLabel(code)]),
+);
 
 const CURRENCY_OPTIONS = ["USD", "CAD", "GBP", "AUD", "MXN", "AED"];
 const CURRENCY_FORMAT_OPTIONS = [
@@ -93,6 +108,10 @@ export function LocationSection({
 				label="Address"
 				description="Where the property sits, and how that reads publicly."
 			>
+				{/* Even 2x2. These were 6/3/3 + a 3-wide Zip, which filled the first
+				    row exactly and left Zip stranded alone on the second. Now that a
+				    field carries its label inside the control, half width is the
+				    natural size for all four — no field here needs more. */}
 				<FieldGrid>
 					<Col span={6}>
 						<TextField
@@ -101,22 +120,33 @@ export function LocationSection({
 							onChange={(v) => patchProperty({ street: v })}
 						/>
 					</Col>
-					<Col span={3}>
+					<Col span={6}>
 						<TextField
 							label="City"
 							value={property.city}
 							onChange={(v) => patchProperty({ city: v })}
 						/>
 					</Col>
-					<Col span={3}>
-						<TextField
-							label="State"
-							value={property.state}
-							onChange={(v) => patchProperty({ state: v })}
-						/>
+					<Col span={6}>
+						{isUnitedStates ? (
+							<SelectField
+								label="State"
+								value={property.state || null}
+								options={STATE_CODES}
+								labels={STATE_LABELS}
+								placeholder="Select a state…"
+								onChange={(v) => patchProperty({ state: v })}
+							/>
+						) : (
+							<TextField
+								label="State"
+								value={property.state}
+								onChange={(v) => patchProperty({ state: v })}
+							/>
+						)}
 					</Col>
 					{hasPostalCode && (
-						<Col span={3}>
+						<Col span={6}>
 							<TextField
 								label="Zip"
 								value={property.zip}
