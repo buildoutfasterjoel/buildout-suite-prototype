@@ -41,6 +41,16 @@
     margin-bottom: 0;
   }
 
+  // ── Editable grids (Unit Mix, Rent Roll) ──────────────────────────────────
+  // A floor width so the columns keep their inputs legible instead of crushing
+  // — the Unit Mix multifamily set runs to ten columns. Below this the table
+  // scrolls inside Blueprint's own `.table-container`, which already supplies
+  // the overflow. Deliberately not a token: this is a content measurement (ten
+  // number inputs plus a remove button), not a step on the spacing scale.
+  &__grid-table {
+    min-width: 40rem; // 640px
+  }
+
   // ── Disclosure ────────────────────────────────────────────────────────────
   // Deliberately not a heading: it used to be an <h3>, the same level as the
   // group titles it sat among.

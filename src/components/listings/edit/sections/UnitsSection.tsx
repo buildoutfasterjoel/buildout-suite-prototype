@@ -1,5 +1,6 @@
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
+import { Table } from "@buildoutinc/blueprint-react/ui/Table";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faTrashCan } from "@fortawesome/pro-regular-svg-icons";
 import { SubGroup } from "#/components/listings/edit/FieldGroup";
@@ -91,83 +92,84 @@ function EditableTable<T extends { id: string }>({
 }) {
 	return (
 		<div className="d-flex flex-column gap-2">
-			<div style={{ overflowX: "auto" }}>
-				<table className="table table-sm align-middle mb-0" style={{ minWidth: 640 }}>
-					<thead>
-						<tr>
-							{columns.map((c) => (
-								<th key={String(c.key)} className="text-muted fw-semibold" style={{ fontSize: 13 }}>
-									{c.label}
-								</th>
-							))}
-							<th style={{ width: 44 }} />
-						</tr>
-					</thead>
-					<tbody>
-						{rows.length === 0 ? (
-							<tr>
-								<td colSpan={columns.length + 1} className="text-muted">
-									{emptyLabel}
-								</td>
-							</tr>
-						) : (
-							rows.map((row) => (
-								<tr key={row.id}>
-									{columns.map((c) => {
-										const raw = row[c.key] as string | number | null | undefined;
-										return (
-											<td key={String(c.key)}>
-												{c.kind === "text" ? (
-													<Input
-														style={{ minWidth: 140 }}
-														value={(raw as string | null) ?? ""}
-														onChange={(e) =>
-															onEdit(row.id, { [c.key]: e.target.value } as Partial<T>)
-														}
-													/>
-												) : c.kind === "date" ? (
-													<Input
-														type="date"
-														style={{ minWidth: 150 }}
-														value={(raw as string | null) ?? ""}
-														onChange={(e) =>
-															onEdit(row.id, {
-																[c.key]: e.target.value === "" ? null : e.target.value,
-															} as Partial<T>)
-														}
-													/>
-												) : (
-													<Input
-														type="number"
-														style={{ minWidth: 110 }}
-														value={(raw as number | null) ?? ""}
-														onChange={(e) =>
-															onEdit(row.id, {
-																[c.key]:
-																	e.target.value === "" ? null : Number(e.target.value),
-															} as Partial<T>)
-														}
-													/>
-												)}
-											</td>
-										);
-									})}
-									<td>
-										<Button
-											variant="ghost"
-											size="icon"
-											aria-label="Remove row"
-											onClick={() => onRemove(row.id)}
-										>
-											<FontAwesomeIcon icon={faTrashCan} />
-										</Button>
-									</td>
-								</tr>
-							))
-						)}
-					</tbody>
-				</table>
-			</div>
+			{/* `dense` is Blueprint's `table-sm`, and the root's own `.table-container`
+			    supplies the overflow, border, and radius — all three were hand-rolled
+			    here before. Header cells inherit `.table th` from the theme, so the
+			    muted/semibold/13px overrides they used to carry are gone too. */}
+			<Table dense className="listing-form__grid-table align-middle mb-0">
+				<Table.Header>
+					<Table.Row>
+						{columns.map((c) => (
+							<Table.Head key={String(c.key)}>{c.label}</Table.Head>
+						))}
+						{/* Remove-button column — labelled by each row's own button. */}
+						<Table.Head style={{ width: 44 }} />
+					</Table.Row>
+				</Table.Header>
+				<Table.Body>
+					{rows.length === 0 ? (
+						<Table.Row>
+							<Table.Cell colSpan={columns.length + 1} className="text-muted">
+								{emptyLabel}
+							</Table.Cell>
+						</Table.Row>
+					) : (
+						rows.map((row) => (
+							<Table.Row key={row.id}>
+								{columns.map((c) => {
+									const raw = row[c.key] as string | number | null | undefined;
+									return (
+										<Table.Cell key={String(c.key)}>
+											{c.kind === "text" ? (
+												<Input
+													style={{ minWidth: 140 }}
+													value={(raw as string | null) ?? ""}
+													onChange={(e) =>
+														onEdit(row.id, { [c.key]: e.target.value } as Partial<T>)
+													}
+												/>
+											) : c.kind === "date" ? (
+												<Input
+													type="date"
+													style={{ minWidth: 150 }}
+													value={(raw as string | null) ?? ""}
+													onChange={(e) =>
+														onEdit(row.id, {
+															[c.key]: e.target.value === "" ? null : e.target.value,
+														} as Partial<T>)
+													}
+												/>
+											) : (
+												<Input
+													type="number"
+													style={{ minWidth: 110 }}
+													value={(raw as number | null) ?? ""}
+													onChange={(e) =>
+														onEdit(row.id, {
+															[c.key]:
+																e.target.value === "" ? null : Number(e.target.value),
+														} as Partial<T>)
+													}
+												/>
+											)}
+										</Table.Cell>
+									);
+								})}
+								<Table.Cell>
+									<Button
+										variant="ghost"
+										size="icon"
+										aria-label="Remove row"
+										onClick={() => onRemove(row.id)}
+									>
+										<FontAwesomeIcon icon={faTrashCan} />
+									</Button>
+								</Table.Cell>
+							</Table.Row>
+						))
+					)}
+				</Table.Body>
+			</Table>
 			<div>
 				<Button variant="ghost" size="sm" onClick={onAdd}>
 					<FontAwesomeIcon icon={faPlus} />
