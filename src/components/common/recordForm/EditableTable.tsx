@@ -2,10 +2,12 @@
  * A repeatable grid of rows with add/remove — Unit Mix, Rent Roll, income and
  * expense line items.
  *
- * Reach for this only when the repeater is read DOWN a column: many rows whose
- * values get compared to each other. A repeater with a handful of rows does not
- * earn a header row — see `AdditionalTypesEditor` in PropertySection.tsx, which
- * carries two fields per row and stays stacked flex on purpose.
+ * Reach for this only when the repeater is read DOWN a column: either many rows
+ * whose values get compared to each other, or a column that carries a total —
+ * a total is read downward at any row count, which is why the income and expense
+ * line items are tables at one and two rows. Without one, a handful of rows does
+ * not earn a header row: see `AdditionalTypesEditor` in PropertySection.tsx,
+ * which carries two fields per row and stays stacked flex on purpose.
  */
 import type { ReactNode } from "react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
@@ -28,6 +30,7 @@ export function EditableTable<T extends { id: string }>({
 	addLabel,
 	emptyLabel,
 	footer,
+	className,
 }: {
 	columns: Column<T>[];
 	rows: T[];
@@ -38,6 +41,11 @@ export function EditableTable<T extends { id: string }>({
 	emptyLabel: string;
 	/** Rendered as a table footer row spanning the value columns. */
 	footer?: ReactNode;
+	/** Extra classes on the `<table>`. A WIDE grid passes
+	 *  `record-form__grid-table` for its 640px floor; a narrow one passes nothing,
+	 *  because that floor inside a cluster column would push its last columns off
+	 *  behind a scrollbar. */
+	className?: string;
 }) {
 	return (
 		<div className="d-flex flex-column gap-2">
@@ -45,7 +53,7 @@ export function EditableTable<T extends { id: string }>({
 			    supplies the overflow, border, and radius — all three were hand-rolled
 			    here before. Header cells inherit `.table th` from the theme, so the
 			    muted/semibold/13px overrides they used to carry are gone too. */}
-			<Table dense className="record-form__grid-table align-middle mb-0">
+			<Table dense className={`align-middle mb-0 ${className ?? ""}`}>
 				<Table.Header>
 					<Table.Row>
 						{columns.map((c) => (

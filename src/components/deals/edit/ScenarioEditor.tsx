@@ -8,7 +8,7 @@ import {
 	faTrashCan,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { FinancialScenario } from "#/data/types";
-import { FieldGrid, NumberField } from "#/components/common/recordForm/fieldWidgets";
+import { NumberField } from "#/components/common/recordForm/fieldWidgets";
 
 // ── Scenario editor (reorderable) ────────────────────────────────────────────
 export function ScenarioEditor({
@@ -29,8 +29,10 @@ export function ScenarioEditor({
 		onChange(scenarios.map((s) => (s.id === id ? { ...s, ...patch } : s)));
 	return (
 		<div className="d-flex flex-column gap-3">
-			<div className="d-flex align-items-center justify-content-between">
-				<span className="fw-semibold">Scenarios</span>
+			{/* No title here — the cluster's gutter already names this "Scenarios",
+			    the same call `LineItemEditor` makes for its table. `justify-content-end`
+			    keeps the button where the removed heading left it. */}
+			<div className="d-flex align-items-center justify-content-end">
 				<Button
 					variant="ghost"
 					size="sm"
@@ -52,11 +54,7 @@ export function ScenarioEditor({
 				</Button>
 			</div>
 			{scenarios.map((s, i) => (
-				<div
-					key={s.id}
-					className="border rounded p-3"
-					style={{ borderRadius: 6 }}
-				>
+				<div key={s.id} className="bg-card border rounded p-3">
 					<div className="d-flex align-items-center gap-2 mb-2">
 						<div className="d-flex flex-column">
 							<Button
@@ -93,29 +91,31 @@ export function ScenarioEditor({
 							<FontAwesomeIcon icon={faTrashCan} />
 						</Button>
 					</div>
-					<FieldGrid>
-						<div className="col-md-4">
+					{/* `flexBasis: 0` for the same reason as the broker rows: three
+					    `col-md-4`s inside a cluster left each number a clipped control. */}
+					<div className="d-flex gap-2">
+						<div className="flex-grow-1" style={{ flexBasis: 0 }}>
 							<NumberField
 								label="NOI"
 								value={s.noi}
 								onChange={(v) => update(s.id, { noi: v ?? 0 })}
 							/>
 						</div>
-						<div className="col-md-4">
+						<div className="flex-grow-1" style={{ flexBasis: 0 }}>
 							<NumberField
 								label="Cap Rate %"
 								value={s.capRate}
 								onChange={(v) => update(s.id, { capRate: v ?? 0 })}
 							/>
 						</div>
-						<div className="col-md-4">
+						<div className="flex-grow-1" style={{ flexBasis: 0 }}>
 							<NumberField
 								label="Cash Flow"
 								value={s.cashFlow}
 								onChange={(v) => update(s.id, { cashFlow: v ?? 0 })}
 							/>
 						</div>
-					</FieldGrid>
+					</div>
 				</div>
 			))}
 		</div>

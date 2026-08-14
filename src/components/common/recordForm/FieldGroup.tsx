@@ -17,13 +17,20 @@ import { faChevronRight } from "@fortawesome/pro-regular-svg-icons";
 import "./recordForm.scss";
 
 /**
- * One top-level group on the Listing form — Location, The Asset, Marketing.
+ * One top-level group on either long record form — Location / The Asset /
+ * Marketing on the Listing form, Setup & Status / Transaction Terms /
+ * Financials on the Deal form.
  *
- * Deliberately NOT the `Section` in `listingWidgets.tsx`: that one is shared
- * with the Deal editor, and this needs its own spacing rhythm without changing
- * how the Deal editor looks. The heading keeps `fs-large` (17px) — the scale is
- * full at 24/20/17/14 and 20px would collide with the page title, so the 72px
- * gap between groups does the separating instead of a size bump.
+ * Deliberately NOT the `Section` in `listingWidgets.tsx`. That one is a plain
+ * heading over a `gap-3` stack, and it still serves the *read-only* listing
+ * surfaces — client-report, website, and demographics — where a group is a
+ * heading and nothing else. A group here owns the cluster rhythm below it
+ * (transparent body, 4px between tiles), which those pages have no use for; the
+ * two stayed separate so neither drags the other's spacing along.
+ *
+ * The heading keeps `fs-large` (17px) — the scale is full at 24/20/17/14 and
+ * 20px would collide with the page title, so the caller's group-tier gap does
+ * the separating instead of a size bump.
  */
 export function FieldGroup({
   title,

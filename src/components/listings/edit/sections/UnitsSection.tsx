@@ -167,6 +167,9 @@ export function UnitsSection({
 					{(marketing.includeUnitMix ?? false) && (
 						<>
 							<EditableTable
+								// Wide grid — the multifamily column set runs to ten. Takes the
+								// 640px floor and scrolls inside its own `.table-container`.
+								className="record-form__grid-table"
 								columns={columnsFor(property.propertyType)}
 								rows={unitMix}
 								onEdit={editUnitMixRow}
@@ -200,6 +203,8 @@ export function UnitsSection({
 					{(marketing.includeRentRoll ?? false) && (
 						<>
 							<EditableTable
+								// Wide grid — same 640px floor as Unit Mix.
+								className="record-form__grid-table"
 								columns={RENT_ROLL_COLUMNS}
 								rows={rentRoll}
 								onEdit={editRentRow}

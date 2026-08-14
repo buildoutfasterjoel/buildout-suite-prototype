@@ -168,7 +168,7 @@ export function ListingEditor({
 				{conflictCount === 0 && conflictsElsewhere > 0 && (
 					<p className="text-muted fs-small mb-0">
 						{conflictsElsewhere} unresolved{" "}
-						{conflictsElsewhere === 1 ? "conflict" : "conflicts"} remain on{" "}
+						{conflictsElsewhere === 1 ? "conflict remains" : "conflicts remain"} on{" "}
 						<Link
 							to="/listings/$listingId/edit"
 							params={{ listingId: listing.id }}

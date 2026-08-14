@@ -42,12 +42,65 @@
     margin-bottom: 0;
   }
 
+  // ── Label gutter ──────────────────────────────────────────────────────────
+  // The gutter is a fixed measure so labels align down the whole form, but a
+  // fixed measure with no floor is what collapsed a `col-md-4` broker row's
+  // input to 16px: 164px of label inside a ~200px column leaves nothing for
+  // the control.
+  //
+  // The floor is a CONTAINER query, not a media query. The failure happens at a
+  // 900px viewport — above `md` — because the container is a narrow grid column
+  // inside a padded tile, and a media query cannot see that. Each field is its
+  // own inline-size container, so a field stacks when ITS OWN box is too narrow
+  // for a gutter plus a usable control, wherever it sits.
+  &__field {
+    container-type: inline-size;
+  }
+
+  &__gutter {
+    width: 164px;
+  }
+
+  // 20rem = 320px, calibrated against a MEASURED field, not arithmetic. A
+  // half-width field (`Col span=6`) inside a cluster is ~332px at a 1440
+  // viewport, so the threshold sits deliberately just below it: a half-width
+  // field keeps its gutter, leaving the control 168px — which is exactly what
+  // the Listing form shipped and had reviewed, and well clear of `__control`'s
+  // own 7rem (112px) floor. A field genuinely too narrow still collapses: a
+  // third-width column, or any field at a small viewport (a half-width field in
+  // a ~354px cluster column at 900px is ~171px). When it does, the gutter takes
+  // the full width and the control wraps under it — the label ends up on top,
+  // which is the layout this form used before the gutter and is still correct
+  // when there is no room for a column of its own.
+  @container (max-width: 20rem) {
+    &__gutter {
+      width: 100%;
+    }
+  }
+
+  &__control {
+    min-width: 7rem; // 112px — a number input's floor before digits clip
+  }
+
+  // `flex-wrap` is what makes the container query's full-width gutter actually
+  // stack: Bootstrap's `.input-group` is `flex-wrap: wrap` already, but the
+  // addon and control both carry `flex: 1 1 auto` overrides in the theme, so
+  // the wrap only takes effect once the gutter claims the whole line.
+  &__field .input-group {
+    flex-wrap: wrap;
+  }
+
   // ── Editable grids (Unit Mix, Rent Roll) ──────────────────────────────────
-  // A floor width so the columns keep their inputs legible instead of crushing
-  // — the Unit Mix multifamily set runs to ten columns. Below this the table
-  // scrolls inside Blueprint's own `.table-container`, which already supplies
-  // the overflow. Deliberately not a token: this is a content measurement (ten
-  // number inputs plus a remove button), not a step on the spacing scale.
+  // OPT-IN, for WIDE grids only — `EditableTable` does not apply this itself;
+  // a caller passes it via `className`. A floor width so the columns keep their
+  // inputs legible instead of crushing — the Unit Mix multifamily set runs to
+  // ten columns. Below this the table scrolls inside Blueprint's own
+  // `.table-container`, which already supplies the overflow. A narrow grid must
+  // NOT take this floor: the Deal form's income/expense line items are three
+  // columns, and 640px inside a ~354px cluster column pushes the Amount cell
+  // and the remove button off-screen behind a scrollbar. Deliberately not a
+  // token: this is a content measurement (ten number inputs plus a remove
+  // button), not a step on the spacing scale.
   &__grid-table {
     min-width: 40rem; // 640px
   }
@@ -81,5 +134,31 @@
 
   &__more-body {
     margin-top: tokens.$spacing-6;
+  }
+
+  // ── Computed readout ──────────────────────────────────────────────────────
+  // A derived figure, not a field. These used to render as read-only `Input`s
+  // with a top label, which put a disabled-looking text box next to eleven live
+  // ones and invited a broker to type in it.
+  //
+  // Indented by the gutter's width so the readout block shares the control
+  // column's bounds — it starts where the controls above it start, which is what
+  // ties a readout to its inputs. `space-between` then pushes the label to that
+  // offset and the figure to the far edge of the column, so this aligns the
+  // block, not the digits.
+  //
+  // `min()` rather than a container query, deliberately. A readout is a SIBLING
+  // of the fields it belongs to, not a descendant, so it cannot query the
+  // `__field` container that Task 4 established — the query would resolve
+  // against an ancestor with no `container-type` and never match, leaving the
+  // indent permanently at 164px. Adding a second container on the cluster just
+  // to make a query work buys less than this: 45% holds the alignment at normal
+  // widths and gives way on its own when the cluster is too narrow to spare
+  // 164px.
+  &__readout {
+    display: flex;
+    justify-content: space-between;
+    gap: tokens.$spacing-4;
+    padding-left: min(164px, 45%);
   }
 }

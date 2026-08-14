@@ -6,12 +6,10 @@ import { NumberField, TextField } from "#/components/common/recordForm/fieldWidg
 
 // ── Broker rows ──────────────────────────────────────────────────────────────
 export function BrokerEditor({
-	title,
 	brokers,
 	side,
 	onChange,
 }: {
-	title: string;
 	brokers: DealBroker[];
 	side: "internal" | "outside";
 	onChange: (v: DealBroker[]) => void;
@@ -32,46 +30,51 @@ export function BrokerEditor({
 			},
 		]);
 	return (
-		<div className="d-flex flex-column gap-3">
-			<div className="d-flex align-items-center justify-content-between">
-				<span className="fw-semibold">{title}</span>
-				<Button variant="ghost" size="sm" onClick={add}>
-					<FontAwesomeIcon icon={faPlus} />
-					Add broker
-				</Button>
-			</div>
+		<div className="d-flex flex-column gap-2">
 			{brokers.length === 0 ? (
 				<p className="text-muted mb-0">No {side} brokers on this deal.</p>
 			) : (
 				brokers.map((b) => (
-					<div key={b.id} className="row g-2 align-items-end">
-						<div className="col-md-7">
+					// Flex with `flexBasis: 0`, not a 7/4/1 grid. The grid gave Split %
+					// a `col-md-4` — 164px of label gutter inside a ~200px column left a
+					// 16px input holding a value nobody could read. Basis 0 is what
+					// makes the two fields split evenly; `flex-grow-1` alone shares out
+					// only the leftover space, so they would keep their unequal
+					// intrinsic widths. The remove button hugs at the 8px bound tier
+					// instead of being parked at the far edge of its own column.
+					<div key={b.id} className="d-flex align-items-center gap-2">
+						<div className="flex-grow-1" style={{ flexBasis: 0 }}>
 							<TextField
 								label="Name"
 								value={b.name}
 								onChange={(v) => update(b.id, { name: v })}
 							/>
 						</div>
-						<div className="col-md-4">
+						<div className="flex-grow-1" style={{ flexBasis: 0 }}>
 							<NumberField
 								label="Split %"
 								value={b.commissionSplitPct}
 								onChange={(v) => update(b.id, { commissionSplitPct: v ?? 0 })}
 							/>
 						</div>
-						<div className="col-md-1 d-flex justify-content-end pb-1">
-							<Button
-								variant="ghost"
-								size="icon-sm"
-								aria-label="Remove broker"
-								onClick={() => onChange(brokers.filter((x) => x.id !== b.id))}
-							>
-								<FontAwesomeIcon icon={faTrashCan} />
-							</Button>
-						</div>
+						<Button
+							variant="ghost"
+							size="icon"
+							className="flex-shrink-0"
+							aria-label="Remove broker"
+							onClick={() => onChange(brokers.filter((x) => x.id !== b.id))}
+						>
+							<FontAwesomeIcon icon={faTrashCan} />
+						</Button>
 					</div>
 				))
 			)}
+			<div>
+				<Button variant="ghost" size="sm" onClick={add}>
+					<FontAwesomeIcon icon={faPlus} />
+					Add broker
+				</Button>
+			</div>
 		</div>
 	);
 }

@@ -213,8 +213,24 @@ Two rules:
    rows, values compared downward (Unit Mix, Rent Roll, income/expense line
    items). Field count per row is *not* the test: `AdditionalTypesEditor` has
    two fields per row and stays stacked flex, because at two rows there is
-   nothing to compare and a header row costs more than it returns. Single-field
-   repeaters (Sale Bullets, Alias) take one label for the whole set.
+   nothing to compare and a header row costs more than it returns. Three
+   corollaries:
+   - **A column carrying a total is read downward at any row count.** The
+     income and expense line items are tables at two rows and one because each
+     has a footer Total; the total *is* the downward read, so row count stops
+     being the test.
+   - **When each row is a named case rather than a record in a list, it gets
+     one card per row** — Financial Scenarios, where every row is "the
+     optimistic case" with its own NOI, cap rate, and cash flow. Nobody scans a
+     column of cap rates looking for an outlier; they read one case at a time,
+     so a table's shared header buys nothing and a card gives each case a name.
+   - **Single-field repeaters** (Sale Bullets, Alias) take one label for the
+     whole set.
+
+   A wide table also opts in to a floor width by passing
+   `record-form__grid-table` to `EditableTable`'s `className` — `EditableTable`
+   does not apply it itself, because a 640px floor inside a cluster column
+   pushes a narrow table's last columns off behind a scrollbar.
 
 ## Icons
 

@@ -58,12 +58,18 @@ const percent = (n: number) => `${Math.round(n)}%`
  * the broker picks leaves the field populated.
  *
  * A Sale raises all three (asking price, NOI, occupancy). A **Lease** raises
- * occupancy only: `DealEditor` renders its Financials section only when
- * `isSale && shape !== 'shell'` — always false for a Lease — so an
- * asking-price or NOI conflict would show a page badge with no arbitration
- * row behind it — unresolvable, which would strand the run in `needs-review`
- * forever. Neither field is gate-required on a Lease, so they are dropped
- * rather than surfaced as a dead end.
+ * occupancy only: the Deal form renders its Financials group only when
+ * `visibleDealGroups` (src/components/deals/edit/dealFormGroups.ts) keeps the
+ * `financials` group, which it does for `shape === 'sale'` alone — never for a
+ * Lease or a shell. So an asking-price or NOI conflict on one of those would show
+ * a page badge with no arbitration row behind it — unresolvable, which would
+ * strand the run in `needs-review` forever. Neither field is gate-required on a
+ * Lease, so they are dropped rather than surfaced as a dead end.
+ *
+ * The `isSale` test below is that same rule stated locally, and it covers the
+ * shell case for free: `dealShape` returns "sale" for exactly the listings whose
+ * `dealType` is not "Lease", and a shell is by definition a Lease with children —
+ * so dropping Lease drops every shape that hides the group.
  */
 export function deriveConflicts(
   deal: Listing,
