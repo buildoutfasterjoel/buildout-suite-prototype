@@ -1,4 +1,4 @@
-import { SubGroup } from "#/components/listings/edit/FieldGroup";
+import { SubGroup } from "#/components/common/recordForm/FieldGroup";
 import {
 	BulletsField,
 	Col,
@@ -6,7 +6,7 @@ import {
 	NumberField,
 	SelectField,
 	TextField,
-} from "#/components/listings/edit/fieldWidgets";
+} from "#/components/common/recordForm/fieldWidgets";
 import type { DealMarketing } from "#/data/types";
 
 const AVAILABLE_SF_TERMS = ["SF", "RSF"] as const;
@@ -27,7 +27,10 @@ export function LeaseSection({
 }) {
 	return (
 		<>
-			<SubGroup label="Headline">
+			<SubGroup
+				label="Headline"
+				description="The copy tenants read first."
+			>
 				<TextField
 					label="Lease Title"
 					value={marketing.leaseTitle ?? ""}
@@ -51,7 +54,10 @@ export function LeaseSection({
 				/>
 			</SubGroup>
 
-			<SubGroup label="Terms">
+			<SubGroup
+				label="Terms"
+				description="Commission split, quoting units, and closing notes."
+			>
 				<FieldGrid>
 					<Col>
 						<NumberField

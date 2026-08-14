@@ -1,8 +1,8 @@
-import { SubGroup } from "#/components/listings/edit/FieldGroup";
+import { SubGroup } from "#/components/common/recordForm/FieldGroup";
 import {
 	SelectField,
 	TextField,
-} from "#/components/listings/edit/fieldWidgets";
+} from "#/components/common/recordForm/fieldWidgets";
 import { getStore } from "#/data/store";
 import type { DealMarketing, DealType, PropertyStatus } from "#/data/types";
 
@@ -29,7 +29,7 @@ export function BuyerSection({
 	);
 
 	return (
-		<SubGroup label="Buyer">
+		<SubGroup label="Buyer" description="Who's buying, and who sent them.">
 			<SelectField
 				label="Buyer"
 				value={marketing.buyerContactId ?? ""}

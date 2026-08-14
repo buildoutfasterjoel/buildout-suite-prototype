@@ -1,7 +1,7 @@
 import {
 	AdditionalFields,
 	SubGroup,
-} from "#/components/listings/edit/FieldGroup";
+} from "#/components/common/recordForm/FieldGroup";
 import {
 	Col,
 	FieldGrid,
@@ -9,7 +9,7 @@ import {
 	SelectField,
 	SwitchRow,
 	TextField,
-} from "#/components/listings/edit/fieldWidgets";
+} from "#/components/common/recordForm/fieldWidgets";
 import {
 	buildingClassOptions,
 	propertyTypeEffects,
@@ -38,7 +38,10 @@ export function BuildingSection({
 
 	return (
 		<>
-			<SubGroup label="Size & Age">
+			<SubGroup
+				label="Size & Age"
+				description="Footprint, occupancy, and vintage."
+			>
 				<FieldGrid>
 					<Col span={6}>
 						<NumberField
@@ -72,7 +75,10 @@ export function BuildingSection({
 				</FieldGrid>
 			</SubGroup>
 
-			<SubGroup label="Structure">
+			<SubGroup
+				label="Structure"
+				description="Floors, heights, and how the space divides."
+			>
 				<FieldGrid>
 					<Col span={6}>
 						<NumberField
@@ -112,7 +118,10 @@ export function BuildingSection({
 				</FieldGrid>
 			</SubGroup>
 
-			<SubGroup label="Class & Tenancy">
+			<SubGroup
+				label="Class & Tenancy"
+				description="How the building grades, and who occupies it."
+			>
 				<FieldGrid>
 					<Col>
 						<SelectField
@@ -142,7 +151,10 @@ export function BuildingSection({
 			</SubGroup>
 
 			{effects.industrialCluster && (
-				<SubGroup label="Loading">
+				<SubGroup
+					label="Loading"
+					description="Dock, door, and crane counts for industrial space."
+				>
 					<FieldGrid>
 						<Col span={6}>
 							<NumberField
@@ -215,7 +227,10 @@ export function BuildingAdditionalFields({
 }) {
 	return (
 		<AdditionalFields label="Show 19 more building fields">
-			<SubGroup label="Measurements">
+			<SubGroup
+				label="Measurements"
+				description="Areas and dimensions beyond the headline size."
+			>
 				<FieldGrid>
 					<Col span={6}>
 						<NumberField
@@ -248,7 +263,10 @@ export function BuildingAdditionalFields({
 				</FieldGrid>
 			</SubGroup>
 
-			<SubGroup label="Parking & Construction">
+			<SubGroup
+				label="Parking & Construction"
+				description="How it was built, and where cars go."
+			>
 				<FieldGrid>
 					<Col span={6}>
 						<TextField
@@ -302,7 +320,10 @@ export function BuildingAdditionalFields({
 				</FieldGrid>
 			</SubGroup>
 
-			<SubGroup label="Systems & Condition">
+			<SubGroup
+				label="Systems & Condition"
+				description="Mechanicals, certifications, and current state."
+			>
 				<FieldGrid>
 					<Col span={6}>
 						<TextField

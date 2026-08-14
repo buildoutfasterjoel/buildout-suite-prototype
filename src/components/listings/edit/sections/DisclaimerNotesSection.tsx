@@ -1,12 +1,12 @@
 import { Field } from "@buildoutinc/blueprint-react/ui/Field";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
-import { SubGroup } from "#/components/listings/edit/FieldGroup";
+import { SubGroup } from "#/components/common/recordForm/FieldGroup";
 import {
 	Col,
 	FieldGrid,
 	SwitchRow,
 	TextField,
-} from "#/components/listings/edit/fieldWidgets";
+} from "#/components/common/recordForm/fieldWidgets";
 import type { DealMarketing } from "#/data/types";
 
 /**
@@ -30,7 +30,10 @@ export function DisclaimerNotesSection({
 }) {
 	return (
 		<>
-			<SubGroup label="Disclaimer">
+			<SubGroup
+				label="Disclaimer"
+				description="The legal footer buyers see on marketing."
+			>
 				<SwitchRow
 					label="Override Disclaimer"
 					checked={marketing.overrideDisclaimer ?? false}
@@ -50,7 +53,10 @@ export function DisclaimerNotesSection({
 				)}
 			</SubGroup>
 
-			<SubGroup label="Internal">
+			<SubGroup
+				label="Internal"
+				description="Notes that never leave the office."
+			>
 				<FieldGrid>
 					<Col span={12}>
 						<TextField

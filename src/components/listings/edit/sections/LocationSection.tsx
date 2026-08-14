@@ -1,4 +1,4 @@
-import { AdditionalFields, SubGroup } from "#/components/listings/edit/FieldGroup";
+import { AdditionalFields, SubGroup } from "#/components/common/recordForm/FieldGroup";
 import {
 	Col,
 	FieldGrid,
@@ -6,7 +6,7 @@ import {
 	SelectField,
 	SwitchRow,
 	TextField,
-} from "#/components/listings/edit/fieldWidgets";
+} from "#/components/common/recordForm/fieldWidgets";
 import { US_STATES, stateLabel } from "#/components/contacts/usStates";
 import { CoordinatePickerMap } from "#/components/listings/edit/CoordinatePickerMap";
 import type { DealMarketing, Property, YesNoNA } from "#/data/types";

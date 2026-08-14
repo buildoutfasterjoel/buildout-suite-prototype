@@ -195,6 +195,43 @@ Blueprint theme is globally applied via `src/main.scss`:
 
 Use Bootstrap utility classes for spacing, typography, and layout — the Blueprint theme extends Bootstrap 5.
 
+### Record forms
+
+Long record forms — the Listing form and the Deal form — are built from the
+shared shell in `src/components/common/recordForm/`: a **group** (icon + title
+over a stack of tiles), a **cluster** (`SubGroup` — name in a left gutter,
+fields right, its own tile), and two spacing tiers, *bound* (8px, a control and
+the field it reveals) and *peer* (16px, fields sharing a `FieldGrid`).
+
+Two rules:
+
+1. **The shell is for long forms only.** Modals, filter flyouts, and anything
+   under roughly six fields use plain stacked Blueprint `Field`s. The 164px
+   label gutter and the tile stack earn their cost across twenty-plus fields and
+   lose money on four.
+2. **A repeater becomes a table only when it is read down a column** — many
+   rows, values compared downward (Unit Mix, Rent Roll, income/expense line
+   items). Field count per row is *not* the test: `AdditionalTypesEditor` has
+   two fields per row and stays stacked flex, because at two rows there is
+   nothing to compare and a header row costs more than it returns. Three
+   corollaries:
+   - **A column carrying a total is read downward at any row count.** The
+     income and expense line items are tables at two rows and one because each
+     has a footer Total; the total *is* the downward read, so row count stops
+     being the test.
+   - **When each row is a named case rather than a record in a list, it gets
+     one card per row** — Financial Scenarios, where every row is "the
+     optimistic case" with its own NOI, cap rate, and cash flow. Nobody scans a
+     column of cap rates looking for an outlier; they read one case at a time,
+     so a table's shared header buys nothing and a card gives each case a name.
+   - **Single-field repeaters** (Sale Bullets, Alias) take one label for the
+     whole set.
+
+   A wide table also opts in to a floor width by passing
+   `record-form__grid-table` to `EditableTable`'s `className` — `EditableTable`
+   does not apply it itself, because a 640px floor inside a cluster column
+   pushes a narrow table's last columns off behind a scrollbar.
+
 ## Icons
 
 Use **FontAwesome Pro** icons. All four packages are available:

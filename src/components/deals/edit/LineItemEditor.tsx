@@ -1,10 +1,18 @@
-import { Button } from "@buildoutinc/blueprint-react/ui/Button";
-import { Input } from "@buildoutinc/blueprint-react/ui/Input";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faTrashCan } from "@fortawesome/pro-regular-svg-icons";
 import type { ExpenseLineItem, IncomeLineItem } from "#/data/types";
+import {
+	EditableTable,
+	type Column,
+} from "#/components/common/recordForm/EditableTable";
 
 // ── Line-item editor (income / expenses) ─────────────────────────────────────
+// A headerless hand-rolled repeater before: label + amount read down the column,
+// which is exactly what `EditableTable` is for. The title and the running Total
+// move into the footer — the cluster's gutter already names the table.
+const COLUMNS: Column<IncomeLineItem | ExpenseLineItem>[] = [
+	{ key: "label", label: "Item", kind: "text" },
+	{ key: "amount", label: "Amount", kind: "number" },
+];
+
 export function LineItemEditor<T extends IncomeLineItem | ExpenseLineItem>({
 	title,
 	items,
@@ -16,63 +24,46 @@ export function LineItemEditor<T extends IncomeLineItem | ExpenseLineItem>({
 }) {
 	const total = items.reduce((sum, i) => sum + i.amount, 0);
 	return (
-		<div className="d-flex flex-column gap-2">
-			<div className="d-flex align-items-center justify-content-between">
-				<span className="fw-semibold">{title}</span>
-				<span className="text-muted">Total ${total.toLocaleString()}</span>
-			</div>
-			{items.map((item) => (
-				<div key={item.id} className="d-flex align-items-center gap-2">
-					<Input
-						value={item.label}
-						placeholder="Label"
-						onChange={(e) =>
-							onChange(
-								items.map((x) =>
-									x.id === item.id ? { ...x, label: e.target.value } : x,
-								),
-							)
-						}
-					/>
-					<Input
-						type="number"
-						style={{ maxWidth: 160 }}
-						value={item.amount}
-						onChange={(e) =>
-							onChange(
-								items.map((x) =>
-									x.id === item.id
-										? { ...x, amount: Number(e.target.value) }
-										: x,
-								),
-							)
-						}
-					/>
-					<Button
-						variant="ghost"
-						size="icon-sm"
-						aria-label="Remove line item"
-						onClick={() => onChange(items.filter((x) => x.id !== item.id))}
-					>
-						<FontAwesomeIcon icon={faTrashCan} />
-					</Button>
+		<EditableTable<T>
+			// A union-typed column list feeding a generic component: both members
+			// carry `label` and `amount`, but TS can't narrow `keyof T` from the
+			// union's keys, so the cast is deliberate.
+			columns={COLUMNS as Column<T>[]}
+			rows={items}
+			// `EditableTable`'s number cells write `null` for an emptied input, but
+			// `amount` is non-nullable, so a cleared cell has to land as 0 — a number
+			// input that silently restores its old value when cleared reads as broken.
+			// The `in` check is what separates that from a label-only patch, which
+			// carries no `amount` key at all: a bare `patch.amount ?? 0` would zero the
+			// row's amount every time someone edited the Item text.
+			onEdit={(id, patch) =>
+				onChange(
+					items.map((x) =>
+						x.id === id
+							? {
+									...x,
+									...patch,
+									amount: "amount" in patch ? (patch.amount ?? 0) : x.amount,
+								}
+							: x,
+					),
+				)
+			}
+			onAdd={() =>
+				onChange([
+					...items,
+					{ id: crypto.randomUUID(), label: "", amount: 0 } as T,
+				])
+			}
+			onRemove={(id) => onChange(items.filter((x) => x.id !== id))}
+			addLabel="Add line item"
+			emptyLabel={`No ${title.toLowerCase()} line items yet.`}
+			footer={
+				<div className="d-flex justify-content-between">
+					<span className="fw-semibold">Total</span>
+					<span className="fw-semibold">${total.toLocaleString()}</span>
 				</div>
-			))}
-			<div>
-				<Button
-					variant="ghost"
-					size="sm"
-					onClick={() =>
-						onChange([
-							...items,
-							{ id: crypto.randomUUID(), label: "", amount: 0 } as T,
-						])
-					}
-				>
-					<FontAwesomeIcon icon={faPlus} />
-					Add line item
-				</Button>
-			</div>
-		</div>
+			}
+		/>
 	);
 }

@@ -1,0 +1,235 @@
+// src/components/common/recordForm/recordForm.scss
+//
+// Structure for the app's LONG record forms — the Listing form and the Deal
+// form. Hierarchy is drawn, not spaced: an earlier pass carried all four tiers
+// on whitespace alone and the form still read as one wall, because every cluster
+// looked identical no matter how far apart it sat. Each tier has its own device:
+//
+//   group     an icon + 17px title over a stack of tiles
+//   cluster   a name in a left gutter, fields right, each cluster its own tile
+//   bound     8px  — a control and the field it reveals (`gap-2`, in the TSX)
+//   peer      16px — fields sharing a FieldGrid (`g-4`, in the TSX)
+//
+// NOT for short forms. Modals, filter flyouts, and anything under roughly six
+// fields keep plain stacked Blueprint `Field`s: the 164px gutter and the tile
+// stack earn their cost across twenty-plus fields and lose money on four.
+//
+// Every value resolves to a Blueprint token — `tokens.*` for spacing, type, and
+// borders, `motion.*` for the disclosure (same precedent as editor.scss).
+//
+// Rules are flat `.record-form__x` class selectors, not descendants: `&__x`
+// inside `.record-form` compiles to a single class, and there is no
+// `.record-form` wrapper element anywhere. Containment comes from the prefix.
+@use "@buildoutinc/blueprint-tokens/scss/semantic" as tokens;
+@use "@buildoutinc/blueprint-theme/scss/bridge/vars" as motion;
+
+.record-form {
+  // ── Cluster tier ──────────────────────────────────────────────────────────
+  // No rules and no margins here. Each cluster is its own `bg-body` tile (see
+  // FieldGroup.tsx) and the 4px between tiles comes from the group body's
+  // `gap-1`, so the boundary is the tile's own edge. A rule *and* a tile edge
+  // would draw the same boundary twice.
+
+  // The gutter label. Semibold body text — in a gutter it does not need caps or
+  // a size change to separate from field labels, because it never shares a
+  // column with one.
+  &__subgroup-label {
+    font-weight: tokens.$font-weight-semibold;
+  }
+
+  &__subgroup-desc {
+    margin-top: tokens.$spacing-1;
+    margin-bottom: 0;
+  }
+
+  // ── Label gutter ──────────────────────────────────────────────────────────
+  // The gutter is a fixed measure so labels align down the whole form, but a
+  // fixed measure with no floor is what collapsed a `col-md-4` broker row's
+  // input to 16px: 164px of label inside a ~200px column leaves nothing for
+  // the control.
+  //
+  // The floor is a CONTAINER query, not a media query. The failure happens at a
+  // 900px viewport — above `md` — because the container is a narrow grid column
+  // inside a padded tile, and a media query cannot see that. Each field is its
+  // own inline-size container, so a field stacks when ITS OWN box is too narrow
+  // for a gutter plus a usable control, wherever it sits.
+  &__field {
+    container-type: inline-size;
+  }
+
+  &__gutter {
+    width: 164px;
+  }
+
+  // Bootstrap's `.input-group-text` is `white-space: nowrap`, which is right for
+  // a "$" or a "/mo" and wrong for a label in a fixed gutter: a label wider than
+  // the gutter's ~140px content box does not wrap, it runs on past the divider
+  // and into the control ("Gross Scheduled Income" overflowed by 5px). Two
+  // classes so this outranks the theme's single-class rule regardless of which
+  // stylesheet Vite injects last.
+  &__field &__gutter {
+    white-space: normal;
+  }
+
+  // 20rem = 320px, calibrated against a MEASURED field, not arithmetic. A
+  // half-width field (`Col span=6`) inside a cluster is ~332px at a 1440
+  // viewport, so the threshold sits deliberately just below it: a half-width
+  // field keeps its gutter, leaving the control 168px — which is exactly what
+  // the Listing form shipped and had reviewed, and well clear of `__control`'s
+  // own 7rem (112px) floor. A field genuinely too narrow still collapses: a
+  // third-width column, or any field at a small viewport (a half-width field in
+  // a ~354px cluster column at 900px is ~171px). When it does, the gutter takes
+  // the full width and the control wraps under it — the label ends up on top,
+  // which is the layout this form used before the gutter and is still correct
+  // when there is no room for a column of its own.
+  @container (max-width: 20rem) {
+    &__gutter {
+      width: 100%;
+    }
+
+    // The addon's divider is the theme's `border-width: 0 1px 0 0` — a vertical
+    // hairline on its right edge, which is where the boundary belongs while the
+    // label and the control sit side by side. Stacked, that hairline lands at
+    // the far right of a full-width row, 1px inside the group's own border, so
+    // it reads as a doubled edge and leaves nothing between the label and the
+    // control it names. Move it to the bottom, where the boundary now is.
+    //
+    // Four classes deliberately: the theme's rule is
+    // `.input-group-text.input-addon-text:first-child` at three, and a tie would
+    // be settled by stylesheet order.
+    &__field .input-group &__gutter.input-addon-text {
+      border-width: 0 0 var(--bp-border-width) 0;
+    }
+
+    // Same rotation for the corners. Side by side, the gutter rounds its left
+    // pair and the control its right pair, and all four are outer corners.
+    // Stacked, one of each pair moves INTO the field: the gutter's bottom-left
+    // and the control's top-right now sit at the seam, where a 6px radius carves
+    // a notch out of a white row against the tile behind it.
+    //
+    // Only the two interior corners are zeroed. The four outer ones need no
+    // rule: `.input-group` carries the radius and `overflow: hidden`, so it
+    // clips its children's square corners to its own rounded ones.
+    &__field .input-group &__gutter {
+      border-bottom-left-radius: 0;
+    }
+
+    &__field .input-group &__control {
+      border-top-right-radius: 0;
+    }
+  }
+
+  &__control {
+    min-width: 7rem; // 112px — a number input's floor before digits clip
+  }
+
+  // `flex-wrap` is what makes the container query's full-width gutter actually
+  // stack: Bootstrap's `.input-group` is `flex-wrap: wrap` already, but the
+  // addon and control both carry `flex: 1 1 auto` overrides in the theme, so
+  // the wrap only takes effect once the gutter claims the whole line.
+  &__field .input-group {
+    flex-wrap: wrap;
+  }
+
+  // ── Editable grids (Unit Mix, Rent Roll) ──────────────────────────────────
+  // OPT-IN, for WIDE grids only — `EditableTable` does not apply this itself;
+  // a caller passes it via `className`. A floor width so the columns keep their
+  // inputs legible instead of crushing — the Unit Mix multifamily set runs to
+  // ten columns. Below this the table scrolls inside Blueprint's own
+  // `.table-container`, which already supplies the overflow. A narrow grid must
+  // NOT take this floor: the Deal form's income/expense line items are three
+  // columns, and 640px inside a ~354px cluster column pushes the Amount cell
+  // and the remove button off-screen behind a scrollbar. Deliberately not a
+  // token: this is a content measurement (ten number inputs plus a remove
+  // button), not a step on the spacing scale.
+  &__grid-table {
+    min-width: 40rem; // 640px
+  }
+
+  // ── Disclosure ────────────────────────────────────────────────────────────
+  // Deliberately not a heading: it used to be an <h3>, the same level as the
+  // group titles it sat among.
+  &__more-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: tokens.$spacing-2;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: tokens.$font-size-body;
+    // Semibold so the disclosure reads as a control rather than prose. 500 was
+    // off Blueprint's weight scale (300/400/600/700/800/900) and the Typekit
+    // kit has no 500 face, so it was painting as 400 regardless.
+    font-weight: tokens.$font-weight-semibold;
+  }
+
+  &__more-chevron {
+    transition: transform motion.$short3 motion.$standard;
+  }
+
+  // base-ui sets data-panel-open on the trigger button (same precedent as
+  // .collapsible-card-trigger[data-panel-open] in main.scss).
+  &__more-toggle[data-panel-open] &__more-chevron {
+    transform: rotate(90deg);
+  }
+
+  &__more-body {
+    margin-top: tokens.$spacing-6;
+  }
+
+  // ── Computed readout ──────────────────────────────────────────────────────
+  // A derived figure, not a field. These used to render as read-only `Input`s
+  // with a top label, which put a disabled-looking text box next to eleven live
+  // ones and invited a broker to type in it.
+  //
+  // Laid out as a field row, not as a band across the cluster. An earlier pass
+  // indented the block by the gutter and used `space-between`, which put the
+  // label at 164px and the figure at the cluster's far edge — 400px of empty
+  // space between "Computed cap rate" and "5.36%", so the two read as unrelated
+  // and the figure read as floating at the end of the tile.
+  //
+  // Instead the label takes the gutter column and the figure starts where the
+  // controls start. The figure then sits directly beneath the input that
+  // produced it, which is the whole claim a readout makes.
+  //
+  // 164px of label plus a 12px gap puts the figure at 176px, and an input's own
+  // 12px of padding puts its first typed digit at 177px — so the figure lands on
+  // the digits above it, not merely inside the same column.
+  //
+  // `flex: 0 1 164px` rather than a fixed width: when a cluster is too narrow to
+  // spare the gutter the label gives ground and wraps, the same concession the
+  // field gutters make above it — without needing a container query it cannot
+  // run (a readout is a SIBLING of its fields, so it has no `__field` container
+  // to query).
+  &__readout {
+    display: flex;
+    align-items: baseline;
+    gap: tokens.$spacing-3;
+  }
+
+  &__readout-label {
+    flex: 0 1 164px;
+  }
+
+  // ── Computed readouts, as a card row ──────────────────────────────────────
+  // The multi-figure form of the above. A grid rather than wrapping flex: with
+  // flex, a card left alone on the second row grows to the full cluster width,
+  // so three cards at 900px read as two halves and one slab. `auto-fit`
+  // collapses the empty tracks instead, so the cards keep one width whatever
+  // number of them lands on a row.
+  //
+  // The 9rem track floor is the wrap point, not a design width: below it the
+  // longest label ("Total scheduled income") takes a third line, so the row
+  // breaks in two before that happens.
+  &__readout-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); // 144px
+    gap: tokens.$spacing-2;
+  }
+
+  &__readout-card {
+    display: flex;
+    flex-direction: column;
+    gap: tokens.$spacing-1;
+  }
+}

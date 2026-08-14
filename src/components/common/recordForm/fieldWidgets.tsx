@@ -42,9 +42,9 @@ export function TextField({
   required?: boolean;
 }) {
   return (
-    <Field>
+    <Field className="record-form__field">
       <InputGroup>
-        <InputGroup.Addon asText style={{ width: 164 }}>
+        <InputGroup.Addon asText className="record-form__gutter">
           <Field.Label className="align-self-start">
             {label}
             {required && <span className="text-danger ms-1">*</span>}
@@ -52,6 +52,7 @@ export function TextField({
         </InputGroup.Addon>
         {textarea ? (
           <Textarea
+            className="record-form__control"
             rows={rows ?? 3}
             value={value}
             placeholder={placeholder}
@@ -59,6 +60,7 @@ export function TextField({
           />
         ) : (
           <Input
+            className="record-form__control"
             value={value}
             placeholder={placeholder}
             onChange={(e) => onChange(e.target.value)}
@@ -67,29 +69,6 @@ export function TextField({
       </InputGroup>
     </Field>
   );
-
-  // return (
-  //   <Field>
-  //     <Field.Label>
-  //       {label}
-  //       {required && <span className="text-danger ms-1">*</span>}
-  //     </Field.Label>
-  //     {textarea ? (
-  //       <Textarea
-  //         rows={rows ?? 3}
-  //         value={value}
-  //         placeholder={placeholder}
-  //         onChange={(e) => onChange(e.target.value)}
-  //       />
-  //     ) : (
-  //       <Input
-  //         value={value}
-  //         placeholder={placeholder}
-  //         onChange={(e) => onChange(e.target.value)}
-  //       />
-  //     )}
-  //   </Field>
-  // );
 }
 
 export function NumberField({
@@ -107,9 +86,9 @@ export function NumberField({
 }) {
   const { conflict, resolve } = useIngestionConflict(fieldKey);
   return (
-    <Field>
+    <Field className="record-form__field">
       <InputGroup>
-        <InputGroup.Addon asText style={{ width: 164 }}>
+        <InputGroup.Addon asText className="record-form__gutter">
           <Field.Label className="d-flex align-items-center gap-2">
             {label}
             {conflict && (
@@ -122,7 +101,11 @@ export function NumberField({
         </InputGroup.Addon>
         <Input
           type="number"
-          className={conflict ? "ingestion-conflict__input" : undefined}
+          className={
+            conflict
+              ? "ingestion-conflict__input record-form__control"
+              : "record-form__control"
+          }
           value={value ?? ""}
           onChange={(e) =>
             onChange(e.target.value === "" ? null : Number(e.target.value))
@@ -170,6 +153,97 @@ export function NumberField({
   );
 }
 
+/**
+ * A derived figure — the output of a calculation, not something to type into.
+ *
+ * Deliberately not a read-only `Input`: a disabled-looking text box beside a
+ * column of live ones reads as a field that is merely switched off, and invites
+ * a click. A label and a figure read as a result. Body-size bold rather than a
+ * KPI tile, because these sit inside a form that already stacks many headings
+ * and numbers.
+ *
+ * Renders nothing when `value` is blank, so an un-entered input does not leave a
+ * dangling label with no figure beside it.
+ */
+export function Readout({ label, value }: { label: string; value: string }) {
+  if (!value) return null;
+  return (
+    <div className="record-form__readout">
+      {/* The label takes the gutter column and the figure starts where the
+          controls start, so a derived figure lines up under the input that
+          produced it. Small and muted is what keeps it from reading as another
+          field label in that column. */}
+      <span className="record-form__readout-label fs-small text-muted">
+        {label}
+      </span>
+      <span className="fw-semibold">{value}</span>
+    </div>
+  );
+}
+
+/**
+ * A row of derived figures as small stat cards — figure first, label beneath.
+ *
+ * For a cluster that produces SEVERAL computed figures at once. Three
+ * {@link Readout} rows stacked under a field grid read as three more form
+ * rows, in a column that is otherwise all inputs; as a row of cards they read
+ * as one result of the fields above them, and take one line instead of three.
+ *
+ * The figure stays body-size bold rather than a KPI number. This sits inside a
+ * form that already stacks a group heading, a cluster label, and a table header
+ * within a screen of each other — a 32px figure would outrank all of them.
+ *
+ * Blank figures are dropped, and the row disappears entirely if none survive,
+ * so an un-entered cluster shows no empty cards.
+ */
+export function ReadoutCards({
+  items,
+}: {
+  items: { label: string; value: string }[];
+}) {
+  const shown = items.filter((i) => i.value);
+  if (shown.length === 0) return null;
+  return (
+    <div className="record-form__readout-cards">
+      {shown.map((i) => (
+        <div
+          key={i.label}
+          className="record-form__readout-card bg-card border rounded p-3"
+        >
+          <span className="fw-semibold">{i.value}</span>
+          <span className="fs-small text-muted">{i.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * A field whose value is fixed — Deal Type, which a listing cannot change.
+ *
+ * Exists so a fixed value still sits in the gutter like every field around it.
+ * Rendering it as a bare `Field` + readOnly `Input` is what left Deal Type as
+ * the one top-labeled row in a form of gutter-labeled ones.
+ */
+export function ReadOnlyField({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <Field className="record-form__field">
+      <InputGroup>
+        <InputGroup.Addon asText className="record-form__gutter">
+          <Field.Label>{label}</Field.Label>
+        </InputGroup.Addon>
+        <Input className="record-form__control" readOnly value={value} />
+      </InputGroup>
+    </Field>
+  );
+}
+
 export const DATE_FORMAT: Intl.DateTimeFormatOptions = {
   year: "numeric",
   month: "short",
@@ -209,13 +283,14 @@ export function DateField({
   const [open, setOpen] = useState(false);
   const selected = parseDate(value);
   return (
-    <Field>
+    <Field className="record-form__field">
       <InputGroup>
-        <InputGroup.Addon asText style={{ width: 164 }}>
+        <InputGroup.Addon asText className="record-form__gutter">
           <Field.Label>{label}</Field.Label>
         </InputGroup.Addon>
 
         <Input
+          className="record-form__control"
           type="text"
           readOnly
           placeholder="Pick a date"
@@ -268,13 +343,13 @@ export function SelectField<T extends string>({
   placeholder?: string;
 }) {
   return (
-    <Field>
+    <Field className="record-form__field">
       <InputGroup>
-        <InputGroup.Addon asText style={{ width: 164 }}>
+        <InputGroup.Addon asText className="record-form__gutter">
           <Field.Label>{label}</Field.Label>
         </InputGroup.Addon>
         <Select value={value} onValueChange={(v) => v && onChange(v as T)}>
-          <Select.Trigger className="bg-card">
+          <Select.Trigger className="bg-card record-form__control">
             <Select.Value>
               {(v) =>
                 v == null
@@ -328,9 +403,9 @@ export function ComboField<T extends string>({
 }) {
   const labelFor = (item: T) => labels?.[item] ?? item;
   return (
-    <Field>
+    <Field className="record-form__field">
       <InputGroup>
-        <InputGroup.Addon asText style={{ width: 164 }}>
+        <InputGroup.Addon asText className="record-form__gutter">
           <Field.Label>
             {label}
             {required && <span className="text-danger ms-1">*</span>}
@@ -349,7 +424,7 @@ export function ComboField<T extends string>({
         >
           <Combobox.InputGroup>
             <Combobox.Input
-              className="flex-grow-0"
+              className="flex-grow-0 record-form__control"
               placeholder={placeholder ?? "Search…"}
               showClear
             />

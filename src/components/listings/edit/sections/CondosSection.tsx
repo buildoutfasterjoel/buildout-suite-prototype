@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDoorOpen, faPlus } from "@fortawesome/pro-regular-svg-icons";
-import { SubGroup } from "#/components/listings/edit/FieldGroup";
+import { SubGroup } from "#/components/common/recordForm/FieldGroup";
 import {
 	Col,
 	DateField,
@@ -11,7 +11,7 @@ import {
 	SelectField,
 	SwitchRow,
 	TextField,
-} from "#/components/listings/edit/fieldWidgets";
+} from "#/components/common/recordForm/fieldWidgets";
 import {
 	ReorderableAccordion,
 	ReorderToggle,

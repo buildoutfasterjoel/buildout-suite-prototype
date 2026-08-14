@@ -1,18 +1,36 @@
+/**
+ * The record-form shell: groups, clusters, and the long-tail disclosure.
+ *
+ * For the app's two LONG record forms only — the Listing form
+ * (`/listings/:id/listing`) and the Deal form (`/listings/:id/edit`).
+ *
+ * Do NOT reach for this in a short form. Modals, filter flyouts, and anything
+ * under roughly six fields keep plain stacked Blueprint `Field`s: the 164px
+ * label gutter and the tile stack pay for themselves across twenty-plus fields
+ * and cost more than they return on four.
+ */
 import type { ReactNode } from "react";
 import { Collapsible } from "@buildoutinc/blueprint-react/ui/Collapsible";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { faChevronRight } from "@fortawesome/pro-regular-svg-icons";
-import "./listingForm.scss";
+import "./recordForm.scss";
 
 /**
- * One top-level group on the Listing form — Location, The Asset, Marketing.
+ * One top-level group on either long record form — Location / The Asset /
+ * Marketing on the Listing form, Setup & Status / Transaction Terms /
+ * Financials on the Deal form.
  *
- * Deliberately NOT the `Section` in `listingWidgets.tsx`: that one is shared
- * with the Deal editor, and this needs its own spacing rhythm without changing
- * how the Deal editor looks. The heading keeps `fs-large` (17px) — the scale is
- * full at 24/20/17/14 and 20px would collide with the page title, so the 72px
- * gap between groups does the separating instead of a size bump.
+ * Deliberately NOT the `Section` in `listingWidgets.tsx`. That one is a plain
+ * heading over a `gap-3` stack, and it still serves the *read-only* listing
+ * surfaces — client-report, website, and demographics — where a group is a
+ * heading and nothing else. A group here owns the cluster rhythm below it
+ * (transparent body, 4px between tiles), which those pages have no use for; the
+ * two stayed separate so neither drags the other's spacing along.
+ *
+ * The heading keeps `fs-large` (17px) — the scale is full at 24/20/17/14 and
+ * 20px would collide with the page title, so the caller's group-tier gap does
+ * the separating instead of a size bump.
  */
 export function FieldGroup({
   title,
@@ -25,7 +43,13 @@ export function FieldGroup({
 }) {
   return (
     <section>
-      <h3 className="d-flex align-items-center gap-2 fs-large fw-semibold py-3">
+      {/* `pb-3`, not `py-3`. The caller's `gap-6` already puts 24px above this
+          heading; a top padding stacked another 12px on it, so the space above a
+          group title measured 36px while the tile below it sat at 12px. Dropping
+          it leaves the gap as the only thing separating one group from the next
+          — which is what the gap is for — and keeps 12px binding the title to
+          the stack it labels. */}
+      <h3 className="d-flex align-items-center gap-2 fs-large fw-semibold pb-3">
         {icon && <FontAwesomeIcon icon={icon} className="text-primary" />}
         {title}
       </h3>
@@ -81,12 +105,12 @@ export function SubGroup({
   // negative side margins to cancel its gutters, so padding and a background on
   // the same node would bleed the panel past the column edges.
   return (
-    <div className="listing-form__subgroup bg-body rounded p-4">
+    <div className="record-form__subgroup bg-body rounded p-4">
       <div className="row">
         <div className="col-md-3">
-          {label && <div className="listing-form__subgroup-label">{label}</div>}
+          {label && <div className="record-form__subgroup-label">{label}</div>}
           {description && (
-            <p className="listing-form__subgroup-desc fs-small text-muted">
+            <p className="record-form__subgroup-desc fs-small text-muted">
               {description}
             </p>
           )}
@@ -125,17 +149,17 @@ export function AdditionalFields({
     // clusters rather than floating between two panels.
     <Collapsible
       defaultOpen={false}
-      className="listing-form__more bg-body rounded p-4"
+      className="record-form__more bg-body rounded p-4"
     >
-      <Collapsible.Trigger className="listing-form__more-toggle">
+      <Collapsible.Trigger className="record-form__more-toggle">
         <FontAwesomeIcon
           icon={faChevronRight}
-          className="listing-form__more-chevron"
+          className="record-form__more-chevron"
         />
         {label}
       </Collapsible.Trigger>
       <Collapsible.Content>
-        <div className="listing-form__more-body">{children}</div>
+        <div className="record-form__more-body">{children}</div>
       </Collapsible.Content>
     </Collapsible>
   );

@@ -1,14 +1,14 @@
 import {
 	AdditionalFields,
 	SubGroup,
-} from "#/components/listings/edit/FieldGroup";
+} from "#/components/common/recordForm/FieldGroup";
 import {
 	Col,
 	FieldGrid,
 	NumberField,
 	TextField,
 	YesNoNaField,
-} from "#/components/listings/edit/fieldWidgets";
+} from "#/components/common/recordForm/fieldWidgets";
 import type { Property } from "#/data/types";
 
 /**
@@ -28,7 +28,10 @@ export function LandSection({
 }) {
 	return (
 		<>
-			<SubGroup label="Land">
+			<SubGroup
+				label="Land"
+				description="How the parcel divides, and what it suits."
+			>
 				<FieldGrid>
 					<Col>
 						<NumberField
@@ -71,7 +74,10 @@ export function LandAdditionalFields({
 }) {
 	return (
 		<AdditionalFields label="Show 13 more land fields">
-			<SubGroup label="Utilities">
+			<SubGroup
+				label="Utilities"
+				description="Which services reach the site."
+			>
 				<FieldGrid>
 					<Col span={6}>
 						<YesNoNaField
@@ -143,7 +149,10 @@ export function LandAdditionalFields({
 				</FieldGrid>
 			</SubGroup>
 
-			<SubGroup label="Site Conditions">
+			<SubGroup
+				label="Site Conditions"
+				description="Ground, topography, and anything encumbering it."
+			>
 				<FieldGrid>
 					<Col span={6}>
 						<TextField

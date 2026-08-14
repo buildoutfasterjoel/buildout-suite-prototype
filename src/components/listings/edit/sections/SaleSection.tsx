@@ -1,4 +1,4 @@
-import { AdditionalFields, SubGroup } from "#/components/listings/edit/FieldGroup";
+import { AdditionalFields, SubGroup } from "#/components/common/recordForm/FieldGroup";
 import {
 	BulletsField,
 	Col,
@@ -9,7 +9,7 @@ import {
 	SwitchRow,
 	TextField,
 	YesNoNaField,
-} from "#/components/listings/edit/fieldWidgets";
+} from "#/components/common/recordForm/fieldWidgets";
 import type { DealMarketing, InvestmentType, PropertyUse } from "#/data/types";
 
 // ── Option lists (string unions from the data model) ────────────────────────
@@ -46,7 +46,10 @@ export function SaleSection({
 }) {
 	return (
 		<>
-			<SubGroup label="Headline">
+			<SubGroup
+				label="Headline"
+				description="The copy buyers read first."
+			>
 				<TextField
 					label="Sale Title"
 					value={marketing.saleTitle ?? ""}
@@ -70,7 +73,10 @@ export function SaleSection({
 				/>
 			</SubGroup>
 
-			<SubGroup label="Terms">
+			<SubGroup
+				label="Terms"
+				description="Use, investment profile, and what the sale includes."
+			>
 				<FieldGrid>
 					<Col>
 						<SelectField
@@ -127,7 +133,10 @@ export function SaleSection({
 				</div>
 			</SubGroup>
 
-			<SubGroup label="Lease & Commission">
+			<SubGroup
+				label="Lease & Commission"
+				description="Existing lease runway, and what the deal pays out."
+			>
 				<FieldGrid>
 					<Col>
 						<TextField
@@ -160,7 +169,10 @@ export function SaleSection({
 				</FieldGrid>
 			</SubGroup>
 
-			<SubGroup label="Auction">
+			<SubGroup
+				label="Auction"
+				description="Whether this sells at auction, and on what terms."
+			>
 				<div className="d-flex flex-column gap-3">
 					<SwitchRow
 						label="Auction"
@@ -235,7 +247,10 @@ export function SaleAdditionalFields({
 }) {
 	return (
 		<AdditionalFields label="Show 12 more sale fields">
-			<SubGroup label="Financing">
+			<SubGroup
+				label="Financing"
+				description="Debt in place, and what it costs to carry."
+			>
 				<FieldGrid>
 					<Col>
 						<TextField
@@ -261,7 +276,10 @@ export function SaleAdditionalFields({
 				/>
 			</SubGroup>
 
-			<SubGroup label="Taxes & Assessment">
+			<SubGroup
+				label="Taxes & Assessment"
+				description="Assessed values and the tax picture."
+			>
 				<TextField
 					label="Taxes"
 					textarea
@@ -306,7 +324,10 @@ export function SaleAdditionalFields({
 				</FieldGrid>
 			</SubGroup>
 
-			<SubGroup label="Exchange & Ownership">
+			<SubGroup
+				label="Exchange & Ownership"
+				description="1031 eligibility, and how the land is held."
+			>
 				<FieldGrid>
 					<Col>
 						<YesNoNaField

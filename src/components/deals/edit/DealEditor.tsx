@@ -1,11 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
-import { Input } from "@buildoutinc/blueprint-react/ui/Input";
-import { Field } from "@buildoutinc/blueprint-react/ui/Field";
-import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
-import { faGear, faFileContract } from "@fortawesome/pro-regular-svg-icons";
 import type {
 	DealBroker,
 	DealPitchFinancials,
@@ -22,14 +18,19 @@ import {
 	commissionAmountFromPct,
 	commissionPctFromAmount,
 } from "#/data/commission";
-import { Section } from "#/components/listings/listingWidgets";
 import {
 	NumberField,
 	DateField,
 	SelectField,
 	FieldGrid,
 	Col,
-} from "#/components/listings/edit/fieldWidgets";
+	ReadOnlyField,
+} from "#/components/common/recordForm/fieldWidgets";
+import { FieldGroup, SubGroup } from "#/components/common/recordForm/FieldGroup";
+import {
+	visibleDealGroups,
+	type DealGroupId,
+} from "#/components/deals/edit/dealFormGroups";
 import { ListingPageHeader } from "#/components/listings/ListingPageHeader";
 import { notify } from "#/lib/notify";
 import { useStageGate } from "#/components/deals/useStageGate";
@@ -91,7 +92,7 @@ export function DealEditor({
 	const [transaction, setTransaction] = useState<DealTransaction>(
 		listing.transaction,
 	);
-	const [financials, setFinancials] = useState<DealPitchFinancials>(
+	const [financialsDraft, setFinancialsDraft] = useState<DealPitchFinancials>(
 		listing.financials,
 	);
 
@@ -111,7 +112,7 @@ export function DealEditor({
 		if (previous !== "processing" || ingestionStatus === "processing") return;
 		const base = mountedListing.current;
 		setTransaction((d) => reseedDraft(d, base.transaction, listing.transaction));
-		setFinancials((d) => reseedDraft(d, base.financials, listing.financials));
+		setFinancialsDraft((d) => reseedDraft(d, base.financials, listing.financials));
 	}, [ingestionStatus, listing]);
 
 	// A StageGate commit always appends a history entry, so a change in its
@@ -144,7 +145,7 @@ export function DealEditor({
 		gateBase.current = listing;
 		setStatus((d) => (d === base.status ? listing.status : d));
 		setTransaction((d) => reseedDraft(d, base.transaction, listing.transaction));
-		setFinancials((d) => reseedDraft(d, base.financials, listing.financials));
+		setFinancialsDraft((d) => reseedDraft(d, base.financials, listing.financials));
 	}, [historyLength, listing]);
 
 	// A resolution writes financials straight to the store
@@ -173,7 +174,7 @@ export function DealEditor({
 		resolveIngestionConflict(listing.id, fieldKey, side);
 		const updated = useDataStore.getState().listings.get(listing.id);
 		if (!base || !updated) return;
-		setFinancials((d) => reseedDraft(d, base, updated.financials));
+		setFinancialsDraft((d) => reseedDraft(d, base, updated.financials));
 	};
 
 	const conflicts = listing.ingestion?.conflicts ?? [];
@@ -198,10 +199,8 @@ export function DealEditor({
 			?.scrollIntoView({ behavior: "smooth", block: "center" });
 	}, []);
 
-	const isSale = dealType !== "Lease";
-
 	const patchFinancials = (patch: Partial<DealPitchFinancials>) =>
-		setFinancials((f) => ({ ...f, ...patch }));
+		setFinancialsDraft((f) => ({ ...f, ...patch }));
 	const patchTransaction = (patch: Partial<DealTransaction>) =>
 		setTransaction((t) => ({ ...t, ...patch }));
 
@@ -244,7 +243,7 @@ export function DealEditor({
 				internalBrokers,
 				outsideBrokers,
 				transaction,
-				financials,
+				financials: financialsDraft,
 			}),
 		);
 		notify({ title: "Deal saved" });
@@ -268,6 +267,16 @@ export function DealEditor({
 		</>
 	);
 
+	const groups = visibleDealGroups(shape);
+	const groupById = (id: DealGroupId) => groups.find((g) => g.id === id);
+	// `…Group` suffixes so a group descriptor never reads as its draft: the
+	// Financials group object, the `financials` prop it feeds, and the
+	// `financialsDraft` state used to be three different `financials` in four
+	// lines.
+	const setupGroup = groupById("setup");
+	const termsGroup = groupById("terms");
+	const financialsGroup = groupById("financials");
+
 	const body = (
 		<div className="d-flex flex-column gap-6 p-4">
 			<PendingPublishBanner listing={listing} />
@@ -287,7 +296,7 @@ export function DealEditor({
 			{conflictCount === 0 && conflictsElsewhere > 0 && (
 				<p className="text-muted fs-small mb-0">
 					{conflictsElsewhere} unresolved{" "}
-					{conflictsElsewhere === 1 ? "conflict" : "conflicts"} remain on{" "}
+					{conflictsElsewhere === 1 ? "conflict remains" : "conflicts remain"} on{" "}
 					<Link
 						to="/listings/$listingId/listing"
 						params={{ listingId: listing.id }}
@@ -299,124 +308,156 @@ export function DealEditor({
 				</p>
 			)}
 
+			{/* `gap-6` (24px) — the group tier, matching ListingFormEditor. */}
 			<div className="d-flex flex-column gap-6">
-				{/* ── Setup / status ── */}
-				<Section title="Setup & Status" icon={faGear}>
-					<FieldGrid>
-						<Col>
-							<Field>
-								<Field.Label>Deal Type</Field.Label>
-								<Input readOnly value={dealType} />
-							</Field>
-						</Col>
-						<Col>
-							<SelectField
-								label="Status"
-								value={status}
-								options={availableStages(shape)}
-								labels={Object.fromEntries(
-									availableStages(shape).map((s) => [s, dealStageLabel(s, shape)]),
-								)}
-								onChange={setStatus}
+				{setupGroup && (
+					<FieldGroup title={setupGroup.label} icon={setupGroup.icon}>
+						<SubGroup
+							label="Classification"
+							description="What kind of deal this is, and where it stands."
+						>
+							<FieldGrid>
+								<Col>
+									<ReadOnlyField label="Deal Type" value={dealType} />
+								</Col>
+								<Col>
+									<SelectField
+										label="Status"
+										value={status}
+										options={availableStages(shape)}
+										labels={Object.fromEntries(
+											availableStages(shape).map((s) => [
+												s,
+												dealStageLabel(s, shape),
+											]),
+										)}
+										onChange={setStatus}
+									/>
+								</Col>
+							</FieldGrid>
+						</SubGroup>
+
+						<SubGroup
+							label="Listing Dates"
+							description="When the listing agreement starts and ends."
+						>
+							<FieldGrid>
+								<Col>
+									<DateField
+										label="Listed On"
+										value={transaction.listedOnDate}
+										onChange={(v) => patchTransaction({ listedOnDate: v })}
+									/>
+								</Col>
+								<Col>
+									<DateField
+										label="Listing Expiration"
+										value={transaction.listingExpirationDate}
+										onChange={(v) =>
+											patchTransaction({ listingExpirationDate: v })
+										}
+									/>
+								</Col>
+							</FieldGrid>
+						</SubGroup>
+
+						<SubGroup
+							label="Internal Brokers"
+							description="Who at your brokerage is on this deal."
+						>
+							<BrokerEditor
+								brokers={internalBrokers}
+								side="internal"
+								onChange={setInternalBrokers}
 							/>
-						</Col>
-						<Col>
-							<DateField
-								label="Listed On"
-								value={transaction.listedOnDate}
-								onChange={(v) => patchTransaction({ listedOnDate: v })}
+						</SubGroup>
+
+						<SubGroup
+							label="Outside Brokers"
+							description="Co-brokers outside your brokerage."
+						>
+							<BrokerEditor
+								brokers={outsideBrokers}
+								side="outside"
+								onChange={setOutsideBrokers}
 							/>
-						</Col>
-						<Col>
-							<DateField
-								label="Listing Expiration"
-								value={transaction.listingExpirationDate}
-								onChange={(v) =>
-									patchTransaction({ listingExpirationDate: v })
-								}
-							/>
-						</Col>
-					</FieldGrid>
-					<BrokerEditor
-						title="Internal Brokers"
-						brokers={internalBrokers}
-						side="internal"
-						onChange={setInternalBrokers}
-					/>
-					<BrokerEditor
-						title="Outside Brokers"
-						brokers={outsideBrokers}
-						side="outside"
-						onChange={setOutsideBrokers}
-					/>
-				</Section>
+						</SubGroup>
+					</FieldGroup>
+				)}
 
-				{shape !== "shell" && (
-					<>
-					<Separator />
+				{termsGroup && (
+					<FieldGroup title={termsGroup.label} icon={termsGroup.icon}>
+						<SubGroup
+							label="Price & Commission"
+							description="What it sells for, and what you earn on it."
+						>
+							<FieldGrid>
+								<Col>
+									<NumberField
+										label="Sale Price"
+										value={transaction.salePrice || null}
+										onChange={setSalePrice}
+									/>
+								</Col>
+								<Col>
+									<NumberField
+										label="Gross Commission %"
+										value={transaction.commissionPct || null}
+										onChange={setCommissionPct}
+									/>
+								</Col>
+								<Col>
+									<NumberField
+										label="Gross Commission $"
+										value={transaction.commissionAmount || null}
+										onChange={setCommissionAmount}
+									/>
+								</Col>
+							</FieldGrid>
+						</SubGroup>
 
-					{/* ── Transaction terms (parity with the stage gate + Edit Transaction dialog) ── */}
-					<Section title="Transaction Terms" icon={faFileContract}>
-						<FieldGrid>
-							<Col>
-								<NumberField
-									label="Sale Price"
-									value={transaction.salePrice || null}
-									onChange={setSalePrice}
-								/>
-							</Col>
-							<Col>
-								<NumberField
-									label="Gross Commission %"
-									value={transaction.commissionPct || null}
-									onChange={setCommissionPct}
-								/>
-							</Col>
-							<Col>
-								<NumberField
-									label="Gross Commission $"
-									value={transaction.commissionAmount || null}
-									onChange={setCommissionAmount}
-								/>
-							</Col>
-							<Col>
-								<NumberField
-									label="Close Probability (%)"
-									value={transaction.closeProbability || null}
-									onChange={(v) =>
-										patchTransaction({ closeProbability: v ?? 0 })
-									}
-								/>
-							</Col>
-							<Col>
-								<DateField
-									label="Contract Executed"
-									value={transaction.contractExecutedDate}
-									onChange={(v) =>
-										patchTransaction({ contractExecutedDate: v })
-									}
-								/>
-							</Col>
-							<Col>
-								<DateField
-									label="Close Date"
-									value={transaction.closeDate}
-									onChange={(v) => patchTransaction({ closeDate: v })}
-								/>
-							</Col>
-						</FieldGrid>
-					</Section>
+						<SubGroup
+							label="Milestones"
+							description="Confidence, and the dates that close it out."
+						>
+							<FieldGrid>
+								<Col>
+									<NumberField
+										label="Close Probability (%)"
+										value={transaction.closeProbability || null}
+										onChange={(v) =>
+											patchTransaction({ closeProbability: v ?? 0 })
+										}
+									/>
+								</Col>
+								<Col>
+									<DateField
+										label="Contract Executed"
+										value={transaction.contractExecutedDate}
+										onChange={(v) =>
+											patchTransaction({ contractExecutedDate: v })
+										}
+									/>
+								</Col>
+								<Col>
+									<DateField
+										label="Close Date"
+										value={transaction.closeDate}
+										onChange={(v) => patchTransaction({ closeDate: v })}
+									/>
+								</Col>
+							</FieldGrid>
+						</SubGroup>
+					</FieldGroup>
+				)}
 
-					{isSale && <Separator />}
-
-					{/* ── Financials ── */}
-					{isSale && (
+				{financialsGroup && (
+					<FieldGroup title={financialsGroup.label} icon={financialsGroup.icon}>
 						<DealFinancialsSection
-							financials={financials}
+							financials={financialsDraft}
 							patchFinancials={patchFinancials}
 						/>
-					)}
-					</>
+					</FieldGroup>
 				)}
 			</div>
 
