@@ -151,7 +151,10 @@ export function PropertySection({
 
 	return (
 		<>
-			<SubGroup label="Identity">
+			<SubGroup
+				label="Identity"
+				description="What kind of asset this is, and what it's called."
+			>
 				<FieldGrid>
 					<Col>
 						<SelectField
@@ -207,7 +210,10 @@ export function PropertySection({
 				/>
 			</SubGroup>
 
-			<SubGroup label="Parcel">
+			<SubGroup
+				label="Parcel"
+				description="Zoning, parcel record, and lot size."
+			>
 				<FieldGrid>
 					<Col span={6}>
 						<TextField
@@ -265,7 +271,10 @@ export function PropertyAdditionalFields({
 }) {
 	return (
 		<AdditionalFields label="Show 12 more property fields">
-			<SubGroup label="Site">
+			<SubGroup
+				label="Site"
+				description="Frontage, features, and how the site presents."
+			>
 				<FieldGrid>
 					<Col>
 						<NumberField
@@ -321,7 +330,10 @@ export function PropertyAdditionalFields({
 				/>
 			</SubGroup>
 
-			<SubGroup label="Records & Utilities">
+			<SubGroup
+				label="Records & Utilities"
+				description="Outside record IDs, and what's connected."
+			>
 				<FieldGrid>
 					<Col>
 						<TextField

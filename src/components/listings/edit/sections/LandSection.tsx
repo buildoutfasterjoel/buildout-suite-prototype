@@ -28,7 +28,10 @@ export function LandSection({
 }) {
 	return (
 		<>
-			<SubGroup label="Land">
+			<SubGroup
+				label="Land"
+				description="How the parcel divides, and what it suits."
+			>
 				<FieldGrid>
 					<Col>
 						<NumberField
@@ -71,7 +74,10 @@ export function LandAdditionalFields({
 }) {
 	return (
 		<AdditionalFields label="Show 13 more land fields">
-			<SubGroup label="Utilities">
+			<SubGroup
+				label="Utilities"
+				description="Which services reach the site."
+			>
 				<FieldGrid>
 					<Col span={6}>
 						<YesNoNaField
@@ -143,7 +149,10 @@ export function LandAdditionalFields({
 				</FieldGrid>
 			</SubGroup>
 
-			<SubGroup label="Site Conditions">
+			<SubGroup
+				label="Site Conditions"
+				description="Ground, topography, and anything encumbering it."
+			>
 				<FieldGrid>
 					<Col span={6}>
 						<TextField

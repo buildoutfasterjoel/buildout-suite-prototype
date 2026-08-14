@@ -27,7 +27,10 @@ export function LeaseSection({
 }) {
 	return (
 		<>
-			<SubGroup label="Headline">
+			<SubGroup
+				label="Headline"
+				description="The copy tenants read first."
+			>
 				<TextField
 					label="Lease Title"
 					value={marketing.leaseTitle ?? ""}
@@ -51,7 +54,10 @@ export function LeaseSection({
 				/>
 			</SubGroup>
 
-			<SubGroup label="Terms">
+			<SubGroup
+				label="Terms"
+				description="Commission split, quoting units, and closing notes."
+			>
 				<FieldGrid>
 					<Col>
 						<NumberField

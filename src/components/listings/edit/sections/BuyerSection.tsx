@@ -29,7 +29,7 @@ export function BuyerSection({
 	);
 
 	return (
-		<SubGroup label="Buyer">
+		<SubGroup label="Buyer" description="Who's buying, and who sent them.">
 			<SelectField
 				label="Buyer"
 				value={marketing.buyerContactId ?? ""}

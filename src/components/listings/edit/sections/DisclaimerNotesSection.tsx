@@ -30,7 +30,10 @@ export function DisclaimerNotesSection({
 }) {
 	return (
 		<>
-			<SubGroup label="Disclaimer">
+			<SubGroup
+				label="Disclaimer"
+				description="The legal footer buyers see on marketing."
+			>
 				<SwitchRow
 					label="Override Disclaimer"
 					checked={marketing.overrideDisclaimer ?? false}
@@ -50,7 +53,10 @@ export function DisclaimerNotesSection({
 				)}
 			</SubGroup>
 
-			<SubGroup label="Internal">
+			<SubGroup
+				label="Internal"
+				description="Notes that never leave the office."
+			>
 				<FieldGrid>
 					<Col span={12}>
 						<TextField

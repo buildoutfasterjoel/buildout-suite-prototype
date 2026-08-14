@@ -144,7 +144,10 @@ export function UnitsSection({
 
 	return (
 		<>
-			<SubGroup label="Overview">
+			<SubGroup
+				label="Overview"
+				description="How many units the property holds."
+			>
 				<FieldGrid>
 					<Col>
 						<NumberField
@@ -158,7 +161,10 @@ export function UnitsSection({
 
 			{/* ── Unit Mix ── */}
 			{showUnitMix && (
-				<SubGroup label="Unit Mix">
+				<SubGroup
+					label="Unit Mix"
+					description="The unit types on offer, and whether to publish them."
+				>
 					<SwitchRow
 						label="Include Unit Mix"
 						checked={marketing.includeUnitMix ?? false}
@@ -194,7 +200,10 @@ export function UnitsSection({
 
 			{/* ── Rent Roll ── */}
 			{showRentRoll && (
-				<SubGroup label="Rent Roll">
+				<SubGroup
+					label="Rent Roll"
+					description="Tenants in place, and whether to publish them."
+				>
 					<SwitchRow
 						label="Include Rent Roll"
 						checked={marketing.includeRentRoll ?? false}

@@ -129,7 +129,10 @@ export function MarketingVisibilitySection({
 	const showDisconnectWarning = DISCONNECT_CHANNELS.includes(current);
 
 	return (
-		<SubGroup label="Channels">
+		<SubGroup
+			label="Channels"
+			description="Who can see this listing, and where it syndicates."
+		>
 			<RadioGroup
 				value={current}
 				onValueChange={(v) => v && pick(v as MarketingChannel)}
