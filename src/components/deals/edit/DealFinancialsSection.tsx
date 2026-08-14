@@ -10,6 +10,7 @@ import {
 	FieldGrid,
 	NumberField,
 	Readout,
+	ReadoutCards,
 	SwitchRow,
 } from "#/components/common/recordForm/fieldWidgets";
 import { SubGroup } from "#/components/common/recordForm/FieldGroup";
@@ -125,15 +126,21 @@ export function DealFinancialsSection({
 				{/* Above the line-item table, not below it. All three figures derive
 				    from the three fields in the grid — the table's own rows feed none of
 				    them, and it carries its own Total — so sitting after it made them
-				    read as that table's summary. */}
-				<Readout
-					label="Total scheduled income"
-					value={formatCalcAmount(totalScheduled)}
-				/>
-				<Readout label="Vacancy cost" value={formatCalcAmount(vacancy)} />
-				<Readout
-					label="Gross income"
-					value={formatCalcAmount(grossIncome(totalScheduled, vacancy))}
+				    read as that table's summary.
+				    Cards rather than three `Readout` rows: stacked, they read as three
+				    more form rows in a column that is otherwise all inputs. */}
+				<ReadoutCards
+					items={[
+						{
+							label: "Total scheduled income",
+							value: formatCalcAmount(totalScheduled),
+						},
+						{ label: "Vacancy cost", value: formatCalcAmount(vacancy) },
+						{
+							label: "Gross income",
+							value: formatCalcAmount(grossIncome(totalScheduled, vacancy)),
+						},
+					]}
 				/>
 				<LineItemEditor
 					title="Income"

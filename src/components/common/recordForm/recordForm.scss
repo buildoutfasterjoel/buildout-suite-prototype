@@ -210,4 +210,26 @@
   &__readout-label {
     flex: 0 1 164px;
   }
+
+  // ── Computed readouts, as a card row ──────────────────────────────────────
+  // The multi-figure form of the above. A grid rather than wrapping flex: with
+  // flex, a card left alone on the second row grows to the full cluster width,
+  // so three cards at 900px read as two halves and one slab. `auto-fit`
+  // collapses the empty tracks instead, so the cards keep one width whatever
+  // number of them lands on a row.
+  //
+  // The 9rem track floor is the wrap point, not a design width: below it the
+  // longest label ("Total scheduled income") takes a third line, so the row
+  // breaks in two before that happens.
+  &__readout-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); // 144px
+    gap: tokens.$spacing-2;
+  }
+
+  &__readout-card {
+    display: flex;
+    flex-direction: column;
+    gap: tokens.$spacing-1;
+  }
 }
