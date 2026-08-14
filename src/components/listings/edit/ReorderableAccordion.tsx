@@ -126,7 +126,7 @@ export function CollapsibleCard<T extends { id: string }>({
 				{onRemove && (
 					<Button
 						variant="ghost"
-						size="icon-sm"
+						size="icon"
 						aria-label={removeLabel}
 						className="me-2 flex-shrink-0"
 						onClick={() => onRemove(item.id)}

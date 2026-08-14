@@ -31,13 +31,11 @@ export function DisclaimerNotesSection({
 	return (
 		<>
 			<SubGroup label="Disclaimer">
-				<div style={{ maxWidth: 360 }}>
-					<SwitchRow
-						label="Override Disclaimer"
-						checked={marketing.overrideDisclaimer ?? false}
-						onChange={(v) => patchMarketing({ overrideDisclaimer: v })}
-					/>
-				</div>
+				<SwitchRow
+					label="Override Disclaimer"
+					checked={marketing.overrideDisclaimer ?? false}
+					onChange={(v) => patchMarketing({ overrideDisclaimer: v })}
+				/>
 				{marketing.overrideDisclaimer && (
 					<FieldGrid>
 						<Col span={12}>

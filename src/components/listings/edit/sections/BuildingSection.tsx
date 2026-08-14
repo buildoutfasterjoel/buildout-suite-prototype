@@ -190,171 +190,193 @@ export function BuildingSection({
 					/>
 				</SubGroup>
 			)}
-
-			<AdditionalFields label="Show 19 more building fields">
-				<SubGroup label="Measurements">
-					<FieldGrid>
-						<Col span={3}>
-							<NumberField
-								label="Overhead Door Height"
-								value={property.overheadDoorHeight ?? null}
-								onChange={(v) => patchProperty({ overheadDoorHeight: v })}
-							/>
-						</Col>
-						<Col span={3}>
-							<TextField
-								label="Column Space"
-								value={property.columnSpace ?? ""}
-								onChange={(v) => patchProperty({ columnSpace: v })}
-							/>
-						</Col>
-						<Col span={3}>
-							<NumberField
-								label="Gross Leasable Area"
-								value={property.grossLeasableArea ?? null}
-								onChange={(v) => patchProperty({ grossLeasableArea: v })}
-							/>
-						</Col>
-						<Col span={3}>
-							<NumberField
-								label="Load Factor"
-								value={property.loadFactor ?? null}
-								onChange={(v) => patchProperty({ loadFactor: v })}
-							/>
-						</Col>
-					</FieldGrid>
-				</SubGroup>
-
-				<SubGroup label="Parking & Construction">
-					<FieldGrid>
-						<Col span={3}>
-							<TextField
-								label="Construction Status"
-								value={property.constructionStatus ?? ""}
-								onChange={(v) => patchProperty({ constructionStatus: v })}
-							/>
-						</Col>
-						<Col span={3}>
-							<NumberField
-								label="Parking Ratio"
-								value={property.parkingRatio ?? null}
-								onChange={(v) => patchProperty({ parkingRatio: v })}
-							/>
-						</Col>
-						<Col span={3}>
-							<TextField
-								label="Parking Type"
-								value={property.parkingType ?? ""}
-								onChange={(v) => patchProperty({ parkingType: v })}
-							/>
-						</Col>
-						<Col span={3}>
-							<NumberField
-								label="Warehouse %"
-								value={property.warehousePct ?? null}
-								onChange={(v) => patchProperty({ warehousePct: v })}
-							/>
-						</Col>
-					</FieldGrid>
-
-					<FieldGrid>
-						<Col span={12}>
-							<TextField
-								label="Construction Description"
-								textarea
-								value={property.constructionDescription ?? ""}
-								onChange={(v) =>
-									patchProperty({ constructionDescription: v })
-								}
-							/>
-						</Col>
-						<Col span={12}>
-							<TextField
-								label="Parking Description"
-								textarea
-								value={property.parkingDescription ?? ""}
-								onChange={(v) => patchProperty({ parkingDescription: v })}
-							/>
-						</Col>
-					</FieldGrid>
-				</SubGroup>
-
-				<SubGroup label="Systems & Condition">
-					<FieldGrid>
-						<Col span={4}>
-							<TextField
-								label="Condition"
-								value={property.condition ?? ""}
-								onChange={(v) => patchProperty({ condition: v })}
-							/>
-						</Col>
-						<Col span={4}>
-							<NumberField
-								label="Number of Elevators"
-								value={property.numberOfElevators ?? null}
-								onChange={(v) => patchProperty({ numberOfElevators: v })}
-							/>
-						</Col>
-						<Col span={4}>
-							<TextField
-								label="Roof"
-								value={property.roof ?? ""}
-								onChange={(v) => patchProperty({ roof: v })}
-							/>
-						</Col>
-					</FieldGrid>
-
-					<div className="row g-3">
-						<div className="col-md-6">
-							<SwitchRow
-								label="Freight Elevator"
-								checked={property.freightElevator ?? false}
-								onChange={(v) => patchProperty({ freightElevator: v })}
-							/>
-						</div>
-						<div className="col-md-6">
-							<SwitchRow
-								label="Central HVAC"
-								checked={property.centralHvac ?? false}
-								onChange={(v) => patchProperty({ centralHvac: v })}
-							/>
-						</div>
-						<div className="col-md-6">
-							<SwitchRow
-								label="Free Standing"
-								checked={property.freeStanding ?? false}
-								onChange={(v) => patchProperty({ freeStanding: v })}
-							/>
-						</div>
-						<div className="col-md-6">
-							<SwitchRow
-								label="LEED Certified"
-								checked={property.leedCertified ?? false}
-								onChange={(v) => patchProperty({ leedCertified: v })}
-							/>
-						</div>
-					</div>
-
-					<FieldGrid>
-						<Col span={12}>
-							<TextField
-								label="Utilities Description"
-								textarea
-								value={property.utilitiesDescription ?? ""}
-								onChange={(v) => patchProperty({ utilitiesDescription: v })}
-							/>
-						</Col>
-						<Col span={12}>
-							<TextField
-								label="Loading Description"
-								textarea
-								value={property.loadingDescription ?? ""}
-								onChange={(v) => patchProperty({ loadingDescription: v })}
-							/>
-						</Col>
-					</FieldGrid>
-				</SubGroup>
-			</AdditionalFields>
 		</>
+	);
+}
+
+/**
+ * The long-tail building fields, split out of `BuildingSection` so the group can put
+ * every disclosure after every cluster.
+ *
+ * "The Asset" is built from three sections, each of which used to end with its
+ * own `AdditionalFields`. Rendered in sequence that put a collapsed disclosure
+ * in the middle of the tile stack — between Parcel and Size & Age — where it
+ * read as a cluster of its own rather than as the tail of the one above it.
+ * Splitting the disclosure from its section lets `ListingFormEditor` order all
+ * the clusters first and all the disclosures last, in DOM order rather than
+ * with CSS `order` (which would leave tab order jumping back up the page).
+ */
+export function BuildingAdditionalFields({
+	property,
+	patchProperty,
+}: {
+	property: Property;
+	patchProperty: (p: Partial<Property>) => void;
+}) {
+	return (
+		<AdditionalFields label="Show 19 more building fields">
+			<SubGroup label="Measurements">
+				<FieldGrid>
+					<Col span={3}>
+						<NumberField
+							label="Overhead Door Height"
+							value={property.overheadDoorHeight ?? null}
+							onChange={(v) => patchProperty({ overheadDoorHeight: v })}
+						/>
+					</Col>
+					<Col span={3}>
+						<TextField
+							label="Column Space"
+							value={property.columnSpace ?? ""}
+							onChange={(v) => patchProperty({ columnSpace: v })}
+						/>
+					</Col>
+					<Col span={3}>
+						<NumberField
+							label="Gross Leasable Area"
+							value={property.grossLeasableArea ?? null}
+							onChange={(v) => patchProperty({ grossLeasableArea: v })}
+						/>
+					</Col>
+					<Col span={3}>
+						<NumberField
+							label="Load Factor"
+							value={property.loadFactor ?? null}
+							onChange={(v) => patchProperty({ loadFactor: v })}
+						/>
+					</Col>
+				</FieldGrid>
+			</SubGroup>
+
+			<SubGroup label="Parking & Construction">
+				<FieldGrid>
+					<Col span={3}>
+						<TextField
+							label="Construction Status"
+							value={property.constructionStatus ?? ""}
+							onChange={(v) => patchProperty({ constructionStatus: v })}
+						/>
+					</Col>
+					<Col span={3}>
+						<NumberField
+							label="Parking Ratio"
+							value={property.parkingRatio ?? null}
+							onChange={(v) => patchProperty({ parkingRatio: v })}
+						/>
+					</Col>
+					<Col span={3}>
+						<TextField
+							label="Parking Type"
+							value={property.parkingType ?? ""}
+							onChange={(v) => patchProperty({ parkingType: v })}
+						/>
+					</Col>
+					<Col span={3}>
+						<NumberField
+							label="Warehouse %"
+							value={property.warehousePct ?? null}
+							onChange={(v) => patchProperty({ warehousePct: v })}
+						/>
+					</Col>
+				</FieldGrid>
+
+				<FieldGrid>
+					<Col span={12}>
+						<TextField
+							label="Construction Description"
+							textarea
+							value={property.constructionDescription ?? ""}
+							onChange={(v) =>
+								patchProperty({ constructionDescription: v })
+							}
+						/>
+					</Col>
+					<Col span={12}>
+						<TextField
+							label="Parking Description"
+							textarea
+							value={property.parkingDescription ?? ""}
+							onChange={(v) => patchProperty({ parkingDescription: v })}
+						/>
+					</Col>
+				</FieldGrid>
+			</SubGroup>
+
+			<SubGroup label="Systems & Condition">
+				<FieldGrid>
+					<Col span={4}>
+						<TextField
+							label="Condition"
+							value={property.condition ?? ""}
+							onChange={(v) => patchProperty({ condition: v })}
+						/>
+					</Col>
+					<Col span={4}>
+						<NumberField
+							label="Number of Elevators"
+							value={property.numberOfElevators ?? null}
+							onChange={(v) => patchProperty({ numberOfElevators: v })}
+						/>
+					</Col>
+					<Col span={4}>
+						<TextField
+							label="Roof"
+							value={property.roof ?? ""}
+							onChange={(v) => patchProperty({ roof: v })}
+						/>
+					</Col>
+				</FieldGrid>
+
+				<div className="row g-3">
+					<div className="col-md-6">
+						<SwitchRow
+							label="Freight Elevator"
+							checked={property.freightElevator ?? false}
+							onChange={(v) => patchProperty({ freightElevator: v })}
+						/>
+					</div>
+					<div className="col-md-6">
+						<SwitchRow
+							label="Central HVAC"
+							checked={property.centralHvac ?? false}
+							onChange={(v) => patchProperty({ centralHvac: v })}
+						/>
+					</div>
+					<div className="col-md-6">
+						<SwitchRow
+							label="Free Standing"
+							checked={property.freeStanding ?? false}
+							onChange={(v) => patchProperty({ freeStanding: v })}
+						/>
+					</div>
+					<div className="col-md-6">
+						<SwitchRow
+							label="LEED Certified"
+							checked={property.leedCertified ?? false}
+							onChange={(v) => patchProperty({ leedCertified: v })}
+						/>
+					</div>
+				</div>
+
+				<FieldGrid>
+					<Col span={12}>
+						<TextField
+							label="Utilities Description"
+							textarea
+							value={property.utilitiesDescription ?? ""}
+							onChange={(v) => patchProperty({ utilitiesDescription: v })}
+						/>
+					</Col>
+					<Col span={12}>
+						<TextField
+							label="Loading Description"
+							textarea
+							value={property.loadingDescription ?? ""}
+							onChange={(v) => patchProperty({ loadingDescription: v })}
+						/>
+					</Col>
+				</FieldGrid>
+			</SubGroup>
+		</AdditionalFields>
 	);
 }

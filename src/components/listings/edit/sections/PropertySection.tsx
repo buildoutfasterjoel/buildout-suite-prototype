@@ -106,7 +106,7 @@ function AdditionalTypesEditor({
 					<div className="col-md-1 d-flex justify-content-end pb-1">
 						<Button
 							variant="ghost"
-							size="icon-sm"
+							size="icon"
 							aria-label="Remove type"
 							onClick={() => onChange(rows.filter((_, j) => j !== i))}
 						>
@@ -233,107 +233,123 @@ export function PropertySection({
 					</Col>
 				</FieldGrid>
 			</SubGroup>
-
-			<AdditionalFields label="Show 12 more property fields">
-				<SubGroup label="Site">
-					<FieldGrid>
-						<Col>
-							<NumberField
-								label="Lot Frontage"
-								value={property.lotFrontage ?? null}
-								onChange={(v) => patchProperty({ lotFrontage: v })}
-							/>
-						</Col>
-						<Col>
-							<NumberField
-								label="Lot Depth"
-								value={property.lotDepth ?? null}
-								onChange={(v) => patchProperty({ lotDepth: v })}
-							/>
-						</Col>
-					</FieldGrid>
-
-					<div style={{ maxWidth: 360 }}>
-						<SwitchRow
-							label="Corner Property"
-							checked={property.cornerProperty ?? false}
-							onChange={(v) => patchProperty({ cornerProperty: v })}
-						/>
-					</div>
-
-					<TextField
-						label="Traffic Count"
-						value={property.trafficCount ?? ""}
-						onChange={(v) => patchProperty({ trafficCount: v })}
-					/>
-
-					<FieldGrid>
-						<Col span={12}>
-							<TextField
-								label="Site Description"
-								textarea
-								value={property.siteDescription ?? ""}
-								onChange={(v) => patchProperty({ siteDescription: v })}
-							/>
-						</Col>
-						<Col span={12}>
-							<TextField
-								label="Amenities"
-								textarea
-								value={property.amenities ?? ""}
-								onChange={(v) => patchProperty({ amenities: v })}
-							/>
-						</Col>
-					</FieldGrid>
-
-					<div style={{ maxWidth: 360 }}>
-						<SwitchRow
-							label="Waterfront"
-							checked={property.waterfront ?? false}
-							onChange={(v) => patchProperty({ waterfront: v })}
-						/>
-					</div>
-				</SubGroup>
-
-				<SubGroup label="Records & Utilities">
-					<FieldGrid>
-						<Col>
-							<TextField
-								label="MLS ID#"
-								value={property.mlsId ?? ""}
-								onChange={(v) => patchProperty({ mlsId: v })}
-							/>
-						</Col>
-						<Col>
-							<TextField
-								label="Thomas Guide Page #"
-								value={property.thomasGuidePage ?? ""}
-								onChange={(v) => patchProperty({ thomasGuidePage: v })}
-							/>
-						</Col>
-					</FieldGrid>
-
-					<TextField
-						label="Power Description"
-						value={property.powerDescription ?? ""}
-						onChange={(v) => patchProperty({ powerDescription: v })}
-					/>
-
-					<div style={{ maxWidth: 360 }}>
-						<SwitchRow
-							label="Rail Access"
-							checked={property.railAccess ?? false}
-							onChange={(v) => patchProperty({ railAccess: v })}
-						/>
-					</div>
-
-					<TextField
-						label="Gas/Propane Description"
-						value={property.gasPropaneDescription ?? ""}
-						onChange={(v) => patchProperty({ gasPropaneDescription: v })}
-					/>
-				</SubGroup>
-			</AdditionalFields>
 		</>
+	);
+}
+
+/**
+ * The long-tail property fields, split out of `PropertySection` so the group can put
+ * every disclosure after every cluster.
+ *
+ * "The Asset" is built from three sections, each of which used to end with its
+ * own `AdditionalFields`. Rendered in sequence that put a collapsed disclosure
+ * in the middle of the tile stack — between Parcel and Size & Age — where it
+ * read as a cluster of its own rather than as the tail of the one above it.
+ * Splitting the disclosure from its section lets `ListingFormEditor` order all
+ * the clusters first and all the disclosures last, in DOM order rather than
+ * with CSS `order` (which would leave tab order jumping back up the page).
+ */
+export function PropertyAdditionalFields({
+	property,
+	patchProperty,
+}: {
+	property: Property;
+	patchProperty: (p: Partial<Property>) => void;
+}) {
+	return (
+		<AdditionalFields label="Show 12 more property fields">
+			<SubGroup label="Site">
+				<FieldGrid>
+					<Col>
+						<NumberField
+							label="Lot Frontage"
+							value={property.lotFrontage ?? null}
+							onChange={(v) => patchProperty({ lotFrontage: v })}
+						/>
+					</Col>
+					<Col>
+						<NumberField
+							label="Lot Depth"
+							value={property.lotDepth ?? null}
+							onChange={(v) => patchProperty({ lotDepth: v })}
+						/>
+					</Col>
+				</FieldGrid>
+
+				<SwitchRow
+					label="Corner Property"
+					checked={property.cornerProperty ?? false}
+					onChange={(v) => patchProperty({ cornerProperty: v })}
+				/>
+
+				<TextField
+					label="Traffic Count"
+					value={property.trafficCount ?? ""}
+					onChange={(v) => patchProperty({ trafficCount: v })}
+				/>
+
+				<FieldGrid>
+					<Col span={12}>
+						<TextField
+							label="Site Description"
+							textarea
+							value={property.siteDescription ?? ""}
+							onChange={(v) => patchProperty({ siteDescription: v })}
+						/>
+					</Col>
+					<Col span={12}>
+						<TextField
+							label="Amenities"
+							textarea
+							value={property.amenities ?? ""}
+							onChange={(v) => patchProperty({ amenities: v })}
+						/>
+					</Col>
+				</FieldGrid>
+
+				<SwitchRow
+					label="Waterfront"
+					checked={property.waterfront ?? false}
+					onChange={(v) => patchProperty({ waterfront: v })}
+				/>
+			</SubGroup>
+
+			<SubGroup label="Records & Utilities">
+				<FieldGrid>
+					<Col>
+						<TextField
+							label="MLS ID#"
+							value={property.mlsId ?? ""}
+							onChange={(v) => patchProperty({ mlsId: v })}
+						/>
+					</Col>
+					<Col>
+						<TextField
+							label="Thomas Guide Page #"
+							value={property.thomasGuidePage ?? ""}
+							onChange={(v) => patchProperty({ thomasGuidePage: v })}
+						/>
+					</Col>
+				</FieldGrid>
+
+				<TextField
+					label="Power Description"
+					value={property.powerDescription ?? ""}
+					onChange={(v) => patchProperty({ powerDescription: v })}
+				/>
+
+				<SwitchRow
+					label="Rail Access"
+					checked={property.railAccess ?? false}
+					onChange={(v) => patchProperty({ railAccess: v })}
+				/>
+
+				<TextField
+					label="Gas/Propane Description"
+					value={property.gasPropaneDescription ?? ""}
+					onChange={(v) => patchProperty({ gasPropaneDescription: v })}
+				/>
+			</SubGroup>
+		</AdditionalFields>
 	);
 }

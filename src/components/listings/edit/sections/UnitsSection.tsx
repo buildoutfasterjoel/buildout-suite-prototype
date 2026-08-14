@@ -155,7 +155,7 @@ function EditableTable<T extends { id: string }>({
 									<td>
 										<Button
 											variant="ghost"
-											size="icon-sm"
+											size="icon"
 											aria-label="Remove row"
 											onClick={() => onRemove(row.id)}
 										>
@@ -270,13 +270,11 @@ export function UnitsSection({
 			{/* ── Unit Mix ── */}
 			{showUnitMix && (
 				<SubGroup label="Unit Mix">
-					<div style={{ maxWidth: 360 }}>
-						<SwitchRow
-							label="Include Unit Mix"
-							checked={marketing.includeUnitMix ?? false}
-							onChange={(v) => patchMarketing({ includeUnitMix: v })}
-						/>
-					</div>
+					<SwitchRow
+						label="Include Unit Mix"
+						checked={marketing.includeUnitMix ?? false}
+						onChange={(v) => patchMarketing({ includeUnitMix: v })}
+					/>
 					{(marketing.includeUnitMix ?? false) && (
 						<>
 							<EditableTable
@@ -292,13 +290,11 @@ export function UnitsSection({
 								addLabel="Add unit type"
 								emptyLabel="No unit types yet."
 							/>
-							<div style={{ maxWidth: 360 }}>
-								<SwitchRow
-									label="Syndicate Unit Mix"
-									checked={marketing.syndicateUnitMix ?? false}
-									onChange={(v) => patchMarketing({ syndicateUnitMix: v })}
-								/>
-							</div>
+							<SwitchRow
+								label="Syndicate Unit Mix"
+								checked={marketing.syndicateUnitMix ?? false}
+								onChange={(v) => patchMarketing({ syndicateUnitMix: v })}
+							/>
 						</>
 					)}
 				</SubGroup>
@@ -307,13 +303,11 @@ export function UnitsSection({
 			{/* ── Rent Roll ── */}
 			{showRentRoll && (
 				<SubGroup label="Rent Roll">
-					<div style={{ maxWidth: 360 }}>
-						<SwitchRow
-							label="Include Rent Roll"
-							checked={marketing.includeRentRoll ?? false}
-							onChange={(v) => patchMarketing({ includeRentRoll: v })}
-						/>
-					</div>
+					<SwitchRow
+						label="Include Rent Roll"
+						checked={marketing.includeRentRoll ?? false}
+						onChange={(v) => patchMarketing({ includeRentRoll: v })}
+					/>
 					{(marketing.includeRentRoll ?? false) && (
 						<>
 							<EditableTable
@@ -327,13 +321,11 @@ export function UnitsSection({
 								addLabel="Add rent roll row"
 								emptyLabel="No rent roll rows yet."
 							/>
-							<div style={{ maxWidth: 360 }}>
-								<SwitchRow
-									label="Syndicate Rent Roll"
-									checked={marketing.syndicateRentRoll ?? false}
-									onChange={(v) => patchMarketing({ syndicateRentRoll: v })}
-								/>
-							</div>
+							<SwitchRow
+								label="Syndicate Rent Roll"
+								checked={marketing.syndicateRentRoll ?? false}
+								onChange={(v) => patchMarketing({ syndicateRentRoll: v })}
+							/>
 						</>
 					)}
 				</SubGroup>

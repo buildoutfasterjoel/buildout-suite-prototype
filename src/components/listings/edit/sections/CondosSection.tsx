@@ -152,13 +152,11 @@ export function CondosSection({
 								    table either — kept unchanged, repositioned after the merged
 								    Sale Price/Size row since that row now occupies the slot they
 								    used to sit inside. */}
-								<div style={{ maxWidth: 360 }}>
-									<SwitchRow
-										label="Hide Price"
-										checked={condo.hidePrice ?? false}
-										onChange={(v) => update(condo.id, { hidePrice: v })}
-									/>
-								</div>
+								<SwitchRow
+									label="Hide Price"
+									checked={condo.hidePrice ?? false}
+									onChange={(v) => update(condo.id, { hidePrice: v })}
+								/>
 								{condo.hidePrice && (
 									<TextField
 										label="Hide Price Label"

@@ -89,7 +89,10 @@ export function LocationSection({
 
 	return (
 		<>
-			<SubGroup label="Address">
+			<SubGroup
+				label="Address"
+				description="Where the property sits, and how that reads publicly."
+			>
 				<FieldGrid>
 					<Col span={6}>
 						<TextField
@@ -123,13 +126,11 @@ export function LocationSection({
 					)}
 				</FieldGrid>
 
-				<div style={{ maxWidth: 360 }}>
-					<SwitchRow
-						label="Hide Address"
-						checked={property.hideAddress ?? false}
-						onChange={(v) => patchProperty({ hideAddress: v })}
-					/>
-				</div>
+				<SwitchRow
+					label="Hide Address"
+					checked={property.hideAddress ?? false}
+					onChange={(v) => patchProperty({ hideAddress: v })}
+				/>
 				{property.hideAddress && (
 					<TextField
 						label="Display Address As"
@@ -139,14 +140,15 @@ export function LocationSection({
 				)}
 			</SubGroup>
 
-			<SubGroup label="Map">
-				<div style={{ maxWidth: 360 }}>
-					<SwitchRow
-						label="Override Map Location"
-						checked={property.overrideMapLocation ?? false}
-						onChange={(v) => patchProperty({ overrideMapLocation: v })}
-					/>
-				</div>
+			<SubGroup
+				label="Map"
+				description="Where the pin drops on syndicated maps."
+			>
+				<SwitchRow
+					label="Override Map Location"
+					checked={property.overrideMapLocation ?? false}
+					onChange={(v) => patchProperty({ overrideMapLocation: v })}
+				/>
 				{property.overrideMapLocation && (
 					<FieldGrid>
 						<Col span={3}>
@@ -167,7 +169,10 @@ export function LocationSection({
 				)}
 			</SubGroup>
 
-			<SubGroup label="Market">
+			<SubGroup
+				label="Market"
+				description="Submarket and surroundings used for search and comps."
+			>
 				<FieldGrid>
 					{hasCounty && (
 						<Col>
@@ -211,21 +216,22 @@ export function LocationSection({
 						/>
 					</Col>
 				</FieldGrid>
-				<div style={{ maxWidth: 360 }}>
-					<SwitchRow
-						label="Display Location Description for Syndication"
-						checked={marketing.displayLocationDescriptionForSyndication ?? false}
-						onChange={(v) =>
-							patchMarketing({ displayLocationDescriptionForSyndication: v })
-						}
-					/>
-				</div>
+				<SwitchRow
+					label="Display Location Description for Syndication"
+					checked={marketing.displayLocationDescriptionForSyndication ?? false}
+					onChange={(v) =>
+						patchMarketing({ displayLocationDescriptionForSyndication: v })
+					}
+				/>
 			</SubGroup>
 
 			<AdditionalFields
 				label={`Show ${additionalLocationFieldCount} more location fields`}
 			>
-				<SubGroup label="Locale">
+				<SubGroup
+					label="Locale"
+					description="Country, units, and currency for this listing."
+				>
 					<FieldGrid>
 						<Col>
 							<SelectField
@@ -283,7 +289,10 @@ export function LocationSection({
 					</FieldGrid>
 				</SubGroup>
 
-				<SubGroup label="Legal & Frontage">
+				<SubGroup
+					label="Legal & Frontage"
+					description="Survey references and road frontage detail."
+				>
 					<FieldGrid>
 						<Col>
 							<TextField

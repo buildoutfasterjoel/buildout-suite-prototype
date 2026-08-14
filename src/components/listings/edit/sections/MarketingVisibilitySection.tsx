@@ -100,13 +100,11 @@ export function MarketingVisibilitySection({
 				)}
 			</div>
 
-			<div style={{ maxWidth: 360 }}>
-				<SwitchRow
-					label="Hide from Non-Listing Brokers"
-					checked={marketing.hideFromNonListingBrokers ?? false}
-					onChange={(v) => patchMarketing({ hideFromNonListingBrokers: v })}
-				/>
-			</div>
+			<SwitchRow
+				label="Hide from Non-Listing Brokers"
+				checked={marketing.hideFromNonListingBrokers ?? false}
+				onChange={(v) => patchMarketing({ hideFromNonListingBrokers: v })}
+			/>
 		</SubGroup>
 	);
 }

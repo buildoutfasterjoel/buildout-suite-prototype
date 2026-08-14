@@ -5,14 +5,20 @@ import {
   faTableCells,
   faMap,
   faLayerGroup,
-  faBullhorn,
   faNoteSticky,
+  faSignPosts,
 } from "@fortawesome/pro-regular-svg-icons";
 import { propertyTypeEffects } from "#/data/listingFormLogic";
 import type { DealType, PropertyType } from "#/data/types";
 
 export type ListingGroupId =
-  | "location" | "asset" | "units" | "lots" | "condos" | "marketing" | "notes";
+  | "location"
+  | "asset"
+  | "units"
+  | "lots"
+  | "condos"
+  | "marketing"
+  | "notes";
 
 export type ListingGroup = {
   id: ListingGroupId;
@@ -27,7 +33,7 @@ const ALL_GROUPS: ListingGroup[] = [
   { id: "units", label: "Units", icon: faTableCells },
   { id: "lots", label: "Lots", icon: faMap },
   { id: "condos", label: "Condos", icon: faLayerGroup },
-  { id: "marketing", label: "Marketing", icon: faBullhorn },
+  { id: "marketing", label: "Marketing", icon: faSignPosts },
   { id: "notes", label: "Disclaimer & Notes", icon: faNoteSticky },
 ];
 

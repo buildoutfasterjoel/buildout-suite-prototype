@@ -24,39 +24,75 @@ export function FieldGroup({
   children: ReactNode;
 }) {
   return (
-    <section className="listing-form__group">
-      <h3 className="listing-form__group-title fs-large fw-semibold mb-0 d-flex align-items-center gap-2">
+    <section>
+      <h3 className="d-flex align-items-center gap-2 fs-large fw-semibold py-3">
         {icon && <FontAwesomeIcon icon={icon} className="text-primary" />}
         {title}
       </h3>
-      <div>{children}</div>
+      {/* Transparent — the panel moved down to each cluster, so a group is now a
+          stack of tiles rather than one slab with rules through it. `gap-1` (4px)
+          is doing real work at that size: wide enough that each tile reads as its
+          own container, tight enough that the run reads as one group. Anything
+          looser and the tiles stop belonging to each other. */}
+      <div className="d-flex flex-column gap-1">{children}</div>
     </section>
   );
 }
 
 /**
- * One labeled cluster of related fields inside a group.
+ * One cluster of related fields inside a group — its own `bg-body` tile, with
+ * the name in a left gutter and fields in the right column.
  *
- * These clusters already existed as separate `<FieldGrid>` blocks — roughly 30
- * of them across the form — but consecutive grids were separated by the same
- * 16px that separates two fields, so the grouping never rendered. This draws it.
+ * The tile is what separates one cluster from the next; consecutive tiles sit
+ * 4px apart. That replaced a hairline rule inside a single shared panel, which
+ * drew the boundary but left every cluster looking like more of the same slab.
+ * A tile has an edge on all four sides, so a cluster reads as a container that
+ * wraps its own content — and at a 4px gap the run still reads as one group.
  *
- * `label` is optional: a group with a single cluster needs the spacing but not a
- * redundant restatement of the group title.
+ * The gutter is the point. Two earlier passes put the label *above* its fields:
+ * first as a 17px heading (which competed with the group title), then as a 14px
+ * muted line (which read as floating text belonging to nothing). Both failed for
+ * the same structural reason — a label stacked above a block is only attached to
+ * it by proximity, and proximity was already carrying the field/cluster tiers.
+ * In a gutter the label is attached by *position*: it sits beside exactly the
+ * fields it names, in a column no field label ever occupies, so it cannot
+ * compete and cannot drift. Jobber and Deputy both solve dense record forms this
+ * way.
+ *
+ * It also fixes line length for free. Full-bleed rows ran ~920px, long enough
+ * that a column of them reads as an undifferentiated wall; the gutter takes a
+ * quarter of that back and caps fields near 700px.
+ *
+ * `gap-2` (8px) inside the right column stays the *bound* tier: a switch sits
+ * tight under the field it governs, and the field it reveals tight under it.
  */
 export function SubGroup({
   label,
+  description,
   children,
 }: {
   label?: string;
+  /** One line on what the cluster is for. Gives the gutter label a reason to
+   *  exist — a bare noun over a stack of fields reads as arbitrary. */
+  description?: string;
   children: ReactNode;
 }) {
+  // The tile and the grid are separate elements on purpose: `.row` carries
+  // negative side margins to cancel its gutters, so padding and a background on
+  // the same node would bleed the panel past the column edges.
   return (
-    <div className="listing-form__subgroup">
-      {label && (
-        <div className="listing-form__subgroup-label text-muted">{label}</div>
-      )}
-      {children}
+    <div className="listing-form__subgroup bg-body rounded p-4">
+      <div className="row">
+        <div className="col-md-3">
+          {label && <div className="listing-form__subgroup-label">{label}</div>}
+          {description && (
+            <p className="listing-form__subgroup-desc fs-small text-muted">
+              {description}
+            </p>
+          )}
+        </div>
+        <div className="col-md-9 d-flex gap-2 flex-column">{children}</div>
+      </div>
     </div>
   );
 }
@@ -85,8 +121,13 @@ export function AdditionalFields({
   children: ReactNode;
 }) {
   return (
-    <Collapsible defaultOpen={false} className="listing-form__more">
-      <Collapsible.Trigger className="listing-form__more-toggle text-muted">
+    // Its own tile, so the disclosure sits in the stack as a peer of the
+    // clusters rather than floating between two panels.
+    <Collapsible
+      defaultOpen={false}
+      className="listing-form__more bg-body rounded p-4"
+    >
+      <Collapsible.Trigger className="listing-form__more-toggle">
         <FontAwesomeIcon
           icon={faChevronRight}
           className="listing-form__more-chevron"

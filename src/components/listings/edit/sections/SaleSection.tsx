@@ -118,7 +118,7 @@ export function SaleSection({
 					</Col>
 				</FieldGrid>
 
-				<div className="d-flex flex-column gap-1" style={{ maxWidth: 360 }}>
+				<div className="d-flex flex-column gap-1">
 					<SwitchRow
 						label="Includes real estate"
 						checked={marketing.includesRealEstate ?? false}
@@ -161,7 +161,7 @@ export function SaleSection({
 			</SubGroup>
 
 			<SubGroup label="Auction">
-				<div className="d-flex flex-column gap-3" style={{ maxWidth: 360 }}>
+				<div className="d-flex flex-column gap-3">
 					<SwitchRow
 						label="Auction"
 						checked={marketing.auction ?? false}
@@ -213,115 +213,134 @@ export function SaleSection({
 					</>
 				)}
 			</SubGroup>
-
-			<AdditionalFields label="Show 12 more sale fields">
-				<SubGroup label="Financing">
-					<FieldGrid>
-						<Col>
-							<TextField
-								label="Capital Costs"
-								value={marketing.capitalCosts ?? ""}
-								onChange={(v) => patchMarketing({ capitalCosts: v })}
-							/>
-						</Col>
-						<Col>
-							<DateField
-								label="Loan Due Date"
-								value={marketing.loanDueDate ?? null}
-								onChange={(v) => patchMarketing({ loanDueDate: v })}
-							/>
-						</Col>
-					</FieldGrid>
-
-					<TextField
-						label="Loan Description"
-						textarea
-						value={marketing.loanDescription ?? ""}
-						onChange={(v) => patchMarketing({ loanDescription: v })}
-					/>
-				</SubGroup>
-
-				<SubGroup label="Taxes & Assessment">
-					<TextField
-						label="Taxes"
-						textarea
-						value={marketing.taxes ?? ""}
-						onChange={(v) => patchMarketing({ taxes: v })}
-					/>
-
-					<FieldGrid>
-						<Col span={4}>
-							<NumberField
-								label="Tax Value - Land"
-								value={marketing.taxValueLand ?? null}
-								onChange={(v) => patchMarketing({ taxValueLand: v })}
-							/>
-						</Col>
-						<Col span={4}>
-							<NumberField
-								label="Tax Value - Improvements"
-								value={marketing.taxValueImprovements ?? null}
-								onChange={(v) =>
-									patchMarketing({ taxValueImprovements: v })
-								}
-							/>
-						</Col>
-						<Col span={4}>
-							<NumberField
-								label="Tax Value - Personal"
-								value={marketing.taxValuePersonal ?? null}
-								onChange={(v) => patchMarketing({ taxValuePersonal: v })}
-							/>
-						</Col>
-					</FieldGrid>
-
-					<FieldGrid>
-						<Col span={12}>
-							<NumberField
-								label="Assessed Value"
-								value={marketing.assessedValue ?? null}
-								onChange={(v) => patchMarketing({ assessedValue: v })}
-							/>
-						</Col>
-					</FieldGrid>
-				</SubGroup>
-
-				<SubGroup label="Exchange & Ownership">
-					<FieldGrid>
-						<Col>
-							<YesNoNaField
-								label="1031 Exchange"
-								value={marketing.exchange1031}
-								onChange={(v) => patchMarketing({ exchange1031: v })}
-							/>
-						</Col>
-						<Col>
-							<YesNoNaField
-								label="Consider Exchange"
-								value={marketing.considerExchange}
-								onChange={(v) => patchMarketing({ considerExchange: v })}
-							/>
-						</Col>
-					</FieldGrid>
-
-					<TextField
-						label="Land Ownership"
-						value={marketing.landOwnership ?? ""}
-						onChange={(v) => patchMarketing({ landOwnership: v })}
-					/>
-
-					<FieldGrid>
-						<Col span={12}>
-							<TextField
-								label="Land Legal Description"
-								textarea
-								value={marketing.landLegalDescription ?? ""}
-								onChange={(v) => patchMarketing({ landLegalDescription: v })}
-							/>
-						</Col>
-					</FieldGrid>
-				</SubGroup>
-			</AdditionalFields>
 		</>
+	);
+}
+
+/**
+ * The long-tail sale fields, split out of `SaleSection` for the same reason the
+ * property/building/land tails were: the Marketing group renders Sale (or
+ * Lease), then Visibility, then Buyer. With the disclosure still inside
+ * `SaleSection` it landed before Visibility instead of at the end of the group.
+ *
+ * Sale-only — the lease branch has no long tail — so the caller keeps this under
+ * the same `dealType === "Sale"` check that picks `SaleSection`.
+ */
+export function SaleAdditionalFields({
+	marketing,
+	patchMarketing,
+}: {
+	marketing: DealMarketing;
+	patchMarketing: (p: Partial<DealMarketing>) => void;
+}) {
+	return (
+		<AdditionalFields label="Show 12 more sale fields">
+			<SubGroup label="Financing">
+				<FieldGrid>
+					<Col>
+						<TextField
+							label="Capital Costs"
+							value={marketing.capitalCosts ?? ""}
+							onChange={(v) => patchMarketing({ capitalCosts: v })}
+						/>
+					</Col>
+					<Col>
+						<DateField
+							label="Loan Due Date"
+							value={marketing.loanDueDate ?? null}
+							onChange={(v) => patchMarketing({ loanDueDate: v })}
+						/>
+					</Col>
+				</FieldGrid>
+
+				<TextField
+					label="Loan Description"
+					textarea
+					value={marketing.loanDescription ?? ""}
+					onChange={(v) => patchMarketing({ loanDescription: v })}
+				/>
+			</SubGroup>
+
+			<SubGroup label="Taxes & Assessment">
+				<TextField
+					label="Taxes"
+					textarea
+					value={marketing.taxes ?? ""}
+					onChange={(v) => patchMarketing({ taxes: v })}
+				/>
+
+				<FieldGrid>
+					<Col span={4}>
+						<NumberField
+							label="Tax Value - Land"
+							value={marketing.taxValueLand ?? null}
+							onChange={(v) => patchMarketing({ taxValueLand: v })}
+						/>
+					</Col>
+					<Col span={4}>
+						<NumberField
+							label="Tax Value - Improvements"
+							value={marketing.taxValueImprovements ?? null}
+							onChange={(v) =>
+								patchMarketing({ taxValueImprovements: v })
+							}
+						/>
+					</Col>
+					<Col span={4}>
+						<NumberField
+							label="Tax Value - Personal"
+							value={marketing.taxValuePersonal ?? null}
+							onChange={(v) => patchMarketing({ taxValuePersonal: v })}
+						/>
+					</Col>
+				</FieldGrid>
+
+				<FieldGrid>
+					<Col span={12}>
+						<NumberField
+							label="Assessed Value"
+							value={marketing.assessedValue ?? null}
+							onChange={(v) => patchMarketing({ assessedValue: v })}
+						/>
+					</Col>
+				</FieldGrid>
+			</SubGroup>
+
+			<SubGroup label="Exchange & Ownership">
+				<FieldGrid>
+					<Col>
+						<YesNoNaField
+							label="1031 Exchange"
+							value={marketing.exchange1031}
+							onChange={(v) => patchMarketing({ exchange1031: v })}
+						/>
+					</Col>
+					<Col>
+						<YesNoNaField
+							label="Consider Exchange"
+							value={marketing.considerExchange}
+							onChange={(v) => patchMarketing({ considerExchange: v })}
+						/>
+					</Col>
+				</FieldGrid>
+
+				<TextField
+					label="Land Ownership"
+					value={marketing.landOwnership ?? ""}
+					onChange={(v) => patchMarketing({ landOwnership: v })}
+				/>
+
+				<FieldGrid>
+					<Col span={12}>
+						<TextField
+							label="Land Legal Description"
+							textarea
+							value={marketing.landLegalDescription ?? ""}
+							onChange={(v) => patchMarketing({ landLegalDescription: v })}
+						/>
+					</Col>
+				</FieldGrid>
+			</SubGroup>
+		</AdditionalFields>
 	);
 }
