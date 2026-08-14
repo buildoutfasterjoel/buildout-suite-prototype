@@ -2,26 +2,32 @@ import type {
   BuildingClass, DealType, MarketingChannel, PropertyStatus, PropertySubtype, PropertyType,
 } from './types'
 
-const ALL_SALE_CHANNELS: MarketingChannel[] = [
-  'None', 'Buildout Buyer Network', 'My Brokerage Website', 'Buildout Syndication Network',
+const ALL_CHANNELS: MarketingChannel[] = [
+  'None', 'My Brokerage Website', 'Buildout Syndication Network',
 ]
 
-/** Sale marketing channels available at a given deal status (PRD §20). */
-export function saleChannelsFor(status: PropertyStatus): MarketingChannel[] {
-  switch (status) {
-    case 'active': return ALL_SALE_CHANNELS
-    case 'under-contract':
-      return ALL_SALE_CHANNELS.filter((c) => c !== 'Buildout Syndication Network')
-    default: return ['None'] // proposal | inactive | closed
-  }
-}
+/** Nothing is marketed once the deal is off the board, either won or lost. */
+const SETTLED_STATUSES: PropertyStatus[] = ['closed', 'inactive']
 
-/** Lease marketing channels available at a given deal status (PRD §21). */
-export function leaseChannelsFor(status: PropertyStatus): MarketingChannel[] {
-  if (status === 'active') {
-    return ['None', 'My Brokerage Website', 'Buildout Syndication Network']
-  }
-  return ['None']
+/**
+ * Marketing channels offered at a given point in a deal's life.
+ *
+ * The PRD (§20/§21) narrowed this list at every stage below Active, which
+ * described where a listing may be *published* but was enforced on the control
+ * where a broker *sets one up* — and setup happens before a deal goes active.
+ * That hid the decision at exactly the moment it was being made. Pitching and
+ * Under Contract now offer the full list: picking a channel there records where
+ * the listing should go once it is live.
+ *
+ * Closed and Lost still collapse to None. Those are not "not yet published",
+ * they are done, and offering to syndicate a deal that has already ended is
+ * offering something nobody wants.
+ *
+ * Takes no deal type: Buyer Network was the only channel that differed between
+ * Sale and Lease, and it is gone.
+ */
+export function channelsFor(status: PropertyStatus): MarketingChannel[] {
+  return SETTLED_STATUSES.includes(status) ? ['None'] : ALL_CHANNELS
 }
 
 const LAND_LIKE: PropertySubtype[] = ['Vacant Land', 'Industrial Outdoor Storage']

@@ -65,6 +65,48 @@
     aspect-ratio: 1;
   }
 
+  // ── Marketing channel cards ───────────────────────────────────────────────
+  // Buildout blue, deliberately not `border-primary` / `--bp-primary`: those are
+  // the theme's purple, which would have left a purple edge around a blue fill.
+  // Blue is also the right register here — the card marks a state the broker
+  // chose, not an action to take, and purple is what the form's buttons use.
+  //
+  // The radio inside each card is visually hidden (selection is drawn by the
+  // card's own accent), so focus has to be shown by the card or a keyboard user
+  // gets no ring at all — hence `:focus-within`.
+  &__channel-card {
+    cursor: pointer;
+
+    &--selected {
+      border-color: tokens.$buildout-blue-600;
+      background: tokens.$buildout-blue-50;
+    }
+
+    &:focus-within {
+      outline: tokens.$spacing-0-5 solid tokens.$buildout-blue-600;
+      outline-offset: tokens.$spacing-0-5;
+    }
+  }
+
+  // Tinted square behind the channel glyph, sized to the type rather than to a
+  // round number so it stays square as the icon inherits font-size. Grey by
+  // default: the card is `bg-card`, so the square is what gives the glyph a
+  // ground of its own rather than letting it float on white.
+  &__channel-icon {
+    width: tokens.$spacing-8; // 32px
+    height: tokens.$spacing-8;
+    background: tokens.$body-bg;
+
+    // Selected takes the accent on both the glyph and its square — blue-100 is
+    // a step up from the card's blue-50 fill, so the square keeps the same
+    // figure/ground separation there that the grey gives it everywhere else.
+    // `text-primary` would have put the theme purple inside a blue card.
+    &--selected {
+      color: tokens.$buildout-blue-600;
+      background: tokens.$buildout-blue-100;
+    }
+  }
+
   // ── Disclosure ────────────────────────────────────────────────────────────
   // Deliberately not a heading: it used to be an <h3>, the same level as the
   // group titles it sat among.
