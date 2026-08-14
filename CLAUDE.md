@@ -195,6 +195,27 @@ Blueprint theme is globally applied via `src/main.scss`:
 
 Use Bootstrap utility classes for spacing, typography, and layout — the Blueprint theme extends Bootstrap 5.
 
+### Record forms
+
+Long record forms — the Listing form and the Deal form — are built from the
+shared shell in `src/components/common/recordForm/`: a **group** (icon + title
+over a stack of tiles), a **cluster** (`SubGroup` — name in a left gutter,
+fields right, its own tile), and two spacing tiers, *bound* (8px, a control and
+the field it reveals) and *peer* (16px, fields sharing a `FieldGrid`).
+
+Two rules:
+
+1. **The shell is for long forms only.** Modals, filter flyouts, and anything
+   under roughly six fields use plain stacked Blueprint `Field`s. The 164px
+   label gutter and the tile stack earn their cost across twenty-plus fields and
+   lose money on four.
+2. **A repeater becomes a table only when it is read down a column** — many
+   rows, values compared downward (Unit Mix, Rent Roll, income/expense line
+   items). Field count per row is *not* the test: `AdditionalTypesEditor` has
+   two fields per row and stays stacked flex, because at two rows there is
+   nothing to compare and a header row costs more than it returns. Single-field
+   repeaters (Sale Bullets, Alias) take one label for the whole set.
+
 ## Icons
 
 Use **FontAwesome Pro** icons. All four packages are available:

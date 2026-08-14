@@ -1,4 +1,4 @@
-import { AdditionalFields, SubGroup } from "#/components/listings/edit/FieldGroup";
+import { AdditionalFields, SubGroup } from "#/components/common/recordForm/FieldGroup";
 import {
 	BulletsField,
 	Col,
@@ -9,7 +9,7 @@ import {
 	SwitchRow,
 	TextField,
 	YesNoNaField,
-} from "#/components/listings/edit/fieldWidgets";
+} from "#/components/common/recordForm/fieldWidgets";
 import type { DealMarketing, InvestmentType, PropertyUse } from "#/data/types";
 
 // ── Option lists (string unions from the data model) ────────────────────────

@@ -9,7 +9,7 @@ import {
 	SwitchRow,
 	TextField,
 	YesNoNaField,
-} from "#/components/listings/edit/fieldWidgets";
+} from "#/components/common/recordForm/fieldWidgets";
 import { ALL_SUBTYPES } from "#/components/listings/edit/sections/PropertySection";
 import { isResidentialSubtype } from "#/data/leaseEligibility";
 import type {

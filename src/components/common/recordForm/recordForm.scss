@@ -1,0 +1,85 @@
+// src/components/common/recordForm/recordForm.scss
+//
+// Structure for the app's LONG record forms — the Listing form and the Deal
+// form. Hierarchy is drawn, not spaced: an earlier pass carried all four tiers
+// on whitespace alone and the form still read as one wall, because every cluster
+// looked identical no matter how far apart it sat. Each tier has its own device:
+//
+//   group     an icon + 17px title over a stack of tiles
+//   cluster   a name in a left gutter, fields right, each cluster its own tile
+//   bound     8px  — a control and the field it reveals (`gap-2`, in the TSX)
+//   peer      16px — fields sharing a FieldGrid (`g-4`, in the TSX)
+//
+// NOT for short forms. Modals, filter flyouts, and anything under roughly six
+// fields keep plain stacked Blueprint `Field`s: the 164px gutter and the tile
+// stack earn their cost across twenty-plus fields and lose money on four.
+//
+// Every value resolves to a Blueprint token — `tokens.*` for spacing, type, and
+// borders, `motion.*` for the disclosure (same precedent as editor.scss).
+//
+// Rules are flat `.record-form__x` class selectors, not descendants: `&__x`
+// inside `.record-form` compiles to a single class, and there is no
+// `.record-form` wrapper element anywhere. Containment comes from the prefix.
+@use "@buildoutinc/blueprint-tokens/scss/semantic" as tokens;
+@use "@buildoutinc/blueprint-theme/scss/bridge/vars" as motion;
+
+.record-form {
+  // ── Cluster tier ──────────────────────────────────────────────────────────
+  // No rules and no margins here. Each cluster is its own `bg-body` tile (see
+  // FieldGroup.tsx) and the 4px between tiles comes from the group body's
+  // `gap-1`, so the boundary is the tile's own edge. A rule *and* a tile edge
+  // would draw the same boundary twice.
+
+  // The gutter label. Semibold body text — in a gutter it does not need caps or
+  // a size change to separate from field labels, because it never shares a
+  // column with one.
+  &__subgroup-label {
+    font-weight: tokens.$font-weight-semibold;
+  }
+
+  &__subgroup-desc {
+    margin-top: tokens.$spacing-1;
+    margin-bottom: 0;
+  }
+
+  // ── Editable grids (Unit Mix, Rent Roll) ──────────────────────────────────
+  // A floor width so the columns keep their inputs legible instead of crushing
+  // — the Unit Mix multifamily set runs to ten columns. Below this the table
+  // scrolls inside Blueprint's own `.table-container`, which already supplies
+  // the overflow. Deliberately not a token: this is a content measurement (ten
+  // number inputs plus a remove button), not a step on the spacing scale.
+  &__grid-table {
+    min-width: 40rem; // 640px
+  }
+
+  // ── Disclosure ────────────────────────────────────────────────────────────
+  // Deliberately not a heading: it used to be an <h3>, the same level as the
+  // group titles it sat among.
+  &__more-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: tokens.$spacing-2;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: tokens.$font-size-body;
+    // Semibold so the disclosure reads as a control rather than prose. 500 was
+    // off Blueprint's weight scale (300/400/600/700/800/900) and the Typekit
+    // kit has no 500 face, so it was painting as 400 regardless.
+    font-weight: tokens.$font-weight-semibold;
+  }
+
+  &__more-chevron {
+    transition: transform motion.$short3 motion.$standard;
+  }
+
+  // base-ui sets data-panel-open on the trigger button (same precedent as
+  // .collapsible-card-trigger[data-panel-open] in main.scss).
+  &__more-toggle[data-panel-open] &__more-chevron {
+    transform: rotate(90deg);
+  }
+
+  &__more-body {
+    margin-top: tokens.$spacing-6;
+  }
+}

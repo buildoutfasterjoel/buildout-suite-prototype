@@ -1,4 +1,4 @@
-import { FieldGroup } from "#/components/listings/edit/FieldGroup";
+import { FieldGroup } from "#/components/common/recordForm/FieldGroup";
 import type { ListingGroupId } from "#/components/listings/edit/listingFormGroups";
 import { visibleListingGroups } from "#/components/listings/edit/listingFormGroups";
 import {

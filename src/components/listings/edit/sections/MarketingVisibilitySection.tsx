@@ -10,8 +10,8 @@ import {
 	faGlobe,
 	faTowerBroadcast,
 } from "@fortawesome/pro-regular-svg-icons";
-import { SubGroup } from "#/components/listings/edit/FieldGroup";
-import { SwitchRow } from "#/components/listings/edit/fieldWidgets";
+import { SubGroup } from "#/components/common/recordForm/FieldGroup";
+import { SwitchRow } from "#/components/common/recordForm/fieldWidgets";
 import { channelsFor } from "#/data/listingFormLogic";
 import type {
 	DealMarketing,
@@ -20,6 +20,7 @@ import type {
 	PropertyStatus,
 	VisibilityTier,
 } from "#/data/types";
+import "#/components/listings/edit/listingForm.scss";
 
 const DISCONNECT_CHANNELS: MarketingChannel[] = ["Buildout Syndication Network"];
 

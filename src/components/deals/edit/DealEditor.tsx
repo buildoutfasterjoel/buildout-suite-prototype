@@ -29,7 +29,7 @@ import {
 	SelectField,
 	FieldGrid,
 	Col,
-} from "#/components/listings/edit/fieldWidgets";
+} from "#/components/common/recordForm/fieldWidgets";
 import { ListingPageHeader } from "#/components/listings/ListingPageHeader";
 import { notify } from "#/lib/notify";
 import { useStageGate } from "#/components/deals/useStageGate";

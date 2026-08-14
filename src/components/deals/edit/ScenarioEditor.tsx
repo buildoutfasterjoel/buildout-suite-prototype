@@ -8,7 +8,7 @@ import {
 	faTrashCan,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { FinancialScenario } from "#/data/types";
-import { FieldGrid, NumberField } from "#/components/listings/edit/fieldWidgets";
+import { FieldGrid, NumberField } from "#/components/common/recordForm/fieldWidgets";
 
 // ── Scenario editor (reorderable) ────────────────────────────────────────────
 export function ScenarioEditor({

@@ -67,29 +67,6 @@ export function TextField({
       </InputGroup>
     </Field>
   );
-
-  // return (
-  //   <Field>
-  //     <Field.Label>
-  //       {label}
-  //       {required && <span className="text-danger ms-1">*</span>}
-  //     </Field.Label>
-  //     {textarea ? (
-  //       <Textarea
-  //         rows={rows ?? 3}
-  //         value={value}
-  //         placeholder={placeholder}
-  //         onChange={(e) => onChange(e.target.value)}
-  //       />
-  //     ) : (
-  //       <Input
-  //         value={value}
-  //         placeholder={placeholder}
-  //         onChange={(e) => onChange(e.target.value)}
-  //       />
-  //     )}
-  //   </Field>
-  // );
 }
 
 export function NumberField({

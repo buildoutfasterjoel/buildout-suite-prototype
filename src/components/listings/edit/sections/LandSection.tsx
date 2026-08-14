@@ -1,14 +1,14 @@
 import {
 	AdditionalFields,
 	SubGroup,
-} from "#/components/listings/edit/FieldGroup";
+} from "#/components/common/recordForm/FieldGroup";
 import {
 	Col,
 	FieldGrid,
 	NumberField,
 	TextField,
 	YesNoNaField,
-} from "#/components/listings/edit/fieldWidgets";
+} from "#/components/common/recordForm/fieldWidgets";
 import type { Property } from "#/data/types";
 
 /**

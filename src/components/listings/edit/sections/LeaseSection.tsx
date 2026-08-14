@@ -1,4 +1,4 @@
-import { SubGroup } from "#/components/listings/edit/FieldGroup";
+import { SubGroup } from "#/components/common/recordForm/FieldGroup";
 import {
 	BulletsField,
 	Col,
@@ -6,7 +6,7 @@ import {
 	NumberField,
 	SelectField,
 	TextField,
-} from "#/components/listings/edit/fieldWidgets";
+} from "#/components/common/recordForm/fieldWidgets";
 import type { DealMarketing } from "#/data/types";
 
 const AVAILABLE_SF_TERMS = ["SF", "RSF"] as const;

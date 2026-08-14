@@ -1,7 +1,7 @@
 import {
 	AdditionalFields,
 	SubGroup,
-} from "#/components/listings/edit/FieldGroup";
+} from "#/components/common/recordForm/FieldGroup";
 import {
 	Col,
 	FieldGrid,
@@ -9,7 +9,7 @@ import {
 	SelectField,
 	SwitchRow,
 	TextField,
-} from "#/components/listings/edit/fieldWidgets";
+} from "#/components/common/recordForm/fieldWidgets";
 import {
 	buildingClassOptions,
 	propertyTypeEffects,

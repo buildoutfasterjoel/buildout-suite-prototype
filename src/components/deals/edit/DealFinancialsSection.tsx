@@ -14,7 +14,7 @@ import {
 	FieldGrid,
 	NumberField,
 	SwitchRow,
-} from "#/components/listings/edit/fieldWidgets";
+} from "#/components/common/recordForm/fieldWidgets";
 import { LineItemEditor } from "#/components/deals/edit/LineItemEditor";
 import { ScenarioEditor } from "#/components/deals/edit/ScenarioEditor";
 

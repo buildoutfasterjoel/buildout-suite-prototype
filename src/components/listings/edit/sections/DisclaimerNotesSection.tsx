@@ -1,12 +1,12 @@
 import { Field } from "@buildoutinc/blueprint-react/ui/Field";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
-import { SubGroup } from "#/components/listings/edit/FieldGroup";
+import { SubGroup } from "#/components/common/recordForm/FieldGroup";
 import {
 	Col,
 	FieldGrid,
 	SwitchRow,
 	TextField,
-} from "#/components/listings/edit/fieldWidgets";
+} from "#/components/common/recordForm/fieldWidgets";
 import type { DealMarketing } from "#/data/types";
 
 /**

@@ -2,7 +2,7 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faTrashCan } from "@fortawesome/pro-regular-svg-icons";
 import type { DealBroker } from "#/data/types";
-import { NumberField, TextField } from "#/components/listings/edit/fieldWidgets";
+import { NumberField, TextField } from "#/components/common/recordForm/fieldWidgets";
 
 // ── Broker rows ──────────────────────────────────────────────────────────────
 export function BrokerEditor({
