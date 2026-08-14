@@ -61,6 +61,16 @@
     width: 164px;
   }
 
+  // Bootstrap's `.input-group-text` is `white-space: nowrap`, which is right for
+  // a "$" or a "/mo" and wrong for a label in a fixed gutter: a label wider than
+  // the gutter's ~140px content box does not wrap, it runs on past the divider
+  // and into the control ("Gross Scheduled Income" overflowed by 5px). Two
+  // classes so this outranks the theme's single-class rule regardless of which
+  // stylesheet Vite injects last.
+  &__field &__gutter {
+    white-space: normal;
+  }
+
   // 20rem = 320px, calibrated against a MEASURED field, not arithmetic. A
   // half-width field (`Col span=6`) inside a cluster is ~332px at a 1440
   // viewport, so the threshold sits deliberately just below it: a half-width
@@ -75,6 +85,37 @@
   @container (max-width: 20rem) {
     &__gutter {
       width: 100%;
+    }
+
+    // The addon's divider is the theme's `border-width: 0 1px 0 0` — a vertical
+    // hairline on its right edge, which is where the boundary belongs while the
+    // label and the control sit side by side. Stacked, that hairline lands at
+    // the far right of a full-width row, 1px inside the group's own border, so
+    // it reads as a doubled edge and leaves nothing between the label and the
+    // control it names. Move it to the bottom, where the boundary now is.
+    //
+    // Four classes deliberately: the theme's rule is
+    // `.input-group-text.input-addon-text:first-child` at three, and a tie would
+    // be settled by stylesheet order.
+    &__field .input-group &__gutter.input-addon-text {
+      border-width: 0 0 var(--bp-border-width) 0;
+    }
+
+    // Same rotation for the corners. Side by side, the gutter rounds its left
+    // pair and the control its right pair, and all four are outer corners.
+    // Stacked, one of each pair moves INTO the field: the gutter's bottom-left
+    // and the control's top-right now sit at the seam, where a 6px radius carves
+    // a notch out of a white row against the tile behind it.
+    //
+    // Only the two interior corners are zeroed. The four outer ones need no
+    // rule: `.input-group` carries the radius and `overflow: hidden`, so it
+    // clips its children's square corners to its own rounded ones.
+    &__field .input-group &__gutter {
+      border-bottom-left-radius: 0;
+    }
+
+    &__field .input-group &__control {
+      border-top-right-radius: 0;
     }
   }
 
@@ -141,24 +182,32 @@
   // with a top label, which put a disabled-looking text box next to eleven live
   // ones and invited a broker to type in it.
   //
-  // Indented by the gutter's width so the readout block shares the control
-  // column's bounds — it starts where the controls above it start, which is what
-  // ties a readout to its inputs. `space-between` then pushes the label to that
-  // offset and the figure to the far edge of the column, so this aligns the
-  // block, not the digits.
+  // Laid out as a field row, not as a band across the cluster. An earlier pass
+  // indented the block by the gutter and used `space-between`, which put the
+  // label at 164px and the figure at the cluster's far edge — 400px of empty
+  // space between "Computed cap rate" and "5.36%", so the two read as unrelated
+  // and the figure read as floating at the end of the tile.
   //
-  // `min()` rather than a container query, deliberately. A readout is a SIBLING
-  // of the fields it belongs to, not a descendant, so it cannot query the
-  // `__field` container that Task 4 established — the query would resolve
-  // against an ancestor with no `container-type` and never match, leaving the
-  // indent permanently at 164px. Adding a second container on the cluster just
-  // to make a query work buys less than this: 45% holds the alignment at normal
-  // widths and gives way on its own when the cluster is too narrow to spare
-  // 164px.
+  // Instead the label takes the gutter column and the figure starts where the
+  // controls start. The figure then sits directly beneath the input that
+  // produced it, which is the whole claim a readout makes.
+  //
+  // 164px of label plus a 12px gap puts the figure at 176px, and an input's own
+  // 12px of padding puts its first typed digit at 177px — so the figure lands on
+  // the digits above it, not merely inside the same column.
+  //
+  // `flex: 0 1 164px` rather than a fixed width: when a cluster is too narrow to
+  // spare the gutter the label gives ground and wraps, the same concession the
+  // field gutters make above it — without needing a container query it cannot
+  // run (a readout is a SIBLING of its fields, so it has no `__field` container
+  // to query).
   &__readout {
     display: flex;
-    justify-content: space-between;
-    gap: tokens.$spacing-4;
-    padding-left: min(164px, 45%);
+    align-items: baseline;
+    gap: tokens.$spacing-3;
+  }
+
+  &__readout-label {
+    flex: 0 1 164px;
   }
 }

@@ -169,7 +169,13 @@ export function Readout({ label, value }: { label: string; value: string }) {
   if (!value) return null;
   return (
     <div className="record-form__readout">
-      <span className="fs-small text-muted">{label}</span>
+      {/* The label takes the gutter column and the figure starts where the
+          controls start, so a derived figure lines up under the input that
+          produced it. Small and muted is what keeps it from reading as another
+          field label in that column. */}
+      <span className="record-form__readout-label fs-small text-muted">
+        {label}
+      </span>
       <span className="fw-semibold">{value}</span>
     </div>
   );

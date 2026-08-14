@@ -43,7 +43,13 @@ export function FieldGroup({
 }) {
   return (
     <section>
-      <h3 className="d-flex align-items-center gap-2 fs-large fw-semibold py-3">
+      {/* `pb-3`, not `py-3`. The caller's `gap-6` already puts 24px above this
+          heading; a top padding stacked another 12px on it, so the space above a
+          group title measured 36px while the tile below it sat at 12px. Dropping
+          it leaves the gap as the only thing separating one group from the next
+          — which is what the gap is for — and keeps 12px binding the title to
+          the stack it labels. */}
+      <h3 className="d-flex align-items-center gap-2 fs-large fw-semibold pb-3">
         {icon && <FontAwesomeIcon icon={icon} className="text-primary" />}
         {title}
       </h3>

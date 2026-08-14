@@ -78,11 +78,13 @@ export function ListingFormEditor({
   const marketingGroup = groupById("marketing"); // not `marketing` — that prop is the draft
   const notes = groupById("notes");
 
-  // `gap-12` (48px): the group tier has to outrank the ~48px a rule plus its
-  // symmetric padding puts between clusters inside a group. At the previous
-  // `gap-6` it was smaller than the tier below it.
+  // `gap-6` (24px). The 48px this used to carry was sized against a tier that no
+  // longer exists: clusters were separated by a hairline rule plus its symmetric
+  // padding, so the group gap had to clear ~48px to outrank them. Clusters are
+  // tiles at `gap-1` now, and 24px clears that with room to spare while keeping
+  // a group's own heading close to the stack it labels.
   return (
-    <div className="d-flex flex-column gap-12">
+    <div className="d-flex flex-column gap-6">
       {marketingGroup && (
         <FieldGroup title={marketingGroup.label} icon={marketingGroup.icon}>
           {dealType === "Sale" ? (

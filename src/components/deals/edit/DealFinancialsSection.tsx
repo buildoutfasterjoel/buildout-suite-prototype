@@ -98,8 +98,11 @@ export function DealFinancialsSection({
 			<SubGroup label="Income" description="What the asset takes in.">
 				<FieldGrid>
 					<Col>
+						{/* Not "Gross Scheduled Income": at 156px it was the one label too
+						    wide for the 164px gutter's content box, and the cluster it sits
+						    in is already named Income. */}
 						<NumberField
-							label="Gross Scheduled Income"
+							label="Gross Scheduled"
 							value={financials.grossScheduledIncome || null}
 							onChange={(v) => patchFinancials({ grossScheduledIncome: v ?? 0 })}
 						/>
@@ -119,11 +122,10 @@ export function DealFinancialsSection({
 						/>
 					</Col>
 				</FieldGrid>
-				<LineItemEditor
-					title="Income"
-					items={financials.income}
-					onChange={(v) => patchFinancials({ income: v })}
-				/>
+				{/* Above the line-item table, not below it. All three figures derive
+				    from the three fields in the grid — the table's own rows feed none of
+				    them, and it carries its own Total — so sitting after it made them
+				    read as that table's summary. */}
 				<Readout
 					label="Total scheduled income"
 					value={formatCalcAmount(totalScheduled)}
@@ -132,6 +134,11 @@ export function DealFinancialsSection({
 				<Readout
 					label="Gross income"
 					value={formatCalcAmount(grossIncome(totalScheduled, vacancy))}
+				/>
+				<LineItemEditor
+					title="Income"
+					items={financials.income}
+					onChange={(v) => patchFinancials({ income: v })}
 				/>
 			</SubGroup>
 

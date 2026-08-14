@@ -308,7 +308,8 @@ export function DealEditor({
 				</p>
 			)}
 
-			<div className="d-flex flex-column gap-12">
+			{/* `gap-6` (24px) — the group tier, matching ListingFormEditor. */}
+			<div className="d-flex flex-column gap-6">
 				{setupGroup && (
 					<FieldGroup title={setupGroup.label} icon={setupGroup.icon}>
 						<SubGroup
