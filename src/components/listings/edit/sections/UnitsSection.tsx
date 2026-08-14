@@ -1,14 +1,14 @@
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLayerGroup, faPlus, faTrashCan } from "@fortawesome/pro-regular-svg-icons";
+import { faPlus, faTrashCan } from "@fortawesome/pro-regular-svg-icons";
+import { SubGroup } from "#/components/listings/edit/FieldGroup";
 import {
 	Col,
 	FieldGrid,
 	NumberField,
 	SwitchRow,
 } from "#/components/listings/edit/fieldWidgets";
-import { Section } from "#/components/listings/listingWidgets";
 import { emptyUnitMixRow } from "#/data/createListing";
 import { autoFillRentRow } from "#/data/listingFinancials";
 import { propertyTypeEffects } from "#/data/listingFormLogic";
@@ -187,6 +187,8 @@ function EditableTable<T extends { id: string }>({
  * with the primary property type; the Rent Roll size/rate/annual trio
  * auto-fills the third value. Unit Mix is hidden for land; Rent Roll is
  * hidden for hospitality.
+ *
+ * Emits subgroups only — `ListingFormEditor` owns the group heading.
  */
 export function UnitsSection({
 	property,
@@ -252,20 +254,22 @@ export function UnitsSection({
 	});
 
 	return (
-		<Section title="Units" icon={faLayerGroup}>
-			<FieldGrid>
-				<Col>
-					<NumberField
-						label={effects.unitsRequired ? "Number of Units *" : "Number of Units"}
-						value={property.residentialUnits}
-						onChange={(v) => patchProperty({ residentialUnits: v })}
-					/>
-				</Col>
-			</FieldGrid>
+		<>
+			<SubGroup label="Overview">
+				<FieldGrid>
+					<Col>
+						<NumberField
+							label={effects.unitsRequired ? "Number of Units *" : "Number of Units"}
+							value={property.residentialUnits}
+							onChange={(v) => patchProperty({ residentialUnits: v })}
+						/>
+					</Col>
+				</FieldGrid>
+			</SubGroup>
 
 			{/* ── Unit Mix ── */}
 			{showUnitMix && (
-				<div className="d-flex flex-column gap-3">
+				<SubGroup label="Unit Mix">
 					<div style={{ maxWidth: 360 }}>
 						<SwitchRow
 							label="Include Unit Mix"
@@ -274,7 +278,7 @@ export function UnitsSection({
 						/>
 					</div>
 					{(marketing.includeUnitMix ?? false) && (
-						<div className="d-flex flex-column gap-3">
+						<>
 							<EditableTable
 								columns={columnsFor(property.propertyType)}
 								rows={unitMix}
@@ -295,14 +299,14 @@ export function UnitsSection({
 									onChange={(v) => patchMarketing({ syndicateUnitMix: v })}
 								/>
 							</div>
-						</div>
+						</>
 					)}
-				</div>
+				</SubGroup>
 			)}
 
 			{/* ── Rent Roll ── */}
 			{showRentRoll && (
-				<div className="d-flex flex-column gap-3">
+				<SubGroup label="Rent Roll">
 					<div style={{ maxWidth: 360 }}>
 						<SwitchRow
 							label="Include Rent Roll"
@@ -311,7 +315,7 @@ export function UnitsSection({
 						/>
 					</div>
 					{(marketing.includeRentRoll ?? false) && (
-						<div className="d-flex flex-column gap-3">
+						<>
 							<EditableTable
 								columns={RENT_ROLL_COLUMNS}
 								rows={rentRoll}
@@ -330,10 +334,10 @@ export function UnitsSection({
 									onChange={(v) => patchMarketing({ syndicateRentRoll: v })}
 								/>
 							</div>
-						</div>
+						</>
 					)}
-				</div>
+				</SubGroup>
 			)}
-		</Section>
+		</>
 	);
 }

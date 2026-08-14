@@ -1,7 +1,6 @@
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
-import { faEye } from "@fortawesome/pro-regular-svg-icons";
+import { SubGroup } from "#/components/listings/edit/FieldGroup";
 import { SwitchRow } from "#/components/listings/edit/fieldWidgets";
-import { Section } from "#/components/listings/listingWidgets";
 import { leaseChannelsFor, saleChannelsFor } from "#/data/listingFormLogic";
 import type {
 	DealMarketing,
@@ -31,6 +30,8 @@ const TIER_FOR_CHANNEL: Record<MarketingChannel, VisibilityTier> = {
  * mirrored into the legacy `marketingChannel` field on every change so older
  * readers of that field keep working. Always rendered — the channel options
  * available simply narrow as `status` moves along the deal lifecycle.
+ *
+ * Emits subgroups only — `ListingFormEditor` owns the group heading.
  */
 export function MarketingVisibilitySection({
 	dealType,
@@ -70,7 +71,7 @@ export function MarketingVisibilitySection({
 	const showDisconnectWarning = DISCONNECT_CHANNELS.includes(current);
 
 	return (
-		<Section title="Marketing Visibility" icon={faEye}>
+		<SubGroup label="Visibility">
 			<div className="d-flex flex-column gap-2">
 				<div className="d-flex flex-wrap gap-2">
 					{channels.map((c) => (
@@ -106,6 +107,6 @@ export function MarketingVisibilitySection({
 					onChange={(v) => patchMarketing({ hideFromNonListingBrokers: v })}
 				/>
 			</div>
-		</Section>
+		</SubGroup>
 	);
 }

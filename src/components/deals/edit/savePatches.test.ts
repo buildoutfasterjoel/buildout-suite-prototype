@@ -3,7 +3,7 @@ import { useDataStore } from "#/data/dataStore";
 import { updateDeal } from "#/data/actions";
 import { addPropertyUnit, getProperty } from "#/data/store";
 import { emptySpaceLeaseTerms } from "#/data/createListing";
-import type { Listing, Property, RentRollRow } from "#/data/types";
+import type { Listing, Property, RentRollRow, VisualMediaType } from "#/data/types";
 import { dealSavePatch, listingSavePatch, propertySavePatch } from "./savePatches";
 
 /** The first seeded deal. Read fresh per test — these tests write to the store. */
@@ -122,6 +122,84 @@ describe("listingSavePatch", () => {
     });
 
     expect(patch.marketing?.occupancySnapshot).toBe(92);
+  });
+
+  it("keeps Media page edits (photos, links, visualMedia) over a stale draft", () => {
+    const deal = seededDeal();
+    // Simulate Media page edits made while Listing form was open: current has newer values
+    updateDeal(deal.id, {
+      marketing: {
+        ...deal.marketing,
+        photos: [
+          {
+            id: "photo-new",
+            url: "https://example.com/new-photo.jpg",
+            kind: "photo" as const,
+            caption: "New photo",
+            unitId: null,
+          },
+        ],
+        links: [
+          {
+            id: "link-new",
+            url: "https://example.com/tour",
+            kind: "matterport" as const,
+            unitId: null,
+          },
+        ],
+        visualMedia: [
+          {
+            id: "vm-new",
+            url: "https://example.com/embed",
+            mediaType: "Matterport Tour" as VisualMediaType,
+            unitId: null,
+          },
+        ],
+      },
+    });
+    const record = current(deal.id);
+
+    const patch = listingSavePatch(record, {
+      marketing: {
+        ...deal.marketing,
+        photos: [
+          {
+            id: "photo-old",
+            url: "https://example.com/old-photo.jpg",
+            kind: "photo" as const,
+            caption: "Old photo",
+            unitId: null,
+          },
+        ],
+        links: [
+          {
+            id: "link-old",
+            url: "https://example.com/old-tour",
+            kind: "virtualTour" as const,
+            unitId: null,
+          },
+        ],
+        visualMedia: [
+          {
+            id: "vm-old",
+            url: "https://example.com/old-embed",
+            mediaType: "Interactive Site Plan" as VisualMediaType,
+            unitId: null,
+          },
+        ],
+        leaseTitle: "Form-edited lease title",
+      },
+      internalNotes: "",
+      rentRoll: record.financials.rentRoll,
+    });
+
+    // All three media keys must come from current (newer), not draft (stale)
+    expect(patch.marketing?.photos).toEqual(record.marketing.photos);
+    expect(patch.marketing?.links).toEqual(record.marketing.links);
+    expect(patch.marketing?.visualMedia).toEqual(record.marketing.visualMedia);
+
+    // Other marketing fields still come from draft
+    expect(patch.marketing?.leaseTitle).toBe("Form-edited lease title");
   });
 });
 

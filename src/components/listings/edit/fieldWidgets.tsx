@@ -354,8 +354,23 @@ export function SwitchRow({
 export function FieldGrid({ children }: { children: React.ReactNode }) {
   return <div className="row g-3">{children}</div>;
 }
-export function Col({ children }: { children: React.ReactNode }) {
-  return <div className="col-md-6">{children}</div>;
+/**
+ * One cell in a `FieldGrid`. `span` is Bootstrap's 12-column scale at the `md`
+ * breakpoint; it defaults to 6 so every existing caller is unchanged.
+ *
+ * Widths are what let related short fields share a row — City / State / Zip on
+ * one line rather than three half-width rows — which chunks the form visually
+ * without any type change. Bootstrap ships every `col-md-*` class, so building
+ * the name at runtime is safe here (this is not Tailwind; nothing is purged).
+ */
+export function Col({
+  children,
+  span = 6,
+}: {
+  children: React.ReactNode;
+  span?: 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 12;
+}) {
+  return <div className={`col-md-${span}`}>{children}</div>;
 }
 
 // ── Bullets editor ───────────────────────────────────────────────────────────

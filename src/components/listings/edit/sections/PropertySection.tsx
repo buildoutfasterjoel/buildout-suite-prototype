@@ -1,8 +1,11 @@
 import { useState } from "react";
-import { Accordion } from "@buildoutinc/blueprint-react/ui/Accordion";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
-import { faCity, faPlus, faTrashCan } from "@fortawesome/pro-regular-svg-icons";
+import { faPlus, faTrashCan } from "@fortawesome/pro-regular-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+	AdditionalFields,
+	SubGroup,
+} from "#/components/listings/edit/FieldGroup";
 import {
 	BulletsField,
 	Col,
@@ -12,7 +15,6 @@ import {
 	SwitchRow,
 	TextField,
 } from "#/components/listings/edit/fieldWidgets";
-import { Section } from "#/components/listings/listingWidgets";
 import {
 	PROPERTY_TYPES,
 	TYPE_LABELS,
@@ -122,6 +124,8 @@ function AdditionalTypesEditor({
  * override, repeatable additional types + aliases, and the required-when-land
  * Lot Size pair. A collapsed "Additional Fields" accordion holds the
  * long-tail site fields most listings never touch.
+ *
+ * Emits subgroups only — `ListingFormEditor` owns the group heading.
  */
 export function PropertySection({
 	property,
@@ -139,196 +143,197 @@ export function PropertySection({
 		isLandLikeSubtype(property.propertySubtype);
 
 	return (
-		<Section title="Property" icon={faCity}>
-			<FieldGrid>
-				<Col>
-					<SelectField
-						label="Primary Property Type"
-						value={property.propertyType}
-						options={PROPERTY_TYPES}
-						labels={TYPE_LABELS}
-						onChange={(v) => patchProperty({ propertyType: v })}
-					/>
-				</Col>
-				<Col>
-					<SelectField
-						label="Primary Property Subtype"
-						value={property.propertySubtype}
-						options={ALL_SUBTYPES}
-						onChange={(v) => patchProperty({ propertySubtype: v })}
-					/>
-				</Col>
-			</FieldGrid>
+		<>
+			<SubGroup label="Identity">
+				<FieldGrid>
+					<Col>
+						<SelectField
+							label="Primary Property Type"
+							value={property.propertyType}
+							options={PROPERTY_TYPES}
+							labels={TYPE_LABELS}
+							onChange={(v) => patchProperty({ propertyType: v })}
+						/>
+					</Col>
+					<Col>
+						<SelectField
+							label="Primary Property Subtype"
+							value={property.propertySubtype}
+							options={ALL_SUBTYPES}
+							onChange={(v) => patchProperty({ propertySubtype: v })}
+						/>
+					</Col>
+				</FieldGrid>
 
-			<div>
-				<Button
-					variant="ghost"
-					size="sm"
-					onClick={() => setShowLabelOverride((s) => !s)}
-				>
-					{showLabelOverride ? "Remove label override" : "Override label"}
-				</Button>
-			</div>
-			{showLabelOverride && (
-				<TextField
-					label="Property Type Label Override"
-					value={property.propertyTypeLabelOverride ?? ""}
-					onChange={(v) => patchProperty({ propertyTypeLabelOverride: v })}
+				<div>
+					<Button
+						variant="ghost"
+						size="sm"
+						onClick={() => setShowLabelOverride((s) => !s)}
+					>
+						{showLabelOverride ? "Remove label override" : "Override label"}
+					</Button>
+				</div>
+				{showLabelOverride && (
+					<TextField
+						label="Property Type Label Override"
+						value={property.propertyTypeLabelOverride ?? ""}
+						onChange={(v) => patchProperty({ propertyTypeLabelOverride: v })}
+					/>
+				)}
+
+				<AdditionalTypesEditor
+					rows={property.additionalPropertyTypes ?? []}
+					onChange={(v) => patchProperty({ additionalPropertyTypes: v })}
 				/>
-			)}
 
-			<AdditionalTypesEditor
-				rows={property.additionalPropertyTypes ?? []}
-				onChange={(v) => patchProperty({ additionalPropertyTypes: v })}
-			/>
+				<TextField
+					label="Property Name"
+					value={property.name}
+					onChange={(v) => patchProperty({ name: v })}
+				/>
 
-			<FieldGrid>
-				<Col>
-					<TextField
-						label="Property Name"
-						value={property.name}
-						onChange={(v) => patchProperty({ name: v })}
-					/>
-				</Col>
-				<Col>
-					<TextField
-						label="Zoning"
-						value={property.zoning}
-						onChange={(v) => patchProperty({ zoning: v })}
-					/>
-				</Col>
-				<Col>
-					<TextField
-						label="APN#"
-						value={property.apn}
-						onChange={(v) => patchProperty({ apn: v })}
-					/>
-				</Col>
-			</FieldGrid>
+				<BulletsField
+					label="Alias"
+					bullets={property.aliases ?? []}
+					onChange={(v) => patchProperty({ aliases: v })}
+				/>
+			</SubGroup>
 
-			<BulletsField
-				label="Alias"
-				bullets={property.aliases ?? []}
-				onChange={(v) => patchProperty({ aliases: v })}
-			/>
+			<SubGroup label="Parcel">
+				<FieldGrid>
+					<Col span={3}>
+						<TextField
+							label="Zoning"
+							value={property.zoning}
+							onChange={(v) => patchProperty({ zoning: v })}
+						/>
+					</Col>
+					<Col span={3}>
+						<TextField
+							label="APN#"
+							value={property.apn}
+							onChange={(v) => patchProperty({ apn: v })}
+						/>
+					</Col>
+					<Col span={3}>
+						<NumberField
+							label={lotSizeRequired ? "Lot Size *" : "Lot Size"}
+							value={property.lotSqFt}
+							onChange={(v) => patchProperty({ lotSqFt: v ?? 0 })}
+						/>
+					</Col>
+					<Col span={3}>
+						<SelectField
+							label="Lot Size Unit"
+							value={property.lotSizeUnit ?? "Sq Ft"}
+							options={LOT_SIZE_UNITS}
+							onChange={(v) => patchProperty({ lotSizeUnit: v })}
+						/>
+					</Col>
+				</FieldGrid>
+			</SubGroup>
 
-			<FieldGrid>
-				<Col>
-					<NumberField
-						label={lotSizeRequired ? "Lot Size *" : "Lot Size"}
-						value={property.lotSqFt}
-						onChange={(v) => patchProperty({ lotSqFt: v ?? 0 })}
-					/>
-				</Col>
-				<Col>
-					<SelectField
-						label="Lot Size Unit"
-						value={property.lotSizeUnit ?? "Sq Ft"}
-						options={LOT_SIZE_UNITS}
-						onChange={(v) => patchProperty({ lotSizeUnit: v })}
-					/>
-				</Col>
-			</FieldGrid>
-
-			<Accordion variant="inline">
-				<Accordion.Item value="property-more">
-					<Accordion.Trigger>
-						<span className="fw-semibold">Show/Hide Additional Fields</span>
-					</Accordion.Trigger>
-					<Accordion.Content>
-						<div className="d-flex flex-column gap-3">
-							<FieldGrid>
-								<Col>
-									<NumberField
-										label="Lot Frontage"
-										value={property.lotFrontage ?? null}
-										onChange={(v) => patchProperty({ lotFrontage: v })}
-									/>
-								</Col>
-								<Col>
-									<NumberField
-										label="Lot Depth"
-										value={property.lotDepth ?? null}
-										onChange={(v) => patchProperty({ lotDepth: v })}
-									/>
-								</Col>
-							</FieldGrid>
-
-							<div style={{ maxWidth: 360 }}>
-								<SwitchRow
-									label="Corner Property"
-									checked={property.cornerProperty ?? false}
-									onChange={(v) => patchProperty({ cornerProperty: v })}
-								/>
-							</div>
-
-							<TextField
-								label="Traffic Count"
-								value={property.trafficCount ?? ""}
-								onChange={(v) => patchProperty({ trafficCount: v })}
+			<AdditionalFields label="Show 12 more property fields">
+				<SubGroup label="Site">
+					<FieldGrid>
+						<Col>
+							<NumberField
+								label="Lot Frontage"
+								value={property.lotFrontage ?? null}
+								onChange={(v) => patchProperty({ lotFrontage: v })}
 							/>
+						</Col>
+						<Col>
+							<NumberField
+								label="Lot Depth"
+								value={property.lotDepth ?? null}
+								onChange={(v) => patchProperty({ lotDepth: v })}
+							/>
+						</Col>
+					</FieldGrid>
 
+					<div style={{ maxWidth: 360 }}>
+						<SwitchRow
+							label="Corner Property"
+							checked={property.cornerProperty ?? false}
+							onChange={(v) => patchProperty({ cornerProperty: v })}
+						/>
+					</div>
+
+					<TextField
+						label="Traffic Count"
+						value={property.trafficCount ?? ""}
+						onChange={(v) => patchProperty({ trafficCount: v })}
+					/>
+
+					<FieldGrid>
+						<Col span={12}>
 							<TextField
 								label="Site Description"
 								textarea
 								value={property.siteDescription ?? ""}
 								onChange={(v) => patchProperty({ siteDescription: v })}
 							/>
+						</Col>
+						<Col span={12}>
 							<TextField
 								label="Amenities"
 								textarea
 								value={property.amenities ?? ""}
 								onChange={(v) => patchProperty({ amenities: v })}
 							/>
+						</Col>
+					</FieldGrid>
 
-							<div style={{ maxWidth: 360 }}>
-								<SwitchRow
-									label="Waterfront"
-									checked={property.waterfront ?? false}
-									onChange={(v) => patchProperty({ waterfront: v })}
-								/>
-							</div>
+					<div style={{ maxWidth: 360 }}>
+						<SwitchRow
+							label="Waterfront"
+							checked={property.waterfront ?? false}
+							onChange={(v) => patchProperty({ waterfront: v })}
+						/>
+					</div>
+				</SubGroup>
 
-							<FieldGrid>
-								<Col>
-									<TextField
-										label="MLS ID#"
-										value={property.mlsId ?? ""}
-										onChange={(v) => patchProperty({ mlsId: v })}
-									/>
-								</Col>
-								<Col>
-									<TextField
-										label="Thomas Guide Page #"
-										value={property.thomasGuidePage ?? ""}
-										onChange={(v) => patchProperty({ thomasGuidePage: v })}
-									/>
-								</Col>
-							</FieldGrid>
-
+				<SubGroup label="Records & Utilities">
+					<FieldGrid>
+						<Col>
 							<TextField
-								label="Power Description"
-								value={property.powerDescription ?? ""}
-								onChange={(v) => patchProperty({ powerDescription: v })}
+								label="MLS ID#"
+								value={property.mlsId ?? ""}
+								onChange={(v) => patchProperty({ mlsId: v })}
 							/>
-
-							<div style={{ maxWidth: 360 }}>
-								<SwitchRow
-									label="Rail Access"
-									checked={property.railAccess ?? false}
-									onChange={(v) => patchProperty({ railAccess: v })}
-								/>
-							</div>
-
+						</Col>
+						<Col>
 							<TextField
-								label="Gas/Propane Description"
-								value={property.gasPropaneDescription ?? ""}
-								onChange={(v) => patchProperty({ gasPropaneDescription: v })}
+								label="Thomas Guide Page #"
+								value={property.thomasGuidePage ?? ""}
+								onChange={(v) => patchProperty({ thomasGuidePage: v })}
 							/>
-						</div>
-					</Accordion.Content>
-				</Accordion.Item>
-			</Accordion>
-		</Section>
+						</Col>
+					</FieldGrid>
+
+					<TextField
+						label="Power Description"
+						value={property.powerDescription ?? ""}
+						onChange={(v) => patchProperty({ powerDescription: v })}
+					/>
+
+					<div style={{ maxWidth: 360 }}>
+						<SwitchRow
+							label="Rail Access"
+							checked={property.railAccess ?? false}
+							onChange={(v) => patchProperty({ railAccess: v })}
+						/>
+					</div>
+
+					<TextField
+						label="Gas/Propane Description"
+						value={property.gasPropaneDescription ?? ""}
+						onChange={(v) => patchProperty({ gasPropaneDescription: v })}
+					/>
+				</SubGroup>
+			</AdditionalFields>
+		</>
 	);
 }

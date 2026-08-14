@@ -1,5 +1,7 @@
-import { Accordion } from "@buildoutinc/blueprint-react/ui/Accordion";
-import { faMountainSun } from "@fortawesome/pro-regular-svg-icons";
+import {
+	AdditionalFields,
+	SubGroup,
+} from "#/components/listings/edit/FieldGroup";
 import {
 	Col,
 	FieldGrid,
@@ -7,7 +9,6 @@ import {
 	TextField,
 	YesNoNaField,
 } from "#/components/listings/edit/fieldWidgets";
-import { Section } from "#/components/listings/listingWidgets";
 import type { Property } from "#/data/types";
 
 /**
@@ -15,6 +16,8 @@ import type { Property } from "#/data/types";
  * (`propertyTypeEffects(...).landSections`). Number of Lots and Best Use show
  * up front; utility availability, environmental, and site fields sit behind a
  * collapsed "Additional Fields" accordion.
+ *
+ * Emits subgroups only — `ListingFormEditor` owns the group heading.
  */
 export function LandSection({
 	property,
@@ -24,137 +27,135 @@ export function LandSection({
 	patchProperty: (p: Partial<Property>) => void;
 }) {
 	return (
-		<Section title="Land" icon={faMountainSun}>
-			<FieldGrid>
-				<Col>
-					<NumberField
-						label="Number of Lots"
-						value={property.numberOfLots ?? null}
-						onChange={(v) => patchProperty({ numberOfLots: v })}
-					/>
-				</Col>
-				<Col>
-					<TextField
-						label="Best Use"
-						value={property.bestUse ?? ""}
-						onChange={(v) => patchProperty({ bestUse: v })}
-					/>
-				</Col>
-			</FieldGrid>
+		<>
+			<SubGroup label="Land">
+				<FieldGrid>
+					<Col>
+						<NumberField
+							label="Number of Lots"
+							value={property.numberOfLots ?? null}
+							onChange={(v) => patchProperty({ numberOfLots: v })}
+						/>
+					</Col>
+					<Col>
+						<TextField
+							label="Best Use"
+							value={property.bestUse ?? ""}
+							onChange={(v) => patchProperty({ bestUse: v })}
+						/>
+					</Col>
+				</FieldGrid>
+			</SubGroup>
 
-			<Accordion variant="inline">
-				<Accordion.Item value="land-more">
-					<Accordion.Trigger>
-						<span className="fw-semibold">Show/Hide Additional Fields</span>
-					</Accordion.Trigger>
-					<Accordion.Content>
-						<div className="d-flex flex-column gap-3">
-							<FieldGrid>
-								<Col>
-									<YesNoNaField
-										label="Irrigation"
-										value={property.irrigation}
-										onChange={(v) => patchProperty({ irrigation: v })}
-									/>
-								</Col>
-								<Col>
-									<TextField
-										label="Irrigation Description"
-										value={property.irrigationDescription ?? ""}
-										onChange={(v) =>
-											patchProperty({ irrigationDescription: v })
-										}
-									/>
-								</Col>
-								<Col>
-									<YesNoNaField
-										label="Water"
-										value={property.water}
-										onChange={(v) => patchProperty({ water: v })}
-									/>
-								</Col>
-								<Col>
-									<TextField
-										label="Water Description"
-										value={property.waterDescription ?? ""}
-										onChange={(v) => patchProperty({ waterDescription: v })}
-									/>
-								</Col>
-								<Col>
-									<YesNoNaField
-										label="Telephone"
-										value={property.telephone}
-										onChange={(v) => patchProperty({ telephone: v })}
-									/>
-								</Col>
-								<Col>
-									<TextField
-										label="Telephone Description"
-										value={property.telephoneDescription ?? ""}
-										onChange={(v) =>
-											patchProperty({ telephoneDescription: v })
-										}
-									/>
-								</Col>
-								<Col>
-									<YesNoNaField
-										label="Cable"
-										value={property.cable}
-										onChange={(v) => patchProperty({ cable: v })}
-									/>
-								</Col>
-								<Col>
-									<TextField
-										label="Cable Description"
-										value={property.cableDescription ?? ""}
-										onChange={(v) => patchProperty({ cableDescription: v })}
-									/>
-								</Col>
-								<Col>
-									<YesNoNaField
-										label="Sewer"
-										value={property.sewer}
-										onChange={(v) => patchProperty({ sewer: v })}
-									/>
-								</Col>
-							</FieldGrid>
+			<AdditionalFields label="Show 13 more land fields">
+				<SubGroup label="Utilities">
+					<FieldGrid>
+						<Col span={3}>
+							<YesNoNaField
+								label="Irrigation"
+								value={property.irrigation}
+								onChange={(v) => patchProperty({ irrigation: v })}
+							/>
+						</Col>
+						<Col span={9}>
+							<TextField
+								label="Irrigation Description"
+								value={property.irrigationDescription ?? ""}
+								onChange={(v) =>
+									patchProperty({ irrigationDescription: v })
+								}
+							/>
+						</Col>
+						<Col span={3}>
+							<YesNoNaField
+								label="Water"
+								value={property.water}
+								onChange={(v) => patchProperty({ water: v })}
+							/>
+						</Col>
+						<Col span={9}>
+							<TextField
+								label="Water Description"
+								value={property.waterDescription ?? ""}
+								onChange={(v) => patchProperty({ waterDescription: v })}
+							/>
+						</Col>
+						<Col span={3}>
+							<YesNoNaField
+								label="Telephone"
+								value={property.telephone}
+								onChange={(v) => patchProperty({ telephone: v })}
+							/>
+						</Col>
+						<Col span={9}>
+							<TextField
+								label="Telephone Description"
+								value={property.telephoneDescription ?? ""}
+								onChange={(v) =>
+									patchProperty({ telephoneDescription: v })
+								}
+							/>
+						</Col>
+						<Col span={3}>
+							<YesNoNaField
+								label="Cable"
+								value={property.cable}
+								onChange={(v) => patchProperty({ cable: v })}
+							/>
+						</Col>
+						<Col span={9}>
+							<TextField
+								label="Cable Description"
+								value={property.cableDescription ?? ""}
+								onChange={(v) => patchProperty({ cableDescription: v })}
+							/>
+						</Col>
+						<Col span={3}>
+							<YesNoNaField
+								label="Sewer"
+								value={property.sewer}
+								onChange={(v) => patchProperty({ sewer: v })}
+							/>
+						</Col>
+					</FieldGrid>
+				</SubGroup>
 
-							<FieldGrid>
-								<Col>
-									<TextField
-										label="Environmental Issues"
-										value={property.environmentalIssues ?? ""}
-										onChange={(v) =>
-											patchProperty({ environmentalIssues: v })
-										}
-									/>
-								</Col>
-								<Col>
-									<TextField
-										label="Topography"
-										value={property.topography ?? ""}
-										onChange={(v) => patchProperty({ topography: v })}
-									/>
-								</Col>
-								<Col>
-									<TextField
-										label="Soil Type"
-										value={property.soilType ?? ""}
-										onChange={(v) => patchProperty({ soilType: v })}
-									/>
-								</Col>
-							</FieldGrid>
-
+				<SubGroup label="Site Conditions">
+					<FieldGrid>
+						<Col span={4}>
+							<TextField
+								label="Environmental Issues"
+								value={property.environmentalIssues ?? ""}
+								onChange={(v) =>
+									patchProperty({ environmentalIssues: v })
+								}
+							/>
+						</Col>
+						<Col span={4}>
+							<TextField
+								label="Topography"
+								value={property.topography ?? ""}
+								onChange={(v) => patchProperty({ topography: v })}
+							/>
+						</Col>
+						<Col span={4}>
+							<TextField
+								label="Soil Type"
+								value={property.soilType ?? ""}
+								onChange={(v) => patchProperty({ soilType: v })}
+							/>
+						</Col>
+						<Col span={12}>
 							<TextField
 								label="Easements Description"
 								textarea
 								value={property.easementsDescription ?? ""}
 								onChange={(v) => patchProperty({ easementsDescription: v })}
 							/>
-						</div>
-					</Accordion.Content>
-				</Accordion.Item>
-			</Accordion>
-		</Section>
+						</Col>
+					</FieldGrid>
+				</SubGroup>
+			</AdditionalFields>
+		</>
 	);
 }
