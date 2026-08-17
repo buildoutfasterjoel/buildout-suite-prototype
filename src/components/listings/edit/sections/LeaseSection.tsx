@@ -14,7 +14,8 @@ const AVAILABLE_SF_TERMS = ["SF", "RSF"] as const;
 /**
  * Listing page — Lease Marketing. Only rendered for Lease deals
  * (`dealType === "Lease"`). Holds the deal-level lease marketing copy and terms;
- * the per-space lease terms live in {@link SpaceTermsSection}.
+ * the per-space lease terms live on the space's own Details form, in
+ * {@link SpaceLeaseTermsSection}.
  *
  * Emits subgroups only — `ListingFormEditor` owns the group heading.
  */
