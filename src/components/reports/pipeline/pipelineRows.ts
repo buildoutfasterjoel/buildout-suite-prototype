@@ -21,6 +21,7 @@ export interface PipelineRow {
   dealType: DealType;
   dealSide: DealSide;
   propertyType: PropertyType | null;
+  street: string | null;
   city: string | null;
   state: string | null;
   office: string | null;
@@ -70,6 +71,7 @@ export function toPipelineRow(
     dealType: deal.dealType,
     dealSide: deal.dealSide,
     propertyType: property?.propertyType ?? null,
+    street: property?.street ?? null,
     city: property?.city ?? null,
     state: property?.state ?? null,
     office: officeForDeal(deal),

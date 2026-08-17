@@ -32,7 +32,7 @@ function PipelineReport() {
     [rows],
   );
   const brokers = useMemo(
-    () => [...new Set(rows.flatMap((r) => r.brokers))].sort(),
+    () => [...new Set(rows.flatMap((r) => r.brokers).filter((b): b is string => !!b))].sort(),
     [rows],
   );
 

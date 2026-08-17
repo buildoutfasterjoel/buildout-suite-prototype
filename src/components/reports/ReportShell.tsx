@@ -4,7 +4,11 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Breadcrumb } from "@buildoutinc/blueprint-react/ui/Breadcrumb";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faFloppyDisk } from "@fortawesome/pro-regular-svg-icons";
+import {
+  faChevronDown,
+  faFloppyDisk,
+  faSignal,
+} from "@fortawesome/pro-regular-svg-icons";
 
 /**
  * The header band every report wears: breadcrumb back to the catalog, the
@@ -35,6 +39,7 @@ export function ReportShell({
               <Breadcrumb.List>
                 <Breadcrumb.Item>
                   <Breadcrumb.Link render={<Link to="/reports/standard" />}>
+                    <FontAwesomeIcon icon={faSignal} />
                     Reports
                   </Breadcrumb.Link>
                 </Breadcrumb.Item>

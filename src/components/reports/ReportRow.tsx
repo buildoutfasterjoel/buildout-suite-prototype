@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, type LinkProps } from "@tanstack/react-router";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
@@ -24,7 +24,7 @@ export function ReportRow({
   title: string;
   description: string;
   meta?: ReactNode;
-  to?: string;
+  to?: LinkProps["to"];
 }) {
   const card = (
     <Card className="shadow-sm report-row">
@@ -47,8 +47,7 @@ export function ReportRow({
   if (!to) return card;
 
   return (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    <Link to={to as any} className="text-decoration-none d-block">
+    <Link to={to} className="text-decoration-none d-block">
       {card}
     </Link>
   );

@@ -2,7 +2,11 @@ import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMagnifyingGlass, faSliders } from "@fortawesome/pro-regular-svg-icons";
+import {
+  faEraser,
+  faMagnifyingGlass,
+  faSliders,
+} from "@fortawesome/pro-regular-svg-icons";
 import {
   PROPERTY_STATUSES,
   PROPERTY_TYPES,
@@ -12,8 +16,10 @@ import {
 import { ContactChip } from "#/components/contacts/ContactChip";
 import {
   CLOSE_DATE_LABELS,
+  CLOSE_DATE_PRESETS,
+  DEAL_TYPE_OPTIONS,
+  EMPTY_PIPELINE_FILTERS,
   pipelineFilterChips,
-  type CloseDatePreset,
   type PipelineFilterState,
 } from "./pipelineFilters";
 
@@ -63,13 +69,6 @@ export function FilterSelect<T extends string>({
     </div>
   );
 }
-
-const CLOSE_DATE_PRESETS: CloseDatePreset[] = [
-  "this-quarter",
-  "this-year",
-  "next-90",
-  "past",
-];
 
 /**
  * The filter row stays ONE row and never wraps. The controls that do not fit
@@ -121,7 +120,7 @@ export function PipelineFilterBar({
         <FilterSelect
           label="Deal Type"
           value={filters.dealType}
-          options={["Sale", "Lease"] as const}
+          options={DEAL_TYPE_OPTIONS}
           labelFor={(v) => v}
           onChange={(dealType) => onChange({ ...filters, dealType })}
           width={130}
@@ -160,6 +159,19 @@ export function PipelineFilterBar({
               onRemove={() => onChange(chip.clear(filters))}
             />
           ))}
+          {/* Clearing one filter at a time is fine at one chip and tedious at
+              five, so the whole set gets a single control. It rides the chips
+              row rather than the filter row because it is only meaningful when
+              something is active, which is exactly when chips exist. */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onChange(EMPTY_PIPELINE_FILTERS)}
+            className="ms-1"
+          >
+            <FontAwesomeIcon icon={faEraser} />
+            Clear Filters
+          </Button>
         </div>
       )}
     </div>

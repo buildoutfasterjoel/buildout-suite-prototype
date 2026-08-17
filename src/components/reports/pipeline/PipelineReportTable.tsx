@@ -123,7 +123,7 @@ export function PipelineReportTable({ rows }: { rows: PipelineRow[] }) {
 
   return (
     <div className="d-flex flex-column gap-3">
-      <div className="border rounded-3 overflow-auto">
+      <div className="border rounded-3">
         <Table variant="sticky">
           <Table.Header sticky>
             <Table.Row>
@@ -146,13 +146,18 @@ export function PipelineReportTable({ rows }: { rows: PipelineRow[] }) {
 
           <Table.Body>
             {/* Summary row above the data, as in the reference: the count is
-                the report's first question. Tracks the filtered set. */}
-            <Table.Row className="bg-body fw-semibold">
-              <Table.Cell colSpan={8}>Count {totals.count}</Table.Cell>
-              <Table.Cell className="text-end">
+                the report's first question. Tracks the filtered set.
+                The tint goes on the cells, not the row: Blueprint's `.table`
+                paints each `td` its own background, which covers anything set
+                on the `tr` underneath. */}
+            <Table.Row className="fw-semibold">
+              <Table.Cell colSpan={8} className="bg-body">
+                Count {totals.count}
+              </Table.Cell>
+              <Table.Cell className="bg-body text-end">
                 {formatReportCurrency(totals.transactionValue)}
               </Table.Cell>
-              <Table.Cell className="text-end">
+              <Table.Cell className="bg-body text-end">
                 {formatReportCurrency(totals.brokerageGross)}
               </Table.Cell>
             </Table.Row>

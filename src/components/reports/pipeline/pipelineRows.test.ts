@@ -29,6 +29,7 @@ function deal(over: Partial<Listing> = {}): Listing {
 function property(over: Partial<Property> = {}): Property {
   return {
     id: "p1",
+    street: "123 Main Street",
     city: "Chicago",
     state: "IL",
     propertyType: "office",
@@ -84,6 +85,7 @@ describe("toPipelineRow", () => {
     expect(r.dealId).toBe("100");
     expect(r.name).toBe("123 Main Street");
     expect(r.stage).toBe("active");
+    expect(r.street).toBe("123 Main Street");
     expect(r.city).toBe("Chicago");
     expect(r.state).toBe("IL");
     expect(r.propertyType).toBe("office");
@@ -100,6 +102,7 @@ describe("toPipelineRow", () => {
 
   it("nulls the property columns when the property is missing", () => {
     const r = toPipelineRow(deal(), undefined);
+    expect(r.street).toBeNull();
     expect(r.city).toBeNull();
     expect(r.state).toBeNull();
     expect(r.propertyType).toBeNull();

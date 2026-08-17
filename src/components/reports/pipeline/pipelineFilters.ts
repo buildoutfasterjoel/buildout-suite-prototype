@@ -15,6 +15,16 @@ export const CLOSE_DATE_LABELS: Record<CloseDatePreset, string> = {
   past: "Past",
 };
 
+export const CLOSE_DATE_PRESETS: CloseDatePreset[] = [
+  "this-quarter",
+  "this-year",
+  "next-90",
+  "past",
+];
+
+/** Shared by the inline row and the All Filters modal so the option set never drifts. */
+export const DEAL_TYPE_OPTIONS = ["Sale", "Lease"] as const;
+
 /**
  * Every filter is single-select — "Any" plus one value — matching the reference
  * design's selects rather than the Deals list's multi-select facets. `null`
@@ -101,7 +111,7 @@ export function applyPipelineFilters(
     if (f.closeDate && !matchesCloseDate(r.closeDate, f.closeDate, today)) return false;
     if (q) {
       const haystack =
-        `${r.name} ${r.dealId} ${r.city ?? ""} ${r.state ?? ""}`.toLowerCase();
+        `${r.name} ${r.dealId} ${r.street ?? ""} ${r.city ?? ""} ${r.state ?? ""}`.toLowerCase();
       if (!haystack.includes(q)) return false;
     }
     return true;
@@ -174,6 +184,3 @@ export function pipelineFilterChips(f: PipelineFilterState): PipelineFilterChip[
   return chips;
 }
 
-export function hasActivePipelineFilters(f: PipelineFilterState): boolean {
-  return pipelineFilterChips(f).length > 0;
-}

@@ -4,7 +4,6 @@ import {
   EMPTY_PIPELINE_FILTERS,
   applyPipelineFilters,
   pipelineFilterChips,
-  hasActivePipelineFilters,
 } from "./pipelineFilters";
 
 const TODAY = new Date(2026, 7, 17); // 17 Aug 2026 — Q3
@@ -18,6 +17,7 @@ function row(over: Partial<PipelineRow> = {}): PipelineRow {
     dealType: "Lease",
     dealSide: "seller",
     propertyType: "office",
+    street: "123 Main Street",
     city: "Chicago",
     state: "IL",
     office: "Chicago — West Loop",
@@ -35,10 +35,16 @@ describe("applyPipelineFilters", () => {
     expect(applyPipelineFilters(rows, EMPTY_PIPELINE_FILTERS, TODAY)).toHaveLength(2);
   });
 
-  it("searches name, city, state and the deal id", () => {
+  it("searches name, street, city, state and the deal id", () => {
     const rows = [
-      row({ dealId: "100", name: "123 Main Street", city: "Chicago" }),
-      row({ dealId: "205", name: "Westgate Plaza", city: "Denver", state: "CO" }),
+      row({ dealId: "100", name: "123 Main Street", street: "123 Main Street", city: "Chicago" }),
+      row({
+        dealId: "205",
+        name: "Westgate Plaza",
+        street: "789 Westgate Boulevard",
+        city: "Denver",
+        state: "CO",
+      }),
     ];
     const only = (search: string) =>
       applyPipelineFilters(rows, { ...EMPTY_PIPELINE_FILTERS, search }, TODAY)
@@ -48,6 +54,7 @@ describe("applyPipelineFilters", () => {
     expect(only("denver")).toEqual(["205"]);
     expect(only("CO")).toEqual(["205"]);
     expect(only("100")).toEqual(["100"]);
+    expect(only("westgate boulevard")).toEqual(["205"]);
   });
 
   it("matches search case-insensitively", () => {
@@ -132,7 +139,6 @@ describe("applyPipelineFilters", () => {
 describe("pipelineFilterChips", () => {
   it("is empty when nothing is set", () => {
     expect(pipelineFilterChips(EMPTY_PIPELINE_FILTERS)).toEqual([]);
-    expect(hasActivePipelineFilters(EMPTY_PIPELINE_FILTERS)).toBe(false);
   });
 
   it("names every active filter, inline and modal alike", () => {

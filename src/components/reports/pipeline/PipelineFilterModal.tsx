@@ -10,19 +10,13 @@ import {
 import { FilterSelect } from "./PipelineFilterBar";
 import {
   CLOSE_DATE_LABELS,
+  CLOSE_DATE_PRESETS,
   DEAL_SIDE_LABELS,
+  DEAL_TYPE_OPTIONS,
   EMPTY_PIPELINE_FILTERS,
-  type CloseDatePreset,
   type PipelineFilterState,
 } from "./pipelineFilters";
 import type { DealSide } from "#/data/types";
-
-const CLOSE_DATE_PRESETS: CloseDatePreset[] = [
-  "this-quarter",
-  "this-year",
-  "next-90",
-  "past",
-];
 
 /**
  * *All* Filters, not *More* Filters: it repeats the inline controls as well as
@@ -106,7 +100,7 @@ export function PipelineFilterModal({
             <FilterSelect
               label="Deal Type"
               value={filters.dealType}
-              options={["Sale", "Lease"] as const}
+              options={DEAL_TYPE_OPTIONS}
               labelFor={(v) => v}
               onChange={(dealType) => onChange({ ...filters, dealType })}
               width={200}
