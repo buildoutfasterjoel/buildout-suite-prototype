@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ShellTasksRouteImport } from './routes/_shell/tasks'
 import { Route as ShellSuiteRouteImport } from './routes/_shell/suite'
 import { Route as ShellSettingsRouteImport } from './routes/_shell/settings'
+import { Route as ShellReportsRouteImport } from './routes/_shell/reports'
 import { Route as ShellPropertiesRouteImport } from './routes/_shell/properties'
 import { Route as ShellListingsRouteImport } from './routes/_shell/listings'
 import { Route as ShellEmailRouteImport } from './routes/_shell/email'
@@ -24,6 +25,7 @@ import { Route as ShellAppRouteImport } from './routes/_shell/app'
 import { Route as ShellTasksIndexRouteImport } from './routes/_shell/tasks/index'
 import { Route as ShellSuiteIndexRouteImport } from './routes/_shell/suite/index'
 import { Route as ShellSettingsIndexRouteImport } from './routes/_shell/settings/index'
+import { Route as ShellReportsIndexRouteImport } from './routes/_shell/reports/index'
 import { Route as ShellPropertiesIndexRouteImport } from './routes/_shell/properties/index'
 import { Route as ShellListingsIndexRouteImport } from './routes/_shell/listings/index'
 import { Route as ShellEmailIndexRouteImport } from './routes/_shell/email/index'
@@ -41,6 +43,8 @@ import { Route as ShellSettingsEmailRouteImport } from './routes/_shell/settings
 import { Route as ShellSettingsCustomFieldsRouteImport } from './routes/_shell/settings/custom-fields'
 import { Route as ShellSettingsCompanyRouteImport } from './routes/_shell/settings/company'
 import { Route as ShellSettingsAffiliationsRouteImport } from './routes/_shell/settings/affiliations'
+import { Route as ShellReportsStandardRouteImport } from './routes/_shell/reports/standard'
+import { Route as ShellReportsMyReportsRouteImport } from './routes/_shell/reports/my-reports'
 import { Route as ShellPropertiesPropertyIdRouteImport } from './routes/_shell/properties/$propertyId'
 import { Route as ShellListingsListingIdRouteImport } from './routes/_shell/listings/$listingId'
 import { Route as ShellEmailEmailIdRouteImport } from './routes/_shell/email/$emailId'
@@ -119,6 +123,11 @@ const ShellSettingsRoute = ShellSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => ShellRoute,
 } as any)
+const ShellReportsRoute = ShellReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => ShellRoute,
+} as any)
 const ShellPropertiesRoute = ShellPropertiesRouteImport.update({
   id: '/properties',
   path: '/properties',
@@ -163,6 +172,11 @@ const ShellSettingsIndexRoute = ShellSettingsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => ShellSettingsRoute,
+} as any)
+const ShellReportsIndexRoute = ShellReportsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShellReportsRoute,
 } as any)
 const ShellPropertiesIndexRoute = ShellPropertiesIndexRouteImport.update({
   id: '/',
@@ -253,6 +267,16 @@ const ShellSettingsAffiliationsRoute =
     path: '/affiliations',
     getParentRoute: () => ShellSettingsRoute,
   } as any)
+const ShellReportsStandardRoute = ShellReportsStandardRouteImport.update({
+  id: '/standard',
+  path: '/standard',
+  getParentRoute: () => ShellReportsRoute,
+} as any)
+const ShellReportsMyReportsRoute = ShellReportsMyReportsRouteImport.update({
+  id: '/my-reports',
+  path: '/my-reports',
+  getParentRoute: () => ShellReportsRoute,
+} as any)
 const ShellPropertiesPropertyIdRoute =
   ShellPropertiesPropertyIdRouteImport.update({
     id: '/$propertyId',
@@ -547,6 +571,7 @@ export interface FileRoutesByFullPath {
   '/email': typeof ShellEmailRouteWithChildren
   '/listings': typeof ShellListingsRouteWithChildren
   '/properties': typeof ShellPropertiesRouteWithChildren
+  '/reports': typeof ShellReportsRouteWithChildren
   '/settings': typeof ShellSettingsRouteWithChildren
   '/suite': typeof ShellSuiteRouteWithChildren
   '/tasks': typeof ShellTasksRouteWithChildren
@@ -554,6 +579,8 @@ export interface FileRoutesByFullPath {
   '/email/$emailId': typeof ShellEmailEmailIdRoute
   '/listings/$listingId': typeof ShellListingsListingIdRouteWithChildren
   '/properties/$propertyId': typeof ShellPropertiesPropertyIdRoute
+  '/reports/my-reports': typeof ShellReportsMyReportsRoute
+  '/reports/standard': typeof ShellReportsStandardRoute
   '/settings/affiliations': typeof ShellSettingsAffiliationsRoute
   '/settings/company': typeof ShellSettingsCompanyRoute
   '/settings/custom-fields': typeof ShellSettingsCustomFieldsRoute
@@ -571,6 +598,7 @@ export interface FileRoutesByFullPath {
   '/email/': typeof ShellEmailIndexRoute
   '/listings/': typeof ShellListingsIndexRoute
   '/properties/': typeof ShellPropertiesIndexRoute
+  '/reports/': typeof ShellReportsIndexRoute
   '/settings/': typeof ShellSettingsIndexRoute
   '/suite/': typeof ShellSuiteIndexRoute
   '/tasks/': typeof ShellTasksIndexRoute
@@ -627,6 +655,8 @@ export interface FileRoutesByTo {
   '/editor/$listingId': typeof ShellEditorListingIdRoute
   '/email/$emailId': typeof ShellEmailEmailIdRoute
   '/properties/$propertyId': typeof ShellPropertiesPropertyIdRoute
+  '/reports/my-reports': typeof ShellReportsMyReportsRoute
+  '/reports/standard': typeof ShellReportsStandardRoute
   '/settings/affiliations': typeof ShellSettingsAffiliationsRoute
   '/settings/company': typeof ShellSettingsCompanyRoute
   '/settings/custom-fields': typeof ShellSettingsCustomFieldsRoute
@@ -643,6 +673,7 @@ export interface FileRoutesByTo {
   '/email': typeof ShellEmailIndexRoute
   '/listings': typeof ShellListingsIndexRoute
   '/properties': typeof ShellPropertiesIndexRoute
+  '/reports': typeof ShellReportsIndexRoute
   '/settings': typeof ShellSettingsIndexRoute
   '/suite': typeof ShellSuiteIndexRoute
   '/tasks': typeof ShellTasksIndexRoute
@@ -700,6 +731,7 @@ export interface FileRoutesById {
   '/_shell/email': typeof ShellEmailRouteWithChildren
   '/_shell/listings': typeof ShellListingsRouteWithChildren
   '/_shell/properties': typeof ShellPropertiesRouteWithChildren
+  '/_shell/reports': typeof ShellReportsRouteWithChildren
   '/_shell/settings': typeof ShellSettingsRouteWithChildren
   '/_shell/suite': typeof ShellSuiteRouteWithChildren
   '/_shell/tasks': typeof ShellTasksRouteWithChildren
@@ -707,6 +739,8 @@ export interface FileRoutesById {
   '/_shell/email/$emailId': typeof ShellEmailEmailIdRoute
   '/_shell/listings/$listingId': typeof ShellListingsListingIdRouteWithChildren
   '/_shell/properties/$propertyId': typeof ShellPropertiesPropertyIdRoute
+  '/_shell/reports/my-reports': typeof ShellReportsMyReportsRoute
+  '/_shell/reports/standard': typeof ShellReportsStandardRoute
   '/_shell/settings/affiliations': typeof ShellSettingsAffiliationsRoute
   '/_shell/settings/company': typeof ShellSettingsCompanyRoute
   '/_shell/settings/custom-fields': typeof ShellSettingsCustomFieldsRoute
@@ -724,6 +758,7 @@ export interface FileRoutesById {
   '/_shell/email/': typeof ShellEmailIndexRoute
   '/_shell/listings/': typeof ShellListingsIndexRoute
   '/_shell/properties/': typeof ShellPropertiesIndexRoute
+  '/_shell/reports/': typeof ShellReportsIndexRoute
   '/_shell/settings/': typeof ShellSettingsIndexRoute
   '/_shell/suite/': typeof ShellSuiteIndexRoute
   '/_shell/tasks/': typeof ShellTasksIndexRoute
@@ -783,6 +818,7 @@ export interface FileRouteTypes {
     | '/email'
     | '/listings'
     | '/properties'
+    | '/reports'
     | '/settings'
     | '/suite'
     | '/tasks'
@@ -790,6 +826,8 @@ export interface FileRouteTypes {
     | '/email/$emailId'
     | '/listings/$listingId'
     | '/properties/$propertyId'
+    | '/reports/my-reports'
+    | '/reports/standard'
     | '/settings/affiliations'
     | '/settings/company'
     | '/settings/custom-fields'
@@ -807,6 +845,7 @@ export interface FileRouteTypes {
     | '/email/'
     | '/listings/'
     | '/properties/'
+    | '/reports/'
     | '/settings/'
     | '/suite/'
     | '/tasks/'
@@ -863,6 +902,8 @@ export interface FileRouteTypes {
     | '/editor/$listingId'
     | '/email/$emailId'
     | '/properties/$propertyId'
+    | '/reports/my-reports'
+    | '/reports/standard'
     | '/settings/affiliations'
     | '/settings/company'
     | '/settings/custom-fields'
@@ -879,6 +920,7 @@ export interface FileRouteTypes {
     | '/email'
     | '/listings'
     | '/properties'
+    | '/reports'
     | '/settings'
     | '/suite'
     | '/tasks'
@@ -935,6 +977,7 @@ export interface FileRouteTypes {
     | '/_shell/email'
     | '/_shell/listings'
     | '/_shell/properties'
+    | '/_shell/reports'
     | '/_shell/settings'
     | '/_shell/suite'
     | '/_shell/tasks'
@@ -942,6 +985,8 @@ export interface FileRouteTypes {
     | '/_shell/email/$emailId'
     | '/_shell/listings/$listingId'
     | '/_shell/properties/$propertyId'
+    | '/_shell/reports/my-reports'
+    | '/_shell/reports/standard'
     | '/_shell/settings/affiliations'
     | '/_shell/settings/company'
     | '/_shell/settings/custom-fields'
@@ -959,6 +1004,7 @@ export interface FileRouteTypes {
     | '/_shell/email/'
     | '/_shell/listings/'
     | '/_shell/properties/'
+    | '/_shell/reports/'
     | '/_shell/settings/'
     | '/_shell/suite/'
     | '/_shell/tasks/'
@@ -1058,6 +1104,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellSettingsRouteImport
       parentRoute: typeof ShellRoute
     }
+    '/_shell/reports': {
+      id: '/_shell/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ShellReportsRouteImport
+      parentRoute: typeof ShellRoute
+    }
     '/_shell/properties': {
       id: '/_shell/properties'
       path: '/properties'
@@ -1120,6 +1173,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/'
       preLoaderRoute: typeof ShellSettingsIndexRouteImport
       parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/reports/': {
+      id: '/_shell/reports/'
+      path: '/'
+      fullPath: '/reports/'
+      preLoaderRoute: typeof ShellReportsIndexRouteImport
+      parentRoute: typeof ShellReportsRoute
     }
     '/_shell/properties/': {
       id: '/_shell/properties/'
@@ -1239,6 +1299,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/affiliations'
       preLoaderRoute: typeof ShellSettingsAffiliationsRouteImport
       parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/reports/standard': {
+      id: '/_shell/reports/standard'
+      path: '/standard'
+      fullPath: '/reports/standard'
+      preLoaderRoute: typeof ShellReportsStandardRouteImport
+      parentRoute: typeof ShellReportsRoute
+    }
+    '/_shell/reports/my-reports': {
+      id: '/_shell/reports/my-reports'
+      path: '/my-reports'
+      fullPath: '/reports/my-reports'
+      preLoaderRoute: typeof ShellReportsMyReportsRouteImport
+      parentRoute: typeof ShellReportsRoute
     }
     '/_shell/properties/$propertyId': {
       id: '/_shell/properties/$propertyId'
@@ -1770,6 +1844,22 @@ const ShellPropertiesRouteWithChildren = ShellPropertiesRoute._addFileChildren(
   ShellPropertiesRouteChildren,
 )
 
+interface ShellReportsRouteChildren {
+  ShellReportsMyReportsRoute: typeof ShellReportsMyReportsRoute
+  ShellReportsStandardRoute: typeof ShellReportsStandardRoute
+  ShellReportsIndexRoute: typeof ShellReportsIndexRoute
+}
+
+const ShellReportsRouteChildren: ShellReportsRouteChildren = {
+  ShellReportsMyReportsRoute: ShellReportsMyReportsRoute,
+  ShellReportsStandardRoute: ShellReportsStandardRoute,
+  ShellReportsIndexRoute: ShellReportsIndexRoute,
+}
+
+const ShellReportsRouteWithChildren = ShellReportsRoute._addFileChildren(
+  ShellReportsRouteChildren,
+)
+
 interface ShellSettingsUsersUserIdRouteChildren {
   ShellSettingsUsersUserIdEmailRoute: typeof ShellSettingsUsersUserIdEmailRoute
   ShellSettingsUsersUserIdIntegrationsRoute: typeof ShellSettingsUsersUserIdIntegrationsRoute
@@ -1879,6 +1969,7 @@ interface ShellRouteChildren {
   ShellEmailRoute: typeof ShellEmailRouteWithChildren
   ShellListingsRoute: typeof ShellListingsRouteWithChildren
   ShellPropertiesRoute: typeof ShellPropertiesRouteWithChildren
+  ShellReportsRoute: typeof ShellReportsRouteWithChildren
   ShellSettingsRoute: typeof ShellSettingsRouteWithChildren
   ShellSuiteRoute: typeof ShellSuiteRouteWithChildren
   ShellTasksRoute: typeof ShellTasksRouteWithChildren
@@ -1891,6 +1982,7 @@ const ShellRouteChildren: ShellRouteChildren = {
   ShellEmailRoute: ShellEmailRouteWithChildren,
   ShellListingsRoute: ShellListingsRouteWithChildren,
   ShellPropertiesRoute: ShellPropertiesRouteWithChildren,
+  ShellReportsRoute: ShellReportsRouteWithChildren,
   ShellSettingsRoute: ShellSettingsRouteWithChildren,
   ShellSuiteRoute: ShellSuiteRouteWithChildren,
   ShellTasksRoute: ShellTasksRouteWithChildren,

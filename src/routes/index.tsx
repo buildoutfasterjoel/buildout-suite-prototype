@@ -131,6 +131,21 @@ function Home() {
         </div>
 
         <div className="col-md-4">
+          <Link to="/reports/standard" className="text-decoration-none">
+            <Card className="shadow-sm h-100">
+              <CardHeader>
+                <CardTitle>Reports</CardTitle>
+              </CardHeader>
+              <CardBody>
+                Reporting index — the eighteen reports Buildout ships pre-built,
+                grouped by the record they read from, beside the custom reports a
+                user has saved from their own filters.
+              </CardBody>
+            </Card>
+          </Link>
+        </div>
+
+        <div className="col-md-4">
           <Link
             to="/editor/$listingId"
             params={{ listingId: sampleListingId }}

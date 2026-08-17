@@ -4560,3 +4560,15 @@
     }
   }
 }
+
+// Reports index — one row per report, in both the standard catalog and the
+// saved list. Only the hover lift lives here; the icon tile and group heading
+// are Bootstrap utilities on the elements themselves.
+.report-row {
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    border-color: var(--color-purple-heart-300, #ddbdfc);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 8%);
+  }
+}
