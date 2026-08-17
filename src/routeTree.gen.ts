@@ -43,6 +43,7 @@ import { Route as ShellSettingsEmailRouteImport } from './routes/_shell/settings
 import { Route as ShellSettingsCustomFieldsRouteImport } from './routes/_shell/settings/custom-fields'
 import { Route as ShellSettingsCompanyRouteImport } from './routes/_shell/settings/company'
 import { Route as ShellSettingsAffiliationsRouteImport } from './routes/_shell/settings/affiliations'
+import { Route as ShellReportsPipelineRouteImport } from './routes/_shell/reports_/pipeline'
 import { Route as ShellReportsStandardRouteImport } from './routes/_shell/reports/standard'
 import { Route as ShellReportsMyReportsRouteImport } from './routes/_shell/reports/my-reports'
 import { Route as ShellPropertiesPropertyIdRouteImport } from './routes/_shell/properties/$propertyId'
@@ -267,6 +268,11 @@ const ShellSettingsAffiliationsRoute =
     path: '/affiliations',
     getParentRoute: () => ShellSettingsRoute,
   } as any)
+const ShellReportsPipelineRoute = ShellReportsPipelineRouteImport.update({
+  id: '/reports_/pipeline',
+  path: '/reports/pipeline',
+  getParentRoute: () => ShellRoute,
+} as any)
 const ShellReportsStandardRoute = ShellReportsStandardRouteImport.update({
   id: '/standard',
   path: '/standard',
@@ -581,6 +587,7 @@ export interface FileRoutesByFullPath {
   '/properties/$propertyId': typeof ShellPropertiesPropertyIdRoute
   '/reports/my-reports': typeof ShellReportsMyReportsRoute
   '/reports/standard': typeof ShellReportsStandardRoute
+  '/reports/pipeline': typeof ShellReportsPipelineRoute
   '/settings/affiliations': typeof ShellSettingsAffiliationsRoute
   '/settings/company': typeof ShellSettingsCompanyRoute
   '/settings/custom-fields': typeof ShellSettingsCustomFieldsRoute
@@ -657,6 +664,7 @@ export interface FileRoutesByTo {
   '/properties/$propertyId': typeof ShellPropertiesPropertyIdRoute
   '/reports/my-reports': typeof ShellReportsMyReportsRoute
   '/reports/standard': typeof ShellReportsStandardRoute
+  '/reports/pipeline': typeof ShellReportsPipelineRoute
   '/settings/affiliations': typeof ShellSettingsAffiliationsRoute
   '/settings/company': typeof ShellSettingsCompanyRoute
   '/settings/custom-fields': typeof ShellSettingsCustomFieldsRoute
@@ -741,6 +749,7 @@ export interface FileRoutesById {
   '/_shell/properties/$propertyId': typeof ShellPropertiesPropertyIdRoute
   '/_shell/reports/my-reports': typeof ShellReportsMyReportsRoute
   '/_shell/reports/standard': typeof ShellReportsStandardRoute
+  '/_shell/reports_/pipeline': typeof ShellReportsPipelineRoute
   '/_shell/settings/affiliations': typeof ShellSettingsAffiliationsRoute
   '/_shell/settings/company': typeof ShellSettingsCompanyRoute
   '/_shell/settings/custom-fields': typeof ShellSettingsCustomFieldsRoute
@@ -828,6 +837,7 @@ export interface FileRouteTypes {
     | '/properties/$propertyId'
     | '/reports/my-reports'
     | '/reports/standard'
+    | '/reports/pipeline'
     | '/settings/affiliations'
     | '/settings/company'
     | '/settings/custom-fields'
@@ -904,6 +914,7 @@ export interface FileRouteTypes {
     | '/properties/$propertyId'
     | '/reports/my-reports'
     | '/reports/standard'
+    | '/reports/pipeline'
     | '/settings/affiliations'
     | '/settings/company'
     | '/settings/custom-fields'
@@ -987,6 +998,7 @@ export interface FileRouteTypes {
     | '/_shell/properties/$propertyId'
     | '/_shell/reports/my-reports'
     | '/_shell/reports/standard'
+    | '/_shell/reports_/pipeline'
     | '/_shell/settings/affiliations'
     | '/_shell/settings/company'
     | '/_shell/settings/custom-fields'
@@ -1299,6 +1311,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/affiliations'
       preLoaderRoute: typeof ShellSettingsAffiliationsRouteImport
       parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/reports_/pipeline': {
+      id: '/_shell/reports_/pipeline'
+      path: '/reports/pipeline'
+      fullPath: '/reports/pipeline'
+      preLoaderRoute: typeof ShellReportsPipelineRouteImport
+      parentRoute: typeof ShellRoute
     }
     '/_shell/reports/standard': {
       id: '/_shell/reports/standard'
@@ -1973,6 +1992,7 @@ interface ShellRouteChildren {
   ShellSettingsRoute: typeof ShellSettingsRouteWithChildren
   ShellSuiteRoute: typeof ShellSuiteRouteWithChildren
   ShellTasksRoute: typeof ShellTasksRouteWithChildren
+  ShellReportsPipelineRoute: typeof ShellReportsPipelineRoute
 }
 
 const ShellRouteChildren: ShellRouteChildren = {
@@ -1986,6 +2006,7 @@ const ShellRouteChildren: ShellRouteChildren = {
   ShellSettingsRoute: ShellSettingsRouteWithChildren,
   ShellSuiteRoute: ShellSuiteRouteWithChildren,
   ShellTasksRoute: ShellTasksRouteWithChildren,
+  ShellReportsPipelineRoute: ShellReportsPipelineRoute,
 }
 
 const ShellRouteWithChildren = ShellRoute._addFileChildren(ShellRouteChildren)
