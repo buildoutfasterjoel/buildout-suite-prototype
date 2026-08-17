@@ -26,10 +26,10 @@ export function ReportRow({
     <Card className="shadow-sm report-row">
       <div className="d-flex align-items-start gap-3 p-3">
         <div
-          className="flex-shrink-0 d-flex align-items-center justify-content-center rounded report-row__icon"
+          className="flex-shrink-0 d-flex align-items-center justify-content-center rounded bg-body"
           style={{ width: 40, height: 40 }}
         >
-          <FontAwesomeIcon icon={icon} />
+          <FontAwesomeIcon icon={icon} className="text-primary" />
         </div>
         <div className="flex-grow-1" style={{ minWidth: 0 }}>
           <div className="fw-semibold">{title}</div>

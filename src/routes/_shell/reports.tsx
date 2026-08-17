@@ -1,9 +1,9 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChartSimple } from "@fortawesome/pro-regular-svg-icons";
 import { ReportsSidebar } from "#/components/reports/ReportsSidebar";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCirclePlus } from "@fortawesome/pro-regular-svg-icons";
 
 export const Route = createFileRoute("/_shell/reports")({
   component: ReportsLayout,
@@ -20,19 +20,16 @@ function ReportsLayout() {
     <div className="h-100 overflow-y-auto overflow-x-hidden">
       <div className="bg-card border-bottom">
         <div className="container p-4 d-flex align-items-center gap-3">
-          <div
-            className="flex-shrink-0 d-flex align-items-center justify-content-center rounded report-row__icon"
-            style={{ width: 44, height: 44 }}
-          >
-            <FontAwesomeIcon icon={faChartSimple} />
-          </div>
           <div className="flex-grow-1" style={{ minWidth: 0 }}>
             <h1 className="fs-4 fw-semibold mb-0">Reports</h1>
             <p className="text-muted mb-0">
               View and analyze data about your company.
             </p>
           </div>
-          <Button variant="primary">New Report</Button>
+          <Button>
+            <FontAwesomeIcon icon={faCirclePlus} />
+            New Report
+          </Button>
         </div>
       </div>
 

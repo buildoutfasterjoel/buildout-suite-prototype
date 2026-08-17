@@ -9,10 +9,10 @@ export const Route = createFileRoute("/_shell/reports/standard")({
 
 function StandardReports() {
   return (
-    <div className="p-4 d-flex flex-column gap-4">
+    <div className="p-4 d-flex flex-column gap-6">
       {REPORT_GROUPS.map((group) => (
         <section key={group.label}>
-          <h2 className="report-row__group-label mb-2">{group.label}</h2>
+          <h2 className="fs-6 mb-3">{group.label}</h2>
           <div className="d-flex flex-column gap-2">
             {group.reports.map((report) => (
               <ReportRow

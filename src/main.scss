@@ -4562,27 +4562,13 @@
 }
 
 // Reports index — one row per report, in both the standard catalog and the
-// saved list. The icon tile borrows the omni-menu's recipe (purple-100 fill,
-// purple-800 glyph) so a report reads as the same class of object as a record.
+// saved list. Only the hover lift lives here; the icon tile and group heading
+// are Bootstrap utilities on the elements themselves.
 .report-row {
   transition: box-shadow 0.15s ease, border-color 0.15s ease;
 
   &:hover {
     border-color: var(--color-purple-heart-300, #ddbdfc);
     box-shadow: 0 2px 8px rgb(0 0 0 / 8%);
-  }
-
-  &__icon {
-    background: var(--color-purple-heart-100, #f2e8ff);
-    color: var(--color-purple-heart-800, #6321a8);
-    font-size: 16px;
-  }
-
-  &__group-label {
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: colors.$storm-grey-600;
   }
 }
