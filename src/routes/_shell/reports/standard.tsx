@@ -20,6 +20,7 @@ function StandardReports() {
                 icon={report.icon}
                 title={report.title}
                 description={report.description}
+                to={report.id === "pipeline" ? "/reports/pipeline" : undefined}
               />
             ))}
           </div>

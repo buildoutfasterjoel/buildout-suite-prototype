@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
@@ -8,21 +9,24 @@ import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
  * supporting text. Shared so a saved report and the standard it came from read
  * as the same kind of thing; `meta` is the only slot where they differ.
  *
- * Inert by design in this phase: the card hovers but nothing is wired behind it
- * yet, so it stays a `div` rather than a button that goes nowhere.
+ * Inert by default: most reports have no page behind them yet, so the card
+ * stays a plain `div` rather than a link that goes nowhere. Passing `to` wraps
+ * the same card in a `Link` for the reports that do have a page.
  */
 export function ReportRow({
   icon,
   title,
   description,
   meta,
+  to,
 }: {
   icon: IconDefinition;
   title: string;
   description: string;
   meta?: ReactNode;
+  to?: string;
 }) {
-  return (
+  const card = (
     <Card className="shadow-sm report-row">
       <div className="d-flex align-items-start gap-3 p-3">
         <div
@@ -38,5 +42,14 @@ export function ReportRow({
         </div>
       </div>
     </Card>
+  );
+
+  if (!to) return card;
+
+  return (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    <Link to={to as any} className="text-decoration-none d-block">
+      {card}
+    </Link>
   );
 }
