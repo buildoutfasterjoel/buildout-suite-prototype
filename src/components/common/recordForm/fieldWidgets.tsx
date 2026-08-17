@@ -404,43 +404,50 @@ export function ComboField<T extends string>({
   const labelFor = (item: T) => labels?.[item] ?? item;
   return (
     <Field className="record-form__field">
-      <InputGroup>
-        <InputGroup.Addon asText className="record-form__gutter">
-          <Field.Label>
-            {label}
-            {required && <span className="text-danger ms-1">*</span>}
-          </Field.Label>
-        </InputGroup.Addon>
-        <Combobox
-          items={options as T[]}
-          value={value}
-          onValueChange={(v) => onChange((v as T | null) ?? null)}
-          // base-ui filters and renders the selected value through this, so it
-          // has to be set for `labels` to reach the input and the match logic —
-          // without it, typing "Texas" against items of `["TX", …]` finds
-          // nothing. Blueprint's Combobox root is a direct alias of base-ui's,
-          // so the prop passes straight through.
-          itemToStringLabel={(item: T) => labelFor(item)}
-        >
-          <Combobox.InputGroup>
-            <Combobox.Input
-              className="flex-grow-0 record-form__control"
-              placeholder={placeholder ?? "Search…"}
-              showClear
-            />
-          </Combobox.InputGroup>
-          <Combobox.Content>
-            <Combobox.Empty className="text-muted">No match</Combobox.Empty>
-            <Combobox.List>
-              {(item: T) => (
-                <Combobox.Item key={item} value={item}>
-                  {labelFor(item)}
-                </Combobox.Item>
-              )}
-            </Combobox.List>
-          </Combobox.Content>
-        </Combobox>
-      </InputGroup>
+      {/* No outer `InputGroup` here, unlike every other widget on this form.
+          `Combobox.InputGroup` renders `.input-group` itself, and Bootstrap
+          gives that `width: 100%` — nested inside a second `.input-group`
+          (which is `flex-wrap: wrap`) it claimed a full row of its own, so the
+          label sat beside an empty box with the search input stranded on the
+          line below. The gutter goes INSIDE the combobox's group instead:
+          `Combobox.Input` renders its `children` ahead of the input, which puts
+          the addon in the one flex row where it belongs. */}
+      <Combobox
+        items={options as T[]}
+        value={value}
+        onValueChange={(v) => onChange((v as T | null) ?? null)}
+        // base-ui filters and renders the selected value through this, so it
+        // has to be set for `labels` to reach the input and the match logic —
+        // without it, typing "Texas" against items of `["TX", …]` finds
+        // nothing. Blueprint's Combobox root is a direct alias of base-ui's,
+        // so the prop passes straight through.
+        itemToStringLabel={(item: T) => labelFor(item)}
+      >
+        <Combobox.InputGroup>
+          <Combobox.Input
+            className="record-form__control"
+            placeholder={placeholder ?? "Search…"}
+            showClear
+          >
+            <InputGroup.Addon asText className="record-form__gutter">
+              <Field.Label>
+                {label}
+                {required && <span className="text-danger ms-1">*</span>}
+              </Field.Label>
+            </InputGroup.Addon>
+          </Combobox.Input>
+        </Combobox.InputGroup>
+        <Combobox.Content>
+          <Combobox.Empty className="text-muted">No match</Combobox.Empty>
+          <Combobox.List>
+            {(item: T) => (
+              <Combobox.Item key={item} value={item}>
+                {labelFor(item)}
+              </Combobox.Item>
+            )}
+          </Combobox.List>
+        </Combobox.Content>
+      </Combobox>
     </Field>
   );
 }

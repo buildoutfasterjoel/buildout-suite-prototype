@@ -88,10 +88,14 @@ export function SpaceLeaseTermsSection({
 							/>
 						</Col>
 					)}
+					{/* "Units Label" for the same reason, sitting a field away from Rate
+					    Units — and it only appears at all when Rate Mode is Hidden,
+					    which is when a broker is naming what shows instead of the
+					    figure. */}
 					{terms.leaseRateMode === "Hidden" && (
 						<Col>
 							<TextField
-								label="Rate Unit Label Override"
+								label="Units Label"
 								value={terms.leaseRateUnitLabelOverride ?? ""}
 								onChange={(v) => onChange({ leaseRateUnitLabelOverride: v })}
 							/>
@@ -122,9 +126,10 @@ export function SpaceLeaseTermsSection({
 							onChange={(v) => onChange({ leaseType: v })}
 						/>
 					</Col>
+					{/* Same shortening as Type & Size's — see the note there. */}
 					<Col>
 						<TextField
-							label="Lease Type Label Override"
+							label="Type Label"
 							value={terms.leaseTypeLabelOverride ?? ""}
 							onChange={(v) => onChange({ leaseTypeLabelOverride: v })}
 						/>

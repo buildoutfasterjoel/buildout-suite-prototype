@@ -140,9 +140,16 @@ export function SpaceIdentitySection({
 							onChange={(v) => onChange({ spaceType: v })}
 						/>
 					</Col>
+					{/* "Type Label", not "Space Type Label Override": at 25 characters
+					    that wrapped to two lines in the 164px gutter, which is the one
+					    thing a fixed label column cannot absorb — every field in the
+					    row grows to match it. The words it drops are the ones the
+					    gutter already supplies: it sits immediately right of Space
+					    Type, inside a cluster named Type & Size, so "Space" and the
+					    override semantics are both readable from position. */}
 					<Col>
 						<TextField
-							label="Space Type Label Override"
+							label="Type Label"
 							value={terms.spaceTypeLabelOverride ?? ""}
 							onChange={(v) => onChange({ spaceTypeLabelOverride: v })}
 						/>
