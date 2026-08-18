@@ -152,6 +152,18 @@ export interface ListBlock {
   style: TextStyle;
 }
 
+/**
+ * A generated table of contents. Its entries are never stored — they are
+ * derived from the document's page list at render time (see `contents.ts`), so
+ * renaming, reordering, adding, or hiding a page updates the list with no
+ * second copy to keep in sync. The block carries only its own type styles.
+ */
+export interface ContentsBlock {
+  id: string;
+  type: "contents";
+  style: TextStyle;
+}
+
 export interface SpacerBlock {
   id: string;
   type: "spacer";
@@ -177,6 +189,7 @@ export type ContentBlock =
   | ImageBlock
   | DynamicBlock
   | ListBlock
+  | ContentsBlock
   | SpacerBlock
   | DividerBlock;
 
@@ -229,6 +242,12 @@ export interface Page {
   locked?: boolean;
   /** Hidden pages stay in the document but are excluded from the exported/rendered output. */
   hidden?: boolean;
+  /**
+   * Front matter — the page is part of the document but not one of its
+   * sections, so a `contents` block never lists it. Set by the cover template;
+   * distinct from `hidden`, which drops the page from the output entirely.
+   */
+  omitFromContents?: boolean;
   /**
    * Page chrome — the brand logo header and the company footer that frame a
    * base page's content. `"base"` (the default) draws both; `"none"` hands the

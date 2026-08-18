@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -20,6 +20,7 @@ import type {
   Cell,
   ColumnsBlock,
   ContentBlock,
+  ContentsBlock,
   DividerBlock,
   DynamicBlock,
   HeadingBlock,
@@ -35,6 +36,8 @@ import type {
 import { useDocumentData, useEditorStore } from "../store";
 import { findBlock } from "../tree";
 import { resolveDynamic, resolveField, resolveList } from "../dynamic";
+import { contentsEntries, contentsIndexLabel } from "../contents";
+import { BRAND } from "../brand";
 import { trailingRowInsertIndex, visibleRows } from "./rowVisibility";
 import { SortableBlock, ListDropZone } from "../dnd/SortableBlock";
 import type { ListLocation } from "../dnd/dndTypes";
@@ -271,6 +274,45 @@ function ListBlockView({ block, pageId, selection }: { block: ListBlock } & Visu
   );
 }
 
+/**
+ * Table of contents — a numbered list of the document's sections, read from the
+ * page list rather than typed. Nothing here is editable: renaming a page in the
+ * Pages panel is how an entry's label changes.
+ */
+function ContentsBlockView({ block, pageId, selection }: { block: ContentsBlock } & VisualProps) {
+  const { selected, onClick } = useBlockSelect(block.id, pageId, selection);
+  // `document.pages` is replaced immutably, so it is a stable dependency —
+  // deriving in a selector would hand zustand a fresh array every render.
+  const pages = useEditorStore((s) => s.document.pages);
+  const entries = useMemo(() => contentsEntries(pages), [pages]);
+
+  return (
+    <div
+      className={`bo-editor-block bo-editor-contents${selected ? " is-selected" : ""}`}
+      onClick={onClick}
+      style={textStyleToCss(block.style)}
+    >
+      {entries.length === 0 ? (
+        <span className="bo-editor-contents-empty">
+          Pages you add to this document will be listed here.
+        </span>
+      ) : (
+        entries.map((entry) => (
+          <div key={entry.pageId} className="bo-editor-contents-entry">
+            <span
+              className="bo-editor-contents-index"
+              style={{ color: BRAND.palette.primary }}
+            >
+              {contentsIndexLabel(entry.index)}
+            </span>
+            <span className="bo-editor-contents-label">{entry.label}</span>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
 function BlockVisual({
   block,
   pageId,
@@ -293,6 +335,8 @@ function BlockVisual({
       return <DynamicBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "list":
       return <ListBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
+    case "contents":
+      return <ContentsBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "spacer":
       return <SpacerBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "divider":

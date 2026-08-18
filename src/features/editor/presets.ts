@@ -12,6 +12,7 @@ import {
   valueCell,
 } from "./templates/helpers";
 import {
+  buildContentsPage,
   buildCoverPage,
   buildFinancialSummaryPage,
   buildPropertySummaryPage,
@@ -89,7 +90,7 @@ export function buildDocumentPages(
     // The real designer cover, not a stub — it's the page the BOV send flow
     // previews, so the opened document has to lead with the same artwork.
     buildCoverPage(property),
-    buildStubPage(property, { name: "Table of Contents", seed: "editor-toc" }),
+    buildContentsPage(property),
     // Once the AI has generated underwriting for this deal, it leads the body —
     // pages scale with the thoroughness the user chose. Empty otherwise.
     ...buildUnderwritingSection(property, underwriting),

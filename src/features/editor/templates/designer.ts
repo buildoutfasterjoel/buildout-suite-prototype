@@ -247,6 +247,8 @@ export function buildCoverPage(property?: Property): Page {
     locked: true,
     chrome: "none",
     bleed: true,
+    // Front matter, not a section: a contents block never lists the cover.
+    omitFromContents: true,
     blocks: [
       {
         id: uid("block"),
@@ -256,6 +258,51 @@ export function buildCoverPage(property?: Property): Page {
       },
       band,
     ],
+  };
+}
+
+/* ── Table of Contents ─────────────────────────────────── */
+
+/** The opening paragraph the broker rewrites — seeded with the deal's name. */
+function contentsOpening(property?: Property): string {
+  const subject = property?.name ?? "this offering";
+  return `${BRAND.name} is pleased to present ${subject}. The pages that follow cover the property and its submarket, the financial picture behind the offering, and the team representing it. Replace this copy with your own introduction.`;
+}
+
+/**
+ * Table of Contents — the generated section list on the left, an editable
+ * opening statement on the right. The contents block derives its entries from
+ * the document's pages, so the only thing to write here is the introduction.
+ */
+export function buildContentsPage(property?: Property): Page {
+  const body: ColumnsBlock = {
+    id: uid("block"),
+    type: "columns",
+    columnCount: 2,
+    columns: [
+      [
+        {
+          id: uid("block"),
+          type: "contents",
+          style: {
+            ...DEFAULT_TEXT_STYLE,
+            fontFamily: BRAND.fonts.body,
+            fontSize: 13,
+            lineHeight: 20,
+            color: BRAND.palette.ink,
+          },
+        },
+      ],
+      [brandHeading("Introduction", 20), brandBody(contentsOpening(property))],
+    ],
+  };
+
+  return {
+    id: uid("page"),
+    name: "Table of Contents",
+    logoSrc: BRAND.logoSrc,
+    locked: true,
+    blocks: [brandHeading("Table of Contents"), body],
   };
 }
 

@@ -210,6 +210,19 @@ export function StyleControls({ block, cell }: { block: Block; cell: Cell | null
     );
   }
 
+  if (block.type === "contents") {
+    return (
+      <div className="d-flex flex-column gap-3">
+        <span className="bo-editor-section-title">Table of Contents</span>
+        <p className="fs-small" style={{ color: "#506079" }}>
+          Entries are generated from the document's pages — rename or reorder a
+          page in the Pages panel and this list follows.
+        </p>
+        <FontControls style={block.style} />
+      </div>
+    );
+  }
+
   if (block.type === "table") {
     return (
       <div className="d-flex flex-column gap-3">

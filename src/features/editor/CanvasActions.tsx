@@ -37,6 +37,8 @@ function blockCrumb(
       return "Dynamic Field";
     case "list":
       return "List";
+    case "contents":
+      return "Table of Contents";
     case "columns":
       return `${block.columnCount} Columns`;
     case "section":

@@ -4,6 +4,7 @@ import {
   buildAdvisorBiosPage,
   buildBrandDividerPage,
   buildComparablesPage,
+  buildContentsPage,
   buildCoverPage,
   buildFinancialHeroPage,
   buildFinancialSummaryPage,
@@ -25,6 +26,7 @@ export interface TemplateDef {
 /** All designer templates, in gallery display order. */
 export const TEMPLATES: TemplateDef[] = [
   { key: "cover", name: "Cover Page", category: "Cover", description: "Full-bleed hero over a navy title band with address and asset line.", build: buildCoverPage },
+  { key: "contents", name: "Table of Contents", category: "Cover", description: "A generated section list beside an editable opening statement.", build: buildContentsPage },
   { key: "financialHero", name: "Financial Highlights", category: "Financials", description: "Headline metric callouts above the financial summary.", build: buildFinancialHeroPage },
   { key: "financialSummary", name: "Financial Summary", category: "Financials", description: "Address header with a data-bound financial summary table.", build: buildFinancialSummaryPage },
   { key: "propertySummary", name: "Property Summary", category: "Property", description: "Full-bleed hero over the deal's sale copy and a fact table that follows the asset class.", build: buildPropertySummaryPage },

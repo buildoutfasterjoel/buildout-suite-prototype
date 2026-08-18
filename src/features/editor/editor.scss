@@ -439,6 +439,35 @@
   cursor: grabbing;
 }
 
+/* ---- Table of contents block ----
+ * Entries are rows, not a <ul>: the number sits in its own fixed gutter so the
+ * labels align down the column regardless of how many entries there are, and a
+ * hairline under each row carries the eye across to it. */
+.bo-editor-contents {
+  display: flex;
+  flex-direction: column;
+}
+.bo-editor-contents-entry {
+  display: flex;
+  align-items: baseline;
+  gap: tokens.$spacing-3;
+  padding: tokens.$spacing-2 0;
+  border-bottom: 1px solid tokens.$root-border-color;
+}
+.bo-editor-contents-index {
+  flex: 0 0 auto;
+  width: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.bo-editor-contents-label {
+  min-width: 0;
+}
+.bo-editor-contents-empty {
+  font-style: italic;
+  color: tokens.$body-text-muted;
+}
+
 /* ---- Layout (container) blocks ---- */
 .bo-editor-columns {
   display: flex;
