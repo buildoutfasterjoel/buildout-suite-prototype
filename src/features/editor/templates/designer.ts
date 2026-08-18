@@ -157,6 +157,78 @@ export function buildPropertySummaryPage(property?: Property): Page {
   };
 }
 
+/* ── Property Description ──────────────────────────────────────────────── */
+
+/**
+ * Half of a base page's content column, matching the 16px gap `.bo-editor-columns`
+ * puts between two columns. Photos are requested at this width so a portrait
+ * image lands in its column at its native size rather than being downscaled.
+ */
+const HALF_COLUMN = (PAGE_WIDTH - PAGE_PADDING * 2 - 16) / 2;
+
+/**
+ * Tall enough to fill the column beside a full page of prose, short enough to
+ * clear the heading above it and the footer below on a US Letter sheet.
+ */
+const DESCRIPTION_IMAGE_HEIGHT = 640;
+
+/**
+ * Property Description — a tall portrait photo beside the deal's marketing
+ * prose. The copy is bound rather than typed: it is the same description the
+ * listing publishes, so the page can't drift from what the market sees. Its
+ * heading is bound too — the marketing title, not the page name.
+ */
+export function buildPropertyDescriptionPage(property?: Property): Page {
+  const body: ColumnsBlock = {
+    id: uid("block"),
+    type: "columns",
+    columnCount: 2,
+    columns: [
+      [heroImage(`${property?.id ?? "editor"}-description`, HALF_COLUMN, DESCRIPTION_IMAGE_HEIGHT)],
+      [
+        {
+          id: uid("block"),
+          type: "dynamic",
+          dynamicKey: "marketing.saleTitle",
+          format: "text",
+          style: {
+            ...DEFAULT_TEXT_STYLE,
+            fontFamily: BRAND.fonts.heading,
+            fontSize: 18,
+            lineHeight: 26,
+            color: BRAND.palette.ink,
+          },
+        },
+        {
+          id: uid("block"),
+          type: "dynamic",
+          dynamicKey: "marketing.saleDescription",
+          format: "text",
+          style: {
+            ...DEFAULT_TEXT_STYLE,
+            fontFamily: BRAND.fonts.body,
+            fontSize: 13,
+            lineHeight: 22,
+            color: BRAND.palette.ink,
+          },
+        },
+      ],
+    ],
+  };
+
+  return {
+    id: uid("page"),
+    name: "Property Description",
+    logoSrc: LOGO_SRC,
+    locked: true,
+    blocks: [
+      brandHeading("Property Description"),
+      { id: uid("block"), type: "text", text: addressOf(property), style: { ...addressStyle, align: "left" } },
+      body,
+    ],
+  };
+}
+
 /* ── Cover ─────────────────────────────────────────────────────────────── */
 
 /**

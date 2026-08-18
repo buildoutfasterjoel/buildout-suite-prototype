@@ -14,6 +14,7 @@ import {
 import {
   buildContentsPage,
   buildCoverPage,
+  buildPropertyDescriptionPage,
   buildFinancialSummaryPage,
   buildPropertySummaryPage,
 } from "./templates/designer";
@@ -95,13 +96,7 @@ export function buildDocumentPages(
     // pages scale with the thoroughness the user chose. Empty otherwise.
     ...buildUnderwritingSection(property, underwriting),
     propertySummary,
-    buildStubPage(property, {
-      name: "Property Description",
-      seed: "editor-prop-desc",
-      dynamicKey: "propertyType",
-      dynamicLabel: "Property Type",
-      format: "text",
-    }),
+    buildPropertyDescriptionPage(property),
     buildStubPage(property, {
       name: "Complete Highlights",
       seed: "editor-highlights",
