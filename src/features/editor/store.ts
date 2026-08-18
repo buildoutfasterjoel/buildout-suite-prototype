@@ -413,13 +413,23 @@ export const useEditorStore = create<EditorState>((set) => {
     })),
 
   removeRow: (blockId, index) =>
-    set((s) => ({
-      document: updateTableRows(s.document, blockId, (rows) =>
-        rows.length <= 1 ? rows : rows.filter((_, ri) => ri !== index),
-      ),
-      selection: clearTableCell(s.selection, blockId),
-      dirty: true,
-    })),
+    set((s) => {
+      const block = findBlock(s.document, blockId);
+      if (!block || block.type !== "table" || block.rows.length <= 1) return s;
+      const removedKey = block.rows[index]?.[0]?.id;
+      const rows = block.rows.filter((_, ri) => ri !== index);
+      // Drop the removed row's own rule too, so it doesn't linger as an orphan
+      // entry keyed by a cell id no row carries anymore.
+      const rowRules =
+        block.rowRules && removedKey !== undefined
+          ? Object.fromEntries(Object.entries(block.rowRules).filter(([key]) => key !== removedKey))
+          : block.rowRules;
+      return {
+        document: replaceBlock(s.document, blockId, { ...block, rows, rowRules }),
+        selection: clearTableCell(s.selection, blockId),
+        dirty: true,
+      };
+    }),
 
   setCellValue: (blockId, cellId, value) =>
     set((s) => ({

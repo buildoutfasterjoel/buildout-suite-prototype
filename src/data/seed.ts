@@ -644,7 +644,7 @@ export function generateProperty(): Property {
     value: askingPrice, expenseRatio,
   })
 
-  return {
+  const property: Property = {
     id,
     name: baseName,
     slug,
@@ -741,6 +741,75 @@ export function generateProperty(): Property {
 
     createdAt: faker.date.past({ years: 3 }).toISOString(),
     updatedAt: faker.date.recent({ days: 90 }).toISOString(),
+  }
+
+  // After the literal on purpose — see typeSpecificFacts' doc comment.
+  return Object.assign(property, typeSpecificFacts(propertyType, buildingSqFt))
+}
+
+/**
+ * Physical facts that only exist for one asset class — dock doors on a
+ * warehouse, elevators on an office tower, soil type on a parcel. Off-type
+ * fields stay `undefined` rather than null so the document editor's row rules
+ * prune them, which is what makes a generated Property Summary look authored
+ * for that specific asset rather than a generic form dump.
+ *
+ * Called AFTER the base property literal is built: faker draws from one
+ * shared deterministic stream, so running these afterward only guarantees
+ * that a property's own base fields are unaffected by its own type-specific
+ * draws. The shared stream still advances here, so every later property's
+ * fields shift too — that's why SEED_VERSION moved when this was added.
+ */
+function typeSpecificFacts(
+  propertyType: PropertyType,
+  buildingSqFt: number,
+): Partial<Property> {
+  switch (propertyType) {
+    case 'industrial':
+      return {
+        ceilingHeight: faker.number.int({ min: 18, max: 36 }),
+        dockHighDoors: faker.number.int({ min: 2, max: 24 }),
+        gradeLevelDoors: faker.number.int({ min: 1, max: 6 }),
+        driveInBays: faker.number.int({ min: 0, max: 4 }),
+        warehousePct: faker.number.int({ min: 55, max: 95 }),
+        numberOfCranes: faker.helpers.weightedArrayElement([
+          { weight: 70, value: 0 },
+          { weight: 20, value: 1 },
+          { weight: 10, value: 2 },
+        ]),
+      }
+    case 'office':
+      return {
+        officeSpaceSqFt: Math.round(buildingSqFt * faker.number.float({ min: 0.7, max: 0.95 })),
+        numberOfElevators: faker.number.int({ min: 1, max: 8 }),
+        loadFactor: faker.number.float({ min: 1.05, max: 1.2, fractionDigits: 2 }),
+        tenancy: faker.helpers.arrayElement(['Single', 'Multiple'] as const),
+      }
+    case 'retail':
+      return {
+        trafficCount: `${faker.number.int({ min: 8, max: 60 })},000 vehicles/day`,
+        retailClientele: faker.helpers.arrayElement([
+          'Neighborhood',
+          'Regional draw',
+          'Commuter',
+          'Destination',
+        ]),
+        freeStanding: faker.datatype.boolean(),
+      }
+    case 'land':
+      return {
+        numberOfLots: faker.number.int({ min: 1, max: 12 }),
+        bestUse: faker.helpers.arrayElement([
+          'Mixed-use redevelopment',
+          'Industrial park',
+          'Retail pad',
+          'Multifamily development',
+        ]),
+        topography: faker.helpers.arrayElement(['Level', 'Gently sloping', 'Rolling', 'Terraced']),
+        soilType: faker.helpers.arrayElement(['Sandy loam', 'Clay', 'Silt loam', 'Rocky']),
+      }
+    default:
+      return {}
   }
 }
 

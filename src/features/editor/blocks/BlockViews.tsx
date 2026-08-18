@@ -175,13 +175,64 @@ function BlockNode({
 /**
  * A bulleted or numbered list. Static items are inline-editable; a bound list
  * renders the deal's array read-only, the same rule dynamic table cells follow.
+ *
+ * Enter/Backspace give static lists the add/remove affordance the table block
+ * already has via handles: Enter after an item inserts a new empty item right
+ * after it and focuses it; Backspace in an already-empty item removes it and
+ * focuses the previous one. Both rely on the Enter/Backspace keydown bubbling
+ * up from `InlineText`'s contentEditable div to this `<li>` — `InlineText`
+ * already calls `preventDefault()` on Enter (to stop it inserting a newline)
+ * but never calls `stopPropagation()`, so the bubbled event reaches us without
+ * any change to `InlineText` itself, keeping every other caller (headings,
+ * text blocks, table cells) untouched.
  */
 function ListBlockView({ block, pageId, selection }: { block: ListBlock } & VisualProps) {
   const { selected, onClick } = useBlockSelect(block.id, pageId, selection);
   const setListItem = useEditorStore((s) => s.setListItem);
+  const addListItem = useEditorStore((s) => s.addListItem);
+  const removeListItem = useEditorStore((s) => s.removeListItem);
   const data = useDocumentData();
   const items = resolveList(block, data);
   const bound = block.dynamicKey !== undefined;
+
+  // Refs to each <li>, so focus can move to the item that results from an
+  // Enter/Backspace edit once the new item list has rendered.
+  const itemRefs = useRef<(HTMLLIElement | null)[]>([]);
+  // Index (in the post-edit items array) to focus after the next render.
+  const pendingFocusIndex = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    const index = pendingFocusIndex.current;
+    if (index == null) return;
+    pendingFocusIndex.current = null;
+    const el = itemRefs.current[index]?.querySelector<HTMLElement>("[contenteditable]");
+    if (!el) return;
+    el.focus();
+    // Land the caret at the end of whatever text the focused item already has.
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+  }, [items.length]);
+
+  const handleItemKeyDown = (e: React.KeyboardEvent<HTMLLIElement>, i: number) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      addListItem(block.id, i + 1);
+      pendingFocusIndex.current = i + 1;
+      return;
+    }
+    if (e.key === "Backspace") {
+      const isEmpty = (e.currentTarget.querySelector("[contenteditable]")?.textContent ?? "") === "";
+      if (isEmpty && items.length > 1) {
+        e.preventDefault();
+        removeListItem(block.id, i);
+        pendingFocusIndex.current = Math.max(0, i - 1);
+      }
+    }
+  };
 
   return (
     <div
@@ -197,7 +248,13 @@ function ListBlockView({ block, pageId, selection }: { block: ListBlock } & Visu
         }}
       >
         {items.map((item, i) => (
-          <li key={i}>
+          <li
+            key={i}
+            ref={(el) => {
+              itemRefs.current[i] = el;
+            }}
+            onKeyDown={bound ? undefined : (e) => handleItemKeyDown(e, i)}
+          >
             {bound ? (
               item
             ) : (
@@ -303,7 +360,11 @@ function ImageBlockView({ block, pageId, selection, index }: { block: ImageBlock
       onClick={onClick}
       style={fullBleedStyle(block.fullBleed, index === 0)}
     >
-      <img src={block.src} alt={block.alt} style={{ maxWidth: "100%", width: "100%", display: "block" }} />
+      <img
+        src={block.src}
+        alt={block.alt}
+        style={{ maxWidth: "100%", width: block.fullBleed ? "100%" : undefined, display: "block" }}
+      />
     </div>
   );
 }
@@ -586,7 +647,7 @@ function TableBlockView({ block, pageId, selection }: { block: TableBlock } & Vi
         <TableEditOverlay
           blockId={block.id}
           edges={edges}
-          colCount={block.rows[0]?.length ?? 0}
+          colCount={rows[0]?.cells.length ?? 0}
           // The VISIBLE row count on purpose, not `block.rows.length`: the
           // handles/dots index into `edges`, which is measured from the
           // actually rendered <tr>s. It also makes "disabled when 1 row"

@@ -67,7 +67,7 @@ export interface Cell {
   /** When set, the cell renders the listing's live value for this field. */
   dynamicKey?: DynamicKey;
   /** Optional currency/number formatting hint for dynamic values. */
-  format?: "currency" | "currencyPerSf" | "percent" | "text" | "boolean";
+  format?: "currency" | "currencyPerSf" | "percent" | "text" | "boolean" | "year";
   align?: TextAlign;
   header?: boolean;
   style: CellStyle;

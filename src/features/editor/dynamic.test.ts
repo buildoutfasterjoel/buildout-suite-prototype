@@ -12,6 +12,7 @@ const property = {
   residentialUnits: null,
   driveInBays: 0,
   freeStanding: true,
+  yearBuilt: 1960,
 } as unknown as Property
 
 const marketing = {
@@ -46,6 +47,12 @@ describe('resolveField', () => {
     expect(resolveField('marketing.saleDescription', 'text', { property, marketing: undefined })).toBe('—')
     expect(resolveField('name', 'text', { property: undefined, marketing })).toBe('—')
     expect(resolveField('residentialUnits', 'text', data)).toBe('—')
+  })
+
+  // Years are identifiers, not quantities: toLocaleString would print "1,960".
+  it('renders a year without a thousands separator', () => {
+    expect(resolveField('yearBuilt', 'year', data)).toBe('1960')
+    expect(resolveField('buildingSqFt', 'text', data)).toBe('176,761')
   })
 })
 

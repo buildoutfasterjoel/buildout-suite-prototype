@@ -29,7 +29,7 @@ describe('resolveSelection', () => {
   })
 
   it('resolves every block nested inside a column', () => {
-    const overview = buildTemplatePage('propertyOverview')
+    const overview = buildTemplatePage('propertySummary')
     const columns = overview.blocks.find((b) => b.type === 'columns') as ColumnsBlock
     const children = columns.columns.flat()
     expect(children.length).toBeGreaterThan(0)
@@ -45,7 +45,7 @@ describe('resolveSelection', () => {
 
   // A table inside a column: the cell only resolves once its table does.
   it('resolves a cell of a nested table', () => {
-    const overview = buildTemplatePage('propertyOverview')
+    const overview = buildTemplatePage('propertySummary')
     const columns = overview.blocks.find((b) => b.type === 'columns') as ColumnsBlock
     const table = columns.columns.flat().find((b) => b.type === 'table') as TableBlock
     const target = table.rows[0][0]
@@ -57,6 +57,14 @@ describe('resolveSelection', () => {
     })
     expect(block).toBe(table)
     expect(cell).toBe(target)
+  })
+
+  it('resolves the Property Summary template’s nested sale copy', () => {
+    const page = buildTemplatePage('propertySummary')
+    const columns = page.blocks.find((b) => b.type === 'columns') as ColumnsBlock
+    const list = columns.columns.flat().find((b) => b.type === 'list')
+    expect(list).toBeDefined()
+    expect(resolveSelection(docOf(page), { pageId: page.id, blockId: list!.id }).block).toBe(list)
   })
 
   it('still resolves top-level blocks, and yields null for a missing one', () => {

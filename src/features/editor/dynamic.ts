@@ -75,6 +75,10 @@ export function resolveField(
       return typeof raw === "number" ? `${raw.toFixed(2)}%` : String(raw);
     case "boolean":
       return raw ? "Yes" : "No";
+    case "year":
+      // Years are identifiers, not quantities — `toLocaleString` would render
+      // 1960 as "1,960".
+      return String(raw);
     default:
       if (Array.isArray(raw)) return raw.join(", ");
       return typeof raw === "number" ? raw.toLocaleString("en-US") : String(raw);

@@ -15,8 +15,11 @@ export interface VisibleRow {
  * dynamic cell it has resolves empty. Rows with no dynamic cells are never
  * dropped — a hand-authored row belongs to the user, not the data.
  *
- * With no property bound (gallery thumbnails) nothing is pruned: every value
- * would read empty and the table would vanish.
+ * With no property bound — i.e. an unbound document, before `initDocument`
+ * has run — nothing is pruned: every value would read empty and the table
+ * would vanish. This is not the template gallery's thumbnails: those render
+ * off the global store, which already has an active listing bound, so their
+ * tables prune same as any other.
  */
 export function visibleRows(block: TableBlock, data: DocumentData): VisibleRow[] {
   const all = block.rows.map((cells, index) => ({ cells, index }));

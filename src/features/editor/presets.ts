@@ -14,7 +14,7 @@ import {
 import {
   buildCoverPage,
   buildFinancialSummaryPage,
-  buildPropertyOverviewPage,
+  buildPropertySummaryPage,
 } from "./templates/designer";
 
 /**
@@ -82,7 +82,7 @@ export function buildDocumentPages(
   property?: Property,
   underwriting?: DealUnderwriting,
 ): Page[] {
-  const propertySummary = withPageIdentity(buildPropertyOverviewPage(property), "Property Summary");
+  const propertySummary = buildPropertySummaryPage(property);
   const financialSummary = withPageIdentity(buildFinancialSummaryPage(property), "Financial Summary");
 
   return [
