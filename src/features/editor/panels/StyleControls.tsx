@@ -20,7 +20,7 @@ import type { Block, Cell, ImageBlock, ListBlock, TextStyle } from "../types";
 import { blockLabel } from "../blocks/blockMeta";
 import { DYNAMIC_FIELD_LABELS } from "../dynamic";
 import { useEditorStore } from "../store";
-import { CRE_PHOTO_IDS, crePhotoUrl } from "#/components/properties/propertyDisplay";
+import { CRE_PHOTO_IDS, crePhotoUrl, swapCrePhoto } from "#/components/properties/propertyDisplay";
 import { BRAND } from "../brand";
 
 const FONT_STYLE_ITEMS: ToggleItem<"bold" | "italic" | "underline">[] = [
@@ -163,7 +163,7 @@ function ImageStyleControls({ block }: { block: ImageBlock }) {
               key={photoId}
               src={crePhotoUrl(photoId, 120, 120)}
               alt=""
-              onClick={() => setImageSrc(block.id, crePhotoUrl(photoId, 736, 300))}
+              onClick={() => setImageSrc(block.id, swapCrePhoto(block.src, photoId))}
               style={{
                 width: 78,
                 height: 78,

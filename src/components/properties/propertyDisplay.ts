@@ -164,6 +164,21 @@ export function crePhotoUrl(photoId: string, w = 480, h = 280): string {
 }
 
 /**
+ * Swap the photo inside an existing CRE photo URL, keeping its crop
+ * dimensions. Every image block carries its size in the URL (`w`/`h`), so a
+ * picker that rebuilds the URL from scratch resizes the block as a side effect
+ * — most visibly on the cover, whose hero is cut to the page height minus the
+ * title band. Reusing the current `w`/`h` keeps the swap a swap.
+ */
+export function swapCrePhoto(src: string, photoId: string): string {
+  const query = src.slice(src.indexOf("?") + 1);
+  const params = new URLSearchParams(src.includes("?") ? query : "");
+  const w = Number(params.get("w"));
+  const h = Number(params.get("h"));
+  return crePhotoUrl(photoId, w || undefined, h || undefined);
+}
+
+/**
  * Resolves a property/listing id to a hand-pinned photo id (story properties
  * whose imagery must match their asset class, e.g. Rosa's multifamily
  * building). Registered by the data store rather than imported from it — this
