@@ -9,6 +9,7 @@ import {
   buildFinancialHeroPage,
   buildFinancialSummaryPage,
   buildLocationMapPage,
+  buildPhotoGalleryPage,
   buildPropertyDescriptionPage,
   buildPropertySummaryPage,
 } from "./designer";
@@ -32,6 +33,7 @@ export const TEMPLATES: TemplateDef[] = [
   { key: "financialSummary", name: "Financial Summary", category: "Financials", description: "Address header with a data-bound financial summary table.", build: buildFinancialSummaryPage },
   { key: "propertySummary", name: "Property Summary", category: "Property", description: "Full-bleed hero over the deal's sale copy and a fact table that follows the asset class.", build: buildPropertySummaryPage },
   { key: "propertyDescription", name: "Property Description", category: "Property", description: "A tall photo beside the deal's marketing title and description copy.", build: buildPropertyDescriptionPage },
+  { key: "photoGallery", name: "Photo Gallery", category: "Property", description: "Nine photos in a mixed-crop masonry grid, each tile swappable.", build: buildPhotoGalleryPage },
   { key: "locationMap", name: "Location & Map", category: "Location", description: "Map image with submarket and city narrative.", build: buildLocationMapPage },
   { key: "comparables", name: "Sale Comparables", category: "Comparables", description: "A three-up grid of comparable properties with photos.", build: buildComparablesPage },
   { key: "advisorBios", name: "Advisor Bios", category: "Team", description: "Team layout: advisor photo, name, role, and blurb.", build: buildAdvisorBiosPage },

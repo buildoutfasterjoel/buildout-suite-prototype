@@ -11,7 +11,7 @@ import type {
   TextBlock,
 } from "../types";
 import { PAGE_HEIGHT, PAGE_PADDING, PAGE_WIDTH } from "../types";
-import { TYPE_LABELS, getPhotoUrl } from "#/components/properties/propertyDisplay";
+import { TYPE_LABELS, crePhotoUrl, galleryPhotoIds, getPhotoUrl } from "#/components/properties/propertyDisplay";
 import { DEFAULT_TEXT_STYLE, uid } from "../blocks/blockFactory";
 import { BRAND } from "../brand";
 import {
@@ -225,6 +225,65 @@ export function buildPropertyDescriptionPage(property?: Property): Page {
       brandHeading("Property Description"),
       { id: uid("block"), type: "text", text: addressOf(property), style: { ...addressStyle, align: "left" } },
       body,
+    ],
+  };
+}
+
+/* ── Photo Gallery ─────────────────────────────────────────────────────── */
+
+/**
+ * A third of the content column, less the two 16px gaps `.bo-editor-columns`
+ * puts between three columns. Photos are requested at this width so each tile
+ * renders at native size.
+ */
+const GALLERY_TILE_WIDTH = Math.floor((PAGE_WIDTH - PAGE_PADDING * 2 - 16 * 2) / 3);
+
+/**
+ * The masonry: one row per column, each number a tile's height. Mixed portrait,
+ * square, and landscape crops are what make the grid read as a gallery rather
+ * than a contact sheet — and each column totals within a few pixels of the
+ * others (738 / 734 / 738 including the 12px stack gaps) so the three columns
+ * land on the same baseline instead of leaving one short.
+ */
+const GALLERY_TILE_HEIGHTS: number[][] = [
+  [300, GALLERY_TILE_WIDTH, 180],
+  [180, 330, 200],
+  [GALLERY_TILE_WIDTH, 200, 280],
+];
+
+/**
+ * Photo Gallery — nine photos in three masonry columns, drawn from the deal's
+ * own gallery so the first tile is the same hero shown on its card. Every tile
+ * is a plain image block, which is what makes the page swappable: selecting one
+ * opens the image picker, and the picker keeps each tile's crop.
+ */
+export function buildPhotoGalleryPage(property?: Property): Page {
+  const tileCount = GALLERY_TILE_HEIGHTS.reduce((n, col) => n + col.length, 0);
+  const photoIds = galleryPhotoIds(property?.id ?? "editor-gallery", tileCount);
+
+  let taken = 0;
+  const columns: ContentBlock[][] = GALLERY_TILE_HEIGHTS.map((heights) =>
+    heights.map((height) => {
+      // The pool is larger than the grid today; the modulo keeps the page
+      // whole if a shorter pool ever has to repeat a photo.
+      const photoId = photoIds[taken++ % photoIds.length];
+      return {
+        id: uid("block"),
+        type: "image",
+        src: crePhotoUrl(photoId, GALLERY_TILE_WIDTH, height),
+        alt: "Property photo",
+      };
+    }),
+  );
+
+  return {
+    id: uid("page"),
+    name: "Property Photos",
+    logoSrc: LOGO_SRC,
+    locked: true,
+    blocks: [
+      brandHeading("Property Photos"),
+      { id: uid("block"), type: "columns", columnCount: 3, columns },
     ],
   };
 }
