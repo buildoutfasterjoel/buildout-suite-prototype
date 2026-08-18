@@ -3,6 +3,7 @@ import { useShallow } from "zustand/react/shallow";
 import type { DealUnderwriting, Property } from "#/data/types";
 import type {
   Block,
+  Cell,
   DropTarget,
   EditorDocument,
   NavPanel,
@@ -411,25 +412,48 @@ function clearTableCell(selection: Selection | null, blockId: string): Selection
   return selection;
 }
 
-/** Resolve the current selection to its concrete page/block/cell objects. */
-export function useSelectedEntities() {
-  return useEditorStore(
-    useShallow((s) => {
-      const sel = s.selection;
-      if (!sel) return { page: null, block: null, cell: null };
-      const page = s.document.pages.find((p) => p.id === sel.pageId) ?? null;
-      const block = page?.blocks.find((b) => b.id === sel.blockId) ?? null;
-      let cell = null;
-      if (block && block.type === "table" && sel.cellId) {
-        for (const row of block.rows) {
-          const found = row.find((c) => c.id === sel.cellId);
-          if (found) {
-            cell = found;
-            break;
-          }
-        }
+export interface SelectedEntities {
+  page: EditorDocument["pages"][number] | null;
+  block: Block | null;
+  cell: Cell | null;
+}
+
+/**
+ * Resolve a selection to its concrete page/block/cell objects.
+ *
+ * Blocks resolve through `findBlock`, which walks into `section` and `columns`
+ * children. A top-level-only lookup here left every nested block unresolved, so
+ * the rich-text toolbar, the style controls, and the breadcrumb all went blank
+ * for text inside a container — the cover's whole title band, among others. The
+ * mutations those surfaces drive already walked the tree; it was only this
+ * lookup that stopped at the top level.
+ *
+ * Pure and exported separately from the hook so the resolution rule is testable
+ * without a renderer.
+ */
+export function resolveSelection(
+  document: EditorDocument,
+  selection: Selection | null,
+): SelectedEntities {
+  if (!selection) return { page: null, block: null, cell: null };
+  const page = document.pages.find((p) => p.id === selection.pageId) ?? null;
+  const block = selection.blockId ? findBlock(document, selection.blockId) : null;
+  let cell: Cell | null = null;
+  if (block && block.type === "table" && selection.cellId) {
+    for (const row of block.rows) {
+      const found = row.find((c) => c.id === selection.cellId);
+      if (found) {
+        cell = found;
+        break;
       }
-      return { page, block, cell };
-    }),
+    }
+  }
+  return { page, block, cell };
+}
+
+/** Resolve the current selection to its concrete page/block/cell objects. */
+export function useSelectedEntities(): SelectedEntities {
+  return useEditorStore(
+    useShallow((s) => resolveSelection(s.document, s.selection)),
   );
 }
