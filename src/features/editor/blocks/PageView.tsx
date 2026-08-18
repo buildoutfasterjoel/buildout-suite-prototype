@@ -12,6 +12,7 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { useEditorStore } from "../store";
+import { useWorkspaceRef } from "../workspaceContext";
 import { BRAND } from "../brand";
 import { PAGE_WIDTH, PAGE_HEIGHT, type Page, type Selection } from "../types";
 import { BlockList } from "./BlockViews";
@@ -43,8 +44,15 @@ function PageToolbarButton({
  * Floating toolbar shown above the page when it (not a block inside it) is
  * selected — anchored to an invisible marker at the page's top-center so the
  * popover stays centered above the page regardless of zoom.
+ *
+ * It portals into the scrolling workspace rather than the body, so the
+ * workspace's overflow clips it: scroll down and the toolbar slides under the
+ * editor's toolbars instead of floating over them. The popup still sits outside
+ * the zoom-transformed page stack, so its buttons stay full size at any zoom.
  */
 function PageToolbar({ page, open }: { page: Page; open: boolean }) {
+  const workspaceRef = useWorkspaceRef();
+
   return (
     <Popover open={open}>
       <Popover.Trigger
@@ -69,6 +77,7 @@ function PageToolbar({ page, open }: { page: Page; open: boolean }) {
         sideOffset={12}
         autoFocus={false}
         className="w-auto"
+        container={workspaceRef ?? undefined}
       >
         <div
           className="d-flex align-items-center gap-2 p-1 position-relative"

@@ -249,6 +249,9 @@
   overflow: auto;
   background: tokens.$body-bg;
   padding: tokens.$spacing-6;
+  /* Positioning context for page-anchored overlays portaled in here (the page
+     toolbar popover), so `overflow` above clips them against the toolbars. */
+  position: relative;
 }
 .bo-editor-pages {
   display: flex;
