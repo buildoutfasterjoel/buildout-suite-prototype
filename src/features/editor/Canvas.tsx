@@ -3,6 +3,7 @@ import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { useEditorStore } from "./store";
 import { PageView } from "./blocks/PageView";
 import { RichTextToolbar } from "./RichTextToolbar";
+import { WorkspaceContext } from "./workspaceContext";
 
 /** Gray workspace that renders the document's pages at the current zoom. */
 export function Canvas() {
@@ -68,20 +69,26 @@ export function Canvas() {
         <Badge>Admin Only</Badge>
       </div>
       <div ref={workspaceRef} className="bo-editor-workspace" onClick={clearSelection}>
-        <div className="bo-editor-pages" style={{ transform: `scale(${zoom})` }}>
-          {pages.map((page) => (
-            <div
-              key={page.id}
-              data-page-id={page.id}
-              onClick={(e) => e.stopPropagation()}
-              // Hidden pages stay in the canvas (so they can be un-hidden) but
-              // dim to signal they're excluded from the rendered/exported output.
-              style={page.hidden ? { opacity: 0.4 } : undefined}
-            >
-              <PageView page={page} selection={selection} />
-            </div>
-          ))}
-        </div>
+        {/* Page-anchored overlays portal into the workspace so its overflow
+            clips them — see WorkspaceContext. */}
+        <WorkspaceContext.Provider value={workspaceRef}>
+          <div className="bo-editor-pages" style={{ transform: `scale(${zoom})` }}>
+            {pages.map((page, i) => (
+              <div
+                key={page.id}
+                data-page-id={page.id}
+                onClick={(e) => e.stopPropagation()}
+                // Hidden pages stay in the canvas (so they can be un-hidden) but
+                // dim to signal they're excluded from the rendered/exported output.
+                style={page.hidden ? { opacity: 0.4 } : undefined}
+              >
+                {/* Footer page numbers count document position, matching the
+                    index shown against each row in the Pages panel. */}
+                <PageView page={page} selection={selection} pageNumber={i + 1} />
+              </div>
+            ))}
+          </div>
+        </WorkspaceContext.Provider>
       </div>
     </>
   );

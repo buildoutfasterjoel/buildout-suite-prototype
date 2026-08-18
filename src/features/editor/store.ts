@@ -1,15 +1,17 @@
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
-import type { DealUnderwriting, Property } from "#/data/types";
+import type { DealMarketing, DealUnderwriting, Property } from "#/data/types";
 import type {
   Block,
+  Cell,
   DropTarget,
   EditorDocument,
   NavPanel,
   Selection,
 } from "./types";
+import type { DocumentData } from "./dynamic";
 import { buildSampleDocument } from "./sampleDocument";
-import { buildBlankPage, buildOnBrandBlankPage, buildTemplatePage } from "./templates";
+import { buildBlankPage, buildTemplatePage } from "./templates";
 import { createBlock, createCell, type BlockVariant } from "./blocks/blockFactory";
 import {
   findBlock,
@@ -32,6 +34,12 @@ interface EditorState {
   /** Pristine copy of the initial document, used to reset tables to template. */
   templateDocument: EditorDocument;
   activeListing: Property | undefined;
+  /**
+   * The deal's marketing copy, bound alongside the property so `marketing.*`
+   * keys resolve. Read-only in the editor — the Edit Listing dialog patches
+   * property facts only.
+   */
+  activeMarketing: DealMarketing | undefined;
   /** True when the document has unsaved edits since the last init/save. */
   dirty: boolean;
   selection: Selection | null;
@@ -53,7 +61,11 @@ interface EditorState {
   sidebarPoppedOpen: boolean;
 
   // Phase 1 actions (selection + navigation + view).
-  initDocument: (listing: Property | undefined, underwriting?: DealUnderwriting) => void;
+  initDocument: (
+    listing: Property | undefined,
+    underwriting?: DealUnderwriting,
+    marketing?: DealMarketing,
+  ) => void;
   /** Clear the dirty flag — called after a Save & Close. */
   markSaved: () => void;
   /** Merge a patch into the bound listing (e.g. from Edit Listing) so dynamic fields refresh. */
@@ -82,7 +94,7 @@ interface EditorState {
 
   // Page management.
   /** Adds at `atIndex` when given, otherwise appends to the end. */
-  addPage: (kind: "blank" | "onBrandBlank" | string, atIndex?: number) => void;
+  addPage: (kind: "blank" | string, atIndex?: number) => void;
   /** Reorder a page to sit at `toIndex` in the document's top-level page list. */
   movePage: (pageId: string, toIndex: number) => void;
   /** Remove a page from the document (no-op if it's the last remaining page). */
@@ -99,6 +111,12 @@ interface EditorState {
   setBlockText: (blockId: string, text: string) => void;
   /** Swap an image block's source. */
   setImageSrc: (blockId: string, src: string) => void;
+  /** Edit one item of a static list block. */
+  setListItem: (blockId: string, index: number, text: string) => void;
+  /** Insert a blank item at `index`. */
+  addListItem: (blockId: string, index: number) => void;
+  /** Remove the item at `index` (no-op on the last remaining item). */
+  removeListItem: (blockId: string, index: number) => void;
 
   // Phase 3 actions (table row/column editing).
   addColumn: (blockId: string, index: number) => void;
@@ -131,6 +149,7 @@ export const useEditorStore = create<EditorState>((set) => {
   document: initialDocument,
   templateDocument: clone(initialDocument),
   activeListing: undefined,
+  activeMarketing: undefined,
   dirty: false,
   // Default to a selected table cell so the contextual style panel shows,
   // matching the Figma reference state.
@@ -144,10 +163,11 @@ export const useEditorStore = create<EditorState>((set) => {
   sidebarPinned: true,
   sidebarPoppedOpen: false,
 
-  initDocument: (listing, underwriting) => {
+  initDocument: (listing, underwriting, marketing) => {
     const document = buildSampleDocument(listing, underwriting);
     set({
       activeListing: listing,
+      activeMarketing: marketing,
       document,
       templateDocument: clone(document),
       selection: null,
@@ -219,9 +239,7 @@ export const useEditorStore = create<EditorState>((set) => {
       const page =
         kind === "blank"
           ? buildBlankPage()
-          : kind === "onBrandBlank"
-            ? buildOnBrandBlankPage()
-            : buildTemplatePage(kind, s.activeListing);
+          : buildTemplatePage(kind, s.activeListing);
       const index = atIndex ?? s.document.pages.length;
       const pages = [...s.document.pages];
       pages.splice(index, 0, page);
@@ -330,6 +348,31 @@ export const useEditorStore = create<EditorState>((set) => {
       return { document: replaceBlock(s.document, blockId, { ...block, src }), dirty: true };
     }),
 
+  setListItem: (blockId, index, text) =>
+    set((s) => {
+      const block = findBlock(s.document, blockId);
+      if (!block || block.type !== "list") return s;
+      const items = block.items.map((item, i) => (i === index ? text : item));
+      return { document: replaceBlock(s.document, blockId, { ...block, items }), dirty: true };
+    }),
+
+  addListItem: (blockId, index) =>
+    set((s) => {
+      const block = findBlock(s.document, blockId);
+      if (!block || block.type !== "list") return s;
+      const items = [...block.items];
+      items.splice(Math.max(0, Math.min(index, items.length)), 0, "");
+      return { document: replaceBlock(s.document, blockId, { ...block, items }), dirty: true };
+    }),
+
+  removeListItem: (blockId, index) =>
+    set((s) => {
+      const block = findBlock(s.document, blockId);
+      if (!block || block.type !== "list" || block.items.length <= 1) return s;
+      const items = block.items.filter((_, i) => i !== index);
+      return { document: replaceBlock(s.document, blockId, { ...block, items }), dirty: true };
+    }),
+
   addColumn: (blockId, index) =>
     set((s) => ({
       document: updateTableRows(s.document, blockId, (rows) =>
@@ -370,13 +413,23 @@ export const useEditorStore = create<EditorState>((set) => {
     })),
 
   removeRow: (blockId, index) =>
-    set((s) => ({
-      document: updateTableRows(s.document, blockId, (rows) =>
-        rows.length <= 1 ? rows : rows.filter((_, ri) => ri !== index),
-      ),
-      selection: clearTableCell(s.selection, blockId),
-      dirty: true,
-    })),
+    set((s) => {
+      const block = findBlock(s.document, blockId);
+      if (!block || block.type !== "table" || block.rows.length <= 1) return s;
+      const removedKey = block.rows[index]?.[0]?.id;
+      const rows = block.rows.filter((_, ri) => ri !== index);
+      // Drop the removed row's own rule too, so it doesn't linger as an orphan
+      // entry keyed by a cell id no row carries anymore.
+      const rowRules =
+        block.rowRules && removedKey !== undefined
+          ? Object.fromEntries(Object.entries(block.rowRules).filter(([key]) => key !== removedKey))
+          : block.rowRules;
+      return {
+        document: replaceBlock(s.document, blockId, { ...block, rows, rowRules }),
+        selection: clearTableCell(s.selection, blockId),
+        dirty: true,
+      };
+    }),
 
   setCellValue: (blockId, cellId, value) =>
     set((s) => ({
@@ -413,25 +466,55 @@ function clearTableCell(selection: Selection | null, blockId: string): Selection
   return selection;
 }
 
-/** Resolve the current selection to its concrete page/block/cell objects. */
-export function useSelectedEntities() {
-  return useEditorStore(
-    useShallow((s) => {
-      const sel = s.selection;
-      if (!sel) return { page: null, block: null, cell: null };
-      const page = s.document.pages.find((p) => p.id === sel.pageId) ?? null;
-      const block = page?.blocks.find((b) => b.id === sel.blockId) ?? null;
-      let cell = null;
-      if (block && block.type === "table" && sel.cellId) {
-        for (const row of block.rows) {
-          const found = row.find((c) => c.id === sel.cellId);
-          if (found) {
-            cell = found;
-            break;
-          }
-        }
+export interface SelectedEntities {
+  page: EditorDocument["pages"][number] | null;
+  block: Block | null;
+  cell: Cell | null;
+}
+
+/**
+ * Resolve a selection to its concrete page/block/cell objects.
+ *
+ * Blocks resolve through `findBlock`, which walks into `section` and `columns`
+ * children. A top-level-only lookup here left every nested block unresolved, so
+ * the rich-text toolbar, the style controls, and the breadcrumb all went blank
+ * for text inside a container — the cover's whole title band, among others. The
+ * mutations those surfaces drive already walked the tree; it was only this
+ * lookup that stopped at the top level.
+ *
+ * Pure and exported separately from the hook so the resolution rule is testable
+ * without a renderer.
+ */
+export function resolveSelection(
+  document: EditorDocument,
+  selection: Selection | null,
+): SelectedEntities {
+  if (!selection) return { page: null, block: null, cell: null };
+  const page = document.pages.find((p) => p.id === selection.pageId) ?? null;
+  const block = selection.blockId ? findBlock(document, selection.blockId) : null;
+  let cell: Cell | null = null;
+  if (block && block.type === "table" && selection.cellId) {
+    for (const row of block.rows) {
+      const found = row.find((c) => c.id === selection.cellId);
+      if (found) {
+        cell = found;
+        break;
       }
-      return { page, block, cell };
-    }),
+    }
+  }
+  return { page, block, cell };
+}
+
+/** Resolve the current selection to its concrete page/block/cell objects. */
+export function useSelectedEntities(): SelectedEntities {
+  return useEditorStore(
+    useShallow((s) => resolveSelection(s.document, s.selection)),
+  );
+}
+
+/** The binding context for dynamic fields — the bound property and its copy. */
+export function useDocumentData(): DocumentData {
+  return useEditorStore(
+    useShallow((s) => ({ property: s.activeListing, marketing: s.activeMarketing })),
   );
 }

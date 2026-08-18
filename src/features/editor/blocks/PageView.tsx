@@ -12,7 +12,9 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { useEditorStore } from "../store";
-import { PAGE_WIDTH, PAGE_HEIGHT, type Page, type Selection } from "../types";
+import { useWorkspaceRef } from "../workspaceContext";
+import { BRAND } from "../brand";
+import { PAGE_WIDTH, PAGE_HEIGHT, PAGE_PADDING, type Page, type Selection } from "../types";
 import { BlockList } from "./BlockViews";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 
@@ -42,8 +44,15 @@ function PageToolbarButton({
  * Floating toolbar shown above the page when it (not a block inside it) is
  * selected — anchored to an invisible marker at the page's top-center so the
  * popover stays centered above the page regardless of zoom.
+ *
+ * It portals into the scrolling workspace rather than the body, so the
+ * workspace's overflow clips it: scroll down and the toolbar slides under the
+ * editor's toolbars instead of floating over them. The popup still sits outside
+ * the zoom-transformed page stack, so its buttons stay full size at any zoom.
  */
 function PageToolbar({ page, open }: { page: Page; open: boolean }) {
+  const workspaceRef = useWorkspaceRef();
+
   return (
     <Popover open={open}>
       <Popover.Trigger
@@ -68,6 +77,7 @@ function PageToolbar({ page, open }: { page: Page; open: boolean }) {
         sideOffset={12}
         autoFocus={false}
         className="w-auto"
+        container={workspaceRef ?? undefined}
       >
         <div
           className="d-flex align-items-center gap-2 p-1 position-relative"
@@ -118,13 +128,33 @@ function PageToolbar({ page, open }: { page: Page; open: boolean }) {
   );
 }
 
+/**
+ * The company footer that closes every base page — brand name on the left, the
+ * page's position in the document on the right, over a hairline inset to the
+ * same 40px margin the content above it uses.
+ */
+function PageFooter({ pageNumber }: { pageNumber: number }) {
+  return (
+    <div
+      className="bo-editor-page-footer"
+      style={{ fontFamily: BRAND.fonts.body }}
+    >
+      <span className="text-truncate">{BRAND.name}</span>
+      <span>{pageNumber}</span>
+    </div>
+  );
+}
+
 /** A single fixed-size page (US Letter) rendering its block stack. */
 export function PageView({
   page,
   selection,
+  pageNumber = 1,
 }: {
   page: Page;
   selection: Selection | null;
+  /** 1-based position in the document, printed in the footer. */
+  pageNumber?: number;
 }) {
   const select = useEditorStore((s) => s.select);
   const pageSelection = selection?.pageId === page.id ? selection : null;
@@ -132,9 +162,12 @@ export function PageView({
   // page space sets a pageId-only selection; blocks stop propagation and set
   // their own blockId, which supersedes this page-level state.
   const pageSelected = pageSelection !== null && !pageSelection.blockId;
-  // Full-bleed pages (covers) drop the logo band, page margin, and block gap so
-  // their artwork runs to the paper's edge.
+  // Full-bleed pages (covers) drop the page margin and block gap so their
+  // artwork runs to the paper's edge.
   const bleed = page.bleed ?? false;
+  // Base pages are framed by the brand logo header and the company footer;
+  // covers and other bespoke layouts own the whole sheet.
+  const chrome = (page.chrome ?? "base") === "base";
 
   return (
     <div style={{ position: "relative" }}>
@@ -143,7 +176,7 @@ export function PageView({
         style={{ width: PAGE_WIDTH, height: PAGE_HEIGHT }}
         onClick={() => select({ pageId: page.id })}
       >
-        {!bleed && page.logoSrc && (
+        {chrome && page.logoSrc && (
           <div className="p-6" style={{ flexShrink: 0 }}>
             <img
               src={page.logoSrc}
@@ -157,7 +190,7 @@ export function PageView({
           className="d-flex flex-column"
           style={{
             gap: bleed ? 0 : 32,
-            padding: bleed ? 0 : 40,
+            padding: bleed ? 0 : PAGE_PADDING,
             flex: "1 0 0",
             minHeight: 0,
           }}
@@ -170,6 +203,8 @@ export function PageView({
             locked={page.locked ?? false}
           />
         </div>
+
+        {chrome && <PageFooter pageNumber={pageNumber} />}
       </div>
       <PageToolbar page={page} open={pageSelected} />
     </div>

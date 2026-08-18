@@ -14,7 +14,7 @@ import {
 import {
   buildCoverPage,
   buildFinancialSummaryPage,
-  buildPropertyOverviewPage,
+  buildPropertySummaryPage,
 } from "./templates/designer";
 
 /**
@@ -59,20 +59,6 @@ function buildStubPage(property: Property | undefined, spec: StubPageSpec): Page
   };
 }
 
-/** A plain section-divider page — just a big centered title, no dynamic content. */
-function buildDividerPage(property: Property | undefined, name: string): Page {
-  return {
-    id: uid("page"),
-    name,
-    logoSrc: LOGO_SRC,
-    locked: true,
-    blocks: [
-      { id: uid("block"), type: "heading", text: name, style: headingStyle },
-      { id: uid("block"), type: "text", text: addressOf(property), style: addressStyle },
-    ],
-  };
-}
-
 /** Rename a built page (and its heading block, which always leads) in place. */
 function withPageIdentity(page: Page, name: string): Page {
   const blocks = page.blocks.map((b, i) => (i === 0 && b.type === "heading" ? { ...b, text: name } : b));
@@ -80,19 +66,23 @@ function withPageIdentity(page: Page, name: string): Page {
 }
 
 /**
- * The sample "Proposal" document's full page list — a 25-page CRE offering
- * memorandum, matching the structure real proposal documents follow: a cover,
- * a table of contents, then content pages broken up by plain section-divider
- * pages (Property Information, Location Information, Financial Analysis, Sale
- * Comparables, Lease Comparables, Demographics, Advisor Bios). Every entry here
- * is a real, selectable page — two reuse the richer hand-built designer
- * templates, the rest are lightweight stubs.
+ * The sample "Proposal" document's page list — a 14-page CRE offering
+ * memorandum: a cover, a table of contents, then one page per section of a real
+ * proposal (property, location, financials, comps, demographics, the team).
+ * Every entry is a real, selectable page — two reuse the richer hand-built
+ * designer templates, the rest are lightweight stubs.
+ *
+ * Deliberately short. An earlier pass ran 23 pages, but seven of those were
+ * title-only section dividers and four were near-duplicate map/comps pages, so
+ * scrolling the document mostly meant scrolling past filler. The section
+ * divider survives as a gallery template (`brandDivider`) for anyone who wants
+ * one; it just isn't seeded seven times.
  */
 export function buildDocumentPages(
   property?: Property,
   underwriting?: DealUnderwriting,
 ): Page[] {
-  const propertySummary = withPageIdentity(buildPropertyOverviewPage(property), "Property Summary");
+  const propertySummary = buildPropertySummaryPage(property);
   const financialSummary = withPageIdentity(buildFinancialSummaryPage(property), "Financial Summary");
 
   return [
@@ -103,7 +93,6 @@ export function buildDocumentPages(
     // Once the AI has generated underwriting for this deal, it leads the body —
     // pages scale with the thoroughness the user chose. Empty otherwise.
     ...buildUnderwritingSection(property, underwriting),
-    buildDividerPage(property, "Property Information"),
     propertySummary,
     buildStubPage(property, {
       name: "Property Description",
@@ -126,26 +115,11 @@ export function buildDocumentPages(
       dynamicLabel: "Buildings",
       format: "text",
     }),
-    buildDividerPage(property, "Location Information"),
-    buildStubPage(property, {
-      name: "Regional Map",
-      seed: "editor-regional",
-      dynamicKey: "submarket",
-      dynamicLabel: "Submarket",
-      format: "text",
-    }),
     buildStubPage(property, {
       name: "Location Map",
       seed: "editor-location-map",
       dynamicKey: "city",
       dynamicLabel: "City",
-      format: "text",
-    }),
-    buildStubPage(property, {
-      name: "Aerial Map",
-      seed: "editor-aerial",
-      dynamicKey: "lotSqFt",
-      dynamicLabel: "Lot Size",
       format: "text",
     }),
     buildStubPage(property, {
@@ -155,7 +129,6 @@ export function buildDocumentPages(
       dynamicLabel: "Zoning",
       format: "text",
     }),
-    buildDividerPage(property, "Financial Analysis"),
     financialSummary,
     buildStubPage(property, {
       name: "Income & Expenses",
@@ -164,7 +137,6 @@ export function buildDocumentPages(
       dynamicLabel: "Net Operating Income",
       format: "currency",
     }),
-    buildDividerPage(property, "Sale Comparables"),
     buildStubPage(property, {
       name: "Sale Comps",
       seed: "editor-sale-comps",
@@ -173,14 +145,6 @@ export function buildDocumentPages(
       format: "percent",
     }),
     buildStubPage(property, {
-      name: "Sale Comps Map & Summary",
-      seed: "editor-sale-comps-map",
-      dynamicKey: "askingPrice",
-      dynamicLabel: "Asking Price",
-      format: "currency",
-    }),
-    buildDividerPage(property, "Lease Comparables"),
-    buildStubPage(property, {
       name: "Lease Comps",
       seed: "editor-lease-comps",
       dynamicKey: "vacancyRate",
@@ -188,23 +152,14 @@ export function buildDocumentPages(
       format: "percent",
     }),
     buildStubPage(property, {
-      name: "Lease Comps Map & Summary",
-      seed: "editor-lease-comps-map",
-      dynamicKey: "grossRentMultiplier",
-      dynamicLabel: "Gross Rent Multiplier",
-      format: "text",
-    }),
-    buildDividerPage(property, "Demographics"),
-    buildStubPage(property, {
-      name: "Demographics Map & Report",
+      name: "Demographics",
       seed: "editor-demographics",
       dynamicKey: "censusTract",
       dynamicLabel: "Census Tract",
       format: "text",
     }),
-    buildDividerPage(property, "Advisor Bios"),
     buildStubPage(property, {
-      name: "Advisor Bio 1",
+      name: "Advisor Bios",
       seed: "editor-advisor",
       dynamicKey: "name",
       dynamicLabel: "Prepared For",

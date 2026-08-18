@@ -24,6 +24,7 @@ import type {
   DynamicBlock,
   HeadingBlock,
   ImageBlock,
+  ListBlock,
   SectionBlock,
   Selection,
   SpacerBlock,
@@ -31,12 +32,14 @@ import type {
   TextBlock,
   TextStyle,
 } from "../types";
-import { useEditorStore } from "../store";
+import { useDocumentData, useEditorStore } from "../store";
 import { findBlock } from "../tree";
-import { resolveDynamic, resolveField } from "../dynamic";
+import { resolveDynamic, resolveField, resolveList } from "../dynamic";
+import { trailingRowInsertIndex, visibleRows } from "./rowVisibility";
 import { SortableBlock, ListDropZone } from "../dnd/SortableBlock";
 import type { ListLocation } from "../dnd/dndTypes";
 import { blockLabel } from "./blockMeta";
+import { fullBleedStyle } from "./fullBleed";
 
 function textStyleToCss(style: TextStyle): CSSProperties {
   return {
@@ -134,7 +137,7 @@ function BlockNode({
   locked: boolean;
 }) {
   const visual = (
-    <BlockVisual block={block} pageId={pageId} selection={selection} locked={locked} />
+    <BlockVisual block={block} pageId={pageId} selection={selection} locked={locked} index={index} />
   );
 
   // "Located" from the Layers panel — outline it, unless it's already the
@@ -169,7 +172,112 @@ function BlockNode({
   );
 }
 
-function BlockVisual({ block, pageId, selection, locked }: { block: Block } & VisualProps) {
+/**
+ * A bulleted or numbered list. Static items are inline-editable; a bound list
+ * renders the deal's array read-only, the same rule dynamic table cells follow.
+ *
+ * Enter/Backspace give static lists the add/remove affordance the table block
+ * already has via handles: Enter after an item inserts a new empty item right
+ * after it and focuses it; Backspace in an already-empty item removes it and
+ * focuses the previous one. Both rely on the Enter/Backspace keydown bubbling
+ * up from `InlineText`'s contentEditable div to this `<li>` — `InlineText`
+ * already calls `preventDefault()` on Enter (to stop it inserting a newline)
+ * but never calls `stopPropagation()`, so the bubbled event reaches us without
+ * any change to `InlineText` itself, keeping every other caller (headings,
+ * text blocks, table cells) untouched.
+ */
+function ListBlockView({ block, pageId, selection }: { block: ListBlock } & VisualProps) {
+  const { selected, onClick } = useBlockSelect(block.id, pageId, selection);
+  const setListItem = useEditorStore((s) => s.setListItem);
+  const addListItem = useEditorStore((s) => s.addListItem);
+  const removeListItem = useEditorStore((s) => s.removeListItem);
+  const data = useDocumentData();
+  const items = resolveList(block, data);
+  const bound = block.dynamicKey !== undefined;
+
+  // Refs to each <li>, so focus can move to the item that results from an
+  // Enter/Backspace edit once the new item list has rendered.
+  const itemRefs = useRef<(HTMLLIElement | null)[]>([]);
+  // Index (in the post-edit items array) to focus after the next render.
+  const pendingFocusIndex = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    const index = pendingFocusIndex.current;
+    if (index == null) return;
+    pendingFocusIndex.current = null;
+    const el = itemRefs.current[index]?.querySelector<HTMLElement>("[contenteditable]");
+    if (!el) return;
+    el.focus();
+    // Land the caret at the end of whatever text the focused item already has.
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+  }, [items.length]);
+
+  const handleItemKeyDown = (e: React.KeyboardEvent<HTMLLIElement>, i: number) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      addListItem(block.id, i + 1);
+      pendingFocusIndex.current = i + 1;
+      return;
+    }
+    if (e.key === "Backspace") {
+      const isEmpty = (e.currentTarget.querySelector("[contenteditable]")?.textContent ?? "") === "";
+      if (isEmpty && items.length > 1) {
+        e.preventDefault();
+        removeListItem(block.id, i);
+        pendingFocusIndex.current = Math.max(0, i - 1);
+      }
+    }
+  };
+
+  return (
+    <div
+      className={`bo-editor-block${selected ? " is-selected" : ""}`}
+      onClick={onClick}
+      style={textStyleToCss(block.style)}
+    >
+      <ul
+        style={{
+          listStyleType: block.marker === "number" ? "decimal" : block.marker === "none" ? "none" : "disc",
+          paddingLeft: block.marker === "none" ? 0 : 20,
+          margin: 0,
+        }}
+      >
+        {items.map((item, i) => (
+          <li
+            key={i}
+            ref={(el) => {
+              itemRefs.current[i] = el;
+            }}
+            onKeyDown={bound ? undefined : (e) => handleItemKeyDown(e, i)}
+          >
+            {bound ? (
+              item
+            ) : (
+              <InlineText
+                value={item}
+                placeholder="List item"
+                onChange={(v) => setListItem(block.id, i, v)}
+              />
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function BlockVisual({
+  block,
+  pageId,
+  selection,
+  locked,
+  index,
+}: { block: Block; index: number } & VisualProps) {
   switch (block.type) {
     case "heading":
       return <HeadingBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
@@ -178,9 +286,13 @@ function BlockVisual({ block, pageId, selection, locked }: { block: Block } & Vi
     case "table":
       return <TableBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "image":
-      return <ImageBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
+      return (
+        <ImageBlockView block={block} pageId={pageId} selection={selection} locked={locked} index={index} />
+      );
     case "dynamic":
       return <DynamicBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
+    case "list":
+      return <ListBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "spacer":
       return <SpacerBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "divider":
@@ -240,19 +352,27 @@ function TextBlockView({ block, pageId, selection }: { block: TextBlock } & Visu
   );
 }
 
-function ImageBlockView({ block, pageId, selection }: { block: ImageBlock } & VisualProps) {
+function ImageBlockView({ block, pageId, selection, index }: { block: ImageBlock; index: number } & VisualProps) {
   const { selected, onClick } = useBlockSelect(block.id, pageId, selection);
   return (
-    <div className={`bo-editor-block${selected ? " is-selected" : ""}`} onClick={onClick}>
-      <img src={block.src} alt={block.alt} style={{ maxWidth: "100%", display: "block" }} />
+    <div
+      className={`bo-editor-block${selected ? " is-selected" : ""}`}
+      onClick={onClick}
+      style={fullBleedStyle(block.fullBleed, index === 0)}
+    >
+      <img
+        src={block.src}
+        alt={block.alt}
+        style={{ maxWidth: "100%", width: block.fullBleed ? "100%" : undefined, display: "block" }}
+      />
     </div>
   );
 }
 
 function DynamicBlockView({ block, pageId, selection }: { block: DynamicBlock } & VisualProps) {
   const { selected, onClick } = useBlockSelect(block.id, pageId, selection);
-  const listing = useEditorStore((s) => s.activeListing);
-  const value = resolveField(block.dynamicKey, block.format, listing);
+  const data = useDocumentData();
+  const value = resolveField(block.dynamicKey, block.format, data);
   return (
     <div
       className={`bo-editor-block bo-editor-dynamic${selected ? " is-selected" : ""}`}
@@ -356,7 +476,13 @@ const HANDLE_GAP = 3;
 function TableBlockView({ block, pageId, selection }: { block: TableBlock } & VisualProps) {
   const select = useSelect();
   const setCellValue = useEditorStore((s) => s.setCellValue);
-  const listing = useEditorStore((s) => s.activeListing);
+  const data = useDocumentData();
+  const rows = visibleRows(block, data);
+  // Row handles and the dot gutter derive their index from measured DOM row
+  // edges, but addRow/removeRow address `block.rows` (the model). Once rows
+  // can be pruned, the DOM index no longer equals the model index, so this
+  // map translates one to the other.
+  const rowIndexMap = rows.map((r) => r.index);
   const zoom = useEditorStore((s) => s.zoom);
   const selectedBlock = selection?.blockId === block.id && !selection?.cellId;
   const selectedHere = selection?.blockId === block.id;
@@ -495,15 +621,15 @@ function TableBlockView({ block, pageId, selection }: { block: TableBlock } & Vi
     >
       <table ref={tableRef} style={{ width: "100%", borderCollapse: "collapse", border }}>
         <tbody>
-          {block.rows.map((row, ri) => (
-            <tr key={ri}>
-              {row.map((cell) => (
+          {rows.map((row) => (
+            <tr key={row.index}>
+              {row.cells.map((cell) => (
                 <CellView
                   key={cell.id}
                   cell={cell}
                   border={border}
                   selected={selection?.blockId === block.id && selection?.cellId === cell.id}
-                  value={resolveDynamic(cell, listing)}
+                  value={resolveDynamic(cell, data)}
                   editable={!cell.dynamicKey}
                   onChange={(v) => setCellValue(block.id, cell.id, v)}
                   onSelect={(e) => {
@@ -521,8 +647,13 @@ function TableBlockView({ block, pageId, selection }: { block: TableBlock } & Vi
         <TableEditOverlay
           blockId={block.id}
           edges={edges}
-          colCount={block.rows[0]?.length ?? 0}
-          rowCount={block.rows.length}
+          colCount={rows[0]?.cells.length ?? 0}
+          // The VISIBLE row count on purpose, not `block.rows.length`: the
+          // handles/dots index into `edges`, which is measured from the
+          // actually rendered <tr>s. It also makes "disabled when 1 row"
+          // mean "can't delete the only row you can see," which is correct.
+          rowCount={rows.length}
+          rowIndexMap={rowIndexMap}
           highlight={highlight}
           hoverBand={hoverBand}
           setHoverHandle={setHoverHandle}
@@ -561,6 +692,7 @@ function TableEditOverlay({
   edges,
   colCount,
   rowCount,
+  rowIndexMap,
   highlight,
   hoverBand,
   setHoverHandle,
@@ -571,6 +703,8 @@ function TableEditOverlay({
   edges: TableEdges;
   colCount: number;
   rowCount: number;
+  /** Translates a DOM row index (rendered, post-pruning) to its index in `block.rows`. */
+  rowIndexMap: number[];
   highlight: HandleTarget | null;
   hoverBand: { col: number | null; row: number | null } | null;
   setHoverHandle: (h: HandleTarget | null) => void;
@@ -595,12 +729,19 @@ function TableEditOverlay({
         blockId={blockId}
         edges={edges}
         rowCount={rowCount}
+        rowIndexMap={rowIndexMap}
         hoverRow={hoverBand?.row ?? null}
         setHoverHandle={setHoverHandle}
         openMenu={openMenu}
         setOpenMenu={setOpenMenu}
       />
-      <InsertDots blockId={blockId} edges={edges} colCount={colCount} rowCount={rowCount} />
+      <InsertDots
+        blockId={blockId}
+        edges={edges}
+        colCount={colCount}
+        rowCount={rowCount}
+        rowIndexMap={rowIndexMap}
+      />
     </div>
   );
 }
@@ -704,6 +845,7 @@ function RowHandles({
   blockId,
   edges,
   rowCount,
+  rowIndexMap,
   hoverRow,
   setHoverHandle,
   openMenu,
@@ -712,6 +854,8 @@ function RowHandles({
   blockId: string;
   edges: TableEdges;
   rowCount: number;
+  /** Translates a DOM row index (rendered, post-pruning) to its index in `block.rows`. */
+  rowIndexMap: number[];
   hoverRow: number | null;
   setHoverHandle: (h: HandleTarget | null) => void;
   openMenu: HandleTarget | null;
@@ -749,16 +893,16 @@ function RowHandles({
               }
             />
             <DropdownMenu.Content align="start" side="right" sideOffset={6}>
-              <DropdownMenu.Item onClick={() => addRow(blockId, i)}>
+              <DropdownMenu.Item onClick={() => addRow(blockId, rowIndexMap[i])}>
                 <FontAwesomeIcon icon={faTableRowsAddAbove} />
                 Insert row above
               </DropdownMenu.Item>
-              <DropdownMenu.Item onClick={() => addRow(blockId, i + 1)}>
+              <DropdownMenu.Item onClick={() => addRow(blockId, rowIndexMap[i] + 1)}>
                 <FontAwesomeIcon icon={faTableRowsAddBelow} />
                 Insert row below
               </DropdownMenu.Item>
               <DropdownMenu.Separator />
-              <DropdownMenu.Item disabled={rowCount <= 1} onClick={() => removeRow(blockId, i)}>
+              <DropdownMenu.Item disabled={rowCount <= 1} onClick={() => removeRow(blockId, rowIndexMap[i])}>
                 <FontAwesomeIcon icon={faTrashCan} />
                 Delete row
               </DropdownMenu.Item>
@@ -776,11 +920,14 @@ function InsertDots({
   edges,
   colCount,
   rowCount,
+  rowIndexMap,
 }: {
   blockId: string;
   edges: TableEdges;
   colCount: number;
   rowCount: number;
+  /** Translates a DOM row index (rendered, post-pruning) to its index in `block.rows`. */
+  rowIndexMap: number[];
 }) {
   const addColumn = useEditorStore((s) => s.addColumn);
   const addRow = useEditorStore((s) => s.addRow);
@@ -817,7 +964,7 @@ function InsertDots({
           style={{ top: y, left: edges.cols[0] - DOT_GUTTER }}
           onClick={(e) => {
             stop(e);
-            addRow(blockId, i);
+            addRow(blockId, trailingRowInsertIndex(rowIndexMap, i));
           }}
         >
           <FontAwesomeIcon icon={faPlus} />

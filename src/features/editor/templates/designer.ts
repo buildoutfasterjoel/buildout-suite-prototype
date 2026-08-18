@@ -1,16 +1,16 @@
-import type { Property } from "#/data/types";
+import type { Property, PropertyType } from "#/data/types";
 import type {
   Cell,
   ColumnsBlock,
   ContentBlock,
   DynamicKey,
   Page,
+  RowVisibility,
   SectionBlock,
   TableBlock,
   TextBlock,
-  TextStyle,
 } from "../types";
-import { PAGE_HEIGHT, PAGE_WIDTH } from "../types";
+import { PAGE_HEIGHT, PAGE_PADDING, PAGE_WIDTH } from "../types";
 import { TYPE_LABELS, getPhotoUrl } from "#/components/properties/propertyDisplay";
 import { DEFAULT_TEXT_STYLE, uid } from "../blocks/blockFactory";
 import { BRAND } from "../brand";
@@ -46,63 +46,113 @@ export function buildFinancialSummaryPage(property: Property | undefined): Page 
   };
 }
 
-/**
- * "Property Overview" preset — a locked page with a richer, magazine-style
- * layout: a full-width hero, then a two-column row pairing a photo + descriptive
- * copy on the left with a data-bound highlights table on the right. Content is
- * editable; the layout is fixed.
- */
-export function buildPropertyOverviewPage(property: Property | undefined): Page {
-  const bodyStyle: TextStyle = { ...DEFAULT_TEXT_STYLE, fontSize: 13, lineHeight: 22 };
+/** Every type that has a building — land is the exception. */
+const BUILT_TYPES: PropertyType[] = [
+  "office", "retail", "industrial", "multifamily", "mixed-use", "hospitality", "special-purpose",
+];
 
-  const highlightsTable: TableBlock = {
-    id: uid("block"),
-    type: "table",
-    title: "Property Highlights",
-    style: { borderWidth: 1, borderStyle: "solid", borderColor: "#d5dae2" },
-    rows: [
-      [headerCell("Property Type"), valueCell("—", "propertyType", "text")],
-      [headerCell("Building Class"), valueCell("—", "buildingClass", "text")],
-      [headerCell("Building Size"), valueCell("—", "buildingSqFt", "text")],
-      [headerCell("Lot Size"), valueCell("—", "lotSqFt", "text")],
-      [headerCell("Stories"), valueCell("—", "stories", "text")],
-    ],
+/**
+ * Property Summary — a full-bleed hero over the deal's sale copy and a fact
+ * table whose rows follow the asset class, so an industrial listing and a
+ * multifamily one produce visibly different pages from one template.
+ */
+export function buildPropertySummaryPage(property?: Property): Page {
+  const rows: Cell[][] = [];
+  const rowRules: Record<string, RowVisibility> = {};
+
+  const metaRow = (
+    label: string,
+    key: DynamicKey,
+    format: Cell["format"] = "text",
+    rule?: RowVisibility,
+  ) => {
+    const head = headerCell(label);
+    rows.push([head, valueCell("—", key, format)]);
+    if (rule) rowRules[head.id] = rule;
   };
 
-  const detailRow: ColumnsBlock = {
+  const built: RowVisibility = { types: BUILT_TYPES };
+
+  metaRow("Building Size", "buildingSqFt", "text", built);
+  metaRow("Lot Size", "lotSqFt");
+  metaRow("Year Built", "yearBuilt", "year", built);
+  metaRow("Building Class", "buildingClass", "text", built);
+  metaRow("Stories", "stories", "text", built);
+  metaRow("Buildings", "numberOfBuildings", "text", built);
+
+  metaRow("Units", "residentialUnits", "text", { types: ["multifamily", "mixed-use"] });
+  metaRow("Total Bathrooms", "totalBathrooms", "text", { types: ["multifamily", "mixed-use"] });
+
+  metaRow("Clear Height", "ceilingHeight", "text", { types: ["industrial"] });
+  metaRow("Dock-High Doors", "dockHighDoors", "text", { types: ["industrial"] });
+  metaRow("Grade-Level Doors", "gradeLevelDoors", "text", { types: ["industrial"] });
+  metaRow("Drive-In Bays", "driveInBays", "text", { types: ["industrial"] });
+  metaRow("Warehouse %", "warehousePct", "percent", { types: ["industrial"] });
+  metaRow("Cranes", "numberOfCranes", "text", { types: ["industrial"] });
+
+  metaRow("Office SF", "officeSpaceSqFt", "text", { types: ["office"] });
+  metaRow("Elevators", "numberOfElevators", "text", { types: ["office"] });
+  metaRow("Load Factor", "loadFactor", "text", { types: ["office"] });
+  metaRow("Tenancy", "tenancy", "text", { types: ["office"] });
+
+  metaRow("Traffic Count", "trafficCount", "text", { types: ["retail"] });
+  metaRow("Clientele", "retailClientele", "text", { types: ["retail"] });
+  metaRow("Free Standing", "freeStanding", "boolean", { types: ["retail"] });
+
+  metaRow("Number of Lots", "numberOfLots", "text", { types: ["land"] });
+  metaRow("Best Use", "bestUse", "text", { types: ["land"] });
+  metaRow("Topography", "topography", "text", { types: ["land"] });
+  metaRow("Soil Type", "soilType", "text", { types: ["land"] });
+
+  metaRow("Zoning", "zoning");
+  metaRow("Parking Spaces", "parkingSpaces");
+
+  const facts: TableBlock = {
+    id: uid("block"),
+    type: "table",
+    title: "Building Information",
+    style: { borderWidth: 1, borderStyle: "solid", borderColor: "#d5dae2" },
+    rows,
+    rowRules,
+  };
+
+  const body: ColumnsBlock = {
     id: uid("block"),
     type: "columns",
     columnCount: 2,
     columns: [
       [
-        heroImage("editor-overview-detail", 640, 440),
+        brandHeading("Property Description", 18),
         {
           id: uid("block"),
-          type: "text",
-          text:
-            property?.name ??
-            "A premier commercial opportunity in a high-growth submarket, offering strong in-place income and significant value-add upside.",
-          style: bodyStyle,
+          type: "dynamic",
+          dynamicKey: "marketing.saleDescription",
+          format: "text",
+          style: { ...DEFAULT_TEXT_STYLE, fontFamily: BRAND.fonts.body, fontSize: 13, lineHeight: 22 },
+        },
+        {
+          id: uid("block"),
+          type: "list",
+          items: [],
+          dynamicKey: "marketing.saleBullets",
+          marker: "bullet",
+          style: { ...DEFAULT_TEXT_STYLE, fontFamily: BRAND.fonts.body, fontSize: 13, lineHeight: 22 },
         },
       ],
-      [highlightsTable],
+      [facts],
     ],
   };
 
   return {
     id: uid("page"),
-    name: "Property Overview",
+    name: "Property Summary",
     logoSrc: LOGO_SRC,
     locked: true,
     blocks: [
-      {
-        id: uid("block"),
-        type: "heading",
-        text: "Property Overview",
-        style: { ...headingStyle, fontSize: 28 },
-      },
-      heroImage("editor-overview-hero", 736, 380),
-      detailRow,
+      { ...heroImage("editor-property-summary", PAGE_WIDTH + PAGE_PADDING * 2, 340), fullBleed: true },
+      { id: uid("block"), type: "heading", text: "Property Summary", style: { ...headingStyle, fontSize: 28 } },
+      { id: uid("block"), type: "text", text: addressOf(property), style: addressStyle },
+      body,
     ],
   };
 }
@@ -152,8 +202,9 @@ function coverMetaLine(property?: Property): string {
 /**
  * Cover — a full-bleed hero photo above a navy band carrying the kicker,
  * property name, address, rule, and type/size line. The hero is sized so the
- * band lands flush on the bottom edge of the page; `bleed` drops the header
- * logo and margins the interior pages carry.
+ * band lands flush on the bottom edge of the page; `chrome: "none"` drops the
+ * logo header and company footer, and `bleed` drops the margins, so the
+ * artwork owns the whole sheet.
  */
 export function buildCoverPage(property?: Property): Page {
   const band: SectionBlock = {
@@ -194,6 +245,7 @@ export function buildCoverPage(property?: Property): Page {
     id: uid("page"),
     name: "Cover Page",
     locked: true,
+    chrome: "none",
     bleed: true,
     blocks: [
       {

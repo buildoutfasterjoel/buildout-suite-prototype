@@ -15,6 +15,7 @@ export function isContainer(block: Block): boolean {
 /** Whether a single (non-container) block carries a live, listing-bound value. */
 function blockHasDynamicContent(block: Block): boolean {
   if (block.type === "dynamic") return true;
+  if (block.type === "list") return block.dynamicKey !== undefined;
   if (block.type === "table") {
     return block.rows.some((row) => row.some((c) => c.dynamicKey !== undefined));
   }
