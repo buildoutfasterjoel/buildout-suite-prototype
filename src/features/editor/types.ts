@@ -1,4 +1,4 @@
-import type { Property } from "#/data/types";
+import type { DealMarketing, Property } from "#/data/types";
 
 /**
  * Document model for the editor prototype.
@@ -42,8 +42,23 @@ export interface CellStyle extends TextStyle {
   borderBottomColor: string | null;
 }
 
-/** Keys of Property that can be surfaced as dynamic data tokens. */
-export type DynamicKey = keyof Property;
+/**
+ * Marketing copy a document can print. `publishFlags` is the stage/visibility
+ * flag set rather than content, and `spaceLeaseTerms` is an array of per-unit
+ * records with no sensible single-value rendering — both are excluded so they
+ * can never be bound by accident.
+ */
+export type MarketingField = Exclude<
+  keyof DealMarketing,
+  "publishFlags" | "spaceLeaseTerms"
+>;
+
+/**
+ * A field a document can bind to: any property fact, or namespaced marketing
+ * copy from the deal. The namespace is additive — every existing `keyof
+ * Property` binding keeps its exact meaning.
+ */
+export type DynamicKey = keyof Property | `marketing.${MarketingField}`;
 
 export interface Cell {
   id: string;
@@ -52,7 +67,7 @@ export interface Cell {
   /** When set, the cell renders the listing's live value for this field. */
   dynamicKey?: DynamicKey;
   /** Optional currency/number formatting hint for dynamic values. */
-  format?: "currency" | "currencyPerSf" | "percent" | "text";
+  format?: "currency" | "currencyPerSf" | "percent" | "text" | "boolean";
   align?: TextAlign;
   header?: boolean;
   style: CellStyle;

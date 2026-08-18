@@ -37,7 +37,8 @@ export function EditorRoot({
   const [switchToClassicOpen, setSwitchToClassicOpen] = useState(false);
 
   useEffect(() => {
-    initDocument(listing, getListing(listingId)?.underwriting);
+    const deal = getListing(listingId);
+    initDocument(listing, deal?.underwriting, deal?.marketing);
   }, [listing, listingId, initDocument]);
 
   // Arriving from the deal's "Review" button — land on the underwriting section.

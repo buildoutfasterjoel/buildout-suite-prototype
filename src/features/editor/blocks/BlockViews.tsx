@@ -31,7 +31,7 @@ import type {
   TextBlock,
   TextStyle,
 } from "../types";
-import { useEditorStore } from "../store";
+import { useDocumentData, useEditorStore } from "../store";
 import { findBlock } from "../tree";
 import { resolveDynamic, resolveField } from "../dynamic";
 import { SortableBlock, ListDropZone } from "../dnd/SortableBlock";
@@ -251,8 +251,8 @@ function ImageBlockView({ block, pageId, selection }: { block: ImageBlock } & Vi
 
 function DynamicBlockView({ block, pageId, selection }: { block: DynamicBlock } & VisualProps) {
   const { selected, onClick } = useBlockSelect(block.id, pageId, selection);
-  const listing = useEditorStore((s) => s.activeListing);
-  const value = resolveField(block.dynamicKey, block.format, listing);
+  const data = useDocumentData();
+  const value = resolveField(block.dynamicKey, block.format, data);
   return (
     <div
       className={`bo-editor-block bo-editor-dynamic${selected ? " is-selected" : ""}`}
@@ -356,7 +356,7 @@ const HANDLE_GAP = 3;
 function TableBlockView({ block, pageId, selection }: { block: TableBlock } & VisualProps) {
   const select = useSelect();
   const setCellValue = useEditorStore((s) => s.setCellValue);
-  const listing = useEditorStore((s) => s.activeListing);
+  const data = useDocumentData();
   const zoom = useEditorStore((s) => s.zoom);
   const selectedBlock = selection?.blockId === block.id && !selection?.cellId;
   const selectedHere = selection?.blockId === block.id;
@@ -503,7 +503,7 @@ function TableBlockView({ block, pageId, selection }: { block: TableBlock } & Vi
                   cell={cell}
                   border={border}
                   selected={selection?.blockId === block.id && selection?.cellId === cell.id}
-                  value={resolveDynamic(cell, listing)}
+                  value={resolveDynamic(cell, data)}
                   editable={!cell.dynamicKey}
                   onChange={(v) => setCellValue(block.id, cell.id, v)}
                   onSelect={(e) => {

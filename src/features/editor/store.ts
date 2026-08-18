@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
-import type { DealUnderwriting, Property } from "#/data/types";
+import type { DealMarketing, DealUnderwriting, Property } from "#/data/types";
 import type {
   Block,
   Cell,
@@ -9,6 +9,7 @@ import type {
   NavPanel,
   Selection,
 } from "./types";
+import type { DocumentData } from "./dynamic";
 import { buildSampleDocument } from "./sampleDocument";
 import { buildBlankPage, buildTemplatePage } from "./templates";
 import { createBlock, createCell, type BlockVariant } from "./blocks/blockFactory";
@@ -33,6 +34,12 @@ interface EditorState {
   /** Pristine copy of the initial document, used to reset tables to template. */
   templateDocument: EditorDocument;
   activeListing: Property | undefined;
+  /**
+   * The deal's marketing copy, bound alongside the property so `marketing.*`
+   * keys resolve. Read-only in the editor — the Edit Listing dialog patches
+   * property facts only.
+   */
+  activeMarketing: DealMarketing | undefined;
   /** True when the document has unsaved edits since the last init/save. */
   dirty: boolean;
   selection: Selection | null;
@@ -54,7 +61,11 @@ interface EditorState {
   sidebarPoppedOpen: boolean;
 
   // Phase 1 actions (selection + navigation + view).
-  initDocument: (listing: Property | undefined, underwriting?: DealUnderwriting) => void;
+  initDocument: (
+    listing: Property | undefined,
+    underwriting?: DealUnderwriting,
+    marketing?: DealMarketing,
+  ) => void;
   /** Clear the dirty flag — called after a Save & Close. */
   markSaved: () => void;
   /** Merge a patch into the bound listing (e.g. from Edit Listing) so dynamic fields refresh. */
@@ -132,6 +143,7 @@ export const useEditorStore = create<EditorState>((set) => {
   document: initialDocument,
   templateDocument: clone(initialDocument),
   activeListing: undefined,
+  activeMarketing: undefined,
   dirty: false,
   // Default to a selected table cell so the contextual style panel shows,
   // matching the Figma reference state.
@@ -145,10 +157,11 @@ export const useEditorStore = create<EditorState>((set) => {
   sidebarPinned: true,
   sidebarPoppedOpen: false,
 
-  initDocument: (listing, underwriting) => {
+  initDocument: (listing, underwriting, marketing) => {
     const document = buildSampleDocument(listing, underwriting);
     set({
       activeListing: listing,
+      activeMarketing: marketing,
       document,
       templateDocument: clone(document),
       selection: null,
@@ -455,5 +468,12 @@ export function resolveSelection(
 export function useSelectedEntities(): SelectedEntities {
   return useEditorStore(
     useShallow((s) => resolveSelection(s.document, s.selection)),
+  );
+}
+
+/** The binding context for dynamic fields — the bound property and its copy. */
+export function useDocumentData(): DocumentData {
+  return useEditorStore(
+    useShallow((s) => ({ property: s.activeListing, marketing: s.activeMarketing })),
   );
 }
