@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { TEMPLATES, buildTemplatePage, buildOnBrandBlankPage } from './templates'
+import { TEMPLATES, buildTemplatePage, buildBlankPage } from './templates'
 import { BRAND } from './brand'
 import type { ImageBlock, SectionBlock } from './types'
 import { PAGE_HEIGHT, PAGE_WIDTH } from './types'
@@ -37,12 +37,13 @@ describe('TEMPLATES registry', () => {
     expect(heading.style.fontFamily).toBe(BRAND.fonts.heading)
   })
 
-  // The cover deliberately opts out of the logo + margin every other page
-  // carries: its hero and title band have to reach the paper's edge, matching
-  // the BOV preview shown before sending.
+  // The cover deliberately opts out of the header/footer chrome and margin
+  // every other page carries: its hero and title band have to reach the paper's
+  // edge, matching the BOV preview shown before sending.
   it('builds the cover as a full-bleed hero over a navy title band', () => {
     const cover = buildTemplatePage('cover')
     expect(cover.bleed).toBe(true)
+    expect(cover.chrome).toBe('none')
     expect(cover.logoSrc).toBeUndefined()
     expect(cover.blocks[0].type).toBe('image')
 
@@ -62,17 +63,18 @@ describe('TEMPLATES registry', () => {
   })
 })
 
-describe('buildOnBrandBlankPage', () => {
+describe('buildBlankPage', () => {
   it('is freeform (not locked) but carries the brand logo', () => {
-    const page = buildOnBrandBlankPage()
+    const page = buildBlankPage()
     expect(page.locked ?? false).toBe(false)
     expect(page.logoSrc).toBe(BRAND.logoSrc)
   })
 
-  it('seeds a brand-font title and a light scaffold', () => {
-    const page = buildOnBrandBlankPage()
-    const heading = page.blocks.find((b) => b.type === 'heading') as { style: { fontFamily: string } }
-    expect(heading.style.fontFamily).toBe(BRAND.fonts.heading)
-    expect(page.blocks.some((b) => b.type === 'columns')).toBe(true)
+  // The header and footer are page chrome, not blocks — so a blank page starts
+  // with an empty body and still reads as the company's.
+  it('starts with no blocks and takes the default base chrome', () => {
+    const page = buildBlankPage()
+    expect(page.blocks).toEqual([])
+    expect(page.chrome ?? 'base').toBe('base')
   })
 })

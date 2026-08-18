@@ -40,4 +40,4 @@ export function buildTemplatePage(key: string, property?: Property): Page {
   return def.build(property);
 }
 
-export { buildBlankPage, buildOnBrandBlankPage } from "./blankPages";
+export { buildBlankPage } from "./blankPages";

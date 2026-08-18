@@ -173,9 +173,19 @@ export interface Page {
   /** Hidden pages stay in the document but are excluded from the exported/rendered output. */
   hidden?: boolean;
   /**
-   * Full-bleed pages render their blocks edge to edge — no header logo, no page
-   * margin, no gap between blocks. Used by cover pages, whose hero photo and
-   * title band run to the paper's edge.
+   * Page chrome — the brand logo header and the company footer that frame a
+   * base page's content. `"base"` (the default) draws both; `"none"` hands the
+   * whole sheet to the page's own blocks. Covers opt out, and so will the other
+   * bespoke layouts that follow them.
+   *
+   * Kept separate from `bleed` on purpose: a page can want the full sheet
+   * without wanting edge-to-edge artwork, and vice versa.
+   */
+  chrome?: "base" | "none";
+  /**
+   * Full-bleed pages render their blocks edge to edge — no page margin, no gap
+   * between blocks. Used by cover pages, whose hero photo and title band run to
+   * the paper's edge.
    */
   bleed?: boolean;
   blocks: Block[];

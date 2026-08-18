@@ -44,7 +44,7 @@ export function TemplateGallery({
             Add a page
           </Modal.Title>
           <Modal.Description>
-            Start from a designer template — or an on-brand blank page you control.
+            Start from a designer template — or a blank page you build yourself.
           </Modal.Description>
         </Modal.Header>
         <Modal.Body>
@@ -68,20 +68,12 @@ export function TemplateGallery({
             {/* Template grid */}
             <div className="d-flex flex-wrap gap-3 flex-grow-1">
               {active === "Blank" ? (
-                <>
-                  <BlankCard
-                    icon={faFileLines}
-                    title="Blank page"
-                    desc="A truly empty page — full manual control."
-                    onClick={() => pick("blank")}
-                  />
-                  <BlankCard
-                    icon={faSwatchbook}
-                    title="On-brand blank"
-                    desc="Freeform, but your brand fonts, colors, and logo are pre-applied."
-                    onClick={() => pick("onBrandBlank")}
-                  />
-                </>
+                <BlankCard
+                  icon={faFileLines}
+                  title="Blank page"
+                  desc="Your company header and footer; everything between them is yours to build."
+                  onClick={() => pick("blank")}
+                />
               ) : (
                 templatesInCategory.map((t) => (
                   <button

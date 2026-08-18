@@ -152,8 +152,9 @@ function coverMetaLine(property?: Property): string {
 /**
  * Cover — a full-bleed hero photo above a navy band carrying the kicker,
  * property name, address, rule, and type/size line. The hero is sized so the
- * band lands flush on the bottom edge of the page; `bleed` drops the header
- * logo and margins the interior pages carry.
+ * band lands flush on the bottom edge of the page; `chrome: "none"` drops the
+ * logo header and company footer, and `bleed` drops the margins, so the
+ * artwork owns the whole sheet.
  */
 export function buildCoverPage(property?: Property): Page {
   const band: SectionBlock = {
@@ -194,6 +195,7 @@ export function buildCoverPage(property?: Property): Page {
     id: uid("page"),
     name: "Cover Page",
     locked: true,
+    chrome: "none",
     bleed: true,
     blocks: [
       {

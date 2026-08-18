@@ -69,7 +69,7 @@ export function Canvas() {
       </div>
       <div ref={workspaceRef} className="bo-editor-workspace" onClick={clearSelection}>
         <div className="bo-editor-pages" style={{ transform: `scale(${zoom})` }}>
-          {pages.map((page) => (
+          {pages.map((page, i) => (
             <div
               key={page.id}
               data-page-id={page.id}
@@ -78,7 +78,9 @@ export function Canvas() {
               // dim to signal they're excluded from the rendered/exported output.
               style={page.hidden ? { opacity: 0.4 } : undefined}
             >
-              <PageView page={page} selection={selection} />
+              {/* Footer page numbers count document position, matching the
+                  index shown against each row in the Pages panel. */}
+              <PageView page={page} selection={selection} pageNumber={i + 1} />
             </div>
           ))}
         </div>
