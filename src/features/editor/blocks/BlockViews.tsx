@@ -37,6 +37,14 @@ import type {
 import { useDocumentData, useEditorStore } from "../store";
 import { findBlock } from "../tree";
 import { resolveDynamic, resolveField, resolveList } from "../dynamic";
+import {
+  hasTokens,
+  hydrateTokens,
+  isTokenChip,
+  normalizePastedHtml,
+  serializeTokens,
+  TOKEN_ATTR,
+} from "../inlineTokens";
 import { contentsEntries, contentsIndexLabel } from "../contents";
 import { MAP_FALLBACK_CENTER, mapSizeHeight } from "./mapStyles";
 import { BRAND } from "../brand";
@@ -1167,11 +1175,43 @@ function CellView({
 }
 
 /**
- * Inline-editable text. The DOM is the source of truth while typing; we only
- * rewrite it when the external value diverges, so committing an edit never
- * resets the caret. A CSS placeholder shows when empty. Used by heading/text
- * blocks and (via EditableCellText) table cells — content editing that stays
- * available even on locked preset pages.
+ * The chip immediately before (`dir === -1`) or after the caret, if any. Only a
+ * collapsed selection sitting flush against a chip counts — mid-text the caret
+ * has its own character to delete.
+ */
+function adjacentTokenChip(range: Range, dir: -1 | 1): HTMLElement | null {
+  const container = range.startContainer;
+  const offset = range.startOffset;
+  if (container.nodeType === Node.TEXT_NODE) {
+    const atEdge =
+      dir === -1 ? offset === 0 : offset === (container.textContent?.length ?? 0);
+    if (!atEdge) return null;
+    const sibling = dir === -1 ? container.previousSibling : container.nextSibling;
+    return isTokenChip(sibling) ? sibling : null;
+  }
+  const child = container.childNodes[dir === -1 ? offset - 1 : offset];
+  return isTokenChip(child) ? child : null;
+}
+
+/**
+ * Inline-editable rich text with inline dynamic fields.
+ *
+ * The DOM is the source of truth while typing, so committing an edit never
+ * resets the caret. Inline tokens complicate that: the DOM holds *resolved*
+ * chips while the store holds `{{property.city}}`, so `innerHTML !== value` no
+ * longer means "diverged". Two rules keep them straight:
+ *
+ * - While the element has focus, the DOM wins. We rewrite only when serializing
+ *   the DOM back to token form yields something other than the stored value —
+ *   i.e. the store changed from outside (undo, Otto, a template swap), which is
+ *   the one case worth a caret for.
+ * - While it doesn't have focus, the store wins, and we re-hydrate freely. That
+ *   is what refreshes every chip when the document is pointed at another
+ *   listing, without ever stomping a caret to do it.
+ *
+ * A CSS placeholder shows when empty. Used by heading/text blocks, list items,
+ * and (via EditableCellText) table cells — content editing that stays available
+ * even on locked preset pages.
  */
 function InlineText({
   value,
@@ -1185,14 +1225,21 @@ function InlineText({
   className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const data = useDocumentData();
 
-  // The stored value is HTML (the rich-text toolbar formats via execCommand,
-  // which writes inline tags). Rewrite only when it diverges from the DOM so
-  // committing an edit or applying formatting never resets the caret.
   useLayoutEffect(() => {
     const el = ref.current;
-    if (el && el.innerHTML !== value) el.innerHTML = value;
-  }, [value]);
+    if (!el) return;
+    if (document.activeElement === el) {
+      if (serializeTokens(el) !== value) el.innerHTML = hydrateTokens(value, data);
+      return;
+    }
+    const display = hydrateTokens(value, data);
+    if (el.innerHTML !== display) el.innerHTML = display;
+  }, [value, data]);
+
+  /** Persist the DOM in stored (token) form. */
+  const commit = (el: HTMLElement) => onChange(serializeTokens(el));
 
   return (
     <div
@@ -1203,8 +1250,44 @@ function InlineText({
       role="textbox"
       aria-label={placeholder}
       data-placeholder={placeholder}
-      onInput={(e) => onChange(e.currentTarget.innerHTML)}
+      onInput={(e) => commit(e.currentTarget)}
+      onPaste={(e) => {
+        // Only intercept a paste that carries tokens; everything else keeps the
+        // browser's own behaviour, which this feature has no business changing.
+        const html = e.clipboardData.getData("text/html");
+        const text = e.clipboardData.getData("text/plain");
+        const pasted = html.includes(TOKEN_ATTR)
+          ? normalizePastedHtml(html, data)
+          : hasTokens(text)
+            ? hydrateTokens(text, data)
+            : null;
+        if (pasted == null) return;
+        e.preventDefault();
+        document.execCommand("insertHTML", false, pasted);
+        commit(e.currentTarget);
+      }}
       onKeyDown={(e) => {
+        // A chip deletes as one unit. Browsers otherwise disagree about a
+        // non-editable inline: some select it first, some erase its text.
+        if (e.key === "Backspace" || e.key === "Delete") {
+          const sel = window.getSelection();
+          if (sel && sel.rangeCount > 0 && sel.isCollapsed) {
+            const chip = adjacentTokenChip(
+              sel.getRangeAt(0),
+              e.key === "Backspace" ? -1 : 1,
+            );
+            if (chip) {
+              // Fully consumed: ListBlockView also watches Backspace to remove
+              // an empty item, and an item holding only a chip must not lose
+              // both the chip and the row to one keystroke.
+              e.preventDefault();
+              e.stopPropagation();
+              chip.remove();
+              commit(e.currentTarget);
+              return;
+            }
+          }
+        }
         // Enter commits and exits rather than inserting a newline.
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault();

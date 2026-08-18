@@ -14,6 +14,7 @@ import {
   faMapLocationDot,
 } from "@fortawesome/pro-regular-svg-icons";
 import { DYNAMIC_FIELD_LABELS } from "../dynamic";
+import { plainTextPreview } from "../inlineTokens";
 import type { Block, BlockType } from "../types";
 
 export const BLOCK_ICONS: Record<BlockType, IconDefinition> = {
@@ -31,13 +32,20 @@ export const BLOCK_ICONS: Record<BlockType, IconDefinition> = {
   divider: faGripLines,
 };
 
-/** Short human label for a block — used in layers, breadcrumb, drag preview. */
+/**
+ * Short human label for a block — used in layers, breadcrumb, drag preview.
+ *
+ * Heading and text carry rich-text HTML with inline field tokens, so they go
+ * through `plainTextPreview`: a bolded heading should read as its words, and a
+ * heading that is entirely one token should read as that field's name, not as
+ * `{{property.name}}`.
+ */
 export function blockLabel(block: Block): string {
   switch (block.type) {
     case "heading":
-      return block.text || "Heading";
+      return plainTextPreview(block.text) || "Heading";
     case "text":
-      return block.text || "Text";
+      return plainTextPreview(block.text) || "Text";
     case "table":
       return block.title || "Table";
     case "image":
