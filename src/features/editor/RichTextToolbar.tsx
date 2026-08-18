@@ -7,15 +7,21 @@ import {
   faStrikethrough,
   faMinus,
   faPlus,
+  faDatabase,
 } from "@fortawesome/pro-regular-svg-icons";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
+import { Combobox } from "@buildoutinc/blueprint-react/ui/Combobox";
 import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import {
   ToggleButtonGroup,
   type ToggleItem,
 } from "./controls/ToggleButtonGroup";
-import { useSelectedEntities } from "./store";
+import { useDocumentData, useSelectedEntities } from "./store";
+import { INLINE_FIELD_GROUPS } from "./dynamic";
+import type { InlineFieldGroup, InlineFieldOption } from "./dynamic";
+import { tokenChipHtml } from "./inlineTokens";
+import type { DynamicKey } from "./types";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
@@ -94,9 +100,13 @@ function currentFontSizePx(editable: HTMLElement): number {
  * execCommand: a highlighted range is formatted in place, while a collapsed
  * caret formats the whole node (we select-all first). Persistence flows through
  * the contentEditable's own `input` handler (see InlineText).
+ *
+ * "Insert Field" drops an inline dynamic field at the caret — a `{{...}}` token
+ * in the store, an atomic chip on the canvas (see inlineTokens.ts).
  */
 export function RichTextToolbar() {
   const { block, cell } = useSelectedEntities();
+  const data = useDocumentData();
 
   // Text nodes: heading/text blocks, or a static (non-dynamic) table cell.
   const isTextNode =
@@ -107,6 +117,9 @@ export function RichTextToolbar() {
 
   const [format, setFormat] = useState<FormatState>(EMPTY_FORMAT);
   const [sizeInput, setSizeInput] = useState(String(DEFAULT_FONT_SIZE));
+  // The field picker's search text. Controlled so it can be wiped after an
+  // insert — see the Combobox below.
+  const [fieldQuery, setFieldQuery] = useState("");
   // Stays mounted through the slide-out animation after `open` flips false.
   const [mounted, setMounted] = useState(false);
 
@@ -249,6 +262,73 @@ export function RichTextToolbar() {
     [getActiveEditable, refreshFormat],
   );
 
+  /**
+   * Drop an inline dynamic field at the caret. Deliberately not `runCommand`:
+   * that helper select-alls when there is no highlight, which is right for
+   * "bold this whole heading" and catastrophic for an insert — it would replace
+   * the block's text with the chip. Here a lost selection collapses to the end
+   * of the node instead.
+   */
+  const insertField = useCallback(
+    (key: DynamicKey) => {
+      const el = getActiveEditable();
+      if (!el) return;
+      // Whether the caret was still in the block must be read BEFORE focusing
+      // it. The field picker is a text input, which takes the document
+      // selection with it; `el.focus()` then manufactures a caret at offset 0
+      // that passes an "is the selection inside el?" test while pointing
+      // nowhere the user put it. Asking first is what routes us to the range
+      // saved on the way out.
+      const hadFocus = document.activeElement === el;
+      el.focus();
+      const sel = window.getSelection();
+      if (!sel) return;
+
+      const liveInside =
+        hadFocus && sel.rangeCount > 0 && el.contains(sel.anchorNode);
+      if (!liveInside) {
+        const saved = savedRangeRef.current;
+        const range = document.createRange();
+        if (saved && el.contains(saved.commonAncestorContainer)) {
+          range.setStart(saved.endContainer, saved.endOffset);
+        } else {
+          range.selectNodeContents(el);
+        }
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } else if (!sel.isCollapsed) {
+        // A highlighted range is replaced by the field, matching how typing
+        // over a selection behaves.
+        sel.getRangeAt(0).deleteContents();
+      }
+
+      // The marker lets us find the chip we just inserted and park the caret
+      // after it — without it, the next keystroke can land inside the chip in
+      // some browsers. It is stripped before the input event, so it never
+      // reaches the store.
+      document.execCommand(
+        "insertHTML",
+        false,
+        tokenChipHtml(key, data, "data-token-new=\"true\""),
+      );
+      const fresh = el.querySelector<HTMLElement>("[data-token-new]");
+      if (fresh) {
+        fresh.removeAttribute("data-token-new");
+        const after = document.createRange();
+        after.setStartAfter(fresh);
+        after.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(after);
+        savedRangeRef.current = after.cloneRange();
+      }
+
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      refreshFormat();
+    },
+    [getActiveEditable, refreshFormat, data],
+  );
+
   const applyFontSize = useCallback(
     (px: number) => {
       const clamped = Math.max(FONT_SIZE_MIN, Math.min(FONT_SIZE_MAX, px));
@@ -385,6 +465,65 @@ export function RichTextToolbar() {
               </Tooltip>
             </InputGroup.Addon>
           </InputGroup>
+
+          <Separator
+            orientation="vertical"
+            className="align-self-stretch h-auto"
+          />
+
+          {/* Searchable rather than a plain list: the field vocabulary is
+              expected to grow well past the twenty-odd here, and a broker who
+              knows they want "Year Built" should not have to find which section
+              it lives in. Both the value and the input text are controlled at
+              empty, because picking a field is an action, not a setting — a
+              retained "City" in the box would read as though the block were
+              bound to City, the very claim inline tokens exist to avoid. */}
+          <Combobox
+            items={INLINE_FIELD_GROUPS}
+            value={null}
+            inputValue={fieldQuery}
+            onInputValueChange={(value) => setFieldQuery(value)}
+            // base-ui filters and renders items through this, so without it
+            // typing "City" against option objects matches nothing.
+            itemToStringLabel={(item: InlineFieldOption) => item.label}
+            onValueChange={(value) => {
+              if (!value) return;
+              insertField((value as InlineFieldOption).key);
+              setFieldQuery("");
+            }}
+          >
+            <Combobox.InputGroup className="w-auto">
+              <InputGroup.Addon>
+                <FontAwesomeIcon icon={faDatabase} />
+              </InputGroup.Addon>
+              <Combobox.Input
+                placeholder="Insert field"
+                aria-label="Insert field"
+                className="flex-grow-0 flex-shrink-0"
+                style={{ width: 150 }}
+                showTrigger
+              />
+            </Combobox.InputGroup>
+            <Combobox.Content>
+              <Combobox.Empty className="text-muted">
+                No matching field
+              </Combobox.Empty>
+              <Combobox.List>
+                {(group: InlineFieldGroup) => (
+                  <Combobox.Group key={group.label} items={group.items}>
+                    <Combobox.GroupLabel>{group.label}</Combobox.GroupLabel>
+                    <Combobox.Collection>
+                      {(item: InlineFieldOption) => (
+                        <Combobox.Item key={item.key} value={item}>
+                          {item.label}
+                        </Combobox.Item>
+                      )}
+                    </Combobox.Collection>
+                  </Combobox.Group>
+                )}
+              </Combobox.List>
+            </Combobox.Content>
+          </Combobox>
         </div>
       </div>
     </div>

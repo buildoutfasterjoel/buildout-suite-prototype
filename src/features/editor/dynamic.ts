@@ -33,6 +33,78 @@ export const DYNAMIC_FIELD_LABELS: Partial<Record<DynamicKey, string>> = {
   "marketing.locationDescription": "Location Description",
 };
 
+/**
+ * Default formatting for an inline token. A whole-block or table-cell binding
+ * carries its own `format` hint, but a token written mid-sentence has nowhere to
+ * put one and liquid filters are deliberately out of scope — so the format is a
+ * property of the field itself. Anything absent here formats as text, which
+ * already handles thousands separators and joins arrays.
+ */
+export const INLINE_FIELD_FORMAT: Partial<Record<DynamicKey, Cell["format"]>> = {
+  askingPrice: "currency",
+  noi: "currency",
+  capRate: "percent",
+  yearBuilt: "year",
+};
+
+/** One selectable field in the "Insert Field" picker. */
+export interface InlineFieldOption {
+  key: DynamicKey;
+  label: string;
+}
+
+/** A titled section of the picker. */
+export interface InlineFieldGroup {
+  label: string;
+  items: InlineFieldOption[];
+}
+
+/**
+ * The fields the "Insert Field" picker offers, grouped so the list can be
+ * skimmed by section rather than read end to end. The keys are the same
+ * vocabulary `DYNAMIC_FIELD_LABELS` names; the grouping is presentation only.
+ * Labels are resolved here rather than at the call site so the picker can
+ * filter on them.
+ */
+const INLINE_FIELD_KEYS: { label: string; keys: DynamicKey[] }[] = [
+  { label: "Deal", keys: ["name"] },
+  { label: "Location", keys: ["street", "city", "state", "zip", "county"] },
+  {
+    label: "Building",
+    keys: [
+      "propertyType",
+      "buildingSqFt",
+      "lotSqFt",
+      "yearBuilt",
+      "buildingClass",
+      "parkingSpaces",
+    ],
+  },
+  { label: "Financials", keys: ["askingPrice", "capRate", "noi"] },
+  {
+    label: "Marketing Copy",
+    keys: [
+      "marketing.saleTitle",
+      "marketing.saleDescription",
+      "marketing.saleBullets",
+      "marketing.leaseTitle",
+      "marketing.leaseDescription",
+      "marketing.leaseBullets",
+      "marketing.locationDescription",
+    ],
+  },
+];
+
+export const INLINE_FIELD_GROUPS: InlineFieldGroup[] = INLINE_FIELD_KEYS.map(
+  (group) => ({
+    label: group.label,
+    items: group.keys.map((key) => ({
+      key,
+      label: DYNAMIC_FIELD_LABELS[key] ?? key,
+    })),
+  }),
+);
+
 function currency(value: number): string {
   return `$${Math.round(value).toLocaleString("en-US")}`;
 }
