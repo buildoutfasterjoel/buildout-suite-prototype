@@ -4,6 +4,7 @@ import type {
   ColumnsBlock,
   ContentBlock,
   DynamicKey,
+  MapBlock,
   Page,
   RowVisibility,
   SectionBlock,
@@ -468,17 +469,76 @@ export function buildFinancialHeroPage(property?: Property): Page {
   };
 }
 
-/** Location & Map — map image left, submarket/city narrative right. */
-export function buildLocationMapPage(property?: Property): Page {
-  const row: ColumnsBlock = {
-    id: uid("block"), type: "columns", columnCount: 2,
-    columns: [
-      [{ id: uid("block"), type: "image", src: getPhotoUrl((property?.id ?? "loc") + "-map", 380, 300), alt: "Location map" }],
-      [brandHeading("Location", 22), brandBody(property?.city ? `Located in ${property.city}, ${property.state}.` : "A well-connected submarket with strong fundamentals."),
-       { id: uid("block"), type: "dynamic", dynamicKey: "submarket", style: { ...DEFAULT_TEXT_STYLE, fontFamily: BRAND.fonts.body, fontSize: 13 } }],
+/* ── Location ──────────────────────────────────────────────────────────── */
+
+/**
+ * Location — a real map of the deal's address across the top, then the location
+ * narrative beside a table of where the property actually sits. The map replaced
+ * a stand-in photo of a map: it is a `map` block, so its style, zoom, size, and
+ * frame are the user's to change, and it re-centers itself on whatever listing
+ * the document is bound to.
+ *
+ * The map is seeded at `md` (360px) rather than `lg`: a base page has ~814px of
+ * content stack, and the heading plus this two-column row need the rest.
+ */
+export function buildLocationMapPage(_property?: Property): Page {
+  const map: MapBlock = {
+    id: uid("block"),
+    type: "map",
+    mapStyle: "streets",
+    zoom: 14,
+    size: "md",
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: "#d5dae2",
+  };
+
+  const facts: TableBlock = {
+    id: uid("block"),
+    type: "table",
+    title: "Location",
+    style: { borderWidth: 1, borderStyle: "solid", borderColor: "#d5dae2" },
+    rows: [
+      [headerCell("Address"), valueCell("—", "street", "text")],
+      [headerCell("City"), valueCell("—", "city", "text")],
+      [headerCell("State"), valueCell("—", "state", "text")],
+      [headerCell("County"), valueCell("—", "county", "text")],
+      [headerCell("Submarket"), valueCell("—", "submarket", "text")],
     ],
   };
-  return { id: uid("page"), name: "Location", logoSrc: BRAND.logoSrc, locked: true, blocks: [brandHeading("Location Information"), row] };
+
+  const row: ColumnsBlock = {
+    id: uid("block"),
+    type: "columns",
+    columnCount: 2,
+    columns: [
+      [
+        brandHeading("Location Overview", 18),
+        {
+          id: uid("block"),
+          type: "dynamic",
+          dynamicKey: "marketing.locationDescription",
+          format: "text",
+          style: {
+            ...DEFAULT_TEXT_STYLE,
+            fontFamily: BRAND.fonts.body,
+            fontSize: 13,
+            lineHeight: 22,
+            color: BRAND.palette.ink,
+          },
+        },
+      ],
+      [facts],
+    ],
+  };
+
+  return {
+    id: uid("page"),
+    name: "Location",
+    logoSrc: BRAND.logoSrc,
+    locked: true,
+    blocks: [brandHeading("Location Information"), map, row],
+  };
 }
 
 /** Comparables Grid — three comps, each a photo + label. */

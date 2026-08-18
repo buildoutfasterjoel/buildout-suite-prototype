@@ -468,6 +468,34 @@
   color: tokens.$body-text-muted;
 }
 
+/* ---- Map block ----
+ * Leaflet needs a positioned, definite-height box; the block clips its tiles so
+ * a border reads as a frame around the map rather than a line beside it. */
+.bo-editor-map {
+  position: relative;
+  overflow: hidden;
+}
+/* A `full` map has no height of its own. The flex item in the page's block stack
+ * is the sortable wrapper, not the block, so the wrapper is what has to grow. */
+.bo-editor-sortable:has(> .bo-editor-map.is-full) {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.bo-editor-map.is-full {
+  height: 100%;
+}
+.bo-editor-map-placeholder {
+  height: 100%;
+  width: 100%;
+  background: tokens.$storm-grey-100;
+}
+/* Leaflet's default pane z-indexes (up to 800) sit above the editor's floating
+ * toolbars, so keep the whole map under them. */
+.bo-editor-map .leaflet-container {
+  z-index: 0;
+  font-family: inherit;
+}
+
 /* ---- Layout (container) blocks ---- */
 .bo-editor-columns {
   display: flex;

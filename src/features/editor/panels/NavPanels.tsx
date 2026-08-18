@@ -629,6 +629,12 @@ const CONTENT_BLOCKS: PaletteEntry[] = [
     desc: "Photo or logo",
   },
   {
+    type: "map",
+    icon: BLOCK_ICONS.map,
+    label: "Map",
+    desc: "Map of the deal's address",
+  },
+  {
     type: "dynamic",
     icon: BLOCK_ICONS.dynamic,
     label: "Dynamic Field",

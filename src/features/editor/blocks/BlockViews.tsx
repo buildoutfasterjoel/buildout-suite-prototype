@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -26,6 +26,7 @@ import type {
   HeadingBlock,
   ImageBlock,
   ListBlock,
+  MapBlock,
   SectionBlock,
   Selection,
   SpacerBlock,
@@ -37,12 +38,16 @@ import { useDocumentData, useEditorStore } from "../store";
 import { findBlock } from "../tree";
 import { resolveDynamic, resolveField, resolveList } from "../dynamic";
 import { contentsEntries, contentsIndexLabel } from "../contents";
+import { MAP_FALLBACK_CENTER, mapSizeHeight } from "./mapStyles";
 import { BRAND } from "../brand";
 import { trailingRowInsertIndex, visibleRows } from "./rowVisibility";
 import { SortableBlock, ListDropZone } from "../dnd/SortableBlock";
 import type { ListLocation } from "../dnd/dndTypes";
 import { blockLabel } from "./blockMeta";
 import { fullBleedStyle } from "./fullBleed";
+
+/** Leaflet reads `window` at module load, so the map canvas never reaches SSR. */
+const MapCanvas = lazy(() => import("./MapCanvas"));
 
 function textStyleToCss(style: TextStyle): CSSProperties {
   return {
@@ -313,6 +318,52 @@ function ContentsBlockView({ block, pageId, selection }: { block: ContentsBlock 
   );
 }
 
+/**
+ * Map block — a map of the bound deal, sized and framed by its own controls.
+ * The center is derived from the property rather than stored, so the map follows
+ * the document's binding instead of having to be re-pointed by hand.
+ */
+function MapBlockView({ block, pageId, selection }: { block: MapBlock } & VisualProps) {
+  const { selected, onClick } = useBlockSelect(block.id, pageId, selection);
+  const { property } = useDocumentData();
+
+  // Mirrors `PropertyMap`: mount first, then load Leaflet, so the dynamic import
+  // stays out of the SSR render path entirely.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const height = mapSizeHeight(block.size);
+  const center: [number, number] =
+    property?.lat != null && property?.lng != null
+      ? [property.lat, property.lng]
+      : MAP_FALLBACK_CENTER;
+  const framed = block.borderWidth > 0 && block.borderStyle !== "none";
+
+  return (
+    <div
+      className={`bo-editor-block bo-editor-map${height === null ? " is-full" : ""}${selected ? " is-selected" : ""}`}
+      onClick={onClick}
+      style={{
+        height: height ?? undefined,
+        // `full` takes its height from the page instead: the `.is-full` rule in
+        // editor.scss grows the sortable wrapper, which is the actual flex item.
+        minHeight: height ?? 200,
+        border: framed
+          ? `${block.borderWidth}px ${block.borderStyle} ${block.borderColor ?? "transparent"}`
+          : undefined,
+      }}
+    >
+      {mounted ? (
+        <Suspense fallback={<div className="bo-editor-map-placeholder" />}>
+          <MapCanvas block={block} center={center} />
+        </Suspense>
+      ) : (
+        <div className="bo-editor-map-placeholder" />
+      )}
+    </div>
+  );
+}
+
 function BlockVisual({
   block,
   pageId,
@@ -337,6 +388,8 @@ function BlockVisual({
       return <ListBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "contents":
       return <ContentsBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
+    case "map":
+      return <MapBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "spacer":
       return <SpacerBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "divider":

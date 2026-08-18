@@ -6,7 +6,8 @@ import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 
 export interface ToggleItem<T extends string> {
   value: T;
-  icon: IconDefinition;
+  /** Omit for a text item — the label renders in place of an icon. */
+  icon?: IconDefinition;
   label: string;
 }
 
@@ -15,7 +16,8 @@ export interface ToggleItem<T extends string> {
  * multi-select (e.g. bold + italic) or single-select (alignment). Each item is
  * a ghost Button; the `active` class shows the pressed state. Pass `tooltips`
  * to surface each item's label on hover (used by the floating toolbar, where
- * there are no adjacent text labels).
+ * there are no adjacent text labels). An item with no `icon` renders its label
+ * as text instead — for value sets that have no glyph (map size S/M/L/Full).
  */
 export function ToggleButtonGroup<T extends string>({
   items,
@@ -41,13 +43,13 @@ export function ToggleButtonGroup<T extends string>({
           <Button
             type="button"
             variant="ghost"
-            size="icon"
+            size={item.icon ? "icon" : "sm"}
             className={isActive ? "active" : undefined}
             aria-label={item.label}
             aria-pressed={isActive}
             onClick={() => onToggle?.(item.value)}
           >
-            <FontAwesomeIcon icon={item.icon} />
+            {item.icon ? <FontAwesomeIcon icon={item.icon} /> : item.label}
           </Button>
         );
 

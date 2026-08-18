@@ -14,6 +14,7 @@ import {
 import {
   buildContentsPage,
   buildCoverPage,
+  buildLocationMapPage,
   buildPhotoGalleryPage,
   buildPropertyDescriptionPage,
   buildFinancialSummaryPage,
@@ -107,13 +108,8 @@ export function buildDocumentPages(
     }),
     // Keeps the section name the document's contents already advertises.
     withPageIdentity(buildPhotoGalleryPage(property), "Additional Photos"),
-    buildStubPage(property, {
-      name: "Location Map",
-      seed: "editor-location-map",
-      dynamicKey: "city",
-      dynamicLabel: "City",
-      format: "text",
-    }),
+    // Keeps the section name the document's contents already advertises.
+    withPageIdentity(buildLocationMapPage(property), "Location Map"),
     buildStubPage(property, {
       name: "Site Plans",
       seed: "editor-site-plans",

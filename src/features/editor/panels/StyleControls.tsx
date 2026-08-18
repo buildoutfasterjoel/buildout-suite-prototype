@@ -1,4 +1,5 @@
 import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
+import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import {
   faBold,
   faItalic,
@@ -10,13 +11,32 @@ import {
   faListUl,
   faListOl,
   faBan,
+  faMap,
+  faSatellite,
+  faMountains,
 } from "@fortawesome/pro-regular-svg-icons";
 import { EditorOption } from "../controls/EditorOption";
 import { Slider } from "../controls/Slider";
 import { SwatchGrid } from "../controls/SwatchGrid";
 import { ToggleButtonGroup, type ToggleItem } from "../controls/ToggleButtonGroup";
 import { FauxSelect } from "./FauxSelect";
-import type { Block, Cell, ImageBlock, ListBlock, TextStyle } from "../types";
+import type {
+  Block,
+  BorderStyle,
+  Cell,
+  ImageBlock,
+  ListBlock,
+  MapBlock,
+  MapSize,
+  MapStyle,
+  TextStyle,
+} from "../types";
+import {
+  MAP_SIZES,
+  MAP_ZOOM_MAX,
+  MAP_ZOOM_MIN,
+  mapStyleDef,
+} from "../blocks/mapStyles";
 import { blockLabel } from "../blocks/blockMeta";
 import { DYNAMIC_FIELD_LABELS } from "../dynamic";
 import { useEditorStore } from "../store";
@@ -146,6 +166,108 @@ function cap(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+const MAP_STYLE_ITEMS: ToggleItem<MapStyle>[] = [
+  { value: "streets", icon: faMap, label: "Streets" },
+  { value: "satellite", icon: faSatellite, label: "Satellite" },
+  { value: "terrain", icon: faMountains, label: "Terrain" },
+];
+
+const MAP_SIZE_ITEMS: ToggleItem<MapSize>[] = MAP_SIZES.map((s) => ({
+  value: s.key,
+  label: s.label,
+}));
+
+const BORDER_STYLES: BorderStyle[] = ["none", "solid", "dashed", "dotted"];
+
+/**
+ * Map block controls — the editor's first controls that actually mutate the
+ * block they describe (the font and table panels remain presentational). Zoom is
+ * capped at what the chosen style serves: past a source's `maxZoom` the tiles
+ * 404 and the map goes grey, so the slider's ceiling moves with the style.
+ */
+function MapStyleControls({ block }: { block: MapBlock }) {
+  const updateMapBlock = useEditorStore((s) => s.updateMapBlock);
+  const maxZoom = Math.min(MAP_ZOOM_MAX, mapStyleDef(block.mapStyle).maxZoom);
+
+  return (
+    <div className="d-flex flex-column gap-4">
+      <div className="d-flex flex-column gap-3">
+        <span className="bo-editor-section-title">Map</span>
+        <EditorOption label="Type">
+          <ToggleButtonGroup
+            items={MAP_STYLE_ITEMS}
+            active={[block.mapStyle]}
+            onToggle={(mapStyle) =>
+              updateMapBlock(block.id, {
+                mapStyle,
+                // Keep the view legal when moving to a shallower source.
+                zoom: Math.min(block.zoom, mapStyleDef(mapStyle).maxZoom),
+              })
+            }
+          />
+        </EditorOption>
+        <EditorOption label="Zoom">
+          <Slider
+            value={Math.min(block.zoom, maxZoom)}
+            min={MAP_ZOOM_MIN}
+            max={maxZoom}
+            unit=""
+            onChange={(zoom) => updateMapBlock(block.id, { zoom })}
+          />
+        </EditorOption>
+        <EditorOption label="Size">
+          <ToggleButtonGroup
+            items={MAP_SIZE_ITEMS}
+            active={[block.size]}
+            onToggle={(size) => updateMapBlock(block.id, { size })}
+          />
+        </EditorOption>
+        <p className="fs-small mb-0" style={{ color: "#506079" }}>
+          Centered on the deal's address — the map follows the listing this
+          document is bound to.
+        </p>
+      </div>
+
+      <Separator />
+
+      <div className="d-flex flex-column gap-3">
+        <span className="bo-editor-section-title">Border</span>
+        <EditorOption label="Border Width">
+          <Slider
+            value={block.borderWidth}
+            min={0}
+            max={12}
+            onChange={(borderWidth) => updateMapBlock(block.id, { borderWidth })}
+          />
+        </EditorOption>
+        <EditorOption label="Border Style">
+          <Select
+            value={block.borderStyle}
+            onValueChange={(v) => v && updateMapBlock(block.id, { borderStyle: v as BorderStyle })}
+          >
+            <Select.Trigger className="w-100">
+              <Select.Value />
+            </Select.Trigger>
+            <Select.Content>
+              {BORDER_STYLES.map((style) => (
+                <Select.Item key={style} value={style}>
+                  {cap(style)}
+                </Select.Item>
+              ))}
+            </Select.Content>
+          </Select>
+        </EditorOption>
+        <EditorOption label="Border Color" orientation="vertical">
+          <SwatchGrid
+            value={block.borderColor}
+            onChange={(borderColor) => updateMapBlock(block.id, { borderColor })}
+          />
+        </EditorOption>
+      </div>
+    </div>
+  );
+}
+
 /** Image block controls — swap the image source without moving/removing it. */
 function ImageStyleControls({ block }: { block: ImageBlock }) {
   const setImageSrc = useEditorStore((s) => s.setImageSrc);
@@ -242,6 +364,10 @@ export function StyleControls({ block, cell }: { block: Block; cell: Cell | null
 
   if (block.type === "image") {
     return <ImageStyleControls block={block} />;
+  }
+
+  if (block.type === "map") {
+    return <MapStyleControls block={block} />;
   }
 
   if (block.type === "dynamic") {
