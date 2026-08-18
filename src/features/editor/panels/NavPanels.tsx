@@ -611,6 +611,12 @@ const CONTENT_BLOCKS: PaletteEntry[] = [
     desc: "Paragraph copy",
   },
   {
+    type: "list",
+    icon: BLOCK_ICONS.list,
+    label: "List",
+    desc: "Bulleted or numbered",
+  },
+  {
     type: "table",
     icon: BLOCK_ICONS.table,
     label: "Table",

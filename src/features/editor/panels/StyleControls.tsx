@@ -7,13 +7,16 @@ import {
   faAlignCenter,
   faAlignRight,
   faAlignJustify,
+  faListUl,
+  faListOl,
+  faBan,
 } from "@fortawesome/pro-regular-svg-icons";
 import { EditorOption } from "../controls/EditorOption";
 import { Slider } from "../controls/Slider";
 import { SwatchGrid } from "../controls/SwatchGrid";
 import { ToggleButtonGroup, type ToggleItem } from "../controls/ToggleButtonGroup";
 import { FauxSelect } from "./FauxSelect";
-import type { Block, Cell, ImageBlock, TextStyle } from "../types";
+import type { Block, Cell, ImageBlock, ListBlock, TextStyle } from "../types";
 import { blockLabel } from "../blocks/blockMeta";
 import { DYNAMIC_FIELD_LABELS } from "../dynamic";
 import { useEditorStore } from "../store";
@@ -31,6 +34,12 @@ const ALIGN_ITEMS: ToggleItem<TextStyle["align"]>[] = [
   { value: "center", icon: faAlignCenter, label: "Align center" },
   { value: "right", icon: faAlignRight, label: "Align right" },
   { value: "justify", icon: faAlignJustify, label: "Justify" },
+];
+
+const MARKER_ITEMS: ToggleItem<ListBlock["marker"]>[] = [
+  { value: "bullet", icon: faListUl, label: "Bulleted" },
+  { value: "number", icon: faListOl, label: "Numbered" },
+  { value: "none", icon: faBan, label: "No marker" },
 ];
 
 const TRANSFORM_LABELS: Record<TextStyle["transform"], string> = {
@@ -184,6 +193,18 @@ export function StyleControls({ block, cell }: { block: Block; cell: Cell | null
         <span className="bo-editor-section-title">
           {block.type === "heading" ? "Heading Styles" : "Text Styles"}
         </span>
+        <FontControls style={block.style} />
+      </div>
+    );
+  }
+
+  if (block.type === "list") {
+    return (
+      <div className="d-flex flex-column gap-3">
+        <span className="bo-editor-section-title">List Styles</span>
+        <EditorOption label="Marker">
+          <ToggleButtonGroup items={MARKER_ITEMS} active={[block.marker]} />
+        </EditorOption>
         <FontControls style={block.style} />
       </div>
     );

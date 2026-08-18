@@ -1,5 +1,5 @@
 import type { DealMarketing, Property } from "#/data/types";
-import type { Cell, DynamicKey } from "./types";
+import type { Cell, DynamicKey, ListBlock } from "./types";
 
 /** Everything a document can bind to — the asset's facts and the deal's copy. */
 export interface DocumentData {
@@ -88,6 +88,13 @@ export function resolveField(
 export function resolveDynamic(cell: Cell, data: DocumentData): string {
   if (!cell.dynamicKey) return cell.value;
   return resolveField(cell.dynamicKey, cell.format, data);
+}
+
+/** The items a list block renders — its binding when set, else its static items. */
+export function resolveList(block: ListBlock, data: DocumentData): string[] {
+  if (!block.dynamicKey) return block.items;
+  const raw = resolveFieldValue(block.dynamicKey, data);
+  return Array.isArray(raw) ? raw.filter((v): v is string => typeof v === "string") : [];
 }
 
 /** Price per SF derived from the property (not a raw field). */

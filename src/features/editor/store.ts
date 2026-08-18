@@ -111,6 +111,12 @@ interface EditorState {
   setBlockText: (blockId: string, text: string) => void;
   /** Swap an image block's source. */
   setImageSrc: (blockId: string, src: string) => void;
+  /** Edit one item of a static list block. */
+  setListItem: (blockId: string, index: number, text: string) => void;
+  /** Insert a blank item at `index`. */
+  addListItem: (blockId: string, index: number) => void;
+  /** Remove the item at `index` (no-op on the last remaining item). */
+  removeListItem: (blockId: string, index: number) => void;
 
   // Phase 3 actions (table row/column editing).
   addColumn: (blockId: string, index: number) => void;
@@ -340,6 +346,31 @@ export const useEditorStore = create<EditorState>((set) => {
       const block = findBlock(s.document, blockId);
       if (!block || block.type !== "image") return s;
       return { document: replaceBlock(s.document, blockId, { ...block, src }), dirty: true };
+    }),
+
+  setListItem: (blockId, index, text) =>
+    set((s) => {
+      const block = findBlock(s.document, blockId);
+      if (!block || block.type !== "list") return s;
+      const items = block.items.map((item, i) => (i === index ? text : item));
+      return { document: replaceBlock(s.document, blockId, { ...block, items }), dirty: true };
+    }),
+
+  addListItem: (blockId, index) =>
+    set((s) => {
+      const block = findBlock(s.document, blockId);
+      if (!block || block.type !== "list") return s;
+      const items = [...block.items];
+      items.splice(Math.max(0, Math.min(index, items.length)), 0, "");
+      return { document: replaceBlock(s.document, blockId, { ...block, items }), dirty: true };
+    }),
+
+  removeListItem: (blockId, index) =>
+    set((s) => {
+      const block = findBlock(s.document, blockId);
+      if (!block || block.type !== "list" || block.items.length <= 1) return s;
+      const items = block.items.filter((_, i) => i !== index);
+      return { document: replaceBlock(s.document, blockId, { ...block, items }), dirty: true };
     }),
 
   addColumn: (blockId, index) =>

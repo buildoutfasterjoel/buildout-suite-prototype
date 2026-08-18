@@ -35,6 +35,8 @@ function blockCrumb(
       return "Image";
     case "dynamic":
       return "Dynamic Field";
+    case "list":
+      return "List";
     case "columns":
       return `${block.columnCount} Columns`;
     case "section":

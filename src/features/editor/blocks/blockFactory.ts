@@ -112,6 +112,14 @@ export function createBlock(type: Block["type"], variant?: BlockVariant): Block 
         format: "text",
         style: { ...DEFAULT_TEXT_STYLE, fontSize: 14 },
       };
+    case "list":
+      return {
+        id: uid("block"),
+        type: "list",
+        items: ["First item", "Second item"],
+        marker: "bullet",
+        style: { ...DEFAULT_TEXT_STYLE, fontSize: 13, lineHeight: 22 },
+      };
     case "spacer":
       return { id: uid("block"), type: "spacer", height: 24 };
     case "divider":

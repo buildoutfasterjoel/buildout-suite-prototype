@@ -14,7 +14,7 @@ import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { useEditorStore } from "../store";
 import { useWorkspaceRef } from "../workspaceContext";
 import { BRAND } from "../brand";
-import { PAGE_WIDTH, PAGE_HEIGHT, type Page, type Selection } from "../types";
+import { PAGE_WIDTH, PAGE_HEIGHT, PAGE_PADDING, type Page, type Selection } from "../types";
 import { BlockList } from "./BlockViews";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 
@@ -190,7 +190,7 @@ export function PageView({
           className="d-flex flex-column"
           style={{
             gap: bleed ? 0 : 32,
-            padding: bleed ? 0 : 40,
+            padding: bleed ? 0 : PAGE_PADDING,
             flex: "1 0 0",
             minHeight: 0,
           }}

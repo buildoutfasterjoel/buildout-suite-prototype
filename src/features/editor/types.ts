@@ -1,4 +1,4 @@
-import type { DealMarketing, Property } from "#/data/types";
+import type { DealMarketing, Property, PropertyType } from "#/data/types";
 
 /**
  * Document model for the editor prototype.
@@ -87,11 +87,27 @@ export interface TextBlock {
   style: TextStyle;
 }
 
+/**
+ * When a table row appears. Absent = always, subject to the empty-value rule.
+ */
+export interface RowVisibility {
+  /** Restrict the row to these property types. */
+  types?: PropertyType[];
+  /** Keep the row even when its dynamic values resolve empty. */
+  keepEmpty?: boolean;
+}
+
 export interface TableBlock {
   id: string;
   type: "table";
   title?: string;
   rows: Cell[][];
+  /**
+   * Visibility rules keyed by the id of the row's first cell. Keyed by id
+   * rather than index so rules survive reordering and are dropped naturally
+   * with their row.
+   */
+  rowRules?: Record<string, RowVisibility>;
   style: TableStyle;
 }
 
@@ -100,6 +116,13 @@ export interface ImageBlock {
   type: "image";
   src: string;
   alt: string;
+  /**
+   * Runs the image to the page's left and right edges, cancelling the page
+   * margin. Only meaningful for a block at a page's top level — inside a column
+   * it would bleed past its own container. Distinct from `Page.bleed`, which is
+   * all-or-nothing for a whole page.
+   */
+  fullBleed?: boolean;
 }
 
 /** A text-like block bound to a live listing field. */
@@ -108,6 +131,24 @@ export interface DynamicBlock {
   type: "dynamic";
   dynamicKey: DynamicKey;
   format?: Cell["format"];
+  style: TextStyle;
+}
+
+/** Array fields a list block can bind to. */
+export type DynamicListKey = "marketing.saleBullets" | "marketing.leaseBullets";
+
+/**
+ * A bulleted or numbered list. Mirrors `table`: it carries either static items
+ * the user edits, or a `dynamicKey` binding to a string[] field on the deal —
+ * never both. A leaf block, so it nests inside columns and sections.
+ */
+export interface ListBlock {
+  id: string;
+  type: "list";
+  /** Static items; ignored when `dynamicKey` is set. */
+  items: string[];
+  dynamicKey?: DynamicListKey;
+  marker: "bullet" | "number" | "none";
   style: TextStyle;
 }
 
@@ -135,6 +176,7 @@ export type ContentBlock =
   | TableBlock
   | ImageBlock
   | DynamicBlock
+  | ListBlock
   | SpacerBlock
   | DividerBlock;
 
@@ -225,3 +267,6 @@ export interface Selection {
 /** US Letter at 96dpi — the fixed page size for the prototype. */
 export const PAGE_WIDTH = 816;
 export const PAGE_HEIGHT = 1056;
+
+/** Page margin (px) around a base page's content column. */
+export const PAGE_PADDING = 40;
