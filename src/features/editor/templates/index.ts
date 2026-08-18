@@ -4,10 +4,13 @@ import {
   buildAdvisorBiosPage,
   buildBrandDividerPage,
   buildComparablesPage,
+  buildContentsPage,
   buildCoverPage,
   buildFinancialHeroPage,
   buildFinancialSummaryPage,
   buildLocationMapPage,
+  buildPhotoGalleryPage,
+  buildPropertyDescriptionPage,
   buildPropertySummaryPage,
 } from "./designer";
 
@@ -25,10 +28,13 @@ export interface TemplateDef {
 /** All designer templates, in gallery display order. */
 export const TEMPLATES: TemplateDef[] = [
   { key: "cover", name: "Cover Page", category: "Cover", description: "Full-bleed hero over a navy title band with address and asset line.", build: buildCoverPage },
+  { key: "contents", name: "Table of Contents", category: "Cover", description: "A generated section list beside an editable opening statement.", build: buildContentsPage },
   { key: "financialHero", name: "Financial Highlights", category: "Financials", description: "Headline metric callouts above the financial summary.", build: buildFinancialHeroPage },
   { key: "financialSummary", name: "Financial Summary", category: "Financials", description: "Address header with a data-bound financial summary table.", build: buildFinancialSummaryPage },
   { key: "propertySummary", name: "Property Summary", category: "Property", description: "Full-bleed hero over the deal's sale copy and a fact table that follows the asset class.", build: buildPropertySummaryPage },
-  { key: "locationMap", name: "Location & Map", category: "Location", description: "Map image with submarket and city narrative.", build: buildLocationMapPage },
+  { key: "propertyDescription", name: "Property Description", category: "Property", description: "A tall photo beside the deal's marketing title and description copy.", build: buildPropertyDescriptionPage },
+  { key: "photoGallery", name: "Photo Gallery", category: "Property", description: "Nine photos in a mixed-crop masonry grid, each tile swappable.", build: buildPhotoGalleryPage },
+  { key: "locationMap", name: "Location & Map", category: "Location", description: "A live map of the deal's address over the location narrative and facts.", build: buildLocationMapPage },
   { key: "comparables", name: "Sale Comparables", category: "Comparables", description: "A three-up grid of comparable properties with photos.", build: buildComparablesPage },
   { key: "advisorBios", name: "Advisor Bios", category: "Team", description: "Team layout: advisor photo, name, role, and blurb.", build: buildAdvisorBiosPage },
   { key: "brandDivider", name: "Section Divider", category: "Property", description: "A branded full-band section divider.", build: () => buildBrandDividerPage() },

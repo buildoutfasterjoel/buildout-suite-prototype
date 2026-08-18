@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { useLayoutEffect, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -20,11 +20,13 @@ import type {
   Cell,
   ColumnsBlock,
   ContentBlock,
+  ContentsBlock,
   DividerBlock,
   DynamicBlock,
   HeadingBlock,
   ImageBlock,
   ListBlock,
+  MapBlock,
   SectionBlock,
   Selection,
   SpacerBlock,
@@ -35,11 +37,17 @@ import type {
 import { useDocumentData, useEditorStore } from "../store";
 import { findBlock } from "../tree";
 import { resolveDynamic, resolveField, resolveList } from "../dynamic";
+import { contentsEntries, contentsIndexLabel } from "../contents";
+import { MAP_FALLBACK_CENTER, mapSizeHeight } from "./mapStyles";
+import { BRAND } from "../brand";
 import { trailingRowInsertIndex, visibleRows } from "./rowVisibility";
 import { SortableBlock, ListDropZone } from "../dnd/SortableBlock";
 import type { ListLocation } from "../dnd/dndTypes";
 import { blockLabel } from "./blockMeta";
 import { fullBleedStyle } from "./fullBleed";
+
+/** Leaflet reads `window` at module load, so the map canvas never reaches SSR. */
+const MapCanvas = lazy(() => import("./MapCanvas"));
 
 function textStyleToCss(style: TextStyle): CSSProperties {
   return {
@@ -271,6 +279,91 @@ function ListBlockView({ block, pageId, selection }: { block: ListBlock } & Visu
   );
 }
 
+/**
+ * Table of contents — a numbered list of the document's sections, read from the
+ * page list rather than typed. Nothing here is editable: renaming a page in the
+ * Pages panel is how an entry's label changes.
+ */
+function ContentsBlockView({ block, pageId, selection }: { block: ContentsBlock } & VisualProps) {
+  const { selected, onClick } = useBlockSelect(block.id, pageId, selection);
+  // `document.pages` is replaced immutably, so it is a stable dependency —
+  // deriving in a selector would hand zustand a fresh array every render.
+  const pages = useEditorStore((s) => s.document.pages);
+  const entries = useMemo(() => contentsEntries(pages), [pages]);
+
+  return (
+    <div
+      className={`bo-editor-block bo-editor-contents${selected ? " is-selected" : ""}`}
+      onClick={onClick}
+      style={textStyleToCss(block.style)}
+    >
+      {entries.length === 0 ? (
+        <span className="bo-editor-contents-empty">
+          Pages you add to this document will be listed here.
+        </span>
+      ) : (
+        entries.map((entry) => (
+          <div key={entry.pageId} className="bo-editor-contents-entry">
+            <span
+              className="bo-editor-contents-index"
+              style={{ color: BRAND.palette.primary }}
+            >
+              {contentsIndexLabel(entry.index)}
+            </span>
+            <span className="bo-editor-contents-label">{entry.label}</span>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+/**
+ * Map block — a map of the bound deal, sized and framed by its own controls.
+ * The center is derived from the property rather than stored, so the map follows
+ * the document's binding instead of having to be re-pointed by hand.
+ */
+function MapBlockView({ block, pageId, selection }: { block: MapBlock } & VisualProps) {
+  const { selected, onClick } = useBlockSelect(block.id, pageId, selection);
+  const { property } = useDocumentData();
+
+  // Mirrors `PropertyMap`: mount first, then load Leaflet, so the dynamic import
+  // stays out of the SSR render path entirely.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const height = mapSizeHeight(block.size);
+  const center: [number, number] =
+    property?.lat != null && property?.lng != null
+      ? [property.lat, property.lng]
+      : MAP_FALLBACK_CENTER;
+  const framed = block.borderWidth > 0 && block.borderStyle !== "none";
+
+  return (
+    <div
+      className={`bo-editor-block bo-editor-map${height === null ? " is-full" : ""}${selected ? " is-selected" : ""}`}
+      onClick={onClick}
+      style={{
+        height: height ?? undefined,
+        // `full` takes its height from the page instead: the `.is-full` rule in
+        // editor.scss grows the sortable wrapper, which is the actual flex item.
+        minHeight: height ?? 200,
+        border: framed
+          ? `${block.borderWidth}px ${block.borderStyle} ${block.borderColor ?? "transparent"}`
+          : undefined,
+      }}
+    >
+      {mounted ? (
+        <Suspense fallback={<div className="bo-editor-map-placeholder" />}>
+          <MapCanvas block={block} center={center} />
+        </Suspense>
+      ) : (
+        <div className="bo-editor-map-placeholder" />
+      )}
+    </div>
+  );
+}
+
 function BlockVisual({
   block,
   pageId,
@@ -293,6 +386,10 @@ function BlockVisual({
       return <DynamicBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "list":
       return <ListBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
+    case "contents":
+      return <ContentsBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
+    case "map":
+      return <MapBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "spacer":
       return <SpacerBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "divider":

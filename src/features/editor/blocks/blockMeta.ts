@@ -10,6 +10,8 @@ import {
   faArrowsUpDown,
   faGripLines,
   faListUl,
+  faListOl,
+  faMapLocationDot,
 } from "@fortawesome/pro-regular-svg-icons";
 import { DYNAMIC_FIELD_LABELS } from "../dynamic";
 import type { Block, BlockType } from "../types";
@@ -21,6 +23,8 @@ export const BLOCK_ICONS: Record<BlockType, IconDefinition> = {
   image: faImage,
   dynamic: faDatabase,
   list: faListUl,
+  contents: faListOl,
+  map: faMapLocationDot,
   columns: faTableColumns,
   section: faSquareDashed,
   spacer: faArrowsUpDown,
@@ -42,6 +46,10 @@ export function blockLabel(block: Block): string {
       return DYNAMIC_FIELD_LABELS[block.dynamicKey] ?? "Dynamic Field";
     case "list":
       return "List";
+    case "contents":
+      return "Table of Contents";
+    case "map":
+      return "Map";
     case "columns":
       return `${block.columnCount} Columns`;
     case "section":

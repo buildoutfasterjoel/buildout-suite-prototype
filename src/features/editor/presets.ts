@@ -12,7 +12,11 @@ import {
   valueCell,
 } from "./templates/helpers";
 import {
+  buildContentsPage,
   buildCoverPage,
+  buildLocationMapPage,
+  buildPhotoGalleryPage,
+  buildPropertyDescriptionPage,
   buildFinancialSummaryPage,
   buildPropertySummaryPage,
 } from "./templates/designer";
@@ -89,18 +93,12 @@ export function buildDocumentPages(
     // The real designer cover, not a stub — it's the page the BOV send flow
     // previews, so the opened document has to lead with the same artwork.
     buildCoverPage(property),
-    buildStubPage(property, { name: "Table of Contents", seed: "editor-toc" }),
+    buildContentsPage(property),
     // Once the AI has generated underwriting for this deal, it leads the body —
     // pages scale with the thoroughness the user chose. Empty otherwise.
     ...buildUnderwritingSection(property, underwriting),
     propertySummary,
-    buildStubPage(property, {
-      name: "Property Description",
-      seed: "editor-prop-desc",
-      dynamicKey: "propertyType",
-      dynamicLabel: "Property Type",
-      format: "text",
-    }),
+    buildPropertyDescriptionPage(property),
     buildStubPage(property, {
       name: "Complete Highlights",
       seed: "editor-highlights",
@@ -108,20 +106,10 @@ export function buildDocumentPages(
       dynamicLabel: "Building Size",
       format: "text",
     }),
-    buildStubPage(property, {
-      name: "Additional Photos",
-      seed: "editor-photos",
-      dynamicKey: "numberOfBuildings",
-      dynamicLabel: "Buildings",
-      format: "text",
-    }),
-    buildStubPage(property, {
-      name: "Location Map",
-      seed: "editor-location-map",
-      dynamicKey: "city",
-      dynamicLabel: "City",
-      format: "text",
-    }),
+    // Keeps the section name the document's contents already advertises.
+    withPageIdentity(buildPhotoGalleryPage(property), "Additional Photos"),
+    // Keeps the section name the document's contents already advertises.
+    withPageIdentity(buildLocationMapPage(property), "Location Map"),
     buildStubPage(property, {
       name: "Site Plans",
       seed: "editor-site-plans",

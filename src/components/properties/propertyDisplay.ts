@@ -164,6 +164,21 @@ export function crePhotoUrl(photoId: string, w = 480, h = 280): string {
 }
 
 /**
+ * Swap the photo inside an existing CRE photo URL, keeping its crop
+ * dimensions. Every image block carries its size in the URL (`w`/`h`), so a
+ * picker that rebuilds the URL from scratch resizes the block as a side effect
+ * — most visibly on the cover, whose hero is cut to the page height minus the
+ * title band. Reusing the current `w`/`h` keeps the swap a swap.
+ */
+export function swapCrePhoto(src: string, photoId: string): string {
+  const query = src.slice(src.indexOf("?") + 1);
+  const params = new URLSearchParams(src.includes("?") ? query : "");
+  const w = Number(params.get("w"));
+  const h = Number(params.get("h"));
+  return crePhotoUrl(photoId, w || undefined, h || undefined);
+}
+
+/**
  * Resolves a property/listing id to a hand-pinned photo id (story properties
  * whose imagery must match their asset class, e.g. Rosa's multifamily
  * building). Registered by the data store rather than imported from it — this
@@ -195,17 +210,13 @@ export function getPhotoUrl(id: string, w = 480, h = 280): string {
 }
 
 /**
- * A deterministic photo gallery for a listing. Photos aren't modeled on
- * `Listing`, so this derives one from the curated CRE pool: it starts at the
- * deal's own hero photo (so the gallery agrees with the thumbnail shown on
- * cards, including pinned story properties) and walks the pool from there.
+ * A deterministic photo gallery for a listing, as photo ids. Photos aren't
+ * modeled on `Listing`, so this derives one from the curated CRE pool: it starts
+ * at the deal's own hero photo (so the gallery agrees with the thumbnail shown
+ * on cards, including pinned story properties) and walks the pool from there.
+ * Every id is distinct, so a gallery never repeats a photo.
  */
-export function listingGallery(
-  id: string,
-  count = 5,
-  w = 480,
-  h = 280,
-): string[] {
+export function galleryPhotoIds(id: string, count = 5): string[] {
   const hero = heroPhotoId(id);
   const start = CRE_PHOTO_IDS.indexOf(hero);
   // A pinned photo may live outside the pool — keep it first, then fill.
@@ -214,5 +225,18 @@ export function listingGallery(
     start === -1
       ? [hero, ...rest]
       : [hero, ...rest.slice(start), ...rest.slice(0, start)];
-  return ordered.slice(0, Math.min(count, ordered.length)).map((p) => crePhotoUrl(p, w, h));
+  return ordered.slice(0, Math.min(count, ordered.length));
+}
+
+/**
+ * The same gallery as URLs, at one shared crop. Callers that need a different
+ * crop per photo (the editor's masonry gallery page) take the ids instead.
+ */
+export function listingGallery(
+  id: string,
+  count = 5,
+  w = 480,
+  h = 280,
+): string[] {
+  return galleryPhotoIds(id, count).map((p) => crePhotoUrl(p, w, h));
 }

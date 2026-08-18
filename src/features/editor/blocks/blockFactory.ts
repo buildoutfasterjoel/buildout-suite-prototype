@@ -120,6 +120,23 @@ export function createBlock(type: Block["type"], variant?: BlockVariant): Block 
         marker: "bullet",
         style: { ...DEFAULT_TEXT_STYLE, fontSize: 13, lineHeight: 22 },
       };
+    case "contents":
+      return {
+        id: uid("block"),
+        type: "contents",
+        style: { ...DEFAULT_TEXT_STYLE, fontSize: 13, lineHeight: 20 },
+      };
+    case "map":
+      return {
+        id: uid("block"),
+        type: "map",
+        mapStyle: "streets",
+        zoom: 14,
+        size: "md",
+        borderWidth: 1,
+        borderStyle: "solid",
+        borderColor: "#d5dae2",
+      };
     case "spacer":
       return { id: uid("block"), type: "spacer", height: 24 };
     case "divider":

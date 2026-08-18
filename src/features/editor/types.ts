@@ -152,6 +152,43 @@ export interface ListBlock {
   style: TextStyle;
 }
 
+/**
+ * A generated table of contents. Its entries are never stored — they are
+ * derived from the document's page list at render time (see `contents.ts`), so
+ * renaming, reordering, adding, or hiding a page updates the list with no
+ * second copy to keep in sync. The block carries only its own type styles.
+ */
+export interface ContentsBlock {
+  id: string;
+  type: "contents";
+  style: TextStyle;
+}
+
+/** Tile source for a map block — see `blocks/mapStyles.ts`. */
+export type MapStyle = "streets" | "satellite" | "terrain";
+
+/** Map height preset. `full` grows to fill the space its container has left. */
+export type MapSize = "sm" | "md" | "lg" | "full";
+
+/**
+ * A map of the bound deal. Like `contents`, it stores presentation only — the
+ * center comes from the property's lat/lng at render time, so the map follows
+ * whatever deal the document is bound to and can't be left pointing at the
+ * wrong city. Non-interactive on the canvas: the view is set by these controls,
+ * not by dragging, so scrolling the document never zooms the map.
+ */
+export interface MapBlock {
+  id: string;
+  type: "map";
+  mapStyle: MapStyle;
+  /** Leaflet zoom level; clamped to what the chosen style serves. */
+  zoom: number;
+  size: MapSize;
+  borderWidth: number;
+  borderStyle: BorderStyle;
+  borderColor: string | null;
+}
+
 export interface SpacerBlock {
   id: string;
   type: "spacer";
@@ -177,6 +214,8 @@ export type ContentBlock =
   | ImageBlock
   | DynamicBlock
   | ListBlock
+  | ContentsBlock
+  | MapBlock
   | SpacerBlock
   | DividerBlock;
 
@@ -229,6 +268,12 @@ export interface Page {
   locked?: boolean;
   /** Hidden pages stay in the document but are excluded from the exported/rendered output. */
   hidden?: boolean;
+  /**
+   * Front matter — the page is part of the document but not one of its
+   * sections, so a `contents` block never lists it. Set by the cover template;
+   * distinct from `hidden`, which drops the page from the output entirely.
+   */
+  omitFromContents?: boolean;
   /**
    * Page chrome — the brand logo header and the company footer that frame a
    * base page's content. `"base"` (the default) draws both; `"none"` hands the

@@ -4,6 +4,7 @@ import type {
   ColumnsBlock,
   ContentBlock,
   DynamicKey,
+  MapBlock,
   Page,
   RowVisibility,
   SectionBlock,
@@ -11,7 +12,7 @@ import type {
   TextBlock,
 } from "../types";
 import { PAGE_HEIGHT, PAGE_PADDING, PAGE_WIDTH } from "../types";
-import { TYPE_LABELS, getPhotoUrl } from "#/components/properties/propertyDisplay";
+import { TYPE_LABELS, crePhotoUrl, galleryPhotoIds, getPhotoUrl } from "#/components/properties/propertyDisplay";
 import { DEFAULT_TEXT_STYLE, uid } from "../blocks/blockFactory";
 import { BRAND } from "../brand";
 import {
@@ -157,6 +158,137 @@ export function buildPropertySummaryPage(property?: Property): Page {
   };
 }
 
+/* ── Property Description ──────────────────────────────────────────────── */
+
+/**
+ * Half of a base page's content column, matching the 16px gap `.bo-editor-columns`
+ * puts between two columns. Photos are requested at this width so a portrait
+ * image lands in its column at its native size rather than being downscaled.
+ */
+const HALF_COLUMN = (PAGE_WIDTH - PAGE_PADDING * 2 - 16) / 2;
+
+/**
+ * Tall enough to fill the column beside a full page of prose, short enough to
+ * clear the heading above it and the footer below on a US Letter sheet.
+ */
+const DESCRIPTION_IMAGE_HEIGHT = 640;
+
+/**
+ * Property Description — a tall portrait photo beside the deal's marketing
+ * prose. The copy is bound rather than typed: it is the same description the
+ * listing publishes, so the page can't drift from what the market sees. Its
+ * heading is bound too — the marketing title, not the page name.
+ */
+export function buildPropertyDescriptionPage(property?: Property): Page {
+  const body: ColumnsBlock = {
+    id: uid("block"),
+    type: "columns",
+    columnCount: 2,
+    columns: [
+      [heroImage(`${property?.id ?? "editor"}-description`, HALF_COLUMN, DESCRIPTION_IMAGE_HEIGHT)],
+      [
+        {
+          id: uid("block"),
+          type: "dynamic",
+          dynamicKey: "marketing.saleTitle",
+          format: "text",
+          style: {
+            ...DEFAULT_TEXT_STYLE,
+            fontFamily: BRAND.fonts.heading,
+            fontSize: 18,
+            lineHeight: 26,
+            color: BRAND.palette.ink,
+          },
+        },
+        {
+          id: uid("block"),
+          type: "dynamic",
+          dynamicKey: "marketing.saleDescription",
+          format: "text",
+          style: {
+            ...DEFAULT_TEXT_STYLE,
+            fontFamily: BRAND.fonts.body,
+            fontSize: 13,
+            lineHeight: 22,
+            color: BRAND.palette.ink,
+          },
+        },
+      ],
+    ],
+  };
+
+  return {
+    id: uid("page"),
+    name: "Property Description",
+    logoSrc: LOGO_SRC,
+    locked: true,
+    blocks: [
+      brandHeading("Property Description"),
+      { id: uid("block"), type: "text", text: addressOf(property), style: { ...addressStyle, align: "left" } },
+      body,
+    ],
+  };
+}
+
+/* ── Photo Gallery ─────────────────────────────────────────────────────── */
+
+/**
+ * A third of the content column, less the two 16px gaps `.bo-editor-columns`
+ * puts between three columns. Photos are requested at this width so each tile
+ * renders at native size.
+ */
+const GALLERY_TILE_WIDTH = Math.floor((PAGE_WIDTH - PAGE_PADDING * 2 - 16 * 2) / 3);
+
+/**
+ * The masonry: one row per column, each number a tile's height. Mixed portrait,
+ * square, and landscape crops are what make the grid read as a gallery rather
+ * than a contact sheet — and each column totals within a few pixels of the
+ * others (738 / 734 / 738 including the 12px stack gaps) so the three columns
+ * land on the same baseline instead of leaving one short.
+ */
+const GALLERY_TILE_HEIGHTS: number[][] = [
+  [300, GALLERY_TILE_WIDTH, 180],
+  [180, 330, 200],
+  [GALLERY_TILE_WIDTH, 200, 280],
+];
+
+/**
+ * Photo Gallery — nine photos in three masonry columns, drawn from the deal's
+ * own gallery so the first tile is the same hero shown on its card. Every tile
+ * is a plain image block, which is what makes the page swappable: selecting one
+ * opens the image picker, and the picker keeps each tile's crop.
+ */
+export function buildPhotoGalleryPage(property?: Property): Page {
+  const tileCount = GALLERY_TILE_HEIGHTS.reduce((n, col) => n + col.length, 0);
+  const photoIds = galleryPhotoIds(property?.id ?? "editor-gallery", tileCount);
+
+  let taken = 0;
+  const columns: ContentBlock[][] = GALLERY_TILE_HEIGHTS.map((heights) =>
+    heights.map((height) => {
+      // The pool is larger than the grid today; the modulo keeps the page
+      // whole if a shorter pool ever has to repeat a photo.
+      const photoId = photoIds[taken++ % photoIds.length];
+      return {
+        id: uid("block"),
+        type: "image",
+        src: crePhotoUrl(photoId, GALLERY_TILE_WIDTH, height),
+        alt: "Property photo",
+      };
+    }),
+  );
+
+  return {
+    id: uid("page"),
+    name: "Property Photos",
+    logoSrc: LOGO_SRC,
+    locked: true,
+    blocks: [
+      brandHeading("Property Photos"),
+      { id: uid("block"), type: "columns", columnCount: 3, columns },
+    ],
+  };
+}
+
 /* ── Cover ─────────────────────────────────────────────────────────────── */
 
 /**
@@ -247,6 +379,8 @@ export function buildCoverPage(property?: Property): Page {
     locked: true,
     chrome: "none",
     bleed: true,
+    // Front matter, not a section: a contents block never lists the cover.
+    omitFromContents: true,
     blocks: [
       {
         id: uid("block"),
@@ -256,6 +390,51 @@ export function buildCoverPage(property?: Property): Page {
       },
       band,
     ],
+  };
+}
+
+/* ── Table of Contents ─────────────────────────────────── */
+
+/** The opening paragraph the broker rewrites — seeded with the deal's name. */
+function contentsOpening(property?: Property): string {
+  const subject = property?.name ?? "this offering";
+  return `${BRAND.name} is pleased to present ${subject}. The pages that follow cover the property and its submarket, the financial picture behind the offering, and the team representing it. Replace this copy with your own introduction.`;
+}
+
+/**
+ * Table of Contents — the generated section list on the left, an editable
+ * opening statement on the right. The contents block derives its entries from
+ * the document's pages, so the only thing to write here is the introduction.
+ */
+export function buildContentsPage(property?: Property): Page {
+  const body: ColumnsBlock = {
+    id: uid("block"),
+    type: "columns",
+    columnCount: 2,
+    columns: [
+      [
+        {
+          id: uid("block"),
+          type: "contents",
+          style: {
+            ...DEFAULT_TEXT_STYLE,
+            fontFamily: BRAND.fonts.body,
+            fontSize: 13,
+            lineHeight: 20,
+            color: BRAND.palette.ink,
+          },
+        },
+      ],
+      [brandHeading("Introduction", 20), brandBody(contentsOpening(property))],
+    ],
+  };
+
+  return {
+    id: uid("page"),
+    name: "Table of Contents",
+    logoSrc: BRAND.logoSrc,
+    locked: true,
+    blocks: [brandHeading("Table of Contents"), body],
   };
 }
 
@@ -290,17 +469,76 @@ export function buildFinancialHeroPage(property?: Property): Page {
   };
 }
 
-/** Location & Map — map image left, submarket/city narrative right. */
-export function buildLocationMapPage(property?: Property): Page {
-  const row: ColumnsBlock = {
-    id: uid("block"), type: "columns", columnCount: 2,
-    columns: [
-      [{ id: uid("block"), type: "image", src: getPhotoUrl((property?.id ?? "loc") + "-map", 380, 300), alt: "Location map" }],
-      [brandHeading("Location", 22), brandBody(property?.city ? `Located in ${property.city}, ${property.state}.` : "A well-connected submarket with strong fundamentals."),
-       { id: uid("block"), type: "dynamic", dynamicKey: "submarket", style: { ...DEFAULT_TEXT_STYLE, fontFamily: BRAND.fonts.body, fontSize: 13 } }],
+/* ── Location ──────────────────────────────────────────────────────────── */
+
+/**
+ * Location — a real map of the deal's address across the top, then the location
+ * narrative beside a table of where the property actually sits. The map replaced
+ * a stand-in photo of a map: it is a `map` block, so its style, zoom, size, and
+ * frame are the user's to change, and it re-centers itself on whatever listing
+ * the document is bound to.
+ *
+ * The map is seeded at `md` (360px) rather than `lg`: a base page has ~814px of
+ * content stack, and the heading plus this two-column row need the rest.
+ */
+export function buildLocationMapPage(_property?: Property): Page {
+  const map: MapBlock = {
+    id: uid("block"),
+    type: "map",
+    mapStyle: "streets",
+    zoom: 14,
+    size: "md",
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: "#d5dae2",
+  };
+
+  const facts: TableBlock = {
+    id: uid("block"),
+    type: "table",
+    title: "Location",
+    style: { borderWidth: 1, borderStyle: "solid", borderColor: "#d5dae2" },
+    rows: [
+      [headerCell("Address"), valueCell("—", "street", "text")],
+      [headerCell("City"), valueCell("—", "city", "text")],
+      [headerCell("State"), valueCell("—", "state", "text")],
+      [headerCell("County"), valueCell("—", "county", "text")],
+      [headerCell("Submarket"), valueCell("—", "submarket", "text")],
     ],
   };
-  return { id: uid("page"), name: "Location", logoSrc: BRAND.logoSrc, locked: true, blocks: [brandHeading("Location Information"), row] };
+
+  const row: ColumnsBlock = {
+    id: uid("block"),
+    type: "columns",
+    columnCount: 2,
+    columns: [
+      [
+        brandHeading("Location Overview", 18),
+        {
+          id: uid("block"),
+          type: "dynamic",
+          dynamicKey: "marketing.locationDescription",
+          format: "text",
+          style: {
+            ...DEFAULT_TEXT_STYLE,
+            fontFamily: BRAND.fonts.body,
+            fontSize: 13,
+            lineHeight: 22,
+            color: BRAND.palette.ink,
+          },
+        },
+      ],
+      [facts],
+    ],
+  };
+
+  return {
+    id: uid("page"),
+    name: "Location",
+    logoSrc: BRAND.logoSrc,
+    locked: true,
+    blocks: [brandHeading("Location Information"), map, row],
+  };
 }
 
 /** Comparables Grid — three comps, each a photo + label. */

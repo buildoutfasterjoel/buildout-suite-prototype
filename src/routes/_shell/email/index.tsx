@@ -14,7 +14,6 @@ import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { Pagination } from "@buildoutinc/blueprint-react/ui/Pagination";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faEnvelopesBulk,
   faEnvelope,
   faBoxArchive,
   faCirclePlus,
@@ -33,7 +32,10 @@ import {
   EMAIL_LISTS,
 } from "#/data/emails";
 import { useDataStore } from "#/data/dataStore";
-import { EMAIL_STATUS_DISPLAY, TYPE_LABELS } from "#/components/email/emailDisplay";
+import {
+  EMAIL_STATUS_DISPLAY,
+  TYPE_LABELS,
+} from "#/components/email/emailDisplay";
 import { EmailPerformanceStats } from "#/components/email/EmailPerformanceStats";
 import { EmailsTable } from "#/components/email/EmailsTable";
 import { EmailsCalendar } from "#/components/email/EmailsCalendar";
@@ -41,7 +43,7 @@ import { EmailsCalendar } from "#/components/email/EmailsCalendar";
 export const Route = createFileRoute("/_shell/email/")({
   component: EmailsPage,
   head: () => ({
-    meta: [{ title: "Emails | Buildout Suite" }],
+    meta: [{ title: "Campaigns | Buildout Suite" }],
   }),
 });
 
@@ -49,8 +51,18 @@ const ALL = "all";
 const PAGE_SIZE = 10;
 
 const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 function prevMonth(d: Date) {
@@ -93,7 +105,14 @@ function QuotaRing({ percent }: { percent: number }) {
       aria-hidden="true"
       style={{ flexShrink: 0 }}
     >
-      <circle cx={10} cy={10} r={r} fill="none" stroke="#eceef2" strokeWidth={3} />
+      <circle
+        cx={10}
+        cy={10}
+        r={r}
+        fill="none"
+        stroke="#eceef2"
+        strokeWidth={3}
+      />
       <circle
         cx={10}
         cy={10}
@@ -124,8 +143,7 @@ function EmailsPage() {
   const [calMonth, setCalMonth] = useState(() => new Date(2026, 5, 1));
 
   const filtersActive =
-    search.trim() !== "" ||
-    [status, type, broker, list].some((v) => v !== ALL);
+    search.trim() !== "" || [status, type, broker, list].some((v) => v !== ALL);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -158,12 +176,8 @@ function EmailsPage() {
       <div className="bg-white border-bottom shadow-sm">
         <div className="container py-3">
           <div className="d-flex align-items-center gap-3">
-            <FontAwesomeIcon
-              icon={faEnvelopesBulk}
-              className="fs-3 text-body"
-            />
             <div className="flex-grow-1">
-              <h1 className="fs-4 fw-semibold mb-0">Emails</h1>
+              <h1 className="fs-4 fw-semibold mb-0">Campaigns</h1>
               <div className="text-muted">Manage your email campaigns.</div>
             </div>
 
@@ -195,7 +209,12 @@ function EmailsPage() {
                   <span className="text-muted small">75,000 / 250,000</span>
                 </div>
               </Popover.Trigger>
-              <Popover.Content side="bottom" align="end" sideOffset={6} style={{ minWidth: 280 }}>
+              <Popover.Content
+                side="bottom"
+                align="end"
+                sideOffset={6}
+                style={{ minWidth: 280 }}
+              >
                 <Popover.Header>Email Send Limit</Popover.Header>
                 <Popover.Body className="d-flex flex-column gap-3">
                   <div className="d-flex flex-column gap-1">
@@ -209,11 +228,21 @@ function EmailsPage() {
                   <div className="d-flex border rounded overflow-hidden">
                     <div className="flex-fill p-2 border-end">
                       <div className="fw-semibold small">175,000</div>
-                      <div className="text-muted" style={{ fontSize: "0.7rem" }}>Emails Left</div>
+                      <div
+                        className="text-muted"
+                        style={{ fontSize: "0.7rem" }}
+                      >
+                        Emails Left
+                      </div>
                     </div>
                     <div className="flex-fill p-2">
                       <div className="fw-semibold small">April 25, 2026</div>
-                      <div className="text-muted" style={{ fontSize: "0.7rem" }}>Email Limit Resets</div>
+                      <div
+                        className="text-muted"
+                        style={{ fontSize: "0.7rem" }}
+                      >
+                        Email Limit Resets
+                      </div>
                     </div>
                   </div>
                 </Popover.Body>
@@ -287,7 +316,10 @@ function EmailsPage() {
                   </InputGroup>
                 </div>
 
-                <Select value={status} onValueChange={(v) => setStatus(v ?? ALL)}>
+                <Select
+                  value={status}
+                  onValueChange={(v) => setStatus(v ?? ALL)}
+                >
                   <Select.Trigger className="w-auto">
                     <Select.Value>
                       {(v) => STATUS_FILTER_LABELS[v ?? ALL]}
@@ -319,7 +351,10 @@ function EmailsPage() {
                   </Select.Content>
                 </Select>
 
-                <Select value={broker} onValueChange={(v) => setBroker(v ?? ALL)}>
+                <Select
+                  value={broker}
+                  onValueChange={(v) => setBroker(v ?? ALL)}
+                >
                   <Select.Trigger className="w-auto">
                     <Select.Value>
                       {(v) => BROKER_FILTER_LABELS[v ?? ALL]}
@@ -363,8 +398,12 @@ function EmailsPage() {
                       >
                         <FontAwesomeIcon icon={faChevronLeft} />
                       </Button>
-                      <span className="fw-semibold px-1" style={{ minWidth: 110, textAlign: "center" }}>
-                        {MONTH_NAMES[calMonth.getMonth()]} {calMonth.getFullYear()}
+                      <span
+                        className="fw-semibold px-1"
+                        style={{ minWidth: 110, textAlign: "center" }}
+                      >
+                        {MONTH_NAMES[calMonth.getMonth()]}{" "}
+                        {calMonth.getFullYear()}
                       </span>
                       <Button
                         variant="ghost"
@@ -381,7 +420,9 @@ function EmailsPage() {
                       <Tooltip.Trigger
                         render={
                           <Button
-                            variant={viewMode === "table" ? "primary" : "outline"}
+                            variant={
+                              viewMode === "table" ? "primary" : "outline"
+                            }
                             size="icon"
                             onClick={() => setViewMode("table")}
                             aria-pressed={viewMode === "table"}
@@ -397,7 +438,9 @@ function EmailsPage() {
                       <Tooltip.Trigger
                         render={
                           <Button
-                            variant={viewMode === "calendar" ? "primary" : "outline"}
+                            variant={
+                              viewMode === "calendar" ? "primary" : "outline"
+                            }
                             size="icon"
                             onClick={() => setViewMode("calendar")}
                             aria-pressed={viewMode === "calendar"}

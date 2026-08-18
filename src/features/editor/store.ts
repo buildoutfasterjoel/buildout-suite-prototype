@@ -6,6 +6,7 @@ import type {
   Cell,
   DropTarget,
   EditorDocument,
+  MapBlock,
   NavPanel,
   Selection,
 } from "./types";
@@ -111,6 +112,8 @@ interface EditorState {
   setBlockText: (blockId: string, text: string) => void;
   /** Swap an image block's source. */
   setImageSrc: (blockId: string, src: string) => void;
+  /** Patch a map block's presentation (style, zoom, size, border). */
+  updateMapBlock: (blockId: string, patch: Partial<Omit<MapBlock, "id" | "type">>) => void;
   /** Edit one item of a static list block. */
   setListItem: (blockId: string, index: number, text: string) => void;
   /** Insert a blank item at `index`. */
@@ -346,6 +349,16 @@ export const useEditorStore = create<EditorState>((set) => {
       const block = findBlock(s.document, blockId);
       if (!block || block.type !== "image") return s;
       return { document: replaceBlock(s.document, blockId, { ...block, src }), dirty: true };
+    }),
+
+  updateMapBlock: (blockId, patch) =>
+    set((s) => {
+      const block = findBlock(s.document, blockId);
+      if (!block || block.type !== "map") return s;
+      return {
+        document: replaceBlock(s.document, blockId, { ...block, ...patch }),
+        dirty: true,
+      };
     }),
 
   setListItem: (blockId, index, text) =>
