@@ -211,7 +211,7 @@ const INSTRUCTION_EFFECTS: InstructionEffect[] = [
     effect: 'Adds Rent Roll Summary',
     matches: /tenant roster/i,
     phase: 'add',
-    offerWhen: (_base, kinds) => kinds.has('rent-roll'),
+    offerWhen: (base) => !base.includes('rentRollSummary'),
   },
   {
     id: 'emphasize-location',
@@ -220,7 +220,7 @@ const INSTRUCTION_EFFECTS: InstructionEffect[] = [
     effect: 'Adds Location & Map',
     matches: /emphasi\w+.*location/i,
     phase: 'add',
-    offerWhen: (_base, kinds) => kinds.has('market'),
+    offerWhen: (base) => !base.includes('locationMap'),
   },
   {
     id: 'skip-comps',

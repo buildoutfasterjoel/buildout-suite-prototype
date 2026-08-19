@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { OutlineInput } from './documentGeneration'
 import {
   buildOutline,
   classifyFile,
@@ -277,14 +278,36 @@ describe('suggestionsFor', () => {
     expect(without.some((c) => c.id === 'lead-with-noi')).toBe(false)
   })
 
-  it('offers the roster card only when a rent roll is selected', () => {
+  it('offers the roster card only when the outline lacks a rent roll page', () => {
+    // No rent-roll file: the card is the only way to get that page.
+    expect(
+      suggestionsFor({ docType: 'Brochure', files: [], instructions: '' }).some(
+        (c) => c.id === 'tenant-roster',
+      ),
+    ).toBe(true)
+    // Rent-roll file selected: the page is already there, so the card would be a no-op.
     expect(
       suggestionsFor({
         docType: 'Brochure',
         files: [{ id: 'a', name: 'Rent Roll 2026.xlsx' }],
         instructions: '',
       }).some((c) => c.id === 'tenant-roster'),
+    ).toBe(false)
+  })
+
+  it('offers the location card only when the outline lacks a location page', () => {
+    expect(
+      suggestionsFor({ docType: 'Flyer', files: [], instructions: '' }).some(
+        (c) => c.id === 'emphasize-location',
+      ),
     ).toBe(true)
+    expect(
+      suggestionsFor({
+        docType: 'Flyer',
+        files: [{ id: 'a', name: 'Submarket Report.pdf' }],
+        instructions: '',
+      }).some((c) => c.id === 'emphasize-location'),
+    ).toBe(false)
   })
 
   it('offers at most four cards', () => {
@@ -313,6 +336,26 @@ describe('suggestionsFor', () => {
       expect(card.title.length).toBeGreaterThan(0)
       expect(card.sentence.length).toBeGreaterThan(0)
       expect(card.effect.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('never offers a card that would not change the outline', () => {
+    const cases: OutlineInput[] = [
+      { docType: 'Offering Memorandum', files: ALL_KINDS, instructions: '' },
+      { docType: 'Brochure', files: [], instructions: '' },
+      { docType: 'Flyer', files: [{ id: 'a', name: 'T-12 2025.pdf' }], instructions: '' },
+      { docType: "Owner's Report", files: ALL_KINDS, instructions: '' },
+      { docType: 'Executive Summary', files: [{ id: 'a', name: 'Site Photos.zip' }], instructions: '' },
+    ]
+    for (const input of cases) {
+      const base = buildOutline(input)
+      for (const card of suggestionsFor(input)) {
+        const applied = buildOutline({
+          ...input,
+          instructions: `${input.instructions} ${card.sentence}`.trim(),
+        })
+        expect(applied, `${card.id} on ${input.docType} changed nothing`).not.toEqual(base)
+      }
     }
   })
 })
