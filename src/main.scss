@@ -14,7 +14,11 @@
 // mixins in source order, and its callers sit in two separate sections below.
 @mixin otto-sweep($angle, $wash) {
   background-image:
-    linear-gradient(90deg, rgba(255, 255, 255, $wash), rgba(255, 255, 255, $wash)),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, $wash),
+      rgba(255, 255, 255, $wash)
+    ),
     linear-gradient($angle, #b88cf2 0%, #8ca6f7 50%, #61c2ff 100%);
 }
 
@@ -415,7 +419,6 @@
     margin-left: auto;
     opacity: 0.55;
   }
-
 
   // Panel content: a subtle grey background (matches the deal detail rail's
   // Seller/Buyer/Other accordions). Blueprint nests an inner `.accordion-content`
@@ -1478,7 +1481,11 @@
   cursor: pointer;
   outline: none;
   background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08)),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.08),
+      rgba(255, 255, 255, 0.08)
+    ),
     linear-gradient(
       90deg,
       rgba(184, 140, 242, 0.18) 0%,
@@ -1506,7 +1513,11 @@
 
   &:hover {
     background:
-      linear-gradient(90deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.12)),
+      linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.12),
+        rgba(255, 255, 255, 0.12)
+      ),
       linear-gradient(
         90deg,
         rgba(184, 140, 242, 0.34) 0%,
@@ -1857,7 +1868,11 @@
     &--ai {
       color: var(--color-purple-heart-700, #6b21c8);
       background:
-        linear-gradient(0deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.55)),
+        linear-gradient(
+          0deg,
+          rgba(255, 255, 255, 0.55),
+          rgba(255, 255, 255, 0.55)
+        ),
         linear-gradient(45deg, #b88cf2 0%, #8ca6f7 50%, #61c2ff 100%);
     }
   }
@@ -3764,7 +3779,6 @@
     min-width: 0;
   }
 
-
   // The active pane's controls, at the trailing edge of the strip.
   &__actions {
     display: flex;
@@ -3823,7 +3837,11 @@
 .contact-briefing {
   border: 1px solid #e7d5ff;
   background-image:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.85)),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.85),
+      rgba(255, 255, 255, 0.85)
+    ),
     linear-gradient(90deg, #b88cf2 0%, #8ca6f7 50%, #61c2ff 100%);
 
   &__header {
@@ -3894,6 +3912,14 @@
 
 // ── Global top nav: item states + restyled footer controls ───────────────────
 .global-navbar {
+  // The navbar's natural height is 60px (36px items + the theme's 8px
+  // .navbar-nav padding-block + 4px navbar padding-y), but the theme's
+  // `min-height: 56px` sits *below* that. As a shrinkable flex item in
+  // .app-shell's vh-100 column, any page whose content over-constrains the
+  // column squeezed the navbar down to that 56px floor — so its height changed
+  // from page to page. Pin it: the navbar is chrome and never shrinks.
+  flex-shrink: 0;
+
   // Main nav items (Properties, Contacts, Deals, Reports): never filled. Muted
   // when inactive, white on hover, white + bold with a purple icon when active.
   .navbar-collapse .nav-link {
@@ -4565,7 +4591,9 @@
 // saved list. Only the hover lift lives here; the icon tile and group heading
 // are Bootstrap utilities on the elements themselves.
 .report-row {
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  transition:
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
 
   &:hover {
     border-color: var(--color-purple-heart-300, #ddbdfc);

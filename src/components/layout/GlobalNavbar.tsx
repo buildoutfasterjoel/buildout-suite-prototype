@@ -43,6 +43,8 @@ const navContexts: NavContext[] = [
   { label: "Contacts", href: "/backoffice/contacts", icon: faUsers },
   { label: "Deals", href: "/listings", icon: faHandshake },
   { label: "Reports", href: "/reports", icon: faSignal },
+  // Hidden for the demo. To restore, re-add `faDoorOpen` to the icon import:
+  // { label: "Back Office", href: "/backoffice", icon: faDoorOpen },
 ];
 
 function isPathActive(href: string, pathname: string): boolean {
@@ -200,7 +202,9 @@ export function GlobalNavbar() {
               >
                 New Contact
               </Navbar.GroupMenuItem>
-              <Navbar.GroupMenuItem onClick={() => useCreateDeal.getState().openFor()}>
+              <Navbar.GroupMenuItem
+                onClick={() => useCreateDeal.getState().openFor()}
+              >
                 New Deal
               </Navbar.GroupMenuItem>
             </Navbar.GroupMenu>

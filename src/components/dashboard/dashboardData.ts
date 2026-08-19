@@ -8,8 +8,35 @@
  */
 import type { HeroKey } from "#/data/types";
 
-/** "Today" for the dashboard's mock data — a Monday, matching the reference design. */
-export const DASHBOARD_TODAY = new Date(2026, 6, 6);
+/** Local midnight on the real current date. */
+function startOfToday(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+/**
+ * "Today" for the dashboard's mock data. Live, not pinned: it used to be frozen
+ * at 2026-07-06 (a Monday, matching the reference design), so every demo after
+ * that week opened on a visibly stale date. Local midnight, because its readers
+ * compare whole days — the home page's date line, the pipeline report's
+ * close-date filters, and the relative labels in Recent activity.
+ *
+ * Evaluated once per page load, which is the right granularity for a demo.
+ */
+export const DASHBOARD_TODAY = startOfToday();
+
+/**
+ * A local ISO timestamp `daysAgo` days before {@link DASHBOARD_TODAY} at
+ * `hh:mm`. Fixture "when"s go through here rather than being written as literal
+ * dates, so the activity feed keeps its intended spacing ("11h ago", "2d ago")
+ * no matter when the demo runs.
+ */
+function daysBeforeToday(daysAgo: number, hour: number, minute: number): string {
+  const d = startOfToday();
+  d.setDate(d.getDate() - daysAgo);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(hour)}:${pad(minute)}:00`;
+}
 
 export interface PipelineStageSummary {
   id: string;
@@ -107,7 +134,7 @@ export const RECENT_ACTIVITY: ActivityItem[] = [
     kind: "note",
     contactName: "Sandra Vega",
     body: "Closing-day gift idea: frame a print of the 1940s Spring Street streetscape for the lobby.",
-    timestamp: "2026-07-05T12:47:00",
+    timestamp: daysBeforeToday(1, 12, 47),
   },
   {
     id: "activity-2",
@@ -115,7 +142,7 @@ export const RECENT_ACTIVITY: ActivityItem[] = [
     contactName: "Caroline Heyward",
     durationSecs: 38,
     body: "Voicemail — left a message about the Meeting Street walkthrough.",
-    timestamp: "2026-07-04T12:47:00",
+    timestamp: daysBeforeToday(2, 12, 47),
   },
   {
     id: "activity-3",
@@ -123,14 +150,14 @@ export const RECENT_ACTIVITY: ActivityItem[] = [
     contactName: "Sandra Vega",
     durationSecs: 372,
     body: "Warm — walked the closing checklist and confirmed Friday's signing.",
-    timestamp: "2026-07-04T12:47:00",
+    timestamp: daysBeforeToday(2, 12, 47),
   },
   {
     id: "activity-4",
     kind: "note",
     contactName: "Hector Ravenel",
     body: "BAR attorney suggested we reach out to Charleston Historical Foundation before filing.",
-    timestamp: "2026-07-03T12:47:00",
+    timestamp: daysBeforeToday(3, 12, 47),
   },
   {
     id: "activity-5",
@@ -138,7 +165,7 @@ export const RECENT_ACTIVITY: ActivityItem[] = [
     contactName: "Hector Ravenel",
     durationSecs: 728,
     body: "Warm — discussed the valuation cap and the listing window timeline.",
-    timestamp: "2026-07-02T12:47:00",
+    timestamp: daysBeforeToday(4, 12, 47),
   },
 ];
 
