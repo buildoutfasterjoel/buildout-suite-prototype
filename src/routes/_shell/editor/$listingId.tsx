@@ -8,8 +8,11 @@ import { EditorRoot } from "#/features/editor/EditorRoot";
 
 export const Route = createFileRoute("/_shell/editor/$listingId")({
   component: DocumentEditor,
-  validateSearch: (search: Record<string, unknown>): { focus?: "underwriting" } => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { focus?: "underwriting"; doc?: string } => ({
     focus: search.focus === "underwriting" ? "underwriting" : undefined,
+    doc: typeof search.doc === "string" && search.doc.length > 0 ? search.doc : undefined,
   }),
   head: ({ params }) => {
     const listing = getStore().listings.get(params.listingId);
@@ -21,7 +24,7 @@ export const Route = createFileRoute("/_shell/editor/$listingId")({
 
 function DocumentEditor() {
   const { listingId } = Route.useParams();
-  const { focus } = Route.useSearch();
+  const { focus, doc } = Route.useSearch();
   const store = getStore();
   const listing = store.listings.get(listingId);
   const property = listing && store.properties.get(listing.propertyId);
@@ -52,6 +55,7 @@ function DocumentEditor() {
       listing={property}
       listingId={listingId}
       focusUnderwriting={focus === "underwriting"}
+      documentId={doc}
     />
   );
 }

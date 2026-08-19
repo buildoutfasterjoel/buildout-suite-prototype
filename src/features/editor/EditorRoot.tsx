@@ -6,6 +6,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faClockRotateLeft } from "@fortawesome/pro-regular-svg-icons";
 import type { Property } from "#/data/types";
 import { getListing } from "#/data/store";
+import { resolveGeneratedDocument } from "#/data/actions";
 import { buildingSectionListingId } from "#/components/deals/dealCardLink";
 import { SIDEBAR_PIN_STORAGE_KEY, useEditorStore } from "./store";
 import { DocsNavRail } from "./DocsNavRail";
@@ -24,11 +25,14 @@ export function EditorRoot({
   listing,
   listingId,
   focusUnderwriting = false,
+  documentId,
 }: {
   listing: Property | undefined;
   listingId: string;
   /** When true (from `?focus=underwriting`), scroll to the underwriting section on open. */
   focusUnderwriting?: boolean;
+  /** When set (from `?doc=`), open that generated document instead of the fixed Proposal. */
+  documentId?: string;
 }) {
   const navigate = useNavigate();
   const initDocument = useEditorStore((s) => s.initDocument);
@@ -38,8 +42,15 @@ export function EditorRoot({
 
   useEffect(() => {
     const deal = getListing(listingId);
-    initDocument(listing, deal?.underwriting, deal?.marketing);
-  }, [listing, listingId, initDocument]);
+    const generation = resolveGeneratedDocument(deal, documentId);
+    const document = deal?.documents?.find((d) => d.id === documentId);
+    initDocument(
+      listing,
+      deal?.underwriting,
+      deal?.marketing,
+      generation && document ? { name: document.name, generation } : undefined,
+    );
+  }, [listing, listingId, documentId, initDocument]);
 
   // Arriving from the deal's "Review" button — land on the underwriting section.
   useEffect(() => {
