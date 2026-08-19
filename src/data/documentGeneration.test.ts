@@ -297,9 +297,11 @@ describe('suggestionsFor', () => {
   it('offers the roster card only when the outline lacks a rent roll page', () => {
     // No rent-roll file: the card is the only way to get that page.
     expect(
-      suggestionsFor({ templateName: 'Brochure', files: [], instructions: '' }).some(
-        (c) => c.id === 'tenant-roster',
-      ),
+      suggestionsFor({
+        templateName: 'Brochure',
+        files: [{ id: 'a', name: 'Site Photos.zip' }],
+        instructions: '',
+      }).some((c) => c.id === 'tenant-roster'),
     ).toBe(true)
     // Rent-roll file selected: the page is already there, so the card would be a no-op.
     expect(
@@ -313,9 +315,11 @@ describe('suggestionsFor', () => {
 
   it('offers the location card only when the outline lacks a location page', () => {
     expect(
-      suggestionsFor({ templateName: 'Flyer', files: [], instructions: '' }).some(
-        (c) => c.id === 'emphasize-location',
-      ),
+      suggestionsFor({
+        templateName: 'Flyer',
+        files: [{ id: 'a', name: 'T-12 2025.pdf' }],
+        instructions: '',
+      }).some((c) => c.id === 'emphasize-location'),
     ).toBe(true)
     expect(
       suggestionsFor({
@@ -335,6 +339,14 @@ describe('suggestionsFor', () => {
       instructions: 'Skip the sale comparables.',
     })
     expect(cards.some((c) => c.id === 'skip-comps')).toBe(true)
+  })
+
+  it('offers no prompt cards until a file is selected', () => {
+    // Same rule as the template deck: nothing to emphasize before there is
+    // anything to emphasize it in.
+    expect(
+      suggestionsFor({ templateName: 'Offering Memorandum', files: [], instructions: '' }),
+    ).toEqual([])
   })
 
   it('gives every card a sentence and a stated effect', () => {
@@ -381,13 +393,22 @@ describe('suggestTemplates', () => {
     expect(best.name).toBe('Brochure')
   })
 
-  it('names the selected files each suggestion actually uses', () => {
-    const [best] = suggestTemplates([
-      file('T-12 2025.pdf'),
-      file('Master Lease Agreement.docx'),
-    ])
-    // The lease contributes nothing, so no suggestion should claim it.
-    expect(best.usesFileNames).toEqual(['T-12 2025.pdf'])
+  it('credits every selected file whichever template is chosen', () => {
+    // The template supplies only the spine. Every selected file contributes its
+    // sections regardless, which is why a suggestion must not claim to use some
+    // subset of them.
+    // Distinct FILES, not sections — one file can contribute several sections.
+    const creditedPerTemplate = TEMPLATE_NAMES.map((templateName) => [
+      ...new Set(
+        buildOutline({ templateName, files: ALL_KINDS, instructions: '' })
+          .filter((s) => s.origin === 'file')
+          .map((s) => s.sourceFileName),
+      ),
+    ].sort())
+    for (const credited of creditedPerTemplate) {
+      expect(credited).toEqual(creditedPerTemplate[0])
+      expect(credited).toHaveLength(ALL_KINDS.length)
+    }
   })
 
   it('marks exactly one suggestion as the best fit', () => {

@@ -134,12 +134,13 @@ export const SECTION_NAME: Record<string, string> = {
 }
 
 /**
- * Which file kinds each template is FOR. This is the whole basis of the
- * best-fit suggestion, kept as a table rather than logic so the mapping can be
- * retuned in one place after seeing it on screen.
+ * Which file kinds each template is FOR. Used ONLY to rank the best fit, kept as
+ * a table rather than logic so the mapping can be retuned in one place.
  *
- * A kind absent from every list here (legal, other) can still be selected — it
- * simply never argues for one template over another.
+ * This does NOT decide which files a document draws on: every selected file
+ * contributes its sections whatever template is chosen, because the template
+ * supplies only the spine. A kind absent from every list here (legal, other) can
+ * still be selected — it simply never argues for one template over another.
  */
 const TEMPLATE_FOR_KINDS: Record<TemplateName, FileKind[]> = {
   'Offering Memorandum': ['financials', 'rent-roll', 'comps', 'market'],
@@ -155,30 +156,8 @@ const SUGGESTION_COUNT = 3
 
 export interface TemplateSuggestion {
   name: TemplateName
-  /** The selected files this template makes use of, named on its card. */
-  usesFileNames: string[]
   /** True for the single best fit, which the UI preselects. */
   bestFit: boolean
-}
-
-/**
- * The selected files this template is for, in the order their sections appear
- * in the document, and alphabetically within a kind — so the result depends on
- * WHICH files were selected, never on the order they arrived in.
- */
-function filesUsedBy(template: TemplateName, files: SourceFileRef[]): string[] {
-  const declared = new Set(TEMPLATE_FOR_KINDS[template])
-  const names: string[] = []
-  for (const kind of KIND_ORDER) {
-    if (!declared.has(kind)) continue
-    names.push(
-      ...files
-        .filter((f) => classifyFile(f.name) === kind)
-        .map((f) => f.name)
-        .sort(),
-    )
-  }
-  return names
 }
 
 /**
@@ -206,7 +185,6 @@ export function suggestTemplates(files: SourceFileRef[]): TemplateSuggestion[] {
 
   return scored.slice(0, SUGGESTION_COUNT).map((s, i) => ({
     name: s.name,
-    usesFileNames: filesUsedBy(s.name, files),
     bestFit: i === 0,
   }))
 }
@@ -426,12 +404,17 @@ export function buildOutline(input: OutlineInput): GeneratedSection[] {
  * The suggestion deck: at most four cards, in declaration order, offered only
  * when they would change something.
  *
- * Judged against the BASE outline — the one built from the doc type and files
+ * Judged against the BASE outline — the one built from the template and files
  * with no instructions applied — so a card does not vanish the moment its own
  * effect lands. Judging against the live outline would make "Skip comps"
  * disappear as soon as it was selected.
+ *
+ * Silent until a file is selected, matching the template deck: there is nothing
+ * to emphasize before there is anything to emphasize it in.
  */
 export function suggestionsFor(input: OutlineInput): SuggestionCard[] {
+  if (input.files.length === 0) return []
+
   const base = buildOutline({ ...input, instructions: '' }).map((s) => s.templateKey)
   const kinds = new Set(input.files.map((f) => classifyFile(f.name)))
   return INSTRUCTION_EFFECTS.filter((e) => e.offerWhen(base, kinds))

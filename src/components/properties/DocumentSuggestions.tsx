@@ -9,8 +9,10 @@ import type { TemplateName, TemplateSuggestion } from "#/data/documentGeneration
  * document type — the AI proposes a template and they confirm or override it, so
  * the best fit arrives preselected and Generate works without a single click here.
  *
- * Each card names the files it actually uses, which is what keeps the suggestion
- * legible rather than magic: "best fit" means something you can read.
+ * The cards deliberately do NOT say which files they use. Every selected file
+ * contributes its sections whatever template is picked — the template supplies
+ * only the spine — so naming a subset would misdescribe what happens, and the
+ * card would grow with each file selected.
  */
 export function DocumentSuggestions({
   suggestions,
@@ -36,7 +38,11 @@ export function DocumentSuggestions({
               tabIndex={0}
               aria-pressed={active}
               className={active ? "border-primary" : undefined}
-              style={{ cursor: "pointer", flex: "1 1 200px", minWidth: 0 }}
+              // Equal thirds on one row. A 200px basis was right while the cards
+              // carried a line of filenames; without it they wrap 2 + 1, and the
+              // lone card stretches to full width. minWidth: 0 lets a long name
+              // truncate rather than force a wrap.
+              style={{ cursor: "pointer", flex: "1 1 0", minWidth: 0 }}
               onClick={() => onSelect(suggestion.name)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
@@ -45,7 +51,7 @@ export function DocumentSuggestions({
                 }
               }}
             >
-              <Card.Body className="p-2 d-flex flex-column gap-1">
+              <Card.Body className="p-2">
                 <span className="d-flex align-items-center gap-2">
                   <FontAwesomeIcon
                     icon={active ? faCircleCheck : faCircle}
@@ -58,11 +64,6 @@ export function DocumentSuggestions({
                     </Badge>
                   )}
                 </span>
-                <span className="d-block text-muted fs-small">
-                  {suggestion.usesFileNames.length > 0
-                    ? `Uses ${formatFileList(suggestion.usesFileNames)}`
-                    : "Uses none of the selected files"}
-                </span>
               </Card.Body>
             </Card>
           );
@@ -70,10 +71,4 @@ export function DocumentSuggestions({
       </div>
     </div>
   );
-}
-
-/** "a.pdf", "a.pdf and b.xlsx", "a.pdf, b.xlsx and c.zip". */
-function formatFileList(names: string[]): string {
-  if (names.length === 1) return names[0];
-  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }
