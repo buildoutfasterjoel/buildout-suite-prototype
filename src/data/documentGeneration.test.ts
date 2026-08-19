@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { buildOutline, classifyFile, DOC_TYPES } from './documentGeneration'
+import {
+  buildOutline,
+  classifyFile,
+  DOC_TYPES,
+  MAX_CONCISE_SECTIONS,
+  suggestionsFor,
+} from './documentGeneration'
 
 describe('classifyFile', () => {
   it('recognizes financial statements', () => {
@@ -136,5 +142,177 @@ describe('buildOutline base structure', () => {
       instructions: '',
     }
     expect(buildOutline(input)).toEqual(buildOutline(input))
+  })
+})
+
+const ALL_KINDS = [
+  { id: 'f1', name: 'T-12 2025.pdf' },
+  { id: 'f2', name: 'Rent Roll 2026.xlsx' },
+  { id: 'f3', name: 'Submarket Report.pdf' },
+  { id: 'f4', name: 'Sale Comparables.xlsx' },
+  { id: 'f5', name: 'Site Photos.zip' },
+]
+
+describe('instruction effects', () => {
+  it('moves financial highlights directly after the cover', () => {
+    const keys = buildOutline({
+      docType: 'Offering Memorandum',
+      files: ALL_KINDS,
+      instructions: 'Lead with the trailing-12 NOI growth.',
+    }).map((s) => s.templateKey)
+    expect(keys[0]).toBe('cover')
+    expect(keys[1]).toBe('financialHero')
+  })
+
+  it('adds financial highlights when no financial file was selected', () => {
+    const sections = buildOutline({
+      docType: 'Brochure',
+      files: [],
+      instructions: 'Lead with the trailing-12 NOI growth.',
+    })
+    const hero = sections.find((s) => s.templateKey === 'financialHero')
+    expect(hero?.origin).toBe('instruction')
+    expect(hero?.instructionLabel).toBeTruthy()
+  })
+
+  it('adds the rent roll summary on request', () => {
+    const sections = buildOutline({
+      docType: 'Brochure',
+      files: [],
+      instructions: 'Summarize the tenant roster.',
+    })
+    const rentRoll = sections.find((s) => s.templateKey === 'rentRollSummary')
+    expect(rentRoll?.origin).toBe('instruction')
+  })
+
+  it('adds the location page on request', () => {
+    const keys = buildOutline({
+      docType: 'Flyer',
+      files: [],
+      instructions: 'Emphasize the location and surrounding submarket.',
+    }).map((s) => s.templateKey)
+    expect(keys).toContain('locationMap')
+  })
+
+  it('removes the comparables on request', () => {
+    const keys = buildOutline({
+      docType: 'Offering Memorandum',
+      files: ALL_KINDS,
+      instructions: 'Skip the sale comparables.',
+    }).map((s) => s.templateKey)
+    expect(keys).not.toContain('comparables')
+  })
+
+  it('recognizes a hand-typed phrase, not just the canonical sentence', () => {
+    const keys = buildOutline({
+      docType: 'Offering Memorandum',
+      files: ALL_KINDS,
+      instructions: 'no comps please, and keep it short',
+    }).map((s) => s.templateKey)
+    expect(keys).not.toContain('comparables')
+    expect(keys.length).toBeLessThanOrEqual(MAX_CONCISE_SECTIONS)
+  })
+
+  it('caps a concise outline and trims only sourced sections', () => {
+    const sections = buildOutline({
+      docType: 'Offering Memorandum',
+      files: ALL_KINDS,
+      instructions: 'Keep it concise.',
+    })
+    expect(sections.length).toBe(MAX_CONCISE_SECTIONS)
+    const keys = sections.map((s) => s.templateKey)
+    // Openers and the closer survive the trim.
+    expect(keys.slice(0, 3)).toEqual(['cover', 'contents', 'propertySummary'])
+    expect(keys).toContain('advisorBios')
+  })
+
+  it('ignores unrecognized instructions without changing the outline', () => {
+    const base = buildOutline({ docType: 'Proposal', files: ALL_KINDS, instructions: '' })
+    const withText = buildOutline({
+      docType: 'Proposal',
+      files: ALL_KINDS,
+      instructions: 'Make it feel premium and mention the roof deck.',
+    })
+    expect(withText).toEqual(base)
+  })
+
+  it('does not depend on the order phrases appear in the text', () => {
+    const a = buildOutline({
+      docType: 'Offering Memorandum',
+      files: ALL_KINDS,
+      instructions: 'Keep it concise. Skip the sale comparables.',
+    })
+    const b = buildOutline({
+      docType: 'Offering Memorandum',
+      files: ALL_KINDS,
+      instructions: 'Skip the sale comparables. Keep it concise.',
+    })
+    expect(a).toEqual(b)
+  })
+
+  it('never emits a duplicate section key', () => {
+    const keys = buildOutline({
+      docType: "Owner's Report",
+      files: ALL_KINDS,
+      instructions: 'Lead with the trailing-12 NOI growth. Summarize the tenant roster.',
+    }).map((s) => s.templateKey)
+    expect(new Set(keys).size).toBe(keys.length)
+  })
+})
+
+describe('suggestionsFor', () => {
+  it('offers the NOI card only when a financial file is selected', () => {
+    const withFin = suggestionsFor({
+      docType: 'Brochure',
+      files: [{ id: 'a', name: 'T-12 2025.pdf' }],
+      instructions: '',
+    })
+    expect(withFin.some((c) => c.id === 'lead-with-noi')).toBe(true)
+
+    const without = suggestionsFor({
+      docType: 'Brochure',
+      files: [{ id: 'a', name: 'Buyer Q&A Thread.pdf' }],
+      instructions: '',
+    })
+    expect(without.some((c) => c.id === 'lead-with-noi')).toBe(false)
+  })
+
+  it('offers the roster card only when a rent roll is selected', () => {
+    expect(
+      suggestionsFor({
+        docType: 'Brochure',
+        files: [{ id: 'a', name: 'Rent Roll 2026.xlsx' }],
+        instructions: '',
+      }).some((c) => c.id === 'tenant-roster'),
+    ).toBe(true)
+  })
+
+  it('offers at most four cards', () => {
+    expect(
+      suggestionsFor({ docType: 'Offering Memorandum', files: ALL_KINDS, instructions: '' }).length,
+    ).toBeLessThanOrEqual(4)
+  })
+
+  it('keeps offering a card whose effect has already been applied', () => {
+    // Judged against the base outline, so "skip comps" does not vanish the
+    // moment it is added — otherwise the selected card would disappear.
+    const cards = suggestionsFor({
+      docType: 'Offering Memorandum',
+      files: ALL_KINDS,
+      instructions: 'Skip the sale comparables.',
+    })
+    expect(cards.some((c) => c.id === 'skip-comps')).toBe(true)
+  })
+
+  it('gives every card a sentence and a stated effect', () => {
+    for (const card of suggestionsFor({
+      docType: 'Offering Memorandum',
+      files: ALL_KINDS,
+      instructions: '',
+    })) {
+      expect(card.title.length).toBeGreaterThan(0)
+      expect(card.sentence.length).toBeGreaterThan(0)
+      expect(card.effect.length).toBeGreaterThan(0)
+    }
   })
 })

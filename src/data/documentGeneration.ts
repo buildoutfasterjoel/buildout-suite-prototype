@@ -163,17 +163,165 @@ function sourcedSections(files: SourceFileRef[], taken: Set<string>): GeneratedS
   return out
 }
 
+/** Total sections a "keep it concise" outline is allowed. */
+export const MAX_CONCISE_SECTIONS = 6
+
 /**
- * Assemble the outline: the document type's openers, then whatever the selected
- * files contribute, then its closers. Instruction phrases are applied in Task 2.
+ * When each effect runs. Adds land before moves so a moved section exists;
+ * removals run after both; the concise cap runs last, over whatever survived.
  */
+type Phase = 'add' | 'move' | 'remove' | 'cap'
+
+export interface SuggestionCard {
+  id: string
+  title: string
+  sentence: string
+  effect: string
+}
+
+interface InstructionEffect {
+  id: string
+  /** Card title in the deck. */
+  title: string
+  /** The sentence a card appends to the textarea — also what it is recognized by. */
+  sentence: string
+  /** The consequence, stated on the card. */
+  effect: string
+  /** Recognizes both the canonical sentence and the way a broker would type it. */
+  matches: RegExp
+  phase: Phase
+  /** Offered only when this holds, judged against the BASE outline (see suggestionsFor). */
+  offerWhen: (base: string[], kinds: Set<FileKind>) => boolean
+}
+
+const INSTRUCTION_EFFECTS: InstructionEffect[] = [
+  {
+    id: 'lead-with-noi',
+    title: 'Lead with NOI',
+    sentence: 'Lead with the trailing-12 NOI growth.',
+    effect: 'Moves Financial Highlights to page 2',
+    matches: /lead with.*noi|noi.*first/i,
+    phase: 'move',
+    offerWhen: (_base, kinds) => kinds.has('financials'),
+  },
+  {
+    id: 'tenant-roster',
+    title: 'Summarize roster',
+    sentence: 'Summarize the tenant roster.',
+    effect: 'Adds Rent Roll Summary',
+    matches: /tenant roster/i,
+    phase: 'add',
+    offerWhen: (_base, kinds) => kinds.has('rent-roll'),
+  },
+  {
+    id: 'emphasize-location',
+    title: 'Emphasize location',
+    sentence: 'Emphasize the location and surrounding submarket.',
+    effect: 'Adds Location & Map',
+    matches: /emphasi\w+.*location/i,
+    phase: 'add',
+    offerWhen: (_base, kinds) => kinds.has('market'),
+  },
+  {
+    id: 'skip-comps',
+    title: 'Skip comps',
+    sentence: 'Skip the sale comparables.',
+    effect: 'Removes Sale Comparables',
+    matches: /skip.*comps|skip.*comparables|no comps/i,
+    phase: 'remove',
+    offerWhen: (base) => base.includes('comparables'),
+  },
+  {
+    id: 'concise',
+    title: 'Keep it concise',
+    sentence: 'Keep it concise.',
+    effect: `Trims the document to ${MAX_CONCISE_SECTIONS} pages`,
+    matches: /concise|keep it short/i,
+    phase: 'cap',
+    offerWhen: (base) => base.length > MAX_CONCISE_SECTIONS,
+  },
+]
+
+/** Which effects the instructions text asks for. */
+function activeEffects(instructions: string): InstructionEffect[] {
+  return INSTRUCTION_EFFECTS.filter((e) => e.matches.test(instructions))
+}
+
+function instructionSection(templateKey: string, label: string): GeneratedSection {
+  return {
+    templateKey,
+    name: SECTION_NAME[templateKey] ?? templateKey,
+    origin: 'instruction',
+    instructionLabel: label,
+  }
+}
+
+/** Which section each 'add'-phase effect contributes. */
+const ADDS: Record<string, string> = {
+  'tenant-roster': 'rentRollSummary',
+  'emphasize-location': 'locationMap',
+}
+
 export function buildOutline(input: OutlineInput): GeneratedSection[] {
   const spine = SPINE[input.docType] ?? SPINE.Proposal
   const taken = new Set<string>([...spine.openers, ...spine.closers])
-  const body = sourcedSections(input.files, taken)
-  return [
+  let body = sourcedSections(input.files, taken)
+  const active = activeEffects(input.instructions)
+  const has = (key: string) =>
+    taken.has(key) || body.some((s) => s.templateKey === key)
+
+  // Phase 'add' — append to the body, never duplicating an existing section.
+  for (const effect of active.filter((e) => e.phase === 'add')) {
+    const key = ADDS[effect.id]
+    if (!key || has(key)) continue
+    body.push(instructionSection(key, effect.sentence))
+  }
+
+  // Phase 'remove' — body only; the spine is the document type's promise.
+  for (const effect of active.filter((e) => e.phase === 'remove')) {
+    if (effect.id === 'skip-comps') body = body.filter((s) => s.templateKey !== 'comparables')
+  }
+
+  // Phase 'cap' — trim sourced sections from the tail so the openers and the
+  // closers, which the document type guarantees, always survive.
+  if (active.some((e) => e.phase === 'cap')) {
+    const fixed = spine.openers.length + spine.closers.length
+    body = body.slice(0, Math.max(0, MAX_CONCISE_SECTIONS - fixed))
+  }
+
+  let sections = [
     ...spine.openers.map(spineSection),
     ...body,
     ...spine.closers.map(spineSection),
   ]
+
+  // Phase 'move' — operates on the assembled list, since it positions relative
+  // to the cover.
+  for (const effect of active.filter((e) => e.phase === 'move')) {
+    if (effect.id !== 'lead-with-noi') continue
+    const existing = sections.find((s) => s.templateKey === 'financialHero')
+    const hero = existing ?? instructionSection('financialHero', effect.sentence)
+    sections = sections.filter((s) => s.templateKey !== 'financialHero')
+    const coverAt = sections.findIndex((s) => s.templateKey === 'cover')
+    sections.splice(coverAt + 1, 0, hero)
+  }
+
+  return sections
+}
+
+/**
+ * The suggestion deck: at most four cards, in declaration order, offered only
+ * when they would change something.
+ *
+ * Judged against the BASE outline — the one built from the doc type and files
+ * with no instructions applied — so a card does not vanish the moment its own
+ * effect lands. Judging against the live outline would make "Skip comps"
+ * disappear as soon as it was selected.
+ */
+export function suggestionsFor(input: OutlineInput): SuggestionCard[] {
+  const base = buildOutline({ ...input, instructions: '' }).map((s) => s.templateKey)
+  const kinds = new Set(input.files.map((f) => classifyFile(f.name)))
+  return INSTRUCTION_EFFECTS.filter((e) => e.offerWhen(base, kinds))
+    .slice(0, 4)
+    .map((e) => ({ id: e.id, title: e.title, sentence: e.sentence, effect: e.effect }))
 }
