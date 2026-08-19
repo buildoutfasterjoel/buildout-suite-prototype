@@ -50,11 +50,19 @@ describe('createGeneratedDocument', () => {
     expect(createGeneratedDocument('no-such-deal', input).documentId).toBeNull()
   })
 
-  it('gives each generated document a distinct id', () => {
+  it('mints a collision-resistant id rather than a per-session sequence', () => {
     const dealId = anyDealId()
     const a = createGeneratedDocument(dealId, input).documentId
     const b = createGeneratedDocument(dealId, input).documentId
     expect(a).not.toBe(b)
+    // A UUID, not a counter: an in-memory sequence resets to 0 on page reload
+    // while documents persist in IndexedDB, so a second session would remint an
+    // existing id and resolveGeneratedDocument would return the stale document.
+    for (const id of [a, b]) {
+      expect(id).toMatch(
+        /^gendoc-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+      )
+    }
   })
 })
 

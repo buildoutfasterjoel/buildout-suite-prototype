@@ -281,8 +281,6 @@ export interface NewGeneratedDocument {
   sections: GeneratedSection[]
 }
 
-let _generatedDocSeq = 0
-
 /**
  * File a generated document onto the deal. The document carries its whole
  * generation — inputs and outline — so the editor can rebuild the same pages and
@@ -296,8 +294,7 @@ export function createGeneratedDocument(
   input: NewGeneratedDocument,
 ): { documentId: string | null } {
   const now = new Date().toISOString()
-  _generatedDocSeq += 1
-  const documentId = `gendoc-${_generatedDocSeq}-${dealId}`
+  const documentId = `gendoc-${crypto.randomUUID()}`
 
   const document: DealDocument = {
     id: documentId,
