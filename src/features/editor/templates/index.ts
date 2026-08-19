@@ -12,6 +12,7 @@ import {
   buildPhotoGalleryPage,
   buildPropertyDescriptionPage,
   buildPropertySummaryPage,
+  buildRentRollSummaryPage,
 } from "./designer";
 
 export type TemplateCategory =
@@ -31,6 +32,7 @@ export const TEMPLATES: TemplateDef[] = [
   { key: "contents", name: "Table of Contents", category: "Cover", description: "A generated section list beside an editable opening statement.", build: buildContentsPage },
   { key: "financialHero", name: "Financial Highlights", category: "Financials", description: "Headline metric callouts above the financial summary.", build: buildFinancialHeroPage },
   { key: "financialSummary", name: "Financial Summary", category: "Financials", description: "Address header with a data-bound financial summary table.", build: buildFinancialSummaryPage },
+  { key: "rentRollSummary", name: "Rent Roll Summary", category: "Financials", description: "The tenant roster as a table — suites, tenants, SF, rent, and rate per SF.", build: buildRentRollSummaryPage },
   { key: "propertySummary", name: "Property Summary", category: "Property", description: "Full-bleed hero over the deal's sale copy and a fact table that follows the asset class.", build: buildPropertySummaryPage },
   { key: "propertyDescription", name: "Property Description", category: "Property", description: "A tall photo beside the deal's marketing title and description copy.", build: buildPropertyDescriptionPage },
   { key: "photoGallery", name: "Photo Gallery", category: "Property", description: "Nine photos in a mixed-crop masonry grid, each tile swappable.", build: buildPhotoGalleryPage },
