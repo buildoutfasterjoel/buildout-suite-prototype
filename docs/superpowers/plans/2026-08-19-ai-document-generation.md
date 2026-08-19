@@ -1728,7 +1728,7 @@ Start the dev server: `bun --bun run dev` (http://localhost:3000).
 
 Using the `playwright` MCP server:
 1. `browser_navigate` to `http://localhost:3000/listings`
-2. `browser_wait_for` text `Displaying 20 of 20 Deals` — `browser_navigate` returns before the app hydrates, so never snapshot without waiting first. Never use `waitUntil: "networkidle"`; Vite's HMR websocket holds the connection open and it always times out.
+2. `browser_wait_for` text `Displaying 27 of 27 Deals` — `browser_navigate` returns before the app hydrates, so never snapshot without waiting first. Never use `waitUntil: "networkidle"`; Vite's HMR websocket holds the connection open and it always times out.
 3. Open any deal's Documents page, click into the editor, and confirm the fixed Proposal still opens with its cover page.
 4. `browser_console_messages` — expect no errors.
 5. `browser_close` when done. The browser does not exit on its own; leaving it running orphans ~8 Chrome processes and a temp profile.
@@ -2350,7 +2350,7 @@ Expected: no errors. Fix any Blueprint prop mismatches against https://buildouti
 - [ ] **Step 6: Verify in the browser**
 
 With `bun --bun run dev` running, via the `playwright` MCP server:
-1. `browser_navigate` to `http://localhost:3000/listings`, `browser_wait_for` text `Displaying 20 of 20 Deals`.
+1. `browser_navigate` to `http://localhost:3000/listings`, `browser_wait_for` text `Displaying 27 of 27 Deals`.
 2. Open a deal's Documents page and click **New → New Document**.
 3. Confirm the generation screen is what opens — not the template list.
 4. Confirm the picker lists the five new seed files with their kind badges. If they are missing, the IndexedDB store is stale: delete the `keyval-store` database and reload. `SEED_VERSION` should have handled it, so if a delete is needed, check Task 3 Step 4 landed.
@@ -2767,7 +2767,7 @@ Expected: no type errors, all tests pass.
 
 With `bun --bun run dev` running, via the `playwright` MCP server. Remember: never `waitUntil: "networkidle"`; scope selectors to `main.app-shell__main`; snapshots are large and are written to `.playwright-mcp/` — grep them rather than reading whole.
 
-1. `browser_navigate` to `http://localhost:3000/listings`; `browser_wait_for` text `Displaying 20 of 20 Deals`.
+1. `browser_navigate` to `http://localhost:3000/listings`; `browser_wait_for` text `Displaying 27 of 27 Deals`.
 2. Open a deal, go to its **Documents** page.
 3. **New → New Document**. Confirm the generation screen opens first.
 4. Name it, pick **Offering Memorandum**, select the T-12, rent roll, submarket report, and site photos.
