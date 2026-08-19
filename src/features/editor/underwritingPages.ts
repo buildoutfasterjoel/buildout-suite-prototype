@@ -131,7 +131,12 @@ function section(name: string, ...content: ContentBlock[]): Section {
 
 const TENANTS = ["Northwind Traders", "Contoso Ltd.", "Fabrikam Retail", "Adventure Works"];
 
-function rentRollSection(c: Ctx): Section {
+/**
+ * The rent roll table — a deterministic tenant roster derived from the deal's
+ * headline figures. Exported so the Rent Roll Summary document template renders
+ * the same numbers as the underwriting section rather than inventing its own.
+ */
+export function buildRentRollTable(c: Ctx): TableBlock {
   const unitSqft = Math.round(c.sqft / 5);
   const rates = [c.rentPerSf, c.rentPerSf - 1, c.rentPerSf + 1.5, c.rentPerSf - 0.5];
   const rows: Cell[][] = [
@@ -154,7 +159,11 @@ function rentRollSection(c: Ctx): Section {
     vcell("—"),
     vcell("—"),
   ]);
-  return section("Rent Roll Summary", table(rows));
+  return table(rows);
+}
+
+function rentRollSection(c: Ctx): Section {
+  return section("Rent Roll Summary", buildRentRollTable(c));
 }
 
 function projectInfoSection(c: Ctx, property: Property | undefined): Section {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { Table } from "@buildoutinc/blueprint-react/ui/Table";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
@@ -52,7 +52,6 @@ export function PropertyDetailDocuments({ listingId }: { listingId: string }) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [newDocumentOpen, setNewDocumentOpen] = useState(false);
-  const navigate = useNavigate();
 
   // The Documents page shows what Buildout drafts for the deal — the
   // AI-generated documents chosen in the create flow. The broker's own uploads
@@ -266,7 +265,11 @@ export function PropertyDetailDocuments({ listingId }: { listingId: string }) {
                     size="sm"
                     nativeButton={false}
                     render={
-                      <Link to="/editor/$listingId" params={{ listingId }} />
+                      <Link
+                        to="/editor/$listingId"
+                        params={{ listingId }}
+                        search={{ doc: doc.id }}
+                      />
                     }
                   >
                     <FontAwesomeIcon icon={faPenToSquare} />
@@ -310,14 +313,10 @@ export function PropertyDetailDocuments({ listingId }: { listingId: string }) {
       </Table>
       )}
 
-      {/* Picking a template drops the broker straight into the editor, the same
-          destination as editing an existing document. */}
       <NewDocumentModal
         open={newDocumentOpen}
         onOpenChange={setNewDocumentOpen}
-        onSelectTemplate={() =>
-          navigate({ to: "/editor/$listingId", params: { listingId } })
-        }
+        listingId={listingId}
       />
     </div>
   );

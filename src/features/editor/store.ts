@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
-import type { DealMarketing, DealUnderwriting, Property } from "#/data/types";
+import type { DealMarketing, DealUnderwriting, DocumentGeneration, Property } from "#/data/types";
 import type {
   Block,
   Cell,
@@ -11,7 +11,7 @@ import type {
   Selection,
 } from "./types";
 import type { DocumentData } from "./dynamic";
-import { buildSampleDocument } from "./sampleDocument";
+import { buildGeneratedDocument, buildSampleDocument } from "./sampleDocument";
 import { buildBlankPage, buildTemplatePage } from "./templates";
 import { createBlock, createCell, type BlockVariant } from "./blocks/blockFactory";
 import {
@@ -66,6 +66,8 @@ interface EditorState {
     listing: Property | undefined,
     underwriting?: DealUnderwriting,
     marketing?: DealMarketing,
+    /** When present, build this generated document instead of the fixed Proposal. */
+    generated?: { name: string; generation: DocumentGeneration },
   ) => void;
   /** Clear the dirty flag — called after a Save & Close. */
   markSaved: () => void;
@@ -166,8 +168,10 @@ export const useEditorStore = create<EditorState>((set) => {
   sidebarPinned: true,
   sidebarPoppedOpen: false,
 
-  initDocument: (listing, underwriting, marketing) => {
-    const document = buildSampleDocument(listing, underwriting);
+  initDocument: (listing, underwriting, marketing, generated) => {
+    const document = generated
+      ? buildGeneratedDocument(listing, generated.name, generated.generation)
+      : buildSampleDocument(listing, underwriting);
     set({
       activeListing: listing,
       activeMarketing: marketing,

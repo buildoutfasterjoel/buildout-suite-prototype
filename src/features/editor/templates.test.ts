@@ -63,6 +63,35 @@ describe('TEMPLATES registry', () => {
   })
 })
 
+describe('rent roll summary template', () => {
+  it('is registered under Financials', () => {
+    const def = TEMPLATES.find((t) => t.key === 'rentRollSummary')
+    expect(def).toBeTruthy()
+    expect(def?.category).toBe('Financials')
+    expect(def?.name).toBe('Rent Roll Summary')
+  })
+
+  it('builds a page carrying a table of tenants', () => {
+    const page = buildTemplatePage('rentRollSummary')
+    expect(page.name).toBe('Rent Roll Summary')
+    const table = page.blocks.find((b) => b.type === 'table') as { rows: { value: string }[][] }
+    expect(table).toBeTruthy()
+    // A header row plus at least one tenant.
+    expect(table.rows.length).toBeGreaterThan(1)
+    expect(table.rows[0].map((c) => c.value)).toContain('Tenant')
+  })
+
+  it('is deterministic across builds', () => {
+    const a = buildTemplatePage('rentRollSummary')
+    const b = buildTemplatePage('rentRollSummary')
+    const values = (p: typeof a) =>
+      p.blocks.flatMap((blk) =>
+        blk.type === 'table' ? blk.rows.flatMap((r) => r.map((c) => c.value)) : [],
+      )
+    expect(values(a)).toEqual(values(b))
+  })
+})
+
 describe('buildBlankPage', () => {
   it('is freeform (not locked) but carries the brand logo', () => {
     const page = buildBlankPage()

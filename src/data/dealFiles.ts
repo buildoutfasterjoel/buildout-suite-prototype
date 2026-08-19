@@ -8,8 +8,9 @@ function daysAfter(iso: string, days: number): string {
 
 /**
  * Seeds a listing's Files workspace: the deal-creation-time uploads (offering
- * memorandum, financials, notes) plus a couple of standard folders so the page
- * isn't empty on first visit. Deterministic — no Date.now()/Math.random() — so
+ * memorandum, financials, notes), a set of source files the document generator
+ * can act on (one per kind it maps to a section), plus a couple of standard
+ * folders so the page isn't empty on first visit. Deterministic — no Date.now()/Math.random() — so
  * server and client render the same initial state.
  *
  * Only the broker's own uploaded files seed the Files workspace — Buildout's
@@ -30,6 +31,52 @@ export function buildInitialFiles(listing: Listing): DealFileItem[] {
       sizeBytes: parseSizeLabel(doc.size),
     })
   }
+
+  // Source files the document generator can act on — one per kind it maps to a
+  // section, so a fresh deal can produce an interesting document. Sizes are
+  // literal byte counts; formatBytes renders them in the picker.
+  items.push(
+    {
+      id: `${listingId}-file-t12`,
+      name: 'T-12 Operating Statement 2025.pdf',
+      kind: 'file',
+      parentId: null,
+      createdAt: daysAfter(createdAt, 1),
+      sizeBytes: 1_468_006,
+    },
+    {
+      id: `${listingId}-file-rent-roll`,
+      name: 'Rent Roll 2026.xlsx',
+      kind: 'file',
+      parentId: null,
+      createdAt: daysAfter(createdAt, 1),
+      sizeBytes: 245_760,
+    },
+    {
+      id: `${listingId}-file-submarket`,
+      name: 'Submarket Report.pdf',
+      kind: 'file',
+      parentId: null,
+      createdAt: daysAfter(createdAt, 4),
+      sizeBytes: 3_250_586,
+    },
+    {
+      id: `${listingId}-file-sale-comps`,
+      name: 'Sale Comparables.xlsx',
+      kind: 'file',
+      parentId: null,
+      createdAt: daysAfter(createdAt, 6),
+      sizeBytes: 98_304,
+    },
+    {
+      id: `${listingId}-file-site-photos`,
+      name: 'Site Photos.zip',
+      kind: 'file',
+      parentId: null,
+      createdAt: daysAfter(createdAt, 5),
+      sizeBytes: 18_874_368,
+    },
+  )
 
   const leasesId = `${listingId}-folder-leases`
   const correspondenceId = `${listingId}-folder-correspondence`

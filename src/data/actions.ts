@@ -6,7 +6,7 @@ import {
   serializeContactFilters,
   type ContactFilterState,
 } from '#/components/contacts/contactFilterModel'
-import type { Contact, ContactRole, ContactSource, DealHistoryEntry, DealIngestion, DealMarketing, DealPitchFinancials, DealTask, DealTransaction, IngestionFieldKey, Listing, PropertyStatus, Task } from './types'
+import type { Contact, ContactRole, ContactSource, DealDocument, DealHistoryEntry, DealIngestion, DealMarketing, DealPitchFinancials, DealTask, DealTransaction, DocumentGeneration, GeneratedSection, IngestionFieldKey, Listing, PropertyStatus, Task } from './types'
 import { CURRENT_USER, TEAMMATES } from './teammates'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
 import { reconcileContactDealFields } from './contactStage'
@@ -269,6 +269,64 @@ export function updateDealFinancials(
       updatedAt: new Date().toISOString(),
     })),
   }
+}
+
+/** What the generation flow hands over to be persisted. */
+export interface NewGeneratedDocument {
+  name: string
+  templateName: string
+  sourceFileIds: string[]
+  sourceFileNames: string[]
+  instructions: string
+  sections: GeneratedSection[]
+}
+
+/**
+ * File a generated document onto the deal. The document carries its whole
+ * generation — inputs and outline — so the editor can rebuild the same pages and
+ * the review screen stays truthful even if a source file is deleted later.
+ *
+ * `generatedAt` is stamped here rather than in `documentGeneration.ts`, which
+ * must stay deterministic.
+ */
+export function createGeneratedDocument(
+  dealId: string,
+  input: NewGeneratedDocument,
+): { documentId: string | null } {
+  const now = new Date().toISOString()
+  const documentId = `gendoc-${crypto.randomUUID()}`
+
+  const document: DealDocument = {
+    id: documentId,
+    name: input.name,
+    uploadedAt: now,
+    aiGenerated: true,
+    generation: {
+      templateName: input.templateName,
+      sourceFileIds: input.sourceFileIds,
+      sourceFileNames: input.sourceFileNames,
+      instructions: input.instructions,
+      sections: input.sections,
+      generatedAt: now,
+    },
+  }
+
+  const deal = patchListing(dealId, (l) => ({
+    ...l,
+    documents: [...(l.documents ?? []), document],
+    updatedAt: now,
+  }))
+
+  return { documentId: deal ? documentId : null }
+}
+
+/** The generation behind a document id, or undefined if there isn't one. */
+export function resolveGeneratedDocument(
+  deal: Listing | undefined,
+  documentId: string | undefined,
+): DocumentGeneration | undefined {
+  if (!deal || !documentId) return undefined
+  return deal.documents?.find((d) => d.id === documentId)?.generation
 }
 
 /** Advance the run to its next stage. No-op when there is no processing run. */

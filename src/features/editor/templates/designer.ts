@@ -15,6 +15,8 @@ import { PAGE_HEIGHT, PAGE_PADDING, PAGE_WIDTH } from "../types";
 import { TYPE_LABELS, crePhotoUrl, galleryPhotoIds, getPhotoUrl } from "#/components/properties/propertyDisplay";
 import { DEFAULT_TEXT_STYLE, uid } from "../blocks/blockFactory";
 import { BRAND } from "../brand";
+import { buildCtx } from "#/components/deals/underwriting/underwritingResult";
+import { buildRentRollTable } from "../underwritingPages";
 import {
   LOGO_SRC,
   addressOf,
@@ -43,6 +45,25 @@ export function buildFinancialSummaryPage(property: Property | undefined): Page 
       { id: uid("block"), type: "text", text: addressOf(property), style: addressStyle },
       heroImage("editor-financial"),
       buildFinancialSummaryTable(property),
+    ],
+  };
+}
+
+/**
+ * "Rent Roll Summary" — the tenant roster as a locked page, shaped like the
+ * Financial Summary. Shares the underwriting section's table so a document and
+ * its underwriting never disagree about who the tenants are.
+ */
+export function buildRentRollSummaryPage(property: Property | undefined): Page {
+  return {
+    id: uid("page"),
+    name: "Rent Roll Summary",
+    logoSrc: LOGO_SRC,
+    locked: true,
+    blocks: [
+      { id: uid("block"), type: "heading", text: "Rent Roll Summary", style: headingStyle },
+      { id: uid("block"), type: "text", text: addressOf(property), style: addressStyle },
+      buildRentRollTable(buildCtx(property)),
     ],
   };
 }
