@@ -187,10 +187,15 @@ function filesUsedBy(template: TemplateName, files: SourceFileRef[]): string[] {
  * selected and proposes a template, with alternatives beside it.
  *
  * Scored by how many of the selected KINDS a template is for, so two financial
- * files argue no harder than one. Ties break on TEMPLATE_NAMES order, and an
- * empty selection still yields a usable default rather than nothing.
+ * files argue no harder than one, with ties breaking on TEMPLATE_NAMES order.
+ *
+ * Nothing selected means nothing suggested. A deck offered before the broker has
+ * given it anything to read is a guess wearing the costume of a reading, and it
+ * teaches them not to trust the ones that follow.
  */
 export function suggestTemplates(files: SourceFileRef[]): TemplateSuggestion[] {
+  if (files.length === 0) return []
+
   const kinds = new Set(files.map((f) => classifyFile(f.name)))
   const scored = TEMPLATE_NAMES.map((name, order) => ({
     name,

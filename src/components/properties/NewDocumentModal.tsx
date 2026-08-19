@@ -150,12 +150,19 @@ export function NewDocumentModal({
    * that a template stops being suggested and the new best fit takes over,
    * rather than silently keeping a choice the files no longer support.
    */
-  const templateName =
-    (templateOverride && suggestions.some((sg) => sg.name === templateOverride)
+  const suggestedTemplate =
+    templateOverride && suggestions.some((sg) => sg.name === templateOverride)
       ? templateOverride
-      : suggestions[0]?.name) ?? "Offering Memorandum";
+      : suggestions[0]?.name;
+  /**
+   * Typed fallback so the outline builder always has a spine. Nothing the broker
+   * can see reads it before a suggestion exists — Generate is disabled until a
+   * file is selected, which is the same moment a suggestion appears.
+   */
+  const templateName: TemplateName = suggestedTemplate ?? "Offering Memorandum";
 
-  const defaultName = `${templateName} — ${dealName}`;
+  /** Named after the suggestion once there is one; until then, just the deal. */
+  const defaultName = suggestedTemplate ? `${suggestedTemplate} — ${dealName}` : dealName;
   /** What the input shows: the user's text once they have touched the field, even when empty. */
   const displayName = nameEdited ? name : defaultName;
   /** What gets persisted: never blank, so a cleared field still files under the default. */

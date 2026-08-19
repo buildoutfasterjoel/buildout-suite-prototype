@@ -402,12 +402,10 @@ describe('suggestTemplates', () => {
     expect(new Set(suggestions.map((s) => s.name)).size).toBe(suggestions.length)
   })
 
-  it('still suggests something when nothing is selected', () => {
-    const suggestions = suggestTemplates([])
-    expect(suggestions.length).toBeGreaterThan(0)
-    expect(suggestions[0].bestFit).toBe(true)
-    // Nothing selected means nothing to credit.
-    expect(suggestions[0].usesFileNames).toEqual([])
+  it('suggests nothing until a file is selected', () => {
+    // A suggestion with no files behind it is a guess dressed as a reading of
+    // the deal. The deck stays empty until there is something to read.
+    expect(suggestTemplates([])).toEqual([])
   })
 
   it('is deterministic and order-independent across the selection', () => {
