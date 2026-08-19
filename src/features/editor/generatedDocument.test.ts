@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { SECTION_NAME } from '#/data/documentGeneration'
+import { EMITTABLE_TEMPLATE_KEYS, SECTION_NAME } from '#/data/documentGeneration'
 import { TEMPLATES } from './templates'
 import { buildGeneratedDocumentPages } from './presets'
 import { buildGeneratedDocument } from './sampleDocument'
@@ -18,12 +18,18 @@ const SECTIONS: GeneratedSection[] = [
 ]
 
 describe('templateKey contract', () => {
-  // The generator lives in src/data and must not import the editor, so this
-  // test is the guard that its keys still resolve here.
+  // The generator lives in src/data and must not import the editor, so these
+  // two assertions are the only thing keeping that coupling honest.
   it('resolves every key documentGeneration can emit', () => {
     const registered = new Set(TEMPLATES.map((t) => t.key))
-    for (const key of Object.keys(SECTION_NAME)) {
-      expect(registered.has(key)).toBe(true)
+    for (const key of EMITTABLE_TEMPLATE_KEYS) {
+      expect(registered.has(key), `${key} is not a registered template`).toBe(true)
+    }
+  })
+
+  it('names every key documentGeneration can emit', () => {
+    for (const key of EMITTABLE_TEMPLATE_KEYS) {
+      expect(SECTION_NAME[key], `${key} has no display name`).toBeTruthy()
     }
   })
 })

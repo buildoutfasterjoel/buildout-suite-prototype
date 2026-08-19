@@ -133,7 +133,11 @@ export function NewDocumentModal({
   }, [open, listingId]);
 
   const dealName = getListing(listingId)?.name ?? "Untitled Deal";
-  const effectiveName = nameEdited && name.trim() ? name : `${docType} — ${dealName}`;
+  const defaultName = `${docType} — ${dealName}`;
+  /** What the input shows: the user's text once they have touched the field, even when empty. */
+  const displayName = nameEdited ? name : defaultName;
+  /** What gets persisted: never blank, so a cleared field still files under the default. */
+  const effectiveName = displayName.trim() || defaultName;
 
   const selectedFiles: SourceFileRef[] = items
     .filter((i) => selectedIds.has(i.file.id))
@@ -211,7 +215,7 @@ export function NewDocumentModal({
               <Field>
                 <Field.Label>Name</Field.Label>
                 <Input
-                  value={effectiveName}
+                  value={displayName}
                   onChange={(e) => {
                     setNameEdited(true);
                     setName(e.target.value);

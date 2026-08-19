@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import type { OutlineInput } from './documentGeneration'
 import {
   buildOutline,
   classifyFile,
@@ -259,6 +258,22 @@ describe('instruction effects', () => {
     }).map((s) => s.templateKey)
     expect(new Set(keys).size).toBe(keys.length)
   })
+
+  it('never breaches the concise cap, even when a phrase adds a section', () => {
+    // 'lead with NOI' must ensure financialHero exists; if that ensure happened
+    // after the cap it would push every document to MAX_CONCISE_SECTIONS + 1.
+    for (const docType of DOC_TYPES) {
+      const sections = buildOutline({
+        docType,
+        files: ALL_KINDS.filter((f) => !/t-?12/i.test(f.name)),
+        instructions: 'Keep it concise. Lead with the trailing-12 NOI growth.',
+      })
+      expect(sections.length, `${docType} breached the cap`).toBeLessThanOrEqual(
+        MAX_CONCISE_SECTIONS,
+      )
+      expect(sections.map((s) => s.templateKey)).toContain('financialHero')
+    }
+  })
 })
 
 describe('suggestionsFor', () => {
@@ -310,12 +325,6 @@ describe('suggestionsFor', () => {
     ).toBe(false)
   })
 
-  it('offers at most four cards', () => {
-    expect(
-      suggestionsFor({ docType: 'Offering Memorandum', files: ALL_KINDS, instructions: '' }).length,
-    ).toBeLessThanOrEqual(4)
-  })
-
   it('keeps offering a card whose effect has already been applied', () => {
     // Judged against the base outline, so "skip comps" does not vanish the
     // moment it is added — otherwise the selected card would disappear.
@@ -339,22 +348,19 @@ describe('suggestionsFor', () => {
     }
   })
 
-  it('never offers a card that would not change the outline', () => {
-    const cases: OutlineInput[] = [
-      { docType: 'Offering Memorandum', files: ALL_KINDS, instructions: '' },
-      { docType: 'Brochure', files: [], instructions: '' },
-      { docType: 'Flyer', files: [{ id: 'a', name: 'T-12 2025.pdf' }], instructions: '' },
-      { docType: "Owner's Report", files: ALL_KINDS, instructions: '' },
-      { docType: 'Executive Summary', files: [{ id: 'a', name: 'Site Photos.zip' }], instructions: '' },
-    ]
-    for (const input of cases) {
-      const base = buildOutline(input)
-      for (const card of suggestionsFor(input)) {
-        const applied = buildOutline({
-          ...input,
-          instructions: `${input.instructions} ${card.sentence}`.trim(),
-        })
-        expect(applied, `${card.id} on ${input.docType} changed nothing`).not.toEqual(base)
+  it('never offers a card that would not change the outline, for any input', () => {
+    for (const docType of DOC_TYPES) {
+      // Every subset of the five file kinds.
+      for (let mask = 0; mask < 1 << ALL_KINDS.length; mask++) {
+        const files = ALL_KINDS.filter((_, i) => mask & (1 << i))
+        const input = { docType, files, instructions: '' }
+        const base = buildOutline(input)
+        const cards = suggestionsFor(input)
+        expect(cards.length).toBeLessThanOrEqual(4)
+        for (const card of cards) {
+          const applied = buildOutline({ ...input, instructions: card.sentence })
+          expect(applied, `${card.id} on ${docType} changed nothing`).not.toEqual(base)
+        }
       }
     }
   })

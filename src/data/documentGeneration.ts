@@ -262,6 +262,23 @@ const ADDS: Record<string, string> = {
   'emphasize-location': 'locationMap',
 }
 
+/**
+ * Every `templateKey` `buildOutline` can emit — the union of what the spines
+ * carry, what each file kind contributes, what an instruction can add, and the
+ * one key the move phase names directly.
+ *
+ * Exported so the editor can assert its template registry covers all of them.
+ * That test is the only thing keeping the data → editor coupling one-way and
+ * honest; deriving the set here rather than restating it there is what stops
+ * the two drifting apart.
+ */
+export const EMITTABLE_TEMPLATE_KEYS: ReadonlySet<string> = new Set<string>([
+  ...Object.values(SPINE).flatMap((s) => [...s.openers, ...s.closers]),
+  ...Object.values(SECTIONS_FOR_KIND).flat(),
+  ...Object.values(ADDS),
+  'financialHero',
+])
+
 export function buildOutline(input: OutlineInput): GeneratedSection[] {
   const spine = SPINE[input.docType] ?? SPINE.Proposal
   const taken = new Set<string>([...spine.openers, ...spine.closers])
@@ -275,6 +292,15 @@ export function buildOutline(input: OutlineInput): GeneratedSection[] {
     const key = ADDS[effect.id]
     if (!key || has(key)) continue
     body.push(instructionSection(key, effect.sentence))
+  }
+
+  // 'lead-with-noi' is a move, but it must have something to move. Ensure the
+  // section exists HERE rather than in the move phase, so it counts against the
+  // concise cap instead of being added after it and breaching the promised page
+  // count. At the head of the body, where the cap's tail-trim cannot reach it.
+  const leadWithNoi = active.find((e) => e.id === 'lead-with-noi')
+  if (leadWithNoi && !has('financialHero')) {
+    body.unshift(instructionSection('financialHero', leadWithNoi.sentence))
   }
 
   // Phase 'remove' — body only; the spine is the document type's promise.
@@ -296,11 +322,11 @@ export function buildOutline(input: OutlineInput): GeneratedSection[] {
   ]
 
   // Phase 'move' — operates on the assembled list, since it positions relative
-  // to the cover.
+  // to the cover. The section is guaranteed to exist by the add phase above.
   for (const effect of active.filter((e) => e.phase === 'move')) {
     if (effect.id !== 'lead-with-noi') continue
-    const existing = sections.find((s) => s.templateKey === 'financialHero')
-    const hero = existing ?? instructionSection('financialHero', effect.sentence)
+    const hero = sections.find((s) => s.templateKey === 'financialHero')
+    if (!hero) continue
     sections = sections.filter((s) => s.templateKey !== 'financialHero')
     const coverAt = sections.findIndex((s) => s.templateKey === 'cover')
     sections.splice(coverAt + 1, 0, hero)
