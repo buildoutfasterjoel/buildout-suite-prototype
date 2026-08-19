@@ -5,17 +5,12 @@ import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faSquareCheck,
-  faBuilding,
-  faUsers,
-  faHandshake,
-  faSignal,
   faBell,
   faPlus,
   faMicrophone,
 } from "@fortawesome/pro-regular-svg-icons";
 // The AI assistant launcher uses the solid sparkle (per Figma).
 import { faSparkles } from "@fortawesome/pro-solid-svg-icons";
-import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { formatForDisplay } from "@tanstack/hotkeys";
 import BuildoutIcon from "#/features/assets/buildout-icon";
 import BuildoutWordmark from "#/features/assets/buildout-wordmark";
@@ -26,31 +21,17 @@ import { useCreateDeal } from "#/data/useCreateDeal";
 import { useNewContact } from "#/data/useNewContact";
 import { useAddTask } from "#/data/useAddTask";
 import { AccountMenu } from "./AccountMenu";
+import {
+  NAV_SECTIONS,
+  isNavGroup,
+  isSectionActive,
+  type NavGroup,
+  type NavLeaf,
+  type NavSection,
+} from "./navSections";
 
 /** Platform-aware shortcut hint, e.g. "⌘K" on macOS, "Ctrl K" elsewhere. */
 const SEARCH_HINT = formatForDisplay("Mod+K");
-
-type NavContext = {
-  label: string;
-  href: string;
-  icon: IconDefinition;
-};
-
-// NOW is no longer a nav item — the logo links to /suite. Tasks moved to a
-// footer icon button.
-const navContexts: NavContext[] = [
-  { label: "Properties", href: "/properties", icon: faBuilding },
-  { label: "Contacts", href: "/backoffice/contacts", icon: faUsers },
-  { label: "Deals", href: "/listings", icon: faHandshake },
-  { label: "Reports", href: "/reports", icon: faSignal },
-  // Hidden for the demo. To restore, re-add `faDoorOpen` to the icon import:
-  // { label: "Back Office", href: "/backoffice", icon: faDoorOpen },
-];
-
-function isPathActive(href: string, pathname: string): boolean {
-  if (!href || href === "#") return false;
-  return pathname === href || pathname.startsWith(href + "/");
-}
 
 export function GlobalNavbar() {
   const { pathname } = useLocation();
@@ -84,6 +65,71 @@ export function GlobalNavbar() {
     navigate({ to: href as never });
   }
 
+  /** A leaf section: the nav item itself is the link. */
+  function renderLeaf(section: NavLeaf) {
+    return (
+      <Navbar.Item key={section.label}>
+        <Navbar.ItemLink
+          isActive={isSectionActive(section, pathname)}
+          render={
+            <a
+              href={section.href}
+              onClick={(e) => handleNavClick(e, section.href)}
+            />
+          }
+        >
+          <Navbar.ItemLinkIcon>
+            <FontAwesomeIcon icon={section.icon} />
+          </Navbar.ItemLinkIcon>
+          <Navbar.ItemLinkLabel>{section.label}</Navbar.ItemLinkLabel>
+        </Navbar.ItemLink>
+      </Navbar.Item>
+    );
+  }
+
+  /**
+   * A group section: the label opens a dropdown and the children carry the
+   * destinations, so the label itself doesn't navigate. GroupTrigger renders a
+   * `nav-link` and appends its own caret — the rule that hides that caret is
+   * scoped to the New and Account triggers, so a nav dropdown keeps it. It has
+   * no `isActive` prop, hence the bare `active` class: it's the same `nav-link`
+   * inside `.navbar-collapse` that ItemLink is, so it picks up the same
+   * white/bold/purple-icon treatment.
+   */
+  function renderGroup(section: NavGroup) {
+    return (
+      <Navbar.Group key={section.label}>
+        <Navbar.GroupTrigger
+          className={isSectionActive(section, pathname) ? "active" : undefined}
+        >
+          <Navbar.ItemLinkIcon>
+            <FontAwesomeIcon icon={section.icon} />
+          </Navbar.ItemLinkIcon>
+          <Navbar.ItemLinkLabel>{section.label}</Navbar.ItemLinkLabel>
+        </Navbar.GroupTrigger>
+        <Navbar.GroupMenu>
+          {section.items.map((item) => (
+            <Navbar.GroupMenuItem
+              key={item.href}
+              render={
+                <a
+                  href={item.href}
+                  onClick={(e) => handleNavClick(e, item.href)}
+                />
+              }
+            >
+              {item.label}
+            </Navbar.GroupMenuItem>
+          ))}
+        </Navbar.GroupMenu>
+      </Navbar.Group>
+    );
+  }
+
+  function renderSection(section: NavSection) {
+    return isNavGroup(section) ? renderGroup(section) : renderLeaf(section);
+  }
+
   return (
     <Navbar expand="lg" className="global-navbar">
       <Navbar.Brand
@@ -100,24 +146,7 @@ export function GlobalNavbar() {
 
       <Navbar.Content className="flex-nowrap">
         <Navbar.Nav>
-          {navContexts.map((ctx) => (
-            <Navbar.Item key={ctx.label}>
-              <Navbar.ItemLink
-                isActive={isPathActive(ctx.href, pathname)}
-                render={
-                  <a
-                    href={ctx.href}
-                    onClick={(e) => handleNavClick(e, ctx.href)}
-                  />
-                }
-              >
-                <Navbar.ItemLinkIcon>
-                  <FontAwesomeIcon icon={ctx.icon} />
-                </Navbar.ItemLinkIcon>
-                <Navbar.ItemLinkLabel>{ctx.label}</Navbar.ItemLinkLabel>
-              </Navbar.ItemLink>
-            </Navbar.Item>
-          ))}
+          {NAV_SECTIONS.map((section) => renderSection(section))}
 
           {/* Omni search — a gradient "AI omnibar" trigger that opens the
               command palette. A div (not a button) so the nested voice button
