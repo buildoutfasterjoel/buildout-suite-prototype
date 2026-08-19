@@ -1,4 +1,4 @@
-import type { DealUnderwriting, Property } from "#/data/types";
+import type { DealUnderwriting, GeneratedSection, Property } from "#/data/types";
 import type { Block, Cell, DynamicKey, Page, TableBlock } from "./types";
 import { uid } from "./blocks/blockFactory";
 import { buildUnderwritingSection } from "./underwritingPages";
@@ -20,6 +20,7 @@ import {
   buildFinancialSummaryPage,
   buildPropertySummaryPage,
 } from "./templates/designer";
+import { TEMPLATES, buildTemplatePage } from "./templates";
 
 /**
  * Spec for a lightweight locked page in the sample proposal: a heading, address,
@@ -67,6 +68,24 @@ function buildStubPage(property: Property | undefined, spec: StubPageSpec): Page
 function withPageIdentity(page: Page, name: string): Page {
   const blocks = page.blocks.map((b, i) => (i === 0 && b.type === "heading" ? { ...b, text: name } : b));
   return { ...page, name, blocks };
+}
+
+/**
+ * Pages for a generated document: one per outline section, named by the section
+ * so the page rail reads back the outline the broker approved.
+ *
+ * A section whose template is missing is skipped rather than thrown on — a
+ * stored outline outlives the registry, and a document that lost one page is
+ * far better than an editor that will not open.
+ */
+export function buildGeneratedDocumentPages(
+  property: Property | undefined,
+  sections: GeneratedSection[],
+): Page[] {
+  const registered = new Set(TEMPLATES.map((t) => t.key));
+  return sections
+    .filter((s) => registered.has(s.templateKey))
+    .map((s) => withPageIdentity(buildTemplatePage(s.templateKey, property), s.name));
 }
 
 /**

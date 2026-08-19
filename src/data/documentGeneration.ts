@@ -6,7 +6,7 @@ import type { GeneratedSection } from './types'
  *
  * Deliberately pure and deterministic — no Date, no Math.random, and no imports
  * from `features/editor`. The editor consumes the `templateKey` strings this
- * module emits; the coupling runs one way, and a later task adds a test that every
+ * module emits; the coupling runs one way and is guarded by a test that every
  * emittable key resolves in the editor's TEMPLATES registry.
  */
 
