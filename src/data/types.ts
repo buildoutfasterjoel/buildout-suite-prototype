@@ -487,6 +487,41 @@ export interface DealDocument {
   size?: string
   /** True when Buildout auto-generated this document — the publish gate requires review of these. */
   aiGenerated?: boolean
+  /** Present when this document came from the AI generation flow. */
+  generation?: DocumentGeneration
+}
+
+/**
+ * One page of a generated document's outline, carrying why it is there so the
+ * review screen can credit it back to its source.
+ */
+export interface GeneratedSection {
+  /** A key from `features/editor/templates` — see the registry in templates/index.ts. */
+  templateKey: string
+  name: string
+  origin: 'spine' | 'file' | 'instruction'
+  /** Set when origin is 'file' — the display name of the file that contributed it. */
+  sourceFileName?: string
+  /** Set when origin is 'instruction' — the phrase that added it. */
+  instructionLabel?: string
+}
+
+/**
+ * The record of one AI document generation: what the broker fed it, what they
+ * asked for, and the outline it produced. Stored on the DealDocument so the
+ * editor can rebuild the same pages and the review screen stays truthful.
+ */
+export interface DocumentGeneration {
+  /** Which document type drove the spine — a display name, the same vocabulary as the template list. */
+  docType: string
+  sourceFileIds: string[]
+  /** Captured at generation, so the outline still reads correctly if a file is later deleted. */
+  sourceFileNames: string[]
+  /** The broker's instructions, verbatim. */
+  instructions: string
+  /** The outline, in page order — what the editor builds. */
+  sections: GeneratedSection[]
+  generatedAt: string
 }
 
 /** The underwriting scope chosen for a deal — which strategy, its checks, and progress. */
