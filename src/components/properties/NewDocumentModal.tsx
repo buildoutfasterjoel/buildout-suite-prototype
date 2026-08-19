@@ -10,7 +10,9 @@ import { faCheck } from "@fortawesome/pro-regular-svg-icons";
 import { TemplatePicker } from "./TemplatePicker";
 import { SourceFilePicker } from "./SourceFilePicker";
 import { InstructionSuggestions } from "./InstructionSuggestions";
+import { DocumentGenerationProgress } from "./DocumentGenerationProgress";
 import {
+  buildOutline,
   DOC_TYPES,
   suggestionsFor,
   type DocType,
@@ -137,6 +139,7 @@ export function NewDocumentModal({
 
   const outlineInput = { docType, files: selectedFiles, instructions };
   const cards = suggestionsFor(outlineInput);
+  const outline = buildOutline(outlineInput);
 
   const step = STEP_FOR_SCREEN[screen];
 
@@ -250,6 +253,14 @@ export function NewDocumentModal({
                 onOpenChange(false);
                 navigate({ to: "/editor/$listingId", params: { listingId } });
               }}
+            />
+          )}
+
+          {screen === "progress" && (
+            <DocumentGenerationProgress
+              files={selectedFiles}
+              sectionCount={outline.length}
+              onComplete={() => setScreen("review")}
             />
           )}
         </Modal.Body>
