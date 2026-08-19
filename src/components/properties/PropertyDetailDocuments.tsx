@@ -265,7 +265,11 @@ export function PropertyDetailDocuments({ listingId }: { listingId: string }) {
                     size="sm"
                     nativeButton={false}
                     render={
-                      <Link to="/editor/$listingId" params={{ listingId }} />
+                      <Link
+                        to="/editor/$listingId"
+                        params={{ listingId }}
+                        search={{ doc: doc.id }}
+                      />
                     }
                   >
                     <FontAwesomeIcon icon={faPenToSquare} />
