@@ -11,6 +11,7 @@ import { TemplatePicker } from "./TemplatePicker";
 import { SourceFilePicker } from "./SourceFilePicker";
 import { InstructionSuggestions } from "./InstructionSuggestions";
 import { DocumentGenerationProgress } from "./DocumentGenerationProgress";
+import { GeneratedOutlineReview } from "./GeneratedOutlineReview";
 import {
   buildOutline,
   DOC_TYPES,
@@ -21,6 +22,7 @@ import {
 } from "#/data/documentGeneration";
 import { getDealFiles, addDealFile } from "#/data/dealFilesActions";
 import { getListing } from "#/data/store";
+import { createGeneratedDocument } from "#/data/actions";
 import { useNavigate } from "@tanstack/react-router";
 
 /** The generation wizard's screens. The template list sits outside the wizard. */
@@ -140,6 +142,9 @@ export function NewDocumentModal({
   const outlineInput = { docType, files: selectedFiles, instructions };
   const cards = suggestionsFor(outlineInput);
   const outline = buildOutline(outlineInput);
+  const unusedFiles = selectedFiles.filter(
+    (f) => !outline.some((s) => s.sourceFileName === f.name),
+  );
 
   const step = STEP_FOR_SCREEN[screen];
 
@@ -172,6 +177,23 @@ export function NewDocumentModal({
     for (const item of added) addDealFile(listingId, item);
     setItems(flattenDealFiles(listingId));
     setSelectedIds((prev) => new Set([...prev, ...added.map((a) => a.id)]));
+  }
+
+  function handleOpenInEditor() {
+    const { documentId } = createGeneratedDocument(listingId, {
+      name: effectiveName,
+      docType,
+      sourceFileIds: selectedFiles.map((f) => f.id),
+      sourceFileNames: selectedFiles.map((f) => f.name),
+      instructions,
+      sections: outline,
+    });
+    onOpenChange(false);
+    void navigate({
+      to: "/editor/$listingId",
+      params: { listingId },
+      search: documentId ? { doc: documentId } : {},
+    });
   }
 
   return (
@@ -263,6 +285,15 @@ export function NewDocumentModal({
               onComplete={() => setScreen("review")}
             />
           )}
+
+          {screen === "review" && (
+            <GeneratedOutlineReview
+              sections={outline}
+              docType={docType}
+              instructions={instructions}
+              unusedFiles={unusedFiles}
+            />
+          )}
         </Modal.Body>
 
         {screen === "generate" && (
@@ -284,6 +315,17 @@ export function NewDocumentModal({
           <Modal.Footer>
             <Button variant="ghost" onClick={() => setScreen("generate")}>
               Back
+            </Button>
+          </Modal.Footer>
+        )}
+
+        {screen === "review" && (
+          <Modal.Footer className="d-flex align-items-center justify-content-between">
+            <Button variant="ghost" onClick={() => setScreen("generate")}>
+              Back
+            </Button>
+            <Button variant="primary" onClick={handleOpenInEditor}>
+              Open in editor
             </Button>
           </Modal.Footer>
         )}
