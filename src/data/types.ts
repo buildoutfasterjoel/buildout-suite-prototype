@@ -512,8 +512,8 @@ export interface GeneratedSection {
  * editor can rebuild the same pages and the review screen stays truthful.
  */
 export interface DocumentGeneration {
-  /** Which document type drove the spine — a display name, the same vocabulary as the template list. */
-  docType: string
+  /** The template whose spine shaped this document — a real name from the template list. */
+  templateName: string
   sourceFileIds: string[]
   /** Captured at generation, so the outline still reads correctly if a file is later deleted. */
   sourceFileNames: string[]

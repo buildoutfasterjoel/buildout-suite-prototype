@@ -51,7 +51,16 @@ export function classifyFile(name: string): FileKind {
   return 'other'
 }
 
-export type DocType =
+/**
+ * The templates this flow can shape a document into. These are real names from
+ * the template list, not a parallel vocabulary — production has no concept of a
+ * "document type", so there is nothing here for a broker to pick from a list of
+ * types. The AI suggests one of these from the selected files instead.
+ *
+ * Declaration order is the tie-break when two templates fit a selection equally
+ * well, so it reads best-general-purpose first.
+ */
+export type TemplateName =
   | 'Offering Memorandum'
   | 'Proposal'
   | 'Brochure'
@@ -59,7 +68,7 @@ export type DocType =
   | "Owner's Report"
   | 'Executive Summary'
 
-export const DOC_TYPES: DocType[] = [
+export const TEMPLATE_NAMES: TemplateName[] = [
   'Offering Memorandum',
   'Proposal',
   'Brochure',
@@ -69,15 +78,15 @@ export const DOC_TYPES: DocType[] = [
 ]
 
 /**
- * A document type's fixed pages, split so sourced sections land in the body of
- * the document rather than after the advisor bios.
+ * A template's fixed pages, split so sourced sections land in the body of the
+ * document rather than after the advisor bios.
  */
 interface Spine {
   openers: string[]
   closers: string[]
 }
 
-const SPINE: Record<DocType, Spine> = {
+const SPINE: Record<TemplateName, Spine> = {
   'Offering Memorandum': {
     openers: ['cover', 'contents', 'propertySummary'],
     closers: ['advisorBios'],
@@ -124,13 +133,86 @@ export const SECTION_NAME: Record<string, string> = {
   advisorBios: 'Advisor Bios',
 }
 
+/**
+ * Which file kinds each template is FOR. This is the whole basis of the
+ * best-fit suggestion, kept as a table rather than logic so the mapping can be
+ * retuned in one place after seeing it on screen.
+ *
+ * A kind absent from every list here (legal, other) can still be selected — it
+ * simply never argues for one template over another.
+ */
+const TEMPLATE_FOR_KINDS: Record<TemplateName, FileKind[]> = {
+  'Offering Memorandum': ['financials', 'rent-roll', 'comps', 'market'],
+  Proposal: ['financials', 'market'],
+  Brochure: ['photos', 'market'],
+  Flyer: ['photos'],
+  "Owner's Report": ['financials', 'rent-roll'],
+  'Executive Summary': ['financials'],
+}
+
+/** How many templates the deck offers — the best fit plus two alternatives. */
+const SUGGESTION_COUNT = 3
+
+export interface TemplateSuggestion {
+  name: TemplateName
+  /** The selected files this template makes use of, named on its card. */
+  usesFileNames: string[]
+  /** True for the single best fit, which the UI preselects. */
+  bestFit: boolean
+}
+
+/**
+ * The selected files this template is for, in the order their sections appear
+ * in the document, and alphabetically within a kind — so the result depends on
+ * WHICH files were selected, never on the order they arrived in.
+ */
+function filesUsedBy(template: TemplateName, files: SourceFileRef[]): string[] {
+  const declared = new Set(TEMPLATE_FOR_KINDS[template])
+  const names: string[] = []
+  for (const kind of KIND_ORDER) {
+    if (!declared.has(kind)) continue
+    names.push(
+      ...files
+        .filter((f) => classifyFile(f.name) === kind)
+        .map((f) => f.name)
+        .sort(),
+    )
+  }
+  return names
+}
+
+/**
+ * What document these files should become — the inversion at the heart of this
+ * flow. The broker does not declare a document type; the AI reads what they
+ * selected and proposes a template, with alternatives beside it.
+ *
+ * Scored by how many of the selected KINDS a template is for, so two financial
+ * files argue no harder than one. Ties break on TEMPLATE_NAMES order, and an
+ * empty selection still yields a usable default rather than nothing.
+ */
+export function suggestTemplates(files: SourceFileRef[]): TemplateSuggestion[] {
+  const kinds = new Set(files.map((f) => classifyFile(f.name)))
+  const scored = TEMPLATE_NAMES.map((name, order) => ({
+    name,
+    order,
+    score: TEMPLATE_FOR_KINDS[name].filter((k) => kinds.has(k)).length,
+  }))
+  scored.sort((a, b) => b.score - a.score || a.order - b.order)
+
+  return scored.slice(0, SUGGESTION_COUNT).map((s, i) => ({
+    name: s.name,
+    usesFileNames: filesUsedBy(s.name, files),
+    bestFit: i === 0,
+  }))
+}
+
 export interface SourceFileRef {
   id: string
   name: string
 }
 
 export interface OutlineInput {
-  docType: DocType
+  templateName: TemplateName
   files: SourceFileRef[]
   instructions: string
 }
@@ -280,7 +362,7 @@ export const EMITTABLE_TEMPLATE_KEYS: ReadonlySet<string> = new Set<string>([
 ])
 
 export function buildOutline(input: OutlineInput): GeneratedSection[] {
-  const spine = SPINE[input.docType] ?? SPINE.Proposal
+  const spine = SPINE[input.templateName] ?? SPINE.Proposal
   const taken = new Set<string>([...spine.openers, ...spine.closers])
   let body = sourcedSections(input.files, taken)
   const active = activeEffects(input.instructions)

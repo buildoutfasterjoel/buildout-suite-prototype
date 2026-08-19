@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   buildOutline,
   classifyFile,
-  DOC_TYPES,
   MAX_CONCISE_SECTIONS,
   suggestionsFor,
+  suggestTemplates,
+  TEMPLATE_NAMES,
 } from './documentGeneration'
 
 describe('classifyFile', () => {
@@ -40,7 +41,7 @@ describe('classifyFile', () => {
 })
 
 describe('buildOutline base structure', () => {
-  const noFiles = { docType: 'Offering Memorandum' as const, files: [], instructions: '' }
+  const noFiles = { templateName: 'Offering Memorandum' as const, files: [], instructions: '' }
 
   it('produces the spine alone when no files are selected', () => {
     const keys = buildOutline(noFiles).map((s) => s.templateKey)
@@ -52,8 +53,8 @@ describe('buildOutline base structure', () => {
   })
 
   it('builds a non-empty outline for every document type', () => {
-    for (const docType of DOC_TYPES) {
-      const sections = buildOutline({ docType, files: [], instructions: '' })
+    for (const templateName of TEMPLATE_NAMES) {
+      const sections = buildOutline({ templateName, files: [], instructions: '' })
       expect(sections.length).toBeGreaterThan(0)
       expect(sections[0].templateKey).toBe('cover')
     }
@@ -61,7 +62,7 @@ describe('buildOutline base structure', () => {
 
   it('inserts sourced sections between the openers and the closers', () => {
     const keys = buildOutline({
-      docType: 'Offering Memorandum',
+      templateName: 'Offering Memorandum',
       files: [{ id: 'f1', name: 'Site Photos.zip' }],
       instructions: '',
     }).map((s) => s.templateKey)
@@ -70,7 +71,7 @@ describe('buildOutline base structure', () => {
 
   it('credits each sourced section to the file that contributed it', () => {
     const sections = buildOutline({
-      docType: 'Brochure',
+      templateName: 'Brochure',
       files: [{ id: 'f1', name: 'Rent Roll 2026.xlsx' }],
       instructions: '',
     })
@@ -81,7 +82,7 @@ describe('buildOutline base structure', () => {
 
   it('emits sourced sections in a fixed kind order regardless of selection order', () => {
     const forward = buildOutline({
-      docType: 'Brochure',
+      templateName: 'Brochure',
       files: [
         { id: 'a', name: 'Site Photos.zip' },
         { id: 'b', name: 'T-12.pdf' },
@@ -89,7 +90,7 @@ describe('buildOutline base structure', () => {
       instructions: '',
     }).map((s) => s.templateKey)
     const reversed = buildOutline({
-      docType: 'Brochure',
+      templateName: 'Brochure',
       files: [
         { id: 'b', name: 'T-12.pdf' },
         { id: 'a', name: 'Site Photos.zip' },
@@ -102,7 +103,7 @@ describe('buildOutline base structure', () => {
 
   it('contributes nothing for legal and other files', () => {
     const keys = buildOutline({
-      docType: 'Brochure',
+      templateName: 'Brochure',
       files: [
         { id: 'a', name: 'Master Lease Agreement.docx' },
         { id: 'b', name: 'Buyer Q&A Thread.pdf' },
@@ -114,7 +115,7 @@ describe('buildOutline base structure', () => {
 
   it('deduplicates when two files contribute the same section', () => {
     const keys = buildOutline({
-      docType: 'Brochure',
+      templateName: 'Brochure',
       files: [
         { id: 'a', name: 'T-12 2025.pdf' },
         { id: 'b', name: 'NOI Statement.pdf' },
@@ -126,7 +127,7 @@ describe('buildOutline base structure', () => {
 
   it('lets the spine keep a section a file would also have contributed', () => {
     const sections = buildOutline({
-      docType: "Owner's Report",
+      templateName: "Owner's Report",
       files: [{ id: 'a', name: 'T-12 2025.pdf' }],
       instructions: '',
     })
@@ -137,7 +138,7 @@ describe('buildOutline base structure', () => {
 
   it('is deterministic across repeated calls', () => {
     const input = {
-      docType: 'Proposal' as const,
+      templateName: 'Proposal' as const,
       files: [{ id: 'a', name: 'Rent Roll 2026.xlsx' }],
       instructions: '',
     }
@@ -156,7 +157,7 @@ const ALL_KINDS = [
 describe('instruction effects', () => {
   it('moves financial highlights directly after the cover', () => {
     const keys = buildOutline({
-      docType: 'Offering Memorandum',
+      templateName: 'Offering Memorandum',
       files: ALL_KINDS,
       instructions: 'Lead with the trailing-12 NOI growth.',
     }).map((s) => s.templateKey)
@@ -166,7 +167,7 @@ describe('instruction effects', () => {
 
   it('adds financial highlights when no financial file was selected', () => {
     const sections = buildOutline({
-      docType: 'Brochure',
+      templateName: 'Brochure',
       files: [],
       instructions: 'Lead with the trailing-12 NOI growth.',
     })
@@ -177,7 +178,7 @@ describe('instruction effects', () => {
 
   it('adds the rent roll summary on request', () => {
     const sections = buildOutline({
-      docType: 'Brochure',
+      templateName: 'Brochure',
       files: [],
       instructions: 'Summarize the tenant roster.',
     })
@@ -187,7 +188,7 @@ describe('instruction effects', () => {
 
   it('adds the location page on request', () => {
     const keys = buildOutline({
-      docType: 'Flyer',
+      templateName: 'Flyer',
       files: [],
       instructions: 'Emphasize the location and surrounding submarket.',
     }).map((s) => s.templateKey)
@@ -196,7 +197,7 @@ describe('instruction effects', () => {
 
   it('removes the comparables on request', () => {
     const keys = buildOutline({
-      docType: 'Offering Memorandum',
+      templateName: 'Offering Memorandum',
       files: ALL_KINDS,
       instructions: 'Skip the sale comparables.',
     }).map((s) => s.templateKey)
@@ -205,7 +206,7 @@ describe('instruction effects', () => {
 
   it('recognizes a hand-typed phrase, not just the canonical sentence', () => {
     const keys = buildOutline({
-      docType: 'Offering Memorandum',
+      templateName: 'Offering Memorandum',
       files: ALL_KINDS,
       instructions: 'no comps please, and keep it short',
     }).map((s) => s.templateKey)
@@ -215,7 +216,7 @@ describe('instruction effects', () => {
 
   it('caps a concise outline and trims only sourced sections', () => {
     const sections = buildOutline({
-      docType: 'Offering Memorandum',
+      templateName: 'Offering Memorandum',
       files: ALL_KINDS,
       instructions: 'Keep it concise.',
     })
@@ -227,9 +228,9 @@ describe('instruction effects', () => {
   })
 
   it('ignores unrecognized instructions without changing the outline', () => {
-    const base = buildOutline({ docType: 'Proposal', files: ALL_KINDS, instructions: '' })
+    const base = buildOutline({ templateName: 'Proposal', files: ALL_KINDS, instructions: '' })
     const withText = buildOutline({
-      docType: 'Proposal',
+      templateName: 'Proposal',
       files: ALL_KINDS,
       instructions: 'Make it feel premium and mention the roof deck.',
     })
@@ -238,12 +239,12 @@ describe('instruction effects', () => {
 
   it('does not depend on the order phrases appear in the text', () => {
     const a = buildOutline({
-      docType: 'Offering Memorandum',
+      templateName: 'Offering Memorandum',
       files: ALL_KINDS,
       instructions: 'Keep it concise. Skip the sale comparables.',
     })
     const b = buildOutline({
-      docType: 'Offering Memorandum',
+      templateName: 'Offering Memorandum',
       files: ALL_KINDS,
       instructions: 'Skip the sale comparables. Keep it concise.',
     })
@@ -252,7 +253,7 @@ describe('instruction effects', () => {
 
   it('never emits a duplicate section key', () => {
     const keys = buildOutline({
-      docType: "Owner's Report",
+      templateName: "Owner's Report",
       files: ALL_KINDS,
       instructions: 'Lead with the trailing-12 NOI growth. Summarize the tenant roster.',
     }).map((s) => s.templateKey)
@@ -262,13 +263,13 @@ describe('instruction effects', () => {
   it('never breaches the concise cap, even when a phrase adds a section', () => {
     // 'lead with NOI' must ensure financialHero exists; if that ensure happened
     // after the cap it would push every document to MAX_CONCISE_SECTIONS + 1.
-    for (const docType of DOC_TYPES) {
+    for (const templateName of TEMPLATE_NAMES) {
       const sections = buildOutline({
-        docType,
+        templateName,
         files: ALL_KINDS.filter((f) => !/t-?12/i.test(f.name)),
         instructions: 'Keep it concise. Lead with the trailing-12 NOI growth.',
       })
-      expect(sections.length, `${docType} breached the cap`).toBeLessThanOrEqual(
+      expect(sections.length, `${templateName} breached the cap`).toBeLessThanOrEqual(
         MAX_CONCISE_SECTIONS,
       )
       expect(sections.map((s) => s.templateKey)).toContain('financialHero')
@@ -279,14 +280,14 @@ describe('instruction effects', () => {
 describe('suggestionsFor', () => {
   it('offers the NOI card only when a financial file is selected', () => {
     const withFin = suggestionsFor({
-      docType: 'Brochure',
+      templateName: 'Brochure',
       files: [{ id: 'a', name: 'T-12 2025.pdf' }],
       instructions: '',
     })
     expect(withFin.some((c) => c.id === 'lead-with-noi')).toBe(true)
 
     const without = suggestionsFor({
-      docType: 'Brochure',
+      templateName: 'Brochure',
       files: [{ id: 'a', name: 'Buyer Q&A Thread.pdf' }],
       instructions: '',
     })
@@ -296,14 +297,14 @@ describe('suggestionsFor', () => {
   it('offers the roster card only when the outline lacks a rent roll page', () => {
     // No rent-roll file: the card is the only way to get that page.
     expect(
-      suggestionsFor({ docType: 'Brochure', files: [], instructions: '' }).some(
+      suggestionsFor({ templateName: 'Brochure', files: [], instructions: '' }).some(
         (c) => c.id === 'tenant-roster',
       ),
     ).toBe(true)
     // Rent-roll file selected: the page is already there, so the card would be a no-op.
     expect(
       suggestionsFor({
-        docType: 'Brochure',
+        templateName: 'Brochure',
         files: [{ id: 'a', name: 'Rent Roll 2026.xlsx' }],
         instructions: '',
       }).some((c) => c.id === 'tenant-roster'),
@@ -312,13 +313,13 @@ describe('suggestionsFor', () => {
 
   it('offers the location card only when the outline lacks a location page', () => {
     expect(
-      suggestionsFor({ docType: 'Flyer', files: [], instructions: '' }).some(
+      suggestionsFor({ templateName: 'Flyer', files: [], instructions: '' }).some(
         (c) => c.id === 'emphasize-location',
       ),
     ).toBe(true)
     expect(
       suggestionsFor({
-        docType: 'Flyer',
+        templateName: 'Flyer',
         files: [{ id: 'a', name: 'Submarket Report.pdf' }],
         instructions: '',
       }).some((c) => c.id === 'emphasize-location'),
@@ -329,7 +330,7 @@ describe('suggestionsFor', () => {
     // Judged against the base outline, so "skip comps" does not vanish the
     // moment it is added — otherwise the selected card would disappear.
     const cards = suggestionsFor({
-      docType: 'Offering Memorandum',
+      templateName: 'Offering Memorandum',
       files: ALL_KINDS,
       instructions: 'Skip the sale comparables.',
     })
@@ -338,7 +339,7 @@ describe('suggestionsFor', () => {
 
   it('gives every card a sentence and a stated effect', () => {
     for (const card of suggestionsFor({
-      docType: 'Offering Memorandum',
+      templateName: 'Offering Memorandum',
       files: ALL_KINDS,
       instructions: '',
     })) {
@@ -349,19 +350,77 @@ describe('suggestionsFor', () => {
   })
 
   it('never offers a card that would not change the outline, for any input', () => {
-    for (const docType of DOC_TYPES) {
+    for (const templateName of TEMPLATE_NAMES) {
       // Every subset of the five file kinds.
       for (let mask = 0; mask < 1 << ALL_KINDS.length; mask++) {
         const files = ALL_KINDS.filter((_, i) => mask & (1 << i))
-        const input = { docType, files, instructions: '' }
+        const input = { templateName, files, instructions: '' }
         const base = buildOutline(input)
         const cards = suggestionsFor(input)
         expect(cards.length).toBeLessThanOrEqual(4)
         for (const card of cards) {
           const applied = buildOutline({ ...input, instructions: card.sentence })
-          expect(applied, `${card.id} on ${docType} changed nothing`).not.toEqual(base)
+          expect(applied, `${card.id} on ${templateName} changed nothing`).not.toEqual(base)
         }
       }
+    }
+  })
+})
+
+describe('suggestTemplates', () => {
+  const file = (name: string) => ({ id: name, name })
+
+  it('suggests an Offering Memorandum for financial paperwork', () => {
+    const [best] = suggestTemplates([file('T-12 2025.pdf'), file('Rent Roll 2026.xlsx')])
+    expect(best.name).toBe('Offering Memorandum')
+    expect(best.bestFit).toBe(true)
+  })
+
+  it('suggests a Brochure when the deal only has photography', () => {
+    const [best] = suggestTemplates([file('Site Photos.zip')])
+    expect(best.name).toBe('Brochure')
+  })
+
+  it('names the selected files each suggestion actually uses', () => {
+    const [best] = suggestTemplates([
+      file('T-12 2025.pdf'),
+      file('Master Lease Agreement.docx'),
+    ])
+    // The lease contributes nothing, so no suggestion should claim it.
+    expect(best.usesFileNames).toEqual(['T-12 2025.pdf'])
+  })
+
+  it('marks exactly one suggestion as the best fit', () => {
+    const suggestions = suggestTemplates(ALL_KINDS)
+    expect(suggestions.filter((s) => s.bestFit)).toHaveLength(1)
+    expect(suggestions[0].bestFit).toBe(true)
+  })
+
+  it('offers alternatives beside the best fit, without repeating one', () => {
+    const suggestions = suggestTemplates(ALL_KINDS)
+    expect(suggestions.length).toBeGreaterThan(1)
+    expect(new Set(suggestions.map((s) => s.name)).size).toBe(suggestions.length)
+  })
+
+  it('still suggests something when nothing is selected', () => {
+    const suggestions = suggestTemplates([])
+    expect(suggestions.length).toBeGreaterThan(0)
+    expect(suggestions[0].bestFit).toBe(true)
+    // Nothing selected means nothing to credit.
+    expect(suggestions[0].usesFileNames).toEqual([])
+  })
+
+  it('is deterministic and order-independent across the selection', () => {
+    const forward = suggestTemplates([file('T-12 2025.pdf'), file('Site Photos.zip')])
+    const reversed = suggestTemplates([file('Site Photos.zip'), file('T-12 2025.pdf')])
+    expect(forward).toEqual(reversed)
+  })
+
+  it('only ever suggests a template the outline builder can shape', () => {
+    for (const suggestion of suggestTemplates(ALL_KINDS)) {
+      expect(TEMPLATE_NAMES).toContain(suggestion.name)
+      expect(buildOutline({ templateName: suggestion.name, files: ALL_KINDS, instructions: '' }).length)
+        .toBeGreaterThan(0)
     }
   })
 })

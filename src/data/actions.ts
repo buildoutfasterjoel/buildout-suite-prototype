@@ -274,7 +274,7 @@ export function updateDealFinancials(
 /** What the generation flow hands over to be persisted. */
 export interface NewGeneratedDocument {
   name: string
-  docType: string
+  templateName: string
   sourceFileIds: string[]
   sourceFileNames: string[]
   instructions: string
@@ -302,7 +302,7 @@ export function createGeneratedDocument(
     uploadedAt: now,
     aiGenerated: true,
     generation: {
-      docType: input.docType,
+      templateName: input.templateName,
       sourceFileIds: input.sourceFileIds,
       sourceFileNames: input.sourceFileNames,
       instructions: input.instructions,

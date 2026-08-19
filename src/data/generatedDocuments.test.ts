@@ -20,7 +20,7 @@ function anyDealId(): string {
 
 const input = {
   name: 'Offering Memorandum — Test',
-  docType: 'Offering Memorandum',
+  templateName: 'Offering Memorandum',
   sourceFileIds: ['f1'],
   sourceFileNames: ['T-12 2025.pdf'],
   instructions: 'Lead with the trailing-12 NOI growth.',
@@ -71,7 +71,7 @@ describe('resolveGeneratedDocument', () => {
     const dealId = anyDealId()
     const { documentId } = createGeneratedDocument(dealId, input)
     const deal = useDataStore.getState().listings.get(dealId)
-    expect(resolveGeneratedDocument(deal, documentId ?? undefined)?.docType).toBe(
+    expect(resolveGeneratedDocument(deal, documentId ?? undefined)?.templateName).toBe(
       'Offering Memorandum',
     )
   })

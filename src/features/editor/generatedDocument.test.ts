@@ -67,7 +67,7 @@ describe('buildGeneratedDocumentPages', () => {
 
 describe('buildGeneratedDocument', () => {
   const generation: DocumentGeneration = {
-    docType: 'Offering Memorandum',
+    templateName: 'Offering Memorandum',
     sourceFileIds: ['f1'],
     sourceFileNames: ['Rent Roll 2026.xlsx'],
     instructions: '',

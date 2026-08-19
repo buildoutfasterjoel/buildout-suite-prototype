@@ -1,36 +1,34 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
-import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMagnifyingGlass, faCloudArrowUp } from "@fortawesome/pro-regular-svg-icons";
+import { faMagnifyingGlass } from "@fortawesome/pro-regular-svg-icons";
 import { classifyFile, KIND_LABEL } from "#/data/documentGeneration";
 import { formatBytes } from "#/lib/formatBytes";
 import { fileTypeIcon } from "#/lib/fileTypeIcon";
 import type { DealFileItem } from "#/data/types";
 
 /**
- * A flat, searchable list of the deal's files for the generation screen.
- * Folders are shown as a subtitle rather than navigated into — selecting
- * across folders inside a modal loses sight of what is already checked.
+ * A flat, searchable list of the deal's files for the generation screen — the
+ * alternative to uploading, which the drop zone above this handles.
+ *
+ * Folders are shown as a subtitle rather than navigated into: selecting across
+ * folders inside a modal loses sight of what is already checked.
  */
 export function SourceFilePicker({
   items,
   selectedIds,
   onToggle,
-  onUpload,
 }: {
   /** Every non-deleted file on the deal, flattened. */
   items: { file: DealFileItem; folderName: string }[];
   selectedIds: Set<string>;
   onToggle: (id: string, checked: boolean) => void;
-  onUpload: (files: File[]) => void;
 }) {
   const [query, setQuery] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -40,7 +38,7 @@ export function SourceFilePicker({
   return (
     <div className="d-flex flex-column gap-2">
       <div className="d-flex align-items-center justify-content-between gap-2">
-        <span className="fw-semibold">Source files</span>
+        <span className="fw-semibold">Or use files already on this deal</span>
         <span className="text-muted fs-small">
           {selectedIds.size} of {items.length} selected
         </span>
@@ -60,7 +58,11 @@ export function SourceFilePicker({
 
       {filtered.length === 0 ? (
         <Empty className="py-4">
-          <Empty.Content>No files match your search.</Empty.Content>
+          <Empty.Content>
+            {items.length === 0
+              ? "No files on this deal yet — drop one above."
+              : "No files match your search."}
+          </Empty.Content>
         </Empty>
       ) : (
         <div
@@ -99,27 +101,6 @@ export function SourceFilePicker({
         </div>
       )}
 
-      <div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => inputRef.current?.click()}
-        >
-          <FontAwesomeIcon icon={faCloudArrowUp} />
-          Upload files
-        </Button>
-        <input
-          ref={inputRef}
-          type="file"
-          multiple
-          className="d-none"
-          onChange={(e) => {
-            const picked = Array.from(e.target.files ?? []);
-            if (picked.length > 0) onUpload(picked);
-            e.target.value = "";
-          }}
-        />
-      </div>
     </div>
   );
 }

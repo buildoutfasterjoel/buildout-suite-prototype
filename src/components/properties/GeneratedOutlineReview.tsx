@@ -12,13 +12,13 @@ import type { SourceFileRef } from "#/data/documentGeneration";
  */
 export function GeneratedOutlineReview({
   sections,
-  docType,
+  templateName,
   instructions,
   unusedFiles,
 }: {
   sections: GeneratedSection[];
   /** Named in the spine sections' description, e.g. "in every Offering Memorandum". */
-  docType: string;
+  templateName: string;
   instructions: string;
   /** Selected files that contributed no section — named rather than silently dropped. */
   unusedFiles: SourceFileRef[];
@@ -41,7 +41,7 @@ export function GeneratedOutlineReview({
                       <FontAwesomeIcon icon={faWandMagicSparkles} /> from your instructions
                     </>
                   )}
-                  {section.origin === "spine" && `in every ${docType}`}
+                  {section.origin === "spine" && `in every ${templateName}`}
                 </List.ItemDescription>
               </List.ItemContent>
             </List.Item>

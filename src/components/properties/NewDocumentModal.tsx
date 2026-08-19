@@ -3,20 +3,22 @@ import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Field } from "@buildoutinc/blueprint-react/ui/Field";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
-import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { Textarea } from "@buildoutinc/blueprint-react/ui/Textarea";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck } from "@fortawesome/pro-regular-svg-icons";
 import { TemplatePicker } from "./TemplatePicker";
 import { SourceFilePicker } from "./SourceFilePicker";
+import { FileDropZone } from "./FileDropZone";
+import { DocumentSuggestions } from "./DocumentSuggestions";
 import { InstructionSuggestions } from "./InstructionSuggestions";
 import { DocumentGenerationProgress } from "./DocumentGenerationProgress";
 import { GeneratedOutlineReview } from "./GeneratedOutlineReview";
 import {
   buildOutline,
-  DOC_TYPES,
+
   suggestionsFor,
-  type DocType,
+  suggestTemplates,
+  type TemplateName,
   type SourceFileRef,
   type SuggestionCard,
 } from "#/data/documentGeneration";
@@ -114,7 +116,11 @@ export function NewDocumentModal({
   const [screen, setScreen] = useState<Screen>("generate");
   const [name, setName] = useState("");
   const [nameEdited, setNameEdited] = useState(false);
-  const [docType, setDocType] = useState<DocType>("Offering Memorandum");
+  /**
+   * Set only when the broker overrides the suggestion. Left null, the best fit
+   * wins — so the AI's proposal is the default and Generate needs no click here.
+   */
+  const [templateOverride, setTemplateOverride] = useState<TemplateName | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [instructions, setInstructions] = useState("");
   const [items, setItems] = useState<ReturnType<typeof flattenDealFiles>>([]);
@@ -126,24 +132,36 @@ export function NewDocumentModal({
     setScreen("generate");
     setName("");
     setNameEdited(false);
-    setDocType("Offering Memorandum");
+    setTemplateOverride(null);
     setSelectedIds(new Set());
     setInstructions("");
     setItems(flattenDealFiles(listingId));
   }, [open, listingId]);
 
   const dealName = getListing(listingId)?.name ?? "Untitled Deal";
-  const defaultName = `${docType} — ${dealName}`;
-  /** What the input shows: the user's text once they have touched the field, even when empty. */
-  const displayName = nameEdited ? name : defaultName;
-  /** What gets persisted: never blank, so a cleared field still files under the default. */
-  const effectiveName = displayName.trim() || defaultName;
 
   const selectedFiles: SourceFileRef[] = items
     .filter((i) => selectedIds.has(i.file.id))
     .map((i) => ({ id: i.file.id, name: i.file.name }));
 
-  const outlineInput = { docType, files: selectedFiles, instructions };
+  const suggestions = suggestTemplates(selectedFiles);
+  /**
+   * An override only holds while it is still on offer — change the files enough
+   * that a template stops being suggested and the new best fit takes over,
+   * rather than silently keeping a choice the files no longer support.
+   */
+  const templateName =
+    (templateOverride && suggestions.some((sg) => sg.name === templateOverride)
+      ? templateOverride
+      : suggestions[0]?.name) ?? "Offering Memorandum";
+
+  const defaultName = `${templateName} — ${dealName}`;
+  /** What the input shows: the user's text once they have touched the field, even when empty. */
+  const displayName = nameEdited ? name : defaultName;
+  /** What gets persisted: never blank, so a cleared field still files under the default. */
+  const effectiveName = displayName.trim() || defaultName;
+
+  const outlineInput = { templateName, files: selectedFiles, instructions };
   const cards = suggestionsFor(outlineInput);
   const outline = buildOutline(outlineInput);
   const unusedFiles = selectedFiles.filter(
@@ -186,7 +204,7 @@ export function NewDocumentModal({
   function handleOpenInEditor() {
     const { documentId } = createGeneratedDocument(listingId, {
       name: effectiveName,
-      docType,
+      templateName,
       sourceFileIds: selectedFiles.map((f) => f.id),
       sourceFileNames: selectedFiles.map((f) => f.name),
       instructions,
@@ -223,24 +241,7 @@ export function NewDocumentModal({
                 />
               </Field>
 
-              <Field>
-                <Field.Label>Document type</Field.Label>
-                <Select
-                  value={docType}
-                  onValueChange={(v) => v && setDocType(v as DocType)}
-                >
-                  <Select.Trigger className="w-100">
-                    <Select.Value />
-                  </Select.Trigger>
-                  <Select.Content>
-                    {DOC_TYPES.map((t) => (
-                      <Select.Item key={t} value={t}>
-                        {t}
-                      </Select.Item>
-                    ))}
-                  </Select.Content>
-                </Select>
-              </Field>
+              <FileDropZone onUpload={handleUpload} />
 
               <SourceFilePicker
                 items={items}
@@ -252,7 +253,12 @@ export function NewDocumentModal({
                     return next;
                   })
                 }
-                onUpload={handleUpload}
+              />
+
+              <DocumentSuggestions
+                suggestions={suggestions}
+                selected={templateName}
+                onSelect={setTemplateOverride}
               />
 
               <Field>
@@ -293,7 +299,7 @@ export function NewDocumentModal({
           {screen === "review" && (
             <GeneratedOutlineReview
               sections={outline}
-              docType={docType}
+              templateName={templateName}
               instructions={instructions}
               unusedFiles={unusedFiles}
             />
