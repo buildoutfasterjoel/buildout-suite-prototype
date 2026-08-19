@@ -92,6 +92,11 @@ function flattenDealFiles(listingId: string) {
     .map((file) => ({ file, folderName: folderName(file.parentId) }));
 }
 
+/** Escapes a literal string for use inside a RegExp. */
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export function NewDocumentModal({
   open,
   onOpenChange,
@@ -137,14 +142,23 @@ export function NewDocumentModal({
 
   function toggleSuggestion(card: SuggestionCard, add: boolean) {
     setInstructions((prev) => {
-      if (add) return prev.trim() ? `${prev.trim()} ${card.sentence}` : card.sentence;
-      return prev.replace(card.sentence, "").replace(/\s{2,}/g, " ").trim();
+      if (add) {
+        if (prev.includes(card.sentence)) return prev;
+        return prev.trim() ? `${prev.trimEnd()} ${card.sentence}` : card.sentence;
+      }
+      // Remove every occurrence, consuming only the horizontal whitespace that
+      // immediately precedes each one — the separator the add path inserted.
+      // Never touch whitespace elsewhere: the broker's own paragraph breaks and
+      // spacing in this textarea are theirs, not ours to normalize.
+      return prev
+        .replace(new RegExp(`[ \\t]*${escapeRegExp(card.sentence)}`, "g"), "")
+        .trim();
     });
   }
 
   function handleUpload(files: File[]) {
-    const added = files.map((file, i) => ({
-      id: `${listingId}-upload-${Date.now()}-${i}`,
+    const added = files.map((file) => ({
+      id: `${listingId}-upload-${crypto.randomUUID()}`,
       name: file.name,
       kind: "file" as const,
       parentId: null,
