@@ -108,7 +108,7 @@ export function NewDocumentModal({
   const [docType, setDocType] = useState<DocType>("Offering Memorandum");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [instructions, setInstructions] = useState("");
-  const [items, setItems] = useState(() => flattenDealFiles(listingId));
+  const [items, setItems] = useState<ReturnType<typeof flattenDealFiles>>([]);
 
   // Reset every input when the modal opens, so a second run does not inherit
   // the first one's selection.
