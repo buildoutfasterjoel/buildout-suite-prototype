@@ -57,9 +57,17 @@ export function DocumentSuggestions({
                     icon={active ? faCircleCheck : faCircle}
                     className={active ? "text-primary" : "text-muted opacity-50"}
                   />
-                  <span className="fw-medium text-truncate">{suggestion.name}</span>
+                  <span className="fw-medium text-truncate" title={suggestion.name}>
+                    {suggestion.name}
+                  </span>
                   {suggestion.bestFit && (
-                    <Badge variant="secondary" appearance="accent">
+                    // The name truncates; the badge must not. Without these it
+                    // gets squeezed by the name and breaks across two lines.
+                    <Badge
+                      variant="secondary"
+                      appearance="accent"
+                      className="flex-shrink-0 text-nowrap"
+                    >
                       Best fit
                     </Badge>
                   )}
