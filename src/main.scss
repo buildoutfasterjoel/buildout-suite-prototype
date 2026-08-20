@@ -139,17 +139,14 @@
 // offcanvas, tint the header, round the trailing edge, and give the clickable
 // checkbox/radio rows a full-width hover + two-column layout to match the design.
 .contact-filters {
-  // Blueprint's offcanvas sets `width` directly rather than reading the
-  // Bootstrap var, so pin the width with matching specificity (the element
-  // also carries `.offcanvas-start`). Cap on small screens.
-  --bs-offcanvas-width: 30rem;
+  // Bootstrap drives the panel width from its own custom property, which
+  // Blueprint emits as `--bp-offcanvas-width` (the theme sets `$prefix: "bp-"`,
+  // so the `--bs-` spelling this block used to carry was inert and the explicit
+  // `width` below was covering for it). Cap on small screens.
+  --bp-offcanvas-width: 30rem;
+  max-width: 90vw;
   border-top-right-radius: var(--bp-border-radius-xl, 0.75rem);
   border-bottom-right-radius: var(--bp-border-radius-xl, 0.75rem);
-
-  &.offcanvas-start {
-    width: 30rem;
-    max-width: 90vw;
-  }
 
   .contact-filters__header {
     background: var(--color-purple-heart-50, #f9f5ff);
@@ -3803,9 +3800,9 @@
   }
 
   // Count badges match the ones in the section headers: same muted grey fill,
-  // same dark label. Set here rather than via Badge's `style` prop — the DS Badge
-  // doesn't forward it — and the colour has to be pinned because the active pill
-  // recolours its own text purple and the badge sits inside that text node.
+  // same dark label. Set in CSS rather than through Badge's `style` prop (which
+  // it does forward) because the colour has to out-rank the cascade: the active
+  // pill recolours its own text purple and the badge sits inside that text node.
   .nav-link .badge {
     background: var(--color-storm-grey-100, #eceef2);
     color: var(--color-storm-grey-950, #22262f);
@@ -4120,7 +4117,7 @@
 
 // Calendar — today's date. blueprint-react already classes today's cell
 // `.blueprint-calendar-today` (Calendar/index.tsx), and the docs advertise the
-// class, but blueprint-theme 1.1.0 never defines a rule for it, so today renders
+// class, but blueprint-theme 1.1.1 still defines no rule for it, so today renders
 // identically to every other day. Fill the gap locally: a semibold label inside
 // a ring drawn with an inset shadow, so it costs no layout space and can't
 // shift the grid. The `:not()` guard keeps it out of the way when today is also
