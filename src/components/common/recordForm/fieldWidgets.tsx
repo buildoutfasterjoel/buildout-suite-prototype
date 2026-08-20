@@ -44,7 +44,7 @@ export function TextField({
   return (
     <Field className="record-form__field">
       <InputGroup>
-        <InputGroup.Addon asText className="record-form__gutter">
+        <InputGroup.Addon asText className="record-form__gutter justify-content-start">
           <Field.Label className="align-self-start">
             {label}
             {required && <span className="text-danger ms-1">*</span>}
@@ -88,7 +88,7 @@ export function NumberField({
   return (
     <Field className="record-form__field">
       <InputGroup>
-        <InputGroup.Addon asText className="record-form__gutter">
+        <InputGroup.Addon asText className="record-form__gutter justify-content-start">
           <Field.Label className="d-flex align-items-center gap-2">
             {label}
             {conflict && (
@@ -235,7 +235,7 @@ export function ReadOnlyField({
   return (
     <Field className="record-form__field">
       <InputGroup>
-        <InputGroup.Addon asText className="record-form__gutter">
+        <InputGroup.Addon asText className="record-form__gutter justify-content-start">
           <Field.Label>{label}</Field.Label>
         </InputGroup.Addon>
         <Input className="record-form__control" readOnly value={value} />
@@ -285,7 +285,7 @@ export function DateField({
   return (
     <Field className="record-form__field">
       <InputGroup>
-        <InputGroup.Addon asText className="record-form__gutter">
+        <InputGroup.Addon asText className="record-form__gutter justify-content-start">
           <Field.Label>{label}</Field.Label>
         </InputGroup.Addon>
 
@@ -345,7 +345,7 @@ export function SelectField<T extends string>({
   return (
     <Field className="record-form__field">
       <InputGroup>
-        <InputGroup.Addon asText className="record-form__gutter">
+        <InputGroup.Addon asText className="record-form__gutter justify-content-start">
           <Field.Label>{label}</Field.Label>
         </InputGroup.Addon>
         <Select value={value} onValueChange={(v) => v && onChange(v as T)}>
@@ -429,7 +429,7 @@ export function ComboField<T extends string>({
             placeholder={placeholder ?? "Search…"}
             showClear
           >
-            <InputGroup.Addon asText className="record-form__gutter">
+            <InputGroup.Addon asText className="record-form__gutter justify-content-start">
               <Field.Label>
                 {label}
                 {required && <span className="text-danger ms-1">*</span>}
