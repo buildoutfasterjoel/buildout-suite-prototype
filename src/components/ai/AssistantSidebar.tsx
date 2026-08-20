@@ -166,7 +166,6 @@ function StarterPrompts({
             <FontAwesomeIcon
               icon={open ? faChevronDown : faChevronRight}
               className="text-muted"
-              fixedWidth
             />
             Suggested prompts
             <FontAwesomeIcon icon={faSparkles} className="text-purple-heart-600" />

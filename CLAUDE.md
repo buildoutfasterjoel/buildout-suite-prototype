@@ -102,7 +102,7 @@ Data lives in IndexedDB (`keyval-store`) and seeds on first load. The MCP server
 ```bash
 bun install              # Install dependencies (requires tokens in .env)
 bun --bun run dev        # Dev server at http://localhost:3000
-bun --bun run build      # Production build → dist/ (self-contained Node server)
+bun --bun run build      # Production build → .output/ (self-contained Node server)
 bun --bun run test       # Run tests (Vitest)
 ```
 
@@ -131,7 +131,7 @@ Both are consumed by `bunfig.toml` to authenticate private registries.
 **Path aliases** (both work):
 - `#/` → `src/`
 
-**Server functions:** Use `createServerFn` from `@tanstack/start` to colocate server-side logic with routes. Nitro bundles a portable Node.js server into `dist/`.
+**Server functions:** Use `createServerFn` from `@tanstack/start` to colocate server-side logic with routes. Nitro bundles a portable Node.js server into `.output/`.
 
 ### Space/suite routing is settled — don't re-derive it
 
