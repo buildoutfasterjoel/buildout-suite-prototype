@@ -52,7 +52,9 @@ describe('buildPropertySummaryPage', () => {
   it('binds the left column to the deal’s sale copy', () => {
     const columns = buildPropertySummaryPage().blocks.find((b) => b.type === 'columns') as ColumnsBlock
     const left = columns.columns[0]
-    expect(left.some((b) => b.type === 'dynamic' && b.dynamicKey === 'marketing.saleDescription')).toBe(true)
+    expect(
+      left.some((b) => b.type === 'text' && b.text === '{{marketing.saleDescription}}'),
+    ).toBe(true)
     const list = left.find((b) => b.type === 'list') as ListBlock
     expect(list.dynamicKey).toBe('marketing.saleBullets')
   })

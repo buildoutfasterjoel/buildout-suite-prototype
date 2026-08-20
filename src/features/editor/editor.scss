@@ -530,11 +530,6 @@
   font-size: 11px;
   color: var(--bp-primary);
 }
-.bo-editor-dynamic {
-  background: rgba(var(--bp-primary-rgb), 0.06);
-  border-radius: tokens.$border-radius-sm;
-  padding: 2px 6px;
-}
 
 /* ---- Table row/column editing affordances ---- */
 .bo-editor-table-wrap {

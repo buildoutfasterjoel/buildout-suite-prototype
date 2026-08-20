@@ -104,14 +104,6 @@ export function createBlock(type: Block["type"], variant?: BlockVariant): Block 
         src: getPhotoUrl("editor-block", 640, 360),
         alt: "Image",
       };
-    case "dynamic":
-      return {
-        id: uid("block"),
-        type: "dynamic",
-        dynamicKey: "name",
-        format: "text",
-        style: { ...DEFAULT_TEXT_STYLE, fontSize: 14 },
-      };
     case "list":
       return {
         id: uid("block"),

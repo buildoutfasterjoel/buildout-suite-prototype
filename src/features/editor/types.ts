@@ -125,15 +125,6 @@ export interface ImageBlock {
   fullBleed?: boolean;
 }
 
-/** A text-like block bound to a live listing field. */
-export interface DynamicBlock {
-  id: string;
-  type: "dynamic";
-  dynamicKey: DynamicKey;
-  format?: Cell["format"];
-  style: TextStyle;
-}
-
 /** Array fields a list block can bind to. */
 export type DynamicListKey = "marketing.saleBullets" | "marketing.leaseBullets";
 
@@ -212,7 +203,6 @@ export type ContentBlock =
   | TextBlock
   | TableBlock
   | ImageBlock
-  | DynamicBlock
   | ListBlock
   | ContentsBlock
   | MapBlock

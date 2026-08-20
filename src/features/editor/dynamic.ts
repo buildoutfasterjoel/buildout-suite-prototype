@@ -34,10 +34,11 @@ export const DYNAMIC_FIELD_LABELS: Partial<Record<DynamicKey, string>> = {
 };
 
 /**
- * Default formatting for an inline token. A whole-block or table-cell binding
- * carries its own `format` hint, but a token written mid-sentence has nowhere to
- * put one and liquid filters are deliberately out of scope — so the format is a
- * property of the field itself. Anything absent here formats as text, which
+ * Default formatting for an inline token. A table cell carries its own `format`
+ * hint, but a token written mid-sentence has nowhere to put one and liquid
+ * filters are deliberately out of scope — so the format is a property of the
+ * field itself. Since tokens are now the only way a text block binds to data,
+ * this table is what gives those bindings their currency/percent formatting. Anything absent here formats as text, which
  * already handles thousands separators and joins arrays.
  */
 export const INLINE_FIELD_FORMAT: Partial<Record<DynamicKey, Cell["format"]>> = {

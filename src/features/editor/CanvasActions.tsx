@@ -33,8 +33,6 @@ function blockCrumb(
       return block.title || "Table";
     case "image":
       return "Image";
-    case "dynamic":
-      return "Dynamic Field";
     case "list":
       return "List";
     case "contents":

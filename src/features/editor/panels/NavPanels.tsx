@@ -634,12 +634,6 @@ const CONTENT_BLOCKS: PaletteEntry[] = [
     label: "Map",
     desc: "Map of the deal's address",
   },
-  {
-    type: "dynamic",
-    icon: BLOCK_ICONS.dynamic,
-    label: "Dynamic Field",
-    desc: "Deal data token",
-  },
 ];
 
 const LAYOUT_BLOCKS: PaletteEntry[] = [

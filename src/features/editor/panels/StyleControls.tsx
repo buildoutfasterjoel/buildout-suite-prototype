@@ -38,7 +38,6 @@ import {
   mapStyleDef,
 } from "../blocks/mapStyles";
 import { blockLabel } from "../blocks/blockMeta";
-import { DYNAMIC_FIELD_LABELS } from "../dynamic";
 import { useEditorStore } from "../store";
 import { CRE_PHOTO_IDS, crePhotoUrl, swapCrePhoto } from "#/components/properties/propertyDisplay";
 import { BRAND } from "../brand";
@@ -368,18 +367,6 @@ export function StyleControls({ block, cell }: { block: Block; cell: Cell | null
 
   if (block.type === "map") {
     return <MapStyleControls block={block} />;
-  }
-
-  if (block.type === "dynamic") {
-    return (
-      <div className="d-flex flex-column gap-3">
-        <span className="bo-editor-section-title">Dynamic Field</span>
-        <EditorOption label="Field">
-          <FauxSelect value={DYNAMIC_FIELD_LABELS[block.dynamicKey] ?? "Deal Name"} />
-        </EditorOption>
-        <FontControls style={block.style} />
-      </div>
-    );
   }
 
   // Spacer / Divider / Columns / Section / Image — placement-only for now.
