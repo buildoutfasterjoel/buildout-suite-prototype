@@ -9,144 +9,109 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as ShellRouteImport } from './routes/_shell'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ShellTasksRouteImport } from './routes/_shell/tasks'
-import { Route as ShellSuiteRouteImport } from './routes/_shell/suite'
-import { Route as ShellSettingsRouteImport } from './routes/_shell/settings'
-import { Route as ShellReportsRouteImport } from './routes/_shell/reports'
-import { Route as ShellPropertiesRouteImport } from './routes/_shell/properties'
-import { Route as ShellListingsRouteImport } from './routes/_shell/listings'
-import { Route as ShellEmailRouteImport } from './routes/_shell/email'
-import { Route as ShellEditorRouteImport } from './routes/_shell/editor'
-import { Route as ShellBackofficeRouteImport } from './routes/_shell/backoffice'
+import { Route as ShellRouteImport } from './routes/_shell'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as ShellAppRouteImport } from './routes/_shell/app'
-import { Route as ShellTasksIndexRouteImport } from './routes/_shell/tasks/index'
-import { Route as ShellSuiteIndexRouteImport } from './routes/_shell/suite/index'
-import { Route as ShellSettingsIndexRouteImport } from './routes/_shell/settings/index'
-import { Route as ShellReportsIndexRouteImport } from './routes/_shell/reports/index'
-import { Route as ShellPropertiesIndexRouteImport } from './routes/_shell/properties/index'
-import { Route as ShellListingsIndexRouteImport } from './routes/_shell/listings/index'
-import { Route as ShellEmailIndexRouteImport } from './routes/_shell/email/index'
+import { Route as ShellBackofficeRouteImport } from './routes/_shell/backoffice'
+import { Route as ShellEditorRouteImport } from './routes/_shell/editor'
+import { Route as ShellEmailRouteImport } from './routes/_shell/email'
+import { Route as ShellListingsRouteImport } from './routes/_shell/listings'
+import { Route as ShellPropertiesRouteImport } from './routes/_shell/properties'
+import { Route as ShellReportsRouteImport } from './routes/_shell/reports'
+import { Route as ShellSettingsRouteImport } from './routes/_shell/settings'
+import { Route as ShellSuiteRouteImport } from './routes/_shell/suite'
+import { Route as ShellTasksRouteImport } from './routes/_shell/tasks'
 import { Route as ShellAppIndexRouteImport } from './routes/_shell/app/index'
-import { Route as ShellSettingsUsersRouteImport } from './routes/_shell/settings/users'
-import { Route as ShellSettingsSyndicationRouteImport } from './routes/_shell/settings/syndication'
-import { Route as ShellSettingsPluginsRouteImport } from './routes/_shell/settings/plugins'
-import { Route as ShellSettingsPlaybooksRouteImport } from './routes/_shell/settings/playbooks'
-import { Route as ShellSettingsPipelineRouteImport } from './routes/_shell/settings/pipeline'
-import { Route as ShellSettingsOfficesRouteImport } from './routes/_shell/settings/offices'
-import { Route as ShellSettingsNotificationsRouteImport } from './routes/_shell/settings/notifications'
-import { Route as ShellSettingsLogosRouteImport } from './routes/_shell/settings/logos'
-import { Route as ShellSettingsListingsRouteImport } from './routes/_shell/settings/listings'
-import { Route as ShellSettingsEmailRouteImport } from './routes/_shell/settings/email'
-import { Route as ShellSettingsCustomFieldsRouteImport } from './routes/_shell/settings/custom-fields'
-import { Route as ShellSettingsCompanyRouteImport } from './routes/_shell/settings/company'
-import { Route as ShellSettingsAffiliationsRouteImport } from './routes/_shell/settings/affiliations'
-import { Route as ShellReportsPipelineRouteImport } from './routes/_shell/reports_/pipeline'
-import { Route as ShellReportsStandardRouteImport } from './routes/_shell/reports/standard'
-import { Route as ShellReportsMyReportsRouteImport } from './routes/_shell/reports/my-reports'
-import { Route as ShellPropertiesPropertyIdRouteImport } from './routes/_shell/properties/$propertyId'
-import { Route as ShellListingsListingIdRouteImport } from './routes/_shell/listings/$listingId'
-import { Route as ShellEmailEmailIdRouteImport } from './routes/_shell/email/$emailId'
 import { Route as ShellEditorListingIdRouteImport } from './routes/_shell/editor/$listingId'
-import { Route as ShellSettingsUsersIndexRouteImport } from './routes/_shell/settings/users/index'
-import { Route as ShellListingsListingIdIndexRouteImport } from './routes/_shell/listings/$listingId/index'
+import { Route as ShellEmailIndexRouteImport } from './routes/_shell/email/index'
+import { Route as ShellEmailEmailIdRouteImport } from './routes/_shell/email/$emailId'
+import { Route as ShellListingsIndexRouteImport } from './routes/_shell/listings/index'
+import { Route as ShellListingsListingIdRouteImport } from './routes/_shell/listings/$listingId'
+import { Route as ShellPropertiesIndexRouteImport } from './routes/_shell/properties/index'
+import { Route as ShellPropertiesPropertyIdRouteImport } from './routes/_shell/properties/$propertyId'
+import { Route as ShellReportsIndexRouteImport } from './routes/_shell/reports/index'
+import { Route as ShellReportsMyReportsRouteImport } from './routes/_shell/reports/my-reports'
+import { Route as ShellReportsStandardRouteImport } from './routes/_shell/reports/standard'
+import { Route as ShellReportsPipelineRouteImport } from './routes/_shell/reports_/pipeline'
+import { Route as ShellSettingsIndexRouteImport } from './routes/_shell/settings/index'
+import { Route as ShellSettingsAffiliationsRouteImport } from './routes/_shell/settings/affiliations'
+import { Route as ShellSettingsCompanyRouteImport } from './routes/_shell/settings/company'
+import { Route as ShellSettingsCustomFieldsRouteImport } from './routes/_shell/settings/custom-fields'
+import { Route as ShellSettingsEmailRouteImport } from './routes/_shell/settings/email'
+import { Route as ShellSettingsListingsRouteImport } from './routes/_shell/settings/listings'
+import { Route as ShellSettingsLogosRouteImport } from './routes/_shell/settings/logos'
+import { Route as ShellSettingsNotificationsRouteImport } from './routes/_shell/settings/notifications'
+import { Route as ShellSettingsOfficesRouteImport } from './routes/_shell/settings/offices'
+import { Route as ShellSettingsPipelineRouteImport } from './routes/_shell/settings/pipeline'
+import { Route as ShellSettingsPlaybooksRouteImport } from './routes/_shell/settings/playbooks'
+import { Route as ShellSettingsPluginsRouteImport } from './routes/_shell/settings/plugins'
+import { Route as ShellSettingsSyndicationRouteImport } from './routes/_shell/settings/syndication'
+import { Route as ShellSettingsUsersRouteImport } from './routes/_shell/settings/users'
+import { Route as ShellSuiteIndexRouteImport } from './routes/_shell/suite/index'
+import { Route as ShellTasksIndexRouteImport } from './routes/_shell/tasks/index'
 import { Route as ShellBackofficeContactsIndexRouteImport } from './routes/_shell/backoffice/contacts/index'
-import { Route as ShellSettingsUsersUserIdRouteImport } from './routes/_shell/settings/users/$userId'
-import { Route as ShellListingsListingIdWebsiteRouteImport } from './routes/_shell/listings/$listingId/website'
-import { Route as ShellListingsListingIdUnderwritingRouteImport } from './routes/_shell/listings/$listingId/underwriting'
-import { Route as ShellListingsListingIdSpacesRouteImport } from './routes/_shell/listings/$listingId/spaces'
-import { Route as ShellListingsListingIdPlansRouteImport } from './routes/_shell/listings/$listingId/plans'
-import { Route as ShellListingsListingIdOverviewRouteImport } from './routes/_shell/listings/$listingId/overview'
-import { Route as ShellListingsListingIdNotesRouteImport } from './routes/_shell/listings/$listingId/notes'
-import { Route as ShellListingsListingIdMediaRouteImport } from './routes/_shell/listings/$listingId/media'
-import { Route as ShellListingsListingIdListingRouteImport } from './routes/_shell/listings/$listingId/listing'
-import { Route as ShellListingsListingIdLeadsRouteImport } from './routes/_shell/listings/$listingId/leads'
-import { Route as ShellListingsListingIdHistoryRouteImport } from './routes/_shell/listings/$listingId/history'
-import { Route as ShellListingsListingIdGridsRouteImport } from './routes/_shell/listings/$listingId/grids'
-import { Route as ShellListingsListingIdFinancialsRouteImport } from './routes/_shell/listings/$listingId/financials'
-import { Route as ShellListingsListingIdFinancialDocumentsRouteImport } from './routes/_shell/listings/$listingId/financial-documents'
-import { Route as ShellListingsListingIdFilesRouteImport } from './routes/_shell/listings/$listingId/files'
-import { Route as ShellListingsListingIdEmailRouteImport } from './routes/_shell/listings/$listingId/email'
-import { Route as ShellListingsListingIdEditRouteImport } from './routes/_shell/listings/$listingId/edit'
-import { Route as ShellListingsListingIdDocumentsRouteImport } from './routes/_shell/listings/$listingId/documents'
-import { Route as ShellListingsListingIdDemographicsRouteImport } from './routes/_shell/listings/$listingId/demographics'
-import { Route as ShellListingsListingIdClientReportRouteImport } from './routes/_shell/listings/$listingId/client-report'
-import { Route as ShellListingsListingIdActivitiesRouteImport } from './routes/_shell/listings/$listingId/activities'
 import { Route as ShellBackofficeContactsContactIdRouteImport } from './routes/_shell/backoffice/contacts/$contactId'
-import { Route as ShellSettingsUsersUserIdIndexRouteImport } from './routes/_shell/settings/users/$userId/index'
+import { Route as ShellListingsListingIdIndexRouteImport } from './routes/_shell/listings/$listingId/index'
+import { Route as ShellListingsListingIdActivitiesRouteImport } from './routes/_shell/listings/$listingId/activities'
+import { Route as ShellListingsListingIdClientReportRouteImport } from './routes/_shell/listings/$listingId/client-report'
+import { Route as ShellListingsListingIdDemographicsRouteImport } from './routes/_shell/listings/$listingId/demographics'
+import { Route as ShellListingsListingIdDocumentsRouteImport } from './routes/_shell/listings/$listingId/documents'
+import { Route as ShellListingsListingIdEditRouteImport } from './routes/_shell/listings/$listingId/edit'
+import { Route as ShellListingsListingIdEmailRouteImport } from './routes/_shell/listings/$listingId/email'
+import { Route as ShellListingsListingIdFilesRouteImport } from './routes/_shell/listings/$listingId/files'
+import { Route as ShellListingsListingIdFinancialDocumentsRouteImport } from './routes/_shell/listings/$listingId/financial-documents'
+import { Route as ShellListingsListingIdFinancialsRouteImport } from './routes/_shell/listings/$listingId/financials'
+import { Route as ShellListingsListingIdGridsRouteImport } from './routes/_shell/listings/$listingId/grids'
+import { Route as ShellListingsListingIdHistoryRouteImport } from './routes/_shell/listings/$listingId/history'
+import { Route as ShellListingsListingIdLeadsRouteImport } from './routes/_shell/listings/$listingId/leads'
+import { Route as ShellListingsListingIdListingRouteImport } from './routes/_shell/listings/$listingId/listing'
+import { Route as ShellListingsListingIdMediaRouteImport } from './routes/_shell/listings/$listingId/media'
+import { Route as ShellListingsListingIdNotesRouteImport } from './routes/_shell/listings/$listingId/notes'
+import { Route as ShellListingsListingIdOverviewRouteImport } from './routes/_shell/listings/$listingId/overview'
+import { Route as ShellListingsListingIdPlansRouteImport } from './routes/_shell/listings/$listingId/plans'
+import { Route as ShellListingsListingIdSpacesRouteImport } from './routes/_shell/listings/$listingId/spaces'
+import { Route as ShellListingsListingIdUnderwritingRouteImport } from './routes/_shell/listings/$listingId/underwriting'
+import { Route as ShellListingsListingIdWebsiteRouteImport } from './routes/_shell/listings/$listingId/website'
+import { Route as ShellSettingsUsersIndexRouteImport } from './routes/_shell/settings/users/index'
+import { Route as ShellSettingsUsersUserIdRouteImport } from './routes/_shell/settings/users/$userId'
 import { Route as ShellListingsListingIdVouchersIndexRouteImport } from './routes/_shell/listings/$listingId/vouchers/index'
-import { Route as ShellSettingsUsersUserIdProfileRouteImport } from './routes/_shell/settings/users/$userId/profile'
-import { Route as ShellSettingsUsersUserIdPermissionsRouteImport } from './routes/_shell/settings/users/$userId/permissions'
-import { Route as ShellSettingsUsersUserIdNotificationsRouteImport } from './routes/_shell/settings/users/$userId/notifications'
-import { Route as ShellSettingsUsersUserIdIntegrationsRouteImport } from './routes/_shell/settings/users/$userId/integrations'
-import { Route as ShellSettingsUsersUserIdEmailRouteImport } from './routes/_shell/settings/users/$userId/email'
 import { Route as ShellListingsListingIdSpacesSpaceIdRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId'
+import { Route as ShellSettingsUsersUserIdIndexRouteImport } from './routes/_shell/settings/users/$userId/index'
+import { Route as ShellSettingsUsersUserIdEmailRouteImport } from './routes/_shell/settings/users/$userId/email'
+import { Route as ShellSettingsUsersUserIdIntegrationsRouteImport } from './routes/_shell/settings/users/$userId/integrations'
+import { Route as ShellSettingsUsersUserIdNotificationsRouteImport } from './routes/_shell/settings/users/$userId/notifications'
+import { Route as ShellSettingsUsersUserIdPermissionsRouteImport } from './routes/_shell/settings/users/$userId/permissions'
+import { Route as ShellSettingsUsersUserIdProfileRouteImport } from './routes/_shell/settings/users/$userId/profile'
 import { Route as ShellListingsListingIdSpacesSpaceIdIndexRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/index'
-import { Route as ShellListingsListingIdSpacesSpaceIdOverviewRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/overview'
-import { Route as ShellListingsListingIdSpacesSpaceIdNotesRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/notes'
-import { Route as ShellListingsListingIdSpacesSpaceIdMediaRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/media'
-import { Route as ShellListingsListingIdSpacesSpaceIdLeadsRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/leads'
-import { Route as ShellListingsListingIdSpacesSpaceIdHistoryRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/history'
-import { Route as ShellListingsListingIdSpacesSpaceIdFinancialsRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/financials'
-import { Route as ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/financial-documents'
-import { Route as ShellListingsListingIdSpacesSpaceIdFilesRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/files'
-import { Route as ShellListingsListingIdSpacesSpaceIdDetailsRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/details'
 import { Route as ShellListingsListingIdSpacesSpaceIdActivitiesRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/activities'
+import { Route as ShellListingsListingIdSpacesSpaceIdDetailsRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/details'
+import { Route as ShellListingsListingIdSpacesSpaceIdFilesRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/files'
+import { Route as ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/financial-documents'
+import { Route as ShellListingsListingIdSpacesSpaceIdFinancialsRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/financials'
+import { Route as ShellListingsListingIdSpacesSpaceIdHistoryRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/history'
+import { Route as ShellListingsListingIdSpacesSpaceIdLeadsRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/leads'
+import { Route as ShellListingsListingIdSpacesSpaceIdMediaRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/media'
+import { Route as ShellListingsListingIdSpacesSpaceIdNotesRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/notes'
+import { Route as ShellListingsListingIdSpacesSpaceIdOverviewRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/overview'
 
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ShellRoute = ShellRouteImport.update({
   id: '/_shell',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ShellTasksRoute = ShellTasksRouteImport.update({
-  id: '/tasks',
-  path: '/tasks',
-  getParentRoute: () => ShellRoute,
-} as any)
-const ShellSuiteRoute = ShellSuiteRouteImport.update({
-  id: '/suite',
-  path: '/suite',
-  getParentRoute: () => ShellRoute,
-} as any)
-const ShellSettingsRoute = ShellSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => ShellRoute,
-} as any)
-const ShellReportsRoute = ShellReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
-  getParentRoute: () => ShellRoute,
-} as any)
-const ShellPropertiesRoute = ShellPropertiesRouteImport.update({
-  id: '/properties',
-  path: '/properties',
-  getParentRoute: () => ShellRoute,
-} as any)
-const ShellListingsRoute = ShellListingsRouteImport.update({
-  id: '/listings',
-  path: '/listings',
-  getParentRoute: () => ShellRoute,
-} as any)
-const ShellEmailRoute = ShellEmailRouteImport.update({
-  id: '/email',
-  path: '/email',
-  getParentRoute: () => ShellRoute,
-} as any)
-const ShellEditorRoute = ShellEditorRouteImport.update({
-  id: '/editor',
-  path: '/editor',
+const ShellAppRoute = ShellAppRouteImport.update({
+  id: '/app',
+  path: '/app',
   getParentRoute: () => ShellRoute,
 } as any)
 const ShellBackofficeRoute = ShellBackofficeRouteImport.update({
@@ -154,112 +119,110 @@ const ShellBackofficeRoute = ShellBackofficeRouteImport.update({
   path: '/backoffice',
   getParentRoute: () => ShellRoute,
 } as any)
-const ShellAppRoute = ShellAppRouteImport.update({
-  id: '/app',
-  path: '/app',
+const ShellEditorRoute = ShellEditorRouteImport.update({
+  id: '/editor',
+  path: '/editor',
   getParentRoute: () => ShellRoute,
 } as any)
-const ShellTasksIndexRoute = ShellTasksIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => ShellTasksRoute,
+const ShellEmailRoute = ShellEmailRouteImport.update({
+  id: '/email',
+  path: '/email',
+  getParentRoute: () => ShellRoute,
 } as any)
-const ShellSuiteIndexRoute = ShellSuiteIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => ShellSuiteRoute,
+const ShellListingsRoute = ShellListingsRouteImport.update({
+  id: '/listings',
+  path: '/listings',
+  getParentRoute: () => ShellRoute,
 } as any)
-const ShellSettingsIndexRoute = ShellSettingsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => ShellSettingsRoute,
+const ShellPropertiesRoute = ShellPropertiesRouteImport.update({
+  id: '/properties',
+  path: '/properties',
+  getParentRoute: () => ShellRoute,
 } as any)
-const ShellReportsIndexRoute = ShellReportsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => ShellReportsRoute,
+const ShellReportsRoute = ShellReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => ShellRoute,
 } as any)
-const ShellPropertiesIndexRoute = ShellPropertiesIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => ShellPropertiesRoute,
+const ShellSettingsRoute = ShellSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => ShellRoute,
 } as any)
-const ShellListingsIndexRoute = ShellListingsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => ShellListingsRoute,
+const ShellSuiteRoute = ShellSuiteRouteImport.update({
+  id: '/suite',
+  path: '/suite',
+  getParentRoute: () => ShellRoute,
 } as any)
-const ShellEmailIndexRoute = ShellEmailIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => ShellEmailRoute,
+const ShellTasksRoute = ShellTasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
+  getParentRoute: () => ShellRoute,
 } as any)
 const ShellAppIndexRoute = ShellAppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => ShellAppRoute,
 } as any)
-const ShellSettingsUsersRoute = ShellSettingsUsersRouteImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => ShellSettingsRoute,
+const ShellEditorListingIdRoute = ShellEditorListingIdRouteImport.update({
+  id: '/$listingId',
+  path: '/$listingId',
+  getParentRoute: () => ShellEditorRoute,
 } as any)
-const ShellSettingsSyndicationRoute =
-  ShellSettingsSyndicationRouteImport.update({
-    id: '/syndication',
-    path: '/syndication',
-    getParentRoute: () => ShellSettingsRoute,
+const ShellEmailIndexRoute = ShellEmailIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShellEmailRoute,
+} as any)
+const ShellEmailEmailIdRoute = ShellEmailEmailIdRouteImport.update({
+  id: '/$emailId',
+  path: '/$emailId',
+  getParentRoute: () => ShellEmailRoute,
+} as any)
+const ShellListingsIndexRoute = ShellListingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShellListingsRoute,
+} as any)
+const ShellListingsListingIdRoute = ShellListingsListingIdRouteImport.update({
+  id: '/$listingId',
+  path: '/$listingId',
+  getParentRoute: () => ShellListingsRoute,
+} as any)
+const ShellPropertiesIndexRoute = ShellPropertiesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShellPropertiesRoute,
+} as any)
+const ShellPropertiesPropertyIdRoute =
+  ShellPropertiesPropertyIdRouteImport.update({
+    id: '/$propertyId',
+    path: '/$propertyId',
+    getParentRoute: () => ShellPropertiesRoute,
   } as any)
-const ShellSettingsPluginsRoute = ShellSettingsPluginsRouteImport.update({
-  id: '/plugins',
-  path: '/plugins',
-  getParentRoute: () => ShellSettingsRoute,
+const ShellReportsIndexRoute = ShellReportsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShellReportsRoute,
 } as any)
-const ShellSettingsPlaybooksRoute = ShellSettingsPlaybooksRouteImport.update({
-  id: '/playbooks',
-  path: '/playbooks',
-  getParentRoute: () => ShellSettingsRoute,
+const ShellReportsMyReportsRoute = ShellReportsMyReportsRouteImport.update({
+  id: '/my-reports',
+  path: '/my-reports',
+  getParentRoute: () => ShellReportsRoute,
 } as any)
-const ShellSettingsPipelineRoute = ShellSettingsPipelineRouteImport.update({
-  id: '/pipeline',
-  path: '/pipeline',
-  getParentRoute: () => ShellSettingsRoute,
+const ShellReportsStandardRoute = ShellReportsStandardRouteImport.update({
+  id: '/standard',
+  path: '/standard',
+  getParentRoute: () => ShellReportsRoute,
 } as any)
-const ShellSettingsOfficesRoute = ShellSettingsOfficesRouteImport.update({
-  id: '/offices',
-  path: '/offices',
-  getParentRoute: () => ShellSettingsRoute,
+const ShellReportsPipelineRoute = ShellReportsPipelineRouteImport.update({
+  id: '/reports_/pipeline',
+  path: '/reports/pipeline',
+  getParentRoute: () => ShellRoute,
 } as any)
-const ShellSettingsNotificationsRoute =
-  ShellSettingsNotificationsRouteImport.update({
-    id: '/notifications',
-    path: '/notifications',
-    getParentRoute: () => ShellSettingsRoute,
-  } as any)
-const ShellSettingsLogosRoute = ShellSettingsLogosRouteImport.update({
-  id: '/logos',
-  path: '/logos',
-  getParentRoute: () => ShellSettingsRoute,
-} as any)
-const ShellSettingsListingsRoute = ShellSettingsListingsRouteImport.update({
-  id: '/listings',
-  path: '/listings',
-  getParentRoute: () => ShellSettingsRoute,
-} as any)
-const ShellSettingsEmailRoute = ShellSettingsEmailRouteImport.update({
-  id: '/email',
-  path: '/email',
-  getParentRoute: () => ShellSettingsRoute,
-} as any)
-const ShellSettingsCustomFieldsRoute =
-  ShellSettingsCustomFieldsRouteImport.update({
-    id: '/custom-fields',
-    path: '/custom-fields',
-    getParentRoute: () => ShellSettingsRoute,
-  } as any)
-const ShellSettingsCompanyRoute = ShellSettingsCompanyRouteImport.update({
-  id: '/company',
-  path: '/company',
+const ShellSettingsIndexRoute = ShellSettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => ShellSettingsRoute,
 } as any)
 const ShellSettingsAffiliationsRoute =
@@ -268,177 +231,95 @@ const ShellSettingsAffiliationsRoute =
     path: '/affiliations',
     getParentRoute: () => ShellSettingsRoute,
   } as any)
-const ShellReportsPipelineRoute = ShellReportsPipelineRouteImport.update({
-  id: '/reports_/pipeline',
-  path: '/reports/pipeline',
-  getParentRoute: () => ShellRoute,
+const ShellSettingsCompanyRoute = ShellSettingsCompanyRouteImport.update({
+  id: '/company',
+  path: '/company',
+  getParentRoute: () => ShellSettingsRoute,
 } as any)
-const ShellReportsStandardRoute = ShellReportsStandardRouteImport.update({
-  id: '/standard',
-  path: '/standard',
-  getParentRoute: () => ShellReportsRoute,
-} as any)
-const ShellReportsMyReportsRoute = ShellReportsMyReportsRouteImport.update({
-  id: '/my-reports',
-  path: '/my-reports',
-  getParentRoute: () => ShellReportsRoute,
-} as any)
-const ShellPropertiesPropertyIdRoute =
-  ShellPropertiesPropertyIdRouteImport.update({
-    id: '/$propertyId',
-    path: '/$propertyId',
-    getParentRoute: () => ShellPropertiesRoute,
+const ShellSettingsCustomFieldsRoute =
+  ShellSettingsCustomFieldsRouteImport.update({
+    id: '/custom-fields',
+    path: '/custom-fields',
+    getParentRoute: () => ShellSettingsRoute,
   } as any)
-const ShellListingsListingIdRoute = ShellListingsListingIdRouteImport.update({
-  id: '/$listingId',
-  path: '/$listingId',
-  getParentRoute: () => ShellListingsRoute,
+const ShellSettingsEmailRoute = ShellSettingsEmailRouteImport.update({
+  id: '/email',
+  path: '/email',
+  getParentRoute: () => ShellSettingsRoute,
 } as any)
-const ShellEmailEmailIdRoute = ShellEmailEmailIdRouteImport.update({
-  id: '/$emailId',
-  path: '/$emailId',
-  getParentRoute: () => ShellEmailRoute,
+const ShellSettingsListingsRoute = ShellSettingsListingsRouteImport.update({
+  id: '/listings',
+  path: '/listings',
+  getParentRoute: () => ShellSettingsRoute,
 } as any)
-const ShellEditorListingIdRoute = ShellEditorListingIdRouteImport.update({
-  id: '/$listingId',
-  path: '/$listingId',
-  getParentRoute: () => ShellEditorRoute,
+const ShellSettingsLogosRoute = ShellSettingsLogosRouteImport.update({
+  id: '/logos',
+  path: '/logos',
+  getParentRoute: () => ShellSettingsRoute,
 } as any)
-const ShellSettingsUsersIndexRoute = ShellSettingsUsersIndexRouteImport.update({
+const ShellSettingsNotificationsRoute =
+  ShellSettingsNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => ShellSettingsRoute,
+  } as any)
+const ShellSettingsOfficesRoute = ShellSettingsOfficesRouteImport.update({
+  id: '/offices',
+  path: '/offices',
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
+const ShellSettingsPipelineRoute = ShellSettingsPipelineRouteImport.update({
+  id: '/pipeline',
+  path: '/pipeline',
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
+const ShellSettingsPlaybooksRoute = ShellSettingsPlaybooksRouteImport.update({
+  id: '/playbooks',
+  path: '/playbooks',
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
+const ShellSettingsPluginsRoute = ShellSettingsPluginsRouteImport.update({
+  id: '/plugins',
+  path: '/plugins',
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
+const ShellSettingsSyndicationRoute =
+  ShellSettingsSyndicationRouteImport.update({
+    id: '/syndication',
+    path: '/syndication',
+    getParentRoute: () => ShellSettingsRoute,
+  } as any)
+const ShellSettingsUsersRoute = ShellSettingsUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
+const ShellSuiteIndexRoute = ShellSuiteIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => ShellSettingsUsersRoute,
+  getParentRoute: () => ShellSuiteRoute,
 } as any)
-const ShellListingsListingIdIndexRoute =
-  ShellListingsListingIdIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
+const ShellTasksIndexRoute = ShellTasksIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShellTasksRoute,
+} as any)
 const ShellBackofficeContactsIndexRoute =
   ShellBackofficeContactsIndexRouteImport.update({
     id: '/contacts/',
     path: '/contacts/',
     getParentRoute: () => ShellBackofficeRoute,
   } as any)
-const ShellSettingsUsersUserIdRoute =
-  ShellSettingsUsersUserIdRouteImport.update({
-    id: '/$userId',
-    path: '/$userId',
-    getParentRoute: () => ShellSettingsUsersRoute,
+const ShellBackofficeContactsContactIdRoute =
+  ShellBackofficeContactsContactIdRouteImport.update({
+    id: '/contacts/$contactId',
+    path: '/contacts/$contactId',
+    getParentRoute: () => ShellBackofficeRoute,
   } as any)
-const ShellListingsListingIdWebsiteRoute =
-  ShellListingsListingIdWebsiteRouteImport.update({
-    id: '/website',
-    path: '/website',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
-const ShellListingsListingIdUnderwritingRoute =
-  ShellListingsListingIdUnderwritingRouteImport.update({
-    id: '/underwriting',
-    path: '/underwriting',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
-const ShellListingsListingIdSpacesRoute =
-  ShellListingsListingIdSpacesRouteImport.update({
-    id: '/spaces',
-    path: '/spaces',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
-const ShellListingsListingIdPlansRoute =
-  ShellListingsListingIdPlansRouteImport.update({
-    id: '/plans',
-    path: '/plans',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
-const ShellListingsListingIdOverviewRoute =
-  ShellListingsListingIdOverviewRouteImport.update({
-    id: '/overview',
-    path: '/overview',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
-const ShellListingsListingIdNotesRoute =
-  ShellListingsListingIdNotesRouteImport.update({
-    id: '/notes',
-    path: '/notes',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
-const ShellListingsListingIdMediaRoute =
-  ShellListingsListingIdMediaRouteImport.update({
-    id: '/media',
-    path: '/media',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
-const ShellListingsListingIdListingRoute =
-  ShellListingsListingIdListingRouteImport.update({
-    id: '/listing',
-    path: '/listing',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
-const ShellListingsListingIdLeadsRoute =
-  ShellListingsListingIdLeadsRouteImport.update({
-    id: '/leads',
-    path: '/leads',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
-const ShellListingsListingIdHistoryRoute =
-  ShellListingsListingIdHistoryRouteImport.update({
-    id: '/history',
-    path: '/history',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
-const ShellListingsListingIdGridsRoute =
-  ShellListingsListingIdGridsRouteImport.update({
-    id: '/grids',
-    path: '/grids',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
-const ShellListingsListingIdFinancialsRoute =
-  ShellListingsListingIdFinancialsRouteImport.update({
-    id: '/financials',
-    path: '/financials',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
-const ShellListingsListingIdFinancialDocumentsRoute =
-  ShellListingsListingIdFinancialDocumentsRouteImport.update({
-    id: '/financial-documents',
-    path: '/financial-documents',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
-const ShellListingsListingIdFilesRoute =
-  ShellListingsListingIdFilesRouteImport.update({
-    id: '/files',
-    path: '/files',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
-const ShellListingsListingIdEmailRoute =
-  ShellListingsListingIdEmailRouteImport.update({
-    id: '/email',
-    path: '/email',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
-const ShellListingsListingIdEditRoute =
-  ShellListingsListingIdEditRouteImport.update({
-    id: '/edit',
-    path: '/edit',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
-const ShellListingsListingIdDocumentsRoute =
-  ShellListingsListingIdDocumentsRouteImport.update({
-    id: '/documents',
-    path: '/documents',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
-const ShellListingsListingIdDemographicsRoute =
-  ShellListingsListingIdDemographicsRouteImport.update({
-    id: '/demographics',
-    path: '/demographics',
-    getParentRoute: () => ShellListingsListingIdRoute,
-  } as any)
-const ShellListingsListingIdClientReportRoute =
-  ShellListingsListingIdClientReportRouteImport.update({
-    id: '/client-report',
-    path: '/client-report',
+const ShellListingsListingIdIndexRoute =
+  ShellListingsListingIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
     getParentRoute: () => ShellListingsListingIdRoute,
   } as any)
 const ShellListingsListingIdActivitiesRoute =
@@ -447,17 +328,130 @@ const ShellListingsListingIdActivitiesRoute =
     path: '/activities',
     getParentRoute: () => ShellListingsListingIdRoute,
   } as any)
-const ShellBackofficeContactsContactIdRoute =
-  ShellBackofficeContactsContactIdRouteImport.update({
-    id: '/contacts/$contactId',
-    path: '/contacts/$contactId',
-    getParentRoute: () => ShellBackofficeRoute,
+const ShellListingsListingIdClientReportRoute =
+  ShellListingsListingIdClientReportRouteImport.update({
+    id: '/client-report',
+    path: '/client-report',
+    getParentRoute: () => ShellListingsListingIdRoute,
   } as any)
-const ShellSettingsUsersUserIdIndexRoute =
-  ShellSettingsUsersUserIdIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => ShellSettingsUsersUserIdRoute,
+const ShellListingsListingIdDemographicsRoute =
+  ShellListingsListingIdDemographicsRouteImport.update({
+    id: '/demographics',
+    path: '/demographics',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdDocumentsRoute =
+  ShellListingsListingIdDocumentsRouteImport.update({
+    id: '/documents',
+    path: '/documents',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdEditRoute =
+  ShellListingsListingIdEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdEmailRoute =
+  ShellListingsListingIdEmailRouteImport.update({
+    id: '/email',
+    path: '/email',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdFilesRoute =
+  ShellListingsListingIdFilesRouteImport.update({
+    id: '/files',
+    path: '/files',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdFinancialDocumentsRoute =
+  ShellListingsListingIdFinancialDocumentsRouteImport.update({
+    id: '/financial-documents',
+    path: '/financial-documents',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdFinancialsRoute =
+  ShellListingsListingIdFinancialsRouteImport.update({
+    id: '/financials',
+    path: '/financials',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdGridsRoute =
+  ShellListingsListingIdGridsRouteImport.update({
+    id: '/grids',
+    path: '/grids',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdHistoryRoute =
+  ShellListingsListingIdHistoryRouteImport.update({
+    id: '/history',
+    path: '/history',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdLeadsRoute =
+  ShellListingsListingIdLeadsRouteImport.update({
+    id: '/leads',
+    path: '/leads',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdListingRoute =
+  ShellListingsListingIdListingRouteImport.update({
+    id: '/listing',
+    path: '/listing',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdMediaRoute =
+  ShellListingsListingIdMediaRouteImport.update({
+    id: '/media',
+    path: '/media',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdNotesRoute =
+  ShellListingsListingIdNotesRouteImport.update({
+    id: '/notes',
+    path: '/notes',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdOverviewRoute =
+  ShellListingsListingIdOverviewRouteImport.update({
+    id: '/overview',
+    path: '/overview',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdPlansRoute =
+  ShellListingsListingIdPlansRouteImport.update({
+    id: '/plans',
+    path: '/plans',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdSpacesRoute =
+  ShellListingsListingIdSpacesRouteImport.update({
+    id: '/spaces',
+    path: '/spaces',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdUnderwritingRoute =
+  ShellListingsListingIdUnderwritingRouteImport.update({
+    id: '/underwriting',
+    path: '/underwriting',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdWebsiteRoute =
+  ShellListingsListingIdWebsiteRouteImport.update({
+    id: '/website',
+    path: '/website',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellSettingsUsersIndexRoute = ShellSettingsUsersIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShellSettingsUsersRoute,
+} as any)
+const ShellSettingsUsersUserIdRoute =
+  ShellSettingsUsersUserIdRouteImport.update({
+    id: '/$userId',
+    path: '/$userId',
+    getParentRoute: () => ShellSettingsUsersRoute,
   } as any)
 const ShellListingsListingIdVouchersIndexRoute =
   ShellListingsListingIdVouchersIndexRouteImport.update({
@@ -465,28 +459,16 @@ const ShellListingsListingIdVouchersIndexRoute =
     path: '/vouchers/',
     getParentRoute: () => ShellListingsListingIdRoute,
   } as any)
-const ShellSettingsUsersUserIdProfileRoute =
-  ShellSettingsUsersUserIdProfileRouteImport.update({
-    id: '/profile',
-    path: '/profile',
-    getParentRoute: () => ShellSettingsUsersUserIdRoute,
+const ShellListingsListingIdSpacesSpaceIdRoute =
+  ShellListingsListingIdSpacesSpaceIdRouteImport.update({
+    id: '/$listingId_/spaces/$spaceId',
+    path: '/$listingId/spaces/$spaceId',
+    getParentRoute: () => ShellListingsRoute,
   } as any)
-const ShellSettingsUsersUserIdPermissionsRoute =
-  ShellSettingsUsersUserIdPermissionsRouteImport.update({
-    id: '/permissions',
-    path: '/permissions',
-    getParentRoute: () => ShellSettingsUsersUserIdRoute,
-  } as any)
-const ShellSettingsUsersUserIdNotificationsRoute =
-  ShellSettingsUsersUserIdNotificationsRouteImport.update({
-    id: '/notifications',
-    path: '/notifications',
-    getParentRoute: () => ShellSettingsUsersUserIdRoute,
-  } as any)
-const ShellSettingsUsersUserIdIntegrationsRoute =
-  ShellSettingsUsersUserIdIntegrationsRouteImport.update({
-    id: '/integrations',
-    path: '/integrations',
+const ShellSettingsUsersUserIdIndexRoute =
+  ShellSettingsUsersUserIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
     getParentRoute: () => ShellSettingsUsersUserIdRoute,
   } as any)
 const ShellSettingsUsersUserIdEmailRoute =
@@ -495,11 +477,29 @@ const ShellSettingsUsersUserIdEmailRoute =
     path: '/email',
     getParentRoute: () => ShellSettingsUsersUserIdRoute,
   } as any)
-const ShellListingsListingIdSpacesSpaceIdRoute =
-  ShellListingsListingIdSpacesSpaceIdRouteImport.update({
-    id: '/$listingId_/spaces/$spaceId',
-    path: '/$listingId/spaces/$spaceId',
-    getParentRoute: () => ShellListingsRoute,
+const ShellSettingsUsersUserIdIntegrationsRoute =
+  ShellSettingsUsersUserIdIntegrationsRouteImport.update({
+    id: '/integrations',
+    path: '/integrations',
+    getParentRoute: () => ShellSettingsUsersUserIdRoute,
+  } as any)
+const ShellSettingsUsersUserIdNotificationsRoute =
+  ShellSettingsUsersUserIdNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => ShellSettingsUsersUserIdRoute,
+  } as any)
+const ShellSettingsUsersUserIdPermissionsRoute =
+  ShellSettingsUsersUserIdPermissionsRouteImport.update({
+    id: '/permissions',
+    path: '/permissions',
+    getParentRoute: () => ShellSettingsUsersUserIdRoute,
+  } as any)
+const ShellSettingsUsersUserIdProfileRoute =
+  ShellSettingsUsersUserIdProfileRouteImport.update({
+    id: '/profile',
+    path: '/profile',
+    getParentRoute: () => ShellSettingsUsersUserIdRoute,
   } as any)
 const ShellListingsListingIdSpacesSpaceIdIndexRoute =
   ShellListingsListingIdSpacesSpaceIdIndexRouteImport.update({
@@ -507,52 +507,10 @@ const ShellListingsListingIdSpacesSpaceIdIndexRoute =
     path: '/',
     getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
   } as any)
-const ShellListingsListingIdSpacesSpaceIdOverviewRoute =
-  ShellListingsListingIdSpacesSpaceIdOverviewRouteImport.update({
-    id: '/overview',
-    path: '/overview',
-    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
-  } as any)
-const ShellListingsListingIdSpacesSpaceIdNotesRoute =
-  ShellListingsListingIdSpacesSpaceIdNotesRouteImport.update({
-    id: '/notes',
-    path: '/notes',
-    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
-  } as any)
-const ShellListingsListingIdSpacesSpaceIdMediaRoute =
-  ShellListingsListingIdSpacesSpaceIdMediaRouteImport.update({
-    id: '/media',
-    path: '/media',
-    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
-  } as any)
-const ShellListingsListingIdSpacesSpaceIdLeadsRoute =
-  ShellListingsListingIdSpacesSpaceIdLeadsRouteImport.update({
-    id: '/leads',
-    path: '/leads',
-    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
-  } as any)
-const ShellListingsListingIdSpacesSpaceIdHistoryRoute =
-  ShellListingsListingIdSpacesSpaceIdHistoryRouteImport.update({
-    id: '/history',
-    path: '/history',
-    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
-  } as any)
-const ShellListingsListingIdSpacesSpaceIdFinancialsRoute =
-  ShellListingsListingIdSpacesSpaceIdFinancialsRouteImport.update({
-    id: '/financials',
-    path: '/financials',
-    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
-  } as any)
-const ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRoute =
-  ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRouteImport.update({
-    id: '/financial-documents',
-    path: '/financial-documents',
-    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
-  } as any)
-const ShellListingsListingIdSpacesSpaceIdFilesRoute =
-  ShellListingsListingIdSpacesSpaceIdFilesRouteImport.update({
-    id: '/files',
-    path: '/files',
+const ShellListingsListingIdSpacesSpaceIdActivitiesRoute =
+  ShellListingsListingIdSpacesSpaceIdActivitiesRouteImport.update({
+    id: '/activities',
+    path: '/activities',
     getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
   } as any)
 const ShellListingsListingIdSpacesSpaceIdDetailsRoute =
@@ -561,10 +519,52 @@ const ShellListingsListingIdSpacesSpaceIdDetailsRoute =
     path: '/details',
     getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
   } as any)
-const ShellListingsListingIdSpacesSpaceIdActivitiesRoute =
-  ShellListingsListingIdSpacesSpaceIdActivitiesRouteImport.update({
-    id: '/activities',
-    path: '/activities',
+const ShellListingsListingIdSpacesSpaceIdFilesRoute =
+  ShellListingsListingIdSpacesSpaceIdFilesRouteImport.update({
+    id: '/files',
+    path: '/files',
+    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
+  } as any)
+const ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRoute =
+  ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRouteImport.update({
+    id: '/financial-documents',
+    path: '/financial-documents',
+    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
+  } as any)
+const ShellListingsListingIdSpacesSpaceIdFinancialsRoute =
+  ShellListingsListingIdSpacesSpaceIdFinancialsRouteImport.update({
+    id: '/financials',
+    path: '/financials',
+    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
+  } as any)
+const ShellListingsListingIdSpacesSpaceIdHistoryRoute =
+  ShellListingsListingIdSpacesSpaceIdHistoryRouteImport.update({
+    id: '/history',
+    path: '/history',
+    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
+  } as any)
+const ShellListingsListingIdSpacesSpaceIdLeadsRoute =
+  ShellListingsListingIdSpacesSpaceIdLeadsRouteImport.update({
+    id: '/leads',
+    path: '/leads',
+    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
+  } as any)
+const ShellListingsListingIdSpacesSpaceIdMediaRoute =
+  ShellListingsListingIdSpacesSpaceIdMediaRouteImport.update({
+    id: '/media',
+    path: '/media',
+    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
+  } as any)
+const ShellListingsListingIdSpacesSpaceIdNotesRoute =
+  ShellListingsListingIdSpacesSpaceIdNotesRouteImport.update({
+    id: '/notes',
+    path: '/notes',
+    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
+  } as any)
+const ShellListingsListingIdSpacesSpaceIdOverviewRoute =
+  ShellListingsListingIdSpacesSpaceIdOverviewRouteImport.update({
+    id: '/overview',
+    path: '/overview',
     getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
   } as any)
 
@@ -1074,11 +1074,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_shell': {
@@ -1088,67 +1088,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_shell/tasks': {
-      id: '/_shell/tasks'
-      path: '/tasks'
-      fullPath: '/tasks'
-      preLoaderRoute: typeof ShellTasksRouteImport
-      parentRoute: typeof ShellRoute
-    }
-    '/_shell/suite': {
-      id: '/_shell/suite'
-      path: '/suite'
-      fullPath: '/suite'
-      preLoaderRoute: typeof ShellSuiteRouteImport
-      parentRoute: typeof ShellRoute
-    }
-    '/_shell/settings': {
-      id: '/_shell/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof ShellSettingsRouteImport
-      parentRoute: typeof ShellRoute
-    }
-    '/_shell/reports': {
-      id: '/_shell/reports'
-      path: '/reports'
-      fullPath: '/reports'
-      preLoaderRoute: typeof ShellReportsRouteImport
-      parentRoute: typeof ShellRoute
-    }
-    '/_shell/properties': {
-      id: '/_shell/properties'
-      path: '/properties'
-      fullPath: '/properties'
-      preLoaderRoute: typeof ShellPropertiesRouteImport
-      parentRoute: typeof ShellRoute
-    }
-    '/_shell/listings': {
-      id: '/_shell/listings'
-      path: '/listings'
-      fullPath: '/listings'
-      preLoaderRoute: typeof ShellListingsRouteImport
-      parentRoute: typeof ShellRoute
-    }
-    '/_shell/email': {
-      id: '/_shell/email'
-      path: '/email'
-      fullPath: '/email'
-      preLoaderRoute: typeof ShellEmailRouteImport
-      parentRoute: typeof ShellRoute
-    }
-    '/_shell/editor': {
-      id: '/_shell/editor'
-      path: '/editor'
-      fullPath: '/editor'
-      preLoaderRoute: typeof ShellEditorRouteImport
+    '/_shell/app': {
+      id: '/_shell/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof ShellAppRouteImport
       parentRoute: typeof ShellRoute
     }
     '/_shell/backoffice': {
@@ -1158,61 +1109,61 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellBackofficeRouteImport
       parentRoute: typeof ShellRoute
     }
-    '/_shell/app': {
-      id: '/_shell/app'
-      path: '/app'
-      fullPath: '/app'
-      preLoaderRoute: typeof ShellAppRouteImport
+    '/_shell/editor': {
+      id: '/_shell/editor'
+      path: '/editor'
+      fullPath: '/editor'
+      preLoaderRoute: typeof ShellEditorRouteImport
       parentRoute: typeof ShellRoute
     }
-    '/_shell/tasks/': {
-      id: '/_shell/tasks/'
-      path: '/'
-      fullPath: '/tasks/'
-      preLoaderRoute: typeof ShellTasksIndexRouteImport
-      parentRoute: typeof ShellTasksRoute
+    '/_shell/email': {
+      id: '/_shell/email'
+      path: '/email'
+      fullPath: '/email'
+      preLoaderRoute: typeof ShellEmailRouteImport
+      parentRoute: typeof ShellRoute
     }
-    '/_shell/suite/': {
-      id: '/_shell/suite/'
-      path: '/'
-      fullPath: '/suite/'
-      preLoaderRoute: typeof ShellSuiteIndexRouteImport
-      parentRoute: typeof ShellSuiteRoute
+    '/_shell/listings': {
+      id: '/_shell/listings'
+      path: '/listings'
+      fullPath: '/listings'
+      preLoaderRoute: typeof ShellListingsRouteImport
+      parentRoute: typeof ShellRoute
     }
-    '/_shell/settings/': {
-      id: '/_shell/settings/'
-      path: '/'
-      fullPath: '/settings/'
-      preLoaderRoute: typeof ShellSettingsIndexRouteImport
-      parentRoute: typeof ShellSettingsRoute
+    '/_shell/properties': {
+      id: '/_shell/properties'
+      path: '/properties'
+      fullPath: '/properties'
+      preLoaderRoute: typeof ShellPropertiesRouteImport
+      parentRoute: typeof ShellRoute
     }
-    '/_shell/reports/': {
-      id: '/_shell/reports/'
-      path: '/'
-      fullPath: '/reports/'
-      preLoaderRoute: typeof ShellReportsIndexRouteImport
-      parentRoute: typeof ShellReportsRoute
+    '/_shell/reports': {
+      id: '/_shell/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ShellReportsRouteImport
+      parentRoute: typeof ShellRoute
     }
-    '/_shell/properties/': {
-      id: '/_shell/properties/'
-      path: '/'
-      fullPath: '/properties/'
-      preLoaderRoute: typeof ShellPropertiesIndexRouteImport
-      parentRoute: typeof ShellPropertiesRoute
+    '/_shell/settings': {
+      id: '/_shell/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof ShellSettingsRouteImport
+      parentRoute: typeof ShellRoute
     }
-    '/_shell/listings/': {
-      id: '/_shell/listings/'
-      path: '/'
-      fullPath: '/listings/'
-      preLoaderRoute: typeof ShellListingsIndexRouteImport
-      parentRoute: typeof ShellListingsRoute
+    '/_shell/suite': {
+      id: '/_shell/suite'
+      path: '/suite'
+      fullPath: '/suite'
+      preLoaderRoute: typeof ShellSuiteRouteImport
+      parentRoute: typeof ShellRoute
     }
-    '/_shell/email/': {
-      id: '/_shell/email/'
-      path: '/'
-      fullPath: '/email/'
-      preLoaderRoute: typeof ShellEmailIndexRouteImport
-      parentRoute: typeof ShellEmailRoute
+    '/_shell/tasks': {
+      id: '/_shell/tasks'
+      path: '/tasks'
+      fullPath: '/tasks'
+      preLoaderRoute: typeof ShellTasksRouteImport
+      parentRoute: typeof ShellRoute
     }
     '/_shell/app/': {
       id: '/_shell/app/'
@@ -1221,109 +1172,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellAppIndexRouteImport
       parentRoute: typeof ShellAppRoute
     }
-    '/_shell/settings/users': {
-      id: '/_shell/settings/users'
-      path: '/users'
-      fullPath: '/settings/users'
-      preLoaderRoute: typeof ShellSettingsUsersRouteImport
-      parentRoute: typeof ShellSettingsRoute
+    '/_shell/editor/$listingId': {
+      id: '/_shell/editor/$listingId'
+      path: '/$listingId'
+      fullPath: '/editor/$listingId'
+      preLoaderRoute: typeof ShellEditorListingIdRouteImport
+      parentRoute: typeof ShellEditorRoute
     }
-    '/_shell/settings/syndication': {
-      id: '/_shell/settings/syndication'
-      path: '/syndication'
-      fullPath: '/settings/syndication'
-      preLoaderRoute: typeof ShellSettingsSyndicationRouteImport
-      parentRoute: typeof ShellSettingsRoute
+    '/_shell/email/': {
+      id: '/_shell/email/'
+      path: '/'
+      fullPath: '/email/'
+      preLoaderRoute: typeof ShellEmailIndexRouteImport
+      parentRoute: typeof ShellEmailRoute
     }
-    '/_shell/settings/plugins': {
-      id: '/_shell/settings/plugins'
-      path: '/plugins'
-      fullPath: '/settings/plugins'
-      preLoaderRoute: typeof ShellSettingsPluginsRouteImport
-      parentRoute: typeof ShellSettingsRoute
+    '/_shell/email/$emailId': {
+      id: '/_shell/email/$emailId'
+      path: '/$emailId'
+      fullPath: '/email/$emailId'
+      preLoaderRoute: typeof ShellEmailEmailIdRouteImport
+      parentRoute: typeof ShellEmailRoute
     }
-    '/_shell/settings/playbooks': {
-      id: '/_shell/settings/playbooks'
-      path: '/playbooks'
-      fullPath: '/settings/playbooks'
-      preLoaderRoute: typeof ShellSettingsPlaybooksRouteImport
-      parentRoute: typeof ShellSettingsRoute
+    '/_shell/listings/': {
+      id: '/_shell/listings/'
+      path: '/'
+      fullPath: '/listings/'
+      preLoaderRoute: typeof ShellListingsIndexRouteImport
+      parentRoute: typeof ShellListingsRoute
     }
-    '/_shell/settings/pipeline': {
-      id: '/_shell/settings/pipeline'
-      path: '/pipeline'
-      fullPath: '/settings/pipeline'
-      preLoaderRoute: typeof ShellSettingsPipelineRouteImport
-      parentRoute: typeof ShellSettingsRoute
+    '/_shell/listings/$listingId': {
+      id: '/_shell/listings/$listingId'
+      path: '/$listingId'
+      fullPath: '/listings/$listingId'
+      preLoaderRoute: typeof ShellListingsListingIdRouteImport
+      parentRoute: typeof ShellListingsRoute
     }
-    '/_shell/settings/offices': {
-      id: '/_shell/settings/offices'
-      path: '/offices'
-      fullPath: '/settings/offices'
-      preLoaderRoute: typeof ShellSettingsOfficesRouteImport
-      parentRoute: typeof ShellSettingsRoute
+    '/_shell/properties/': {
+      id: '/_shell/properties/'
+      path: '/'
+      fullPath: '/properties/'
+      preLoaderRoute: typeof ShellPropertiesIndexRouteImport
+      parentRoute: typeof ShellPropertiesRoute
     }
-    '/_shell/settings/notifications': {
-      id: '/_shell/settings/notifications'
-      path: '/notifications'
-      fullPath: '/settings/notifications'
-      preLoaderRoute: typeof ShellSettingsNotificationsRouteImport
-      parentRoute: typeof ShellSettingsRoute
+    '/_shell/properties/$propertyId': {
+      id: '/_shell/properties/$propertyId'
+      path: '/$propertyId'
+      fullPath: '/properties/$propertyId'
+      preLoaderRoute: typeof ShellPropertiesPropertyIdRouteImport
+      parentRoute: typeof ShellPropertiesRoute
     }
-    '/_shell/settings/logos': {
-      id: '/_shell/settings/logos'
-      path: '/logos'
-      fullPath: '/settings/logos'
-      preLoaderRoute: typeof ShellSettingsLogosRouteImport
-      parentRoute: typeof ShellSettingsRoute
-    }
-    '/_shell/settings/listings': {
-      id: '/_shell/settings/listings'
-      path: '/listings'
-      fullPath: '/settings/listings'
-      preLoaderRoute: typeof ShellSettingsListingsRouteImport
-      parentRoute: typeof ShellSettingsRoute
-    }
-    '/_shell/settings/email': {
-      id: '/_shell/settings/email'
-      path: '/email'
-      fullPath: '/settings/email'
-      preLoaderRoute: typeof ShellSettingsEmailRouteImport
-      parentRoute: typeof ShellSettingsRoute
-    }
-    '/_shell/settings/custom-fields': {
-      id: '/_shell/settings/custom-fields'
-      path: '/custom-fields'
-      fullPath: '/settings/custom-fields'
-      preLoaderRoute: typeof ShellSettingsCustomFieldsRouteImport
-      parentRoute: typeof ShellSettingsRoute
-    }
-    '/_shell/settings/company': {
-      id: '/_shell/settings/company'
-      path: '/company'
-      fullPath: '/settings/company'
-      preLoaderRoute: typeof ShellSettingsCompanyRouteImport
-      parentRoute: typeof ShellSettingsRoute
-    }
-    '/_shell/settings/affiliations': {
-      id: '/_shell/settings/affiliations'
-      path: '/affiliations'
-      fullPath: '/settings/affiliations'
-      preLoaderRoute: typeof ShellSettingsAffiliationsRouteImport
-      parentRoute: typeof ShellSettingsRoute
-    }
-    '/_shell/reports_/pipeline': {
-      id: '/_shell/reports_/pipeline'
-      path: '/reports/pipeline'
-      fullPath: '/reports/pipeline'
-      preLoaderRoute: typeof ShellReportsPipelineRouteImport
-      parentRoute: typeof ShellRoute
-    }
-    '/_shell/reports/standard': {
-      id: '/_shell/reports/standard'
-      path: '/standard'
-      fullPath: '/reports/standard'
-      preLoaderRoute: typeof ShellReportsStandardRouteImport
+    '/_shell/reports/': {
+      id: '/_shell/reports/'
+      path: '/'
+      fullPath: '/reports/'
+      preLoaderRoute: typeof ShellReportsIndexRouteImport
       parentRoute: typeof ShellReportsRoute
     }
     '/_shell/reports/my-reports': {
@@ -1333,47 +1235,131 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellReportsMyReportsRouteImport
       parentRoute: typeof ShellReportsRoute
     }
-    '/_shell/properties/$propertyId': {
-      id: '/_shell/properties/$propertyId'
-      path: '/$propertyId'
-      fullPath: '/properties/$propertyId'
-      preLoaderRoute: typeof ShellPropertiesPropertyIdRouteImport
-      parentRoute: typeof ShellPropertiesRoute
+    '/_shell/reports/standard': {
+      id: '/_shell/reports/standard'
+      path: '/standard'
+      fullPath: '/reports/standard'
+      preLoaderRoute: typeof ShellReportsStandardRouteImport
+      parentRoute: typeof ShellReportsRoute
     }
-    '/_shell/listings/$listingId': {
-      id: '/_shell/listings/$listingId'
-      path: '/$listingId'
-      fullPath: '/listings/$listingId'
-      preLoaderRoute: typeof ShellListingsListingIdRouteImport
-      parentRoute: typeof ShellListingsRoute
+    '/_shell/reports_/pipeline': {
+      id: '/_shell/reports_/pipeline'
+      path: '/reports/pipeline'
+      fullPath: '/reports/pipeline'
+      preLoaderRoute: typeof ShellReportsPipelineRouteImport
+      parentRoute: typeof ShellRoute
     }
-    '/_shell/email/$emailId': {
-      id: '/_shell/email/$emailId'
-      path: '/$emailId'
-      fullPath: '/email/$emailId'
-      preLoaderRoute: typeof ShellEmailEmailIdRouteImport
-      parentRoute: typeof ShellEmailRoute
-    }
-    '/_shell/editor/$listingId': {
-      id: '/_shell/editor/$listingId'
-      path: '/$listingId'
-      fullPath: '/editor/$listingId'
-      preLoaderRoute: typeof ShellEditorListingIdRouteImport
-      parentRoute: typeof ShellEditorRoute
-    }
-    '/_shell/settings/users/': {
-      id: '/_shell/settings/users/'
+    '/_shell/settings/': {
+      id: '/_shell/settings/'
       path: '/'
-      fullPath: '/settings/users/'
-      preLoaderRoute: typeof ShellSettingsUsersIndexRouteImport
-      parentRoute: typeof ShellSettingsUsersRoute
+      fullPath: '/settings/'
+      preLoaderRoute: typeof ShellSettingsIndexRouteImport
+      parentRoute: typeof ShellSettingsRoute
     }
-    '/_shell/listings/$listingId/': {
-      id: '/_shell/listings/$listingId/'
+    '/_shell/settings/affiliations': {
+      id: '/_shell/settings/affiliations'
+      path: '/affiliations'
+      fullPath: '/settings/affiliations'
+      preLoaderRoute: typeof ShellSettingsAffiliationsRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/company': {
+      id: '/_shell/settings/company'
+      path: '/company'
+      fullPath: '/settings/company'
+      preLoaderRoute: typeof ShellSettingsCompanyRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/custom-fields': {
+      id: '/_shell/settings/custom-fields'
+      path: '/custom-fields'
+      fullPath: '/settings/custom-fields'
+      preLoaderRoute: typeof ShellSettingsCustomFieldsRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/email': {
+      id: '/_shell/settings/email'
+      path: '/email'
+      fullPath: '/settings/email'
+      preLoaderRoute: typeof ShellSettingsEmailRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/listings': {
+      id: '/_shell/settings/listings'
+      path: '/listings'
+      fullPath: '/settings/listings'
+      preLoaderRoute: typeof ShellSettingsListingsRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/logos': {
+      id: '/_shell/settings/logos'
+      path: '/logos'
+      fullPath: '/settings/logos'
+      preLoaderRoute: typeof ShellSettingsLogosRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/notifications': {
+      id: '/_shell/settings/notifications'
+      path: '/notifications'
+      fullPath: '/settings/notifications'
+      preLoaderRoute: typeof ShellSettingsNotificationsRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/offices': {
+      id: '/_shell/settings/offices'
+      path: '/offices'
+      fullPath: '/settings/offices'
+      preLoaderRoute: typeof ShellSettingsOfficesRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/pipeline': {
+      id: '/_shell/settings/pipeline'
+      path: '/pipeline'
+      fullPath: '/settings/pipeline'
+      preLoaderRoute: typeof ShellSettingsPipelineRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/playbooks': {
+      id: '/_shell/settings/playbooks'
+      path: '/playbooks'
+      fullPath: '/settings/playbooks'
+      preLoaderRoute: typeof ShellSettingsPlaybooksRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/plugins': {
+      id: '/_shell/settings/plugins'
+      path: '/plugins'
+      fullPath: '/settings/plugins'
+      preLoaderRoute: typeof ShellSettingsPluginsRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/syndication': {
+      id: '/_shell/settings/syndication'
+      path: '/syndication'
+      fullPath: '/settings/syndication'
+      preLoaderRoute: typeof ShellSettingsSyndicationRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/users': {
+      id: '/_shell/settings/users'
+      path: '/users'
+      fullPath: '/settings/users'
+      preLoaderRoute: typeof ShellSettingsUsersRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/suite/': {
+      id: '/_shell/suite/'
       path: '/'
-      fullPath: '/listings/$listingId/'
-      preLoaderRoute: typeof ShellListingsListingIdIndexRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
+      fullPath: '/suite/'
+      preLoaderRoute: typeof ShellSuiteIndexRouteImport
+      parentRoute: typeof ShellSuiteRoute
+    }
+    '/_shell/tasks/': {
+      id: '/_shell/tasks/'
+      path: '/'
+      fullPath: '/tasks/'
+      preLoaderRoute: typeof ShellTasksIndexRouteImport
+      parentRoute: typeof ShellTasksRoute
     }
     '/_shell/backoffice/contacts/': {
       id: '/_shell/backoffice/contacts/'
@@ -1382,144 +1368,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellBackofficeContactsIndexRouteImport
       parentRoute: typeof ShellBackofficeRoute
     }
-    '/_shell/settings/users/$userId': {
-      id: '/_shell/settings/users/$userId'
-      path: '/$userId'
-      fullPath: '/settings/users/$userId'
-      preLoaderRoute: typeof ShellSettingsUsersUserIdRouteImport
-      parentRoute: typeof ShellSettingsUsersRoute
+    '/_shell/backoffice/contacts/$contactId': {
+      id: '/_shell/backoffice/contacts/$contactId'
+      path: '/contacts/$contactId'
+      fullPath: '/backoffice/contacts/$contactId'
+      preLoaderRoute: typeof ShellBackofficeContactsContactIdRouteImport
+      parentRoute: typeof ShellBackofficeRoute
     }
-    '/_shell/listings/$listingId/website': {
-      id: '/_shell/listings/$listingId/website'
-      path: '/website'
-      fullPath: '/listings/$listingId/website'
-      preLoaderRoute: typeof ShellListingsListingIdWebsiteRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
-    }
-    '/_shell/listings/$listingId/underwriting': {
-      id: '/_shell/listings/$listingId/underwriting'
-      path: '/underwriting'
-      fullPath: '/listings/$listingId/underwriting'
-      preLoaderRoute: typeof ShellListingsListingIdUnderwritingRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
-    }
-    '/_shell/listings/$listingId/spaces': {
-      id: '/_shell/listings/$listingId/spaces'
-      path: '/spaces'
-      fullPath: '/listings/$listingId/spaces'
-      preLoaderRoute: typeof ShellListingsListingIdSpacesRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
-    }
-    '/_shell/listings/$listingId/plans': {
-      id: '/_shell/listings/$listingId/plans'
-      path: '/plans'
-      fullPath: '/listings/$listingId/plans'
-      preLoaderRoute: typeof ShellListingsListingIdPlansRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
-    }
-    '/_shell/listings/$listingId/overview': {
-      id: '/_shell/listings/$listingId/overview'
-      path: '/overview'
-      fullPath: '/listings/$listingId/overview'
-      preLoaderRoute: typeof ShellListingsListingIdOverviewRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
-    }
-    '/_shell/listings/$listingId/notes': {
-      id: '/_shell/listings/$listingId/notes'
-      path: '/notes'
-      fullPath: '/listings/$listingId/notes'
-      preLoaderRoute: typeof ShellListingsListingIdNotesRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
-    }
-    '/_shell/listings/$listingId/media': {
-      id: '/_shell/listings/$listingId/media'
-      path: '/media'
-      fullPath: '/listings/$listingId/media'
-      preLoaderRoute: typeof ShellListingsListingIdMediaRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
-    }
-    '/_shell/listings/$listingId/listing': {
-      id: '/_shell/listings/$listingId/listing'
-      path: '/listing'
-      fullPath: '/listings/$listingId/listing'
-      preLoaderRoute: typeof ShellListingsListingIdListingRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
-    }
-    '/_shell/listings/$listingId/leads': {
-      id: '/_shell/listings/$listingId/leads'
-      path: '/leads'
-      fullPath: '/listings/$listingId/leads'
-      preLoaderRoute: typeof ShellListingsListingIdLeadsRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
-    }
-    '/_shell/listings/$listingId/history': {
-      id: '/_shell/listings/$listingId/history'
-      path: '/history'
-      fullPath: '/listings/$listingId/history'
-      preLoaderRoute: typeof ShellListingsListingIdHistoryRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
-    }
-    '/_shell/listings/$listingId/grids': {
-      id: '/_shell/listings/$listingId/grids'
-      path: '/grids'
-      fullPath: '/listings/$listingId/grids'
-      preLoaderRoute: typeof ShellListingsListingIdGridsRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
-    }
-    '/_shell/listings/$listingId/financials': {
-      id: '/_shell/listings/$listingId/financials'
-      path: '/financials'
-      fullPath: '/listings/$listingId/financials'
-      preLoaderRoute: typeof ShellListingsListingIdFinancialsRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
-    }
-    '/_shell/listings/$listingId/financial-documents': {
-      id: '/_shell/listings/$listingId/financial-documents'
-      path: '/financial-documents'
-      fullPath: '/listings/$listingId/financial-documents'
-      preLoaderRoute: typeof ShellListingsListingIdFinancialDocumentsRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
-    }
-    '/_shell/listings/$listingId/files': {
-      id: '/_shell/listings/$listingId/files'
-      path: '/files'
-      fullPath: '/listings/$listingId/files'
-      preLoaderRoute: typeof ShellListingsListingIdFilesRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
-    }
-    '/_shell/listings/$listingId/email': {
-      id: '/_shell/listings/$listingId/email'
-      path: '/email'
-      fullPath: '/listings/$listingId/email'
-      preLoaderRoute: typeof ShellListingsListingIdEmailRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
-    }
-    '/_shell/listings/$listingId/edit': {
-      id: '/_shell/listings/$listingId/edit'
-      path: '/edit'
-      fullPath: '/listings/$listingId/edit'
-      preLoaderRoute: typeof ShellListingsListingIdEditRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
-    }
-    '/_shell/listings/$listingId/documents': {
-      id: '/_shell/listings/$listingId/documents'
-      path: '/documents'
-      fullPath: '/listings/$listingId/documents'
-      preLoaderRoute: typeof ShellListingsListingIdDocumentsRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
-    }
-    '/_shell/listings/$listingId/demographics': {
-      id: '/_shell/listings/$listingId/demographics'
-      path: '/demographics'
-      fullPath: '/listings/$listingId/demographics'
-      preLoaderRoute: typeof ShellListingsListingIdDemographicsRouteImport
-      parentRoute: typeof ShellListingsListingIdRoute
-    }
-    '/_shell/listings/$listingId/client-report': {
-      id: '/_shell/listings/$listingId/client-report'
-      path: '/client-report'
-      fullPath: '/listings/$listingId/client-report'
-      preLoaderRoute: typeof ShellListingsListingIdClientReportRouteImport
+    '/_shell/listings/$listingId/': {
+      id: '/_shell/listings/$listingId/'
+      path: '/'
+      fullPath: '/listings/$listingId/'
+      preLoaderRoute: typeof ShellListingsListingIdIndexRouteImport
       parentRoute: typeof ShellListingsListingIdRoute
     }
     '/_shell/listings/$listingId/activities': {
@@ -1529,19 +1389,152 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellListingsListingIdActivitiesRouteImport
       parentRoute: typeof ShellListingsListingIdRoute
     }
-    '/_shell/backoffice/contacts/$contactId': {
-      id: '/_shell/backoffice/contacts/$contactId'
-      path: '/contacts/$contactId'
-      fullPath: '/backoffice/contacts/$contactId'
-      preLoaderRoute: typeof ShellBackofficeContactsContactIdRouteImport
-      parentRoute: typeof ShellBackofficeRoute
+    '/_shell/listings/$listingId/client-report': {
+      id: '/_shell/listings/$listingId/client-report'
+      path: '/client-report'
+      fullPath: '/listings/$listingId/client-report'
+      preLoaderRoute: typeof ShellListingsListingIdClientReportRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
     }
-    '/_shell/settings/users/$userId/': {
-      id: '/_shell/settings/users/$userId/'
+    '/_shell/listings/$listingId/demographics': {
+      id: '/_shell/listings/$listingId/demographics'
+      path: '/demographics'
+      fullPath: '/listings/$listingId/demographics'
+      preLoaderRoute: typeof ShellListingsListingIdDemographicsRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
+    '/_shell/listings/$listingId/documents': {
+      id: '/_shell/listings/$listingId/documents'
+      path: '/documents'
+      fullPath: '/listings/$listingId/documents'
+      preLoaderRoute: typeof ShellListingsListingIdDocumentsRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
+    '/_shell/listings/$listingId/edit': {
+      id: '/_shell/listings/$listingId/edit'
+      path: '/edit'
+      fullPath: '/listings/$listingId/edit'
+      preLoaderRoute: typeof ShellListingsListingIdEditRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
+    '/_shell/listings/$listingId/email': {
+      id: '/_shell/listings/$listingId/email'
+      path: '/email'
+      fullPath: '/listings/$listingId/email'
+      preLoaderRoute: typeof ShellListingsListingIdEmailRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
+    '/_shell/listings/$listingId/files': {
+      id: '/_shell/listings/$listingId/files'
+      path: '/files'
+      fullPath: '/listings/$listingId/files'
+      preLoaderRoute: typeof ShellListingsListingIdFilesRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
+    '/_shell/listings/$listingId/financial-documents': {
+      id: '/_shell/listings/$listingId/financial-documents'
+      path: '/financial-documents'
+      fullPath: '/listings/$listingId/financial-documents'
+      preLoaderRoute: typeof ShellListingsListingIdFinancialDocumentsRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
+    '/_shell/listings/$listingId/financials': {
+      id: '/_shell/listings/$listingId/financials'
+      path: '/financials'
+      fullPath: '/listings/$listingId/financials'
+      preLoaderRoute: typeof ShellListingsListingIdFinancialsRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
+    '/_shell/listings/$listingId/grids': {
+      id: '/_shell/listings/$listingId/grids'
+      path: '/grids'
+      fullPath: '/listings/$listingId/grids'
+      preLoaderRoute: typeof ShellListingsListingIdGridsRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
+    '/_shell/listings/$listingId/history': {
+      id: '/_shell/listings/$listingId/history'
+      path: '/history'
+      fullPath: '/listings/$listingId/history'
+      preLoaderRoute: typeof ShellListingsListingIdHistoryRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
+    '/_shell/listings/$listingId/leads': {
+      id: '/_shell/listings/$listingId/leads'
+      path: '/leads'
+      fullPath: '/listings/$listingId/leads'
+      preLoaderRoute: typeof ShellListingsListingIdLeadsRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
+    '/_shell/listings/$listingId/listing': {
+      id: '/_shell/listings/$listingId/listing'
+      path: '/listing'
+      fullPath: '/listings/$listingId/listing'
+      preLoaderRoute: typeof ShellListingsListingIdListingRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
+    '/_shell/listings/$listingId/media': {
+      id: '/_shell/listings/$listingId/media'
+      path: '/media'
+      fullPath: '/listings/$listingId/media'
+      preLoaderRoute: typeof ShellListingsListingIdMediaRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
+    '/_shell/listings/$listingId/notes': {
+      id: '/_shell/listings/$listingId/notes'
+      path: '/notes'
+      fullPath: '/listings/$listingId/notes'
+      preLoaderRoute: typeof ShellListingsListingIdNotesRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
+    '/_shell/listings/$listingId/overview': {
+      id: '/_shell/listings/$listingId/overview'
+      path: '/overview'
+      fullPath: '/listings/$listingId/overview'
+      preLoaderRoute: typeof ShellListingsListingIdOverviewRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
+    '/_shell/listings/$listingId/plans': {
+      id: '/_shell/listings/$listingId/plans'
+      path: '/plans'
+      fullPath: '/listings/$listingId/plans'
+      preLoaderRoute: typeof ShellListingsListingIdPlansRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
+    '/_shell/listings/$listingId/spaces': {
+      id: '/_shell/listings/$listingId/spaces'
+      path: '/spaces'
+      fullPath: '/listings/$listingId/spaces'
+      preLoaderRoute: typeof ShellListingsListingIdSpacesRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
+    '/_shell/listings/$listingId/underwriting': {
+      id: '/_shell/listings/$listingId/underwriting'
+      path: '/underwriting'
+      fullPath: '/listings/$listingId/underwriting'
+      preLoaderRoute: typeof ShellListingsListingIdUnderwritingRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
+    '/_shell/listings/$listingId/website': {
+      id: '/_shell/listings/$listingId/website'
+      path: '/website'
+      fullPath: '/listings/$listingId/website'
+      preLoaderRoute: typeof ShellListingsListingIdWebsiteRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
+    '/_shell/settings/users/': {
+      id: '/_shell/settings/users/'
       path: '/'
-      fullPath: '/settings/users/$userId/'
-      preLoaderRoute: typeof ShellSettingsUsersUserIdIndexRouteImport
-      parentRoute: typeof ShellSettingsUsersUserIdRoute
+      fullPath: '/settings/users/'
+      preLoaderRoute: typeof ShellSettingsUsersIndexRouteImport
+      parentRoute: typeof ShellSettingsUsersRoute
+    }
+    '/_shell/settings/users/$userId': {
+      id: '/_shell/settings/users/$userId'
+      path: '/$userId'
+      fullPath: '/settings/users/$userId'
+      preLoaderRoute: typeof ShellSettingsUsersUserIdRouteImport
+      parentRoute: typeof ShellSettingsUsersRoute
     }
     '/_shell/listings/$listingId/vouchers/': {
       id: '/_shell/listings/$listingId/vouchers/'
@@ -1550,32 +1543,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellListingsListingIdVouchersIndexRouteImport
       parentRoute: typeof ShellListingsListingIdRoute
     }
-    '/_shell/settings/users/$userId/profile': {
-      id: '/_shell/settings/users/$userId/profile'
-      path: '/profile'
-      fullPath: '/settings/users/$userId/profile'
-      preLoaderRoute: typeof ShellSettingsUsersUserIdProfileRouteImport
-      parentRoute: typeof ShellSettingsUsersUserIdRoute
+    '/_shell/listings/$listingId_/spaces/$spaceId': {
+      id: '/_shell/listings/$listingId_/spaces/$spaceId'
+      path: '/$listingId/spaces/$spaceId'
+      fullPath: '/listings/$listingId/spaces/$spaceId'
+      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdRouteImport
+      parentRoute: typeof ShellListingsRoute
     }
-    '/_shell/settings/users/$userId/permissions': {
-      id: '/_shell/settings/users/$userId/permissions'
-      path: '/permissions'
-      fullPath: '/settings/users/$userId/permissions'
-      preLoaderRoute: typeof ShellSettingsUsersUserIdPermissionsRouteImport
-      parentRoute: typeof ShellSettingsUsersUserIdRoute
-    }
-    '/_shell/settings/users/$userId/notifications': {
-      id: '/_shell/settings/users/$userId/notifications'
-      path: '/notifications'
-      fullPath: '/settings/users/$userId/notifications'
-      preLoaderRoute: typeof ShellSettingsUsersUserIdNotificationsRouteImport
-      parentRoute: typeof ShellSettingsUsersUserIdRoute
-    }
-    '/_shell/settings/users/$userId/integrations': {
-      id: '/_shell/settings/users/$userId/integrations'
-      path: '/integrations'
-      fullPath: '/settings/users/$userId/integrations'
-      preLoaderRoute: typeof ShellSettingsUsersUserIdIntegrationsRouteImport
+    '/_shell/settings/users/$userId/': {
+      id: '/_shell/settings/users/$userId/'
+      path: '/'
+      fullPath: '/settings/users/$userId/'
+      preLoaderRoute: typeof ShellSettingsUsersUserIdIndexRouteImport
       parentRoute: typeof ShellSettingsUsersUserIdRoute
     }
     '/_shell/settings/users/$userId/email': {
@@ -1585,12 +1564,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellSettingsUsersUserIdEmailRouteImport
       parentRoute: typeof ShellSettingsUsersUserIdRoute
     }
-    '/_shell/listings/$listingId_/spaces/$spaceId': {
-      id: '/_shell/listings/$listingId_/spaces/$spaceId'
-      path: '/$listingId/spaces/$spaceId'
-      fullPath: '/listings/$listingId/spaces/$spaceId'
-      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdRouteImport
-      parentRoute: typeof ShellListingsRoute
+    '/_shell/settings/users/$userId/integrations': {
+      id: '/_shell/settings/users/$userId/integrations'
+      path: '/integrations'
+      fullPath: '/settings/users/$userId/integrations'
+      preLoaderRoute: typeof ShellSettingsUsersUserIdIntegrationsRouteImport
+      parentRoute: typeof ShellSettingsUsersUserIdRoute
+    }
+    '/_shell/settings/users/$userId/notifications': {
+      id: '/_shell/settings/users/$userId/notifications'
+      path: '/notifications'
+      fullPath: '/settings/users/$userId/notifications'
+      preLoaderRoute: typeof ShellSettingsUsersUserIdNotificationsRouteImport
+      parentRoute: typeof ShellSettingsUsersUserIdRoute
+    }
+    '/_shell/settings/users/$userId/permissions': {
+      id: '/_shell/settings/users/$userId/permissions'
+      path: '/permissions'
+      fullPath: '/settings/users/$userId/permissions'
+      preLoaderRoute: typeof ShellSettingsUsersUserIdPermissionsRouteImport
+      parentRoute: typeof ShellSettingsUsersUserIdRoute
+    }
+    '/_shell/settings/users/$userId/profile': {
+      id: '/_shell/settings/users/$userId/profile'
+      path: '/profile'
+      fullPath: '/settings/users/$userId/profile'
+      preLoaderRoute: typeof ShellSettingsUsersUserIdProfileRouteImport
+      parentRoute: typeof ShellSettingsUsersUserIdRoute
     }
     '/_shell/listings/$listingId_/spaces/$spaceId/': {
       id: '/_shell/listings/$listingId_/spaces/$spaceId/'
@@ -1599,60 +1599,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdIndexRouteImport
       parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
     }
-    '/_shell/listings/$listingId_/spaces/$spaceId/overview': {
-      id: '/_shell/listings/$listingId_/spaces/$spaceId/overview'
-      path: '/overview'
-      fullPath: '/listings/$listingId/spaces/$spaceId/overview'
-      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdOverviewRouteImport
-      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
-    }
-    '/_shell/listings/$listingId_/spaces/$spaceId/notes': {
-      id: '/_shell/listings/$listingId_/spaces/$spaceId/notes'
-      path: '/notes'
-      fullPath: '/listings/$listingId/spaces/$spaceId/notes'
-      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdNotesRouteImport
-      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
-    }
-    '/_shell/listings/$listingId_/spaces/$spaceId/media': {
-      id: '/_shell/listings/$listingId_/spaces/$spaceId/media'
-      path: '/media'
-      fullPath: '/listings/$listingId/spaces/$spaceId/media'
-      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdMediaRouteImport
-      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
-    }
-    '/_shell/listings/$listingId_/spaces/$spaceId/leads': {
-      id: '/_shell/listings/$listingId_/spaces/$spaceId/leads'
-      path: '/leads'
-      fullPath: '/listings/$listingId/spaces/$spaceId/leads'
-      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdLeadsRouteImport
-      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
-    }
-    '/_shell/listings/$listingId_/spaces/$spaceId/history': {
-      id: '/_shell/listings/$listingId_/spaces/$spaceId/history'
-      path: '/history'
-      fullPath: '/listings/$listingId/spaces/$spaceId/history'
-      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdHistoryRouteImport
-      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
-    }
-    '/_shell/listings/$listingId_/spaces/$spaceId/financials': {
-      id: '/_shell/listings/$listingId_/spaces/$spaceId/financials'
-      path: '/financials'
-      fullPath: '/listings/$listingId/spaces/$spaceId/financials'
-      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdFinancialsRouteImport
-      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
-    }
-    '/_shell/listings/$listingId_/spaces/$spaceId/financial-documents': {
-      id: '/_shell/listings/$listingId_/spaces/$spaceId/financial-documents'
-      path: '/financial-documents'
-      fullPath: '/listings/$listingId/spaces/$spaceId/financial-documents'
-      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRouteImport
-      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
-    }
-    '/_shell/listings/$listingId_/spaces/$spaceId/files': {
-      id: '/_shell/listings/$listingId_/spaces/$spaceId/files'
-      path: '/files'
-      fullPath: '/listings/$listingId/spaces/$spaceId/files'
-      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdFilesRouteImport
+    '/_shell/listings/$listingId_/spaces/$spaceId/activities': {
+      id: '/_shell/listings/$listingId_/spaces/$spaceId/activities'
+      path: '/activities'
+      fullPath: '/listings/$listingId/spaces/$spaceId/activities'
+      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdActivitiesRouteImport
       parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
     }
     '/_shell/listings/$listingId_/spaces/$spaceId/details': {
@@ -1662,11 +1613,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdDetailsRouteImport
       parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
     }
-    '/_shell/listings/$listingId_/spaces/$spaceId/activities': {
-      id: '/_shell/listings/$listingId_/spaces/$spaceId/activities'
-      path: '/activities'
-      fullPath: '/listings/$listingId/spaces/$spaceId/activities'
-      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdActivitiesRouteImport
+    '/_shell/listings/$listingId_/spaces/$spaceId/files': {
+      id: '/_shell/listings/$listingId_/spaces/$spaceId/files'
+      path: '/files'
+      fullPath: '/listings/$listingId/spaces/$spaceId/files'
+      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdFilesRouteImport
+      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
+    }
+    '/_shell/listings/$listingId_/spaces/$spaceId/financial-documents': {
+      id: '/_shell/listings/$listingId_/spaces/$spaceId/financial-documents'
+      path: '/financial-documents'
+      fullPath: '/listings/$listingId/spaces/$spaceId/financial-documents'
+      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRouteImport
+      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
+    }
+    '/_shell/listings/$listingId_/spaces/$spaceId/financials': {
+      id: '/_shell/listings/$listingId_/spaces/$spaceId/financials'
+      path: '/financials'
+      fullPath: '/listings/$listingId/spaces/$spaceId/financials'
+      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdFinancialsRouteImport
+      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
+    }
+    '/_shell/listings/$listingId_/spaces/$spaceId/history': {
+      id: '/_shell/listings/$listingId_/spaces/$spaceId/history'
+      path: '/history'
+      fullPath: '/listings/$listingId/spaces/$spaceId/history'
+      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdHistoryRouteImport
+      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
+    }
+    '/_shell/listings/$listingId_/spaces/$spaceId/leads': {
+      id: '/_shell/listings/$listingId_/spaces/$spaceId/leads'
+      path: '/leads'
+      fullPath: '/listings/$listingId/spaces/$spaceId/leads'
+      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdLeadsRouteImport
+      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
+    }
+    '/_shell/listings/$listingId_/spaces/$spaceId/media': {
+      id: '/_shell/listings/$listingId_/spaces/$spaceId/media'
+      path: '/media'
+      fullPath: '/listings/$listingId/spaces/$spaceId/media'
+      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdMediaRouteImport
+      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
+    }
+    '/_shell/listings/$listingId_/spaces/$spaceId/notes': {
+      id: '/_shell/listings/$listingId_/spaces/$spaceId/notes'
+      path: '/notes'
+      fullPath: '/listings/$listingId/spaces/$spaceId/notes'
+      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdNotesRouteImport
+      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
+    }
+    '/_shell/listings/$listingId_/spaces/$spaceId/overview': {
+      id: '/_shell/listings/$listingId_/spaces/$spaceId/overview'
+      path: '/overview'
+      fullPath: '/listings/$listingId/spaces/$spaceId/overview'
+      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdOverviewRouteImport
       parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
     }
   }
