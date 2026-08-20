@@ -22,7 +22,6 @@ import type {
   ContentBlock,
   ContentsBlock,
   DividerBlock,
-  DynamicBlock,
   HeadingBlock,
   ImageBlock,
   ListBlock,
@@ -36,7 +35,7 @@ import type {
 } from "../types";
 import { useDocumentData, useEditorStore } from "../store";
 import { findBlock } from "../tree";
-import { resolveDynamic, resolveField, resolveList } from "../dynamic";
+import { resolveDynamic, resolveList } from "../dynamic";
 import {
   hasTokens,
   hydrateTokens,
@@ -390,8 +389,6 @@ function BlockVisual({
       return (
         <ImageBlockView block={block} pageId={pageId} selection={selection} locked={locked} index={index} />
       );
-    case "dynamic":
-      return <DynamicBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "list":
       return <ListBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "contents":
@@ -470,21 +467,6 @@ function ImageBlockView({ block, pageId, selection, index }: { block: ImageBlock
         alt={block.alt}
         style={{ maxWidth: "100%", width: block.fullBleed ? "100%" : undefined, display: "block" }}
       />
-    </div>
-  );
-}
-
-function DynamicBlockView({ block, pageId, selection }: { block: DynamicBlock } & VisualProps) {
-  const { selected, onClick } = useBlockSelect(block.id, pageId, selection);
-  const data = useDocumentData();
-  const value = resolveField(block.dynamicKey, block.format, data);
-  return (
-    <div
-      className={`bo-editor-block bo-editor-dynamic${selected ? " is-selected" : ""}`}
-      onClick={onClick}
-      style={textStyleToCss(block.style)}
-    >
-      {value}
     </div>
   );
 }

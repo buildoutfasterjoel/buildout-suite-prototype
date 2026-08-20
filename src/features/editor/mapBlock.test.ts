@@ -13,7 +13,7 @@ import { buildTemplatePage } from './templates'
 import { buildDocumentPages } from './presets'
 import { useEditorStore } from './store'
 import { pageHasDynamicContent } from './tree'
-import type { ColumnsBlock, DynamicBlock, MapBlock, TableBlock } from './types'
+import type { ColumnsBlock, MapBlock, TableBlock, TextBlock } from './types'
 import type { Property } from '#/data/types'
 
 function mapBlockOf(page = buildLocationMapPage()): MapBlock {
@@ -139,7 +139,7 @@ describe('the Location template', () => {
 
     const row = page.blocks[2] as ColumnsBlock
     expect(row.columnCount).toBe(2)
-    expect((row.columns[0][1] as DynamicBlock).dynamicKey).toBe('marketing.locationDescription')
+    expect((row.columns[0][1] as TextBlock).text).toBe('{{marketing.locationDescription}}')
     expect((row.columns[1][0] as TableBlock).rows.map((r) => r[0].value)).toEqual([
       'Address',
       'City',

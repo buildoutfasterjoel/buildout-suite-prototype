@@ -15,6 +15,7 @@ import { PAGE_HEIGHT, PAGE_PADDING, PAGE_WIDTH } from "../types";
 import { TYPE_LABELS, crePhotoUrl, galleryPhotoIds, getPhotoUrl } from "#/components/properties/propertyDisplay";
 import { DEFAULT_TEXT_STYLE, uid } from "../blocks/blockFactory";
 import { BRAND } from "../brand";
+import { tokenSyntax } from "../inlineTokens";
 import { buildCtx } from "#/components/deals/underwriting/underwritingResult";
 import { buildRentRollTable } from "../underwritingPages";
 import {
@@ -147,9 +148,8 @@ export function buildPropertySummaryPage(property?: Property): Page {
         brandHeading("Property Description", 18),
         {
           id: uid("block"),
-          type: "dynamic",
-          dynamicKey: "marketing.saleDescription",
-          format: "text",
+          type: "text",
+          text: "{{marketing.saleDescription}}",
           style: { ...DEFAULT_TEXT_STYLE, fontFamily: BRAND.fonts.body, fontSize: 13, lineHeight: 22 },
         },
         {
@@ -210,9 +210,8 @@ export function buildPropertyDescriptionPage(property?: Property): Page {
       [
         {
           id: uid("block"),
-          type: "dynamic",
-          dynamicKey: "marketing.saleTitle",
-          format: "text",
+          type: "text",
+          text: "{{marketing.saleTitle}}",
           style: {
             ...DEFAULT_TEXT_STYLE,
             fontFamily: BRAND.fonts.heading,
@@ -223,9 +222,8 @@ export function buildPropertyDescriptionPage(property?: Property): Page {
         },
         {
           id: uid("block"),
-          type: "dynamic",
-          dynamicKey: "marketing.saleDescription",
-          format: "text",
+          type: "text",
+          text: "{{marketing.saleDescription}}",
           style: {
             ...DEFAULT_TEXT_STYLE,
             fontFamily: BRAND.fonts.body,
@@ -465,7 +463,9 @@ export function buildFinancialHeroPage(property?: Property): Page {
   // `ColumnsBlock.columns` is `ContentBlock[][]` and can't nest a `ContainerBlock`
   // like `section` inside a column, so the "card" look comes from
   // `TextStyle.background` on the leaf blocks instead.
-  const metric = (label: string, key: DynamicKey, format?: Cell["format"]): ContentBlock[] => [
+  // Each value is a text block holding one inline token; its currency/percent
+  // formatting comes from `INLINE_FIELD_FORMAT`, keyed on the field itself.
+  const metric = (label: string, key: DynamicKey): ContentBlock[] => [
     {
       id: uid("block"),
       type: "text",
@@ -474,15 +474,14 @@ export function buildFinancialHeroPage(property?: Property): Page {
     },
     {
       id: uid("block"),
-      type: "dynamic",
-      dynamicKey: key,
-      format,
+      type: "text",
+      text: tokenSyntax(key),
       style: { ...DEFAULT_TEXT_STYLE, fontFamily: BRAND.fonts.heading, fontSize: 22, color: BRAND.palette.primary, background: BRAND.palette.surface },
     },
   ];
   const callouts: ColumnsBlock = {
     id: uid("block"), type: "columns", columnCount: 3,
-    columns: [metric("Asking Price", "askingPrice", "currency"), metric("NOI", "noi", "currency"), metric("Cap Rate", "capRate", "percent")],
+    columns: [metric("Asking Price", "askingPrice"), metric("NOI", "noi"), metric("Cap Rate", "capRate")],
   };
   return {
     id: uid("page"), name: "Financial Highlights", logoSrc: BRAND.logoSrc, locked: true,
@@ -537,9 +536,8 @@ export function buildLocationMapPage(_property?: Property): Page {
         brandHeading("Location Overview", 18),
         {
           id: uid("block"),
-          type: "dynamic",
-          dynamicKey: "marketing.locationDescription",
-          format: "text",
+          type: "text",
+          text: "{{marketing.locationDescription}}",
           style: {
             ...DEFAULT_TEXT_STYLE,
             fontFamily: BRAND.fonts.body,

@@ -3,7 +3,7 @@ import { buildPropertyDescriptionPage } from './templates/designer'
 import { buildTemplatePage } from './templates'
 import { buildDocumentPages } from './presets'
 import { pageHasDynamicContent } from './tree'
-import type { ColumnsBlock, DynamicBlock, ImageBlock } from './types'
+import type { ColumnsBlock, ImageBlock, TextBlock } from './types'
 import { PAGE_PADDING, PAGE_WIDTH } from './types'
 
 function body(): ColumnsBlock {
@@ -26,7 +26,7 @@ describe('buildPropertyDescriptionPage', () => {
     const columns = body()
     expect(columns.columnCount).toBe(2)
     expect(columns.columns[0].map((b) => b.type)).toEqual(['image'])
-    expect(columns.columns[1].map((b) => b.type)).toEqual(['dynamic', 'dynamic'])
+    expect(columns.columns[1].map((b) => b.type)).toEqual(['text', 'text'])
   })
 
   // The photo is requested at exactly half the content column so it lands in
@@ -41,9 +41,9 @@ describe('buildPropertyDescriptionPage', () => {
 
   // Typed copy would fork from the listing the moment either side changed.
   it('binds both the title and the description to the deal’s marketing copy', () => {
-    const [title, description] = body().columns[1] as DynamicBlock[]
-    expect(title.dynamicKey).toBe('marketing.saleTitle')
-    expect(description.dynamicKey).toBe('marketing.saleDescription')
+    const [title, description] = body().columns[1] as TextBlock[]
+    expect(title.text).toBe('{{marketing.saleTitle}}')
+    expect(description.text).toBe('{{marketing.saleDescription}}')
     expect(description.style.lineHeight).toBeGreaterThan(description.style.fontSize)
   })
 

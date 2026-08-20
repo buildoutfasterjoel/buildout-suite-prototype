@@ -1,3 +1,4 @@
+import { hasTokens } from "./inlineTokens";
 import type {
   Block,
   Cell,
@@ -14,7 +15,9 @@ export function isContainer(block: Block): boolean {
 
 /** Whether a single (non-container) block carries a live, listing-bound value. */
 function blockHasDynamicContent(block: Block): boolean {
-  if (block.type === "dynamic") return true;
+  // Headings and text carry their bindings as inline liquid tokens rather than
+  // as a `dynamicKey` field, so the test is on the stored markup.
+  if (block.type === "heading" || block.type === "text") return hasTokens(block.text);
   if (block.type === "list") return block.dynamicKey !== undefined;
   if (block.type === "table") {
     return block.rows.some((row) => row.some((c) => c.dynamicKey !== undefined));

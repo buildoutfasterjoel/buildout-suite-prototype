@@ -530,11 +530,6 @@
   font-size: 11px;
   color: var(--bp-primary);
 }
-.bo-editor-dynamic {
-  background: rgba(var(--bp-primary-rgb), 0.06);
-  border-radius: tokens.$border-radius-sm;
-  padding: 2px 6px;
-}
 
 /* ---- Table row/column editing affordances ---- */
 .bo-editor-table-wrap {
@@ -662,13 +657,25 @@
 
 /* ---- Inline dynamic field chips ---- */
 /* An inline token, rendered as one atomic unit inside a contentEditable. The
-   tint says "this value came from the deal, not your keyboard"; it deliberately
-   reuses the same primary wash as the standalone `dynamic` block. */
+   tint says "this value came from the deal, not your keyboard" — the one signal
+   that a run of text is bound rather than typed. */
 .bo-editor-token {
-  background: rgba(var(--bp-primary-rgb), 0.08);
+  /* Flat tint rather than an `rgba()` wash. A wrapped token paints its
+     background once per line, and where two translucent fragments meet the
+     washes would compound into a visible seam — an opaque tint keeps every
+     line the same colour, which is what lets them read as one chip. */
+  background: tokens.$purple-heart-50;
   border-radius: 3px;
-  padding: 0 3px;
-  /* Keep the tint and radius on both halves when the chip wraps a line. */
+  /* Vertical padding fills the line box's leading so a wrapped token has no
+     unpainted stripe between its lines. `1lh - 1em` slightly overshoots the
+     font's content box — with a flat tint that overlap is invisible, and it is
+     what closes the gap at every font size and line height the editor offers.
+     The fixed value is the fallback where `lh` units aren't supported. */
+  padding: 2px 3px;
+  padding-block: calc((1lh - 1em) / 2);
+  /* Wraps like the prose around it: a token can hold a whole paragraph (a sale
+     or location description), so it has to break across lines or it runs off
+     its column. `clone` keeps the tint and radius on every line fragment. */
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
   /* The chip is not editable, so a text cursor over it would lie. */
@@ -676,7 +683,6 @@
   /* Inherit every text style around it — a bolded sentence bolds its fields. */
   font: inherit;
   color: inherit;
-  white-space: nowrap;
 }
 /* A field the deal has no value for yet. Shows its own name, muted, rather than
    the em dash `resolveField` returns — mid-sentence an em dash reads as a typo,
