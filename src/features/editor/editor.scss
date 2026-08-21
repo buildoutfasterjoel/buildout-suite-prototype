@@ -845,20 +845,6 @@
   color: tokens.$purple-heart-600;
 }
 
-.bo-editor-otto-bubble {
-  max-width: 85%;
-  padding: tokens.$spacing-2 tokens.$spacing-3;
-  border-radius: tokens.$border-radius-md;
-  background: tokens.$storm-grey-100;
-  color: tokens.$body-color;
-  font-size: tokens.$font-size-small;
-  white-space: pre-wrap;
-}
-.bo-editor-otto-reply {
-  width: 100%;
-  color: tokens.$body-color;
-  font-size: tokens.$font-size-small;
-}
 .bo-editor-otto-thinking {
   display: inline-flex;
   align-items: center;
@@ -867,10 +853,9 @@
   color: tokens.$purple-heart-600;
 }
 
+/* Wrapper only: the shared `.otto-composer` inside owns its own layout, so
+   this keeps the panel's bottom padding and divider and nothing else. */
 .bo-editor-otto-composer {
-  display: flex;
-  align-items: center;
-  gap: tokens.$spacing-2;
   padding: tokens.$spacing-3;
   border-top: 1px solid tokens.$card-border-color;
   flex-shrink: 0;
