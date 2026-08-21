@@ -1,26 +1,10 @@
 @use "@buildoutinc/blueprint-tokens/scss/colors" as colors;
+// The Otto sweep lives in `_otto.scss`, shared with the editor's Otto panel.
+// Imported as `*` so the call sites below keep reading `otto-sweep(...)`.
+@use "./otto" as *;
 @import "@fortawesome/fontawesome-svg-core/styles.css" layer(components);
 @import "@buildoutinc/blueprint-theme/scss/theme";
 
-// Otto's surfaces share one fill recipe: a purple → periwinkle → sky sweep read
-// through a flat white wash. Only the sweep's angle and the wash's opacity move
-// between them, so the family holds together — a lower $wash is a more saturated
-// disc. The designs stack an opaque base colour under the sweep too; it can
-// never show through, so it's left out here.
-//
-// The first mixin in this file, deliberately: five call sites (the rail's avatar,
-// the starter rows' discs, and both hover states) would otherwise repeat the same
-// stop list. It lives up here rather than beside them because Sass resolves
-// mixins in source order, and its callers sit in two separate sections below.
-@mixin otto-sweep($angle, $wash) {
-  background-image:
-    linear-gradient(
-      90deg,
-      rgba(255, 255, 255, $wash),
-      rgba(255, 255, 255, $wash)
-    ),
-    linear-gradient($angle, #b88cf2 0%, #8ca6f7 50%, #61c2ff 100%);
-}
 
 // Deal stage colors — sourced from Blueprint palette tokens, exposed as CSS
 // variables so components reference the tokens rather than hard-coded hex.

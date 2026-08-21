@@ -8,6 +8,10 @@ import {
   faMapLocationDot,
   faArrowRotateLeft,
 } from "@fortawesome/pro-regular-svg-icons";
+// Solid, deliberately, and for the same reason as the app-wide rail: the mark's
+// glyph is a silhouette on a pale tile, and the regular weight reads as a
+// hairline outline at 14px.
+import { faOtter } from "@fortawesome/pro-solid-svg-icons";
 import { useChat, type UIMessage } from "@tanstack/ai-react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
@@ -211,9 +215,23 @@ export function OttoPanel() {
 
   return (
     <div className="bo-editor-otto">
+      {/* The otter is gradient-filled in the design, which an SVG icon can't
+          express in CSS, so its `fill` points at this def (see editor.scss).
+          The panel renders its own rather than borrowing the rail's: that one
+          lives inside `AssistantSidebar`, which returns null while the rail is
+          closed — which it always is here. A distinct id, so the two never
+          collide when both surfaces are mounted. Zero-sized and aria-hidden: it
+          paints nothing itself. */}
+      <svg width="0" height="0" aria-hidden="true" focusable="false" className="position-absolute">
+        <linearGradient id="otto-glyph-gradient-editor" x1="1" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#9f55f7" />
+          <stop offset="100%" stopColor="#360764" />
+        </linearGradient>
+      </svg>
+
       <div className="bo-editor-otto-head">
         <span className="bo-editor-otto-mark">
-          <FontAwesomeIcon icon={faSparkles} />
+          <FontAwesomeIcon icon={faOtter} />
         </span>
         <span className="flex-grow-1" style={{ minWidth: 0 }}>
           <span className="bo-editor-subsection-title d-block">Otto</span>

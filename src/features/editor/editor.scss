@@ -9,6 +9,7 @@
 
 @use "@buildoutinc/blueprint-tokens/scss/semantic" as tokens;
 @use "@buildoutinc/blueprint-theme/scss/bridge/vars" as motion;
+@use "../../otto" as *;
 
 .bo-editor {
   width: 100%;
@@ -790,10 +791,26 @@
   width: 32px;
   height: 32px;
   flex-shrink: 0;
-  /* Rounded square, matching the rail's icon tiles rather than an avatar. */
+  /* Rounded square, matching the rail's icon tiles rather than an avatar — the
+     one thing this does NOT borrow from the app-wide rail's round avatar. */
   border-radius: tokens.$border-radius-md;
-  background: tokens.$purple-heart-50;
-  color: tokens.$purple-heart-950;
+  /* Same fill recipe and the same angle/wash as `.assistant-rail__avatar`, so
+     the two Ottos read as one identity. */
+  @include otto-sweep(90deg, 0.65);
+  font-size: 14px;
+
+  /* The otter is gradient-filled in the design, which an SVG icon can't express
+     in CSS, so its path points at a `<linearGradient>` def the panel renders.
+     That def is the panel's own — the rail's returns null while it is closed,
+     which it always is on the editor route. The flat colour is the fallback for
+     when the def can't resolve. */
+  svg {
+    color: tokens.$purple-heart-800;
+  }
+
+  svg path {
+    fill: url("#otto-glyph-gradient-editor");
+  }
 }
 .bo-editor-otto-context {
   font-size: tokens.$font-size-small;
