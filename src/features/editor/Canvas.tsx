@@ -13,6 +13,8 @@ export function Canvas() {
   const clearSelection = useEditorStore((s) => s.clearSelection);
   const highlightedBlockId = useEditorStore((s) => s.highlightedBlockId);
   const setActivePageId = useEditorStore((s) => s.setActivePageId);
+  const pendingScrollPageId = useEditorStore((s) => s.pendingScrollPageId);
+  const clearPageScroll = useEditorStore((s) => s.clearPageScroll);
   const workspaceRef = useRef<HTMLDivElement>(null);
 
   // Locating a block from the Layers panel scrolls it into view on the canvas.
@@ -21,6 +23,21 @@ export function Canvas() {
     const el = document.querySelector(`[data-block-id="${highlightedBlockId}"]`);
     el?.scrollIntoView({ block: "center", behavior: "smooth" });
   }, [highlightedBlockId]);
+
+  // Navigating to a page — from the Pages panel, the Layers picker, or one of
+  // the agent's tools — lands here. It has to be a real scroll: the effect
+  // below recomputes `activePageId` from the viewport whenever the page list
+  // changes, so setting that field alone gets overwritten within the same
+  // commit (which is what made `goToPage` and `addPage` claim a move the
+  // broker never saw). Scrolling instead makes the viewport the single source
+  // of truth, and the scroll handler below then sets `activePageId` to match.
+  useEffect(() => {
+    if (!pendingScrollPageId) return;
+    workspaceRef.current
+      ?.querySelector(`[data-page-id="${pendingScrollPageId}"]`)
+      ?.scrollIntoView({ block: "start", behavior: "smooth" });
+    clearPageScroll();
+  }, [pendingScrollPageId, clearPageScroll]);
 
   // Track the page under the viewport's vertical center as the user scrolls, so
   // the Layers panel follows along.

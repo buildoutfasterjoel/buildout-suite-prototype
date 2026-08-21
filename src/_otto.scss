@@ -1,0 +1,19 @@
+// Otto's surfaces share one fill recipe: a purple → periwinkle → sky sweep read
+// through a flat white wash. Only the sweep's angle and the wash's opacity move
+// between them, so the family holds together — a lower $wash is a more saturated
+// disc. The designs stack an opaque base colour under the sweep too; it can
+// never show through, so it's left out here.
+//
+// Its own partial rather than a mixin inside `main.scss`, because the editor's
+// Otto panel is a second consumer and `editor.scss` cannot reach into main's
+// scope. Both `@use` it as `*`, so call sites read `otto-sweep(...)` unchanged.
+
+@mixin otto-sweep($angle, $wash) {
+  background-image:
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, $wash),
+      rgba(255, 255, 255, $wash)
+    ),
+    linear-gradient($angle, #b88cf2 0%, #8ca6f7 50%, #61c2ff 100%);
+}

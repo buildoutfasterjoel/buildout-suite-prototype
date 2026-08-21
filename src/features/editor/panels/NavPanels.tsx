@@ -207,6 +207,10 @@ function SortablePageRow({
 export function PagesPanel() {
   const pages = useEditorStore((s) => s.document.pages);
   const activePageId = useEditorStore((s) => s.activePageId);
+  // Clicking a page only navigates the canvas to it — a Pages-panel concern,
+  // distinct from selecting a block (which opens style controls). `goToPage`
+  // records the scroll request and the Canvas performs it, so the DOM work
+  // lives in exactly one place.
   const goToPage = useEditorStore((s) => s.goToPage);
   const [search, setSearch] = useState("");
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -216,15 +220,6 @@ export function PagesPanel() {
 
   const isFiltering = search.trim() !== "";
   const filtered = useMemo(() => filterPages(pages, search), [pages, search]);
-
-  // Clicking a page only navigates the canvas to it — it stays a Pages-panel
-  // concern, distinct from selecting a block (which opens style controls).
-  function handleSelectPage(pageId: string) {
-    goToPage(pageId);
-    document
-      .querySelector(`[data-page-id="${pageId}"]`)
-      ?.scrollIntoView({ block: "start", behavior: "smooth" });
-  }
 
   const openGalleryAt = (index?: number) => {
     setGalleryIndex(index);
@@ -261,7 +256,7 @@ export function PagesPanel() {
                   role="button"
                   tabIndex={0}
                   className={`bo-editor-pages-row${page.hidden ? " is-hidden" : ""}`}
-                  onClick={() => handleSelectPage(page.id)}
+                  onClick={() => goToPage(page.id)}
                 >
                   <PageRowContent page={page} index={realIndex + 1} active={active} />
                 </List.Item>
@@ -277,7 +272,7 @@ export function PagesPanel() {
                   page={page}
                   index={i + 1}
                   active={activePageId === page.id}
-                  onSelect={() => handleSelectPage(page.id)}
+                  onSelect={() => goToPage(page.id)}
                 />
                 <PageRowGap index={i + 1} onAdd={openGalleryAt} />
               </Fragment>
@@ -547,13 +542,16 @@ export function LayersPanel() {
   // here scrolls the canvas to it.
   const activePageId = useEditorStore((s) => s.activePageId);
   const setActivePageId = useEditorStore((s) => s.setActivePageId);
+  const requestPageScroll = useEditorStore((s) => s.requestPageScroll);
   const page = pages.find((p) => p.id === activePageId) ?? pages[0];
 
+  // Sets the scope immediately (so the picker's own value updates without
+  // waiting for a smooth scroll to finish) and asks the Canvas to scroll —
+  // deliberately not the store's `goToPage`, which would also drop the block
+  // selection and highlight the Layers list is built around.
   const goToPage = (id: string) => {
     setActivePageId(id);
-    document
-      .querySelector(`[data-page-id="${id}"]`)
-      ?.scrollIntoView({ block: "start", behavior: "smooth" });
+    requestPageScroll(id);
   };
 
   return (
