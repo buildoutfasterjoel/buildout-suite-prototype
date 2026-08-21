@@ -8,6 +8,7 @@ import type {
   EditorDocument,
   MapBlock,
   NavPanel,
+  Page,
   Selection,
 } from "./types";
 import type { DocumentData } from "./dynamic";
@@ -52,6 +53,18 @@ interface EditorState {
   highlightedBlockId: string | null;
   /** Page currently in view on the canvas — drives the Layers panel scope. */
   activePageId: string | null;
+  /**
+   * A page the canvas has been asked to scroll into view, or null once it has.
+   *
+   * Setting `activePageId` alone can't navigate: the Canvas recomputes it from
+   * the viewport whenever the page list changes, so it overwrites any value set
+   * from outside. Every navigation therefore has to end in a real scroll, and
+   * this is where that request lives — `Canvas` watches this field, scrolls,
+   * and clears it, which keeps one scroll mechanism in the app instead of a
+   * `scrollIntoView` copied into each caller (and none in the agent's tools,
+   * which run outside React).
+   */
+  pendingScrollPageId: string | null;
   /** Active left-rail panel. Null = no panel open (only the rail shows). */
   activeNavPanel: NavPanel | null;
   zoom: number;
@@ -79,10 +92,15 @@ interface EditorState {
   highlightBlock: (blockId: string | null) => void;
   /** Track the page currently in view (set as the canvas scrolls). */
   setActivePageId: (pageId: string) => void;
+  /** Ask the canvas to scroll a page into view. */
+  requestPageScroll: (pageId: string) => void;
+  /** Canvas-only: the requested scroll has been performed. */
+  clearPageScroll: () => void;
   /**
-   * Navigate to a page from the Pages panel: drops any block selection and
-   * marks the page as in-view, without touching the active nav panel (unlike
-   * `select`/`clearSelection`, which switch it to show style controls / Blocks).
+   * Navigate to a page: drops any block selection, marks the page as in-view,
+   * and asks the canvas to scroll to it — without touching the active nav panel
+   * (unlike `select`/`clearSelection`, which switch it to show style controls /
+   * Blocks).
    */
   goToPage: (pageId: string) => void;
   setNavPanel: (panel: NavPanel | null) => void;
@@ -98,6 +116,23 @@ interface EditorState {
   // Page management.
   /** Adds at `atIndex` when given, otherwise appends to the end. */
   addPage: (kind: "blank" | string, atIndex?: number) => void;
+  /**
+   * Insert a pre-built page. Appends when `atIndex` is absent. `addPage` builds
+   * a page and delegates here, so the Blocks/Pages palette and the Otto agent
+   * share one insert path.
+   */
+  insertPage: (page: Page, atIndex?: number) => void;
+  /** Rename a page — the name a `contents` block prints. */
+  renamePage: (pageId: string, name: string) => void;
+  /**
+   * Freeze or unfreeze a page's layout.
+   *
+   * `locked` has been read-only since presets were introduced, because nothing
+   * in the UI unfreezes a template page. The Otto agent needs to: every page in
+   * a real document is locked, so its structural edits would otherwise reach
+   * nothing but a blank page it created itself.
+   */
+  setPageLocked: (pageId: string, locked: boolean) => void;
   /** Reorder a page to sit at `toIndex` in the document's top-level page list. */
   movePage: (pageId: string, toIndex: number) => void;
   /** Remove a page from the document (no-op if it's the last remaining page). */
@@ -107,6 +142,12 @@ interface EditorState {
 
   // Phase 2 actions (structural mutation via drag-and-drop).
   addBlock: (target: DropTarget, type: Block["type"], variant?: BlockVariant) => void;
+  /**
+   * Insert a pre-built block at a drop target. Unlike `addBlock`, the caller
+   * owns construction — which is what lets a table arrive with its rows already
+   * populated instead of needing a call per cell.
+   */
+  insertBlock: (target: DropTarget, block: Block) => void;
   moveBlock: (blockId: string, target: DropTarget) => void;
   removeBlock: (blockId: string) => void;
 
@@ -148,7 +189,7 @@ const ZOOM_STEP = 0.1;
 
 const clampZoom = (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
 
-export const useEditorStore = create<EditorState>((set) => {
+export const useEditorStore = create<EditorState>((set, get) => {
   const initialDocument = buildSampleDocument(undefined);
   return {
   document: initialDocument,
@@ -161,6 +202,7 @@ export const useEditorStore = create<EditorState>((set) => {
   selection: null,
   highlightedBlockId: null,
   activePageId: initialDocument.pages[0]?.id ?? null,
+  pendingScrollPageId: null,
   activeNavPanel: "blocks",
   zoom: 1,
   // Hardcoded (not read from localStorage here) so server and first-render
@@ -180,6 +222,9 @@ export const useEditorStore = create<EditorState>((set) => {
       selection: null,
       highlightedBlockId: null,
       activePageId: document.pages[0]?.id ?? null,
+      // A request against the old document would scroll to a page that no
+      // longer exists.
+      pendingScrollPageId: null,
       dirty: false,
     });
   },
@@ -215,7 +260,17 @@ export const useEditorStore = create<EditorState>((set) => {
   setActivePageId: (pageId) =>
     set((s) => (s.activePageId === pageId ? s : { activePageId: pageId })),
 
-  goToPage: (pageId) => set({ selection: null, highlightedBlockId: null, activePageId: pageId }),
+  requestPageScroll: (pageId) => set({ pendingScrollPageId: pageId }),
+
+  clearPageScroll: () => set({ pendingScrollPageId: null }),
+
+  goToPage: (pageId) =>
+    set({
+      selection: null,
+      highlightedBlockId: null,
+      activePageId: pageId,
+      pendingScrollPageId: pageId,
+    }),
 
   setNavPanel: (panel) =>
     set({ activeNavPanel: panel, selection: null, sidebarPoppedOpen: true }),
@@ -241,13 +296,19 @@ export const useEditorStore = create<EditorState>((set) => {
       return { sidebarPinned: next, sidebarPoppedOpen: next ? s.sidebarPoppedOpen : true };
     }),
 
-  addPage: (kind, atIndex) =>
+  addPage: (kind, atIndex) => {
+    const listing = get().activeListing;
+    const page = kind === "blank" ? buildBlankPage() : buildTemplatePage(kind, listing);
+    get().insertPage(page, atIndex);
+    // The palette's own affordance: land the broker in the Pages panel next to
+    // what they just added. The agent path doesn't want this, so it lives here
+    // rather than in `insertPage`.
+    set({ activeNavPanel: "pages" });
+  },
+
+  insertPage: (page, atIndex) =>
     set((s) => {
-      const page =
-        kind === "blank"
-          ? buildBlankPage()
-          : buildTemplatePage(kind, s.activeListing);
-      const index = atIndex ?? s.document.pages.length;
+      const index = clampIndex(atIndex ?? s.document.pages.length, s.document.pages.length);
       const pages = [...s.document.pages];
       pages.splice(index, 0, page);
       // Mirror into the template so table reset keeps working on new pages.
@@ -257,7 +318,31 @@ export const useEditorStore = create<EditorState>((set) => {
         document: { ...s.document, pages },
         templateDocument: { ...s.templateDocument, pages: templatePages },
         selection: { pageId: page.id },
-        activeNavPanel: "pages",
+        activePageId: page.id,
+        dirty: true,
+      };
+    }),
+
+  renamePage: (pageId, name) =>
+    set((s) => {
+      if (!s.document.pages.some((p) => p.id === pageId)) return s;
+      const rename = (pages: Page[]) =>
+        pages.map((p) => (p.id === pageId ? { ...p, name } : p));
+      return {
+        document: { ...s.document, pages: rename(s.document.pages) },
+        templateDocument: { ...s.templateDocument, pages: rename(s.templateDocument.pages) },
+        dirty: true,
+      };
+    }),
+
+  setPageLocked: (pageId, locked) =>
+    set((s) => {
+      if (!s.document.pages.some((p) => p.id === pageId)) return s;
+      const apply = (pages: Page[]) =>
+        pages.map((p) => (p.id === pageId ? { ...p, locked } : p));
+      return {
+        document: { ...s.document, pages: apply(s.document.pages) },
+        templateDocument: { ...s.templateDocument, pages: apply(s.templateDocument.pages) },
         dirty: true,
       };
     }),
@@ -315,6 +400,19 @@ export const useEditorStore = create<EditorState>((set) => {
         document,
         selection: { pageId: pageIdForTarget(document, target), blockId: block.id },
         activeNavPanel: null,
+        dirty: true,
+      };
+    }),
+
+  insertBlock: (target, block) =>
+    set((s) => {
+      // One-level nesting: a container can only live at the top level. Mirrors
+      // the same guard in `addBlock` and `moveBlock`.
+      if (isContainer(block) && target.kind !== "page") return s;
+      const document = insertAt(s.document, target, block);
+      return {
+        document,
+        selection: { pageId: pageIdForTarget(document, target), blockId: block.id },
         dirty: true,
       };
     }),
