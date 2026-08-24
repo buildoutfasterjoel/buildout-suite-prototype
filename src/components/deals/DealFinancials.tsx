@@ -8,18 +8,24 @@ import {
   Tooltip as ChartTooltip,
 } from "recharts";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
+import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { Switch } from "@buildoutinc/blueprint-react/ui/Switch";
 import { Table } from "@buildoutinc/blueprint-react/ui/Table";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faArrowRight,
+  faChevronDown,
+  faFileLines,
   faPlus,
   faPencil,
   faTableRowsAddAbove,
   faTableRowsAddBelow,
   faTrashCan,
 } from "@fortawesome/pro-regular-svg-icons";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { DealBroker, Listing } from "#/data/types";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
 import { VoucherStatusBadge } from "./VoucherStatusBadge";
@@ -435,6 +441,38 @@ function PreSplitDeductionsSection({ listing }: { listing: Listing }) {
   );
 }
 
+/** Width of the receivables checkbox gutter. */
+const RECEIVABLE_CHECKBOX_W = 44;
+
+/**
+ * One item in the Receivables Actions menu, greyed when its precondition fails.
+ *
+ * The `disabled` prop alone would not grey it: base-ui renders a menu item as a
+ * `div`, so Bootstrap's `.dropdown-item:disabled` rule never matches and the
+ * item stays black while silently refusing to open. The class is what greys it,
+ * the prop is what blocks the click and tells a screen reader — pairing them
+ * here is what stops the two drifting apart across three call sites.
+ */
+function ReceivableActionItem({
+  icon,
+  disabled,
+  children,
+}: {
+  icon: IconDefinition;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <DropdownMenu.Item
+      disabled={disabled}
+      className={disabled ? "disabled" : undefined}
+    >
+      <FontAwesomeIcon icon={icon} className="me-2" />
+      {children}
+    </DropdownMenu.Item>
+  );
+}
+
 function ReceivablesSection({ listing }: { listing: Listing }) {
   const receivables = listing.transaction.backOffice.receivables;
   const amountTotal = sum(receivables.map((r) => r.amount));
@@ -443,6 +481,36 @@ function ReceivablesSection({ listing }: { listing: Listing }) {
   const payerContactId =
     listing.buyerContactIds[0] ?? listing.sellerContactIds[0];
 
+  // Which rows the bulk actions apply to. Local state — nothing here persists,
+  // and every read below goes through `selectedRows` rather than the set itself,
+  // so an id left behind by a previous deal is ignored rather than miscounted.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const selectedRows = receivables.filter((r) => selectedIds.has(r.id));
+  const allSelected =
+    receivables.length > 0 && selectedRows.length === receivables.length;
+  const someSelected = selectedRows.length > 0;
+
+  function toggleAll(checked: boolean) {
+    setSelectedIds(checked ? new Set(receivables.map((r) => r.id)) : new Set());
+  }
+
+  function toggleOne(id: string, checked: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  // A deposit lands against money still outstanding, so a fully credited
+  // receivable has nothing left to apply one to.
+  const canApplyDeposit =
+    someSelected && selectedRows.every((r) => r.credited < r.amount);
+  // One invoice bills one payer.
+  const canCreateInvoice =
+    someSelected && new Set(selectedRows.map((r) => r.payerName)).size === 1;
+
   return (
     <Section
       title="Receivables"
@@ -450,11 +518,39 @@ function ReceivablesSection({ listing }: { listing: Listing }) {
         <div className="d-flex gap-2">
           <Button variant="ghost" size="sm">
             <FontAwesomeIcon icon={faPlus} />
-            Add Receivable
+            Add Sales Tax
           </Button>
           <Button variant="ghost" size="sm">
-            Actions
+            <FontAwesomeIcon icon={faPlus} />
+            Add Receivable
           </Button>
+          <DropdownMenu>
+            <DropdownMenu.Trigger
+              render={
+                <Button variant="ghost" size="sm" disabled={!someSelected}>
+                  Actions
+                  <FontAwesomeIcon icon={faChevronDown} />
+                </Button>
+              }
+            />
+            <DropdownMenu.Content align="end">
+              <ReceivableActionItem
+                icon={faArrowRight}
+                disabled={!canApplyDeposit}
+              >
+                Apply Deposit
+              </ReceivableActionItem>
+              <ReceivableActionItem
+                icon={faFileLines}
+                disabled={!canCreateInvoice}
+              >
+                Create New Invoice
+              </ReceivableActionItem>
+              <ReceivableActionItem icon={faTrashCan}>
+                Delete Receivables
+              </ReceivableActionItem>
+            </DropdownMenu.Content>
+          </DropdownMenu>
         </div>
       }
     >
@@ -464,6 +560,19 @@ function ReceivablesSection({ listing }: { listing: Listing }) {
         <Table>
           <Table.Header>
             <Table.Row>
+              <Table.Head
+                style={{
+                  width: RECEIVABLE_CHECKBOX_W,
+                  minWidth: RECEIVABLE_CHECKBOX_W,
+                }}
+              >
+                <Checkbox
+                  checked={allSelected}
+                  indeterminate={!allSelected && someSelected}
+                  onCheckedChange={(c) => toggleAll(c === true)}
+                  aria-label="Select all receivables"
+                />
+              </Table.Head>
               <Table.Head>Payer Name</Table.Head>
               <Table.Head>Due Date</Table.Head>
               <Table.Head>Billing Description</Table.Head>
@@ -473,7 +582,22 @@ function ReceivablesSection({ listing }: { listing: Listing }) {
           </Table.Header>
           <Table.Body>
             {receivables.map((r) => (
-              <Table.Row key={r.id}>
+              <Table.Row
+                key={r.id}
+                className={selectedIds.has(r.id) ? "table-active" : undefined}
+              >
+                <Table.Cell
+                  style={{
+                    width: RECEIVABLE_CHECKBOX_W,
+                    minWidth: RECEIVABLE_CHECKBOX_W,
+                  }}
+                >
+                  <Checkbox
+                    checked={selectedIds.has(r.id)}
+                    onCheckedChange={(c) => toggleOne(r.id, c === true)}
+                    aria-label={`Select receivable for ${r.payerName}`}
+                  />
+                </Table.Cell>
                 <Table.Cell>
                   <div>
                     <PersonLink name={r.payerName} contactId={payerContactId} />
@@ -491,7 +615,7 @@ function ReceivablesSection({ listing }: { listing: Listing }) {
               </Table.Row>
             ))}
             <Table.Row>
-              <Table.Cell colSpan={3} className="fw-semibold">
+              <Table.Cell colSpan={4} className="fw-semibold">
                 Sum
               </Table.Cell>
               <Table.Cell className="text-end fw-semibold">
