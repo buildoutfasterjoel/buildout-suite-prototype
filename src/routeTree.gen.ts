@@ -52,6 +52,7 @@ import { Route as ShellSuiteIndexRouteImport } from './routes/_shell/suite/index
 import { Route as ShellTasksIndexRouteImport } from './routes/_shell/tasks/index'
 import { Route as ShellBackofficeContactsIndexRouteImport } from './routes/_shell/backoffice/contacts/index'
 import { Route as ShellBackofficeContactsContactIdRouteImport } from './routes/_shell/backoffice/contacts/$contactId'
+import { Route as ShellBackofficeVouchersIndexRouteImport } from './routes/_shell/backoffice/vouchers/index'
 import { Route as ShellListingsListingIdIndexRouteImport } from './routes/_shell/listings/$listingId/index'
 import { Route as ShellListingsListingIdActivitiesRouteImport } from './routes/_shell/listings/$listingId/activities'
 import { Route as ShellListingsListingIdClientReportRouteImport } from './routes/_shell/listings/$listingId/client-report'
@@ -314,6 +315,12 @@ const ShellBackofficeContactsContactIdRoute =
   ShellBackofficeContactsContactIdRouteImport.update({
     id: '/contacts/$contactId',
     path: '/contacts/$contactId',
+    getParentRoute: () => ShellBackofficeRoute,
+  } as any)
+const ShellBackofficeVouchersIndexRoute =
+  ShellBackofficeVouchersIndexRouteImport.update({
+    id: '/vouchers/',
+    path: '/vouchers/',
     getParentRoute: () => ShellBackofficeRoute,
   } as any)
 const ShellListingsListingIdIndexRoute =
@@ -632,6 +639,7 @@ export interface FileRoutesByFullPath {
   '/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
   '/settings/users/$userId': typeof ShellSettingsUsersUserIdRouteWithChildren
   '/backoffice/contacts/': typeof ShellBackofficeContactsIndexRoute
+  '/backoffice/vouchers/': typeof ShellBackofficeVouchersIndexRoute
   '/listings/$listingId/': typeof ShellListingsListingIdIndexRoute
   '/settings/users/': typeof ShellSettingsUsersIndexRoute
   '/listings/$listingId/spaces/$spaceId': typeof ShellListingsListingIdSpacesSpaceIdRouteWithChildren
@@ -707,6 +715,7 @@ export interface FileRoutesByTo {
   '/listings/$listingId/underwriting': typeof ShellListingsListingIdUnderwritingRoute
   '/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
   '/backoffice/contacts': typeof ShellBackofficeContactsIndexRoute
+  '/backoffice/vouchers': typeof ShellBackofficeVouchersIndexRoute
   '/listings/$listingId': typeof ShellListingsListingIdIndexRoute
   '/settings/users': typeof ShellSettingsUsersIndexRoute
   '/settings/users/$userId/email': typeof ShellSettingsUsersUserIdEmailRoute
@@ -794,6 +803,7 @@ export interface FileRoutesById {
   '/_shell/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
   '/_shell/settings/users/$userId': typeof ShellSettingsUsersUserIdRouteWithChildren
   '/_shell/backoffice/contacts/': typeof ShellBackofficeContactsIndexRoute
+  '/_shell/backoffice/vouchers/': typeof ShellBackofficeVouchersIndexRoute
   '/_shell/listings/$listingId/': typeof ShellListingsListingIdIndexRoute
   '/_shell/settings/users/': typeof ShellSettingsUsersIndexRoute
   '/_shell/listings/$listingId_/spaces/$spaceId': typeof ShellListingsListingIdSpacesSpaceIdRouteWithChildren
@@ -882,6 +892,7 @@ export interface FileRouteTypes {
     | '/listings/$listingId/website'
     | '/settings/users/$userId'
     | '/backoffice/contacts/'
+    | '/backoffice/vouchers/'
     | '/listings/$listingId/'
     | '/settings/users/'
     | '/listings/$listingId/spaces/$spaceId'
@@ -957,6 +968,7 @@ export interface FileRouteTypes {
     | '/listings/$listingId/underwriting'
     | '/listings/$listingId/website'
     | '/backoffice/contacts'
+    | '/backoffice/vouchers'
     | '/listings/$listingId'
     | '/settings/users'
     | '/settings/users/$userId/email'
@@ -1043,6 +1055,7 @@ export interface FileRouteTypes {
     | '/_shell/listings/$listingId/website'
     | '/_shell/settings/users/$userId'
     | '/_shell/backoffice/contacts/'
+    | '/_shell/backoffice/vouchers/'
     | '/_shell/listings/$listingId/'
     | '/_shell/settings/users/'
     | '/_shell/listings/$listingId_/spaces/$spaceId'
@@ -1375,6 +1388,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellBackofficeContactsContactIdRouteImport
       parentRoute: typeof ShellBackofficeRoute
     }
+    '/_shell/backoffice/vouchers/': {
+      id: '/_shell/backoffice/vouchers/'
+      path: '/vouchers'
+      fullPath: '/backoffice/vouchers/'
+      preLoaderRoute: typeof ShellBackofficeVouchersIndexRouteImport
+      parentRoute: typeof ShellBackofficeRoute
+    }
     '/_shell/listings/$listingId/': {
       id: '/_shell/listings/$listingId/'
       path: '/'
@@ -1687,11 +1707,13 @@ const ShellAppRouteWithChildren = ShellAppRoute._addFileChildren(
 interface ShellBackofficeRouteChildren {
   ShellBackofficeContactsContactIdRoute: typeof ShellBackofficeContactsContactIdRoute
   ShellBackofficeContactsIndexRoute: typeof ShellBackofficeContactsIndexRoute
+  ShellBackofficeVouchersIndexRoute: typeof ShellBackofficeVouchersIndexRoute
 }
 
 const ShellBackofficeRouteChildren: ShellBackofficeRouteChildren = {
   ShellBackofficeContactsContactIdRoute: ShellBackofficeContactsContactIdRoute,
   ShellBackofficeContactsIndexRoute: ShellBackofficeContactsIndexRoute,
+  ShellBackofficeVouchersIndexRoute: ShellBackofficeVouchersIndexRoute,
 }
 
 const ShellBackofficeRouteWithChildren = ShellBackofficeRoute._addFileChildren(

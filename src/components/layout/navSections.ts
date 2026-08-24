@@ -14,6 +14,7 @@ import {
   faBuilding,
   faUsers,
   faHandshake,
+  faDoorOpen,
   faSignal,
 } from "@fortawesome/pro-regular-svg-icons";
 
@@ -56,9 +57,12 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "Campaigns", href: "/email" },
     ],
   },
+  {
+    label: "Back Office",
+    icon: faDoorOpen,
+    items: [{ label: "Vouchers", href: "/backoffice/vouchers" }],
+  },
   { label: "Reports", href: "/reports", icon: faSignal },
-  // Hidden for the demo. To restore, re-add `faDoorOpen` to the icon import:
-  // { label: "Back Office", href: "/backoffice", icon: faDoorOpen },
 ];
 
 /**
