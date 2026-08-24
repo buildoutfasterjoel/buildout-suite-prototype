@@ -151,10 +151,28 @@ describe('matchesVoucherFilters — close date presets', () => {
     ).toBe(false)
   })
 
-  it('"ytd" counts this calendar year only', () => {
+  it('"ytd" reads the created date, over this calendar year', () => {
     const s = { ...emptyVoucherFilters(), closeDate: 'ytd' as const }
-    expect(matchesVoucherFilters(row({ closeDate: '2026-01-01' }), s, NOW)).toBe(true)
-    expect(matchesVoucherFilters(row({ closeDate: '2025-12-31' }), s, NOW)).toBe(false)
+    expect(matchesVoucherFilters(row({ createdOn: '2026-01-01' }), s, NOW)).toBe(true)
+    expect(matchesVoucherFilters(row({ createdOn: '2025-12-31' }), s, NOW)).toBe(false)
+  })
+
+  it('"ytd" keeps a deal opened this year that has never closed', () => {
+    const s = { ...emptyVoucherFilters(), closeDate: 'ytd' as const }
+    expect(
+      matchesVoucherFilters(row({ createdOn: '2026-02-01', closeDate: null }), s, NOW),
+    ).toBe(true)
+  })
+
+  it('"last-year" reads the close date, not the created date', () => {
+    // The one window in the set that is still about closing — hence its label.
+    const s = { ...emptyVoucherFilters(), closeDate: 'last-year' as const }
+    expect(
+      matchesVoucherFilters(row({ createdOn: '2025-06-01', closeDate: null }), s, NOW),
+    ).toBe(false)
+    expect(
+      matchesVoucherFilters(row({ createdOn: '2023-01-01', closeDate: '2025-06-01' }), s, NOW),
+    ).toBe(true)
   })
 
   it('"last-year" counts the previous calendar year only', () => {

@@ -59,8 +59,11 @@ function shortDate(iso: string | null): string {
 }
 
 /**
- * The close-date window: a single-select list, plus a range calendar revealed
- * only by the Custom option.
+ * The date window: a single-select list, plus a range calendar revealed only by
+ * the Custom option.
+ *
+ * The options do not all read the same date — see `CLOSE_DATE_PRESETS` — which
+ * is why the two that are about closing say so in their labels.
  *
  * A radio list rather than a Select because the options are sentences, and
  * because Custom has to expand in place — a Select closes on choice, which would

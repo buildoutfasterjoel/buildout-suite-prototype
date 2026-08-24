@@ -14,12 +14,14 @@ import type { VoucherRow, VoucherStatus } from './vouchers'
  * They do not all read the same date, which is the thing to know before editing
  * one:
  *
- * - `last-365` reads the **created** date, so it means "deals opened in the last
- *   year" and includes deals that have not closed. Confirmed with the team — it
- *   is why the real product shows drafts under this default rather than the
- *   handful of recent closings a close-date reading would leave.
- * - `ytd` and `last-year` read the **close** date, so a deal that has not closed
- *   falls outside them.
+ * - `last-365` and `ytd` read the **created** date, so they mean "deals opened
+ *   in the last year / this year" and include deals that have not closed.
+ *   Confirmed with the team — it is why the real product shows drafts under this
+ *   default rather than the handful of recent closings a close-date reading
+ *   would leave.
+ * - `last-year` reads the **close** date, so a deal that has not closed falls
+ *   outside it. It is the odd one in the set, which is why its label says
+ *   "Closed last year" outright rather than leaving the axis to be guessed.
  * - `active-ytd-closed` is the mixed one: any open deal, plus anything closed
  *   this year.
  * - `custom` reads the close date, as its label says.
@@ -36,13 +38,16 @@ export const CLOSE_DATE_PRESETS: { value: CloseDatePreset; label: string }[] = [
   { value: 'last-365', label: 'Last 365 days' },
   { value: 'active-ytd-closed', label: 'Active + Year to date closed' },
   { value: 'ytd', label: 'Year to date' },
-  { value: 'last-year', label: 'Last Year' },
+  // Named for its axis: every neighbour above reads the created date, so an
+  // unqualified "Last Year" here would be read as one of them.
+  { value: 'last-year', label: 'Closed last year' },
   { value: 'custom', label: 'Custom range of close date' },
-  // Not in the design's list. Without it the four vouchers on Lost deals are
-  // unreachable: they carry no close date, so every window above excludes them
-  // and `active-ytd-closed` rejects them for not being active. An index whose
-  // rows cannot all be reached is worse than an extra option.
-  { value: 'any', label: 'Any close date' },
+  // Not in the design's list. Without it the vouchers on Lost deals opened more
+  // than a year ago are unreachable: they carry no close date, so the
+  // close-date windows exclude them, the created-date windows have gone past
+  // them, and `active-ytd-closed` rejects them for not being active. An index
+  // whose rows cannot all be reached is worse than an extra option.
+  { value: 'any', label: 'All time' },
 ]
 
 export const CLOSE_DATE_LABELS: Record<CloseDatePreset, string> =
@@ -93,7 +98,7 @@ export type VoucherFilterInput = Pick<
   | 'closeDate'
 >
 
-/** The toolbar's resting state: nothing chosen, and the default close-date window. */
+/** The toolbar's resting state: nothing chosen, and the default date window. */
 export function emptyVoucherFilters(): VoucherFilterState {
   return {
     search: '',
@@ -134,13 +139,17 @@ function matchesDateWindow(
   const today = isoDay(now)
   const year = now.getFullYear()
 
-  // Reads the created date, not the close date: "deals opened in the last year",
-  // which is what the team confirmed this option means. A deal still being
-  // worked belongs in that answer, so there is no close-date test to fail.
+  // These two read the created date, not the close date — "deals opened in the
+  // last year" and "opened this year", which is what the team confirmed they
+  // mean. A deal still being worked belongs in both answers, so there is no
+  // close-date test for it to fail.
   if (preset === 'last-365') {
     const from = new Date(now)
     from.setDate(from.getDate() - 365)
     return row.createdOn >= isoDay(from) && row.createdOn <= today
+  }
+  if (preset === 'ytd') {
+    return row.createdOn >= `${year}-01-01` && row.createdOn <= today
   }
 
   // The one window that mixes the two: an open deal is in the book by virtue of
@@ -155,8 +164,6 @@ function matchesDateWindow(
   if (close == null) return false
 
   switch (preset) {
-    case 'ytd':
-      return close >= `${year}-01-01` && close <= today
     case 'last-year':
       return close >= `${year - 1}-01-01` && close <= `${year - 1}-12-31`
     case 'custom':
