@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
@@ -7,7 +7,6 @@ import { Pagination } from "@buildoutinc/blueprint-react/ui/Pagination";
 import { Table } from "@buildoutinc/blueprint-react/ui/Table";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faArrowUpRight,
   faFileInvoiceDollar,
 } from "@fortawesome/pro-regular-svg-icons";
 import { useDataStore } from "#/data/dataStore";
@@ -16,7 +15,6 @@ import {
   voucherTotals,
   VOUCHER_STATUSES,
   VOUCHER_STATUS_LABELS,
-  type VoucherRow,
   type VoucherStatus,
 } from "#/data/vouchers";
 import {
@@ -29,7 +27,6 @@ import { VoucherFilterBar } from "#/components/backoffice/VoucherFilterBar";
 import { StatusPill } from "#/components/deals/DealStageBadge";
 import { formatCurrency, formatDate } from "#/components/deals/dealDisplay";
 import { TYPE_LABELS } from "#/components/properties/propertyDisplay";
-import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
 
 export const Route = createFileRoute("/_shell/backoffice/vouchers/")({
   component: VouchersPage,
@@ -99,7 +96,6 @@ function CommissionTile({
  * `voucherHref`), while the Deal column opens the deal record behind it.
  */
 function VouchersPage() {
-  const navigate = useNavigate();
   // Subscribe to the map: a voucher's figures live on its deal, so this must
   // re-render when any deal changes, not merely when one is added or removed.
   void useDataStore((s) => s.listings);
@@ -147,10 +143,6 @@ function VouchersPage() {
   const current = Math.min(page, pageCount);
   const start = (current - 1) * PAGE_SIZE;
   const visible = filtered.slice(start, start + PAGE_SIZE);
-
-  function openVoucher(row: VoucherRow) {
-    void navigate(row.target);
-  }
 
   return (
     <div className="h-100 overflow-y-auto overflow-x-hidden">
@@ -246,39 +238,24 @@ function VouchersPage() {
                   </Table.Header>
                   <Table.Body>
                     {visible.map((row) => (
-                      // The whole row opens the voucher, matching the shell's
-                      // per-space index and ContactsTable. `shouldIgnoreRowClick`
-                      // exempts `<a>`, so the two links inside keep their own
-                      // targets and modified clicks still open new tabs.
-                      <Table.Row
-                        key={row.dealId}
-                        style={{ cursor: "pointer" }}
-                        onClick={(e) => {
-                          if (shouldIgnoreRowClick(e)) return;
-                          openVoucher(row);
-                        }}
-                      >
+                      // One destination per row, reached two ways. There is no
+                      // whole-row click: a row that navigates *and* holds links
+                      // to somewhere else teaches two rules at once, and the
+                      // difference between hitting the text and hitting the gap
+                      // beside it is invisible until it surprises you.
+                      <Table.Row key={row.dealId}>
                         {/* The deal leads: it is what a broker recognises the
                             row by. The medium weight travels with the first
                             column rather than staying on the voucher name,
-                            since the leading column is the row's identity. */}
+                            since the leading column is the row's identity.
+                            No trailing arrow on either link — both land on this
+                            deal's voucher, and the arrow read as "leaves for
+                            another record", which is no longer true. */}
                         <Table.Cell className="fw-medium text-nowrap">
-                          <Link
-                            to="/listings/$listingId"
-                            params={{ listingId: row.dealId }}
-                            className="d-inline-flex align-items-center gap-1"
-                          >
-                            {row.dealName}
-                            <FontAwesomeIcon
-                              icon={faArrowUpRight}
-                              style={{ fontSize: 11 }}
-                            />
-                          </Link>
+                          <Link {...row.target}>{row.dealName}</Link>
                         </Table.Cell>
                         <Table.Cell className="text-nowrap">
-                          <Link {...row.target} className="text-reset">
-                            {row.name}
-                          </Link>
+                          <Link {...row.target}>{row.name}</Link>
                         </Table.Cell>
                         <Table.Cell className="text-muted">
                           {row.identifier}
