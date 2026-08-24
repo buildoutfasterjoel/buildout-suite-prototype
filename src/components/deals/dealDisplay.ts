@@ -20,10 +20,32 @@ export function formatCurrency(value: number): string {
   });
 }
 
+/** A bare `YYYY-MM-DD`, with no time or zone attached. */
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * An ISO string as a Date the local calendar agrees with.
+ *
+ * A date-only string names a calendar day and carries no zone, but
+ * `new Date('2026-08-14')` reads it as UTC midnight — so anywhere west of
+ * Greenwich every such date renders as the day *before* the one stored. Building
+ * it from parts pins it to local midnight instead. A full timestamp does carry
+ * an offset, so `Date` is right to convert it and is left alone.
+ *
+ * `formatMonthYear` below has always done this for itself; the day-level
+ * formatters simply never got the same treatment, which put the voucher index's
+ * Close Date column a day behind the close-date filter beside it.
+ */
+function parseIsoDate(iso: string): Date {
+  if (!DATE_ONLY.test(iso)) return new Date(iso);
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
 /** MM/DD/YYYY from an ISO date string, or a dash when absent. */
 export function formatDate(iso: string | null): string {
   if (!iso) return "--";
-  const d = new Date(iso);
+  const d = parseIsoDate(iso);
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   return `${mm}/${dd}/${d.getFullYear()}`;
@@ -32,7 +54,7 @@ export function formatDate(iso: string | null): string {
 /** "Jul 4, 2026" from an ISO string, or a dash when absent. */
 export function formatLongDate(iso: string | null): string {
   if (!iso) return "--";
-  return new Date(iso).toLocaleDateString("en-US", {
+  return parseIsoDate(iso).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -51,8 +73,7 @@ export function formatLongDate(iso: string | null): string {
  */
 export function formatMonthYear(iso: string | null): string {
   if (!iso) return "--";
-  const [year, month, day] = iso.split("-").map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString("en-US", {
+  return parseIsoDate(iso).toLocaleDateString("en-US", {
     month: "short",
     year: "numeric",
   });

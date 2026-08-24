@@ -22,6 +22,7 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import type { DealBroker, Listing } from "#/data/types";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
+import { VoucherStatusBadge } from "./VoucherStatusBadge";
 import { formatCurrency, formatDate } from "./dealDisplay";
 import { EditTransactionDialog } from "./EditTransactionDialog";
 import {
@@ -936,13 +937,23 @@ export function DealFinancials({
   /** Overridden on a shell's per-space voucher, so the suite is named. */
   heading?: string;
 }) {
+  const voucher = listing.transaction.backOffice;
+
   return (
     <div className="d-flex flex-column gap-5 p-4">
       <ListingPageHeader
         title={heading}
         actions={
-          <div className="d-flex gap-2">
-            <Button variant="primary">Submit</Button>
+          <div className="d-flex align-items-center gap-2">
+            {/* Where this voucher stands, beside the action that moves it. Every
+                deal carries a voucher from the moment it is created, so there is
+                always a status here — a new deal's reads Draft. */}
+            <VoucherStatusBadge status={voucher.status} long />
+            {/* An approved voucher has nothing left to submit; the only thing
+                left to do with it is change it. */}
+            <Button variant="primary">
+              {voucher.status === "Approved" ? "Edit" : "Submit"}
+            </Button>
           </div>
         }
       />

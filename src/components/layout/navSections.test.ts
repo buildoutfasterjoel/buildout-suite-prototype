@@ -72,6 +72,21 @@ describe("NAV_SECTIONS", () => {
     ]);
   });
 
+  it("puts Vouchers in the Back Office dropdown", () => {
+    const backOffice = NAV_SECTIONS.find((s) => s.label === "Back Office");
+    expect(
+      backOffice && "items" in backOffice && backOffice.items.map((i) => i.href),
+    ).toEqual(["/backoffice/vouchers"]);
+  });
+
+  it("keeps Contacts from lighting Back Office", () => {
+    // Both live under /backoffice, but Contacts is its own leaf — a group is
+    // lit from its children's hrefs, and /backoffice/contacts is not one.
+    const backOffice = NAV_SECTIONS.find((s) => s.label === "Back Office")!;
+    expect(isSectionActive(backOffice, "/backoffice/contacts")).toBe(false);
+    expect(isSectionActive(backOffice, "/backoffice/vouchers")).toBe(true);
+  });
+
   it("gives every section a destination — a leaf href or at least one child", () => {
     for (const section of NAV_SECTIONS) {
       if ("items" in section) {
