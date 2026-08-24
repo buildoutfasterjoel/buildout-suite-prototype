@@ -106,7 +106,19 @@ describe("buildDayPlan", () => {
 
   it("leaves closed-deal voucher paperwork out of the queue", () => {
     const { listings } = useDataStore.getState();
-    const { items } = buildDayPlan("2026-08-12", 50);
+    // The only case here that reads the seeded book rather than building its own
+    // tasks, so it is the only one that cannot pin a date. Seeded task dates are
+    // anchored to the real clock — `stageStartedAt` is a `faker.date.recent`,
+    // and `generateTasks` shifts off that — so a hardcoded "today" drifts out of
+    // the fixture window as real time passes. It had: by Aug 2026 the seeded
+    // window ran Jul 10 – Sep 26, and of the 8 deal tasks still due on or before
+    // the pinned Aug 12, *none* were on live deals, so the queue held no deal
+    // items at all and this failed on `stages.length`. `faker.seed()` keeps the
+    // draws deterministic; it is only the anchor that moves. Asking about today
+    // keeps the test's date and the fixtures' dates in the same relationship
+    // forever.
+    const today = new Date().toISOString().slice(0, 10);
+    const { items } = buildDayPlan(today, 50);
     const stages = items
       .filter((i) => i.dealId)
       .map((i) => listings.get(i.dealId!)?.status);
