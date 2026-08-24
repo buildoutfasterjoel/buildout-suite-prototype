@@ -1395,6 +1395,23 @@
   }
 }
 
+// A table with more columns than its container can hold. Bootstrap's `.table`
+// sets `width: 100%`, which makes a too-wide table *compress* its columns —
+// wrapping text and clipping figures — rather than overflow, so Blueprint's
+// `.table-container` (bordered, `overflow: auto`) never has anything to scroll.
+// Sizing to `max-content` hands the overflow back to the container, which is
+// what keeps the border still while the cells travel. `min-width: 100%` keeps
+// the table filling its card when the columns do fit, so a narrow table is
+// unaffected.
+//
+// Distinct from Blueprint's `variant="sticky"`, which sizes columns the same way
+// but also adds vertical cell rules and the frozen-column machinery — more than
+// a plain wide table needs.
+.table.table-wide {
+  width: max-content;
+  min-width: 100%;
+}
+
 // Clickable table rows (People contacts + My Lists overview): the whole row
 // navigates on a plain left-click. Hover tints the row storm-grey-50 and
 // recolors the name to the link color. Setting Bootstrap's `--bp-table-bg-state`

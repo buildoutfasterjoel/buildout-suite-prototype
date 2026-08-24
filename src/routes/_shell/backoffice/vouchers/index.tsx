@@ -237,17 +237,17 @@ function VouchersPage() {
               </Empty>
             ) : (
               <>
-                {/* Eleven columns outrun the container on a laptop; the table
-                    scrolls inside its own box rather than the page doing it.
-                    The inner width is load-bearing. `max-content` sizes the
-                    table to what its columns actually need, so no column is
-                    squeezed into wrapping or clipped mid-figure; `min-width:
-                    100%` keeps it filling the card when the columns do fit. A
-                    fixed floor can't do both — too low and columns scrunch, too
-                    high and a narrow table grows a scrollbar it doesn't need. */}
-                <div className="table-responsive">
-                  <div style={{ width: "max-content", minWidth: "100%" }}>
-                    <Table>
+                {/* Eleven columns outrun the container on a laptop. Blueprint's
+                    own `.table-container` is the scroller — it carries the
+                    border, the radius and `overflow: auto` — so the frame stays
+                    put and only the cells travel. Wrapping it in a scroller of
+                    our own slid the bordered box itself instead.
+
+                    All `.table-wide` adds is the width Bootstrap's `.table`
+                    takes away: `width: 100%` makes a too-wide table compress its
+                    columns rather than overflow, so the container never has
+                    anything to scroll. */}
+                    <Table className="table-wide">
                     <Table.Header>
                       <Table.Row>
                         <Table.Head>Voucher Name</Table.Head>
@@ -332,8 +332,6 @@ function VouchersPage() {
                       ))}
                     </Table.Body>
                     </Table>
-                  </div>
-                </div>
 
                 {pageCount > 1 && (
                   <Pagination>
