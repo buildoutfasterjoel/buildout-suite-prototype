@@ -949,10 +949,13 @@ export function DealFinancials({
                 deal carries a voucher from the moment it is created, so there is
                 always a status here — a new deal's reads Draft. */}
             <VoucherStatusBadge status={voucher.status} long />
-            {/* An approved voucher has nothing left to submit; the only thing
-                left to do with it is change it. */}
+            {/* Only a Draft has anything left to submit. Pending means it is
+                already with an approver and Approved means they signed off — in
+                both the only thing left to do with it is change it. Offering
+                "Submit" on a Pending voucher invited a broker to send a second
+                time what an approver was already holding. */}
             <Button variant="primary">
-              {voucher.status === "Approved" ? "Edit" : "Submit"}
+              {voucher.status === "Draft" ? "Submit" : "Edit"}
             </Button>
           </div>
         }
