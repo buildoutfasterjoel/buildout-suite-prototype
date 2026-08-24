@@ -227,8 +227,8 @@ function VouchersPage() {
                 <Table className="table-wide">
                   <Table.Header>
                     <Table.Row>
-                      <Table.Head>Voucher Name</Table.Head>
                       <Table.Head>Deal</Table.Head>
+                      <Table.Head>Voucher Name</Table.Head>
                       <Table.Head>ID</Table.Head>
                       <Table.Head>Status</Table.Head>
                       <Table.Head>Close Date</Table.Head>
@@ -258,12 +258,11 @@ function VouchersPage() {
                           openVoucher(row);
                         }}
                       >
+                        {/* The deal leads: it is what a broker recognises the
+                            row by. The medium weight travels with the first
+                            column rather than staying on the voucher name,
+                            since the leading column is the row's identity. */}
                         <Table.Cell className="fw-medium text-nowrap">
-                          <Link {...row.target} className="text-reset">
-                            {row.name}
-                          </Link>
-                        </Table.Cell>
-                        <Table.Cell className="text-nowrap">
                           <Link
                             to="/listings/$listingId"
                             params={{ listingId: row.dealId }}
@@ -274,6 +273,11 @@ function VouchersPage() {
                               icon={faArrowUpRight}
                               style={{ fontSize: 11 }}
                             />
+                          </Link>
+                        </Table.Cell>
+                        <Table.Cell className="text-nowrap">
+                          <Link {...row.target} className="text-reset">
+                            {row.name}
                           </Link>
                         </Table.Cell>
                         <Table.Cell className="text-muted">
