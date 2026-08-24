@@ -35,11 +35,18 @@ import type {
   Condo,
   UnitMixRow,
   VisualMediaLink,
+  VoucherApproval,
 } from './types'
 import type { CallList } from './contactLists'
 import type { SerializedContactFilters } from '#/components/contacts/contactFilterModel'
 import { reconcileContactDealFields } from './contactStage'
-import { CURRENT_USER, TEAMMATES, type AccessTier, type ContactShare } from './teammates'
+import {
+  CURRENT_USER,
+  TEAMMATES,
+  VOUCHER_APPROVER_IDS,
+  type AccessTier,
+  type ContactShare,
+} from './teammates'
 import { DEFAULT_PERSONAL_SPLIT_PCT, STAGE_CLOSE_PROBABILITY } from './commission'
 import { applyLeaseSpaces } from './leaseSpaceFixtures'
 
@@ -1402,6 +1409,27 @@ function generateListings(
           { weight: 20, value: 'Draft' as const },
         ])
 
+    const voucherCloseDate = status === 'closed'
+      ? faker.date.recent({ days: 90 }).toISOString().slice(0, 10)
+      : null
+
+    // Who signed the voucher off, and when. A sign-off follows the close by a
+    // few days — a voucher cannot be approved before there is a deal to settle —
+    // and where the deal has not closed at all it is simply recent.
+    const voucherApproval: VoucherApproval | null = voucherStatus !== 'Approved'
+      ? null
+      : {
+          reviewerId: faker.helpers.arrayElement(VOUCHER_APPROVER_IDS),
+          approvedOn: voucherCloseDate
+            ? new Date(
+                Date.parse(`${voucherCloseDate}T00:00:00`) +
+                  faker.number.int({ min: 1, max: 10 }) * 86_400_000,
+              )
+                .toISOString()
+                .slice(0, 10)
+            : faker.date.recent({ days: 45 }).toISOString().slice(0, 10),
+        }
+
     const grossScheduledIncome = Math.round(salePrice * 0.09)
     const otherIncome = Math.round(grossScheduledIncome * 0.04)
     const totalScheduledIncome = grossScheduledIncome + otherIncome
@@ -1508,7 +1536,8 @@ function generateListings(
           name,
           identifier: dealId,
           status: voucherStatus,
-          closeDate: status === 'closed' ? faker.date.recent({ days: 90 }).toISOString().slice(0, 10) : null,
+          closeDate: voucherCloseDate,
+          approval: voucherApproval,
           relatedContactsLabel: `${sellerName}${sellerContacts.length + buyerContacts.length > 1 ? ` & ${sellerContacts.length + buyerContacts.length - 1} more` : ''}`,
           preSplitDeductions,
           receivables: status === 'closed'

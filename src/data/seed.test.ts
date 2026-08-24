@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { generateTasks, generateDataset } from './seed'
+import { findTeammate } from './teammates'
 import type { ListingStage } from './types'
 import { buildContactTimeline } from '#/components/contacts/timelineArcs'
 import { matchesContactFilters, emptyContactFilters } from '#/components/contacts/contactFilterModel'
@@ -243,5 +244,37 @@ describe('lastActivityAt', () => {
     expect(contactedAge).toBeGreaterThan(7 * 86_400_000)
     // …but her voicemail yesterday is what the filter reads.
     expect(matchesContactFilters(rosa, { ...emptyContactFilters(), lastActivity: '7d' })).toBe(true)
+  })
+})
+
+describe('voucher approval seed', () => {
+  const { listings } = generateDataset()
+
+  it('gives every Approved voucher an approval, and no other voucher one', () => {
+    // The whole reason `approval` is one nested object rather than two flat
+    // nullable fields: the pair is all-or-nothing, and this is what says so.
+    for (const l of listings) {
+      const voucher = l.transaction.backOffice
+      if (voucher.status === 'Approved') expect(voucher.approval).not.toBeNull()
+      else expect(voucher.approval).toBeNull()
+    }
+  })
+
+  it('names a reviewer who is actually on the roster', () => {
+    const approved = listings
+      .map((l) => l.transaction.backOffice)
+      .filter((v) => v.approval !== null)
+    expect(approved.length).toBeGreaterThan(0)
+    for (const v of approved) {
+      expect(findTeammate(v.approval!.reviewerId)).toBeDefined()
+    }
+  })
+
+  it('never signs a voucher off before the deal closed', () => {
+    for (const l of listings) {
+      const voucher = l.transaction.backOffice
+      if (!voucher.approval || !voucher.closeDate) continue
+      expect(voucher.approval.approvedOn >= voucher.closeDate).toBe(true)
+    }
   })
 })

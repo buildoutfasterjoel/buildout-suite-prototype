@@ -265,7 +265,19 @@ function buildChild(
       // A space starts unmarketed no matter what the building was doing —
       // `applyStageDetail` is the only thing that puts a date back on it.
       listedOnDate: null,
-      backOffice: { ...shell.transaction.backOffice, receivables: [], closeDate: null },
+      // A space's voucher starts from scratch, whatever the building's was
+      // doing — the same reasoning as `listedOnDate` above. Inheriting the
+      // shell's status put a suite nobody had closed into Pending Approval, and
+      // once a sign-off carries a name and a date, an inherited `Approved`
+      // would credit a reviewer with approving a voucher that never existed.
+      // `applyStageDetail` is the only thing that moves a space's voucher on.
+      backOffice: {
+        ...shell.transaction.backOffice,
+        receivables: [],
+        closeDate: null,
+        status: 'Draft',
+        approval: null,
+      },
     },
     createdAt,
     updatedAt: createdAt,
@@ -442,6 +454,10 @@ function applyStageDetail(child: Listing, suiteNumber: number, tenantName?: stri
     name: child.name,
     identifier: child.dealId,
     status: 'Approved',
+    // Two days after the "Submit commission voucher" task above completed.
+    // Named outright rather than drawn from `VOUCHER_APPROVER_IDS`: this module
+    // must stay faker-free, and the seed tests pin it that way.
+    approval: { reviewerId: 'omar-haddad', approvedOn: isoDate(-6) },
     closeDate: child.transaction.closeDate,
     receivables: [
       {

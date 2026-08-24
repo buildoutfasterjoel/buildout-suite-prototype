@@ -733,6 +733,24 @@ export interface DealHistoryEntry {
   timestamp: string
 }
 
+/**
+ * Who signed a voucher off, and when.
+ *
+ * One nested object rather than two flat nullable fields on the voucher: the
+ * pair is all-or-nothing, and flat fields would admit a half-state — a reviewer
+ * with no date, or a date signed by nobody — that every reader would then have
+ * to defend against. `seed.test.ts` pins the invariant.
+ *
+ * The reviewer is stored as an id, not a name: `TEAMMATES` already owns the
+ * name and role, so copying either onto the deal would let the two drift.
+ */
+export interface VoucherApproval {
+  /** A `TEAMMATES` id — resolve it with `findTeammate`. */
+  reviewerId: string
+  /** `yyyy-mm-dd`, the day they signed off. Never earlier than `closeDate`. */
+  approvedOn: string
+}
+
 export interface DealFinancials {
   name: string
   identifier: string
@@ -741,6 +759,8 @@ export interface DealFinancials {
   relatedContactsLabel: string
   preSplitDeductions: FinancialDeduction[]
   receivables: FinancialReceivable[]
+  /** Non-null exactly when `status` is `'Approved'`. */
+  approval: VoucherApproval | null
 }
 
 /**

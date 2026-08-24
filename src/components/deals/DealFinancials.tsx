@@ -23,6 +23,7 @@ import {
 import type { DealBroker, Listing } from "#/data/types";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
 import { VoucherStatusBadge } from "./VoucherStatusBadge";
+import { VoucherApprovalBanner } from "./VoucherApprovalBanner";
 import { formatCurrency, formatDate } from "./dealDisplay";
 import { EditTransactionDialog } from "./EditTransactionDialog";
 import {
@@ -960,6 +961,8 @@ export function DealFinancials({
           </div>
         }
       />
+
+      <VoucherApprovalBanner voucher={voucher} />
 
       <TransactionSummarySection listing={listing} />
 
