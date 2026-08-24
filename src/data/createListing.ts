@@ -692,6 +692,7 @@ export function createProposalListing(draft: NewListingDraft): Listing {
         identifier: dealId,
         status: 'Draft',
         closeDate: null,
+        approval: null,
         relatedContactsLabel: primaryContact ? contactLabel(primaryContact) : '—',
         preSplitDeductions: [],
         receivables: [],

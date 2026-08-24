@@ -6,6 +6,7 @@ import type {
   DealBroker,
   DealHistoryEntry,
   FinancialDeduction,
+  FinancialReceivable,
   DealTask,
   DealTaskStatus,
   DealType,
@@ -35,11 +36,18 @@ import type {
   Condo,
   UnitMixRow,
   VisualMediaLink,
+  VoucherApproval,
 } from './types'
 import type { CallList } from './contactLists'
 import type { SerializedContactFilters } from '#/components/contacts/contactFilterModel'
 import { reconcileContactDealFields } from './contactStage'
-import { CURRENT_USER, TEAMMATES, type AccessTier, type ContactShare } from './teammates'
+import {
+  CURRENT_USER,
+  TEAMMATES,
+  VOUCHER_APPROVER_IDS,
+  type AccessTier,
+  type ContactShare,
+} from './teammates'
 import { DEFAULT_PERSONAL_SPLIT_PCT, STAGE_CLOSE_PROBABILITY } from './commission'
 import { applyLeaseSpaces } from './leaseSpaceFixtures'
 
@@ -1402,6 +1410,83 @@ function generateListings(
           { weight: 20, value: 'Draft' as const },
         ])
 
+    const voucherCloseDate = status === 'closed'
+      ? faker.date.recent({ days: 90 }).toISOString().slice(0, 10)
+      : null
+
+    // Who signed the voucher off, and when. A sign-off follows the close by a
+    // few days — a voucher cannot be approved before there is a deal to settle —
+    // and where the deal has not closed at all it is simply recent.
+    const voucherApproval: VoucherApproval | null = voucherStatus !== 'Approved'
+      ? null
+      : {
+          reviewerId: faker.helpers.arrayElement(VOUCHER_APPROVER_IDS),
+          approvedOn: voucherCloseDate
+            ? new Date(
+                Date.parse(`${voucherCloseDate}T00:00:00`) +
+                  faker.number.int({ min: 1, max: 10 }) * 86_400_000,
+              )
+                .toISOString()
+                .slice(0, 10)
+            : faker.date.recent({ days: 45 }).toISOString().slice(0, 10),
+        }
+
+    // What the brokerage billed out on a closed deal. Most deals bill the
+    // commission in one line to one party; some split it across two, the second
+    // billed to the other side, and a split's first line is often part-paid.
+    //
+    // The variety is the point: the Receivables table's Credited column and its
+    // bulk actions both need rows that differ from each other. A single
+    // uniform line per deal left the column reading $0.00 everywhere and made
+    // "these rows share a payer" a question with only one possible answer.
+    const receivables: FinancialReceivable[] = []
+    // `commissionAmount > 0`, not just closed: a zero-dollar receivable is not a
+    // bill anybody sent, and it reads as fully paid to anything comparing
+    // credited against amount.
+    if (status === 'closed' && commissionAmount > 0) {
+      const primaryPayer = buyerContacts[0] ?? sellerContacts[0]
+      const otherPayer = sellerContacts.find((c) => c.id !== primaryPayer.id)
+      // Cycled on the deal number rather than drawn, so the three states below
+      // are all guaranteed to appear. Only a handful of deals ever reach Closed,
+      // and at that sample size a probability left whole states unreachable —
+      // no receivable was ever fully paid, so nothing exercised the rule that a
+      // settled receivable has nothing left to apply a deposit against.
+      const variant = Number(dealId) % 3
+      // Split on a different modulus than `variant`, so the two vary
+      // independently. Sharing one would have tied "billed to two parties" to a
+      // single credited state, and with only a few closed deals that left one
+      // of the two conditions with no deal that could show it.
+      const split = otherPayer !== undefined && Number(dealId) % 2 === 1
+      const firstAmount = split
+        ? Math.round(commissionAmount * 0.6)
+        : commissionAmount
+
+      receivables.push({
+        id: faker.string.uuid(),
+        payerName: `${primaryPayer.firstName} ${primaryPayer.lastName}`,
+        payerEmail: primaryPayer.email,
+        dueDate: faker.date.recent({ days: 30 }).toISOString().slice(0, 10),
+        billingDescription: split ? 'Initial Payment' : 'Full Payment',
+        amount: firstAmount,
+        // Settled / part-paid / untouched, in that order — the Credited column
+        // has nothing to show until these differ from each other.
+        credited:
+          variant === 0 ? firstAmount : variant === 1 ? Math.round(firstAmount / 2) : 0,
+      })
+
+      if (split && otherPayer) {
+        receivables.push({
+          id: faker.string.uuid(),
+          payerName: `${otherPayer.firstName} ${otherPayer.lastName}`,
+          payerEmail: otherPayer.email,
+          dueDate: faker.date.soon({ days: 45 }).toISOString().slice(0, 10),
+          billingDescription: 'Balance Due',
+          amount: commissionAmount - firstAmount,
+          credited: 0,
+        })
+      }
+    }
+
     const grossScheduledIncome = Math.round(salePrice * 0.09)
     const otherIncome = Math.round(grossScheduledIncome * 0.04)
     const totalScheduledIncome = grossScheduledIncome + otherIncome
@@ -1508,22 +1593,11 @@ function generateListings(
           name,
           identifier: dealId,
           status: voucherStatus,
-          closeDate: status === 'closed' ? faker.date.recent({ days: 90 }).toISOString().slice(0, 10) : null,
+          closeDate: voucherCloseDate,
+          approval: voucherApproval,
           relatedContactsLabel: `${sellerName}${sellerContacts.length + buyerContacts.length > 1 ? ` & ${sellerContacts.length + buyerContacts.length - 1} more` : ''}`,
           preSplitDeductions,
-          receivables: status === 'closed'
-            ? [
-                {
-                  id: faker.string.uuid(),
-                  payerName: `${(buyerContacts[0] ?? sellerContacts[0]).firstName} ${(buyerContacts[0] ?? sellerContacts[0]).lastName}`,
-                  payerEmail: (buyerContacts[0] ?? sellerContacts[0]).email,
-                  dueDate: faker.date.recent({ days: 30 }).toISOString().slice(0, 10),
-                  billingDescription: 'Full Payment',
-                  amount: commissionAmount,
-                  credited: 0,
-                },
-              ]
-            : [],
+          receivables,
         },
       },
       marketing: {

@@ -8,21 +8,28 @@ import {
   Tooltip as ChartTooltip,
 } from "recharts";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
+import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { Switch } from "@buildoutinc/blueprint-react/ui/Switch";
 import { Table } from "@buildoutinc/blueprint-react/ui/Table";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faArrowRight,
+  faChevronDown,
+  faFileLines,
   faPlus,
   faPencil,
   faTableRowsAddAbove,
   faTableRowsAddBelow,
   faTrashCan,
 } from "@fortawesome/pro-regular-svg-icons";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { DealBroker, Listing } from "#/data/types";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
 import { VoucherStatusBadge } from "./VoucherStatusBadge";
+import { VoucherApprovalBanner } from "./VoucherApprovalBanner";
 import { formatCurrency, formatDate } from "./dealDisplay";
 import { EditTransactionDialog } from "./EditTransactionDialog";
 import {
@@ -434,6 +441,38 @@ function PreSplitDeductionsSection({ listing }: { listing: Listing }) {
   );
 }
 
+/** Width of the receivables checkbox gutter. */
+const RECEIVABLE_CHECKBOX_W = 44;
+
+/**
+ * One item in the Receivables Actions menu, greyed when its precondition fails.
+ *
+ * The `disabled` prop alone would not grey it: base-ui renders a menu item as a
+ * `div`, so Bootstrap's `.dropdown-item:disabled` rule never matches and the
+ * item stays black while silently refusing to open. The class is what greys it,
+ * the prop is what blocks the click and tells a screen reader — pairing them
+ * here is what stops the two drifting apart across three call sites.
+ */
+function ReceivableActionItem({
+  icon,
+  disabled,
+  children,
+}: {
+  icon: IconDefinition;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <DropdownMenu.Item
+      disabled={disabled}
+      className={disabled ? "disabled" : undefined}
+    >
+      <FontAwesomeIcon icon={icon} className="me-2" />
+      {children}
+    </DropdownMenu.Item>
+  );
+}
+
 function ReceivablesSection({ listing }: { listing: Listing }) {
   const receivables = listing.transaction.backOffice.receivables;
   const amountTotal = sum(receivables.map((r) => r.amount));
@@ -442,6 +481,36 @@ function ReceivablesSection({ listing }: { listing: Listing }) {
   const payerContactId =
     listing.buyerContactIds[0] ?? listing.sellerContactIds[0];
 
+  // Which rows the bulk actions apply to. Local state — nothing here persists,
+  // and every read below goes through `selectedRows` rather than the set itself,
+  // so an id left behind by a previous deal is ignored rather than miscounted.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const selectedRows = receivables.filter((r) => selectedIds.has(r.id));
+  const allSelected =
+    receivables.length > 0 && selectedRows.length === receivables.length;
+  const someSelected = selectedRows.length > 0;
+
+  function toggleAll(checked: boolean) {
+    setSelectedIds(checked ? new Set(receivables.map((r) => r.id)) : new Set());
+  }
+
+  function toggleOne(id: string, checked: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  // A deposit lands against money still outstanding, so a fully credited
+  // receivable has nothing left to apply one to.
+  const canApplyDeposit =
+    someSelected && selectedRows.every((r) => r.credited < r.amount);
+  // One invoice bills one payer.
+  const canCreateInvoice =
+    someSelected && new Set(selectedRows.map((r) => r.payerName)).size === 1;
+
   return (
     <Section
       title="Receivables"
@@ -449,11 +518,39 @@ function ReceivablesSection({ listing }: { listing: Listing }) {
         <div className="d-flex gap-2">
           <Button variant="ghost" size="sm">
             <FontAwesomeIcon icon={faPlus} />
-            Add Receivable
+            Add Sales Tax
           </Button>
           <Button variant="ghost" size="sm">
-            Actions
+            <FontAwesomeIcon icon={faPlus} />
+            Add Receivable
           </Button>
+          <DropdownMenu>
+            <DropdownMenu.Trigger
+              render={
+                <Button variant="ghost" size="sm" disabled={!someSelected}>
+                  Actions
+                  <FontAwesomeIcon icon={faChevronDown} />
+                </Button>
+              }
+            />
+            <DropdownMenu.Content align="end">
+              <ReceivableActionItem
+                icon={faArrowRight}
+                disabled={!canApplyDeposit}
+              >
+                Apply Deposit
+              </ReceivableActionItem>
+              <ReceivableActionItem
+                icon={faFileLines}
+                disabled={!canCreateInvoice}
+              >
+                Create New Invoice
+              </ReceivableActionItem>
+              <ReceivableActionItem icon={faTrashCan}>
+                Delete Receivables
+              </ReceivableActionItem>
+            </DropdownMenu.Content>
+          </DropdownMenu>
         </div>
       }
     >
@@ -463,6 +560,19 @@ function ReceivablesSection({ listing }: { listing: Listing }) {
         <Table>
           <Table.Header>
             <Table.Row>
+              <Table.Head
+                style={{
+                  width: RECEIVABLE_CHECKBOX_W,
+                  minWidth: RECEIVABLE_CHECKBOX_W,
+                }}
+              >
+                <Checkbox
+                  checked={allSelected}
+                  indeterminate={!allSelected && someSelected}
+                  onCheckedChange={(c) => toggleAll(c === true)}
+                  aria-label="Select all receivables"
+                />
+              </Table.Head>
               <Table.Head>Payer Name</Table.Head>
               <Table.Head>Due Date</Table.Head>
               <Table.Head>Billing Description</Table.Head>
@@ -472,7 +582,22 @@ function ReceivablesSection({ listing }: { listing: Listing }) {
           </Table.Header>
           <Table.Body>
             {receivables.map((r) => (
-              <Table.Row key={r.id}>
+              <Table.Row
+                key={r.id}
+                className={selectedIds.has(r.id) ? "table-active" : undefined}
+              >
+                <Table.Cell
+                  style={{
+                    width: RECEIVABLE_CHECKBOX_W,
+                    minWidth: RECEIVABLE_CHECKBOX_W,
+                  }}
+                >
+                  <Checkbox
+                    checked={selectedIds.has(r.id)}
+                    onCheckedChange={(c) => toggleOne(r.id, c === true)}
+                    aria-label={`Select receivable for ${r.payerName}`}
+                  />
+                </Table.Cell>
                 <Table.Cell>
                   <div>
                     <PersonLink name={r.payerName} contactId={payerContactId} />
@@ -490,7 +615,7 @@ function ReceivablesSection({ listing }: { listing: Listing }) {
               </Table.Row>
             ))}
             <Table.Row>
-              <Table.Cell colSpan={3} className="fw-semibold">
+              <Table.Cell colSpan={4} className="fw-semibold">
                 Sum
               </Table.Cell>
               <Table.Cell className="text-end fw-semibold">
@@ -507,7 +632,7 @@ function ReceivablesSection({ listing }: { listing: Listing }) {
   );
 }
 
-/** Label + Switch + ON/OFF state — the toggles above the rent schedule. */
+/** Switch + label — the toggles above the rent schedule. */
 function ToggleControl({
   label,
   checked,
@@ -517,13 +642,13 @@ function ToggleControl({
   checked: boolean;
   onChange: (checked: boolean) => void;
 }) {
+  // Switch first, label beside it — the same shape as `SwitchRow` everywhere
+  // else. The trailing "ON"/"OFF" text is redundant: the switch's own position
+  // already says which it is, and the word only competed with the label.
   return (
     <div className="d-flex align-items-center gap-2">
-      <span>{label}</span>
       <Switch checked={checked} onCheckedChange={onChange} aria-label={label} />
-      <span className="text-muted fs-small fw-semibold">
-        {checked ? "ON" : "OFF"}
-      </span>
+      <span>{label}</span>
     </div>
   );
 }
@@ -949,14 +1074,19 @@ export function DealFinancials({
                 deal carries a voucher from the moment it is created, so there is
                 always a status here — a new deal's reads Draft. */}
             <VoucherStatusBadge status={voucher.status} long />
-            {/* An approved voucher has nothing left to submit; the only thing
-                left to do with it is change it. */}
+            {/* Only a Draft has anything left to submit. Pending means it is
+                already with an approver and Approved means they signed off — in
+                both the only thing left to do with it is change it. Offering
+                "Submit" on a Pending voucher invited a broker to send a second
+                time what an approver was already holding. */}
             <Button variant="primary">
-              {voucher.status === "Approved" ? "Edit" : "Submit"}
+              {voucher.status === "Draft" ? "Submit" : "Edit"}
             </Button>
           </div>
         }
       />
+
+      <VoucherApprovalBanner voucher={voucher} />
 
       <TransactionSummarySection listing={listing} />
 

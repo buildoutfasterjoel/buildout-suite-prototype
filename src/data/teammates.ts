@@ -1,9 +1,13 @@
 /**
- * People and access-tier definitions for the contact-sharing flow.
+ * The company's people, plus the access tiers used by the contact-sharing flow.
  *
- * This is prototype seed data: a fixed roster of teammates the current user can
- * share a contact with, plus the access tiers from the sharing spec. There is no
- * persistence — share state lives in component state for the length of a session.
+ * This is prototype seed data: a fixed roster, and the sharing spec's tiers.
+ * Share state has no persistence — it lives in component state for the length of
+ * a session.
+ *
+ * The roster started out serving contact-sharing alone. It is now also where a
+ * voucher's approver comes from (see `VOUCHER_APPROVER_IDS`), because a second
+ * roster of internal names would let the same company have two sets of staff.
  */
 
 /** Access levels a contact can be shared at, per the sharing rules table. */
@@ -54,6 +58,26 @@ export const TEAMMATES: Teammate[] = [
   { id: "nina-alvarez", name: "Nina Alvarez", email: "nina.alvarez@buildout.com", role: "Broker", initials: "NA", avatarUrl: "https://randomuser.me/api/portraits/women/12.jpg" },
   { id: "priya-nair", name: "Priya Nair", email: "priya.nair@buildout.com", role: "Analyst", initials: "PN" },
 ];
+
+/**
+ * Who can sign off a commission voucher, as `TEAMMATES` ids.
+ *
+ * The back-office roles only — a voucher is the brokerage paying itself, so the
+ * broker who closed the deal is the one person who should not be approving it.
+ * That leaves the Transaction Coordinator, the Analyst, and the Assistant.
+ */
+export const VOUCHER_APPROVER_IDS = [
+  "omar-haddad",
+  "priya-nair",
+  "riley-park",
+] as const;
+
+/** A roster member by id — the current user included. Undefined if the id is unknown. */
+export function findTeammate(id: string): Teammate | undefined {
+  return id === CURRENT_USER.id
+    ? CURRENT_USER
+    : TEAMMATES.find((t) => t.id === id);
+}
 
 export interface AccessTierMeta {
   value: AccessTier;
