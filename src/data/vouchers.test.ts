@@ -155,6 +155,15 @@ describe('allVouchers', () => {
     expect(allVouchers()[0]!.brokerName).toBeNull()
   })
 
+  it('gives a brand-new deal a Draft voucher, so the page always has a status', () => {
+    // The voucher page reads this to choose between Submit and Edit; a deal
+    // with no voucher record would leave that header with nothing to show.
+    resetStore()
+    const deal = makeSale('Riverside Tower')
+    expect(getListing(deal.id)!.transaction.backOffice.status).toBe('Draft')
+    expect(allVouchers()[0]!.status).toBe('Draft')
+  })
+
   it('returns nothing when there are no deals', () => {
     resetStore()
     expect(allVouchers()).toEqual([])

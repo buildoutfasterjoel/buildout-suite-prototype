@@ -24,7 +24,10 @@ import {
   type VoucherFilterState,
 } from "#/data/voucherFilters";
 import { VoucherFilterBar } from "#/components/backoffice/VoucherFilterBar";
-import { StatusPill } from "#/components/deals/DealStageBadge";
+import {
+  VoucherStatusBadge,
+  VOUCHER_STATUS_COLORS,
+} from "#/components/deals/VoucherStatusBadge";
 import { formatCurrency, formatDate } from "#/components/deals/dealDisplay";
 import { TYPE_LABELS } from "#/components/properties/propertyDisplay";
 
@@ -34,17 +37,6 @@ export const Route = createFileRoute("/_shell/backoffice/vouchers/")({
 });
 
 const PAGE_SIZE = 25;
-
-/**
- * Status colours, borrowed from the deal-stage tokens so the back office reads
- * in the same palette as the pipeline: grey for not-yet-submitted, the
- * in-flight purple for awaiting a decision, and the closed green for approved.
- */
-const STATUS_COLORS: Record<VoucherStatus, string> = {
-  Draft: "var(--stage-inactive)",
-  Pending: "var(--stage-under-contract)",
-  Approved: "var(--stage-closed)",
-};
 
 /** Whole dollars — the band footes many vouchers, where cents are noise. */
 const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
@@ -59,7 +51,7 @@ function CommissionTile({
   count: number;
   grossCommission: number;
 }) {
-  const color = STATUS_COLORS[status];
+  const color = VOUCHER_STATUS_COLORS[status];
   return (
     <div className="col-12 col-md-4">
       <div className="bg-card border rounded overflow-hidden h-100">
@@ -261,9 +253,7 @@ function VouchersPage() {
                           {row.identifier}
                         </Table.Cell>
                         <Table.Cell>
-                          <StatusPill color={STATUS_COLORS[row.status]}>
-                            {row.status}
-                          </StatusPill>
+                          <VoucherStatusBadge status={row.status} />
                         </Table.Cell>
                         <Table.Cell className="text-nowrap">
                           {formatDate(row.closeDate)}
