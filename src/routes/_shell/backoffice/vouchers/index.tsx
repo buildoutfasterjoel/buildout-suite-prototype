@@ -1,26 +1,31 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
-import { Input } from "@buildoutinc/blueprint-react/ui/Input";
-import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Pagination } from "@buildoutinc/blueprint-react/ui/Pagination";
-import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { Table } from "@buildoutinc/blueprint-react/ui/Table";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowUpRight,
   faFileInvoiceDollar,
-  faMagnifyingGlass,
 } from "@fortawesome/pro-regular-svg-icons";
 import { useDataStore } from "#/data/dataStore";
 import {
   allVouchers,
   voucherTotals,
   VOUCHER_STATUSES,
+  VOUCHER_STATUS_LABELS,
   type VoucherRow,
   type VoucherStatus,
 } from "#/data/vouchers";
+import {
+  countActiveVoucherFilters,
+  emptyVoucherFilters,
+  matchesVoucherFilters,
+  type VoucherFilterState,
+} from "#/data/voucherFilters";
+import { VoucherFilterBar } from "#/components/backoffice/VoucherFilterBar";
 import { StatusPill } from "#/components/deals/DealStageBadge";
 import { formatCurrency, formatDate } from "#/components/deals/dealDisplay";
 import { TYPE_LABELS } from "#/components/properties/propertyDisplay";
@@ -42,13 +47,6 @@ const STATUS_COLORS: Record<VoucherStatus, string> = {
   Draft: "var(--stage-inactive)",
   Pending: "var(--stage-under-contract)",
   Approved: "var(--stage-closed)",
-};
-
-/** The band's tiles spell the state out; the table's badges stay terse. */
-const STATUS_BAND_LABELS: Record<VoucherStatus, string> = {
-  Draft: "Draft",
-  Pending: "Pending Approval",
-  Approved: "Approved",
 };
 
 /** Whole dollars — the band footes many vouchers, where cents are noise. */
@@ -75,7 +73,7 @@ function CommissionTile({
               className="rounded-circle flex-shrink-0"
               style={{ width: 8, height: 8, backgroundColor: color }}
             />
-            {STATUS_BAND_LABELS[status]}
+            {VOUCHER_STATUS_LABELS[status]}
           </div>
           {/* Body-size bold, not a display figure: three of these sit under a
               heading and above a table, and outsized numerals would outrank
@@ -107,23 +105,37 @@ function VouchersPage() {
   void useDataStore((s) => s.listings);
   const rows = allVouchers();
 
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<VoucherStatus | "all">("all");
+  const [filters, setFilters] = useState(emptyVoucherFilters);
   const [page, setPage] = useState(1);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return rows.filter((row) => {
-      if (status !== "all" && row.status !== status) return false;
-      if (!q) return true;
-      return (
-        row.name.toLowerCase().includes(q) ||
-        row.dealName.toLowerCase().includes(q) ||
-        row.identifier.toLowerCase().includes(q) ||
-        row.relatedContactsLabel.toLowerCase().includes(q)
-      );
-    });
-  }, [rows, search, status]);
+  // Pinned once per mount rather than read inside the predicate: a `new Date()`
+  // per row would let a page render straddle midnight, and it keeps the memo's
+  // dependency list honest.
+  const [now] = useState(() => new Date());
+
+  /** Every filter change returns to page one — page 4 of a 2-page result is nothing. */
+  function updateFilters(next: VoucherFilterState) {
+    setFilters(next);
+    setPage(1);
+  }
+
+  // The Brokers options are the brokers actually on the book, not a fixed
+  // roster — deals carry their own broker names, and an option nothing matches
+  // is a dead end.
+  const brokerNames = useMemo(
+    () =>
+      [...new Set(rows.map((r) => r.brokerName).filter((n): n is string => !!n))].sort(
+        (a, b) => a.localeCompare(b),
+      ),
+    [rows],
+  );
+
+  const filtered = useMemo(
+    () => rows.filter((row) => matchesVoucherFilters(row, filters, now)),
+    [rows, filters, now],
+  );
+
+  const activeFilterCount = countActiveVoucherFilters(filters);
 
   // The band foots the filtered set, so it always agrees with the table beneath
   // it — a filtered view whose totals described the whole book would misreport.
@@ -146,11 +158,6 @@ function VouchersPage() {
       <div className="bg-card border-bottom">
         <div className="container p-4 d-flex align-items-center justify-content-between gap-3">
           <div className="d-flex align-items-center gap-3">
-            <FontAwesomeIcon
-              icon={faFileInvoiceDollar}
-              className="text-muted"
-              style={{ fontSize: 20 }}
-            />
             <h1 className="fs-4 mb-0 fw-semibold">Vouchers</h1>
           </div>
           <span className="text-muted">
@@ -162,7 +169,7 @@ function VouchersPage() {
 
       <div className="container d-flex flex-column gap-4 py-4">
         <section className="d-flex flex-column gap-3">
-          <h2 className="fs-6 mb-0 fw-semibold">Gross Commission</h2>
+          <h2 className="fs-5 mb-0 fw-semibold">Gross Commission</h2>
           <div className="row g-3">
             {VOUCHER_STATUSES.map((s) => (
               <CommissionTile
@@ -177,53 +184,11 @@ function VouchersPage() {
 
         <Card className="shadow">
           <Card.Body className="d-flex flex-column gap-3">
-            <div className="d-flex align-items-center gap-2 flex-wrap">
-              <div style={{ maxWidth: 320, flex: "1 1 240px" }}>
-                <InputGroup>
-                  <InputGroup.Addon>
-                    <FontAwesomeIcon icon={faMagnifyingGlass} />
-                  </InputGroup.Addon>
-                  <Input
-                    type="search"
-                    placeholder="Search name, identifier, or contact"
-                    value={search}
-                    onChange={(e) => {
-                      setSearch(e.target.value);
-                      setPage(1);
-                    }}
-                  />
-                </InputGroup>
-              </div>
-              {/* Fixed width: Select.Trigger fills its container, so as a bare
-                  flex child it would eat the whole row. */}
-              <div style={{ width: 220 }}>
-                <Select
-                  value={status}
-                  onValueChange={(v) => {
-                    setStatus(v as VoucherStatus | "all");
-                    setPage(1);
-                  }}
-                >
-                  <Select.Trigger>
-                    <Select.Value>
-                      {(v) =>
-                        v === "all"
-                          ? "Voucher Status"
-                          : STATUS_BAND_LABELS[v as VoucherStatus]
-                      }
-                    </Select.Value>
-                  </Select.Trigger>
-                  <Select.Content>
-                    <Select.Item value="all">All Statuses</Select.Item>
-                    {VOUCHER_STATUSES.map((s) => (
-                      <Select.Item key={s} value={s}>
-                        {STATUS_BAND_LABELS[s]}
-                      </Select.Item>
-                    ))}
-                  </Select.Content>
-                </Select>
-              </div>
-            </div>
+            <VoucherFilterBar
+              filters={filters}
+              brokerNames={brokerNames}
+              onChange={updateFilters}
+            />
 
             {filtered.length === 0 ? (
               <Empty>
@@ -232,8 +197,20 @@ function VouchersPage() {
                 </Empty.Media>
                 <Empty.Content>
                   <Empty.Title>No vouchers match</Empty.Title>
-                  Try a different search term or clear the status filter.
+                  {activeFilterCount > 0
+                    ? "Widen the close-date window or clear a filter."
+                    : "No vouchers have been created yet."}
                 </Empty.Content>
+                {activeFilterCount > 0 && (
+                  <Empty.Actions>
+                    <Button
+                      variant="outline"
+                      onClick={() => updateFilters(emptyVoucherFilters())}
+                    >
+                      Reset filters
+                    </Button>
+                  </Empty.Actions>
+                )}
               </Empty>
             ) : (
               <>
@@ -247,91 +224,89 @@ function VouchersPage() {
                     takes away: `width: 100%` makes a too-wide table compress its
                     columns rather than overflow, so the container never has
                     anything to scroll. */}
-                    <Table className="table-wide">
-                    <Table.Header>
-                      <Table.Row>
-                        <Table.Head>Voucher Name</Table.Head>
-                        <Table.Head>Deal</Table.Head>
-                        <Table.Head>ID</Table.Head>
-                        <Table.Head>Status</Table.Head>
-                        <Table.Head>Close Date</Table.Head>
-                        <Table.Head>Deal Type</Table.Head>
-                        <Table.Head>Property Type</Table.Head>
-                        <Table.Head>Related Contacts</Table.Head>
-                        <Table.Head className="text-end">
-                          Transaction Value
-                        </Table.Head>
-                        <Table.Head className="text-end">
-                          Gross Commission
-                        </Table.Head>
-                        <Table.Head className="text-end">
-                          Receivables
-                        </Table.Head>
+                <Table className="table-wide">
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.Head>Voucher Name</Table.Head>
+                      <Table.Head>Deal</Table.Head>
+                      <Table.Head>ID</Table.Head>
+                      <Table.Head>Status</Table.Head>
+                      <Table.Head>Close Date</Table.Head>
+                      <Table.Head>Deal Type</Table.Head>
+                      <Table.Head>Property Type</Table.Head>
+                      <Table.Head>Related Contacts</Table.Head>
+                      <Table.Head className="text-end">
+                        Transaction Value
+                      </Table.Head>
+                      <Table.Head className="text-end">
+                        Gross Commission
+                      </Table.Head>
+                      <Table.Head className="text-end">Receivables</Table.Head>
+                    </Table.Row>
+                  </Table.Header>
+                  <Table.Body>
+                    {visible.map((row) => (
+                      // The whole row opens the voucher, matching the shell's
+                      // per-space index and ContactsTable. `shouldIgnoreRowClick`
+                      // exempts `<a>`, so the two links inside keep their own
+                      // targets and modified clicks still open new tabs.
+                      <Table.Row
+                        key={row.dealId}
+                        style={{ cursor: "pointer" }}
+                        onClick={(e) => {
+                          if (shouldIgnoreRowClick(e)) return;
+                          openVoucher(row);
+                        }}
+                      >
+                        <Table.Cell className="fw-medium text-nowrap">
+                          <Link {...row.target} className="text-reset">
+                            {row.name}
+                          </Link>
+                        </Table.Cell>
+                        <Table.Cell className="text-nowrap">
+                          <Link
+                            to="/listings/$listingId"
+                            params={{ listingId: row.dealId }}
+                            className="d-inline-flex align-items-center gap-1"
+                          >
+                            {row.dealName}
+                            <FontAwesomeIcon
+                              icon={faArrowUpRight}
+                              style={{ fontSize: 11 }}
+                            />
+                          </Link>
+                        </Table.Cell>
+                        <Table.Cell className="text-muted">
+                          {row.identifier}
+                        </Table.Cell>
+                        <Table.Cell>
+                          <StatusPill color={STATUS_COLORS[row.status]}>
+                            {row.status}
+                          </StatusPill>
+                        </Table.Cell>
+                        <Table.Cell className="text-nowrap">
+                          {formatDate(row.closeDate)}
+                        </Table.Cell>
+                        <Table.Cell>{row.dealType}</Table.Cell>
+                        <Table.Cell className="text-nowrap">
+                          {row.propertyType
+                            ? TYPE_LABELS[row.propertyType]
+                            : "--"}
+                        </Table.Cell>
+                        <Table.Cell>{row.relatedContactsLabel}</Table.Cell>
+                        <Table.Cell className="text-end text-nowrap">
+                          {formatCurrency(row.transactionValue)}
+                        </Table.Cell>
+                        <Table.Cell className="text-end text-nowrap">
+                          {formatCurrency(row.grossCommission)}
+                        </Table.Cell>
+                        <Table.Cell className="text-end text-nowrap">
+                          {formatCurrency(row.receivablesOutstanding)}
+                        </Table.Cell>
                       </Table.Row>
-                    </Table.Header>
-                    <Table.Body>
-                      {visible.map((row) => (
-                        // The whole row opens the voucher, matching the shell's
-                        // per-space index and ContactsTable. `shouldIgnoreRowClick`
-                        // exempts `<a>`, so the two links inside keep their own
-                        // targets and modified clicks still open new tabs.
-                        <Table.Row
-                          key={row.dealId}
-                          style={{ cursor: "pointer" }}
-                          onClick={(e) => {
-                            if (shouldIgnoreRowClick(e)) return;
-                            openVoucher(row);
-                          }}
-                        >
-                          <Table.Cell className="fw-medium text-nowrap">
-                            <Link {...row.target} className="text-reset">
-                              {row.name}
-                            </Link>
-                          </Table.Cell>
-                          <Table.Cell className="text-nowrap">
-                            <Link
-                              to="/listings/$listingId"
-                              params={{ listingId: row.dealId }}
-                              className="d-inline-flex align-items-center gap-1"
-                            >
-                              {row.dealName}
-                              <FontAwesomeIcon
-                                icon={faArrowUpRight}
-                                style={{ fontSize: 11 }}
-                              />
-                            </Link>
-                          </Table.Cell>
-                          <Table.Cell className="text-muted">
-                            {row.identifier}
-                          </Table.Cell>
-                          <Table.Cell>
-                            <StatusPill color={STATUS_COLORS[row.status]}>
-                              {row.status}
-                            </StatusPill>
-                          </Table.Cell>
-                          <Table.Cell className="text-nowrap">
-                            {formatDate(row.closeDate)}
-                          </Table.Cell>
-                          <Table.Cell>{row.dealType}</Table.Cell>
-                          <Table.Cell className="text-nowrap">
-                            {row.propertyType
-                              ? TYPE_LABELS[row.propertyType]
-                              : "--"}
-                          </Table.Cell>
-                          <Table.Cell>{row.relatedContactsLabel}</Table.Cell>
-                          <Table.Cell className="text-end text-nowrap">
-                            {formatCurrency(row.transactionValue)}
-                          </Table.Cell>
-                          <Table.Cell className="text-end text-nowrap">
-                            {formatCurrency(row.grossCommission)}
-                          </Table.Cell>
-                          <Table.Cell className="text-end text-nowrap">
-                            {formatCurrency(row.receivablesOutstanding)}
-                          </Table.Cell>
-                        </Table.Row>
-                      ))}
-                    </Table.Body>
-                    </Table>
+                    ))}
+                  </Table.Body>
+                </Table>
 
                 {pageCount > 1 && (
                   <Pagination>

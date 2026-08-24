@@ -1,4 +1,4 @@
-import type { DealType, Listing, PropertyType } from './types'
+import type { DealType, Listing, PropertyStatus, PropertyType } from './types'
 import { getStore, getProperty } from './store'
 import { dealShape } from './dealShape'
 
@@ -7,6 +7,17 @@ export type VoucherStatus = 'Draft' | 'Pending' | 'Approved'
 
 /** Display order for the KPI band: earliest state first, so it reads as a pipeline. */
 export const VOUCHER_STATUSES: VoucherStatus[] = ['Draft', 'Pending', 'Approved']
+
+/**
+ * How a status is written out where there is room for it — the KPI tiles and the
+ * status filter. The table's badges use the bare `status` instead, which is why
+ * only `Pending` differs: a column of badges cannot afford "Pending Approval".
+ */
+export const VOUCHER_STATUS_LABELS: Record<VoucherStatus, string> = {
+  Draft: 'Draft',
+  Pending: 'Pending Approval',
+  Approved: 'Approved',
+}
 
 /**
  * Where a deal's voucher page lives, as a typed route target.
@@ -35,8 +46,14 @@ export interface VoucherRow {
   status: VoucherStatus
   closeDate: string | null
   dealType: DealType
+  /** The deal's stage — the Deal Stage facet, and what `active-ytd-closed` reads. */
+  dealStage: PropertyStatus
   /** Null when the deal's property has been removed from the store. */
   propertyType: PropertyType | null
+  /** Street address of the deal's property, for the toolbar's address search. */
+  propertyAddress: string
+  /** The deal's primary internal broker, or null when it has none. */
+  brokerName: string | null
   relatedContactsLabel: string
   transactionValue: number
   grossCommission: number
@@ -83,6 +100,7 @@ export function allVouchers(): VoucherRow[] {
   return [...getStore().listings.values()]
     .map((deal) => {
       const voucher = deal.transaction.backOffice
+      const property = getProperty(deal.propertyId)
       return {
         dealId: deal.id,
         name: voucher.name,
@@ -91,7 +109,16 @@ export function allVouchers(): VoucherRow[] {
         status: voucher.status,
         closeDate: voucher.closeDate,
         dealType: deal.dealType,
-        propertyType: getProperty(deal.propertyId)?.propertyType ?? null,
+        dealStage: deal.status,
+        propertyType: property?.propertyType ?? null,
+        // Assembled the way the deal header shows it, so a broker searching the
+        // address they see on the deal page finds the voucher here.
+        propertyAddress: property
+          ? [property.street, property.city, property.state, property.zip]
+              .filter(Boolean)
+              .join(', ')
+          : '',
+        brokerName: deal.internalBrokers[0]?.name ?? null,
         relatedContactsLabel: voucher.relatedContactsLabel,
         transactionValue: deal.transaction.salePrice,
         grossCommission: deal.transaction.commissionAmount,

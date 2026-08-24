@@ -85,6 +85,7 @@ describe('allVouchers', () => {
       // createListing seeds every new deal's voucher as a Draft.
       status: 'Draft',
       dealType: 'Sale',
+      dealStage: 'proposal',
     })
   })
 
@@ -129,6 +130,29 @@ describe('allVouchers', () => {
     expect(allVouchers().map((r) => r.name)).toEqual([
       'Adler Building', 'Monroe Center', 'Zenith Plaza',
     ])
+  })
+
+  it('carries the address and primary broker the toolbar filters on', () => {
+    resetStore()
+    const deal = makeSale('Riverside Tower')
+    const listing = getListing(deal.id)!
+    listing.internalBrokers = [
+      { id: 'b1', name: 'Ada Nunez', role: 'Primary Broker', email: 'a@x.com',
+        side: 'internal', commissionSplitPct: 100, grossCommission: 0 },
+    ]
+
+    const r = allVouchers()[0]!
+    expect(r.brokerName).toBe('Ada Nunez')
+    // The property createProposalListing made carries no street, so the joined
+    // address is whatever of city/state/zip exists — never undefined text.
+    expect(r.propertyAddress).not.toContain('undefined')
+  })
+
+  it('reports no broker when the deal has none', () => {
+    resetStore()
+    const deal = makeSale('Riverside Tower')
+    getListing(deal.id)!.internalBrokers = []
+    expect(allVouchers()[0]!.brokerName).toBeNull()
   })
 
   it('returns nothing when there are no deals', () => {
