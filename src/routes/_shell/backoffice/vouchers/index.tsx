@@ -137,9 +137,15 @@ function VouchersPage() {
   const visible = filtered.slice(start, start + PAGE_SIZE);
 
   return (
-    <div className="h-100 overflow-y-auto overflow-x-hidden">
+    // The page fills the shell exactly and scrolls nothing itself: the table is
+    // the only scroller, so its header can stay put and the pagination keeps one
+    // spot at the foot of the card instead of riding up and down with row count.
+    // Every ancestor of that scroller needs `minHeight: 0` — a flex item's
+    // default `min-height: auto` refuses to shrink below its content, which
+    // would push the overflow back out to the page.
+    <div className="h-100 d-flex flex-column overflow-hidden">
       {/* Header band — the full-bleed identity strip a deal page opens with. */}
-      <div className="bg-card border-bottom">
+      <div className="bg-card border-bottom flex-shrink-0">
         <div className="container p-4 d-flex align-items-center justify-content-between gap-3">
           <div className="d-flex align-items-center gap-3">
             <h1 className="fs-4 mb-0 fw-semibold">Vouchers</h1>
@@ -151,8 +157,11 @@ function VouchersPage() {
         </div>
       </div>
 
-      <div className="container d-flex flex-column gap-4 py-4">
-        <section className="d-flex flex-column gap-3">
+      <div
+        className="container d-flex flex-column gap-4 py-4 flex-grow-1"
+        style={{ minHeight: 0 }}
+      >
+        <section className="d-flex flex-column gap-3 flex-shrink-0">
           <h2 className="fs-5 mb-0 fw-semibold">Gross Commission</h2>
           <div className="row g-3">
             {VOUCHER_STATUSES.map((s) => (
@@ -166,8 +175,14 @@ function VouchersPage() {
           </div>
         </section>
 
-        <Card className="shadow">
-          <Card.Body className="d-flex flex-column gap-3">
+        <Card
+          className="shadow d-flex flex-column flex-grow-1"
+          style={{ minHeight: 0 }}
+        >
+          <Card.Body
+            className="d-flex flex-column gap-3 flex-grow-1"
+            style={{ minHeight: 0 }}
+          >
             <VoucherFilterBar
               filters={filters}
               brokerNames={brokerNames}
@@ -175,7 +190,7 @@ function VouchersPage() {
             />
 
             {filtered.length === 0 ? (
-              <Empty>
+              <Empty className="flex-shrink-0">
                 <Empty.Media>
                   <FontAwesomeIcon icon={faFileInvoiceDollar} />
                 </Empty.Media>
@@ -208,8 +223,16 @@ function VouchersPage() {
                     takes away: `width: 100%` makes a too-wide table compress its
                     columns rather than overflow, so the container never has
                     anything to scroll. */}
-                <Table className="table-wide">
-                  <Table.Header>
+                {/* The one scrolling region on the page. `style` lands on
+                    Blueprint's `.table-container` (which already carries the
+                    border and `overflow: auto`), while `className` lands on the
+                    `<table>` — so the frame stays put and only the rows travel,
+                    vertically as well as horizontally now. */}
+                <Table
+                  className="table-wide"
+                  style={{ flexGrow: 1, minHeight: 0 }}
+                >
+                  <Table.Header sticky>
                     <Table.Row>
                       <Table.Head>Deal</Table.Head>
                       <Table.Head>Voucher Name</Table.Head>
@@ -283,7 +306,9 @@ function VouchersPage() {
                   // Centred in the card, matching the People table. Blueprint's
                   // Pagination root is a bare <nav>, so alignment is the
                   // caller's to set — left is not a default it chose.
-                  <Pagination className="d-flex justify-content-center">
+                  // `flex-shrink-0` keeps it at full height while the table
+                  // above absorbs whatever room is left.
+                  <Pagination className="d-flex justify-content-center flex-shrink-0">
                     <Pagination.Content>
                       <Pagination.Item>
                         <Pagination.Previous
