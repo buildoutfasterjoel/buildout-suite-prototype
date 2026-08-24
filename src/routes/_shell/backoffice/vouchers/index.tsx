@@ -280,7 +280,10 @@ function VouchersPage() {
                 </Table>
 
                 {pageCount > 1 && (
-                  <Pagination>
+                  // Centred in the card, matching the People table. Blueprint's
+                  // Pagination root is a bare <nav>, so alignment is the
+                  // caller's to set — left is not a default it chose.
+                  <Pagination className="d-flex justify-content-center">
                     <Pagination.Content>
                       <Pagination.Item>
                         <Pagination.Previous
