@@ -9,11 +9,20 @@ import type { DealType, PropertyStatus, PropertyType } from './types'
 import type { VoucherRow, VoucherStatus } from './vouchers'
 
 /**
- * The close-date windows the dropdown offers.
+ * The date windows the dropdown offers.
  *
- * Every one of these reads the *close* date, which is why a deal that has not
- * closed falls outside all of them — except `active-ytd-closed`, whose whole
- * purpose is to pull the open pipeline back in, and `any`.
+ * They do not all read the same date, which is the thing to know before editing
+ * one:
+ *
+ * - `last-365` reads the **created** date, so it means "deals opened in the last
+ *   year" and includes deals that have not closed. Confirmed with the team — it
+ *   is why the real product shows drafts under this default rather than the
+ *   handful of recent closings a close-date reading would leave.
+ * - `ytd` and `last-year` read the **close** date, so a deal that has not closed
+ *   falls outside them.
+ * - `active-ytd-closed` is the mixed one: any open deal, plus anything closed
+ *   this year.
+ * - `custom` reads the close date, as its label says.
  */
 export type CloseDatePreset =
   | 'last-365'
@@ -75,6 +84,7 @@ export type VoucherFilterInput = Pick<
   | 'identifier'
   | 'relatedContactsLabel'
   | 'propertyAddress'
+  | 'createdOn'
   | 'status'
   | 'dealType'
   | 'dealStage'
@@ -112,7 +122,7 @@ function isoDay(d: Date): string {
  * constructed from stored text, and no timezone can shift a boundary date into
  * the wrong day.
  */
-function matchesCloseDate(
+function matchesDateWindow(
   row: VoucherFilterInput,
   state: VoucherFilterState,
   now: Date,
@@ -124,8 +134,17 @@ function matchesCloseDate(
   const today = isoDay(now)
   const year = now.getFullYear()
 
-  // The one window that is not purely about the close date: an open deal is in
-  // the book by virtue of being open, whether or not it has a date yet.
+  // Reads the created date, not the close date: "deals opened in the last year",
+  // which is what the team confirmed this option means. A deal still being
+  // worked belongs in that answer, so there is no close-date test to fail.
+  if (preset === 'last-365') {
+    const from = new Date(now)
+    from.setDate(from.getDate() - 365)
+    return row.createdOn >= isoDay(from) && row.createdOn <= today
+  }
+
+  // The one window that mixes the two: an open deal is in the book by virtue of
+  // being open, whether or not it has a close date yet.
   if (preset === 'active-ytd-closed') {
     if (OPEN_STAGES.has(row.dealStage)) return true
     return close != null && close >= `${year}-01-01` && close <= today
@@ -136,11 +155,6 @@ function matchesCloseDate(
   if (close == null) return false
 
   switch (preset) {
-    case 'last-365': {
-      const from = new Date(now)
-      from.setDate(from.getDate() - 365)
-      return close >= isoDay(from) && close <= today
-    }
     case 'ytd':
       return close >= `${year}-01-01` && close <= today
     case 'last-year':
@@ -191,7 +205,7 @@ export function matchesVoucherFilters(
     return false
   }
 
-  return matchesCloseDate(row, state, now)
+  return matchesDateWindow(row, state, now)
 }
 
 /**

@@ -22,6 +22,7 @@ function row(overrides: Partial<VoucherFilterInput> = {}): VoucherFilterInput {
     propertyType: 'office',
     brokerName: 'Colleen Little',
     closeDate: null,
+    createdOn: '2026-08-01',
     ...overrides,
   }
 }
@@ -124,17 +125,30 @@ describe('matchesVoucherFilters — close date presets', () => {
     expect(matchesVoucherFilters(row({ closeDate: null }), anyDate(), NOW)).toBe(true)
   })
 
-  it('"last-365" keeps a close inside the window and drops one outside it', () => {
+  it('"last-365" reads the created date, not the close date', () => {
+    // Confirmed with the team: this option means "deals opened in the last
+    // year". A deal still being worked belongs in that answer.
     const s = { ...emptyVoucherFilters(), closeDate: 'last-365' as const }
-    expect(matchesVoucherFilters(row({ closeDate: '2026-08-03' }), s, NOW)).toBe(true)
-    expect(matchesVoucherFilters(row({ closeDate: '2025-08-25' }), s, NOW)).toBe(true)
-    expect(matchesVoucherFilters(row({ closeDate: '2025-08-23' }), s, NOW)).toBe(false)
+    expect(matchesVoucherFilters(row({ createdOn: '2026-08-03' }), s, NOW)).toBe(true)
+    expect(matchesVoucherFilters(row({ createdOn: '2025-08-25' }), s, NOW)).toBe(true)
+    expect(matchesVoucherFilters(row({ createdOn: '2025-08-23' }), s, NOW)).toBe(false)
   })
 
-  it('"last-365" drops a row that never closed', () => {
-    // A close-date window can say nothing about a deal with no close date.
+  it('"last-365" keeps a recently opened deal that has never closed', () => {
+    // The case the close-date reading got wrong: a draft voucher on a live deal
+    // is exactly what the back office is chasing, and it has no close date.
     const s = { ...emptyVoucherFilters(), closeDate: 'last-365' as const }
-    expect(matchesVoucherFilters(row({ closeDate: null }), s, NOW)).toBe(false)
+    expect(
+      matchesVoucherFilters(row({ createdOn: '2026-06-01', closeDate: null }), s, NOW),
+    ).toBe(true)
+  })
+
+  it('"last-365" ignores the close date entirely', () => {
+    // An old deal that closed yesterday is still an old deal.
+    const s = { ...emptyVoucherFilters(), closeDate: 'last-365' as const }
+    expect(
+      matchesVoucherFilters(row({ createdOn: '2023-01-01', closeDate: '2026-08-23' }), s, NOW),
+    ).toBe(false)
   })
 
   it('"ytd" counts this calendar year only', () => {

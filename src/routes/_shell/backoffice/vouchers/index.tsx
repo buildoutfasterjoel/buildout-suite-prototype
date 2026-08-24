@@ -197,7 +197,7 @@ function VouchersPage() {
                 <Empty.Content>
                   <Empty.Title>No vouchers match</Empty.Title>
                   {activeFilterCount > 0
-                    ? "Widen the close-date window or clear a filter."
+                    ? "Widen the date window or clear a filter."
                     : "No vouchers have been created yet."}
                 </Empty.Content>
                 {activeFilterCount > 0 && (

@@ -148,6 +148,20 @@ describe('allVouchers', () => {
     expect(r.propertyAddress).not.toContain('undefined')
   })
 
+  it('normalises the created date to a plain day for the date windows', () => {
+    resetStore()
+    const deal = makeSale('Riverside Tower')
+    const created = new Date(getListing(deal.id)!.createdAt)
+    const expected = [
+      created.getFullYear(),
+      String(created.getMonth() + 1).padStart(2, '0'),
+      String(created.getDate()).padStart(2, '0'),
+    ].join('-')
+
+    expect(allVouchers()[0]!.createdOn).toBe(expected)
+    expect(allVouchers()[0]!.createdOn).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+
   it('reports no broker when the deal has none', () => {
     resetStore()
     const deal = makeSale('Riverside Tower')

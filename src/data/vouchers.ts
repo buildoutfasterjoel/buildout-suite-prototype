@@ -45,6 +45,14 @@ export interface VoucherRow {
   identifier: string
   status: VoucherStatus
   closeDate: string | null
+  /**
+   * The day the deal was created, as `yyyy-mm-dd`.
+   *
+   * Normalised to a local calendar day here rather than kept as the raw
+   * timestamp, so every date the filters compare is the same shape and sorts
+   * chronologically as a plain string.
+   */
+  createdOn: string
   dealType: DealType
   /** The deal's stage — the Deal Stage facet, and what `active-ytd-closed` reads. */
   dealStage: PropertyStatus
@@ -101,6 +109,7 @@ export function allVouchers(): VoucherRow[] {
     .map((deal) => {
       const voucher = deal.transaction.backOffice
       const property = getProperty(deal.propertyId)
+      const created = new Date(deal.createdAt)
       return {
         dealId: deal.id,
         name: voucher.name,
@@ -108,6 +117,11 @@ export function allVouchers(): VoucherRow[] {
         identifier: voucher.identifier,
         status: voucher.status,
         closeDate: voucher.closeDate,
+        createdOn: [
+          created.getFullYear(),
+          String(created.getMonth() + 1).padStart(2, '0'),
+          String(created.getDate()).padStart(2, '0'),
+        ].join('-'),
         dealType: deal.dealType,
         dealStage: deal.status,
         propertyType: property?.propertyType ?? null,
