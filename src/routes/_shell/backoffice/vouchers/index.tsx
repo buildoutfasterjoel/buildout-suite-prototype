@@ -239,17 +239,20 @@ function VouchersPage() {
               <>
                 {/* Eleven columns outrun the container on a laptop; the table
                     scrolls inside its own box rather than the page doing it.
-                    The floor width is load-bearing: without it the table shrinks
-                    to fit, `table-responsive` never has anything to scroll, and
-                    the nowrap money columns are clipped mid-figure instead. */}
+                    The inner width is load-bearing. `max-content` sizes the
+                    table to what its columns actually need, so no column is
+                    squeezed into wrapping or clipped mid-figure; `min-width:
+                    100%` keeps it filling the card when the columns do fit. A
+                    fixed floor can't do both — too low and columns scrunch, too
+                    high and a narrow table grows a scrollbar it doesn't need. */}
                 <div className="table-responsive">
-                  <div style={{ minWidth: 1320 }}>
+                  <div style={{ width: "max-content", minWidth: "100%" }}>
                     <Table>
                     <Table.Header>
                       <Table.Row>
                         <Table.Head>Voucher Name</Table.Head>
                         <Table.Head>Deal</Table.Head>
-                        <Table.Head>Identifier</Table.Head>
+                        <Table.Head>ID</Table.Head>
                         <Table.Head>Status</Table.Head>
                         <Table.Head>Close Date</Table.Head>
                         <Table.Head>Deal Type</Table.Head>
