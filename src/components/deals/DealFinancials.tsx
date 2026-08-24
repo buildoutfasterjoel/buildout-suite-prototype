@@ -507,7 +507,7 @@ function ReceivablesSection({ listing }: { listing: Listing }) {
   );
 }
 
-/** Label + Switch + ON/OFF state — the toggles above the rent schedule. */
+/** Switch + label — the toggles above the rent schedule. */
 function ToggleControl({
   label,
   checked,
@@ -517,13 +517,13 @@ function ToggleControl({
   checked: boolean;
   onChange: (checked: boolean) => void;
 }) {
+  // Switch first, label beside it — the same shape as `SwitchRow` everywhere
+  // else. The trailing "ON"/"OFF" text is redundant: the switch's own position
+  // already says which it is, and the word only competed with the label.
   return (
     <div className="d-flex align-items-center gap-2">
-      <span>{label}</span>
       <Switch checked={checked} onCheckedChange={onChange} aria-label={label} />
-      <span className="text-muted fs-small fw-semibold">
-        {checked ? "ON" : "OFF"}
-      </span>
+      <span>{label}</span>
     </div>
   );
 }
