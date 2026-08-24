@@ -56,16 +56,38 @@ describe('voucherHref', () => {
     })
   })
 
-  it('sends a shell to its per-space Vouchers index', () => {
+  it('reports no voucher for a shell', () => {
     resetStore()
     const parent = makeLease('Mall Assignment')
     const unit = addPropertyUnit(parent.propertyId, {
       label: 'Suite 100', sqft: 1000, unitType: 'retail',
     })!
     addSpaceToDeal(parent.id, unit.id)
-    // A shell earns nothing itself; its money is one voucher per space.
+    // Splitting a lease deal hands the transaction to each space. The building
+    // keeps the assignment, not the money — so it has no voucher of its own.
+    expect(voucherHref(getListing(parent.id)!)).toBeNull()
+  })
+
+  it('gives the voucher back if the last space is removed', () => {
+    resetStore()
+    const parent = makeLease('Mall Assignment')
+    const unit = addPropertyUnit(parent.propertyId, {
+      label: 'Suite 100', sqft: 1000, unitType: 'retail',
+    })!
+    const space = addSpaceToDeal(parent.id, unit.id)!.deal
+    expect(voucherHref(getListing(parent.id)!)).toBeNull()
+
+    // `dealShape` reads whether children exist, so this is derived rather than
+    // stamped on at split time — which is what makes it reversible. The stored
+    // `backOffice` record was never cleared, and the fixtures rely on that:
+    // a child copies the shell's record when it is created.
+    useDataStore.setState((st) => {
+      const listings = new Map(st.listings)
+      listings.delete(space.id)
+      return { listings }
+    })
     expect(voucherHref(getListing(parent.id)!)).toEqual({
-      to: '/listings/$listingId/vouchers',
+      to: '/listings/$listingId/financials',
       params: { listingId: parent.id },
     })
   })
@@ -89,7 +111,7 @@ describe('allVouchers', () => {
     })
   })
 
-  it('includes a shell and each of its spaces as separate rows', () => {
+  it('lists each space but not the shell they hang off', () => {
     resetStore()
     const parent = makeLease('Mall Assignment')
     const a = addPropertyUnit(parent.propertyId, { label: 'Suite 100', sqft: 1000, unitType: 'retail' })!
@@ -98,8 +120,19 @@ describe('allVouchers', () => {
     const spaceB = addSpaceToDeal(parent.id, b.id)!.deal
 
     const ids = allVouchers().map((r) => r.dealId)
-    expect(ids).toHaveLength(3)
-    expect(ids).toEqual(expect.arrayContaining([parent.id, spaceA.id, spaceB.id]))
+    expect(ids).toEqual(expect.arrayContaining([spaceA.id, spaceB.id]))
+    // The building would otherwise sit in the list beside its own suites,
+    // claiming a voucher it does not have.
+    expect(ids).not.toContain(parent.id)
+    expect(ids).toHaveLength(2)
+  })
+
+  it('still lists a lease deal that has no spaces yet', () => {
+    resetStore()
+    // A lease deal is only a shell once it has children; before that it is a
+    // normal whole-building listing and keeps its voucher.
+    const parent = makeLease('Standalone Lease')
+    expect(allVouchers().map((r) => r.dealId)).toEqual([parent.id])
   })
 
   it('totals a deal’s receivables net of what has been credited', () => {
@@ -146,6 +179,20 @@ describe('allVouchers', () => {
     // The property createProposalListing made carries no street, so the joined
     // address is whatever of city/state/zip exists — never undefined text.
     expect(r.propertyAddress).not.toContain('undefined')
+  })
+
+  it('normalises the created date to a plain day for the date windows', () => {
+    resetStore()
+    const deal = makeSale('Riverside Tower')
+    const created = new Date(getListing(deal.id)!.createdAt)
+    const expected = [
+      created.getFullYear(),
+      String(created.getMonth() + 1).padStart(2, '0'),
+      String(created.getDate()).padStart(2, '0'),
+    ].join('-')
+
+    expect(allVouchers()[0]!.createdOn).toBe(expected)
+    expect(allVouchers()[0]!.createdOn).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
 
   it('reports no broker when the deal has none', () => {

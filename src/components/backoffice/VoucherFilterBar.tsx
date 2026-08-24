@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Calendar } from "@buildoutinc/blueprint-react/ui/Calendar";
@@ -59,8 +60,11 @@ function shortDate(iso: string | null): string {
 }
 
 /**
- * The close-date window: a single-select list, plus a range calendar revealed
- * only by the Custom option.
+ * The date window: a single-select list, plus a range calendar revealed only by
+ * the Custom option.
+ *
+ * The options do not all read the same date — see `CLOSE_DATE_PRESETS` — which
+ * is why the two that are about closing say so in their labels.
  *
  * A radio list rather than a Select because the options are sentences, and
  * because Custom has to expand in place — a Select closes on choice, which would
@@ -84,6 +88,11 @@ function CloseDateDropdown({
   // Custom's full label ("Custom range of close date") is a sentence, and as a
   // trigger it pushes the rest of the toolbar onto a second row. Once a range is
   // picked the dates say it more precisely anyway.
+  // Controlled so a chosen preset can dismiss the popover. Custom is the one
+  // exception: picking it reveals the calendar, so closing on that click would
+  // shut the thing the click asked for.
+  const [open, setOpen] = useState(false);
+
   const label =
     value === "custom"
       ? from || to
@@ -92,7 +101,7 @@ function CloseDateDropdown({
       : CLOSE_DATE_LABELS[value];
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <Popover.Trigger
         render={
           <Button
@@ -108,15 +117,17 @@ function CloseDateDropdown({
         <Popover.Body className="d-flex flex-column gap-2">
           <RadioGroup
             value={value}
-            onValueChange={(v) =>
+            onValueChange={(v) => {
               onChange({
                 closeDate: v as CloseDatePreset,
                 // Dropping the bounds on the way out of Custom keeps a stale
                 // range from silently applying if it is picked again later.
                 customFrom: v === "custom" ? from : null,
                 customTo: v === "custom" ? to : null,
-              })
-            }
+              });
+              // A preset is the whole answer, so the popover has no more to ask.
+              if (v !== "custom") setOpen(false);
+            }}
           >
             {CLOSE_DATE_PRESETS.map((preset) => (
               <label

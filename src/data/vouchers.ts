@@ -33,7 +33,6 @@ export type VoucherTarget =
       to: '/listings/$listingId/spaces/$spaceId/financials'
       params: { listingId: string; spaceId: string }
     }
-  | { to: '/listings/$listingId/vouchers'; params: { listingId: string } }
 
 export interface VoucherRow {
   /** The deal this voucher settles — also the row's identity. */
@@ -45,6 +44,14 @@ export interface VoucherRow {
   identifier: string
   status: VoucherStatus
   closeDate: string | null
+  /**
+   * The day the deal was created, as `yyyy-mm-dd`.
+   *
+   * Normalised to a local calendar day here rather than kept as the raw
+   * timestamp, so every date the filters compare is the same shape and sorts
+   * chronologically as a plain string.
+   */
+  createdOn: string
   dealType: DealType
   /** The deal's stage — the Deal Stage facet, and what `active-ytd-closed` reads. */
   dealStage: PropertyStatus
@@ -64,19 +71,23 @@ export interface VoucherRow {
 }
 
 /**
- * The voucher page for a deal. Three destinations, because a voucher is not a
- * record of its own — it is a tab whose route depends on the deal's shape, and
- * this mirrors the swap `dealNav` already makes in the deal sidebar.
+ * The voucher page for a deal, or null when the deal has no voucher.
  *
- * A shell is the odd one: its spaces carry the transactions, so it earns no
- * commission itself and has no voucher. Its row points at the per-space Vouchers
- * index instead, which is the honest answer to "show me this deal's money".
+ * A voucher is not a record of its own — it is a tab whose route depends on the
+ * deal's shape, which is why this mirrors the swap `dealNav` already makes in
+ * the deal sidebar.
+ *
+ * **A shell has no voucher.** Splitting a lease deal hands the transaction to
+ * each space; the building keeps the assignment, not the money. Its own
+ * `backOffice` record is left untouched in the store — the fixtures copy it onto
+ * each child at creation, and `dealShape` reads whether children exist rather
+ * than anything stamped on at split time. So this is derived, not mutated, and
+ * it reverses on its own: remove the last space and the deal is a flat lease
+ * again, with its voucher back.
  */
-export function voucherHref(deal: Listing): VoucherTarget {
+export function voucherHref(deal: Listing): VoucherTarget | null {
   const shape = dealShape(deal)
-  if (shape === 'shell') {
-    return { to: '/listings/$listingId/vouchers', params: { listingId: deal.id } }
-  }
+  if (shape === 'shell') return null
   if (shape === 'space' && deal.parentDealId) {
     return {
       to: '/listings/$listingId/spaces/$spaceId/financials',
@@ -89,25 +100,38 @@ export function voucherHref(deal: Listing): VoucherTarget {
 /**
  * Every voucher in the book, flattened for the Back Office index.
  *
- * One row per deal, including shells and their spaces — every deal carries a
+ * One row per deal that *has* a voucher — every deal carries a
  * `transaction.backOffice` record from the moment it is created, so there is no
- * separate notion of "a voucher was created" to filter on.
+ * separate notion of "a voucher was created" to filter on, but a shell's record
+ * is a leftover from before it was split and belongs to its spaces now. Listing
+ * it would put a building in the table beside its own suites, claiming money the
+ * suites are already claiming.
  *
  * Sorted by voucher name. The store returns insertion order, which is arbitrary
  * to a broker and would also reshuffle the table on any unrelated deal edit.
  */
 export function allVouchers(): VoucherRow[] {
   return [...getStore().listings.values()]
-    .map((deal) => {
+    .flatMap((deal) => {
+      // `voucherHref` owns the "does this deal have a voucher" question, so the
+      // rule lives in one place rather than being re-derived here.
+      const target = voucherHref(deal)
+      if (!target) return []
       const voucher = deal.transaction.backOffice
       const property = getProperty(deal.propertyId)
-      return {
+      const created = new Date(deal.createdAt)
+      return [{
         dealId: deal.id,
         name: voucher.name,
         dealName: deal.name,
         identifier: voucher.identifier,
         status: voucher.status,
         closeDate: voucher.closeDate,
+        createdOn: [
+          created.getFullYear(),
+          String(created.getMonth() + 1).padStart(2, '0'),
+          String(created.getDate()).padStart(2, '0'),
+        ].join('-'),
         dealType: deal.dealType,
         dealStage: deal.status,
         propertyType: property?.propertyType ?? null,
@@ -128,8 +152,8 @@ export function allVouchers(): VoucherRow[] {
           (sum, r) => sum + (r.amount - r.credited),
           0,
         ),
-        target: voucherHref(deal),
-      }
+        target,
+      }]
     })
     .sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric: true }))
 }

@@ -2,13 +2,24 @@ import { VOUCHER_STATUS_LABELS, type VoucherStatus } from "#/data/vouchers";
 import { StatusPill } from "./DealStageBadge";
 
 /**
- * Voucher-status colours, borrowed from the deal-stage tokens so the back office
- * reads in the same palette as the pipeline: grey for not yet submitted, the
- * in-flight purple for awaiting a decision, and the closed green for approved.
+ * Voucher-status colours: grey for not yet submitted, the warning ramp for
+ * awaiting a decision, and the closed green for approved.
+ *
+ * Pending is the one that is not a deal-stage token. It used to borrow the
+ * in-flight purple, which sat quietly among the others; a voucher waiting on an
+ * approver is the status that wants chasing, so it takes the warning ramp
+ * instead. That is still the pipeline's palette — Blueprint's `--bp-warning`
+ * resolves to harvest-gold-500, the same hue `--stage-proposal` carries — but it
+ * is referenced as *warning* rather than as a stage, because a voucher awaiting
+ * approval has nothing to do with a deal being pitched.
+ *
+ * `--bp-warning`, not `--root-warning` or `--color-harvest-gold-500`: only the
+ * `--bp-` prefixed names are actually emitted. The others read as undefined in
+ * the browser and fall through to whatever fallback the call site supplies.
  */
 export const VOUCHER_STATUS_COLORS: Record<VoucherStatus, string> = {
   Draft: "var(--stage-inactive)",
-  Pending: "var(--stage-under-contract)",
+  Pending: "var(--bp-warning)",
   Approved: "var(--stage-closed)",
 };
 
