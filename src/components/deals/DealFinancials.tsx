@@ -354,10 +354,13 @@ function InternalCommissionsSection({
         onAdd={(b) => onChange([...brokers, b])}
       />
       <div className="d-flex flex-column gap-4">
-        <Table dense>
+        <Table dense className="align-middle">
           <Table.Header>
             <Table.Row>
-              <Table.Head>Brokers</Table.Head>
+              {/* Name and dropdown share equal widths: the remainder splits
+                  between them in proportion, so they stay even at any table
+                  width and a short name cannot claim half the row. */}
+              <Table.Head style={{ width: 220 }}>Brokers</Table.Head>
               <Table.Head style={{ width: 220 }}>Transaction Side</Table.Head>
               <Table.Head className="text-end" style={{ width: 132 }}>
                 Gross %
@@ -434,11 +437,11 @@ function InternalCommissionsSection({
           </Table.Footer>
         </Table>
 
-        <Table dense>
+        <Table dense className="align-middle">
           <Table.Header>
             <Table.Row>
-              <Table.Head>Brokers</Table.Head>
-              <Table.Head style={{ width: 260 }}>Commission Plan</Table.Head>
+              <Table.Head style={{ width: 220 }}>Brokers</Table.Head>
+              <Table.Head style={{ width: 220 }}>Commission Plan</Table.Head>
               <Table.Head className="text-end" style={{ width: 132 }}>
                 Broker Split %
               </Table.Head>
@@ -672,7 +675,7 @@ function PreSplitDeductionsSection({
           No pre-split deductions have been added.
         </p>
       ) : (
-        <Table dense>
+        <Table dense className="align-middle">
           <Table.Header>
             {/* The three number columns are pinned narrow so Description — the
                 only free-text field, and the one that runs long — takes what is
