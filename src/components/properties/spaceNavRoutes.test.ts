@@ -17,10 +17,24 @@ const SPACE_ROUTES_DIR = fileURLToPath(
   new URL("../../routes/_shell/listings/$listingId_/spaces/$spaceId/", import.meta.url),
 );
 
+/**
+ * Space routes that are deliberately not nav sections. `edit` is the space's Edit
+ * Deal form, entered from the Transaction pencil on its Voucher — the same rule
+ * the building's `/edit` follows (it isn't in `NAV_GROUPS` either; it just lives
+ * in a directory this test doesn't scan). Anything added here needs a reason:
+ * the default is that a route is reachable from the sidebar.
+ */
+const NOT_NAV_SECTIONS = ["edit"];
+
 const routeSlugs = readdirSync(SPACE_ROUTES_DIR)
   .filter((f) => f.endsWith(".tsx") && f !== "index.tsx")
   .map((f) => f.replace(/\.tsx$/, ""))
   .sort();
+
+/** The slugs the nav is answerable for — every route file bar the exemptions. */
+const navigableSlugs = routeSlugs.filter(
+  (slug) => !NOT_NAV_SECTIONS.includes(slug),
+);
 
 const navHrefs = visibleNavGroups("space", {
   leaseParent: false,
@@ -39,10 +53,12 @@ describe("a space's nav and its routes", () => {
   });
 
   it("has a nav item for every route", () => {
-    const unreachable = routeSlugs.filter((slug) => !navHrefs.includes(slug));
+    const unreachable = navigableSlugs.filter(
+      (slug) => !navHrefs.includes(slug),
+    );
     expect(
       unreachable,
-      "These space routes exist but no nav item points at them. Either add the nav item or delete the route.",
+      "These space routes exist but no nav item points at them. Either add the nav item, delete the route, or — if it is entered some other way, like the building's /edit is — add it to NOT_NAV_SECTIONS with a reason.",
     ).toEqual([]);
   });
 

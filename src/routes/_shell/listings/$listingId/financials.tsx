@@ -8,7 +8,8 @@ export const Route = createFileRoute("/_shell/listings/$listingId/financials")({
 
 function FinancialsRoute() {
   const { listingId } = Route.useParams();
-  // Reactive selector so an Edit Transaction save re-renders the summary immediately.
+  // Reactive selector so a save on the Edit Deal form re-renders the summary
+  // as soon as this page comes back into view.
   const listing = useDataStore((s) => s.listings.get(listingId));
   if (!listing) return null;
 

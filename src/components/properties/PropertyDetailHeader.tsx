@@ -193,6 +193,11 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
                     <Button
                       variant="ghost"
                       size="icon"
+                      // Named on the button, not left to the tooltip: Blueprint's
+                      // Tooltip describes a trigger, it does not name it, so an
+                      // icon-only pencil reads as an unlabelled button to a
+                      // screen reader until hover — which never happens there.
+                      aria-label="Edit deal"
                       nativeButton={false}
                       render={
                         <Link

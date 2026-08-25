@@ -15,6 +15,8 @@ import {
   updateDealMarketing,
   updateDealStage,
   updateDealTransaction,
+  submitVoucher,
+  reopenVoucher,
 } from './actions'
 import { emptyDraft } from './createListing'
 import { closeProbabilityForStage, commissionForecast } from './commission'
@@ -333,5 +335,80 @@ describe('actions', () => {
     expect(useDataStore.getState().tasks.get(task.id)).toBeTruthy()
     deleteTask(task.id)
     expect(useDataStore.getState().tasks.get(task.id)).toBeUndefined()
+  })
+
+  it('submitVoucher moves a Draft voucher to Pending', () => {
+    const deal = [...useDataStore.getState().listings.values()][0]
+    updateDealTransaction(deal.id, {
+      backOffice: { ...deal.transaction.backOffice, status: 'Draft' },
+    })
+    const { deal: updated } = submitVoucher(deal.id)
+    expect(updated?.transaction.backOffice.status).toBe('Pending')
+  })
+
+  it('submitVoucher leaves a voucher that is already with an approver alone', () => {
+    const deal = [...useDataStore.getState().listings.values()][0]
+    for (const status of ['Pending', 'Approved'] as const) {
+      const { deal: seeded } = updateDealTransaction(deal.id, {
+        backOffice: { ...deal.transaction.backOffice, status },
+      })
+      const { deal: updated } = submitVoucher(deal.id)
+      expect(updated?.transaction.backOffice.status).toBe(status)
+      // Referentially equal, so a no-op submit cannot re-render the page.
+      expect(updated).toBe(seeded)
+    }
+  })
+
+  it('submitVoucher returns null for an unknown deal', () => {
+    expect(submitVoucher('does-not-exist').deal).toBeNull()
+  })
+  it('reopenVoucher takes a Pending voucher back to Draft', () => {
+    const deal = [...useDataStore.getState().listings.values()][0]
+    updateDealTransaction(deal.id, {
+      backOffice: { ...deal.transaction.backOffice, status: 'Pending' },
+    })
+    const { deal: updated } = reopenVoucher(deal.id)
+    expect(updated?.transaction.backOffice.status).toBe('Draft')
+  })
+
+  it('reopenVoucher will not reopen an Approved voucher', () => {
+    const deal = [...useDataStore.getState().listings.values()][0]
+    const approval = { reviewerId: TEAMMATES[0].id, approvedOn: '2026-08-01' }
+    const { deal: seeded } = updateDealTransaction(deal.id, {
+      backOffice: { ...deal.transaction.backOffice, status: 'Approved', approval },
+    })
+    // Approved is terminal: a sign-off describes these figures, so the broker
+    // cannot take it back by reopening the record.
+    expect(reopenVoucher(deal.id).deal).toBe(seeded)
+    expect(seeded?.transaction.backOffice.status).toBe('Approved')
+    expect(seeded?.transaction.backOffice.approval).toEqual(approval)
+  })
+
+  it('reopenVoucher leaves a Draft alone, and a reopened voucher can be resubmitted', () => {
+    const deal = [...useDataStore.getState().listings.values()][0]
+    const { deal: seeded } = updateDealTransaction(deal.id, {
+      backOffice: { ...deal.transaction.backOffice, status: 'Draft' },
+    })
+    expect(reopenVoucher(deal.id).deal).toBe(seeded)
+    expect(submitVoucher(deal.id).deal?.transaction.backOffice.status).toBe('Pending')
+  })
+
+  it('reopenVoucher returns null for an unknown deal', () => {
+    expect(reopenVoucher('does-not-exist').deal).toBeNull()
+  })
+
+  it('a voucher can go Draft → Pending → Draft → Pending', () => {
+    const deal = [...useDataStore.getState().listings.values()][0]
+    updateDealTransaction(deal.id, {
+      backOffice: { ...deal.transaction.backOffice, status: 'Draft' },
+    })
+    const status = () =>
+      useDataStore.getState().listings.get(deal.id)?.transaction.backOffice.status
+    submitVoucher(deal.id)
+    expect(status()).toBe('Pending')
+    reopenVoucher(deal.id)
+    expect(status()).toBe('Draft')
+    submitVoucher(deal.id)
+    expect(status()).toBe('Pending')
   })
 })

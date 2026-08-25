@@ -9,6 +9,7 @@ import {
 } from "recharts";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
+import { Field } from "@buildoutinc/blueprint-react/ui/Field";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { Switch } from "@buildoutinc/blueprint-react/ui/Switch";
@@ -27,11 +28,13 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { DealBroker, Listing } from "#/data/types";
+import { reopenVoucher, submitVoucher } from "#/data/actions";
+import { notify } from "#/lib/notify";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
 import { VoucherStatusBadge } from "./VoucherStatusBadge";
 import { VoucherApprovalBanner } from "./VoucherApprovalBanner";
+import { dealEditTarget } from "./dealCardLink";
 import { formatCurrency, formatDate } from "./dealDisplay";
-import { EditTransactionDialog } from "./EditTransactionDialog";
 import {
   buildRentSchedule,
   computeTotal,
@@ -968,7 +971,6 @@ function RentScheduleSection({ listing }: { listing: Listing }) {
  * inline edit. Consolidates what used to be the separate Transaction tab.
  */
 function TransactionSummarySection({ listing }: { listing: Listing }) {
-  const [editOpen, setEditOpen] = useState(false);
   const { transaction } = listing;
   const isLease = listing.dealType === "Lease";
   const leaseTerms = listing.marketing.spaceLeaseTerms ?? [];
@@ -1007,14 +1009,25 @@ function TransactionSummarySection({ listing }: { listing: Listing }) {
     <Section
       title="Transaction"
       action={
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Edit transaction"
-          onClick={() => setEditOpen(true)}
-        >
-          <FontAwesomeIcon icon={faPencil} />
-        </Button>
+        // The deal editor's Transaction Terms group already carries every field
+        // this section shows, so the voucher links to it rather than keeping a
+        // second, narrower copy of the same form in a modal.
+        <Tooltip>
+          <Tooltip.Trigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Edit transaction"
+                nativeButton={false}
+                render={<Link {...dealEditTarget(listing)} />}
+              >
+                <FontAwesomeIcon icon={faPencil} />
+              </Button>
+            }
+          />
+          <Tooltip.Content>Edit Deal</Tooltip.Content>
+        </Tooltip>
       }
     >
       <div className="row g-3">
@@ -1041,15 +1054,109 @@ function TransactionSummarySection({ listing }: { listing: Listing }) {
         </div>
       </div>
       <p className="text-muted fs-small mb-0">{secondary.join(" · ")}</p>
-
-      {editOpen && (
-        <EditTransactionDialog
-          listing={listing}
-          open={editOpen}
-          onOpenChange={setEditOpen}
-        />
-      )}
     </Section>
+  );
+}
+
+/**
+ * One label for both Submit buttons. They are the same verb in two places, so
+ * the string lives once — two spellings of one action read as two actions.
+ */
+const SUBMIT_LABEL = "Submit for Approval";
+
+/**
+ * One wording for the attestation, in both places it appears. Short enough to
+ * share the header's line with a title and a button — two phrasings of one
+ * attestation would read as two different things being confirmed.
+ */
+const ATTESTATION_LABEL = "I confirm the information is accurate";
+
+/**
+ * The attestation and the Submit it gates, as one cluster — rendered in the page
+ * header and again at the foot of the page, from this one component so the two
+ * cannot drift apart in wording, treatment or behaviour.
+ *
+ * Both instances write the same page state, so ticking either box enables both
+ * buttons and the broker never has to go find the other one.
+ *
+ * The card and the button are matched by `align-items-stretch` rather than a
+ * height: the card carries horizontal padding only, so its content can never
+ * out-grow the button, the button is always the thing setting the height, and
+ * nothing drifts the first time the theme changes its control sizing. A pinned
+ * px height to match a Blueprint button would.
+ */
+function AttestationSubmit({
+  attested,
+  onChange,
+  onSubmit,
+}: {
+  attested: boolean;
+  onChange: (checked: boolean) => void;
+  onSubmit: () => void;
+}) {
+  return (
+    <div className="d-flex align-items-stretch gap-2">
+      <Field
+        orientation="horizontal"
+        className="align-items-center gap-2 mb-0 px-3 border rounded"
+      >
+        <Checkbox
+          checked={attested}
+          onCheckedChange={(next) => onChange(next === true)}
+        />
+        {/* `fw-normal`: Field.Label is 600, which is right for a two-word field
+            name and heavy for a sentence of body copy the broker is meant to
+            read. */}
+        <Field.Label className="mb-0 fw-normal">
+          {ATTESTATION_LABEL}
+        </Field.Label>
+      </Field>
+      <SubmitVoucherButton attested={attested} onSubmit={onSubmit} />
+    </div>
+  );
+}
+
+/**
+ * The voucher's Submit. Always reached through {@link AttestationSubmit}, which
+ * is what keeps a Submit button from ever appearing without its attestation.
+ *
+ * Disabled until the broker has ticked an attestation — there is one beside
+ * this button in the header and one in the page footer, and either will do. The
+ * tooltip carries the reason, because a dead primary button with no explanation
+ * is the worst version of this. It hangs off a wrapper `span` since a disabled
+ * button fires no pointer events, which would otherwise make the one
+ * explanation of why it is dead unreachable.
+ */
+function SubmitVoucherButton({
+  attested,
+  onSubmit,
+}: {
+  attested: boolean;
+  onSubmit: () => void;
+}) {
+  if (attested) {
+    return (
+      <Button variant="primary" onClick={onSubmit}>
+        {SUBMIT_LABEL}
+      </Button>
+    );
+  }
+
+  return (
+    <Tooltip>
+      <Tooltip.Trigger
+        render={
+          <span className="d-inline-flex">
+            <Button variant="primary" disabled>
+              {SUBMIT_LABEL}
+            </Button>
+          </span>
+        }
+      />
+      <Tooltip.Content>
+        Confirm you have checked this voucher first.
+      </Tooltip.Content>
+    </Tooltip>
   );
 }
 
@@ -1063,26 +1170,72 @@ export function DealFinancials({
   heading?: string;
 }) {
   const voucher = listing.transaction.backOffice;
+  const isDraft = voucher.status === "Draft";
+  // Approved is terminal: the sign-off is a statement about these figures, so
+  // the broker cannot take it back. What an approved voucher will accept is
+  // additions — receivables, invoices, credits against what was approved —
+  // which is where this header's action slot is headed once those exist.
+  const isPending = voucher.status === "Pending";
+  // The broker's attestation, which gates both Submit buttons. Page state, not
+  // stored: it is a confirmation of *this* reading of the voucher, so it should
+  // not survive a reload and come back pre-ticked.
+  const [attested, setAttested] = useState(false);
+
+  // Both Submit buttons commit through the same action, so the two can never
+  // disagree about what submitting means. `submitVoucher` re-checks Draft itself;
+  // the attestation is re-checked here for the same reason — a guard at the one
+  // write path holds even if a button forgets to disable itself.
+  const submit = () => {
+    if (!attested) return;
+    submitVoucher(listing.id);
+    setAttested(false);
+    notify({
+      title: "Voucher submitted",
+      description: "It is now with an approver.",
+    });
+  };
+
+  // Edit takes a Pending voucher back off the approver's desk, which un-submits
+  // it: the attestation clears and it has to be sent again. `reopenVoucher`
+  // accepts nothing but Pending, so an approved voucher cannot come back this
+  // way even if this button were rendered by mistake.
+  const reopen = () => {
+    reopenVoucher(listing.id);
+    setAttested(false);
+    notify({
+      title: "Voucher reopened",
+      description: "Back to Draft. Submit it again when you are ready.",
+    });
+  };
 
   return (
     <div className="d-flex flex-column gap-5 p-4">
       <ListingPageHeader
         title={heading}
+        /* Where this voucher stands, under the title it describes rather than
+           against the button that moves it. Every deal carries a voucher from
+           the moment it is created, so there is always a status here — a new
+           deal's reads Draft. */
+        meta={<VoucherStatusBadge status={voucher.status} long />}
         actions={
-          <div className="d-flex align-items-center gap-2">
-            {/* Where this voucher stands, beside the action that moves it. Every
-                deal carries a voucher from the moment it is created, so there is
-                always a status here — a new deal's reads Draft. */}
-            <VoucherStatusBadge status={voucher.status} long />
-            {/* Only a Draft has anything left to submit. Pending means it is
-                already with an approver and Approved means they signed off — in
-                both the only thing left to do with it is change it. Offering
-                "Submit" on a Pending voucher invited a broker to send a second
-                time what an approver was already holding. */}
-            <Button variant="primary">
-              {voucher.status === "Draft" ? "Submit" : "Edit"}
+          /* One action per state, and Approved has none. A Draft is the only
+             thing there is to submit — offering "Submit" on a Pending voucher
+             invited a broker to send a second time what an approver was already
+             holding. Pending offers Edit, which pulls it back. Approved offers
+             nothing: the banner below states who signed it off, and the actions
+             that remain open on a settled voucher are additions to it —
+             receivables, invoices — not an edit of the approved figures. */
+          isDraft ? (
+            <AttestationSubmit
+              attested={attested}
+              onChange={setAttested}
+              onSubmit={submit}
+            />
+          ) : isPending ? (
+            <Button variant="primary" onClick={reopen}>
+              Edit
             </Button>
-          </div>
+          ) : undefined
         }
       />
 
@@ -1112,6 +1265,27 @@ export function DealFinancials({
           this deal.
         </p>
       </Section>
+
+      {/* The header's cluster again, at the end of the page. This is a long
+          scroll — commission breakdown, splits, rent schedule, receivables — and
+          a broker who has just read the last of it should not have to scroll
+          back up to send it; the confirmation belongs here for the same reason,
+          at the end of the thing being confirmed rather than above it. Draft
+          only, like the header's: there is nothing to submit once it is with an
+          approver.
+
+          Right-aligned so the pair sits where the header's does. Splitting them
+          to opposite ends of the bar read as two unrelated controls, when the
+          checkbox is the thing that arms the button beside it. */}
+      {isDraft && (
+        <div className="d-flex justify-content-end border-top pt-4">
+          <AttestationSubmit
+            attested={attested}
+            onChange={setAttested}
+            onSubmit={submit}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -1,13 +1,16 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Breadcrumb } from "@buildoutinc/blueprint-react/ui/Breadcrumb";
+import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faHandshake } from "@fortawesome/pro-regular-svg-icons";
+import { faHandshake, faPencil } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing, Property } from "#/data/types";
 import { dealBreadcrumbTrail } from "#/components/properties/dealNav";
 import { hash, getRefId, getPhotoUrl } from "#/components/properties/propertyDisplay";
 import { AvatarGroup } from "#/components/properties/AvatarGroup";
 import { DealStageSelect } from "#/components/deals/DealStageSelect";
+import { dealEditTarget } from "#/components/deals/dealCardLink";
 
 /**
  * The space page's own header. Deliberately not `PropertyDetailHeader`, which is
@@ -171,8 +174,41 @@ export function SpaceDetailHeader({
             </div>
           </div>
 
-          <div className="flex-shrink-0">
-            <DealStageSelect listing={space} />
+          {/* Stage block · actions — the same two-group cluster
+              PropertyDetailHeader ends with, at the same `gap-3`, so a suite's
+              controls sit where a broker already expects them. No Add Space (a
+              suite has no suites) and no options menu: access is granted per
+              space deal and deleting one is the roster's job, so neither of the
+              building menu's two items has a space equivalent yet. */}
+          <div className="d-flex align-items-center gap-3 flex-shrink-0">
+            <div className="d-flex align-items-center gap-2">
+              <DealStageSelect listing={space} />
+            </div>
+            <div className="d-flex align-items-center gap-2">
+              <Tooltip>
+                <Tooltip.Trigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      // Named on the button, not left to the tooltip: Blueprint's
+                      // Tooltip describes a trigger, it does not name it, so an
+                      // icon-only pencil reads as an unlabelled button to a
+                      // screen reader until hover — which never happens there.
+                      aria-label="Edit deal"
+                      nativeButton={false}
+                      // `dealEditTarget` rather than a literal: a space's edit
+                      // page is nested under its building, and this is the same
+                      // rule the Voucher's Transaction pencil follows.
+                      render={<Link {...dealEditTarget(space)} />}
+                    >
+                      <FontAwesomeIcon icon={faPencil} />
+                    </Button>
+                  }
+                />
+                <Tooltip.Content>Edit Deal</Tooltip.Content>
+              </Tooltip>
+            </div>
           </div>
         </div>
       </div>
