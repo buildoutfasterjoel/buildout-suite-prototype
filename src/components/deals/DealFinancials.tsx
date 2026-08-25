@@ -284,22 +284,45 @@ function BrokerSelectCell({
 }
 
 /** The row action both broker tables carry — delete, which drops the broker from both. */
-function RemoveBrokerButton({ name, onRemove }: { name: string; onRemove: () => void }) {
+function RemoveBrokerButton({
+  name,
+  onlyBroker,
+  onRemove,
+}: {
+  name: string;
+  /** The last broker on the voucher — removable by nobody. */
+  onlyBroker: boolean;
+  onRemove: () => void;
+}) {
+  const label = `Remove ${name || "broker"}`;
+  const button = (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label={label}
+      disabled={onlyBroker}
+      onClick={onlyBroker ? undefined : onRemove}
+    >
+      <FontAwesomeIcon icon={faTrashCan} />
+    </Button>
+  );
+
   return (
     <Tooltip>
       <Tooltip.Trigger
         render={
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={`Remove ${name || "broker"}`}
-            onClick={onRemove}
-          >
-            <FontAwesomeIcon icon={faTrashCan} />
-          </Button>
+          // A disabled button fires no pointer events, so the last broker's
+          // button hangs its tooltip off a wrapper — the same trick Submit
+          // uses, and the reason the rule is discoverable rather than a dead
+          // icon.
+          onlyBroker ? <span className="d-inline-flex">{button}</span> : button
         }
       />
-      <Tooltip.Content>Remove broker</Tooltip.Content>
+      <Tooltip.Content>
+        {onlyBroker
+          ? "A voucher keeps at least one internal broker."
+          : "Remove broker"}
+      </Tooltip.Content>
     </Tooltip>
   );
 }
@@ -333,7 +356,14 @@ function InternalCommissionsSection({
 
   const patch = (id: string, fields: Partial<DealBroker>) =>
     onChange(brokers.map((b) => (b.id === id ? { ...b, ...fields } : b)));
-  const remove = (id: string) => onChange(brokers.filter((b) => b.id !== id));
+  // The voucher's commission has to be payable to somebody, so the last broker
+  // stays. Guarded here as well as at the buttons, so both tables' Delete —
+  // and anything that reaches this later — obey the same floor.
+  const onlyBroker = brokers.length <= 1;
+  const remove = (id: string) => {
+    if (onlyBroker) return;
+    onChange(brokers.filter((b) => b.id !== id));
+  };
 
   return (
     <Section
@@ -407,7 +437,11 @@ function InternalCommissionsSection({
                     />
                   </Table.Cell>
                   <Table.Cell className="text-end">
-                    <RemoveBrokerButton name={b.name} onRemove={() => remove(b.id)} />
+                    <RemoveBrokerButton
+                      name={b.name}
+                      onlyBroker={onlyBroker}
+                      onRemove={() => remove(b.id)}
+                    />
                   </Table.Cell>
                 </Table.Row>
               ) : (
@@ -503,7 +537,11 @@ function InternalCommissionsSection({
                 </Table.Cell>
                 {editable && (
                   <Table.Cell className="text-end">
-                    <RemoveBrokerButton name={b.name} onRemove={() => remove(b.id)} />
+                    <RemoveBrokerButton
+                      name={b.name}
+                      onlyBroker={onlyBroker}
+                      onRemove={() => remove(b.id)}
+                    />
                   </Table.Cell>
                 )}
               </Table.Row>
