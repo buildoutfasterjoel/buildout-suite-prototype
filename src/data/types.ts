@@ -636,6 +636,12 @@ export interface DealFileItem {
 }
 
 /** A broker on a deal, internal (own brokerage) or an outside co-broker. */
+/**
+ * Which side of the deal a broker worked. Distinct from `DealBroker.side`, which
+ * says whether they are the brokerage's own person or someone else's.
+ */
+export type TransactionSide = 'Buy Side' | 'Sell Side' | 'Dual'
+
 export interface DealBroker {
   id: string
   name: string
@@ -648,6 +654,11 @@ export interface DealBroker {
   commissionPlan?: string
   /** This broker's personal split % of their own grossCommission — used on the Financials tab. */
   personalSplitPct?: number
+  /**
+   * Which side this broker worked, on the voucher's Internal Commissions table.
+   * Undefined on a broker added there but not yet assigned a side.
+   */
+  transactionSide?: TransactionSide
 }
 
 export type DealTaskStatus = 'open' | 'complete' | 'overdue'

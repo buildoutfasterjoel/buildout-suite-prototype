@@ -6,7 +6,7 @@ import {
   serializeContactFilters,
   type ContactFilterState,
 } from '#/components/contacts/contactFilterModel'
-import type { Contact, ContactRole, ContactSource, DealDocument, DealHistoryEntry, DealIngestion, DealMarketing, DealPitchFinancials, DealTask, DealTransaction, DocumentGeneration, FinancialDeduction, GeneratedSection, IngestionFieldKey, Listing, PropertyStatus, Task } from './types'
+import type { Contact, ContactRole, ContactSource, DealDocument, DealHistoryEntry, DealIngestion, DealMarketing, DealPitchFinancials, DealBroker, DealTask, DealTransaction, DocumentGeneration, FinancialDeduction, GeneratedSection, IngestionFieldKey, Listing, PropertyStatus, Task } from './types'
 import { CURRENT_USER, TEAMMATES } from './teammates'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
 import { reconcileContactDealFields } from './contactStage'
@@ -326,9 +326,14 @@ export function reopenVoucher(dealId: string): { deal: Listing | null } {
   }
 }
 
+/** What a voucher's Save commits — the tables a broker can edit on a Draft. */
+export interface VoucherDraft {
+  preSplitDeductions: FinancialDeduction[]
+  internalBrokers: DealBroker[]
+}
+
 /**
- * Commit the voucher's pre-split deductions — the write behind Save on a Draft
- * voucher's editable deduction table.
+ * Commit a Draft voucher's editable tables — the write behind its Save button.
  *
  * **Draft only,** the same guard `submitVoucher` and `reopenVoucher` carry and
  * for the same reason: a Pending voucher is sitting with an approver and an
@@ -336,13 +341,18 @@ export function reopenVoucher(dealId: string): { deal: Listing | null } {
  * change underneath it. The rule lives here rather than only in the Save button
  * so it holds however the write is reached.
  *
- * The whole array is replaced rather than patched row by row: the table edits
- * rows, adds them, and deletes them in one local working copy, and Save is a
- * statement about that copy as a whole.
+ * Whole arrays are replaced rather than patched row by row: the tables edit
+ * rows, add them, and delete them in one local working copy, and Save is a
+ * statement about that copy as a whole. One write for both, because one button
+ * commits both — a partial save would leave the deduction total and the broker
+ * splits describing different drafts.
+ *
+ * `internalBrokers` sits on the deal rather than in `backOffice`, so this is
+ * also the one place that fact is spelled out.
  */
-export function updateVoucherDeductions(
+export function saveVoucherDraft(
   dealId: string,
-  deductions: FinancialDeduction[],
+  draft: VoucherDraft,
 ): { deal: Listing | null } {
   return {
     deal: patchListing(dealId, (l) =>
@@ -350,9 +360,13 @@ export function updateVoucherDeductions(
         ? l
         : {
             ...l,
+            internalBrokers: draft.internalBrokers,
             transaction: {
               ...l.transaction,
-              backOffice: { ...l.transaction.backOffice, preSplitDeductions: deductions },
+              backOffice: {
+                ...l.transaction.backOffice,
+                preSplitDeductions: draft.preSplitDeductions,
+              },
             },
             updatedAt: new Date().toISOString(),
           },

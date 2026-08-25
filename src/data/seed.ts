@@ -1314,6 +1314,17 @@ function generateListings(
       { weight: 35, value: 'buyer' },
     ])
 
+    // Transaction Side belongs to the deal, not to the person who worked it, so
+    // every internal broker starts on the deal's own side; the voucher can move
+    // one of them afterwards (a dual-side deal splits Buy and Sell across two).
+    // Applied here rather than inside `generateBroker` because `dealSide` is
+    // drawn after the brokers are, and reordering the faker calls would reshuffle
+    // every seeded value downstream.
+    const brokersWithSide: DealBroker[] = internalBrokers.map((b) => ({
+      ...b,
+      transactionSide: dealSide === 'buyer' ? 'Buy Side' : 'Sell Side',
+    }))
+
     // Parties are drawn from THIS property's associated contacts so the graph
     // stays reciprocal (a deal's contacts are linked to the deal's property).
     const sellerContacts = faker.helpers.arrayElements(
@@ -1535,7 +1546,7 @@ function generateListings(
 
       // Deal (1:1)
       dealId,
-      internalBrokers,
+      internalBrokers: brokersWithSide,
       outsideBrokers,
       sellerContactIds: sellerContacts.map((c) => c.id),
       buyerContactIds: buyerContacts.map((c) => c.id),

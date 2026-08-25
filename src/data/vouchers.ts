@@ -1,4 +1,10 @@
-import type { DealType, Listing, PropertyStatus, PropertyType } from './types'
+import type {
+  DealType,
+  Listing,
+  PropertyStatus,
+  PropertyType,
+  TransactionSide,
+} from './types'
 import { getStore, getProperty } from './store'
 import { dealShape } from './dealShape'
 
@@ -36,6 +42,25 @@ export const DEDUCTION_CATEGORIES = [
 ] as const
 
 export type DeductionCategory = (typeof DEDUCTION_CATEGORIES)[number]
+
+/** The Transaction Side dropdown on the voucher's Internal Commissions table. */
+export const TRANSACTION_SIDES: TransactionSide[] = [
+  'Buy Side',
+  'Sell Side',
+  'Dual',
+]
+
+/**
+ * The payout plans a broker's own split can be figured under. `'No Plan'` is a
+ * real choice, not an empty one — it is what the seed gives every internal
+ * broker — so the dropdown carries it rather than leaving the field blank.
+ */
+export const COMMISSION_PLANS = [
+  'No Plan',
+  'Standard Commission Plan',
+  'Custom Plan',
+  'House Split Plan',
+] as const
 
 /**
  * Where a deal's voucher page lives, as a typed route target.
