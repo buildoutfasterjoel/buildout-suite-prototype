@@ -11,6 +11,7 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
 import { Field } from "@buildoutinc/blueprint-react/ui/Field";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
+import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
@@ -21,7 +22,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowRight,
   faChevronDown,
+  faDollarSign,
   faFileLines,
+  faPercent,
   faPlus,
   faPencil,
   faTableRowsAddAbove,
@@ -395,18 +398,21 @@ function emptyDeduction(): FinancialDeduction {
 }
 
 /**
- * One numeric cell of an editable deduction row. Right-aligned to sit under its
- * header and over the Sum beneath it, and empty-as-null so a Covered $ that has
- * not been decided stays `null` rather than becoming a typed zero.
+ * One numeric cell of an editable deduction row: a `$` or `%` addon over a
+ * right-aligned number, so the unit is on the field rather than only in the
+ * header two rows up. Empty-as-null on Covered $, so an amount that has not
+ * been decided stays `null` rather than becoming a typed zero.
  */
 function DeductionNumberCell({
   label,
+  unit,
   value,
   step,
   nullable,
   onChange,
 }: {
   label: string;
+  unit: IconDefinition;
   value: number | null;
   step: string;
   /** Covered $ only: an empty box means "none", not zero. */
@@ -414,23 +420,28 @@ function DeductionNumberCell({
   onChange: (next: number | null) => void;
 }) {
   return (
-    <Input
-      type="number"
-      step={step}
-      min={0}
-      aria-label={label}
-      className="text-end"
-      value={value ?? ""}
-      onChange={(e) => {
-        const raw = e.target.value;
-        if (raw === "") {
-          onChange(nullable ? null : 0);
-          return;
-        }
-        const n = Number.parseFloat(raw);
-        onChange(Number.isNaN(n) ? (nullable ? null : 0) : Math.max(0, n));
-      }}
-    />
+    <InputGroup>
+      <InputGroup.Addon>
+        <FontAwesomeIcon icon={unit} />
+      </InputGroup.Addon>
+      <Input
+        type="number"
+        step={step}
+        min={0}
+        aria-label={label}
+        className="text-end"
+        value={value ?? ""}
+        onChange={(e) => {
+          const raw = e.target.value;
+          if (raw === "") {
+            onChange(nullable ? null : 0);
+            return;
+          }
+          const n = Number.parseFloat(raw);
+          onChange(Number.isNaN(n) ? (nullable ? null : 0) : Math.max(0, n));
+        }}
+      />
+    </InputGroup>
   );
 }
 
@@ -489,24 +500,31 @@ function PreSplitDeductionsSection({
           No pre-split deductions have been added.
         </p>
       ) : (
-        <Table>
+        <Table dense>
           <Table.Header>
+            {/* The three number columns are pinned narrow so Description — the
+                only free-text field, and the one that runs long — takes what is
+                left. Category is pinned too, or "Broker of Record" wraps. */}
             <Table.Row>
-              <Table.Head>Category</Table.Head>
+              <Table.Head style={{ width: 190 }}>Category</Table.Head>
               <Table.Head>Description</Table.Head>
-              <Table.Head className="text-end">Percent %</Table.Head>
-              <Table.Head className="text-end">Amount $</Table.Head>
-              <Table.Head className="text-end">Covered $</Table.Head>
-              {editable && <Table.Head />}
+              <Table.Head className="text-end" style={{ width: 132 }}>
+                Percent %
+              </Table.Head>
+              <Table.Head className="text-end" style={{ width: 132 }}>
+                Amount $
+              </Table.Head>
+              <Table.Head className="text-end" style={{ width: 132 }}>
+                Covered $
+              </Table.Head>
+              {editable && <Table.Head style={{ width: 56 }} />}
             </Table.Row>
           </Table.Header>
           <Table.Body>
             {deductions.map((d) =>
               editable ? (
                 <Table.Row key={d.id}>
-                  {/* A floor on the trigger, or "Broker of Record" wraps to two
-                      lines in a column sized by its four-word header. */}
-                  <Table.Cell style={{ minWidth: 180 }}>
+                  <Table.Cell>
                     <Select
                       value={d.category}
                       onValueChange={(v) =>
@@ -537,6 +555,7 @@ function PreSplitDeductionsSection({
                   <Table.Cell>
                     <DeductionNumberCell
                       label="Percent %"
+                      unit={faPercent}
                       value={d.pct}
                       step="0.1"
                       onChange={(pct) => patch(d.id, { pct: pct ?? 0 })}
@@ -545,6 +564,7 @@ function PreSplitDeductionsSection({
                   <Table.Cell>
                     <DeductionNumberCell
                       label="Amount $"
+                      unit={faDollarSign}
                       value={d.amount}
                       step="0.01"
                       onChange={(amount) => patch(d.id, { amount: amount ?? 0 })}
@@ -553,6 +573,7 @@ function PreSplitDeductionsSection({
                   <Table.Cell>
                     <DeductionNumberCell
                       label="Covered $"
+                      unit={faDollarSign}
                       value={d.covered}
                       step="0.01"
                       nullable
@@ -565,7 +586,7 @@ function PreSplitDeductionsSection({
                         render={
                           <Button
                             variant="ghost"
-                            size="icon-sm"
+                            size="icon"
                             aria-label="Delete deduction"
                             onClick={() =>
                               onChange(deductions.filter((r) => r.id !== d.id))
