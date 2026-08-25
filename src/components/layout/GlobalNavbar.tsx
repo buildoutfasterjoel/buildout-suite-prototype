@@ -1,26 +1,20 @@
-import type { MouseEvent } from "react";
-import { useLocation, useNavigate } from "@tanstack/react-router";
+import { useLocation } from "@tanstack/react-router";
 import { Navbar } from "@buildoutinc/blueprint-react/ui/Navbar";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faSquareCheck,
-  faBell,
-  faPlus,
-  faMicrophone,
-} from "@fortawesome/pro-regular-svg-icons";
 // The AI assistant launcher uses the solid sparkle (per Figma).
 import { faSparkles } from "@fortawesome/pro-solid-svg-icons";
-import { formatForDisplay } from "@tanstack/hotkeys";
 import BuildoutIcon from "#/features/assets/buildout-icon";
 import BuildoutWordmark from "#/features/assets/buildout-wordmark";
 import { useAssistant } from "#/ai/useAssistant";
-import { useOmniSearch } from "#/components/search/useOmniSearch";
-import { OmniSparkleIcon } from "#/components/search/OmniSparkleIcon";
-import { useCreateDeal } from "#/data/useCreateDeal";
-import { useNewContact } from "#/data/useNewContact";
-import { useAddTask } from "#/data/useAddTask";
 import { AccountMenu } from "./AccountMenu";
+import {
+  NewMenu,
+  NotificationsLink,
+  OmniBarTrigger,
+  TasksLink,
+  useNavClick,
+} from "./navbarParts";
 import {
   NAV_SECTIONS,
   isNavGroup,
@@ -30,40 +24,19 @@ import {
   type NavSection,
 } from "./navSections";
 
-/** Platform-aware shortcut hint, e.g. "⌘K" on macOS, "Ctrl K" elsewhere. */
-const SEARCH_HINT = formatForDisplay("Mod+K");
-
+/**
+ * The classic global nav: one full-width dark bar carrying everything — brand,
+ * sections, omnibar, and the right-hand action cluster.
+ *
+ * Its counterpart is `AppTopBar` + `AppSideNav`; which one renders is decided by
+ * `useNavMode` and switched from the account menu.
+ */
 export function GlobalNavbar() {
   const { pathname } = useLocation();
 
-  const navigate = useNavigate();
+  const handleNavClick = useNavClick();
   const assistantOpen = useAssistant((s) => s.open);
   const toggleAssistant = useAssistant((s) => s.toggle);
-  const openOmniSearch = useOmniSearch((s) => s.setOpen);
-  const openOmniSearchWithVoice = useOmniSearch((s) => s.openWithVoice);
-  const omniSearchOpen = useOmniSearch((s) => s.open);
-
-  // Navigate client-side so the persistent shell — and the open AI assistant
-  // session — survives section changes. A plain <a> would full-reload the
-  // document and remount everything. We keep the <a href> (for accessibility
-  // and cmd/ctrl/middle-click "open in new tab") but intercept the plain
-  // left-click. navigate() is used instead of <Link> because some nav targets
-  // are placeholder routes that don't exist yet; navigate degrades to
-  // not-found rather than throwing at render time.
-  function handleNavClick(e: MouseEvent<HTMLAnchorElement>, href: string) {
-    if (
-      e.defaultPrevented ||
-      e.button !== 0 ||
-      e.metaKey ||
-      e.ctrlKey ||
-      e.shiftKey ||
-      e.altKey
-    ) {
-      return;
-    }
-    e.preventDefault();
-    navigate({ to: href as never });
-  }
 
   /** A leaf section: the nav item itself is the link. */
   function renderLeaf(section: NavLeaf) {
@@ -148,141 +121,17 @@ export function GlobalNavbar() {
         <Navbar.Nav>
           {NAV_SECTIONS.map((section) => renderSection(section))}
 
-          {/* Omni search — a gradient "AI omnibar" trigger that opens the
-              command palette. A div (not a button) so the nested voice button
-              is valid markup; it's keyboard-activatable via role + handlers.
-              Stays put while the palette is open: it used to fade out and hand
-              off to the palette's own bar, which read as the search box being
-              yanked away mid-thought. Only the tab stop goes, since the palette
-              traps focus and the backdrop swallows clicks. */}
           <Navbar.Item className="d-flex align-items-center ms-2">
-            {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
-            <div
-              role="button"
-              tabIndex={omniSearchOpen ? -1 : 0}
-              onClick={() => openOmniSearch(true)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  openOmniSearch(true);
-                }
-              }}
-              aria-label="Search or ask Otto"
-              className="omni-bar flex-shrink-0"
-            >
-              <span className="omni-bar__icon">
-                <OmniSparkleIcon variant="navbar" />
-              </span>
-              <span className="omni-bar__label">Search or ask Otto</span>
-              <span className="omni-bar__end">
-                <span className="omni-bar__kbd">{SEARCH_HINT}</span>
-                <button
-                  type="button"
-                  className="omni-bar__voice"
-                  aria-label="Voice search"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    // Open the overlay already listening, so one tap starts
-                    // dictating instead of just revealing a second mic button.
-                    openOmniSearchWithVoice();
-                  }}
-                >
-                  <FontAwesomeIcon icon={faMicrophone} />
-                </button>
-              </span>
-            </div>
+            <OmniBarTrigger />
           </Navbar.Item>
         </Navbar.Nav>
       </Navbar.Content>
 
       <Navbar.Footer className="flex-grow-0 flex-shrink-0 d-flex align-items-center">
         <Navbar.Nav>
-          {/* New action menu */}
-          <Navbar.Group>
-            <Tooltip>
-              <Tooltip.Trigger
-                render={
-                  <Navbar.GroupTrigger
-                    className="navbar-new-trigger"
-                    aria-label="New"
-                  >
-                    <Navbar.ItemLinkIcon>
-                      <FontAwesomeIcon icon={faPlus} />
-                    </Navbar.ItemLinkIcon>
-                  </Navbar.GroupTrigger>
-                }
-              />
-              <Tooltip.Content>New</Tooltip.Content>
-            </Tooltip>
-            <Navbar.GroupMenu>
-              <Navbar.GroupMenuItem onClick={() => console.log("new activity")}>
-                New Activity
-              </Navbar.GroupMenuItem>
-              <Navbar.GroupMenuItem
-                onClick={() => useAddTask.getState().openFor()}
-              >
-                New Task
-              </Navbar.GroupMenuItem>
-              <Navbar.GroupMenuItem onClick={() => console.log("new note")}>
-                New Note
-              </Navbar.GroupMenuItem>
-              <Navbar.GroupMenuItem
-                onClick={() => useNewContact.getState().openNew()}
-              >
-                New Contact
-              </Navbar.GroupMenuItem>
-              <Navbar.GroupMenuItem
-                onClick={() => useCreateDeal.getState().openFor()}
-              >
-                New Deal
-              </Navbar.GroupMenuItem>
-            </Navbar.GroupMenu>
-          </Navbar.Group>
-
-          {/* Tasks — moved out of the main nav into a footer icon button. */}
-          <Navbar.Item>
-            <Tooltip>
-              <Tooltip.Trigger
-                render={
-                  <Navbar.ItemLink
-                    aria-label="Tasks"
-                    render={
-                      <a
-                        href="/tasks"
-                        onClick={(e) => handleNavClick(e, "/tasks")}
-                      />
-                    }
-                  >
-                    <Navbar.ItemLinkIcon className="position-relative">
-                      <FontAwesomeIcon icon={faSquareCheck} />
-                      <span className="navbar-dot" aria-hidden />
-                    </Navbar.ItemLinkIcon>
-                  </Navbar.ItemLink>
-                }
-              />
-              <Tooltip.Content>Tasks</Tooltip.Content>
-            </Tooltip>
-          </Navbar.Item>
-
-          {/* Notifications */}
-          <Navbar.Item>
-            <Tooltip>
-              <Tooltip.Trigger
-                render={
-                  <Navbar.ItemLink
-                    aria-label="Notifications"
-                    render={<a href="#" />}
-                  >
-                    <Navbar.ItemLinkIcon className="position-relative">
-                      <FontAwesomeIcon icon={faBell} />
-                      <span className="navbar-dot" aria-hidden />
-                    </Navbar.ItemLinkIcon>
-                  </Navbar.ItemLink>
-                }
-              />
-              <Tooltip.Content>Notifications</Tooltip.Content>
-            </Tooltip>
-          </Navbar.Item>
+          <NewMenu />
+          <TasksLink />
+          <NotificationsLink />
 
           {/* AI Assistant launcher — a filled purple-gradient circle. */}
           <Navbar.Item>

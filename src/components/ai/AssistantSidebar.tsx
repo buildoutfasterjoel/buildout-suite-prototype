@@ -21,6 +21,8 @@ import {
   faHandshake,
   faUsers,
   faBuilding,
+  faUpRightAndDownLeftFromCenter,
+  faDownLeftAndUpRightToCenter,
 } from "@fortawesome/pro-regular-svg-icons";
 // Solid, deliberately: the avatar's glyph is a silhouette on a pale disc, and
 // the regular weight reads as a hairline outline at 14px.
@@ -673,6 +675,8 @@ export function AssistantSidebar() {
   const pendingLine = useAssistant((s) => s.pendingLine);
   const consumeLine = useAssistant((s) => s.consumeLine);
   const focusNonce = useAssistant((s) => s.focusNonce);
+  const expanded = useAssistant((s) => s.expanded);
+  const toggleExpanded = useAssistant((s) => s.toggleExpanded);
   /**
    * Which of the rail's two faces is showing (Figma nodes 193:4366 / 193:4669).
    *
@@ -1086,9 +1090,20 @@ export function AssistantSidebar() {
   if (!open) return null;
 
   return (
+    /*
+      Two frames, one panel. Docked, it's a 380px rail against the right edge of
+      the stage — inset 8px from the stage's top and right in the app shell, so
+      it reads as a card floating *on* the page rather than a second column
+      welded to it (Figma node 193:4365). The classic nav has no rounded stage to
+      float on, so there it stays flush and keeps its plain left border.
+
+      Expanded, it drops the width cap and the inset and takes the whole stage;
+      `AppShell` hides the page content to make the room (Figma node 193:5009).
+    */
     <aside
-      className="border-start bg-white d-flex flex-column flex-shrink-0 h-100"
-      style={{ width: 380 }}
+      className={`assistant-rail bg-white d-flex flex-column h-100${
+        expanded ? " assistant-rail--expanded" : " flex-shrink-0"
+      }`}
     >
       {/* Otto's glyphs — the header otter and the starter rows' icons — are
           gradient-filled in the design, which an SVG icon can't express in CSS.
@@ -1165,6 +1180,21 @@ export function AssistantSidebar() {
           <button
             type="button"
             className="assistant-rail__control"
+            aria-label={expanded ? "Exit full screen" : "Expand to full screen"}
+            aria-pressed={expanded}
+            onClick={toggleExpanded}
+          >
+            <FontAwesomeIcon
+              icon={
+                expanded
+                  ? faDownLeftAndUpRightToCenter
+                  : faUpRightAndDownLeftFromCenter
+              }
+            />
+          </button>
+          <button
+            type="button"
+            className="assistant-rail__control"
             aria-label="Close assistant"
             onClick={() => setOpen(false)}
           >
@@ -1175,6 +1205,7 @@ export function AssistantSidebar() {
 
       {view === "home" ? (
         <div className="flex-grow-1 overflow-auto">
+          <div className="assistant-rail__column assistant-rail__column--fill">
           <OttoHome
             greeting={greeting}
             starters={SUGGESTIONS}
@@ -1182,16 +1213,17 @@ export function AssistantSidebar() {
             onCall={() => send("yes")}
             onBrief={() => send("brief me first")}
           />
+          </div>
         </div>
       ) : (
       /* Messages. 20px of inner padding and 24px between turns (Figma node
          193:4680) — elements *within* one reply group tighter at 12px, which
          each of them owns (see `ChatMessage`). */
-      <div
-        ref={scrollRef}
-        className="flex-grow-1 overflow-auto d-flex flex-column"
-        style={{ padding: 20, gap: 24 }}
-      >
+      <div ref={scrollRef} className="flex-grow-1 overflow-auto">
+        <div
+          className="assistant-rail__column d-flex flex-column"
+          style={{ padding: 20, gap: 24 }}
+        >
         {messages.length === 0 && !recap ? (
           <div className="text-muted small">
             Ask about your properties, contacts, and deals — or have me draft an email, build a
@@ -1241,12 +1273,13 @@ export function AssistantSidebar() {
         {/* The BOV draft self-arrives after the underwriting result is ready
             (§Phase 4C) — render it at the bottom of the flow too. */}
         <BovCard />
+        </div>
       </div>
       )}
 
       {/* Call brief (Phase 4A "brief me first"), raised above the composer. */}
       {brief && (
-        <div className="pb-2" style={{ paddingInline: 20 }}>
+        <div className="assistant-rail__column pb-2" style={{ paddingInline: 20 }}>
           <CallBriefCard
             brief={brief.spec}
             contactName={brief.name}
@@ -1263,7 +1296,7 @@ export function AssistantSidebar() {
       {/* Input (Figma node 193:4425) — shared with the editor's Otto panel. The
           disclaimer under it is part of the input area, not the transcript, so
           it stays put across both views. */}
-      <div style={{ padding: "4px 16px 16px" }}>
+      <div className="assistant-rail__column" style={{ padding: "4px 16px 16px" }}>
         <ChatComposer
           draft={draft}
           onDraftChange={setDraft}

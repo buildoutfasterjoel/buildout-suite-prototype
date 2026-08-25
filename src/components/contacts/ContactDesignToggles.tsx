@@ -7,6 +7,7 @@ import { faPaintbrush } from "@fortawesome/pro-regular-svg-icons";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
 import { useContactNarrow } from "#/lib/useMediaQuery";
 import { useAssistant } from "#/ai/useAssistant";
+import { useDesignToggles } from "#/components/layout/useDesignToggles";
 
 /** A single labeled switch row inside the design menu. */
 function ToggleRow({
@@ -46,8 +47,13 @@ function ToggleRow({
  *
  * Mounted on both the contact detail page and the Pipeline board — the deal-card
  * switch applies to both surfaces, so it has to be reachable from either.
+ *
+ * Hidden unless the account menu turns it on (see `useDesignToggles`): it's a
+ * reviewer's tool, and left on it lands in the corner of every screenshot of
+ * these two pages.
  */
 export function ContactDesignToggles() {
+  const shown = useDesignToggles((s) => s.shown);
   const legacyAccordions = useContactUiPrefs((s) => s.legacyAccordions);
   const setLegacyAccordions = useContactUiPrefs((s) => s.setLegacyAccordions);
   const tabTrack = useContactUiPrefs((s) => s.tabTrack);
@@ -66,6 +72,9 @@ export function ContactDesignToggles() {
   const isNarrow = useContactNarrow(assistantOpen);
   const pinnedByRail = assistantOpen;
 
+  // After the hooks, so the rules of hooks hold whichever way the setting goes.
+  if (!shown) return null;
+
   return (
     <Popover>
       <Popover.Trigger
@@ -73,8 +82,11 @@ export function ContactDesignToggles() {
           <Button
             variant="secondary"
             size="sm"
-            className="position-fixed shadow rounded-circle d-inline-flex align-items-center justify-content-center p-0"
-            style={{ left: 16, bottom: 16, zIndex: 1050, width: 40, height: 40 }}
+            className="design-toggle-fab position-fixed shadow rounded-circle d-inline-flex align-items-center justify-content-center p-0"
+            // `left` and `bottom` moved to CSS: the app shell's rail owns the
+            // lower-left corner, so the button has to step clear of it there
+            // and nowhere else.
+            style={{ zIndex: 1050, width: 40, height: 40 }}
             aria-label="Design options"
           >
             <FontAwesomeIcon icon={faPaintbrush} />

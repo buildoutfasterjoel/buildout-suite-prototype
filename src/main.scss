@@ -3998,6 +3998,284 @@
   }
 }
 
+// ── App shell nav mode ───────────────────────────────────────────────────────
+// The second global nav shape (Figma node 193:3678): a 48px icon rail down the
+// left and a top bar to its right, with the page content in a container that
+// rounds only its top-left corner — the one corner where the two navs meet — so
+// it reads as a surface sitting *inside* the chrome rather than butting against
+// it. The other three corners run to the window edge and stay square.
+//
+// Everything here is scoped to `.app-shell--app`; classic mode renders the same
+// DOM with the rail slot empty and none of these rules apply.
+.app-shell--app {
+  background-color: colors.$buildout-blue-950;
+
+  .app-shell__stage {
+    background-color: var(--bp-body-bg, #{colors.$storm-grey-50});
+    border-top-left-radius: 12px;
+    // Clips whichever of the page or the assistant rail reaches that corner.
+    overflow: hidden;
+  }
+}
+
+// The rail itself. Full window height — the top bar starts to its right, not
+// above it — so the brand, the sections and the page all sit in one frame.
+.app-rail {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: 48px;
+  background-color: colors.$buildout-blue-950;
+
+  // Matches the top bar's 60px, so the first section icon clears its floor.
+  &__top {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 60px;
+    flex-shrink: 0;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+    padding: 8px 0;
+    list-style: none;
+  }
+
+  // Pushed to the foot of the rail by the auto margin, so it stays put whether
+  // there are five sections above it or fifteen.
+  &__foot {
+    display: flex;
+    justify-content: center;
+    margin-top: auto;
+    padding: 8px 0;
+  }
+
+  // The hover target for a group's flyout. `position: relative` anchors the
+  // flyout to the item rather than the rail, so it opens beside its own icon.
+  &__item {
+    position: relative;
+  }
+
+  &__link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background-color: transparent;
+    color: colors.$buildout-blue-50;
+    font-size: 16px;
+    text-decoration: none;
+    transition:
+      background-color 0.12s ease,
+      color 0.12s ease;
+
+    &:hover,
+    &:focus-visible {
+      background-color: rgba(255, 255, 255, 0.12);
+      color: #fff;
+    }
+
+    // Active is a filled purple tile, not a tinted glyph: with the labels gone
+    // there is no bold weight left to carry the state.
+    &--active,
+    &--active:hover,
+    &--active:focus-visible {
+      background-color: var(--color-purple-heart-600, #8833ea);
+      color: #fff;
+    }
+  }
+
+  // Inert until the collapsed/expanded rail exists — see AppSideNav.
+  &__hamburger {
+    cursor: default;
+
+    &:hover {
+      background-color: transparent;
+      color: colors.$buildout-blue-50;
+    }
+  }
+
+  // A group's children, opened by hovering (or focusing into) the item. Its own
+  // left padding is the bridge across to the rail, so the pointer never crosses
+  // a dead gap on the way over and drops the menu.
+  &__flyout {
+    position: absolute;
+    top: -6px;
+    left: 100%;
+    z-index: 1040;
+    display: none;
+    padding-left: 8px;
+  }
+
+  &__item:hover &__flyout,
+  &__item:focus-within &__flyout {
+    display: block;
+  }
+
+  &__flyout-inner {
+    min-width: 176px;
+    padding: 6px;
+    border-radius: 8px;
+    background-color: #fff;
+    box-shadow:
+      0 4px 6px -4px rgba(0, 0, 0, 0.1),
+      0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
+
+  // Carries the group's name, which the icon can no longer say on its own.
+  &__flyout-title {
+    padding: 4px 8px;
+    color: colors.$storm-grey-500;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &__flyout-link {
+    display: block;
+    padding: 6px 8px;
+    border-radius: 6px;
+    color: colors.$storm-grey-900;
+    font-size: 14px;
+    line-height: 19px;
+    text-decoration: none;
+
+    &:hover,
+    &:focus-visible {
+      background-color: colors.$storm-grey-50;
+      color: colors.$storm-grey-950;
+    }
+  }
+}
+
+// The floating design-options button (`ContactDesignToggles`). It docks in the
+// lower-left, which in the app shell is the rail's own corner — where the
+// Support button already lives — so there it steps right of the rail's 48px
+// instead of landing on top of it.
+.design-toggle-fab {
+  left: 16px;
+  bottom: 16px;
+}
+
+.app-shell--app .design-toggle-fab {
+  left: 64px;
+}
+
+// ── App shell top bar ────────────────────────────────────────────────────────
+// Three zones, and the whole design rests on the outer two being the same
+// width: that's what puts the omnibar and the Assistant button dead-centre over
+// the page container rather than wherever the brand and the account icons
+// happen to leave them.
+.app-topbar {
+  --app-topbar-side: 244px;
+
+  min-height: 60px;
+  padding: 0;
+
+  // Blueprint's Navbar nests a `.container-fluid` that carries 12px of its own
+  // padding. Left in, it insets both side zones by 12 before their own 16 —
+  // which is what left the avatar floating 28px off the window edge instead of
+  // the design's 16.
+  > .container-fluid {
+    padding: 0;
+  }
+
+  &__side {
+    flex: 0 0 var(--app-topbar-side);
+    width: var(--app-topbar-side);
+    min-width: 0;
+    margin: 0;
+    padding: 0 16px;
+  }
+
+  // `.navbar-nav` grows by default, so each list stretched to share the zone's
+  // slack and then packed its icons to its own left — leaving dead space after
+  // the last one, most visibly the hole where the classic bar's AI button used
+  // to sit. Shrink-wrap the lists and let the zone's `justify-content: end` put
+  // them against the right edge.
+  &__side--end .navbar-nav {
+    flex: 0 0 auto;
+  }
+
+  &__center {
+    // Bootstrap's `.navbar-collapse` is `flex-basis: 100%` until an expand
+    // breakpoint relaxes it; this is the growing middle, so say so outright.
+    flex: 1 1 auto;
+    min-width: 0;
+
+    // Blueprint's `Navbar.Content` is a Collapsible, and it puts a plain block
+    // `.collapse-body` between the bar and the nav list. Left alone that block
+    // shrink-wraps the list to its content and parks it hard left, which is
+    // exactly the drift the equal side zones exist to prevent — so the centring
+    // has to happen on the wrapper, not on the list inside it.
+    > .collapse-body {
+      display: flex;
+      justify-content: center;
+      flex: 1 1 auto;
+      width: 100%;
+    }
+  }
+
+  // Centred on the list too, not only on the wrapper: `.navbar-nav` grows to
+  // fill the wrapper, so the wrapper's centring lands on a full-width box and
+  // the list's own alignment is what actually places the pair.
+  &__center-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+}
+
+// The Assistant launcher in app mode (Figma node 208:11159). Where the classic
+// bar hides it in a filled circle at the end of an icon row, here it's a named
+// button next to the omnibar — the two AI entry points read as one pair, which
+// is the emphasis this layout exists to give them. Pale rather than saturated:
+// it sits on the dark bar beside an already-glowing omnibar, and two competing
+// glows would leave neither of them primary.
+.app-assistant-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 16px;
+  border: 1px solid var(--color-purple-heart-100, #f2e8ff);
+  border-radius: 6px;
+  color: var(--color-purple-heart-950, #360764);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 19px;
+  white-space: nowrap;
+  @include otto-gradient-decorative;
+  transition:
+    filter 0.12s ease,
+    box-shadow 0.12s ease;
+
+  svg {
+    color: var(--color-purple-heart-500, #9f55f7);
+  }
+
+  &:hover {
+    filter: brightness(1.04);
+    box-shadow: 0 0 16px 0 rgba(212, 180, 254, 0.5);
+  }
+
+  &[aria-pressed="true"] {
+    box-shadow: 0 0 0 2px rgba(159, 85, 247, 0.55);
+  }
+}
+
 // ── Account dropdown ────────────────────────────────────────────────────────
 // The navbar dropdown is portaled to <body>, so these rules sit at top level
 // rather than inside .global-navbar.
@@ -4605,6 +4883,58 @@
     color: colors.$storm-grey-950;
     white-space: pre-wrap;
   }
+}
+
+// The rail's two frames. Docked it is a fixed 380px column; in the app shell it
+// pulls 8px off the stage's top and right so it reads as a card floating on the
+// page rather than a second column welded to it (Figma node 193:4365). Expanded
+// it drops both the width and the inset and takes the stage whole (193:5009).
+//
+// The classic nav has no rounded stage to float on, so there the rail stays
+// flush and keeps a plain left border — the inset rules are scoped to app mode.
+.assistant-rail {
+  width: 380px;
+  border-left: 1px solid var(--card-border-color, #{colors.$storm-grey-100});
+}
+
+.app-shell--app .assistant-rail:not(.assistant-rail--expanded) {
+  margin: 8px 8px 0 0;
+  height: calc(100% - 8px);
+  border: 1px solid var(--card-border-color, #{colors.$storm-grey-100});
+  border-radius: 12px 12px 0 0;
+  box-shadow:
+    0 1px 2px -1px rgba(0, 0, 0, 0.1),
+    0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  // The header owns the panel's top corners, so it has to round with it or its
+  // white fill squares them back off.
+  overflow: hidden;
+}
+
+.assistant-rail--expanded {
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  border-left: 0;
+}
+
+// The reading column. At rail width it is simply the full panel — the cap only
+// bites in full screen, where an unconstrained transcript would run type across
+// the whole window. The scroller stays full-width outside it, so the scrollbar
+// sits on the panel's edge rather than floating mid-page beside the text.
+.assistant-rail__column {
+  width: 100%;
+}
+
+// Height for the home screen's vertical centring to resolve against.
+.assistant-rail__column--fill {
+  min-height: 100%;
+}
+
+.assistant-rail--expanded .assistant-rail__column {
+  // 720px including padding — 680 of transcript, 688 of composer (Figma nodes
+  // 193:5257 / 193:5309).
+  max-width: 720px;
+  margin-inline: auto;
 }
 
 // Assistant rail — header (Figma node 25:178). Otto's avatar is the ONE place
