@@ -614,19 +614,23 @@ function PreSplitDeductionsSection({
                 </Table.Row>
               ),
             )}
+          </Table.Body>
+          {/* Sum is a `tfoot`, not a last body row: the theme gives `tfoot`
+              cells the header's background, weight, and a rule above them, so
+              the total reads as the table's own summary rather than another
+              deduction — and the hand-applied `fw-semibold` goes away. */}
+          <Table.Footer>
             <Table.Row>
-              <Table.Cell colSpan={3} className="fw-semibold">
-                Sum
-              </Table.Cell>
-              <Table.Cell className="text-end fw-semibold">
+              <Table.Cell colSpan={3}>Sum</Table.Cell>
+              <Table.Cell className="text-end">
                 {formatCurrency(amountTotal)}
               </Table.Cell>
-              <Table.Cell className="text-end fw-semibold">
+              <Table.Cell className="text-end">
                 {formatCurrency(coveredTotal)}
               </Table.Cell>
               {editable && <Table.Cell />}
             </Table.Row>
-          </Table.Body>
+          </Table.Footer>
         </Table>
       )}
     </Section>
