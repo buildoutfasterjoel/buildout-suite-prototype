@@ -931,7 +931,7 @@ export function AssistantSidebar() {
    * A follow-up that also calls a tool is real work, not narration, so it keeps
    * its text.
    */
-  const narratedIndices = useMemo(() => {
+  const { narratedIndices, artifactLanded } = useMemo(() => {
     const out = new Set<number>();
     let armed = false;
     messages.forEach((m, i) => {
@@ -946,7 +946,11 @@ export function AssistantSidebar() {
       }
       if (armed && calls.length === 0) out.add(i);
     });
-    return out;
+    // `armed` where the walk ends is the same question asked of the newest turn:
+    // its artifact is on screen and the broker hasn't spoken since. One pass,
+    // two facts — so the loading indicator and the suppression can't disagree
+    // about whether a turn is visually finished.
+    return { narratedIndices: out, artifactLanded: armed };
   }, [messages]);
 
   /**
@@ -1259,7 +1263,14 @@ export function AssistantSidebar() {
             </Fragment>
           ))
         )}
+        {/* The turn's visible work can finish before the turn does: a tool result
+            lands, its card renders, and the model is still closing out. What it
+            says next is suppressed anyway (see `narratedIndices`), so a spinner
+            underneath the card advertises work that will never show up — it just
+            vanishes. `planPending` alone didn't cover this; it stopped the
+            checklist re-rendering in that gap and handed the slot to "Working…". */}
         {isLoading &&
+          !artifactLanded &&
           (planPending ? (
             <ActionPlanChecklist done={false} />
           ) : (
