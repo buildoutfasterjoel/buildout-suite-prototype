@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "@tanstack/react-router";
+import { useLocation, useRouter } from "@tanstack/react-router";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { useChat, type UIMessage } from "@tanstack/ai-react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
@@ -677,6 +677,8 @@ export function AssistantSidebar() {
   const focusNonce = useAssistant((s) => s.focusNonce);
   const expanded = useAssistant((s) => s.expanded);
   const toggleExpanded = useAssistant((s) => s.toggleExpanded);
+  const setExpanded = useAssistant((s) => s.setExpanded);
+  const { pathname } = useLocation();
   /**
    * Which of the rail's two faces is showing (Figma nodes 193:4366 / 193:4669).
    *
@@ -1065,6 +1067,18 @@ export function AssistantSidebar() {
     });
     return () => cancelAnimationFrame(id);
   }, [focusNonce]);
+
+  /**
+   * Navigating collapses full screen back to the rail.
+   *
+   * Full screen hides the page entirely, so a navigation that left it up would
+   * take the broker somewhere they can't see — and every route change here is
+   * one they asked for, including the ones started from inside the chat by
+   * clicking a result. The rail stays open; only the frame gives way.
+   */
+  useEffect(() => {
+    if (useAssistant.getState().expanded) setExpanded(false);
+  }, [pathname, setExpanded]);
 
   /**
    * Arriving at the chat lands on the newest message — coming back from the home

@@ -54,7 +54,7 @@ export function AppTopBar() {
 
       <Navbar.Content className="app-topbar__center flex-nowrap">
         <Navbar.Nav className="app-topbar__center-nav">
-          <Navbar.Item className="d-flex align-items-center">
+          <Navbar.Item className="omni-bar-item d-flex align-items-center">
             <OmniBarTrigger />
           </Navbar.Item>
 
