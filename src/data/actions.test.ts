@@ -17,6 +17,7 @@ import {
   updateDealTransaction,
   submitVoucher,
   reopenVoucher,
+  updateVoucherDeductions,
 } from './actions'
 import { emptyDraft } from './createListing'
 import { closeProbabilityForStage, commissionForecast } from './commission'
@@ -395,6 +396,42 @@ describe('actions', () => {
 
   it('reopenVoucher returns null for an unknown deal', () => {
     expect(reopenVoucher('does-not-exist').deal).toBeNull()
+  })
+
+  it('updateVoucherDeductions replaces the deductions on a Draft voucher', () => {
+    const deal = [...useDataStore.getState().listings.values()][0]
+    updateDealTransaction(deal.id, {
+      backOffice: { ...deal.transaction.backOffice, status: 'Draft' },
+    })
+    const rows = [
+      {
+        id: 'ded-1',
+        category: 'Broker of Record',
+        description: 'BOR fee',
+        pct: 5,
+        amount: 2500,
+        covered: null,
+      },
+    ]
+    const { deal: updated } = updateVoucherDeductions(deal.id, rows)
+    expect(updated?.transaction.backOffice.preSplitDeductions).toEqual(rows)
+  })
+
+  it('updateVoucherDeductions will not write to a submitted or approved voucher', () => {
+    const deal = [...useDataStore.getState().listings.values()][0]
+    for (const status of ['Pending', 'Approved'] as const) {
+      const { deal: seeded } = updateDealTransaction(deal.id, {
+        backOffice: { ...deal.transaction.backOffice, status },
+      })
+      const before = seeded?.transaction.backOffice.preSplitDeductions
+      const { deal: updated } = updateVoucherDeductions(deal.id, [])
+      expect(updated).toBe(seeded)
+      expect(updated?.transaction.backOffice.preSplitDeductions).toBe(before)
+    }
+  })
+
+  it('updateVoucherDeductions returns null for an unknown deal', () => {
+    expect(updateVoucherDeductions('does-not-exist', []).deal).toBeNull()
   })
 
   it('a voucher can go Draft → Pending → Draft → Pending', () => {

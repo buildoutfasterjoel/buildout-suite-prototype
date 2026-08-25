@@ -49,6 +49,7 @@ import {
   type ContactShare,
 } from './teammates'
 import { DEFAULT_PERSONAL_SPLIT_PCT, STAGE_CLOSE_PROBABILITY } from './commission'
+import type { DeductionCategory } from './vouchers'
 import { applyLeaseSpaces } from './leaseSpaceFixtures'
 
 const SEED = 20240101
@@ -1142,11 +1143,14 @@ function generateBroker(side: 'internal' | 'outside', commissionAmount: number):
   }
 }
 
-const DEDUCTION_CATEGORIES = [
-  { category: 'Marketing', description: 'Billboard Fees' },
-  { category: 'Marketing', description: 'Digital Ad Spend' },
-  { category: 'Legal', description: 'Closing Review' },
-  { category: 'Admin', description: 'Processing Fee' },
+// Category is drawn from DEDUCTION_CATEGORIES — the same list the voucher's
+// Category dropdown offers — so a seeded row's category is always one the
+// dropdown can show as selected. Description is the free-text line beside it.
+const DEDUCTION_FIXTURES: { category: DeductionCategory; description: string }[] = [
+  { category: 'Outside Referral', description: 'Referral Fee' },
+  { category: 'Royalties', description: 'Franchise Royalty' },
+  { category: 'Internal Referrals', description: 'Internal Referral Fee' },
+  { category: 'Broker of Record', description: 'Broker of Record Fee' },
 ]
 
 const TASK_ASSIGNEE_INITIALS = ['OW', 'MT', 'KN', 'SP', 'JR']
@@ -1284,7 +1288,7 @@ function generateListings(
     const [pMin, pMax] = STAGE_CLOSE_PROBABILITY[status]
 
     // Pre-split deductions come off the top before brokers are paid out.
-    const deductionPick = faker.helpers.arrayElement(DEDUCTION_CATEGORIES)
+    const deductionPick = faker.helpers.arrayElement(DEDUCTION_FIXTURES)
     const deductionPct = faker.number.float({ min: 3, max: 8, fractionDigits: 1 })
     const deductionAmount = Math.round(commissionAmount * (deductionPct / 100))
     const preSplitDeductions: FinancialDeduction[] = [

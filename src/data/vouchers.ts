@@ -20,6 +20,24 @@ export const VOUCHER_STATUS_LABELS: Record<VoucherStatus, string> = {
 }
 
 /**
+ * What a pre-split deduction can be filed under — the Category dropdown on a
+ * Draft voucher, and what the seed picks from.
+ *
+ * A new row starts with no category chosen (`''`), which is why
+ * `FinancialDeduction.category` stays a plain `string` rather than this union:
+ * the empty state is a real state on an unfinished row, not a broken one.
+ */
+export const DEDUCTION_CATEGORIES = [
+  'Outside Referral',
+  'Royalties',
+  'Internal Referrals',
+  'Broker of Record',
+  'Other',
+] as const
+
+export type DeductionCategory = (typeof DEDUCTION_CATEGORIES)[number]
+
+/**
  * Where a deal's voucher page lives, as a typed route target.
  *
  * A discriminated union, not `{ to: string; params: Record<string, string> }`:

@@ -6,7 +6,7 @@ import {
   serializeContactFilters,
   type ContactFilterState,
 } from '#/components/contacts/contactFilterModel'
-import type { Contact, ContactRole, ContactSource, DealDocument, DealHistoryEntry, DealIngestion, DealMarketing, DealPitchFinancials, DealTask, DealTransaction, DocumentGeneration, GeneratedSection, IngestionFieldKey, Listing, PropertyStatus, Task } from './types'
+import type { Contact, ContactRole, ContactSource, DealDocument, DealHistoryEntry, DealIngestion, DealMarketing, DealPitchFinancials, DealTask, DealTransaction, DocumentGeneration, FinancialDeduction, GeneratedSection, IngestionFieldKey, Listing, PropertyStatus, Task } from './types'
 import { CURRENT_USER, TEAMMATES } from './teammates'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
 import { reconcileContactDealFields } from './contactStage'
@@ -319,6 +319,40 @@ export function reopenVoucher(dealId: string): { deal: Listing | null } {
             transaction: {
               ...l.transaction,
               backOffice: { ...l.transaction.backOffice, status: 'Draft' },
+            },
+            updatedAt: new Date().toISOString(),
+          },
+    ),
+  }
+}
+
+/**
+ * Commit the voucher's pre-split deductions — the write behind Save on a Draft
+ * voucher's editable deduction table.
+ *
+ * **Draft only,** the same guard `submitVoucher` and `reopenVoucher` carry and
+ * for the same reason: a Pending voucher is sitting with an approver and an
+ * Approved one has been signed off, so the figures either is looking at cannot
+ * change underneath it. The rule lives here rather than only in the Save button
+ * so it holds however the write is reached.
+ *
+ * The whole array is replaced rather than patched row by row: the table edits
+ * rows, adds them, and deletes them in one local working copy, and Save is a
+ * statement about that copy as a whole.
+ */
+export function updateVoucherDeductions(
+  dealId: string,
+  deductions: FinancialDeduction[],
+): { deal: Listing | null } {
+  return {
+    deal: patchListing(dealId, (l) =>
+      l.transaction.backOffice.status !== 'Draft'
+        ? l
+        : {
+            ...l,
+            transaction: {
+              ...l.transaction,
+              backOffice: { ...l.transaction.backOffice, preSplitDeductions: deductions },
             },
             updatedAt: new Date().toISOString(),
           },
