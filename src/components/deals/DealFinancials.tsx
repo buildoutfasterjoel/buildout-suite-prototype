@@ -44,7 +44,7 @@ import {
   DEDUCTION_CATEGORIES,
   TRANSACTION_SIDES,
 } from "#/data/vouchers";
-import { TEAMMATES, type Teammate } from "#/data/teammates";
+import { AddBrokerModal } from "./AddBrokerModal";
 import { notify } from "#/lib/notify";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
 import { VoucherStatusBadge } from "./VoucherStatusBadge";
@@ -305,51 +305,6 @@ function RemoveBrokerButton({ name, onRemove }: { name: string; onRemove: () => 
 }
 
 /**
- * Add Broker: the company roster, minus whoever is already on this voucher.
- *
- * A menu rather than a blank row with a name field, because an internal broker
- * is one of the firm's own people — a typed name would let the voucher pay
- * someone who does not work here, and it is what keeps the Brokers column plain
- * text in both tables.
- */
-function AddBrokerMenu({
-  brokers,
-  onAdd,
-}: {
-  brokers: DealBroker[];
-  onAdd: (teammate: Teammate) => void;
-}) {
-  const taken = new Set(brokers.map((b) => b.name));
-  const available = TEAMMATES.filter((t) => !taken.has(t.name));
-
-  return (
-    <DropdownMenu>
-      <DropdownMenu.Trigger
-        render={
-          <Button variant="ghost" size="sm">
-            <FontAwesomeIcon icon={faPlus} />
-            Add Broker
-          </Button>
-        }
-      />
-      <DropdownMenu.Content align="end">
-        {available.length === 0 ? (
-          <DropdownMenu.Item disabled className="disabled">
-            Everyone is already on this voucher
-          </DropdownMenu.Item>
-        ) : (
-          available.map((t) => (
-            <DropdownMenu.Item key={t.id} onClick={() => onAdd(t)}>
-              {t.name}
-            </DropdownMenu.Item>
-          ))
-        )}
-      </DropdownMenu.Content>
-    </DropdownMenu>
-  );
-}
-
-/**
  * The two Internal Commissions tables: what each broker takes off the deal's
  * gross, then what each takes home from their own share.
  *
@@ -374,36 +329,30 @@ function InternalCommissionsSection({
   onChange: (next: DealBroker[]) => void;
 }) {
   const grossTotal = sum(brokers.map((b) => b.grossCommission));
+  const [adding, setAdding] = useState(false);
 
   const patch = (id: string, fields: Partial<DealBroker>) =>
     onChange(brokers.map((b) => (b.id === id ? { ...b, ...fields } : b)));
   const remove = (id: string) => onChange(brokers.filter((b) => b.id !== id));
 
-  // A teammate joins the deal with nothing filled in but their identity: no
-  // side, no gross, "No Plan". Whoever added them is the one who knows the rest.
-  const add = (t: Teammate) =>
-    onChange([
-      ...brokers,
-      {
-        id: crypto.randomUUID(),
-        name: t.name,
-        role: t.role,
-        email: t.email,
-        side: "internal",
-        commissionSplitPct: 0,
-        grossCommission: 0,
-        commissionPlan: "No Plan",
-        personalSplitPct: 0,
-      },
-    ]);
-
   return (
     <Section
       title="Internal Commissions"
       action={
-        editable ? <AddBrokerMenu brokers={brokers} onAdd={add} /> : undefined
+        editable ? (
+          <Button variant="ghost" size="sm" onClick={() => setAdding(true)}>
+            <FontAwesomeIcon icon={faPlus} />
+            Add Broker
+          </Button>
+        ) : undefined
       }
     >
+      <AddBrokerModal
+        open={adding}
+        onOpenChange={setAdding}
+        brokers={brokers}
+        onAdd={(b) => onChange([...brokers, b])}
+      />
       <div className="d-flex flex-column gap-4">
         <Table dense>
           <Table.Header>
