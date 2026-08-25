@@ -75,7 +75,9 @@ function ContactListPager({ contactId }: { contactId: string }) {
 }
 
 /**
- * Fixed top bar for the contact detail page: a list pager + breadcrumbs.
+ * Fixed top bar for the contact detail page: breadcrumbs on the left, the list
+ * pager pushed to the far right so stepping through a list doesn't sit between
+ * the user and the trail back out.
  *
  * The breadcrumb root adapts to the source list — "Contacts", "Contacts
  * (Filtered)", or the list's (truncated) name — and clicking it restores that
@@ -89,8 +91,6 @@ export function ContactDetailTopBar({ contact }: { contact: Contact }) {
   return (
     <div className="d-flex align-items-center justify-content-between gap-3">
       <div className="d-flex align-items-center gap-3" style={{ minWidth: 0 }}>
-        <ContactListPager contactId={contact.id} />
-
         <Breadcrumb className="contact-detail-breadcrumb">
           <Breadcrumb.List>
             <Breadcrumb.Item>
@@ -121,6 +121,8 @@ export function ContactDetailTopBar({ contact }: { contact: Contact }) {
           </Breadcrumb.List>
         </Breadcrumb>
       </div>
+
+      <ContactListPager contactId={contact.id} />
     </div>
   );
 }
