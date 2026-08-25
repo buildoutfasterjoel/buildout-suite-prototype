@@ -95,16 +95,6 @@ export function UserPermissions({ user }: { user: RosterUser }) {
     );
   }
 
-  function reset(row: ResolvedPermission) {
-    setOverride(user.id, row.permission.id, undefined);
-    notify({
-      title: `${row.permission.label} reset`,
-      description: `Back to the role default (${
-        row.roleDefault ? "On" : "Off"
-      }).`,
-    });
-  }
-
   // Without Manage Company there's nothing here to read or act on, so the notice
   // stands alone rather than heading a list the viewer can't touch.
   if (!canManage) {
@@ -271,7 +261,6 @@ export function UserPermissions({ user }: { user: RosterUser }) {
                   firstName={firstName}
                   editing={editing}
                   onToggle={(next) => toggle(row, next)}
-                  onReset={() => reset(row)}
                 />
               ))}
             </div>
@@ -303,23 +292,20 @@ export function UserPermissions({ user }: { user: RosterUser }) {
 
 /**
  * One permission. The label, its origin, and its effective state are always
- * visible. In edit mode the state pill becomes a switch, with a reset button
- * beside it once the row diverges from what the roles say.
+ * visible. In edit mode the state pill becomes a switch.
  */
 function PermissionRow({
   row,
   firstName,
   editing,
   onToggle,
-  onReset,
 }: {
   row: ResolvedPermission;
   firstName: string;
   editing: boolean;
   onToggle: (next: boolean) => void;
-  onReset: () => void;
 }) {
-  const { permission, custom, on, roleDefault } = row;
+  const { permission, custom, on } = row;
 
   return (
     // A left rule plus the Custom chip carry the whole signal — no fill behind
@@ -368,38 +354,16 @@ function PermissionRow({
           cards), and the reason neither a disabled nor a read-only switch works
           here: Blueprint's disabled switch drops the checked fill, so twenty
           rows would render identically, and a read-only switch invites a click
-          that does nothing. The reset button keeps a fixed slot so the switches
-          stay in one column down the list. */}
+          that does nothing. No per-row reset: flipping the switch back already
+          clears the override, so a second control for the same move was noise.
+          "Reset all to role defaults" above still clears the page at once. */}
       <div className="flex-shrink-0 d-flex align-items-center gap-2">
         {editing ? (
-          <>
-            <div style={{ width: 32 }} className="d-flex justify-content-center">
-              {custom && (
-                <Tooltip>
-                  <Tooltip.Trigger
-                    render={
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={onReset}
-                        aria-label={`Reset ${permission.label} to the role default`}
-                      >
-                        <FontAwesomeIcon icon={faRotateLeft} />
-                      </Button>
-                    }
-                  />
-                  <Tooltip.Content side="top">
-                    Reset to role default ({roleDefault ? "On" : "Off"})
-                  </Tooltip.Content>
-                </Tooltip>
-              )}
-            </div>
-            <Switch
-              checked={on}
-              onCheckedChange={onToggle}
-              aria-label={`${permission.label} for ${firstName}`}
-            />
-          </>
+          <Switch
+            checked={on}
+            onCheckedChange={onToggle}
+            aria-label={`${permission.label} for ${firstName}`}
+          />
         ) : (
           <StatePill on={on} />
         )}
