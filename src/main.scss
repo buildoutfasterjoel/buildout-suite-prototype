@@ -5092,6 +5092,26 @@
 // Assistant rail — the running-tool chip (Figma node 102:3967). A pill wearing
 // the same sweep as Otto's mark, so "Otto is doing something" is one visual
 // language across the rail. Replaces a bare wrench + raw tool name.
+// A chip and the status line it grows when the call runs long. A column so the
+// line sits under its own chip rather than under the whole wrapped row — the
+// chips live in a `flex-wrap` row, and a sibling line there would break it.
+.assistant-tool-chip__stack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+// Deliberately quiet, and outside the pill: this is Otto thinking aloud, not a
+// result. Matches the task list's muted voice (see `.assistant-task-row`).
+.assistant-tool-chip__progress {
+  padding-left: 2px;
+  color: colors.$storm-grey-600;
+  font-size: 12px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
 .assistant-tool-chip {
   display: inline-flex;
   align-items: center;
