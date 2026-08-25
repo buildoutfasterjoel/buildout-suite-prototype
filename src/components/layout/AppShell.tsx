@@ -81,6 +81,14 @@ export function AppShell() {
 
   const appMode = mounted && navMode === "app";
 
+  // The omni palette is portaled to <body>, outside this tree, so it can't read
+  // the mode from an ancestor class. Stamp it on <html> instead — that's the one
+  // element both the shell and the portal can see. Written in an effect because
+  // it's a DOM side-effect, not markup React renders.
+  useEffect(() => {
+    document.documentElement.dataset.navMode = appMode ? "app" : "classic";
+  }, [appMode]);
+
   // Global command-center shortcut. `Mod` resolves to ⌘ on macOS, Ctrl elsewhere.
   useHotkey("Mod+K", () => useOmniSearch.getState().toggle());
 

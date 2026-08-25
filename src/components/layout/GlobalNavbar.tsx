@@ -121,7 +121,7 @@ export function GlobalNavbar() {
         <Navbar.Nav>
           {NAV_SECTIONS.map((section) => renderSection(section))}
 
-          <Navbar.Item className="d-flex align-items-center ms-2">
+          <Navbar.Item className="omni-bar-item d-flex align-items-center ms-2">
             <OmniBarTrigger />
           </Navbar.Item>
         </Navbar.Nav>

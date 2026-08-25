@@ -89,7 +89,7 @@ export function OmniBarTrigger() {
         }
       }}
       aria-label="Search or ask Otto"
-      className="omni-bar flex-shrink-0"
+      className="omni-bar"
     >
       <span className="omni-bar__icon">
         <OmniSparkleIcon variant="navbar" />
