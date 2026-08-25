@@ -257,6 +257,75 @@ export function updateDealTransaction(
   }
 }
 
+/**
+ * Send a Draft voucher to an approver — the single write behind both Submit
+ * buttons on the voucher page.
+ *
+ * Guarded here, not only at the buttons: Pending is already sitting with an
+ * approver and Approved has been signed off, so submitting either would walk a
+ * voucher backwards. Returning the listing untouched keeps it referentially
+ * equal, so a no-op submit doesn't re-render the page either.
+ *
+ * No history entry. `DealHistoryEntry` records stage moves — its `fromStage` and
+ * `toStage` are `PropertyStatus` — and a voucher's status is a separate axis
+ * from the deal's stage, so it has nowhere to go in that shape.
+ */
+export function submitVoucher(dealId: string): { deal: Listing | null } {
+  return {
+    deal: patchListing(dealId, (l) =>
+      l.transaction.backOffice.status !== 'Draft'
+        ? l
+        : {
+            ...l,
+            transaction: {
+              ...l.transaction,
+              backOffice: { ...l.transaction.backOffice, status: 'Pending' },
+            },
+            updatedAt: new Date().toISOString(),
+          },
+    ),
+  }
+}
+
+/**
+ * Take a Pending voucher back off the approver's desk, to Draft.
+ *
+ * **Pending only.** An approved voucher is settled: the sign-off is a statement
+ * about specific figures, and a broker cannot walk it back by reopening the
+ * record. What an approved voucher still accepts is *additions* — receivables,
+ * invoices, credits against what was approved — not a re-edit of the approved
+ * figures themselves. So Draft (already open) and Approved (closed) are both
+ * no-ops here, returning the listing referentially unchanged the way
+ * `submitVoucher` does.
+ *
+ * That rule lives here rather than only in the button that calls it, which is
+ * also what keeps `DealFinancials`' own invariant safe by construction:
+ * `approval` is non-null exactly when `status` is `'Approved'`, and the one
+ * status this can move — Pending — never carries one.
+ *
+ * Reopening costs the submission: the voucher has to be attested to and
+ * submitted again. That is the point, not a side effect — whatever the approver
+ * was looking at is no longer what the brokerage is claiming. (The page's
+ * sections are editable at any status today, so this changes what the voucher
+ * *claims about itself*, not what can be typed into it.)
+ */
+export function reopenVoucher(dealId: string): { deal: Listing | null } {
+  return {
+    deal: patchListing(dealId, (l) =>
+      l.transaction.backOffice.status !== 'Pending'
+        ? l
+        : {
+            ...l,
+            transaction: {
+              ...l.transaction,
+              backOffice: { ...l.transaction.backOffice, status: 'Draft' },
+            },
+            updatedAt: new Date().toISOString(),
+          },
+    ),
+  }
+}
+
 /** Merge-patch the deal's pitch financials (asking price, price per SF, cap rate, …). */
 export function updateDealFinancials(
   dealId: string,
