@@ -531,6 +531,10 @@ export function createClientTools({
             to: fromComposer.to,
             contactId: fromComposer.contactId,
             contactName: fromComposer.contactName,
+            // Carried so the receipt can offer "Show Content" — the rail folds
+            // the sent body away, but folding it away means still having it.
+            body: fromComposer.body,
+            sentAt: new Date().toISOString(),
           },
         };
       }
@@ -562,6 +566,8 @@ export function createClientTools({
           to: pending.to,
           contactId: pending.contactId,
           contactName: pending.contactName,
+          body: pending.body,
+          sentAt: new Date().toISOString(),
         },
       };
     }),

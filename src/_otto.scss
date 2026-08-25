@@ -17,3 +17,58 @@
     ),
     linear-gradient($angle, #b88cf2 0%, #8ca6f7 50%, #61c2ff 100%);
 }
+
+// The three named AI gradients from the design system, added when the rail was
+// rebuilt against the Figma refresh. `otto-sweep` above is the *wash* recipe —
+// a flat white veil over a saturated sweep — and stays where it is because the
+// avatar, the starter discs and the tool chip all still read through it. These
+// three are literal token ramps instead: they name their stops, so a design
+// change is a stop swap rather than an opacity guess.
+
+// AI-Gradient/Card — the Next Actions card's ground. Left-to-right, purple into
+// blue, pale enough that 14px body copy still passes on top of it.
+@mixin otto-gradient-card {
+  background-image: linear-gradient(
+    90deg,
+    var(--color-purple-heart-100, #f2e8ff) 0%,
+    var(--color-buildout-blue-50, #eff6ff) 50%,
+    var(--color-buildout-blue-100, #dcebfd) 100%
+  );
+}
+
+// AI-Gradient/Interactive-Decorative — a step more saturated than the card, for
+// the small discs and badges that sit *on* white: Otto's avatar, the starter
+// prompt icons, the "Draft" badge.
+@mixin otto-gradient-decorative {
+  background-image: linear-gradient(
+    90deg,
+    var(--color-purple-heart-200, #e7d5ff) 0%,
+    var(--color-buildout-blue-100, #dcebfd) 50%,
+    var(--color-buildout-blue-200, #c0dcfd) 100%
+  );
+}
+
+// AI-Gradient/Accent — used as a *text* fill (via background-clip), which is why
+// it's dark: it has to carry 12–24px type, not sit behind it. Call sites pair it
+// with `otto-gradient-text` below.
+@mixin otto-gradient-accent($angle: 191deg) {
+  background-image: linear-gradient(
+    $angle,
+    var(--color-purple-heart-500, #9f55f7) 0%,
+    var(--color-purple-heart-950, #360764) 100%
+  );
+}
+
+// Paint type with a gradient. The flat `color` is a fallback for when
+// background-clip:text can't resolve — it's the ramp's dark end, so the text
+// stays legible rather than disappearing into the page.
+@mixin otto-gradient-text($angle: 191deg) {
+  @include otto-gradient-accent($angle);
+  color: var(--color-purple-heart-950, #360764);
+
+  @supports (background-clip: text) or (-webkit-background-clip: text) {
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}

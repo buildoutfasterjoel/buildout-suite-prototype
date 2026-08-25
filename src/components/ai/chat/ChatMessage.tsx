@@ -45,7 +45,10 @@ export function ChatMessage({
   const text = messageText(message);
 
   return (
-    <div className="d-flex flex-column gap-2">
+    // 12px between the pieces of a single reply — the text, its tool chips, and
+    // whatever cards came back (Figma node 193:4684). The 24px that separates one
+    // turn from the next belongs to the flow, not to the turn.
+    <div className="d-flex flex-column" style={{ gap: 12 }}>
       {(showText || chipCalls.length > 0) && (
         <div className={`d-flex ${isUser ? "justify-content-end" : "justify-content-start"}`}>
           <div className={isUser ? "assistant-bubble--user" : "text-body w-100"}>
@@ -56,7 +59,7 @@ export function ChatMessage({
                 <MarkdownMessage content={text} />
               ))}
             {chipCalls.length > 0 && (
-              <div className="d-flex flex-wrap gap-2 mt-1">
+              <div className="d-flex flex-wrap gap-2 mt-2">
                 {chipCalls.map((p, i) => (
                   <ToolChip key={i} name={p.name} running={p.output === undefined} labels={labels} />
                 ))}

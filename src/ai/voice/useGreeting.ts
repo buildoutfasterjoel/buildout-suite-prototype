@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useAssistant } from "#/ai/useAssistant";
 import { useVoice } from "./useVoice";
 import { voiceEngine } from "./voiceEngine";
-import { buildGreetingWithOffer } from "./greeting";
+import { buildGreetingWithOffer, type GreetingParts } from "./greeting";
 import { useHeroOffer } from "#/ai/heroOffer";
 
 /**
@@ -12,7 +12,12 @@ import { useHeroOffer } from "#/ai/heroOffer";
  * on the first user gesture so real TTS — not the robotic fallback — plays.
  */
 export function useGreeting(opts: {
-  onGreeting: (text: string) => void;
+  /**
+   * Hand the greeting to the surface that renders it. The rail's home screen
+   * lays the three parts out itself (headline / lead / offer); `text` is the
+   * same thing joined, for anything that just needs a line.
+   */
+  onGreeting: (greeting: GreetingParts, text: string) => void;
   onEnterConversation: () => void;
 }) {
   const { onGreeting, onEnterConversation } = opts;
@@ -39,8 +44,8 @@ export function useGreeting(opts: {
   useEffect(() => {
     if (!open || greeted) return;
     setGreeted(true);
-    const { text, offer } = buildGreetingWithOffer();
-    onGreeting(text);
+    const { text, parts, offer } = buildGreetingWithOffer();
+    onGreeting(parts, text);
     if (offer) useHeroOffer.getState().setOffer(offer);
     if (!useVoice.getState().voiceEnabled) return; // show only, no speech/mic
     void voiceEngine.speak(text).then(() => {

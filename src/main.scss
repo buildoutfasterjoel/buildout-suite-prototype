@@ -4133,111 +4133,477 @@
   box-shadow: inset 0 0 0 1px var(--bp-calendar-day-active-bg);
 }
 
-// Assistant rail — "Suggested prompts" accordion. The caret is rendered inline
-// as the trigger's first child (left of the label, pointing down when open and
-// right when collapsed), so Bootstrap's own right-edge `::after` chevron would
-// be a second, contradictory one. Suppress it rather than restyle it: the icon
-// swap already carries the state, and `::after` also reserves right-hand space
-// the rail doesn't have.
-.assistant-starters {
-  .accordion-button::after {
-    display: none;
-  }
-  // The trigger is a label, not a card header — drop the theme's block padding,
-  // keeping a little breathing room beneath it before the rows begin.
-  .accordion-button {
-    cursor: pointer;
-    padding-block: 0.25rem;
-    margin-bottom: 0.5rem;
-  }
-  // Room below the rows too, so the block doesn't butt against the next message.
-  .accordion-content {
-    padding: 0 0 0.5rem;
-  }
+// Assistant rail — the home screen (Figma node 193:4366). The greeting block and
+// the starter prompts, vertically centred in whatever height is left over the
+// composer: an empty rail pinned to the top reads as a page that failed to load.
+.assistant-home {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 20px;
+  min-height: 100%;
+  padding: 8px 20px 60px;
 }
 
-// Assistant rail — starter prompt rows. Ported from the Otto AI Chat Rail design
-// (Figma node 44:665), which specifies both a default and a hover state.
+// font/size/h5 over font/line-height/h5, wearing the accent ramp as its fill.
+.assistant-home__headline {
+  font-size: 24px;
+  line-height: 31px;
+  font-weight: 600;
+  @include otto-gradient-text(185deg);
+}
+
+// Assistant rail — starter prompt rows (Figma node 193:4389). Rebuilt much
+// lighter than the bordered, shadowed cards they used to be: on the home screen
+// they're the only other thing on the page, so they no longer have to fight for
+// attention. A 24px gradient disc, then the title with its hint trailing on the
+// same line — two lines of chrome per row became one line of type.
 //
-// A bespoke button rather than a Blueprint `Button`: the design owns its own
-// fill, border, shadow and hover colours, and every Button variant brings its
-// own set that would have to be overridden back out.
-//
-// Sizes are written as explicit px to match the design's tokens directly
-// (padding/spacing-3 = 12, font/size/body = 14, font/size/small = 12); the
-// Bootstrap spacing scale has no 12px step to borrow.
+// Still a bespoke button rather than a Blueprint `Button`: every variant brings
+// its own fill, border and padding that would be overridden straight back out.
 .assistant-starter-row {
   display: flex;
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 12px;
+  padding: 4px;
   text-align: left;
-  // The theme's `rounded` is 6px; the design specifies 8.
-  border-radius: 8px;
-  border: 1px solid var(--card-border-color, #{colors.$storm-grey-100});
-  background-color: #fff;
-  // shadows/base
-  box-shadow:
-    0 1px 3px 0 rgba(0, 0, 0, 0.1),
-    0 1px 2px -1px rgba(0, 0, 0, 0.1);
-  line-height: 19px;
-  transition:
-    background-color 0.12s ease,
-    border-color 0.12s ease;
+  border: 0;
+  border-radius: 6px;
+  background-color: transparent;
+  transition: background-color 0.12s ease;
 
-  // Hover (Figma node 94:3701): the flat purple fill gives way to the same sweep
-  // the avatar wears, read through a heavier wash so it stays a background. The
-  // fill swap is instant — CSS can't interpolate between gradients — while the
-  // border still eases.
   &:hover,
   &:focus-visible {
-    @include otto-sweep(9.26deg, 0.85);
-    border-color: colors.$purple-heart-300;
-
-    // The disc deepens as the card lightens, so it holds its edge against the
-    // new fill rather than dissolving into it.
-    .assistant-starter-row__icon {
-      @include otto-sweep(45deg, 0.55);
-    }
+    background-color: colors.$storm-grey-50;
   }
 
-  // Round token badge holding the glyph: 36px outer, 14px glyph, centred
-  // (Figma node 94:3678).
+  // Round gradient token holding the glyph: 24px outer, 12px glyph.
   &__icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    width: 36px;
-    height: 36px;
+    width: 24px;
+    height: 24px;
     border-radius: 99px;
-    @include otto-sweep(45deg, 0.75);
+    @include otto-gradient-decorative;
     // Fallback for the gradient fill below (see `.assistant-rail__avatar`).
     color: colors.$purple-heart-800;
-    font-size: 14px;
+    font-size: 12px;
 
     svg path {
       fill: url("#otto-glyph-gradient");
     }
   }
 
-  // font/size/body over font/line-height/body.
+  // Title and hint share a line, baseline-aligned. The hint is the flexible one,
+  // so a long row truncates the explanation rather than the name of the action.
+  &__text {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex: 1 0 0;
+    min-width: 0;
+  }
+
   &__title {
-    font-size: 14px;
-    line-height: 19px;
-  }
-
-  // font/size/small over font/line-height/small.
-  &__subtitle {
-    font-size: 12px;
-    line-height: 16px;
-  }
-
-  &__chevron {
     flex-shrink: 0;
     font-size: 14px;
-    color: colors.$storm-grey-300;
+    line-height: 19px;
+    font-weight: 600;
+    color: colors.$storm-grey-950;
+  }
+
+  &__subtitle {
+    flex: 1 0 0;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 12px;
+    line-height: 16px;
+    color: colors.$storm-grey-600;
+  }
+}
+
+// Assistant rail — a finished piece of Otto's work, folded behind one muted line
+// (Figma nodes 193:5895, 193:8991). Deliberately weightless: it's a label, not a
+// control surface, and the artifact underneath is the thing worth looking at.
+.assistant-section__trigger,
+.assistant-section__label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  text-align: left;
+  font-size: 14px;
+  line-height: 19px;
+  color: colors.$storm-grey-600;
+}
+
+.assistant-section__trigger:hover,
+.assistant-section__trigger:focus-visible {
+  color: colors.$storm-grey-900;
+}
+
+// The caret sits in a 16px column with 4px of vertical inset, so it centres on
+// the label's first line no matter how many lines the label runs to.
+.assistant-section__caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  padding-block: 4px;
+  font-size: 10px;
+}
+
+// Assistant rail — Otto showing its working (Figma node 193:9078). No card: this
+// is a transient progress readout, and boxing it gave it the same visual weight
+// as the answer it was on the way to.
+.assistant-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.assistant-task-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &__status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 16px;
+    font-size: 13px;
+  }
+
+  &__check {
+    color: var(--root-success, #{colors.$mountain-meadow-500});
+  }
+
+  &__spinner {
+    color: colors.$purple-heart-700;
+  }
+
+  &__pending {
+    color: colors.$storm-grey-500;
+  }
+
+  &__label {
+    flex: 1 0 0;
+    min-width: 0;
+    font-size: 14px;
+    line-height: 19px;
+    color: colors.$storm-grey-600;
+
+    // The step in flight is the only one that earns emphasis — it's the one
+    // sentence that describes what is happening right now.
+    &--running {
+      font-weight: 600;
+      color: colors.$storm-grey-950;
+    }
+
+    &--done {
+      text-decoration: line-through;
+    }
+  }
+}
+
+// Assistant rail — the Next Actions card (Figma node 193:4697). The one card
+// left in the rail, and the only thing wearing the AI gradient ground: it is the
+// answer, and everything around it has been flattened so it reads that way.
+.assistant-next-actions {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid colors.$purple-heart-200;
+  border-radius: 8px;
+  overflow: hidden;
+  @include otto-gradient-card;
+  // shadows/md
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -2px rgba(0, 0, 0, 0.1);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  // The gradient mark. A flat purple fallback for when the `<linearGradient>`
+  // def can't resolve (see `.assistant-rail__avatar`).
+  &__mark {
+    flex-shrink: 0;
+    font-size: 14px;
+    color: colors.$purple-heart-800;
+
+    path {
+      fill: url("#otto-glyph-gradient");
+    }
+  }
+
+  &__title {
+    flex: 1 0 0;
+    min-width: 0;
+    font-size: 12px;
+    line-height: 19px;
+    font-weight: 600;
+    letter-spacing: 0.48px;
+    text-transform: uppercase;
+    @include otto-gradient-text;
+  }
+
+  // Prev / position / next. Browsing only — "Done" is the one control that
+  // removes a move from the queue.
+  &__nav {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  &__arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background-color: transparent;
+    color: colors.$storm-grey-700;
+    font-size: 12px;
+
+    &:hover:not(:disabled),
+    &:focus-visible {
+      background-color: rgba(255, 255, 255, 0.6);
+    }
+
+    &:disabled {
+      opacity: 0.4;
+    }
+  }
+
+  // A step darker than the card's own ground, so the count reads as a badge
+  // without introducing a second accent colour.
+  &__count {
+    padding: 4px;
+    border-radius: 6px;
+    background-color: rgba(185, 132, 252, 0.3);
+    color: colors.$purple-heart-800;
+    font-size: 12px;
+    line-height: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0 12px 12px;
+  }
+
+  &__headline {
+    font-size: 14px;
+    line-height: 19px;
+    font-weight: 600;
+    color: colors.$storm-grey-950;
+  }
+
+  // Full body size, NOT `small`: the reason is the case for making the call, and
+  // shrinking it made the card look like a headline with a footnote.
+  &__reason {
+    font-size: 14px;
+    line-height: 19px;
+    color: colors.$storm-grey-950;
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding-top: 8px;
+  }
+}
+
+// Assistant rail — a generated email draft (Figma node 193:5905). A grey slab
+// rather than a white card: it's a document Otto wrote, and the page it sits on
+// is white.
+.assistant-email {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--card-border-color, #{colors.$storm-grey-100});
+  border-radius: 8px;
+  background-color: colors.$storm-grey-50;
+  // shadows/base
+  box-shadow:
+    0 1px 3px 0 rgba(0, 0, 0, 0.1),
+    0 1px 2px -1px rgba(0, 0, 0, 0.1);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__eyebrow {
+    font-size: 12px;
+    line-height: 19px;
+    font-weight: 600;
+    letter-spacing: 0.48px;
+    text-transform: uppercase;
+    @include otto-gradient-text(191deg);
+  }
+
+  &__glyph {
+    flex-shrink: 0;
+    font-size: 14px;
+    color: colors.$purple-heart-800;
+
+    path {
+      fill: url("#otto-glyph-gradient");
+    }
+  }
+
+  // "Draft" / "Draft v2". Wears the decorative ramp so the version reads as
+  // Otto's stamp on the document rather than as a status the CRM assigned.
+  &__badge {
+    margin-left: auto;
+    flex-shrink: 0;
+    padding: 4px;
+    border-radius: 6px;
+    @include otto-gradient-decorative;
+    color: colors.$storm-grey-950;
+    font-size: 12px;
+    line-height: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  &__subject {
+    font-size: 14px;
+    line-height: 19px;
+    font-weight: 600;
+    color: colors.$storm-grey-950;
+  }
+
+  &__to-label {
+    flex-shrink: 0;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 600;
+    color: colors.$storm-grey-600;
+  }
+
+  &__chip {
+    padding: 4px;
+    border-radius: 6px;
+    background-color: var(--badge-muted-secondary-bg, #{colors.$storm-grey-100});
+    color: colors.$storm-grey-950;
+    font-size: 12px;
+    line-height: 13px;
+    font-weight: 600;
+    // Long addresses wrap inside the chip rather than pushing the card wide.
+    overflow-wrap: anywhere;
+  }
+
+  &__body {
+    font-size: 14px;
+    line-height: 19px;
+    color: colors.$storm-grey-950;
+    white-space: pre-wrap;
+  }
+}
+
+// Assistant rail — the receipt for an email already sent (Figma node 193:9445).
+// Past work, so it sheds the card entirely: a hairline down the left edge, a
+// muted header instead of the gradient one, and the body folded away. What's
+// left is what the broker needs to confirm it went, and the way to the record.
+.assistant-sent {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-inline: 12px;
+  border-left: 2px solid var(--card-border-color, #{colors.$storm-grey-100});
+
+  &__header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  &__eyebrow {
+    font-size: 12px;
+    line-height: 19px;
+    font-weight: 600;
+    letter-spacing: 0.48px;
+    text-transform: uppercase;
+    color: colors.$storm-grey-600;
+  }
+
+  &__glyph {
+    font-size: 12px;
+    color: colors.$storm-grey-600;
+  }
+
+  &__meta {
+    padding-left: 4px;
+    font-size: 12px;
+    line-height: 16px;
+    color: colors.$storm-grey-600;
+  }
+
+  &__subject {
+    font-size: 14px;
+    line-height: 19px;
+    font-weight: 600;
+    color: colors.$storm-grey-950;
+  }
+
+  &__to {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 600;
+    color: colors.$storm-grey-600;
+    overflow-wrap: anywhere;
+  }
+
+  &__toggle {
+    padding: 0;
+    border: 0;
+    background-color: transparent;
+    color: var(--body-link-color, #{colors.$buildout-blue-800});
+    font-size: 14px;
+    line-height: 19px;
+    font-weight: 600;
+
+    &:hover,
+    &:focus-visible {
+      text-decoration: underline;
+    }
+  }
+
+  &__body {
+    font-size: 14px;
+    line-height: 19px;
+    color: colors.$storm-grey-950;
+    white-space: pre-wrap;
   }
 }
 
@@ -4249,9 +4615,22 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  // A fixed height, so the bar doesn't jump between the home screen's single
+  // button and the chat's two-line title as the broker moves between them.
+  min-height: 60px;
   padding: 12px 16px;
   background-color: #fff;
   border-bottom: 1px solid var(--card-border-color, #{colors.$storm-grey-100});
+}
+
+// The standing caveat under the composer. Part of the input area rather than the
+// transcript, so it stays put across both views instead of scrolling away.
+.assistant-rail__disclaimer {
+  margin: 16px 0 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: colors.$storm-grey-600;
+  text-align: center;
 }
 
 // Otto's mark (Figma node 94:3570): a pale disc carrying a gradient-filled

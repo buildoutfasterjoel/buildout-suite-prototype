@@ -1,9 +1,15 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
-import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSparkles, faCheck, faPhone } from "@fortawesome/pro-regular-svg-icons";
+import {
+  faSparkles,
+  faPhone,
+  faChevronLeft,
+  faChevronRight,
+} from "@fortawesome/pro-regular-svg-icons";
+// Solid: the same finished-work check the task list uses (see ActionPlanChecklist).
+import { faCircleCheck } from "@fortawesome/pro-solid-svg-icons";
 import type { DayPlanItem } from "#/ai/dayPlan";
 import { listAllTasks } from "#/data/selectors";
 import { getContact } from "#/data/store";
@@ -101,13 +107,19 @@ export function DayPlanCard({
     router.navigate({ to: `/backoffice/contacts/${item.contactId}` as never });
   };
 
-  const onOpenRecord = () => {
+  /** Work the move: the task list, which is where a non-call move gets done. */
+  const onOpenTask = () => {
     if (!item) return;
-    if (item.contactId) {
-      router.navigate({ to: `/backoffice/contacts/${item.contactId}` as never });
-    } else {
-      router.navigate({ to: "/tasks" as never });
-    }
+    router.navigate({ to: "/tasks" as never });
+  };
+
+  /**
+   * The record the move hangs off — the secondary action, and the broker's
+   * reflex before acting: read the person before you ring them.
+   */
+  const onViewRecord = () => {
+    if (!item?.contactId) return onOpenTask();
+    router.navigate({ to: `/backoffice/contacts/${item.contactId}` as never });
   };
 
   // Only one slot renders: inline until a call detaches the queue, bottom after.
@@ -120,13 +132,13 @@ export function DayPlanCard({
   // Every item worked — the queue is done.
   if (!item) {
     return (
-      <div className="border rounded p-3 bg-white d-flex flex-column gap-2">
-        <div className="d-flex align-items-center gap-2">
-          <FontAwesomeIcon icon={faCheck} className="text-success" />
-          <span className="fw-semibold">That's your day cleared.</span>
-        </div>
-        <div className="small text-muted">
-          Nothing left in the queue. Want me to build a call list next?
+      // No card: an empty queue is finished work, and finished work in this rail
+      // reads as a line of prose (see `ChatSection`).
+      <div className="d-flex align-items-start gap-2">
+        <FontAwesomeIcon icon={faCircleCheck} className="text-success mt-1" />
+        <div>
+          <span className="fw-semibold">That's your day cleared.</span>{" "}
+          <span className="text-body">Want me to build a call list next?</span>
         </div>
       </div>
     );
@@ -134,52 +146,73 @@ export function DayPlanCard({
 
   const firstName = item.contactName?.split(" ")[0];
   const canCall = item.isCall && !!item.contactId;
+  const position = Math.min(index, remaining.length - 1) + 1;
 
   return (
-    <div className="border border-primary rounded p-3 bg-purple-heart-50 d-flex flex-column gap-2">
-      {note && <div className="small text-muted fst-italic">{note}</div>}
-
-      <div className="d-flex align-items-center gap-2">
-        <FontAwesomeIcon icon={faSparkles} className="text-purple-heart-600" />
-        <span className="fw-semibold small text-uppercase text-muted">Next Actions</span>
-        {/* A step darker than the card's purple-heart-50 ground, so the count
-            reads as a badge without introducing a second accent colour. */}
-        <Badge variant="secondary" className="bg-purple-heart-200 text-purple-heart-800">
-          {remaining.length} to clear
-        </Badge>
+    <div className="assistant-next-actions">
+      {/* Header (Figma 193:4698): the gradient mark and wordmark on the left, the
+          queue's position on the right. The nav browses the queue *without*
+          touching it — "Done" is the only control that removes a move. */}
+      <div className="assistant-next-actions__header">
+        <FontAwesomeIcon icon={faSparkles} className="assistant-next-actions__mark" />
+        <span className="assistant-next-actions__title">Next Actions</span>
+        <div className="assistant-next-actions__nav">
+          <button
+            type="button"
+            className="assistant-next-actions__arrow"
+            aria-label="Previous action"
+            onClick={() => q.step(-1)}
+            disabled={remaining.length < 2}
+          >
+            <FontAwesomeIcon icon={faChevronLeft} />
+          </button>
+          <span className="assistant-next-actions__count">
+            {position} of {remaining.length}
+          </span>
+          <button
+            type="button"
+            className="assistant-next-actions__arrow"
+            aria-label="Next action"
+            onClick={() => q.step(1)}
+            disabled={remaining.length < 2}
+          >
+            <FontAwesomeIcon icon={faChevronRight} />
+          </button>
+        </div>
       </div>
 
-      <div className="fw-semibold">
-        {isFirstItem ? `Start with ${item.headline}` : item.headline}
-      </div>
-      <div className="small text-body">{item.reason}</div>
+      <div className="assistant-next-actions__body">
+        {note && <div className="small text-muted fst-italic">{note}</div>}
+        <div className="assistant-next-actions__headline">
+          {isFirstItem ? `Start with ${item.headline}` : item.headline}
+        </div>
+        <div className="assistant-next-actions__reason">{item.reason}</div>
 
-      {/* Three slots, always: primary lead action, outline confirm, ghost defer.
-          When the move is a call, `onCall` also lands on the contact's record —
-          so folding "open record" into the primary loses nothing. */}
-      <div className="d-flex flex-wrap align-items-center gap-2 mt-1">
-        {canCall ? (
-          <Button size="sm" variant="primary" onClick={onCall}>
-            <FontAwesomeIcon icon={faPhone} className="me-1" />
-            Call {firstName ?? "now"}
+        {/* Three slots, always: work the move, look at what it hangs off, or
+            declare it handled. The middle one is the record — the broker's
+            reflex before acting is to check who they're about to call. */}
+        <div className="assistant-next-actions__actions">
+          {canCall ? (
+            <Button size="sm" variant="primary" onClick={onCall}>
+              <FontAwesomeIcon icon={faPhone} />
+              Call {firstName ?? "now"}
+            </Button>
+          ) : (
+            <Button size="sm" variant="primary" onClick={onOpenTask}>
+              Open task
+            </Button>
+          )}
+          {/* Only when there's actually a record behind the move — a standalone
+              task has nothing to view that "Open task" hasn't already opened. */}
+          {item.contactId && (
+            <Button size="sm" variant="outline" onClick={onViewRecord}>
+              View {firstName ?? "record"}
+            </Button>
+          )}
+          <Button size="sm" variant="ghost" onClick={onDone}>
+            Done
           </Button>
-        ) : (
-          <Button size="sm" variant="primary" onClick={onOpenRecord}>
-            {firstName ? `Open ${firstName}'s record` : "Open task"}
-          </Button>
-        )}
-        <Button size="sm" variant="outline" onClick={onDone}>
-          <FontAwesomeIcon icon={faCheck} className="me-1" />
-          Done
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => q.skip("Skipped, let me look again…")}
-          disabled={remaining.length < 2}
-        >
-          Skip → next
-        </Button>
+        </div>
       </div>
     </div>
   );

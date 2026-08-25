@@ -21,7 +21,18 @@
 
 /** What the composer reports back, so the assistant can confirm specifically. */
 export type ComposerSendResult =
-  | { sent: true; subject: string; to: string; contactId: string; contactName: string }
+  | {
+      sent: true;
+      subject: string;
+      to: string;
+      contactId: string;
+      contactName: string;
+      /**
+       * The body as actually sent, hand edits included. The rail's sent-email
+       * receipt folds it behind "Show Content" — which still means holding it.
+       */
+      body: string;
+    }
   /** Nothing to send — no composer mounted, wrong tab, or an empty draft. */
   | { sent: false; reason: string };
 
