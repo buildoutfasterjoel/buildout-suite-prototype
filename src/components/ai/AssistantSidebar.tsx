@@ -27,7 +27,12 @@ import {
 // Solid, deliberately: the avatar's glyph is a silhouette on a pale disc, and
 // the regular weight reads as a hairline outline at 14px.
 import { faOtter } from "@fortawesome/pro-solid-svg-icons";
-import { ChatMessage, messageText, messageToolCalls } from "#/components/ai/chat/ChatMessage";
+import {
+  ChatMessage,
+  messageText,
+  messageToolCalls,
+  type ToolCallPart,
+} from "#/components/ai/chat/ChatMessage";
 import { ChatComposer } from "#/components/ai/chat/ChatComposer";
 import { createClientTools } from "#/ai/tools";
 import type { ResultNav } from "#/ai/resultNav";
@@ -563,30 +568,20 @@ const LOOKUP_TOOLS = new Set([
   "list_contacts_for_deal",
 ]);
 
-/** Render a message: text bubble + a tool chip for actions, or interactive cards for lists. */
-function MessageBubble({
-  message,
-  suppressNarration = false,
-  emailFlow,
-  repliedPast = false,
-  onQuickReply,
-}: {
-  /** The conversation's email history — see {@link buildEmailFlow}. */
-  emailFlow?: EmailFlow;
-  /** A later message is the broker's, so this turn's quick replies retire. */
-  repliedPast?: boolean;
-  onQuickReply?: (text: string) => void;
-  message: UIMessage;
-  /**
-   * True while this message is the in-flight half of a "plan my day" turn. The
-   * model streams its lead-in *before* the tool call lands, so the day-plan card
-   * isn't there yet to suppress against — without this the duplicative line
-   * ("You've got a handful of moves…") flashes up and then vanishes.
-   */
-  suppressNarration?: boolean;
-}) {
-  const text = messageText(message);
-  const toolCalls = messageToolCalls(message);
+/**
+ * Split a message's tool calls into the ones that render a card and the ones
+ * that render a chip.
+ *
+ * Module-level because two callers need the same answer: `MessageBubble`, to
+ * decide what to draw, and the transcript's display order, to tell a message
+ * that shows *results* from one that only shows a progress step. Those must
+ * agree — a chip is a step and its conclusion belongs after it, while a card is
+ * the answer and its lead-in belongs before it.
+ */
+function splitToolCalls(toolCalls: ToolCallPart[]): {
+  cardCalls: ToolCallPart[];
+  chipCalls: ToolCallPart[];
+} {
   /**
    * A lookup the model ran to answer something else is a step, not a result. When
    * the same turn also produced a real artifact, its record cards are noise — a
@@ -631,7 +626,45 @@ function MessageBubble({
       p.name === "plan_my_day"
     );
   });
-  const chipCalls = toolCalls.filter((p) => !cardCalls.includes(p));
+  return { cardCalls, chipCalls: toolCalls.filter((p) => !cardCalls.includes(p)) };
+}
+
+/** Render a message: text bubble + a tool chip for actions, or interactive cards for lists. */
+function MessageBubble({
+  message,
+  suppressNarration = false,
+  emailFlow,
+  repliedPast = false,
+  onQuickReply,
+}: {
+  /** The conversation's email history — see {@link buildEmailFlow}. */
+  emailFlow?: EmailFlow;
+  /** A later message is the broker's, so this turn's quick replies retire. */
+  repliedPast?: boolean;
+  onQuickReply?: (text: string) => void;
+  message: UIMessage;
+  /**
+   * True while this message is the in-flight half of a "plan my day" turn. The
+   * model streams its lead-in *before* the tool call lands, so the day-plan card
+   * isn't there yet to suppress against — without this the duplicative line
+   * ("You've got a handful of moves…") flashes up and then vanishes.
+   */
+  suppressNarration?: boolean;
+}) {
+  const text = messageText(message);
+  const toolCalls = messageToolCalls(message);
+  /**
+   * A lookup the model ran to answer something else is a step, not a result. When
+   * the same turn also produced a real artifact, its record cards are noise — a
+   * "Delgado Building, Austin TX" property card wedged above the email draft it
+   * was looked up for, which reads like the assistant answered a question nobody
+   * asked. Those calls fall back to chips ("Searching your book ✓"), which say
+   * the same thing in one line.
+   *
+   * A lookup on its own still renders cards: "find me the Delgado Building" is a
+   * turn where the record IS the answer.
+   */
+  const { cardCalls, chipCalls } = splitToolCalls(toolCalls);
 
   /**
    * Drop prose the artifact below it already carries — whether the model put it
@@ -954,6 +987,46 @@ export function AssistantSidebar() {
   }, [messages]);
 
   /**
+   * The order the transcript is *drawn* in, as indices into `messages`.
+   *
+   * A turn that returns results is split across two messages: the model calls
+   * the tool, the result comes back, and only then does it write the sentence
+   * introducing what came back. Chronologically the cards are first — so "You
+   * have 5 active deals — here they are:" lands underneath the deals it was
+   * introducing. Inside one message `ChatMessage` already puts text above its
+   * cards; this extends that across the two messages one turn is split into.
+   *
+   * Narrow on purpose. It swaps only a card-bearing message that has no prose of
+   * its own with the text-only message immediately after it:
+   *
+   * - A reply that already had a paragraph keeps its own paragraphs in order.
+   * - A *chip* message is never moved. A chip is a progress step ("Searching
+   *   your book ✓") and the sentence after it is its conclusion, so that pair is
+   *   already the right way round.
+   * - Text that `narratedIndices` is going to drop isn't worth reordering.
+   *
+   * Indices ride along rather than the messages themselves, because
+   * `repliedPast` and `suppressNarration` are both defined against the real
+   * transcript and must not be renumbered by a presentation choice.
+   */
+  const displayOrder = useMemo(() => {
+    const order = messages.map((_, i) => i);
+    for (let i = 0; i < order.length - 1; i++) {
+      const first = messages[order[i]];
+      const second = messages[order[i + 1]];
+      if (first.role !== "assistant" || second.role !== "assistant") continue;
+      if (messageText(first).trim()) continue;
+      if (splitToolCalls(messageToolCalls(first)).cardCalls.length === 0) continue;
+      if (messageToolCalls(second).length > 0) continue;
+      if (!messageText(second).trim()) continue;
+      if (narratedIndices.has(order[i + 1])) continue;
+      [order[i], order[i + 1]] = [order[i + 1], order[i]];
+      i++; // the pair is settled — don't reconsider it from the other side
+    }
+    return order;
+  }, [messages, narratedIndices]);
+
+  /**
    * Index of the broker's last turn. Every assistant message above it has been
    * replied past, which retires its quick replies: the reply *is* the answer to
    * "send it or edit it?", so leaving the buttons up offers a choice that has
@@ -1248,20 +1321,23 @@ export function AssistantSidebar() {
             call list, or move a deal along.
           </div>
         ) : (
-          messages.map((m, i) => (
-            <Fragment key={m.id}>
-              <MessageBubble
-                message={m}
-                emailFlow={emailFlow}
-                repliedPast={i < lastUserIndex}
-                onQuickReply={send}
-                suppressNarration={
-                  narratedIndices.has(i) ||
-                  (planPending && m.role === "assistant" && i === messages.length - 1)
-                }
-              />
-            </Fragment>
-          ))
+          displayOrder.map((i) => {
+            const m = messages[i];
+            return (
+              <Fragment key={m.id}>
+                <MessageBubble
+                  message={m}
+                  emailFlow={emailFlow}
+                  repliedPast={i < lastUserIndex}
+                  onQuickReply={send}
+                  suppressNarration={
+                    narratedIndices.has(i) ||
+                    (planPending && m.role === "assistant" && i === messages.length - 1)
+                  }
+                />
+              </Fragment>
+            );
+          })
         )}
         {/* The turn's visible work can finish before the turn does: a tool result
             lands, its card renders, and the model is still closing out. What it
