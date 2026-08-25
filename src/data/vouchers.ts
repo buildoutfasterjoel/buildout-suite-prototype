@@ -1,4 +1,10 @@
-import type { DealType, Listing, PropertyStatus, PropertyType } from './types'
+import type {
+  DealType,
+  Listing,
+  PropertyStatus,
+  PropertyType,
+  TransactionSide,
+} from './types'
 import { getStore, getProperty } from './store'
 import { dealShape } from './dealShape'
 
@@ -18,6 +24,43 @@ export const VOUCHER_STATUS_LABELS: Record<VoucherStatus, string> = {
   Pending: 'Pending Approval',
   Approved: 'Approved',
 }
+
+/**
+ * What a pre-split deduction can be filed under — the Category dropdown on a
+ * Draft voucher, and what the seed picks from.
+ *
+ * A new row starts with no category chosen (`''`), which is why
+ * `FinancialDeduction.category` stays a plain `string` rather than this union:
+ * the empty state is a real state on an unfinished row, not a broken one.
+ */
+export const DEDUCTION_CATEGORIES = [
+  'Outside Referral',
+  'Royalties',
+  'Internal Referrals',
+  'Broker of Record',
+  'Other',
+] as const
+
+export type DeductionCategory = (typeof DEDUCTION_CATEGORIES)[number]
+
+/** The Transaction Side dropdown on the voucher's Internal Commissions table. */
+export const TRANSACTION_SIDES: TransactionSide[] = [
+  'Buy Side',
+  'Sell Side',
+  'Dual',
+]
+
+/**
+ * The payout plans a broker's own split can be figured under. `'No Plan'` is a
+ * real choice, not an empty one — it is what the seed gives every internal
+ * broker — so the dropdown carries it rather than leaving the field blank.
+ */
+export const COMMISSION_PLANS = [
+  'No Plan',
+  'Standard Commission Plan',
+  'Custom Plan',
+  'House Split Plan',
+] as const
 
 /**
  * Where a deal's voucher page lives, as a typed route target.

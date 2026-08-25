@@ -49,6 +49,7 @@ import {
   type ContactShare,
 } from './teammates'
 import { DEFAULT_PERSONAL_SPLIT_PCT, STAGE_CLOSE_PROBABILITY } from './commission'
+import type { DeductionCategory } from './vouchers'
 import { applyLeaseSpaces } from './leaseSpaceFixtures'
 
 const SEED = 20240101
@@ -1142,11 +1143,14 @@ function generateBroker(side: 'internal' | 'outside', commissionAmount: number):
   }
 }
 
-const DEDUCTION_CATEGORIES = [
-  { category: 'Marketing', description: 'Billboard Fees' },
-  { category: 'Marketing', description: 'Digital Ad Spend' },
-  { category: 'Legal', description: 'Closing Review' },
-  { category: 'Admin', description: 'Processing Fee' },
+// Category is drawn from DEDUCTION_CATEGORIES — the same list the voucher's
+// Category dropdown offers — so a seeded row's category is always one the
+// dropdown can show as selected. Description is the free-text line beside it.
+const DEDUCTION_FIXTURES: { category: DeductionCategory; description: string }[] = [
+  { category: 'Outside Referral', description: 'Referral Fee' },
+  { category: 'Royalties', description: 'Franchise Royalty' },
+  { category: 'Internal Referrals', description: 'Internal Referral Fee' },
+  { category: 'Broker of Record', description: 'Broker of Record Fee' },
 ]
 
 const TASK_ASSIGNEE_INITIALS = ['OW', 'MT', 'KN', 'SP', 'JR']
@@ -1284,7 +1288,7 @@ function generateListings(
     const [pMin, pMax] = STAGE_CLOSE_PROBABILITY[status]
 
     // Pre-split deductions come off the top before brokers are paid out.
-    const deductionPick = faker.helpers.arrayElement(DEDUCTION_CATEGORIES)
+    const deductionPick = faker.helpers.arrayElement(DEDUCTION_FIXTURES)
     const deductionPct = faker.number.float({ min: 3, max: 8, fractionDigits: 1 })
     const deductionAmount = Math.round(commissionAmount * (deductionPct / 100))
     const preSplitDeductions: FinancialDeduction[] = [
@@ -1309,6 +1313,17 @@ function generateListings(
       { weight: 65, value: 'seller' },
       { weight: 35, value: 'buyer' },
     ])
+
+    // Transaction Side belongs to the deal, not to the person who worked it, so
+    // every internal broker starts on the deal's own side; the voucher can move
+    // one of them afterwards (a dual-side deal splits Buy and Sell across two).
+    // Applied here rather than inside `generateBroker` because `dealSide` is
+    // drawn after the brokers are, and reordering the faker calls would reshuffle
+    // every seeded value downstream.
+    const brokersWithSide: DealBroker[] = internalBrokers.map((b) => ({
+      ...b,
+      transactionSide: dealSide === 'buyer' ? 'Buy Side' : 'Sell Side',
+    }))
 
     // Parties are drawn from THIS property's associated contacts so the graph
     // stays reciprocal (a deal's contacts are linked to the deal's property).
@@ -1531,7 +1546,7 @@ function generateListings(
 
       // Deal (1:1)
       dealId,
-      internalBrokers,
+      internalBrokers: brokersWithSide,
       outsideBrokers,
       sellerContactIds: sellerContacts.map((c) => c.id),
       buyerContactIds: buyerContacts.map((c) => c.id),

@@ -10,6 +10,9 @@ import {
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
 import { Field } from "@buildoutinc/blueprint-react/ui/Field";
+import { Input } from "@buildoutinc/blueprint-react/ui/Input";
+import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
+import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
 import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { Switch } from "@buildoutinc/blueprint-react/ui/Switch";
@@ -19,7 +22,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowRight,
   faChevronDown,
+  faDollarSign,
   faFileLines,
+  faPercent,
   faPlus,
   faPencil,
   faTableRowsAddAbove,
@@ -27,8 +32,19 @@ import {
   faTrashCan,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import type { DealBroker, Listing } from "#/data/types";
-import { reopenVoucher, submitVoucher } from "#/data/actions";
+import type {
+  DealBroker,
+  FinancialDeduction,
+  Listing,
+  TransactionSide,
+} from "#/data/types";
+import { reopenVoucher, saveVoucherDraft, submitVoucher } from "#/data/actions";
+import {
+  COMMISSION_PLANS,
+  DEDUCTION_CATEGORIES,
+  TRANSACTION_SIDES,
+} from "#/data/vouchers";
+import { AddBrokerModal } from "./AddBrokerModal";
 import { notify } from "#/lib/notify";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
 import { VoucherStatusBadge } from "./VoucherStatusBadge";
@@ -234,33 +250,242 @@ function BreakdownSection({ listing }: { listing: Listing }) {
   );
 }
 
-function dealSideLabel(listing: Listing): string {
-  return listing.dealSide === "buyer" ? "Buy Side" : "Sell Side";
+/** A broker's own split of their gross — the second table's derived money column. */
+function brokerSplitAmount(broker: DealBroker): number {
+  return Math.round(broker.grossCommission * ((broker.personalSplitPct ?? 0) / 100));
 }
 
-/** The two Internal Commissions tables: broker gross split, then each broker's personal payout. */
-function InternalCommissionsSection({ listing }: { listing: Listing }) {
-  const brokers = listing.internalBrokers;
+/** One-column dropdown cell, shared by Transaction Side and Commission Plan. */
+function BrokerSelectCell({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: readonly string[];
+  onChange: (next: string) => void;
+}) {
+  return (
+    <Select value={value} onValueChange={(v) => onChange((v as string) ?? "")}>
+      <Select.Trigger aria-label={label}>
+        <Select.Value placeholder="Select..." />
+      </Select.Trigger>
+      <Select.Content>
+        {options.map((o) => (
+          <Select.Item key={o} value={o}>
+            {o}
+          </Select.Item>
+        ))}
+      </Select.Content>
+    </Select>
+  );
+}
+
+/** The row action both broker tables carry — delete, which drops the broker from both. */
+function RemoveBrokerButton({
+  name,
+  onlyBroker,
+  onRemove,
+}: {
+  name: string;
+  /** The last broker on the voucher — removable by nobody. */
+  onlyBroker: boolean;
+  onRemove: () => void;
+}) {
+  const label = `Remove ${name || "broker"}`;
+  const button = (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label={label}
+      disabled={onlyBroker}
+      onClick={onlyBroker ? undefined : onRemove}
+    >
+      <FontAwesomeIcon icon={faTrashCan} />
+    </Button>
+  );
+
+  return (
+    <Tooltip>
+      <Tooltip.Trigger
+        render={
+          // A disabled button fires no pointer events, so the last broker's
+          // button hangs its tooltip off a wrapper — the same trick Submit
+          // uses, and the reason the rule is discoverable rather than a dead
+          // icon.
+          onlyBroker ? <span className="d-inline-flex">{button}</span> : button
+        }
+      />
+      <Tooltip.Content>
+        {onlyBroker
+          ? "A voucher keeps at least one internal broker."
+          : "Remove broker"}
+      </Tooltip.Content>
+    </Tooltip>
+  );
+}
+
+/**
+ * The two Internal Commissions tables: what each broker takes off the deal's
+ * gross, then what each takes home from their own share.
+ *
+ * One list behind both. A broker added from either table appears in both, and
+ * deleting from either removes them from both — they are the same person on the
+ * same deal, and a broker who earned a gross split but has no payout plan (or
+ * the reverse) is not a state the voucher should be able to reach.
+ *
+ * Editable on a Draft, on the same terms as the deduction table: live controls,
+ * delete as the only row action, and edits committed by the voucher's Save.
+ * Broker Split $ is the one figure that is not typed — it is Gross $ times the
+ * broker's own split, so typing it would let the three disagree.
+ */
+function InternalCommissionsSection({
+  brokers,
+  editable,
+  onChange,
+}: {
+  brokers: DealBroker[];
+  /** Draft only — a submitted voucher's splits are what an approver is reading. */
+  editable: boolean;
+  onChange: (next: DealBroker[]) => void;
+}) {
   const grossTotal = sum(brokers.map((b) => b.grossCommission));
+  const [adding, setAdding] = useState(false);
+
+  const patch = (id: string, fields: Partial<DealBroker>) =>
+    onChange(brokers.map((b) => (b.id === id ? { ...b, ...fields } : b)));
+  // The voucher's commission has to be payable to somebody, so the last broker
+  // stays. Guarded here as well as at the buttons, so both tables' Delete —
+  // and anything that reaches this later — obey the same floor.
+  const onlyBroker = brokers.length <= 1;
+  const remove = (id: string) => {
+    if (onlyBroker) return;
+    onChange(brokers.filter((b) => b.id !== id));
+  };
 
   return (
     <Section
       title="Internal Commissions"
       action={
-        <Button variant="ghost" size="sm">
-          <FontAwesomeIcon icon={faPlus} />
-          Add broker
-        </Button>
+        editable ? (
+          <Button variant="ghost" size="sm" onClick={() => setAdding(true)}>
+            <FontAwesomeIcon icon={faPlus} />
+            Add Broker
+          </Button>
+        ) : undefined
       }
     >
+      <AddBrokerModal
+        open={adding}
+        onOpenChange={setAdding}
+        brokers={brokers}
+        onAdd={(b) => onChange([...brokers, b])}
+      />
       <div className="d-flex flex-column gap-4">
-        <Table>
+        <Table dense className="align-middle">
           <Table.Header>
             <Table.Row>
-              <Table.Head>Brokers</Table.Head>
-              <Table.Head>Transaction Side</Table.Head>
-              <Table.Head className="text-end">Gross %</Table.Head>
-              <Table.Head className="text-end">Gross $</Table.Head>
+              {/* Name and dropdown share equal widths: the remainder splits
+                  between them in proportion, so they stay even at any table
+                  width and a short name cannot claim half the row. */}
+              <Table.Head style={{ width: 220 }}>Brokers</Table.Head>
+              <Table.Head style={{ width: 220 }}>Transaction Side</Table.Head>
+              <Table.Head className="text-end" style={{ width: 132 }}>
+                Gross %
+              </Table.Head>
+              <Table.Head className="text-end" style={{ width: 132 }}>
+                Gross $
+              </Table.Head>
+              {editable && <Table.Head style={{ width: 56 }} />}
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {brokers.map((b) =>
+              editable ? (
+                <Table.Row key={b.id}>
+                  <Table.Cell>
+                    <PersonLink name={b.name} contactId={b.id} />
+                  </Table.Cell>
+                  <Table.Cell>
+                    <BrokerSelectCell
+                      label="Transaction Side"
+                      value={b.transactionSide ?? ""}
+                      options={TRANSACTION_SIDES}
+                      onChange={(v) =>
+                        patch(b.id, { transactionSide: v as TransactionSide })
+                      }
+                    />
+                  </Table.Cell>
+                  <Table.Cell>
+                    <MoneyCell
+                      label="Gross %"
+                      unit={faPercent}
+                      value={b.commissionSplitPct}
+                      step="0.1"
+                      onChange={(v) => patch(b.id, { commissionSplitPct: v ?? 0 })}
+                    />
+                  </Table.Cell>
+                  <Table.Cell>
+                    <MoneyCell
+                      label="Gross $"
+                      unit={faDollarSign}
+                      value={b.grossCommission}
+                      step="0.01"
+                      onChange={(v) => patch(b.id, { grossCommission: v ?? 0 })}
+                    />
+                  </Table.Cell>
+                  <Table.Cell className="text-end">
+                    <RemoveBrokerButton
+                      name={b.name}
+                      onlyBroker={onlyBroker}
+                      onRemove={() => remove(b.id)}
+                    />
+                  </Table.Cell>
+                </Table.Row>
+              ) : (
+                <Table.Row key={b.id}>
+                  <Table.Cell>
+                    <PersonLink name={b.name} contactId={b.id} />
+                  </Table.Cell>
+                  <Table.Cell>{b.transactionSide ?? "—"}</Table.Cell>
+                  <Table.Cell className="text-end">
+                    {b.commissionSplitPct}
+                  </Table.Cell>
+                  <Table.Cell className="text-end">
+                    {formatCurrency(b.grossCommission)}
+                  </Table.Cell>
+                </Table.Row>
+              ),
+            )}
+          </Table.Body>
+          <Table.Footer>
+            <Table.Row>
+              <Table.Cell colSpan={3}>Sum</Table.Cell>
+              <Table.Cell className="text-end">
+                {formatCurrency(grossTotal)}
+              </Table.Cell>
+              {editable && <Table.Cell />}
+            </Table.Row>
+          </Table.Footer>
+        </Table>
+
+        <Table dense className="align-middle">
+          <Table.Header>
+            <Table.Row>
+              <Table.Head style={{ width: 220 }}>Brokers</Table.Head>
+              <Table.Head style={{ width: 220 }}>Commission Plan</Table.Head>
+              <Table.Head className="text-end" style={{ width: 132 }}>
+                Broker Split %
+              </Table.Head>
+              <Table.Head className="text-end" style={{ width: 132 }}>
+                Broker Split $
+              </Table.Head>
+              <Table.Head className="text-end" style={{ width: 132 }}>
+                Net Amount
+              </Table.Head>
+              {editable && <Table.Head style={{ width: 56 }} />}
             </Table.Row>
           </Table.Header>
           <Table.Body>
@@ -269,60 +494,58 @@ function InternalCommissionsSection({ listing }: { listing: Listing }) {
                 <Table.Cell>
                   <PersonLink name={b.name} contactId={b.id} />
                 </Table.Cell>
-                <Table.Cell>{dealSideLabel(listing)}</Table.Cell>
+                <Table.Cell>
+                  {editable ? (
+                    <BrokerSelectCell
+                      label="Commission Plan"
+                      value={b.commissionPlan ?? ""}
+                      options={COMMISSION_PLANS}
+                      onChange={(v) => patch(b.id, { commissionPlan: v })}
+                    />
+                  ) : (
+                    (b.commissionPlan ?? "No Plan")
+                  )}
+                </Table.Cell>
+                <Table.Cell className={editable ? undefined : "text-end"}>
+                  {editable ? (
+                    <MoneyCell
+                      label="Broker Split %"
+                      unit={faPercent}
+                      value={b.personalSplitPct ?? 0}
+                      step="0.1"
+                      onChange={(v) => patch(b.id, { personalSplitPct: v ?? 0 })}
+                    />
+                  ) : (
+                    (b.personalSplitPct ?? 0)
+                  )}
+                </Table.Cell>
+                {/* Derived from the row above it — Gross $ times this broker's
+                    own split — so it is read-only at every status. */}
                 <Table.Cell className="text-end">
-                  {b.commissionSplitPct}
+                  {formatCurrency(brokerSplitAmount(b))}
                 </Table.Cell>
                 <Table.Cell className="text-end">
-                  {formatCurrency(b.grossCommission)}
+                  {/* The payout breakdown behind the figure. Not wired up yet,
+                      so it is a button wearing the app's link styling rather
+                      than a `Link` to a route that does not exist. */}
+                  <button
+                    type="button"
+                    className="btn btn-link p-0 border-0 link-primary"
+                  >
+                    View Details
+                  </button>
                 </Table.Cell>
+                {editable && (
+                  <Table.Cell className="text-end">
+                    <RemoveBrokerButton
+                      name={b.name}
+                      onlyBroker={onlyBroker}
+                      onRemove={() => remove(b.id)}
+                    />
+                  </Table.Cell>
+                )}
               </Table.Row>
             ))}
-            <Table.Row>
-              <Table.Cell colSpan={3} className="fw-semibold">
-                Sum
-              </Table.Cell>
-              <Table.Cell className="text-end fw-semibold">
-                {formatCurrency(grossTotal)}
-              </Table.Cell>
-            </Table.Row>
-          </Table.Body>
-        </Table>
-
-        <Table>
-          <Table.Header>
-            <Table.Row>
-              <Table.Head>Brokers</Table.Head>
-              <Table.Head>Commission Plan</Table.Head>
-              <Table.Head className="text-end">Broker Split %</Table.Head>
-              <Table.Head className="text-end">Broker Split $</Table.Head>
-              <Table.Head className="text-end">Net Amount</Table.Head>
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {brokers.map((b) => {
-              const splitPct = b.personalSplitPct ?? 0;
-              const netAmount = Math.round(
-                b.grossCommission * (splitPct / 100),
-              );
-              return (
-                <Table.Row key={b.id}>
-                  <Table.Cell>
-                    <PersonLink name={b.name} contactId={b.id} />
-                  </Table.Cell>
-                  <Table.Cell>{b.commissionPlan ?? "No Plan"}</Table.Cell>
-                  <Table.Cell className="text-end">{splitPct}</Table.Cell>
-                  <Table.Cell className="text-end">
-                    {formatCurrency(netAmount)}
-                  </Table.Cell>
-                  <Table.Cell className="text-end">
-                    <Button variant="ghost" size="sm">
-                      View Est.
-                    </Button>
-                  </Table.Cell>
-                </Table.Row>
-              );
-            })}
           </Table.Body>
         </Table>
       </div>
@@ -375,19 +598,114 @@ function OutsideCommissionsSection({ brokers }: { brokers: DealBroker[] }) {
   );
 }
 
-function PreSplitDeductionsSection({ listing }: { listing: Listing }) {
-  const deductions = listing.transaction.backOffice.preSplitDeductions;
+/** A blank deduction row — no category picked, nothing typed, nothing covered. */
+function emptyDeduction(): FinancialDeduction {
+  return {
+    id: crypto.randomUUID(),
+    category: "",
+    description: "",
+    pct: 0,
+    amount: 0,
+    covered: null,
+  };
+}
+
+/**
+ * One numeric cell of an editable row — deductions and both broker tables share
+ * it: a `$` or `%` addon over a right-aligned number, so the unit is on the
+ * field rather than only in the header two rows up. Empty-as-null on Covered $,
+ * so an amount that has not been decided stays `null` rather than a typed zero.
+ */
+function MoneyCell({
+  label,
+  unit,
+  value,
+  step,
+  nullable,
+  onChange,
+}: {
+  label: string;
+  unit: IconDefinition;
+  value: number | null;
+  step: string;
+  /** Covered $ only: an empty box means "none", not zero. */
+  nullable?: boolean;
+  onChange: (next: number | null) => void;
+}) {
+  return (
+    <InputGroup>
+      <InputGroup.Addon>
+        <FontAwesomeIcon icon={unit} />
+      </InputGroup.Addon>
+      <Input
+        type="number"
+        step={step}
+        min={0}
+        aria-label={label}
+        className="text-end"
+        value={value ?? ""}
+        onChange={(e) => {
+          const raw = e.target.value;
+          if (raw === "") {
+            onChange(nullable ? null : 0);
+            return;
+          }
+          const n = Number.parseFloat(raw);
+          onChange(Number.isNaN(n) ? (nullable ? null : 0) : Math.max(0, n));
+        }}
+      />
+    </InputGroup>
+  );
+}
+
+/**
+ * Pre-Split Deductions — what comes off the gross commission before any broker
+ * is paid.
+ *
+ * Editable in place while the voucher is a Draft: every cell is a live control
+ * rather than a click-to-edit span, because a row is typically filled left to
+ * right in one pass and a dropdown that has to be woken up first costs a click
+ * per cell. That is also why the row's only action is Delete — an Edit button
+ * would open what is already open.
+ *
+ * Edits are held in the caller's working copy and committed by the voucher's
+ * Save, so the breakdown and its donut — which read the store — move when the
+ * broker says the figures are ready, not on every keystroke.
+ *
+ * Not `EditableTable` from the record-form shell: that one has no dropdown
+ * column, no per-column alignment, and a footer that spans the whole width,
+ * where this table needs Sum to land under Amount and Covered.
+ */
+function PreSplitDeductionsSection({
+  deductions,
+  editable,
+  onChange,
+}: {
+  deductions: FinancialDeduction[];
+  /** Draft only — a submitted voucher's deductions are what an approver is reading. */
+  editable: boolean;
+  onChange: (next: FinancialDeduction[]) => void;
+}) {
   const amountTotal = sum(deductions.map((d) => d.amount));
   const coveredTotal = sum(deductions.map((d) => d.covered ?? 0));
+
+  const patch = (id: string, fields: Partial<FinancialDeduction>) =>
+    onChange(deductions.map((d) => (d.id === id ? { ...d, ...fields } : d)));
 
   return (
     <Section
       title="Pre-Split Deductions"
       action={
-        <Button variant="ghost" size="sm">
-          <FontAwesomeIcon icon={faPlus} />
-          Add Pre-Split Deduction
-        </Button>
+        editable ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onChange([...deductions, emptyDeduction()])}
+          >
+            <FontAwesomeIcon icon={faPlus} />
+            Add Pre-Split Deduction
+          </Button>
+        ) : undefined
       }
     >
       {deductions.length === 0 ? (
@@ -395,49 +713,137 @@ function PreSplitDeductionsSection({ listing }: { listing: Listing }) {
           No pre-split deductions have been added.
         </p>
       ) : (
-        <Table>
+        <Table dense className="align-middle">
           <Table.Header>
+            {/* The three number columns are pinned narrow so Description — the
+                only free-text field, and the one that runs long — takes what is
+                left. Category is pinned too, or "Broker of Record" wraps. */}
             <Table.Row>
-              <Table.Head>Category</Table.Head>
+              <Table.Head style={{ width: 190 }}>Category</Table.Head>
               <Table.Head>Description</Table.Head>
-              <Table.Head className="text-end">Percent %</Table.Head>
-              <Table.Head className="text-end">Amount $</Table.Head>
-              <Table.Head className="text-end">Covered $</Table.Head>
-              <Table.Head />
+              <Table.Head className="text-end" style={{ width: 132 }}>
+                Percent %
+              </Table.Head>
+              <Table.Head className="text-end" style={{ width: 132 }}>
+                Amount $
+              </Table.Head>
+              <Table.Head className="text-end" style={{ width: 132 }}>
+                Covered $
+              </Table.Head>
+              {editable && <Table.Head style={{ width: 56 }} />}
             </Table.Row>
           </Table.Header>
           <Table.Body>
-            {deductions.map((d) => (
-              <Table.Row key={d.id}>
-                <Table.Cell>{d.category}</Table.Cell>
-                <Table.Cell>{d.description}</Table.Cell>
-                <Table.Cell className="text-end">{d.pct}</Table.Cell>
-                <Table.Cell className="text-end">
-                  {formatCurrency(d.amount)}
-                </Table.Cell>
-                <Table.Cell className="text-end">
-                  {d.covered !== null ? formatCurrency(d.covered) : "None"}
-                </Table.Cell>
-                <Table.Cell className="text-end">
-                  <Button variant="ghost" size="sm">
-                    Edit
-                  </Button>
-                </Table.Cell>
-              </Table.Row>
-            ))}
+            {deductions.map((d) =>
+              editable ? (
+                <Table.Row key={d.id}>
+                  <Table.Cell>
+                    <Select
+                      value={d.category}
+                      onValueChange={(v) =>
+                        patch(d.id, { category: (v as string) ?? "" })
+                      }
+                    >
+                      <Select.Trigger aria-label="Category">
+                        <Select.Value placeholder="Select..." />
+                      </Select.Trigger>
+                      <Select.Content>
+                        {DEDUCTION_CATEGORIES.map((c) => (
+                          <Select.Item key={c} value={c}>
+                            {c}
+                          </Select.Item>
+                        ))}
+                      </Select.Content>
+                    </Select>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <Input
+                      aria-label="Description"
+                      value={d.description}
+                      onChange={(e) =>
+                        patch(d.id, { description: e.target.value })
+                      }
+                    />
+                  </Table.Cell>
+                  <Table.Cell>
+                    <MoneyCell
+                      label="Percent %"
+                      unit={faPercent}
+                      value={d.pct}
+                      step="0.1"
+                      onChange={(pct) => patch(d.id, { pct: pct ?? 0 })}
+                    />
+                  </Table.Cell>
+                  <Table.Cell>
+                    <MoneyCell
+                      label="Amount $"
+                      unit={faDollarSign}
+                      value={d.amount}
+                      step="0.01"
+                      onChange={(amount) => patch(d.id, { amount: amount ?? 0 })}
+                    />
+                  </Table.Cell>
+                  <Table.Cell>
+                    <MoneyCell
+                      label="Covered $"
+                      unit={faDollarSign}
+                      value={d.covered}
+                      step="0.01"
+                      nullable
+                      onChange={(covered) => patch(d.id, { covered })}
+                    />
+                  </Table.Cell>
+                  <Table.Cell className="text-end">
+                    <Tooltip>
+                      <Tooltip.Trigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Delete deduction"
+                            onClick={() =>
+                              onChange(deductions.filter((r) => r.id !== d.id))
+                            }
+                          >
+                            <FontAwesomeIcon icon={faTrashCan} />
+                          </Button>
+                        }
+                      />
+                      <Tooltip.Content>Delete deduction</Tooltip.Content>
+                    </Tooltip>
+                  </Table.Cell>
+                </Table.Row>
+              ) : (
+                <Table.Row key={d.id}>
+                  <Table.Cell>{d.category}</Table.Cell>
+                  <Table.Cell>{d.description}</Table.Cell>
+                  <Table.Cell className="text-end">{d.pct}</Table.Cell>
+                  <Table.Cell className="text-end">
+                    {formatCurrency(d.amount)}
+                  </Table.Cell>
+                  <Table.Cell className="text-end">
+                    {d.covered !== null ? formatCurrency(d.covered) : "None"}
+                  </Table.Cell>
+                </Table.Row>
+              ),
+            )}
+          </Table.Body>
+          {/* Sum is a `tfoot`, not a last body row: the theme gives `tfoot`
+              cells the header's background, weight, and a rule above them, so
+              the total reads as the table's own summary rather than another
+              deduction — and the hand-applied `fw-semibold` goes away. */}
+          <Table.Footer>
             <Table.Row>
-              <Table.Cell colSpan={3} className="fw-semibold">
-                Sum
-              </Table.Cell>
-              <Table.Cell className="text-end fw-semibold">
+              <Table.Cell colSpan={3}>Sum</Table.Cell>
+              <Table.Cell className="text-end">
                 {formatCurrency(amountTotal)}
               </Table.Cell>
-              <Table.Cell className="text-end fw-semibold">
+              <Table.Cell className="text-end">
                 {formatCurrency(coveredTotal)}
               </Table.Cell>
-              <Table.Cell />
+              {editable && <Table.Cell />}
             </Table.Row>
-          </Table.Body>
+          </Table.Footer>
         </Table>
       )}
     </Section>
@@ -970,7 +1376,14 @@ function RentScheduleSection({ listing }: { listing: Listing }) {
  * commission, close probability) as stat tiles, with secondary facts beneath and an
  * inline edit. Consolidates what used to be the separate Transaction tab.
  */
-function TransactionSummarySection({ listing }: { listing: Listing }) {
+function TransactionSummarySection({
+  listing,
+  editable,
+}: {
+  listing: Listing;
+  /** False once the voucher is Approved: the terms are what was signed off. */
+  editable: boolean;
+}) {
   const { transaction } = listing;
   const isLease = listing.dealType === "Lease";
   const leaseTerms = listing.marketing.spaceLeaseTerms ?? [];
@@ -1011,23 +1424,28 @@ function TransactionSummarySection({ listing }: { listing: Listing }) {
       action={
         // The deal editor's Transaction Terms group already carries every field
         // this section shows, so the voucher links to it rather than keeping a
-        // second, narrower copy of the same form in a modal.
-        <Tooltip>
-          <Tooltip.Trigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Edit transaction"
-                nativeButton={false}
-                render={<Link {...dealEditTarget(listing)} />}
-              >
-                <FontAwesomeIcon icon={faPencil} />
-              </Button>
-            }
-          />
-          <Tooltip.Content>Edit Deal</Tooltip.Content>
-        </Tooltip>
+        // second, narrower copy of the same form in a modal. An Approved voucher
+        // drops the link: the approval is a statement about these figures, so
+        // what stays open on a settled voucher is additions — payables and
+        // receivables — not an edit of the terms they are measured against.
+        editable ? (
+          <Tooltip>
+            <Tooltip.Trigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Edit transaction"
+                  nativeButton={false}
+                  render={<Link {...dealEditTarget(listing)} />}
+                >
+                  <FontAwesomeIcon icon={faPencil} />
+                </Button>
+              }
+            />
+            <Tooltip.Content>Edit Deal</Tooltip.Content>
+          </Tooltip>
+        ) : undefined
       }
     >
       <div className="row g-3">
@@ -1089,10 +1507,15 @@ function AttestationSubmit({
   attested,
   onChange,
   onSubmit,
+  dirty,
+  onSave,
 }: {
   attested: boolean;
   onChange: (checked: boolean) => void;
   onSubmit: () => void;
+  /** The deduction table has edits the store has not seen yet. */
+  dirty: boolean;
+  onSave: () => void;
 }) {
   return (
     <div className="d-flex align-items-stretch gap-2">
@@ -1111,7 +1534,18 @@ function AttestationSubmit({
           {ATTESTATION_LABEL}
         </Field.Label>
       </Field>
-      <SubmitVoucherButton attested={attested} onSubmit={onSubmit} />
+      {/* Save is beside Submit, not out over the table it commits: the page has
+          two of these clusters and a broker who scrolled to the bottom one
+          should not have to go back up to keep the work. Dead until there is
+          something to keep, so it never reads as a second Submit. */}
+      <Button variant="secondary" disabled={!dirty} onClick={onSave}>
+        Save
+      </Button>
+      <SubmitVoucherButton
+        attested={attested}
+        unsaved={dirty}
+        onSubmit={onSubmit}
+      />
     </div>
   );
 }
@@ -1121,20 +1555,33 @@ function AttestationSubmit({
  * is what keeps a Submit button from ever appearing without its attestation.
  *
  * Disabled until the broker has ticked an attestation — there is one beside
- * this button in the header and one in the page footer, and either will do. The
- * tooltip carries the reason, because a dead primary button with no explanation
- * is the worst version of this. It hangs off a wrapper `span` since a disabled
- * button fires no pointer events, which would otherwise make the one
- * explanation of why it is dead unreachable.
+ * this button in the header and one in the page footer, and either will do —
+ * and disabled again while the deduction table has edits the store has not
+ * seen. The tooltip carries whichever reason applies, because a dead primary
+ * button with no explanation is the worst version of this. It hangs off a
+ * wrapper `span` since a disabled button fires no pointer events, which would
+ * otherwise make the one explanation of why it is dead unreachable.
  */
 function SubmitVoucherButton({
   attested,
+  unsaved,
   onSubmit,
 }: {
   attested: boolean;
+  /** Unsaved deduction edits — submitting would send the stored figures, not these. */
+  unsaved: boolean;
   onSubmit: () => void;
 }) {
-  if (attested) {
+  // Unsaved edits outrank a missing tick: what an approver would receive is the
+  // stored voucher, so the fix is Save, and saying "confirm you checked it"
+  // while the numbers on screen are not the numbers being sent would be a lie.
+  const blockedReason = unsaved
+    ? "Save your changes before submitting."
+    : attested
+      ? null
+      : "Confirm you have checked this voucher first.";
+
+  if (!blockedReason) {
     return (
       <Button variant="primary" onClick={onSubmit}>
         {SUBMIT_LABEL}
@@ -1153,9 +1600,7 @@ function SubmitVoucherButton({
           </span>
         }
       />
-      <Tooltip.Content>
-        Confirm you have checked this voucher first.
-      </Tooltip.Content>
+      <Tooltip.Content>{blockedReason}</Tooltip.Content>
     </Tooltip>
   );
 }
@@ -1176,10 +1621,35 @@ export function DealFinancials({
   // additions — receivables, invoices, credits against what was approved —
   // which is where this header's action slot is headed once those exist.
   const isPending = voucher.status === "Pending";
+  const isApproved = voucher.status === "Approved";
   // The broker's attestation, which gates both Submit buttons. Page state, not
   // stored: it is a confirmation of *this* reading of the voucher, so it should
   // not survive a reload and come back pre-ticked.
   const [attested, setAttested] = useState(false);
+
+  // The deduction table's working copy. Held here rather than in the section
+  // because Save sits up in the header cluster beside Submit, and the two have
+  // to agree about whether there is anything to save.
+  //
+  // `deductions !== stored` is the dirty test: every write in this app spreads
+  // a new array, so an edit, an add, or a delete all break identity, and Save
+  // writing them through restores it. A hand-reverted edit still reads dirty —
+  // saving it is a no-op, which is the cheap side of that trade.
+  const stored = voucher.preSplitDeductions;
+  const storedBrokers = listing.internalBrokers;
+  const [deductions, setDeductions] = useState(stored);
+  const [brokers, setBrokers] = useState(storedBrokers);
+  const dirty = deductions !== stored || brokers !== storedBrokers;
+
+  // Re-seed when the store's array moves under us — a Save of our own, or a
+  // write from elsewhere (the AI rail, another tab of the same deal). This
+  // *does* drop unsaved edits when something else writes the same array, which
+  // is the honest outcome: the two copies disagree and the store is the one
+  // that is real.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on `stored` alone by design
+  useEffect(() => setDeductions(stored), [stored]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on `storedBrokers` alone by design
+  useEffect(() => setBrokers(storedBrokers), [storedBrokers]);
 
   // Both Submit buttons commit through the same action, so the two can never
   // disagree about what submitting means. `submitVoucher` re-checks Draft itself;
@@ -1208,6 +1678,20 @@ export function DealFinancials({
     });
   };
 
+  // Commit the deduction table. `updateVoucherDeductions` re-checks Draft, so a
+  // voucher that moved on while this page was open cannot be written to.
+  const save = () => {
+    if (!dirty) return;
+    saveVoucherDraft(listing.id, {
+      preSplitDeductions: deductions,
+      internalBrokers: brokers,
+    });
+    notify({
+      title: "Voucher saved",
+      description: "Deductions and internal commissions updated.",
+    });
+  };
+
   return (
     <div className="d-flex flex-column gap-5 p-4">
       <ListingPageHeader
@@ -1230,6 +1714,8 @@ export function DealFinancials({
               attested={attested}
               onChange={setAttested}
               onSubmit={submit}
+              dirty={dirty}
+              onSave={save}
             />
           ) : isPending ? (
             <Button variant="primary" onClick={reopen}>
@@ -1241,7 +1727,7 @@ export function DealFinancials({
 
       <VoucherApprovalBanner voucher={voucher} />
 
-      <TransactionSummarySection listing={listing} />
+      <TransactionSummarySection listing={listing} editable={!isApproved} />
 
       <Separator />
 
@@ -1250,8 +1736,16 @@ export function DealFinancials({
       <Separator />
 
       <OutsideCommissionsSection brokers={listing.outsideBrokers} />
-      <PreSplitDeductionsSection listing={listing} />
-      <InternalCommissionsSection listing={listing} />
+      <PreSplitDeductionsSection
+        deductions={deductions}
+        editable={isDraft}
+        onChange={setDeductions}
+      />
+      <InternalCommissionsSection
+        brokers={brokers}
+        editable={isDraft}
+        onChange={setBrokers}
+      />
 
       <Separator />
 
@@ -1283,6 +1777,8 @@ export function DealFinancials({
             attested={attested}
             onChange={setAttested}
             onSubmit={submit}
+            dirty={dirty}
+            onSave={save}
           />
         </div>
       )}
