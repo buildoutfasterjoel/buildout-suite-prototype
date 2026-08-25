@@ -406,10 +406,11 @@ export function matchesFilter(event: TimelineEvent, key: FilterKey): boolean {
 }
 
 /**
- * The hybrid email-thread model. `All` collapses a thread into its one
- * Conversation card (member messages hidden); `Emails` expands the thread into
- * its individual message cards (Conversation card hidden). Other filters show
- * whatever matches — an attachment-bearing member still surfaces.
+ * The email-thread model. `All` and `Emails` both collapse a thread into its one
+ * Conversation card (member messages hidden) — narrowing to Emails should drop
+ * the non-email rows, not shatter a conversation into its individual messages.
+ * Other filters show whatever matches — an attachment-bearing member still
+ * surfaces.
  */
 export function visibleEvents(
   events: TimelineEvent[],
@@ -422,8 +423,7 @@ export function visibleEvents(
   );
   return events.filter((e) => {
     if (!matchesFilter(e, filter)) return false;
-    if (filter === "emails") return e.type !== "conversation";
-    if (filter === "all") {
+    if (filter === "all" || filter === "emails") {
       const isThreadMember =
         !!e.threadId && convoThreads.has(e.threadId) && e.type !== "conversation";
       return !isThreadMember;

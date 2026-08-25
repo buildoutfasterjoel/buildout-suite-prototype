@@ -61,7 +61,7 @@ describe("foldThreads", () => {
     expect(member.reply).toBeUndefined();
   });
 
-  it("hides members under All and lists them under Emails", () => {
+  it("hides members under both All and Emails", () => {
     const sent: TimelineEvent = {
       ...base,
       type: "email",
@@ -73,9 +73,9 @@ describe("foldThreads", () => {
     expect(visibleEvents(folded, "all").map((e) => e.type)).toEqual([
       "conversation",
     ]);
-    expect(visibleEvents(folded, "emails").every((e) => e.type !== "conversation")).toBe(
-      true,
-    );
+    expect(visibleEvents(folded, "emails").map((e) => e.type)).toEqual([
+      "conversation",
+    ]);
   });
 
   it("advances an existing conversation instead of adding a row", () => {
