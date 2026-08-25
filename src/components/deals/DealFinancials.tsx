@@ -970,7 +970,14 @@ function RentScheduleSection({ listing }: { listing: Listing }) {
  * commission, close probability) as stat tiles, with secondary facts beneath and an
  * inline edit. Consolidates what used to be the separate Transaction tab.
  */
-function TransactionSummarySection({ listing }: { listing: Listing }) {
+function TransactionSummarySection({
+  listing,
+  editable,
+}: {
+  listing: Listing;
+  /** False once the voucher is Approved: the terms are what was signed off. */
+  editable: boolean;
+}) {
   const { transaction } = listing;
   const isLease = listing.dealType === "Lease";
   const leaseTerms = listing.marketing.spaceLeaseTerms ?? [];
@@ -1011,23 +1018,28 @@ function TransactionSummarySection({ listing }: { listing: Listing }) {
       action={
         // The deal editor's Transaction Terms group already carries every field
         // this section shows, so the voucher links to it rather than keeping a
-        // second, narrower copy of the same form in a modal.
-        <Tooltip>
-          <Tooltip.Trigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Edit transaction"
-                nativeButton={false}
-                render={<Link {...dealEditTarget(listing)} />}
-              >
-                <FontAwesomeIcon icon={faPencil} />
-              </Button>
-            }
-          />
-          <Tooltip.Content>Edit Deal</Tooltip.Content>
-        </Tooltip>
+        // second, narrower copy of the same form in a modal. An Approved voucher
+        // drops the link: the approval is a statement about these figures, so
+        // what stays open on a settled voucher is additions — payables and
+        // receivables — not an edit of the terms they are measured against.
+        editable ? (
+          <Tooltip>
+            <Tooltip.Trigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Edit transaction"
+                  nativeButton={false}
+                  render={<Link {...dealEditTarget(listing)} />}
+                >
+                  <FontAwesomeIcon icon={faPencil} />
+                </Button>
+              }
+            />
+            <Tooltip.Content>Edit Deal</Tooltip.Content>
+          </Tooltip>
+        ) : undefined
       }
     >
       <div className="row g-3">
@@ -1176,6 +1188,7 @@ export function DealFinancials({
   // additions — receivables, invoices, credits against what was approved —
   // which is where this header's action slot is headed once those exist.
   const isPending = voucher.status === "Pending";
+  const isApproved = voucher.status === "Approved";
   // The broker's attestation, which gates both Submit buttons. Page state, not
   // stored: it is a confirmation of *this* reading of the voucher, so it should
   // not survive a reload and come back pre-ticked.
@@ -1241,7 +1254,7 @@ export function DealFinancials({
 
       <VoucherApprovalBanner voucher={voucher} />
 
-      <TransactionSummarySection listing={listing} />
+      <TransactionSummarySection listing={listing} editable={!isApproved} />
 
       <Separator />
 
