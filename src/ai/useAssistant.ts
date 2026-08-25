@@ -9,6 +9,18 @@ interface AssistantUIState {
   setOpen: (open: boolean) => void;
   toggle: () => void;
   /**
+   * Full-screen chat (Figma node 193:5009): the rail stops being a rail and
+   * takes the whole page container, with the transcript and composer capped at
+   * a reading width down the middle. Toggled from the arrows in the rail
+   * header.
+   *
+   * It lives here rather than inside the sidebar because the shell has to know
+   * too — it's the shell that pulls the page content out of the flow.
+   */
+  expanded: boolean;
+  setExpanded: (expanded: boolean) => void;
+  toggleExpanded: () => void;
+  /**
    * A message queued from another surface (e.g. omni search "Ask Otto") to be
    * sent as soon as the sidebar mounts. The sidebar consumes and clears it.
    */
@@ -41,8 +53,16 @@ interface AssistantUIState {
 
 export const useAssistant = create<AssistantUIState>((set, get) => ({
   open: false,
-  setOpen: (open) => set({ open }),
-  toggle: () => set((s) => ({ open: !s.open })),
+  // Closing always collapses. A rail reopened later should come back as a rail:
+  // full screen is a thing you do *to a conversation you're in*, not a standing
+  // preference, and restoring it would hide the page the broker just navigated
+  // to without their asking.
+  setOpen: (open) => set(open ? { open } : { open, expanded: false }),
+  toggle: () =>
+    set((s) => (s.open ? { open: false, expanded: false } : { open: true })),
+  expanded: false,
+  setExpanded: (expanded) => set({ expanded }),
+  toggleExpanded: () => set((s) => ({ expanded: !s.expanded })),
   pendingPrompt: null,
   ask: (prompt) =>
     set((s) => ({ open: true, pendingPrompt: prompt, focusNonce: s.focusNonce + 1 })),

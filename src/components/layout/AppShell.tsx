@@ -6,7 +6,15 @@ import { ToasterProvider } from "@buildoutinc/blueprint-react/ui/Toast";
 import { ToastBridge } from "#/components/layout/ToastBridge";
 import { UndoHotkey } from "#/components/layout/UndoHotkey";
 import { GlobalNavbar } from "#/components/layout/GlobalNavbar";
+import { AppTopBar } from "#/components/layout/AppTopBar";
+import { AppSideNav } from "#/components/layout/AppSideNav";
+import { readNavMode, useNavMode } from "#/components/layout/useNavMode";
+import {
+  readDesignTogglesShown,
+  useDesignToggles,
+} from "#/components/layout/useDesignToggles";
 import { AssistantSidebar } from "#/components/ai/AssistantSidebar";
+import { useAssistant } from "#/ai/useAssistant";
 import { OmniSearch } from "#/components/search/OmniSearch";
 import { useOmniSearch } from "#/components/search/useOmniSearch";
 import { GlobalCreateDealModal } from "#/components/deals/GlobalCreateDealModal";
@@ -23,6 +31,13 @@ import { useDataStore } from "#/data/dataStore";
 
 export function AppShell() {
   const hydrated = useDataStore((s) => s.hydrated);
+  const navMode = useNavMode((s) => s.mode);
+  const setNavMode = useNavMode((s) => s.setMode);
+  const setDesignTogglesShown = useDesignToggles((s) => s.setShown);
+  // Full-screen chat: the rail takes the whole stage and the page underneath is
+  // pulled out of the flow entirely. `open` is checked alongside `expanded` so a
+  // rail closed while expanded can never leave the page hidden behind nothing.
+  const chatFullscreen = useAssistant((s) => s.open && s.expanded);
 
   // The navbar is client-only, and not by choice. Blueprint's `Navbar` decides
   // mobile vs desktop with `useMobileBreakpoint`, whose `useState` initializer
@@ -44,6 +59,28 @@ export function AppShell() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  // The same one-render hold pays for the nav mode too. The store can't read
+  // localStorage in its initializer without disagreeing with the server, so the
+  // persisted choice is applied here — and every branch that reads `appMode`
+  // below is gated on `mounted`, so the first client render still matches the
+  // HTML that arrived.
+  useEffect(() => {
+    const stored = readNavMode();
+    if (stored !== useNavMode.getState().mode) setNavMode(stored);
+  }, [setNavMode]);
+
+  // Same deal for the design-options button. An effect runs after the first
+  // commit, so the worst it can do is make the button appear — never disagree
+  // with the HTML the server sent.
+  useEffect(() => {
+    const stored = readDesignTogglesShown();
+    if (stored !== useDesignToggles.getState().shown) {
+      setDesignTogglesShown(stored);
+    }
+  }, [setDesignTogglesShown]);
+
+  const appMode = mounted && navMode === "app";
+
   // Global command-center shortcut. `Mod` resolves to ⌘ on macOS, Ctrl elsewhere.
   useHotkey("Mod+K", () => useOmniSearch.getState().toggle());
 
@@ -51,24 +88,52 @@ export function AppShell() {
     <ToasterProvider>
       <ToastBridge />
       <UndoHotkey />
-      <div className="app-shell vh-100 d-flex flex-column overflow-hidden">
-        {mounted && <GlobalNavbar />}
-        <div className="flex-grow-1 d-flex overflow-hidden">
-          <main className="app-shell__main flex-grow-1 overflow-auto">
-            {hydrated && <LiveCallBar />}
-            {hydrated && <CallSessionController />}
-            {hydrated && <BovWatcher />}
-            {hydrated && <RosaLeadsWatcher />}
-            {hydrated && <IngestionWatcher />}
-            {hydrated ? (
-              <Outlet />
-            ) : (
-              <div className="d-flex justify-content-center align-items-center py-8 w-100 h-100">
-                <CircularProgress size="lg" />
-              </div>
-            )}
-          </main>
-          {hydrated && <AssistantSidebar />}
+      {/*
+        One structure serves both nav modes, and the slots are deliberately
+        never removed — `{appMode ? <AppSideNav/> : null}` holds its index so
+        the body div, the `<main>` and the assistant rail keep their positions
+        in the tree when the mode flips. Collapsing the rail's slot instead
+        would shift every sibling by one and remount the router outlet and the
+        open chat session along with it.
+
+        In classic mode the rail slot is empty and the body is the full width,
+        which is exactly the old flex column.
+      */}
+      <div
+        className={`app-shell d-flex overflow-hidden vh-100${
+          appMode ? " app-shell--app" : ""
+        }`}
+      >
+        {appMode ? <AppSideNav /> : null}
+        <div className="app-shell__body d-flex flex-column flex-grow-1 overflow-hidden">
+          {!mounted ? null : appMode ? <AppTopBar /> : <GlobalNavbar />}
+          {/*
+            The stage is what the app shell rounds: page content and the
+            assistant rail share one container so the rail's 8px top/right
+            inset is measured against the container, not the window, and the
+            top-left radius clips whichever of them reaches the corner.
+          */}
+          <div className="app-shell__stage flex-grow-1 d-flex overflow-hidden">
+            <main
+              className={`app-shell__main flex-grow-1 overflow-auto${
+                chatFullscreen ? " d-none" : ""
+              }`}
+            >
+              {hydrated && <LiveCallBar />}
+              {hydrated && <CallSessionController />}
+              {hydrated && <BovWatcher />}
+              {hydrated && <RosaLeadsWatcher />}
+              {hydrated && <IngestionWatcher />}
+              {hydrated ? (
+                <Outlet />
+              ) : (
+                <div className="d-flex justify-content-center align-items-center py-8 w-100 h-100">
+                  <CircularProgress size="lg" />
+                </div>
+              )}
+            </main>
+            {hydrated && <AssistantSidebar />}
+          </div>
         </div>
         {hydrated && <OmniSearch />}
         {hydrated && <GlobalCreateDealModal />}

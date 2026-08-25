@@ -7,7 +7,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowsRotate,
   faBuildings,
+  faPaintbrush,
   faRectanglesMixed,
+  faSidebar,
   faUser,
   faUserGear,
 } from "@fortawesome/pro-regular-svg-icons";
@@ -16,6 +18,8 @@ import { CURRENT_USER } from "#/data/teammates";
 import type { RoleId } from "#/data/permissions";
 import { useRoster } from "#/components/settings/users/useRoster";
 import { useViewerRoles } from "#/components/settings/users/useViewer";
+import { useDesignToggles } from "./useDesignToggles";
+import { navModeLabel, useNavMode } from "./useNavMode";
 import {
   VIEW_AS_ORDER,
   identityLine,
@@ -35,6 +39,10 @@ export function AccountMenu() {
   const navigate = useNavigate();
   const { isMobile } = useNavbar();
   const resetDemo = useDataStore((s) => s.reset);
+  const navMode = useNavMode((s) => s.mode);
+  const toggleNavMode = useNavMode((s) => s.toggle);
+  const designTogglesShown = useDesignToggles((s) => s.shown);
+  const toggleDesignToggles = useDesignToggles((s) => s.toggle);
   const setRoles = useRoster((s) => s.setRoles);
 
   // The chosen role lives on the signed-in user's roster row, so the menu reads
@@ -160,6 +168,26 @@ export function AccountMenu() {
               </DropdownMenu.SubContent>
             </DropdownMenu.Sub>
           )}
+          {/* The nav-shape switch. Named for what you'd get, not for what you
+              have, so one read of the row tells you what clicking it does. */}
+          <Navbar.GroupMenuItem
+            className="d-flex align-items-center gap-2"
+            onClick={toggleNavMode}
+          >
+            <FontAwesomeIcon icon={faSidebar} />
+            Switch to {navModeLabel(navMode === "app" ? "classic" : "app")}
+          </Navbar.GroupMenuItem>
+          {/* The floating paintbrush on the contact page and the Pipeline
+              board. Off by default — it's a reviewer's tool, and it sits in the
+              corner of every screenshot of those pages until someone asks for
+              it. Same "name the outcome" phrasing as the row above. */}
+          <Navbar.GroupMenuItem
+            className="d-flex align-items-center gap-2"
+            onClick={toggleDesignToggles}
+          >
+            <FontAwesomeIcon icon={faPaintbrush} />
+            {designTogglesShown ? "Hide" : "Show"} style toggle
+          </Navbar.GroupMenuItem>
           <Navbar.GroupMenuItem
             className="d-flex align-items-center gap-2"
             onClick={() => navigate({ to: "/" })}
