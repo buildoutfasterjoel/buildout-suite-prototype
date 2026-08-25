@@ -43,6 +43,7 @@ import {
   getPendingEmail,
   setPendingEmail,
 } from "#/components/contacts/composerSend";
+import { withPhase } from "#/ai/toolPhase";
 import { useContactSession } from "#/components/contacts/useContactSession";
 import {
   getClientReportKpis,
@@ -428,7 +429,9 @@ export function createClientTools({
 
     filterListingsDef.client(async (args) => {
       const { query } = args as { query: string };
-      const spec = await generateFilter({ data: { query } });
+      const spec = await withPhase("filter_listings", "Working out the filter", () =>
+        generateFilter({ data: { query } }),
+      );
       useListingsFilter.getState().apply(spec);
       navigate("/listings");
       return { explanation: spec.explanation };
@@ -484,7 +487,9 @@ export function createClientTools({
             },
           ]
         : [];
-      const draft = await generateEmail({ data: { property: propPayload, intent, recipients } });
+      const draft = await withPhase("draft_email", "Writing the draft", () =>
+        generateEmail({ data: { property: propPayload, intent, recipients } }),
+      );
       const { email } = createEmailDraft({ subject: draft.subject });
       // Trust the record over the generated line: the model still sometimes
       // rewrites the address it was handed.
@@ -575,7 +580,9 @@ export function createClientTools({
     buildCallListDef.client(async (args) => {
       const { intent } = args as { intent?: string };
       const pool = contactCallPool([...useDataStore.getState().contacts.values()]);
-      const ranked = await generateCallList({ data: { intent, contacts: pool } });
+      const ranked = await withPhase("build_call_list", "Ranking by stage and last touch", () =>
+        generateCallList({ data: { intent, contacts: pool } }),
+      );
       const { callList } = createCallList({
         name: intent ? `AI: ${intent}` : "AI call list",
         contactIds: ranked.calls.map((c) => c.contactId),
@@ -612,12 +619,17 @@ export function createClientTools({
         owner: owner_name,
         notes,
       };
-      const [doc, email] = await Promise.all([
-        generateMarketingDoc({ data: { property, docType: "marketing_flyer" } }),
-        generateEmail({
-          data: { property, intent: `Launch marketing for ${address}`, recipients: [] },
-        }),
-      ]);
+      const [doc, email] = await withPhase(
+        "build_marketing_package",
+        "Writing the flyer and its launch email",
+        () =>
+          Promise.all([
+            generateMarketingDoc({ data: { property, docType: "marketing_flyer" } }),
+            generateEmail({
+              data: { property, intent: `Launch marketing for ${address}`, recipients: [] },
+            }),
+          ]),
+      );
       return {
         package: {
           doc,
@@ -632,9 +644,9 @@ export function createClientTools({
       const detail = getContactDetailClient(contactId);
       if (!detail) return { error: "Contact not found" };
       const name = `${detail.contact.firstName} ${detail.contact.lastName}`.trim();
-      const { brief } = await generateContactBrief({
-        data: { data: composeContactData(contactId), name },
-      });
+      const { brief } = await withPhase("research_contact", `Reading ${name}'s record`, () =>
+        generateContactBrief({ data: { data: composeContactData(contactId), name } }),
+      );
       return { brief, contactName: name };
     }),
 
@@ -643,15 +655,17 @@ export function createClientTools({
       const detail = getContactDetailClient(contactId);
       if (!detail) return { error: "Contact not found" };
       const name = `${detail.contact.firstName} ${detail.contact.lastName}`.trim();
-      const { brief } = await generateContactBrief({
-        data: { data: composeContactData(contactId), name, question },
-      });
+      const { brief } = await withPhase("answer_about_contact", `Reading ${name}'s record`, () =>
+        generateContactBrief({ data: { data: composeContactData(contactId), name, question } }),
+      );
       return { brief, contactName: name };
     }),
 
     analyzeBookDef.client(async (args) => {
       const { question } = args as { question: string };
-      const { answer } = await generateStrategy({ data: { book: composeBookSnapshot(), question } });
+      const { answer } = await withPhase("analyze_book", "Reading your whole book", () =>
+        generateStrategy({ data: { book: composeBookSnapshot(), question } }),
+      );
       return { answer };
     }),
 
