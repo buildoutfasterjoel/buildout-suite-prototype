@@ -5092,24 +5092,102 @@
 // Assistant rail — the running-tool chip (Figma node 102:3967). A pill wearing
 // the same sweep as Otto's mark, so "Otto is doing something" is one visual
 // language across the rail. Replaces a bare wrench + raw tool name.
-// A chip and the status line it grows when the call runs long. A column so the
-// line sits under its own chip rather than under the whole wrapped row — the
-// chips live in a `flex-wrap` row, and a sibling line there would break it.
+// A chip and the status line it grows when the call runs long (Figma node
+// 252:18531). A column so the line sits under its own chip rather than under the
+// whole wrapped row — the chips live in a `flex-wrap` row, and a sibling line
+// there would break it.
 .assistant-tool-chip__stack {
   display: inline-flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
+  gap: 4px;
+}
+
+// The 28px gutter the connector and the phase glyph share, so the bar drops
+// straight into the icon beneath it rather than beside it.
+$otto-progress-gutter: 28px;
+
+// A 2px stub tying the line back to the chip above it. Its own element rather
+// than a pseudo on the row, because it has to sit *between* two flex children
+// and take the column's gap on both sides.
+.assistant-tool-chip__connector {
+  display: flex;
+  justify-content: center;
+  width: $otto-progress-gutter;
+  height: 16px;
+
+  &::before {
+    content: "";
+    width: 2px;
+    height: 100%;
+    background-color: colors.$storm-grey-200;
+  }
+}
+
+.assistant-tool-chip__progress-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.assistant-tool-chip__progress-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: $otto-progress-gutter;
+  height: 16px;
+  font-size: 12px;
+  color: colors.$storm-grey-500;
 }
 
 // Deliberately quiet, and outside the pill: this is Otto thinking aloud, not a
 // result. Matches the task list's muted voice (see `.assistant-task-row`).
+//
+// The shimmer is the one piece of motion that carries information here — a
+// spinner says "running" and stops meaning anything after a few seconds, while
+// light travelling across the words keeps saying it about *this* line. Painted
+// as a moving gradient clipped to the glyphs; `color` underneath is the flat
+// fallback for when `background-clip: text` can't resolve, so the text never
+// vanishes into a transparent fill.
 .assistant-tool-chip__progress {
-  padding-left: 2px;
   color: colors.$storm-grey-600;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 16px;
+  // Stops the seconds jittering the line's width as the digits tick over.
   font-variant-numeric: tabular-nums;
+
+  @supports (background-clip: text) or (-webkit-background-clip: text) {
+    background-image: linear-gradient(
+      100deg,
+      #{colors.$storm-grey-600} 0%,
+      #{colors.$storm-grey-600} 38%,
+      #{colors.$storm-grey-300} 50%,
+      #{colors.$storm-grey-600} 62%,
+      #{colors.$storm-grey-600} 100%
+    );
+    background-size: 220% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: otto-progress-shimmer 2.1s linear infinite;
+  }
+
+  // Motion is decoration here — the words and the timer already say everything.
+  @media (prefers-reduced-motion: reduce) {
+    background-image: none;
+    animation: none;
+    color: colors.$storm-grey-600;
+  }
+}
+
+@keyframes otto-progress-shimmer {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -120% 0;
+  }
 }
 
 .assistant-tool-chip {
