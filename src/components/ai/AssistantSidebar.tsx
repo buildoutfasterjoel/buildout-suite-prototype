@@ -675,7 +675,13 @@ function MessageBubble({
   const suppressText = suppressNarration || cardCalls.some((p) => selfNarrating(p.output));
   const showText = !!text && !suppressText;
 
-  if (!text && toolCalls.length === 0) return null;
+  // Render nothing rather than an empty wrapper. A message whose only content is
+  // narration `suppressNarration` drops still *has* text, so the old
+  // `!text` guard let it through — and `ChatMessage` dutifully returned a bare
+  // flex column with a 0px height, which the transcript's own 24px gap then
+  // spaced as if it were a real turn. Visible as a phantom double gap under an
+  // email draft.
+  if (!showText && chipCalls.length === 0 && cardCalls.length === 0) return null;
 
   return (
     <ChatMessage message={message} chipCalls={chipCalls} showText={showText}>
@@ -1397,7 +1403,10 @@ export function AssistantSidebar() {
       {/* Input (Figma node 193:4425) — shared with the editor's Otto panel. The
           disclaimer under it is part of the input area, not the transcript, so
           it stays put across both views. */}
-      <div className="assistant-rail__column" style={{ padding: "4px 16px 16px" }}>
+      {/* 20px of gutter, matching the transcript's — the two columns are the same
+          width and centred the same way, so a different inset here reads as the
+          composer being misaligned with everything above it. */}
+      <div className="assistant-rail__column" style={{ padding: "4px 20px 16px" }}>
         <ChatComposer
           draft={draft}
           onDraftChange={setDraft}

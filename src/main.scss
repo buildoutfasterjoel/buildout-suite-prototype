@@ -4979,6 +4979,16 @@
   }
 }
 
+// Reserve the scrollbar's width on both edges so the centred column stays put.
+// Without it the scroller's content box narrows the moment the transcript
+// overflows, and the 720px column centred inside it slides left by half a
+// scrollbar — while the composer, which lives outside the scroller, doesn't
+// move. That's the "aligned until you scroll" half of the misalignment; the
+// other half was the two columns using different gutters.
+.assistant-rail--expanded > .overflow-auto {
+  scrollbar-gutter: stable both-edges;
+}
+
 .assistant-rail--expanded .assistant-rail__column {
   // 720px including padding — 680 of transcript, 688 of composer (Figma nodes
   // 193:5257 / 193:5309).
