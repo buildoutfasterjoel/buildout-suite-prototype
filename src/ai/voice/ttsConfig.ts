@@ -6,8 +6,8 @@
  */
 const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
 
-/** Warm, neutral "Otto" delivery. Default: ElevenLabs "Adam". */
-export const AL_VOICE_ID = env.ELEVENLABS_AL_VOICE_ID || "pNInz6obpgDQGcFmaJgB";
+/** Warm, neutral "Otto" delivery. Default: the account's chosen Otto voice. */
+export const AL_VOICE_ID = env.ELEVENLABS_AL_VOICE_ID || "hpp4J3VqNfWAUOO0d1Us";
 
 /** Low-latency, low-credit model for hands-free + the Phase-3 live call. */
 export const TTS_MODEL = env.ELEVENLABS_MODEL || "eleven_flash_v2_5";
