@@ -30,7 +30,12 @@ interface DayPlanQueueState {
   detached: boolean;
 
   arm: (key: string, items: DayPlanItem[]) => void;
-  skip: (note: string) => void;
+  /**
+   * Move the cursor by `delta`, wrapping at both ends. This is the card's
+   * prev/next nav — pure browsing, so unlike `clear` it changes nothing about
+   * the queue itself and leaves no note behind.
+   */
+  step: (delta: number) => void;
   clear: (taskId: string, note: string) => void;
   park: (taskId: string) => void;
   resume: (note: string) => void;
@@ -51,10 +56,16 @@ export const useDayPlanQueue = create<DayPlanQueueState>((set, get) => ({
 
   arm: (key, items) => set({ ...EMPTY, key, items }),
 
-  skip: (note) =>
+  step: (delta) =>
     set((s) => {
       const remaining = s.items.filter((i) => !s.cleared.includes(i.taskId));
-      return { note, index: s.index + 1 >= remaining.length ? 0 : s.index + 1 };
+      if (remaining.length === 0) return { index: 0, note: null };
+      // Modulo twice: JS's `%` keeps the sign of the dividend, so a step back
+      // from the first item would land on -1 rather than wrapping to the end.
+      const next = ((s.index + delta) % remaining.length + remaining.length) % remaining.length;
+      // Browsing clears the transient note — it belonged to the move you just
+      // stepped away from.
+      return { index: next, note: null };
     }),
 
   clear: (taskId, note) =>

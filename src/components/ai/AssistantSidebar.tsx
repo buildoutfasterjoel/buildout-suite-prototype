@@ -4,20 +4,17 @@ import { useHotkey } from "@tanstack/react-hotkeys";
 import { useChat, type UIMessage } from "@tanstack/ai-react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
-import { Accordion } from "@buildoutinc/blueprint-react/ui/Accordion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faSparkles,
-  faPaperPlaneTop,
-  faUser,
   faXmark,
   faFileLines,
   faListCheck,
   faPhone,
   faUserPlus,
-  faPenNib,
   faChevronRight,
-  faChevronDown,
+  faArrowLeft,
+  faArrowRight,
   faMicrophone,
   faVolumeHigh,
   faVolumeXmark,
@@ -42,12 +39,19 @@ import { useVoice } from "#/ai/voice/useVoice";
 import { voiceEngine } from "#/ai/voice/voiceEngine";
 import { useHandsFree } from "#/ai/voice/useHandsFree";
 import { useGreeting } from "#/ai/voice/useGreeting";
+import type { GreetingParts } from "#/ai/voice/greeting";
 import { registerStopForCall, callFlow } from "#/components/call/callFlow";
 import { useCallStore } from "#/components/call/useCallStore";
 import { CallRecapCard } from "#/components/call/CallRecapCard";
 import { composeRecapReport, recapSpeechText } from "#/components/call/callRecap";
 import { DealCardById } from "#/components/deals/DealCard";
-import { EmailDraftCard, type EmailDraftCardData } from "#/components/ai/EmailDraftCard";
+import {
+  EmailDraftCard,
+  EmailDraftSection,
+  type EmailDraftCardData,
+} from "#/components/ai/EmailDraftCard";
+import { SentEmailCard, type SentEmailData } from "#/components/ai/SentEmailCard";
+import { OttoHome, type StarterPrompt } from "#/components/ai/OttoHome";
 import { DayPlanCard } from "#/components/ai/DayPlanCard";
 import { ActionPlanChecklist } from "#/components/ai/ActionPlanChecklist";
 import { matchesPlanIntent, type DayPlanItem } from "#/ai/dayPlan";
@@ -85,38 +89,29 @@ export function scopeLabel(pathname: string): string {
  * what to do, not just wait to be asked. Every chip maps to a tool that actually
  * runs — no chip advertises a capability the prototype doesn't have.
  */
-const SUGGESTIONS = [
+const SUGGESTIONS: StarterPrompt[] = [
   {
     icon: faListCheck,
-    label: "Recommend my next actions",
+    label: "What's next?",
     sublabel: "Walk my whole day, top move first",
     prompt: "What should I do today?",
   },
   {
     icon: faPhone,
-    label: "Build my call list",
-    sublabel: "Rank the warmest prospects to call now",
+    label: "Build call list",
+    sublabel: "Rank warmest prospects to call now",
     prompt: "Build my call list.",
   },
   {
     icon: faUserPlus,
     label: "Add a contact",
-    sublabel: "Add someone new to your book",
+    sublabel: "Add someone new to my book",
     prompt: "Add a contact",
-  },
-  {
-    icon: faPenNib,
-    label: "Draft an email",
-    sublabel: "Outreach to a list, in your voice",
-    prompt: "Draft a price-reduction email to the Investors list.",
-    // Parked while the drafting flow gets a fresh look. The `draft_email` tool
-    // still works if asked for directly — this only pulls the starter row.
-    hidden: true,
   },
   {
     icon: faFileLines,
     label: "Generate a doc",
-    sublabel: "Client reports and marketing packages",
+    sublabel: "Client reports, marketing packages",
     prompt: "Generate a client-report summary for one of my active listings.",
   },
   {
@@ -126,85 +121,6 @@ const SUGGESTIONS = [
     prompt: "What can you do?",
   },
 ];
-
-/**
- * The starter prompts, as a collapsible column of two-line rows. Sends on click
- * rather than filling the composer: every prompt is a complete question, so
- * making the broker press enter again is friction for no gain.
- *
- * Controlled open state so the first ask can fold them away (see
- * `startersOpen`) while leaving them one click from coming back.
- */
-function StarterPrompts({
-  onPick,
-  open,
-  onOpenChange,
-}: {
-  onPick: (prompt: string) => void;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
-  return (
-    <Accordion
-      // `assistant-starters` suppresses Bootstrap's own right-edge ::after
-      // chevron so the caret below is the only one (see main.scss).
-      className="assistant-starters"
-      variant="inline"
-      value={open ? ["starters"] : []}
-      onValueChange={(v: unknown[]) => onOpenChange(v.includes("starters"))}
-    >
-      <Accordion.Item value="starters">
-        <Accordion.Trigger>
-          <span className="d-flex align-items-center gap-2 fw-semibold">
-            <FontAwesomeIcon
-              icon={open ? faChevronDown : faChevronRight}
-              className="text-muted"
-            />
-            Suggested prompts
-            <FontAwesomeIcon icon={faSparkles} className="text-purple-heart-600" />
-          </span>
-        </Accordion.Trigger>
-        <Accordion.Content>
-          <StarterRows onPick={onPick} />
-        </Accordion.Content>
-      </Accordion.Item>
-    </Accordion>
-  );
-}
-
-/**
- * One row per starter prompt, per the Otto AI Chat Rail design (Figma 44:665):
- * a round purple token badge, a title over a muted subtitle, and a trailing
- * chevron; hover shifts the card to a light purple fill with a purple border.
- * Layout and both states live in `.assistant-starter-row` (see main.scss).
- */
-function StarterRows({ onPick }: { onPick: (prompt: string) => void }) {
-  return (
-    <div className="d-flex flex-column gap-2">
-      {SUGGESTIONS.filter((s) => !s.hidden).map((s) => (
-        <button
-          key={s.label}
-          type="button"
-          className="assistant-starter-row"
-          onClick={() => onPick(s.prompt)}
-        >
-          <span className="assistant-starter-row__icon">
-            <FontAwesomeIcon icon={s.icon} />
-          </span>
-          <span className="flex-grow-1" style={{ minWidth: 0 }}>
-            <span className="assistant-starter-row__title d-block fw-semibold text-truncate">
-              {s.label}
-            </span>
-            <span className="assistant-starter-row__subtitle d-block text-muted text-truncate">
-              {s.sublabel}
-            </span>
-          </span>
-          <FontAwesomeIcon icon={faChevronRight} className="assistant-starter-row__chevron" />
-        </button>
-      ))}
-    </div>
-  );
-}
 
 type DealCardData = {
   id: string;
@@ -297,56 +213,10 @@ function answerOf(output: unknown): string | null {
   return typeof o.answer === "string" ? o.answer : null;
 }
 
-type SentEmailData = {
-  subject: string;
-  to: string;
-  contactId: string;
-  contactName: string;
-};
-
 /** Extract a just-sent email (from `send_email`) from a tool-call's output. */
 function sentEmailOf(output: unknown): SentEmailData | null {
   const o = (output ?? {}) as { sentEmail?: unknown };
   return o.sentEmail ? (o.sentEmail as SentEmailData) : null;
-}
-
-/**
- * Receipt for an email the assistant sent. Sending is the one irreversible
- * thing it does, so the confirmation is a card rather than a line of prose —
- * and it carries the way through to the record, which is where the broker goes
- * next to see it on the timeline.
- */
-function SentEmailCard({ sent }: { sent: SentEmailData }) {
-  const router = useRouter();
-  return (
-    <div className="border rounded p-3 bg-white d-flex flex-column gap-2">
-      <div className="d-flex align-items-center gap-2">
-        <FontAwesomeIcon icon={faPaperPlaneTop} className="text-purple-heart-600" />
-        <span className="fw-semibold small text-uppercase text-muted">Email sent</span>
-      </div>
-      <div>
-        <div className="fw-semibold">{sent.subject}</div>
-        <div className="small text-muted text-truncate">
-          To {sent.contactName} · {sent.to}
-        </div>
-      </div>
-      <div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() =>
-            router.navigate({
-              to: "/backoffice/contacts/$contactId",
-              params: { contactId: sent.contactId },
-            })
-          }
-        >
-          <FontAwesomeIcon icon={faUser} />
-          View {sent.contactName.split(" ")[0]}
-        </Button>
-      </div>
-    </div>
-  );
 }
 
 /** Extract the ranked day queue from `plan_my_day`'s output, if present. */
@@ -502,14 +372,17 @@ function ResultSummaryCard({ nav, onGo }: { nav: ResultNav; onGo: () => void }) 
  */
 function ToolResultCards({
   output,
-  latestDraftId,
+  emailFlow,
+  repliedPast,
+  onQuickReply,
 }: {
   output: unknown;
-  /**
-   * The id of the newest email draft in the whole conversation. Anything older
-   * renders collapsed — see `EmailDraftCard`'s `superseded`.
-   */
-  latestDraftId?: string | null;
+  /** Where each draft sits in the conversation's email history (see `emailFlow`). */
+  emailFlow?: EmailFlow;
+  /** The broker has already replied past this turn — its quick replies retire. */
+  repliedPast?: boolean;
+  /** Send a quick reply as the broker's own turn ("send it", "delete it"). */
+  onQuickReply?: (text: string) => void;
 }) {
   const router = useRouter();
   const { deals, contacts, properties } = entitiesOf(output);
@@ -528,17 +401,25 @@ function ToolResultCards({
     <>
       {dayPlan && (
         <>
-          <ActionPlanChecklist
-            done
-            summary={`Prioritized your day, ${dayPlan.length} move${dayPlan.length === 1 ? "" : "s"} queued. Starting you on the first one.`}
-          />
+          <ActionPlanChecklist done />
+          {/* The summary moved out of the checklist and into plain prose: the
+              checklist is now a folded line, and burying the one sentence that
+              says what happened inside it meant it shipped collapsed. */}
+          <div className="text-body">
+            Prioritized your day, {dayPlan.length} move{dayPlan.length === 1 ? "" : "s"} queued.
+            Starting you on the first one.
+          </div>
           <DayPlanCard items={dayPlan} slot="inline" />
         </>
       )}
       {emailDraft && (
-        <EmailDraftCard
+        <EmailDraftSection
           draft={emailDraft}
-          superseded={!!latestDraftId && emailDraft.id !== latestDraftId}
+          version={emailFlow?.versionOf.get(emailDraft.id) ?? 1}
+          superseded={!!emailFlow?.superseded.has(emailDraft.id)}
+          showActions={!repliedPast}
+          onSend={() => onQuickReply?.("Send it")}
+          onDelete={() => onQuickReply?.("Delete that draft")}
         />
       )}
       {sentEmail && <SentEmailCard sent={sentEmail} />}
@@ -563,7 +444,7 @@ function ToolResultCards({
     const c = contacts[0];
     const p = properties[0];
     return (
-      <div className="d-flex flex-column gap-2">
+      <div className="d-flex flex-column" style={{ gap: 12 }}>
         {d && <DealCardById listingId={d.id} showStatus />}
         {c && (
           <ResultCard
@@ -588,13 +469,77 @@ function ToolResultCards({
   const navs = navsOf(output);
   const summaryNavs = navs.length ? navs : synthesizeNavs(deals, contacts, properties);
   return (
-    <div className="d-flex flex-column gap-2">
+    // 12px, like every other multi-element reply — see `ChatMessage`.
+    <div className="d-flex flex-column" style={{ gap: 12 }}>
       {summaryNavs.map((nav, i) => (
         <ResultSummaryCard key={i} nav={nav} onGo={() => goToNav(router, nav)} />
       ))}
       {rich}
     </div>
   );
+}
+
+/**
+ * Artifacts that carry their own summary line — the day plan's "Prioritized your
+ * day, 8 moves queued", the draft's "Done. Let me know if you'd like any edits",
+ * the receipt's own subject-and-recipient header.
+ *
+ * The system prompt asks the model to confirm each of these in a line of prose,
+ * and that instruction is older than the cards: it was written when the model's
+ * sentence was the ONLY prose in the turn. Now every one of these artifacts says
+ * the same thing itself, so the model's copy is a second version of a sentence
+ * the broker has already read — see `narratedIndices`.
+ */
+function selfNarrating(output: unknown): boolean {
+  return (
+    dayPlanOf(output) !== null || emailDraftOf(output) !== null || sentEmailOf(output) !== null
+  );
+}
+
+/**
+ * The conversation's email history, walked once and read by every draft in it.
+ *
+ * A draft can't tell on its own whether it's the live one: that depends on what
+ * landed *after* it. So the walk goes forward through the transcript and, each
+ * time a new draft or a send appears, retires everything before it. What comes
+ * back is two lookups — which version a draft is (so a revision says "Draft v2"
+ * under an "Edited email draft" header) and whether it's been superseded (so it
+ * folds shut and leaves the live version in view).
+ */
+interface EmailFlow {
+  versionOf: Map<string, number>;
+  superseded: Set<string>;
+}
+
+function buildEmailFlow(messages: UIMessage[]): EmailFlow {
+  const versionOf = new Map<string, number>();
+  const superseded = new Set<string>();
+  /**
+   * Drafts of the email currently being worked on. Reset by a send, so the next
+   * email starts over at "Drafted an email" / "Draft" — it's a new letter, not
+   * revision three of one that already went out.
+   */
+  let live: string[] = [];
+  for (const m of messages) {
+    for (const p of m.parts) {
+      if (p.type !== "tool-call") continue;
+      const draft = emailDraftOf(p.output);
+      if (draft?.id && !versionOf.has(draft.id)) {
+        // Everything drafted before this one is now history.
+        for (const id of live) superseded.add(id);
+        live.push(draft.id);
+        versionOf.set(draft.id, live.length);
+        continue;
+      }
+      // A send closes the thread: the receipt below is the live artifact now, so
+      // every draft that fed it folds away.
+      if (sentEmailOf(p.output)) {
+        for (const id of live) superseded.add(id);
+        live = [];
+      }
+    }
+  }
+  return { versionOf, superseded };
 }
 
 /**
@@ -619,11 +564,16 @@ const LOOKUP_TOOLS = new Set([
 /** Render a message: text bubble + a tool chip for actions, or interactive cards for lists. */
 function MessageBubble({
   message,
-  suppressPlanText = false,
-  latestDraftId,
+  suppressNarration = false,
+  emailFlow,
+  repliedPast = false,
+  onQuickReply,
 }: {
-  /** Newest email draft in the conversation; older ones render collapsed. */
-  latestDraftId?: string | null;
+  /** The conversation's email history — see {@link buildEmailFlow}. */
+  emailFlow?: EmailFlow;
+  /** A later message is the broker's, so this turn's quick replies retire. */
+  repliedPast?: boolean;
+  onQuickReply?: (text: string) => void;
   message: UIMessage;
   /**
    * True while this message is the in-flight half of a "plan my day" turn. The
@@ -631,7 +581,7 @@ function MessageBubble({
    * isn't there yet to suppress against — without this the duplicative line
    * ("You've got a handful of moves…") flashes up and then vanishes.
    */
-  suppressPlanText?: boolean;
+  suppressNarration?: boolean;
 }) {
   const text = messageText(message);
   const toolCalls = messageToolCalls(message);
@@ -682,14 +632,12 @@ function MessageBubble({
   const chipCalls = toolCalls.filter((p) => !cardCalls.includes(p));
 
   /**
-   * The day-plan card carries its own "Prioritized your day, N moves queued"
-   * summary, so the model's lead-in to it ("You've got a queue ready — starting
-   * with …") only says the same thing twice. Drop the text on the message that
-   * carries the card; the model's follow-up message, which adds detail the card
-   * doesn't have, still renders.
+   * Drop prose the artifact below it already carries — whether the model put it
+   * in the same message as the tool call (this check) or in the follow-up
+   * message after it (`suppressNarration`, decided by the rail, which is the
+   * only place that can see one message in the context of the next).
    */
-  const suppressText =
-    suppressPlanText || cardCalls.some((p) => dayPlanOf(p.output) !== null);
+  const suppressText = suppressNarration || cardCalls.some((p) => selfNarrating(p.output));
   const showText = !!text && !suppressText;
 
   if (!text && toolCalls.length === 0) return null;
@@ -697,30 +645,15 @@ function MessageBubble({
   return (
     <ChatMessage message={message} chipCalls={chipCalls} showText={showText}>
       {cardCalls.map((p, i) => (
-        <ToolResultCards key={i} output={p.output} latestDraftId={latestDraftId} />
+        <ToolResultCards
+          key={i}
+          output={p.output}
+          emailFlow={emailFlow}
+          repliedPast={repliedPast}
+          onQuickReply={onQuickReply}
+        />
       ))}
     </ChatMessage>
-  );
-}
-
-/** The hero offer's quick-response chips ("Yes, call now" / "Brief me first").
- * Reads the offer reactively so it disappears the moment `send` clears it, and
- * calls `send(...)` for both so the click path shares the exact same routing as
- * voice/typed input. */
-function HeroOfferChips({ onCall, onBrief }: { onCall: () => void; onBrief: () => void }) {
-  const offer = useHeroOffer((s) => s.pendingOffer);
-  if (!offer) return null;
-  return (
-    // No horizontal padding: these sit inside the already-padded message flow,
-    // so they line up with the greeting bubble and the starter rows.
-    <div className="d-flex gap-2">
-      <Button variant="primary" size="sm" onClick={onCall}>
-        Yes, call now
-      </Button>
-      <Button variant="outline" size="sm" onClick={onBrief}>
-        Brief me first
-      </Button>
-    </div>
   );
 }
 
@@ -740,6 +673,19 @@ export function AssistantSidebar() {
   const pendingLine = useAssistant((s) => s.pendingLine);
   const consumeLine = useAssistant((s) => s.consumeLine);
   const focusNonce = useAssistant((s) => s.focusNonce);
+  /**
+   * Which of the rail's two faces is showing (Figma nodes 193:4366 / 193:4669).
+   *
+   * The rail opens on `home` every time — the greeting, the offer and the
+   * starters are a *place* you can get back to, not messages that scroll away.
+   * Sending anything moves to `chat`, and the chat header's back arrow returns.
+   * The transcript is never cleared by the trip, so "Resume chatting" picks up
+   * exactly where the broker left off.
+   */
+  const [view, setView] = useState<"home" | "chat">("home");
+  /** The session greeting, laid out by the home screen rather than sent as a
+   * message. Null until `useGreeting` fires. */
+  const [greeting, setGreeting] = useState<GreetingParts | null>(null);
   const [draft, setDraft] = useState("");
   const [brief, setBrief] = useState<{ spec: CallBriefSpecT; name: string; contactId: string } | null>(
     null,
@@ -817,6 +763,9 @@ export function AssistantSidebar() {
       const content = text.trim();
       if (!content || isLoading) return;
       setDraft("");
+      // Anything the broker says is a conversation — leave the home screen for
+      // it, including the greeting's own "Yes, call now" / "Brief me first".
+      setView("chat");
 
       // A pending hero offer (§Phase 4A) takes priority over the normal agent
       // turn: "yes" opens the live call, "brief me first" generates a call
@@ -906,12 +855,11 @@ export function AssistantSidebar() {
   }, [stopForCall]);
 
   // Greeting: render + speak once per session on first open; then open the mic.
+  // It lands in the home screen's hero rather than in the transcript — a
+  // greeting is what the rail *is* when nothing has been asked yet, and pushing
+  // it in as message zero meant every later view had to carve around it.
   useGreeting({
-    onGreeting: (text) =>
-      setMessages([
-        ...messages,
-        { id: `greeting-${Date.now()}`, role: "assistant", parts: [{ type: "text", content: text }] },
-      ]),
+    onGreeting: (parts) => setGreeting(parts),
     onEnterConversation: () => startHandsFree(),
   });
 
@@ -957,39 +905,53 @@ export function AssistantSidebar() {
   }, [messages]);
 
   /**
-   * Starter prompts start expanded and fold away on the broker's first ask, but
-   * stay one click from returning. Collapsed exactly once, via the ref: after
-   * that the accordion is the broker's to control, so re-expanding it mid-chat
-   * isn't immediately undone by the next message.
+   * The email history, derived once per transcript change and read by every
+   * draft in it — versions and what's been superseded (see {@link EmailFlow}).
    */
-  const [startersOpen, setStartersOpen] = useState(true);
-  const startersCollapsedRef = useRef(false);
-  const hasUserMessage = messages.some((m) => m.role === "user");
-  useEffect(() => {
-    if (!hasUserMessage || startersCollapsedRef.current) return;
-    startersCollapsedRef.current = true;
-    setStartersOpen(false);
-  }, [hasUserMessage]);
+  const emailFlow = useMemo(() => buildEmailFlow(messages), [messages]);
 
   /**
-   * The newest email draft in the transcript. Every older draft card collapses
-   * against it, so a revision leaves one open version in view and the history
-   * folded above it rather than a stack of near-identical emails.
+   * Assistant messages whose whole content is a re-telling of the artifact just
+   * above them — "You've got 8 queued … here's your queue:" under the queue card,
+   * "Drafted — open it in her composer" under the draft that says exactly that.
    *
-   * Scoped to drafts that arrived as `draft_email` results: the marketing
-   * package's launch email is part of a different artifact and shouldn't fold
-   * away because someone later revised an unrelated one.
+   * The model can't know it's repeating itself: it writes its confirmation line
+   * before the card renders, and each of these artifacts only grew its own
+   * summary when the rail was rebuilt. So the judgement is made here, where one
+   * message can be read in the context of the one before it: once a turn has
+   * produced a self-narrating artifact, the assistant's follow-up *text* is a
+   * duplicate until the broker says something new.
+   *
+   * A follow-up that also calls a tool is real work, not narration, so it keeps
+   * its text.
    */
-  const latestDraftId = useMemo(() => {
-    let latest: string | null = null;
-    for (const m of messages) {
-      for (const p of m.parts) {
-        if (p.type !== "tool-call") continue;
-        const d = emailDraftOf(p.output);
-        if (d?.id) latest = d.id;
+  const narratedIndices = useMemo(() => {
+    const out = new Set<number>();
+    let armed = false;
+    messages.forEach((m, i) => {
+      if (m.role === "user") {
+        armed = false;
+        return;
       }
-    }
-    return latest;
+      const calls = m.parts.filter((p) => p.type === "tool-call");
+      if (calls.some((p) => selfNarrating(p.output))) {
+        armed = true;
+        return;
+      }
+      if (armed && calls.length === 0) out.add(i);
+    });
+    return out;
+  }, [messages]);
+
+  /**
+   * Index of the broker's last turn. Every assistant message above it has been
+   * replied past, which retires its quick replies: the reply *is* the answer to
+   * "send it or edit it?", so leaving the buttons up offers a choice that has
+   * already been made (Figma node 193:7460).
+   */
+  const lastUserIndex = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) if (messages[i].role === "user") return i;
+    return -1;
   }, [messages]);
 
   /**
@@ -1100,6 +1062,25 @@ export function AssistantSidebar() {
     return () => cancelAnimationFrame(id);
   }, [focusNonce]);
 
+  /**
+   * Arriving at the chat lands on the newest message — coming back from the home
+   * screen, or reopening a rail that was collapsed mid-conversation.
+   *
+   * The effect above can't cover this: it keys off `messages`, which hasn't
+   * changed on either trip, so it never re-runs — and the scroller is a fresh
+   * element each time (closing the rail unmounts it), which means it starts at
+   * the top showing the beginning of the conversation.
+   */
+  useEffect(() => {
+    if (!open || view !== "chat") return;
+    // After paint, so the transcript is laid out and `scrollHeight` is real.
+    const id = requestAnimationFrame(() => {
+      const el = scrollRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
+    });
+    return () => cancelAnimationFrame(id);
+  }, [open, view]);
+
   // The panel is launched from the global navbar; render nothing when closed
   // so the content area reclaims the full width.
   if (!open) return null;
@@ -1122,19 +1103,48 @@ export function AssistantSidebar() {
         </linearGradient>
       </svg>
 
-      {/* Header (Figma node 25:178) */}
+      {/* Header. Two faces (Figma nodes 193:4367 / 193:4670): on the home screen
+          Otto's mark is *inside* the greeting, so the header shows only the way
+          back into an existing conversation; in the chat it identifies whose
+          replies these are and offers the way back out. Controls stay put across
+          both, so the mute and close buttons never move under the cursor. */}
       <div className="assistant-rail__header">
-        <span className="assistant-rail__avatar">
-          <FontAwesomeIcon icon={faOtter} />
-        </span>
-        <div className="d-flex flex-column flex-grow-1" style={{ minWidth: 0 }}>
-          <span className="assistant-rail__title text-truncate">Otto</span>
-          <span className="assistant-rail__subtitle text-truncate">Your Buildout assistant</span>
-        </div>
+        {view === "home" ? (
+          /* Nothing to resume until something's been said — and an empty rail
+             with a "Resume chatting" button is an offer that goes nowhere. */
+          messages.length > 0 ? (
+            <Button size="sm" variant="ghost" onClick={() => setView("chat")}>
+              Resume chatting
+              <FontAwesomeIcon icon={faArrowRight} />
+            </Button>
+          ) : (
+            <span className="flex-grow-1" />
+          )
+        ) : (
+          <>
+            <button
+              type="button"
+              className="assistant-rail__control"
+              aria-label="Back to start"
+              onClick={() => setView("home")}
+            >
+              <FontAwesomeIcon icon={faArrowLeft} />
+            </button>
+            <span className="assistant-rail__avatar">
+              <FontAwesomeIcon icon={faOtter} />
+            </span>
+            <div className="d-flex flex-column flex-grow-1" style={{ minWidth: 0 }}>
+              <span className="assistant-rail__title text-truncate">Otto</span>
+              <span className="assistant-rail__subtitle text-truncate">
+                Your Buildout assistant
+              </span>
+            </div>
+          </>
+        )}
         {/* Route-scope badge ("People", "Buildout Suite", …) parked for now.
             `scopeLabel` is kept exported so the mapping survives; restoring the
             badge means putting a <Badge> back here with the current pathname. */}
-        <div className="d-flex align-items-start gap-1 flex-shrink-0">
+        <div className="d-flex align-items-center gap-1 flex-shrink-0 ms-auto">
           <button
             type="button"
             className="assistant-rail__control"
@@ -1163,8 +1173,25 @@ export function AssistantSidebar() {
         </div>
       </div>
 
-      {/* Messages */}
-      <div ref={scrollRef} className="flex-grow-1 overflow-auto p-3 d-flex flex-column gap-4">
+      {view === "home" ? (
+        <div className="flex-grow-1 overflow-auto">
+          <OttoHome
+            greeting={greeting}
+            starters={SUGGESTIONS}
+            onPick={send}
+            onCall={() => send("yes")}
+            onBrief={() => send("brief me first")}
+          />
+        </div>
+      ) : (
+      /* Messages. 20px of inner padding and 24px between turns (Figma node
+         193:4680) — elements *within* one reply group tighter at 12px, which
+         each of them owns (see `ChatMessage`). */
+      <div
+        ref={scrollRef}
+        className="flex-grow-1 overflow-auto d-flex flex-column"
+        style={{ padding: 20, gap: 24 }}
+      >
         {messages.length === 0 && !recap ? (
           <div className="text-muted small">
             Ask about your properties, contacts, and deals — or have me draft an email, build a
@@ -1175,34 +1202,14 @@ export function AssistantSidebar() {
             <Fragment key={m.id}>
               <MessageBubble
                 message={m}
-                latestDraftId={latestDraftId}
-                suppressPlanText={
-                  planPending && m.role === "assistant" && i === messages.length - 1
+                emailFlow={emailFlow}
+                repliedPast={i < lastUserIndex}
+                onQuickReply={send}
+                suppressNarration={
+                  narratedIndices.has(i) ||
+                  (planPending && m.role === "assistant" && i === messages.length - 1)
                 }
               />
-              {/* The offer + starters belong to the greeting, so they sit directly
-                  under the first message rather than pinned above the composer. */}
-              {i === 0 && (
-                // Grouped tighter than the flow's own gap: the offer and the
-                // starters are one block belonging to the greeting.
-                <div className="d-flex flex-column gap-2">
-                  <HeroOfferChips
-                    onCall={() => send("yes")}
-                    onBrief={() => send("brief me first")}
-                  />
-                  {/* Kept in place after the first ask rather than retired, so the
-                      starters stay reachable mid-conversation — collapsed once
-                      the broker is under way. Deliberately NOT gated on `recap`:
-                      these sit at the top of the flow attached to the greeting,
-                      so a call recap arriving at the bottom is unrelated. That
-                      guard is what made them vanish for good after a call. */}
-                  <StarterPrompts
-                    onPick={send}
-                    open={startersOpen}
-                    onOpenChange={setStartersOpen}
-                  />
-                </div>
-              )}
             </Fragment>
           ))
         )}
@@ -1235,10 +1242,11 @@ export function AssistantSidebar() {
             (§Phase 4C) — render it at the bottom of the flow too. */}
         <BovCard />
       </div>
+      )}
 
-      {/* Call brief (Phase 4A "brief me first") + the hero-offer chips */}
+      {/* Call brief (Phase 4A "brief me first"), raised above the composer. */}
       {brief && (
-        <div className="px-3 pb-2">
+        <div className="pb-2" style={{ paddingInline: 20 }}>
           <CallBriefCard
             brief={brief.spec}
             contactName={brief.name}
@@ -1252,8 +1260,10 @@ export function AssistantSidebar() {
           />
         </div>
       )}
-      {/* Input (Figma node 12:108) — shared with the editor's Otto panel. */}
-      <div className="px-3 pb-3">
+      {/* Input (Figma node 193:4425) — shared with the editor's Otto panel. The
+          disclaimer under it is part of the input area, not the transcript, so
+          it stays put across both views. */}
+      <div style={{ padding: "4px 16px 16px" }}>
         <ChatComposer
           draft={draft}
           onDraftChange={setDraft}
@@ -1280,6 +1290,7 @@ export function AssistantSidebar() {
           fieldRef={fieldRef}
           formRef={formRef}
         />
+        <p className="assistant-rail__disclaimer">AI-generated content may be inaccurate.</p>
       </div>
     </aside>
   );

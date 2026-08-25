@@ -214,6 +214,7 @@ export function ContactComposeModule({
         to: contact.email,
         contactId: contact.id,
         contactName: contactFullName(contact),
+        body: body.email,
       };
       handleSubmit();
       return sent;

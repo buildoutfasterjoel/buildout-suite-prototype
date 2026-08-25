@@ -1,16 +1,10 @@
-import { useEffect, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
-import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faPenNib,
-  faArrowUpRightFromSquare,
-  faChevronDown,
-  faChevronRight,
-} from "@fortawesome/pro-regular-svg-icons";
+import { faFilePen, faArrowUpRightFromSquare } from "@fortawesome/pro-regular-svg-icons";
 import { findContactForRecipient } from "#/data/store";
 import { useComposeFocus } from "#/components/contacts/useComposeFocus";
+import { ChatSection } from "#/components/ai/chat/ChatSection";
 
 export interface EmailDraftCardData {
   id: string;
@@ -20,129 +14,190 @@ export interface EmailDraftCardData {
   signature: string;
 }
 
+/** The first name in "Rosa Delgado <rosa@…>", for the "EMAIL TO ROSA" eyebrow. */
+function recipientFirstName(to: string[]): string | null {
+  const first = to[0];
+  if (!first) return null;
+  const name = first.split("<")[0].trim();
+  if (!name) return null;
+  return name.split(/\s+/)[0];
+}
+
 /**
- * Renders a generated outreach email (subject/to/body/signature) as an
- * editable-looking draft the broker can review before sending. Shared between
- * the assistant chat (`AssistantSidebar.tsx`) and the in-context "Draft with AI"
- * button (`ListingEmail.tsx`).
+ * The draft itself (Figma node 193:5905) — a grey slab carrying a gradient
+ * "EMAIL TO ROSA" eyebrow, a version badge, the subject over its recipient chip,
+ * and the body.
+ *
+ * Presentation only, and deliberately actionless: the same object appears inside
+ * the chat rail's collapsible section, inside a marketing package, and on the
+ * listing page's own draft panel, and each of those owns a different set of
+ * things to do with it.
  */
-export function EmailDraftCard({
+export function EmailDraftObject({
   draft,
-  superseded = false,
+  version = 1,
 }: {
   draft: EmailDraftCardData;
-  /**
-   * A newer version of this draft exists further down the chat. Folds this one
-   * shut so the live draft is the one in view, while the version history stays
-   * one click away rather than being deleted out from under the broker.
-   */
-  superseded?: boolean;
+  /** 1 for the first draft, 2+ after a revision — shown as "Draft v2". */
+  version?: number;
 }) {
-  const router = useRouter();
-  const [open, setOpen] = useState(!superseded);
-  // Collapse when a revision arrives, rather than only at mount: the card that's
-  // on screen is exactly the one being superseded. Deliberately one-way — it
-  // won't re-open a card the broker chose to fold, and won't fight a click.
-  useEffect(() => {
-    if (superseded) setOpen(false);
-  }, [superseded]);
-  // Where "Open in Email" goes depends on whether this is a note to one person
-  // or a send to a list. A recipient we can match to a contact means the former,
-  // and the right destination is that contact's own composer — the Email module
-  // is the campaign surface, and landing there for a one-off left the broker to
-  // rebuild a draft that already existed.
-  const recipient = draft.to.map(findContactForRecipient).find(Boolean);
-
+  const first = recipientFirstName(draft.to);
   return (
-    <div className="border rounded p-3 bg-white d-flex flex-column gap-2">
-      {/* The header is the disclosure control: the whole row is clickable, and
-          the subject rides in it when collapsed so a folded card still says
-          which draft it is. */}
-      <button
-        type="button"
-        className="btn p-0 border-0 bg-transparent text-start d-flex align-items-center gap-2 w-100"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-      >
-        <FontAwesomeIcon icon={faPenNib} className="text-purple-heart-600" />
-        <span className="fw-semibold small text-uppercase text-muted">Email draft</span>
-        {!open && (
-          <span className="small text-muted text-truncate flex-grow-1" style={{ minWidth: 0 }}>
-            {superseded ? "Revised below · " : ""}
-            {draft.subject}
-          </span>
-        )}
-        <FontAwesomeIcon
-          icon={open ? faChevronDown : faChevronRight}
-          className="text-muted ms-auto flex-shrink-0"
-        />
-      </button>
+    <div className="assistant-email">
+      <div className="assistant-email__header">
+        <span className="assistant-email__eyebrow">
+          {first ? `Email to ${first}` : "Email draft"}
+        </span>
+        <FontAwesomeIcon icon={faFilePen} className="assistant-email__glyph" />
+        <span className="assistant-email__badge">
+          {version > 1 ? `Draft v${version}` : "Draft"}
+        </span>
+      </div>
 
-      {!open ? null : (
-        <>
-      <div>
-        <div className="fw-semibold">{draft.subject}</div>
+      <div className="d-flex flex-column gap-2">
+        <div className="assistant-email__subject">{draft.subject}</div>
         {draft.to.length > 0 && (
-          <div className="d-flex flex-wrap gap-1 mt-1">
-            {draft.to.map((recipientLine) => (
-              <Badge key={recipientLine} variant="secondary" appearance="muted">
-                {recipientLine}
-              </Badge>
+          <div className="d-flex flex-wrap align-items-center gap-2">
+            <span className="assistant-email__to-label">To:</span>
+            {draft.to.map((line) => (
+              <span key={line} className="assistant-email__chip">
+                {line}
+              </span>
             ))}
           </div>
         )}
       </div>
 
-      <div className="small text-body" style={{ whiteSpace: "pre-wrap" }}>
+      <div className="assistant-email__body">
         {draft.body}
+        {draft.signature ? `\n\n${draft.signature}` : ""}
       </div>
+    </div>
+  );
+}
 
-      {draft.signature && (
-        <div className="small text-muted" style={{ whiteSpace: "pre-wrap" }}>
-          {draft.signature}
+/**
+ * Where "Open in Email" goes depends on whether this is a note to one person or
+ * a send to a list. A recipient we can match to a contact means the former, and
+ * the right destination is that contact's own composer — the Email module is the
+ * campaign surface, and landing there for a one-off left the broker to rebuild a
+ * draft that already existed.
+ */
+function OpenInEmailButton({
+  draft,
+  label = "Open in Email",
+}: {
+  draft: EmailDraftCardData;
+  label?: string;
+}) {
+  const router = useRouter();
+  const recipient = draft.to.map(findContactForRecipient).find(Boolean);
+
+  if (!recipient) {
+    return (
+      <Button variant="outline" size="sm" nativeButton={false} render={<Link to="/email" />}>
+        {label}
+        <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => {
+        // Raise the draft before navigating: the composer reads the signal in an
+        // effect on mount, so it's already waiting when the page arrives — and
+        // the contact guard keeps it from landing anywhere else if navigation is
+        // interrupted.
+        useComposeFocus.getState().requestEmailDraft({
+          contactId: recipient.id,
+          subject: draft.subject,
+          body: draft.body,
+        });
+        router.navigate({
+          to: "/backoffice/contacts/$contactId",
+          params: { contactId: recipient.id },
+        });
+      }}
+    >
+      {label}
+      <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+    </Button>
+  );
+}
+
+/**
+ * A generated draft outside the chat rail — the listing page's "Draft with AI"
+ * panel and the marketing package. No section header and no quick replies: those
+ * surfaces have no conversation to reply into, so the only move is to take the
+ * draft to a composer.
+ */
+export function EmailDraftCard({ draft }: { draft: EmailDraftCardData }) {
+  return (
+    <div className="d-flex flex-column gap-3">
+      <EmailDraftObject draft={draft} />
+      <div>
+        <OpenInEmailButton draft={draft} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The draft as it lands in Otto's rail (Figma node 193:5894): a collapsible
+ * section header, the draft object, one line saying what was done, and the row
+ * of replies.
+ *
+ * Three things fold this shut or strip it back, and they're separate on purpose:
+ *
+ * - `superseded` — a newer draft exists below, so this one collapses to its
+ *   header and the live version is the one in view.
+ * - `showActions` — the broker has already replied past this draft. The reply
+ *   *is* the answer to "send it or edit it?", so leaving the buttons up offers a
+ *   choice that's already been made.
+ * - `version` — labels the header and the badge, so a revision reads as a
+ *   revision rather than as a second unrelated email.
+ */
+export function EmailDraftSection({
+  draft,
+  version = 1,
+  superseded = false,
+  showActions = true,
+  onSend,
+  onDelete,
+}: {
+  draft: EmailDraftCardData;
+  version?: number;
+  superseded?: boolean;
+  showActions?: boolean;
+  onSend: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <ChatSection
+      label={version > 1 ? "Edited email draft" : "Drafted an email"}
+      collapsed={superseded}
+    >
+      <EmailDraftObject draft={draft} version={version} />
+      <div className="text-body">
+        <span className="fw-semibold">{version > 1 ? "Edited." : "Done."}</span>{" "}
+        {version > 1
+          ? "Good to send?"
+          : "Let me know if you'd like any edits or if I should send it."}
+      </div>
+      {showActions && (
+        <div className="d-flex flex-wrap align-items-center gap-2">
+          <Button size="sm" variant="primary" onClick={onSend}>
+            Send it
+          </Button>
+          <OpenInEmailButton draft={draft} label="Let me edit" />
+          <Button size="sm" variant="ghost" onClick={onDelete}>
+            Delete
+          </Button>
         </div>
       )}
-
-      <div>
-        {recipient ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              // Raise the draft before navigating: the composer reads the signal
-              // in an effect on mount, so it's already waiting when the page
-              // arrives — and the contact guard keeps it from landing anywhere
-              // else if navigation is interrupted.
-              useComposeFocus.getState().requestEmailDraft({
-                contactId: recipient.id,
-                subject: draft.subject,
-                body: draft.body,
-              });
-              router.navigate({
-                to: "/backoffice/contacts/$contactId",
-                params: { contactId: recipient.id },
-              });
-            }}
-          >
-            <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
-            Open in Email
-          </Button>
-        ) : (
-          /* No recipient we hold a record for — a list send, so the campaign
-             module is still the right place to take it. */
-          <Button
-            variant="outline"
-            size="sm"
-            nativeButton={false}
-            render={<Link to="/email" />}
-          >
-            <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
-            Open in Email
-          </Button>
-        )}
-      </div>
-        </>
-      )}
-    </div>
+    </ChatSection>
   );
 }
