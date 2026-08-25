@@ -1,7 +1,7 @@
 /**
  * The Sale Price / Gross Commission % / Gross Commission $ trio, with sale price
- * as the anchor. Both the Under Contract stage gate and the Edit Transaction
- * dialog use these so the math is identical in both places.
+ * as the anchor. Both the Under Contract stage gate and the Deal form's
+ * Transaction Terms group use these so the math is identical in both places.
  */
 
 /** Total gross commission $ from a sale price and rate, rounded to whole dollars. */

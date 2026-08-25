@@ -87,6 +87,7 @@ import { Route as ShellSettingsUsersUserIdProfileRouteImport } from './routes/_s
 import { Route as ShellListingsListingIdSpacesSpaceIdIndexRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/index'
 import { Route as ShellListingsListingIdSpacesSpaceIdActivitiesRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/activities'
 import { Route as ShellListingsListingIdSpacesSpaceIdDetailsRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/details'
+import { Route as ShellListingsListingIdSpacesSpaceIdEditRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/edit'
 import { Route as ShellListingsListingIdSpacesSpaceIdFilesRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/files'
 import { Route as ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/financial-documents'
 import { Route as ShellListingsListingIdSpacesSpaceIdFinancialsRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId/financials'
@@ -526,6 +527,12 @@ const ShellListingsListingIdSpacesSpaceIdDetailsRoute =
     path: '/details',
     getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
   } as any)
+const ShellListingsListingIdSpacesSpaceIdEditRoute =
+  ShellListingsListingIdSpacesSpaceIdEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => ShellListingsListingIdSpacesSpaceIdRoute,
+  } as any)
 const ShellListingsListingIdSpacesSpaceIdFilesRoute =
   ShellListingsListingIdSpacesSpaceIdFilesRouteImport.update({
     id: '/files',
@@ -652,6 +659,7 @@ export interface FileRoutesByFullPath {
   '/settings/users/$userId/': typeof ShellSettingsUsersUserIdIndexRoute
   '/listings/$listingId/spaces/$spaceId/activities': typeof ShellListingsListingIdSpacesSpaceIdActivitiesRoute
   '/listings/$listingId/spaces/$spaceId/details': typeof ShellListingsListingIdSpacesSpaceIdDetailsRoute
+  '/listings/$listingId/spaces/$spaceId/edit': typeof ShellListingsListingIdSpacesSpaceIdEditRoute
   '/listings/$listingId/spaces/$spaceId/files': typeof ShellListingsListingIdSpacesSpaceIdFilesRoute
   '/listings/$listingId/spaces/$spaceId/financial-documents': typeof ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRoute
   '/listings/$listingId/spaces/$spaceId/financials': typeof ShellListingsListingIdSpacesSpaceIdFinancialsRoute
@@ -727,6 +735,7 @@ export interface FileRoutesByTo {
   '/settings/users/$userId': typeof ShellSettingsUsersUserIdIndexRoute
   '/listings/$listingId/spaces/$spaceId/activities': typeof ShellListingsListingIdSpacesSpaceIdActivitiesRoute
   '/listings/$listingId/spaces/$spaceId/details': typeof ShellListingsListingIdSpacesSpaceIdDetailsRoute
+  '/listings/$listingId/spaces/$spaceId/edit': typeof ShellListingsListingIdSpacesSpaceIdEditRoute
   '/listings/$listingId/spaces/$spaceId/files': typeof ShellListingsListingIdSpacesSpaceIdFilesRoute
   '/listings/$listingId/spaces/$spaceId/financial-documents': typeof ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRoute
   '/listings/$listingId/spaces/$spaceId/financials': typeof ShellListingsListingIdSpacesSpaceIdFinancialsRoute
@@ -816,6 +825,7 @@ export interface FileRoutesById {
   '/_shell/settings/users/$userId/': typeof ShellSettingsUsersUserIdIndexRoute
   '/_shell/listings/$listingId_/spaces/$spaceId/activities': typeof ShellListingsListingIdSpacesSpaceIdActivitiesRoute
   '/_shell/listings/$listingId_/spaces/$spaceId/details': typeof ShellListingsListingIdSpacesSpaceIdDetailsRoute
+  '/_shell/listings/$listingId_/spaces/$spaceId/edit': typeof ShellListingsListingIdSpacesSpaceIdEditRoute
   '/_shell/listings/$listingId_/spaces/$spaceId/files': typeof ShellListingsListingIdSpacesSpaceIdFilesRoute
   '/_shell/listings/$listingId_/spaces/$spaceId/financial-documents': typeof ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRoute
   '/_shell/listings/$listingId_/spaces/$spaceId/financials': typeof ShellListingsListingIdSpacesSpaceIdFinancialsRoute
@@ -905,6 +915,7 @@ export interface FileRouteTypes {
     | '/settings/users/$userId/'
     | '/listings/$listingId/spaces/$spaceId/activities'
     | '/listings/$listingId/spaces/$spaceId/details'
+    | '/listings/$listingId/spaces/$spaceId/edit'
     | '/listings/$listingId/spaces/$spaceId/files'
     | '/listings/$listingId/spaces/$spaceId/financial-documents'
     | '/listings/$listingId/spaces/$spaceId/financials'
@@ -980,6 +991,7 @@ export interface FileRouteTypes {
     | '/settings/users/$userId'
     | '/listings/$listingId/spaces/$spaceId/activities'
     | '/listings/$listingId/spaces/$spaceId/details'
+    | '/listings/$listingId/spaces/$spaceId/edit'
     | '/listings/$listingId/spaces/$spaceId/files'
     | '/listings/$listingId/spaces/$spaceId/financial-documents'
     | '/listings/$listingId/spaces/$spaceId/financials'
@@ -1068,6 +1080,7 @@ export interface FileRouteTypes {
     | '/_shell/settings/users/$userId/'
     | '/_shell/listings/$listingId_/spaces/$spaceId/activities'
     | '/_shell/listings/$listingId_/spaces/$spaceId/details'
+    | '/_shell/listings/$listingId_/spaces/$spaceId/edit'
     | '/_shell/listings/$listingId_/spaces/$spaceId/files'
     | '/_shell/listings/$listingId_/spaces/$spaceId/financial-documents'
     | '/_shell/listings/$listingId_/spaces/$spaceId/financials'
@@ -1633,6 +1646,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdDetailsRouteImport
       parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
     }
+    '/_shell/listings/$listingId_/spaces/$spaceId/edit': {
+      id: '/_shell/listings/$listingId_/spaces/$spaceId/edit'
+      path: '/edit'
+      fullPath: '/listings/$listingId/spaces/$spaceId/edit'
+      preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdEditRouteImport
+      parentRoute: typeof ShellListingsListingIdSpacesSpaceIdRoute
+    }
     '/_shell/listings/$listingId_/spaces/$spaceId/files': {
       id: '/_shell/listings/$listingId_/spaces/$spaceId/files'
       path: '/files'
@@ -1812,6 +1832,7 @@ const ShellListingsListingIdRouteWithChildren =
 interface ShellListingsListingIdSpacesSpaceIdRouteChildren {
   ShellListingsListingIdSpacesSpaceIdActivitiesRoute: typeof ShellListingsListingIdSpacesSpaceIdActivitiesRoute
   ShellListingsListingIdSpacesSpaceIdDetailsRoute: typeof ShellListingsListingIdSpacesSpaceIdDetailsRoute
+  ShellListingsListingIdSpacesSpaceIdEditRoute: typeof ShellListingsListingIdSpacesSpaceIdEditRoute
   ShellListingsListingIdSpacesSpaceIdFilesRoute: typeof ShellListingsListingIdSpacesSpaceIdFilesRoute
   ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRoute: typeof ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRoute
   ShellListingsListingIdSpacesSpaceIdFinancialsRoute: typeof ShellListingsListingIdSpacesSpaceIdFinancialsRoute
@@ -1829,6 +1850,8 @@ const ShellListingsListingIdSpacesSpaceIdRouteChildren: ShellListingsListingIdSp
       ShellListingsListingIdSpacesSpaceIdActivitiesRoute,
     ShellListingsListingIdSpacesSpaceIdDetailsRoute:
       ShellListingsListingIdSpacesSpaceIdDetailsRoute,
+    ShellListingsListingIdSpacesSpaceIdEditRoute:
+      ShellListingsListingIdSpacesSpaceIdEditRoute,
     ShellListingsListingIdSpacesSpaceIdFilesRoute:
       ShellListingsListingIdSpacesSpaceIdFilesRoute,
     ShellListingsListingIdSpacesSpaceIdFinancialDocumentsRoute:

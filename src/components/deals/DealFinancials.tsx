@@ -30,8 +30,8 @@ import type { DealBroker, Listing } from "#/data/types";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
 import { VoucherStatusBadge } from "./VoucherStatusBadge";
 import { VoucherApprovalBanner } from "./VoucherApprovalBanner";
+import { dealEditTarget } from "./dealCardLink";
 import { formatCurrency, formatDate } from "./dealDisplay";
-import { EditTransactionDialog } from "./EditTransactionDialog";
 import {
   buildRentSchedule,
   computeTotal,
@@ -968,7 +968,6 @@ function RentScheduleSection({ listing }: { listing: Listing }) {
  * inline edit. Consolidates what used to be the separate Transaction tab.
  */
 function TransactionSummarySection({ listing }: { listing: Listing }) {
-  const [editOpen, setEditOpen] = useState(false);
   const { transaction } = listing;
   const isLease = listing.dealType === "Lease";
   const leaseTerms = listing.marketing.spaceLeaseTerms ?? [];
@@ -1007,14 +1006,25 @@ function TransactionSummarySection({ listing }: { listing: Listing }) {
     <Section
       title="Transaction"
       action={
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Edit transaction"
-          onClick={() => setEditOpen(true)}
-        >
-          <FontAwesomeIcon icon={faPencil} />
-        </Button>
+        // The deal editor's Transaction Terms group already carries every field
+        // this section shows, so the voucher links to it rather than keeping a
+        // second, narrower copy of the same form in a modal.
+        <Tooltip>
+          <Tooltip.Trigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Edit transaction"
+                nativeButton={false}
+                render={<Link {...dealEditTarget(listing)} />}
+              >
+                <FontAwesomeIcon icon={faPencil} />
+              </Button>
+            }
+          />
+          <Tooltip.Content>Edit Deal</Tooltip.Content>
+        </Tooltip>
       }
     >
       <div className="row g-3">
@@ -1041,14 +1051,6 @@ function TransactionSummarySection({ listing }: { listing: Listing }) {
         </div>
       </div>
       <p className="text-muted fs-small mb-0">{secondary.join(" · ")}</p>
-
-      {editOpen && (
-        <EditTransactionDialog
-          listing={listing}
-          open={editOpen}
-          onOpenChange={setEditOpen}
-        />
-      )}
     </Section>
   );
 }

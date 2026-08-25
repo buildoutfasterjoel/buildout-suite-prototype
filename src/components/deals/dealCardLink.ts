@@ -56,3 +56,30 @@ export function spaceLeadsTarget(
   const parentDealId = getListing(listingId)?.parentDealId;
   return parentDealId ? { listingId: parentDealId, spaceId: listingId } : null;
 }
+
+/**
+ * Where this deal's Edit Deal form lives. A space's edit page is nested under
+ * its building like every other space section, so a space resolves to
+ * `/listings/{shellId}/spaces/{spaceId}/edit` and everything else to its own
+ * `/listings/{id}/edit`.
+ *
+ * Returns a `{ to, params }` pair rather than bare params because both branches
+ * are complete link targets — spread it straight into a `<Link>` the way
+ * `dealCardLinkProps` is. Callers that `navigate()` instead must keep a literal
+ * `to`, since `navigate` is generic over `to` and a union does not narrow
+ * `params` against it.
+ */
+export function dealEditTarget(listing: Listing):
+  | { to: "/listings/$listingId/edit"; params: { listingId: string } }
+  | {
+      to: "/listings/$listingId/spaces/$spaceId/edit";
+      params: { listingId: string; spaceId: string };
+    } {
+  if (listing.parentDealId) {
+    return {
+      to: "/listings/$listingId/spaces/$spaceId/edit",
+      params: { listingId: listing.parentDealId, spaceId: listing.id },
+    };
+  }
+  return { to: "/listings/$listingId/edit", params: { listingId: listing.id } };
+}

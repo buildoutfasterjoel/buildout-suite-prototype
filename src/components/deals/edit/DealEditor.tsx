@@ -51,7 +51,8 @@ import { DealFinancialsSection } from "#/components/deals/edit/DealFinancialsSec
 import { PendingPublishBanner } from "#/components/deals/edit/PendingPublishBanner";
 
 /**
- * Edit Deal (`/listings/:id/edit`): the deal-only half of what used to be the
+ * Edit Deal (`/listings/:id/edit`, or `/listings/:shellId/spaces/:id/edit` for a
+ * space): the deal-only half of what used to be the
  * two-tab edit form. Not a nav section — `/edit` isn't in `NAV_GROUPS` at all;
  * the header pencil is its only entry point (contrast the Listing page, which
  * IS a Marketing nav item). Holds a working copy of the six deal fields in
@@ -69,11 +70,23 @@ export function DealEditor({
 	review?: "ingestion";
 }) {
 	const navigate = useNavigate();
+	// Where Cancel and a completed Save return to: the overview of the deal being
+	// edited. A space's overview is nested under its building, and a space reaches
+	// this form through its Voucher's Transaction pencil, so both branches are
+	// live. Kept as two literal `to`s rather than spreading `dealEditTarget`'s
+	// sibling helper — `navigate` is generic over `to`, so a union of link objects
+	// does not narrow `params` against the route it picked.
+	const shellId = listing.parentDealId;
 	const back = () =>
-		navigate({
-			to: "/listings/$listingId/overview",
-			params: { listingId: listing.id },
-		});
+		shellId
+			? navigate({
+					to: "/listings/$listingId/spaces/$spaceId/overview",
+					params: { listingId: shellId, spaceId: listing.id },
+				})
+			: navigate({
+					to: "/listings/$listingId/overview",
+					params: { listingId: listing.id },
+				});
 
 	// Computed once — `dealShape` scans every listing to find children, so it
 	// isn't free to call more than once per render.
@@ -205,7 +218,7 @@ export function DealEditor({
 		setTransaction((t) => ({ ...t, ...patch }));
 
 	// Sale Price / Gross Commission % / Gross Commission $ — bi-directional, sale
-	// price anchors (same math as the stage gate and Edit Transaction dialog).
+	// price anchors (same math as the stage gate).
 	const setSalePrice = (v: number | null) =>
 		setTransaction((t) => ({
 			...t,
