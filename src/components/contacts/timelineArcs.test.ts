@@ -453,7 +453,7 @@ describe("hero personas in the seed", () => {
     expect(newest.direction).toBe("in");
     expect(needsAttention(convo)).toBe(true);
 
-    // Every message also exists as its own row, so the Emails filter and the
+    // Every message also exists as its own row, so per-message filters and the
     // expanded thread agree.
     const members = events.filter(
       (e) => e.threadId === convo.threadId && e.type !== "conversation",

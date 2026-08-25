@@ -315,7 +315,7 @@ function victor(ctx: ArcCtx): TimelineEvent[] {
   const threadId = `thr-${ctx.c.id}`;
   const subject = `${dealName}: offer strategy`;
   // One source for the thread and its member rows, so the "View full thread (N)"
-  // count and the individual emails under the Emails filter can't drift apart.
+  // count and the expanded thread can't drift apart.
   const messages = VICTOR_THREAD.map((m, i) => ({
     id: `${threadId}-m${i + 1}`,
     direction: m.direction,
@@ -361,8 +361,9 @@ function victor(ctx: ArcCtx): TimelineEvent[] {
       threadId,
       associations: assoc(ctx.deal),
     }),
-    // Each message also as its own row. Hidden under the "All" filter (the
-    // conversation row stands in for them) and shown under "Emails".
+    // Each message also as its own row. Hidden wherever the conversation row
+    // stands in for them ("All" and "Emails"); surfaced by narrower filters
+    // such as Attachments.
     ...VICTOR_THREAD.map((m, i) =>
       mk(ctx, m.direction === "out" ? "email" : "inbound-email", m.day, {
         direction: m.direction,
