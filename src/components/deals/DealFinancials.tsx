@@ -553,15 +553,24 @@ function InternalCommissionsSection({
   );
 }
 
-function OutsideCommissionsSection({ brokers }: { brokers: DealBroker[] }) {
+function OutsideCommissionsSection({
+  brokers,
+  editable,
+}: {
+  brokers: DealBroker[];
+  /** False while the voucher is Pending — nothing joins the split off the approver's desk. */
+  editable: boolean;
+}) {
   return (
     <Section
       title="Outside Commissions"
       action={
-        <Button variant="ghost" size="sm">
-          <FontAwesomeIcon icon={faPlus} />
-          Add Outside Commission
-        </Button>
+        editable ? (
+          <Button variant="ghost" size="sm">
+            <FontAwesomeIcon icon={faPlus} />
+            Add Outside Commission
+          </Button>
+        ) : undefined
       }
     >
       {brokers.length === 0 ? (
@@ -882,7 +891,14 @@ function ReceivableActionItem({
   );
 }
 
-function ReceivablesSection({ listing }: { listing: Listing }) {
+function ReceivablesSection({
+  listing,
+  editable,
+}: {
+  listing: Listing;
+  /** False while the voucher is Pending — no adds, and nothing to select rows for. */
+  editable: boolean;
+}) {
   const receivables = listing.transaction.backOffice.receivables;
   const amountTotal = sum(receivables.map((r) => r.amount));
   const creditedTotal = sum(receivables.map((r) => r.credited));
@@ -924,43 +940,45 @@ function ReceivablesSection({ listing }: { listing: Listing }) {
     <Section
       title="Receivables"
       action={
-        <div className="d-flex gap-2">
-          <Button variant="ghost" size="sm">
-            <FontAwesomeIcon icon={faPlus} />
-            Add Sales Tax
-          </Button>
-          <Button variant="ghost" size="sm">
-            <FontAwesomeIcon icon={faPlus} />
-            Add Receivable
-          </Button>
-          <DropdownMenu>
-            <DropdownMenu.Trigger
-              render={
-                <Button variant="ghost" size="sm" disabled={!someSelected}>
-                  Actions
-                  <FontAwesomeIcon icon={faChevronDown} />
-                </Button>
-              }
-            />
-            <DropdownMenu.Content align="end">
-              <ReceivableActionItem
-                icon={faArrowRight}
-                disabled={!canApplyDeposit}
-              >
-                Apply Deposit
-              </ReceivableActionItem>
-              <ReceivableActionItem
-                icon={faFileLines}
-                disabled={!canCreateInvoice}
-              >
-                Create New Invoice
-              </ReceivableActionItem>
-              <ReceivableActionItem icon={faTrashCan}>
-                Delete Receivables
-              </ReceivableActionItem>
-            </DropdownMenu.Content>
-          </DropdownMenu>
-        </div>
+        editable ? (
+          <div className="d-flex gap-2">
+            <Button variant="ghost" size="sm">
+              <FontAwesomeIcon icon={faPlus} />
+              Add Sales Tax
+            </Button>
+            <Button variant="ghost" size="sm">
+              <FontAwesomeIcon icon={faPlus} />
+              Add Receivable
+            </Button>
+            <DropdownMenu>
+              <DropdownMenu.Trigger
+                render={
+                  <Button variant="ghost" size="sm" disabled={!someSelected}>
+                    Actions
+                    <FontAwesomeIcon icon={faChevronDown} />
+                  </Button>
+                }
+              />
+              <DropdownMenu.Content align="end">
+                <ReceivableActionItem
+                  icon={faArrowRight}
+                  disabled={!canApplyDeposit}
+                >
+                  Apply Deposit
+                </ReceivableActionItem>
+                <ReceivableActionItem
+                  icon={faFileLines}
+                  disabled={!canCreateInvoice}
+                >
+                  Create New Invoice
+                </ReceivableActionItem>
+                <ReceivableActionItem icon={faTrashCan}>
+                  Delete Receivables
+                </ReceivableActionItem>
+              </DropdownMenu.Content>
+            </DropdownMenu>
+          </div>
+        ) : undefined
       }
     >
       {receivables.length === 0 ? (
@@ -969,19 +987,24 @@ function ReceivablesSection({ listing }: { listing: Listing }) {
         <Table>
           <Table.Header>
             <Table.Row>
-              <Table.Head
-                style={{
-                  width: RECEIVABLE_CHECKBOX_W,
-                  minWidth: RECEIVABLE_CHECKBOX_W,
-                }}
-              >
-                <Checkbox
-                  checked={allSelected}
-                  indeterminate={!allSelected && someSelected}
-                  onCheckedChange={(c) => toggleAll(c === true)}
-                  aria-label="Select all receivables"
-                />
-              </Table.Head>
+              {/* The gutter exists to arm the Actions menu. With the menu gone
+                  there is nothing a selection could do, so the column goes with
+                  it rather than leaving checkboxes that tick and mean nothing. */}
+              {editable && (
+                <Table.Head
+                  style={{
+                    width: RECEIVABLE_CHECKBOX_W,
+                    minWidth: RECEIVABLE_CHECKBOX_W,
+                  }}
+                >
+                  <Checkbox
+                    checked={allSelected}
+                    indeterminate={!allSelected && someSelected}
+                    onCheckedChange={(c) => toggleAll(c === true)}
+                    aria-label="Select all receivables"
+                  />
+                </Table.Head>
+              )}
               <Table.Head>Payer Name</Table.Head>
               <Table.Head>Due Date</Table.Head>
               <Table.Head>Billing Description</Table.Head>
@@ -993,20 +1016,24 @@ function ReceivablesSection({ listing }: { listing: Listing }) {
             {receivables.map((r) => (
               <Table.Row
                 key={r.id}
-                className={selectedIds.has(r.id) ? "table-active" : undefined}
+                className={
+                  editable && selectedIds.has(r.id) ? "table-active" : undefined
+                }
               >
-                <Table.Cell
-                  style={{
-                    width: RECEIVABLE_CHECKBOX_W,
-                    minWidth: RECEIVABLE_CHECKBOX_W,
-                  }}
-                >
-                  <Checkbox
-                    checked={selectedIds.has(r.id)}
-                    onCheckedChange={(c) => toggleOne(r.id, c === true)}
-                    aria-label={`Select receivable for ${r.payerName}`}
-                  />
-                </Table.Cell>
+                {editable && (
+                  <Table.Cell
+                    style={{
+                      width: RECEIVABLE_CHECKBOX_W,
+                      minWidth: RECEIVABLE_CHECKBOX_W,
+                    }}
+                  >
+                    <Checkbox
+                      checked={selectedIds.has(r.id)}
+                      onCheckedChange={(c) => toggleOne(r.id, c === true)}
+                      aria-label={`Select receivable for ${r.payerName}`}
+                    />
+                  </Table.Cell>
+                )}
                 <Table.Cell>
                   <div>
                     <PersonLink name={r.payerName} contactId={payerContactId} />
@@ -1024,7 +1051,7 @@ function ReceivablesSection({ listing }: { listing: Listing }) {
               </Table.Row>
             ))}
             <Table.Row>
-              <Table.Cell colSpan={4} className="fw-semibold">
+              <Table.Cell colSpan={editable ? 4 : 3} className="fw-semibold">
                 Sum
               </Table.Cell>
               <Table.Cell className="text-end fw-semibold">
@@ -1075,11 +1102,14 @@ function EditableCell({
   value,
   onCommit,
   align,
+  editable = true,
 }: {
   type: CellType;
   value: number | string;
   onCommit: (next: number | string) => void;
   align?: "end";
+  /** False on a frozen voucher — the same formatted value, without the affordance. */
+  editable?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -1094,6 +1124,17 @@ function EditableCell({
     if (!Number.isNaN(n))
       onCommit(type === "int" ? Math.max(1, Math.round(n)) : Math.max(0, n));
   }
+
+  const display =
+    type === "date"
+      ? formatScheduleDate(String(value))
+      : type === "currency"
+        ? formatCurrency(Number(value))
+        : String(value);
+
+  // Read-only cells route through here rather than being formatted at the call
+  // site, so a frozen schedule shows exactly the string an editable one does.
+  if (!editable) return <>{display}</>;
 
   if (editing) {
     return (
@@ -1112,13 +1153,6 @@ function EditableCell({
       />
     );
   }
-
-  const display =
-    type === "date"
-      ? formatScheduleDate(String(value))
-      : type === "currency"
-        ? formatCurrency(Number(value))
-        : String(value);
 
   return (
     <span
@@ -1196,7 +1230,14 @@ type EditableField = "startDate" | "months" | "monthlyRate" | "commissionPct";
  * value, inserting a term, or removing one re-flows the dates and recomputes the totals.
  * State is component-local (resets on reload).
  */
-function RentScheduleSection({ listing }: { listing: Listing }) {
+function RentScheduleSection({
+  listing,
+  editable,
+}: {
+  listing: Listing;
+  /** False while the voucher is Pending — the schedule is what an approver is reading. */
+  editable: boolean;
+}) {
   const initial = buildRentSchedule(listing);
   const [rows, setRows] = useState<RentScheduleRow[]>(initial?.rows ?? []);
   const [autoCalcRents, setAutoCalcRents] = useState(true);
@@ -1257,24 +1298,32 @@ function RentScheduleSection({ listing }: { listing: Listing }) {
     <Section
       title="Rent Schedule"
       action={
-        <Button variant="ghost" size="sm" onClick={addTerm}>
-          <FontAwesomeIcon icon={faPlus} />
-          Add Term
-        </Button>
+        editable ? (
+          <Button variant="ghost" size="sm" onClick={addTerm}>
+            <FontAwesomeIcon icon={faPlus} />
+            Add Term
+          </Button>
+        ) : undefined
       }
     >
-      <div className="d-flex align-items-center gap-4">
-        <ToggleControl
-          label="Auto-calculate Rents"
-          checked={autoCalcRents}
-          onChange={setAutoCalcRents}
-        />
-        <ToggleControl
-          label="Operating expenses"
-          checked={operatingExpenses}
-          onChange={setOperatingExpenses}
-        />
-      </div>
+      {/* Both toggles only shape an edit — auto-calculate escalates the rate of
+          the next term added, operating expenses is a display switch over rows
+          nobody can change — so a frozen schedule drops the row entirely rather
+          than leaving two live switches over a table that cannot move. */}
+      {editable && (
+        <div className="d-flex align-items-center gap-4">
+          <ToggleControl
+            label="Auto-calculate Rents"
+            checked={autoCalcRents}
+            onChange={setAutoCalcRents}
+          />
+          <ToggleControl
+            label="Operating expenses"
+            checked={operatingExpenses}
+            onChange={setOperatingExpenses}
+          />
+        </div>
+      )}
 
       <Table>
         <Table.Header>
@@ -1286,7 +1335,7 @@ function RentScheduleSection({ listing }: { listing: Listing }) {
             <Table.Head className="text-end">Total Rent</Table.Head>
             <Table.Head className="text-end">Commission %</Table.Head>
             <Table.Head className="text-end">Commission $</Table.Head>
-            <Table.Head />
+            {editable && <Table.Head />}
           </Table.Row>
         </Table.Header>
         <Table.Body>
@@ -1299,6 +1348,7 @@ function RentScheduleSection({ listing }: { listing: Listing }) {
                     type="date"
                     value={r.startDate}
                     onCommit={(next) => editField(i, "startDate", next)}
+                    editable={editable}
                   />
                 ) : (
                   formatScheduleDate(r.startDate)
@@ -1310,6 +1360,7 @@ function RentScheduleSection({ listing }: { listing: Listing }) {
                   type="int"
                   value={r.months}
                   onCommit={(next) => editField(i, "months", next)}
+                  editable={editable}
                 />
               </Table.Cell>
               <Table.Cell className="text-end">
@@ -1318,6 +1369,7 @@ function RentScheduleSection({ listing }: { listing: Listing }) {
                   align="end"
                   value={r.monthlyRate}
                   onCommit={(next) => editField(i, "monthlyRate", next)}
+                  editable={editable}
                 />
               </Table.Cell>
               <Table.Cell className="text-end">
@@ -1329,18 +1381,21 @@ function RentScheduleSection({ listing }: { listing: Listing }) {
                   align="end"
                   value={r.commissionPct}
                   onCommit={(next) => editField(i, "commissionPct", next)}
+                  editable={editable}
                 />
               </Table.Cell>
               <Table.Cell className="text-end">
                 {formatCurrency(r.commissionAmount)}
               </Table.Cell>
-              <Table.Cell className="text-end">
-                <RowActions
-                  onAddAbove={() => insertTerm(i)}
-                  onAddBelow={() => insertTerm(i + 1)}
-                  onRemove={() => removeTerm(i)}
-                />
-              </Table.Cell>
+              {editable && (
+                <Table.Cell className="text-end">
+                  <RowActions
+                    onAddAbove={() => insertTerm(i)}
+                    onAddBelow={() => insertTerm(i + 1)}
+                    onRemove={() => removeTerm(i)}
+                  />
+                </Table.Cell>
+              )}
             </Table.Row>
           ))}
           {total && (
@@ -1362,7 +1417,7 @@ function RentScheduleSection({ listing }: { listing: Listing }) {
               <Table.Cell className="text-end fw-semibold">
                 {formatCurrency(total.commissionAmount)}
               </Table.Cell>
-              <Table.Cell />
+              {editable && <Table.Cell />}
             </Table.Row>
           )}
         </Table.Body>
@@ -1381,7 +1436,7 @@ function TransactionSummarySection({
   editable,
 }: {
   listing: Listing;
-  /** False once the voucher is Approved: the terms are what was signed off. */
+  /** Draft only: once submitted, the terms are what an approver reads or signed off on. */
   editable: boolean;
 }) {
   const { transaction } = listing;
@@ -1424,10 +1479,9 @@ function TransactionSummarySection({
       action={
         // The deal editor's Transaction Terms group already carries every field
         // this section shows, so the voucher links to it rather than keeping a
-        // second, narrower copy of the same form in a modal. An Approved voucher
-        // drops the link: the approval is a statement about these figures, so
-        // what stays open on a settled voucher is additions — payables and
-        // receivables — not an edit of the terms they are measured against.
+        // second, narrower copy of the same form in a modal. A submitted voucher
+        // drops the link: the figures are the thing being approved, so editing
+        // the terms they are measured against has to go back through Draft.
         editable ? (
           <Tooltip>
             <Tooltip.Trigger
@@ -1616,12 +1670,16 @@ export function DealFinancials({
 }) {
   const voucher = listing.transaction.backOffice;
   const isDraft = voucher.status === "Draft";
-  // Approved is terminal: the sign-off is a statement about these figures, so
-  // the broker cannot take it back. What an approved voucher will accept is
-  // additions — receivables, invoices, credits against what was approved —
-  // which is where this header's action slot is headed once those exist.
+  // A Pending voucher is on an approver's desk, so the page freezes whole: no
+  // edits, no adds, no row actions anywhere below. Nothing is trapped by that —
+  // the header's Edit pulls it back to Draft and every control returns.
+  //
+  // Approved is deliberately *not* frozen the same way here. It is terminal —
+  // the broker cannot take it back — and what it will eventually accept is
+  // additions (receivables, invoices, credits against what was approved) rather
+  // than a blanket lock, which needs the data reworked first. Until that pass
+  // lands it keeps the controls it has today.
   const isPending = voucher.status === "Pending";
-  const isApproved = voucher.status === "Approved";
   // The broker's attestation, which gates both Submit buttons. Page state, not
   // stored: it is a confirmation of *this* reading of the voucher, so it should
   // not survive a reload and come back pre-ticked.
@@ -1727,7 +1785,7 @@ export function DealFinancials({
 
       <VoucherApprovalBanner voucher={voucher} />
 
-      <TransactionSummarySection listing={listing} editable={!isApproved} />
+      <TransactionSummarySection listing={listing} editable={isDraft} />
 
       <Separator />
 
@@ -1735,7 +1793,10 @@ export function DealFinancials({
 
       <Separator />
 
-      <OutsideCommissionsSection brokers={listing.outsideBrokers} />
+      <OutsideCommissionsSection
+        brokers={listing.outsideBrokers}
+        editable={!isPending}
+      />
       <PreSplitDeductionsSection
         deductions={deductions}
         editable={isDraft}
@@ -1749,9 +1810,9 @@ export function DealFinancials({
 
       <Separator />
 
-      <RentScheduleSection listing={listing} />
+      <RentScheduleSection listing={listing} editable={!isPending} />
 
-      <ReceivablesSection listing={listing} />
+      <ReceivablesSection listing={listing} editable={!isPending} />
 
       <Section title="Payables">
         <p className="text-muted mb-0">
