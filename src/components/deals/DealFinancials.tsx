@@ -45,9 +45,12 @@ import {
   DEDUCTION_CATEGORIES,
   partyContactIds,
   partySectionTitle,
+  payerRemovalBlock,
   TRANSACTION_SIDES,
   voucherParty,
+  voucherPayers,
   type VoucherParty,
+  type VoucherPayerRow,
 } from "#/data/vouchers";
 import { AddBrokerModal } from "./AddBrokerModal";
 import { AddContactModal } from "./AddContactModal";
@@ -712,6 +715,103 @@ function PartySection({
         onOpenChange={setAddOpen}
         takenIds={contactIds}
         title={title}
+        onAdd={(contactId) => onChange([...contactIds, contactId])}
+      />
+    </Section>
+  );
+}
+
+/**
+ * Who this voucher bills.
+ *
+ * Sits directly above Receivables because that table references it: every
+ * receivable names one of these payers, and the two have to be readable
+ * together.
+ *
+ * A payer is usually the buyer or the tenant and often is not — a lease
+ * commission billed to a corporate AP department, a sale where a holding
+ * company pays. That is the reason this is its own list rather than a column on
+ * the section above.
+ */
+function PayersSection({
+  payers,
+  editable,
+  onChange,
+}: {
+  payers: VoucherPayerRow[];
+  editable: boolean;
+  onChange: (next: string[]) => void;
+}) {
+  const [addOpen, setAddOpen] = useState(false);
+  const contactIds = payers.map((p) => p.contactId);
+  const billedTotal = sum(payers.map((p) => p.billed));
+
+  return (
+    <Section
+      title="Payers"
+      action={
+        editable ? (
+          <Button variant="ghost" size="sm" onClick={() => setAddOpen(true)}>
+            <FontAwesomeIcon icon={faPlus} />
+            Add Payer
+          </Button>
+        ) : undefined
+      }
+    >
+      {payers.length === 0 ? (
+        <p className="text-muted mb-0">No payers have been added.</p>
+      ) : (
+        <Table>
+          <Table.Header>
+            <Table.Row>
+              <Table.Head>Name</Table.Head>
+              <Table.Head>Company</Table.Head>
+              <Table.Head>Email</Table.Head>
+              <Table.Head>Phone</Table.Head>
+              <Table.Head className="text-end">Billed</Table.Head>
+              {editable && <Table.Head style={{ width: 56 }} />}
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {payers.map((payer) => (
+              <Table.Row key={payer.contactId}>
+                <PartyRowCells party={payer} />
+                <Table.Cell className="text-end">
+                  {formatCurrency(payer.billed)}
+                </Table.Cell>
+                {editable && (
+                  <Table.Cell>
+                    <RemovePartyButton
+                      name={payer.name}
+                      blockedReason={payerRemovalBlock(payer)}
+                      onRemove={() =>
+                        onChange(
+                          contactIds.filter((id) => id !== payer.contactId),
+                        )
+                      }
+                    />
+                  </Table.Cell>
+                )}
+              </Table.Row>
+            ))}
+            <Table.Row>
+              <Table.Cell colSpan={4} className="fw-semibold">
+                Sum
+              </Table.Cell>
+              <Table.Cell className="text-end fw-semibold">
+                {formatCurrency(billedTotal)}
+              </Table.Cell>
+              {editable && <Table.Cell />}
+            </Table.Row>
+          </Table.Body>
+        </Table>
+      )}
+
+      <AddContactModal
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        takenIds={contactIds}
+        title="Payer"
         onAdd={(contactId) => onChange([...contactIds, contactId])}
       />
     </Section>
@@ -1878,10 +1978,16 @@ export function DealFinancials({
   // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on `storedParties` alone by design
   useEffect(() => setParties(storedParties), [storedParties]);
 
+  const storedPayers = voucher.payerContactIds;
+  const [payerIds, setPayerIds] = useState(storedPayers);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on `storedPayers` alone by design
+  useEffect(() => setPayerIds(storedPayers), [storedPayers]);
+
   const dirty =
     deductions !== stored ||
     brokers !== storedBrokers ||
-    parties !== storedParties;
+    parties !== storedParties ||
+    payerIds !== storedPayers;
 
   // Re-seed when the store's array moves under us — a Save of our own, or a
   // write from elsewhere (the AI rail, another tab of the same deal). This
@@ -1918,7 +2024,7 @@ export function DealFinancials({
       preSplitDeductions: deductions,
       internalBrokers: brokers,
       partyContactIds: parties,
-      payerContactIds: voucher.payerContactIds,
+      payerContactIds: payerIds,
     });
     notify({
       title: "Voucher saved",
@@ -1990,6 +2096,12 @@ export function DealFinancials({
       <Separator />
 
       <RentScheduleSection listing={listing} editable={!isPending} />
+
+      <PayersSection
+        payers={voucherPayers({ ...voucher, payerContactIds: payerIds })}
+        editable={isDraft}
+        onChange={setPayerIds}
+      />
 
       <ReceivablesSection listing={listing} editable={!isPending} />
 
