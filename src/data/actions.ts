@@ -305,9 +305,9 @@ export function submitVoucher(dealId: string): { deal: Listing | null } {
  *
  * Reopening costs the submission: the voucher has to be attested to and
  * submitted again. That is the point, not a side effect — whatever the approver
- * was looking at is no longer what the brokerage is claiming. (The page's
- * sections are editable at any status today, so this changes what the voucher
- * *claims about itself*, not what can be typed into it.)
+ * was looking at is no longer what the brokerage is claiming. It is also the
+ * only way back into the figures: a Pending voucher is frozen whole, and so is
+ * the Deal form behind it, so this is the one door out of that state.
  */
 export function reopenVoucher(dealId: string): { deal: Listing | null } {
   return {

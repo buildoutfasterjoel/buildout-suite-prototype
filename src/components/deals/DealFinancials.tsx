@@ -21,7 +21,6 @@ import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowRight,
-  faChevronDown,
   faDollarSign,
   faFileLines,
   faPercent,
@@ -30,6 +29,7 @@ import {
   faTableRowsAddAbove,
   faTableRowsAddBelow,
   faTrashCan,
+  faCaretDown,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type {
@@ -252,7 +252,9 @@ function BreakdownSection({ listing }: { listing: Listing }) {
 
 /** A broker's own split of their gross — the second table's derived money column. */
 function brokerSplitAmount(broker: DealBroker): number {
-  return Math.round(broker.grossCommission * ((broker.personalSplitPct ?? 0) / 100));
+  return Math.round(
+    broker.grossCommission * ((broker.personalSplitPct ?? 0) / 100),
+  );
 }
 
 /** One-column dropdown cell, shared by Transaction Side and Commission Plan. */
@@ -424,7 +426,9 @@ function InternalCommissionsSection({
                       unit={faPercent}
                       value={b.commissionSplitPct}
                       step="0.1"
-                      onChange={(v) => patch(b.id, { commissionSplitPct: v ?? 0 })}
+                      onChange={(v) =>
+                        patch(b.id, { commissionSplitPct: v ?? 0 })
+                      }
                     />
                   </Table.Cell>
                   <Table.Cell>
@@ -513,7 +517,9 @@ function InternalCommissionsSection({
                       unit={faPercent}
                       value={b.personalSplitPct ?? 0}
                       step="0.1"
-                      onChange={(v) => patch(b.id, { personalSplitPct: v ?? 0 })}
+                      onChange={(v) =>
+                        patch(b.id, { personalSplitPct: v ?? 0 })
+                      }
                     />
                   ) : (
                     (b.personalSplitPct ?? 0)
@@ -789,7 +795,9 @@ function PreSplitDeductionsSection({
                       unit={faDollarSign}
                       value={d.amount}
                       step="0.01"
-                      onChange={(amount) => patch(d.id, { amount: amount ?? 0 })}
+                      onChange={(amount) =>
+                        patch(d.id, { amount: amount ?? 0 })
+                      }
                     />
                   </Table.Cell>
                   <Table.Cell>
@@ -955,7 +963,7 @@ function ReceivablesSection({
                 render={
                   <Button variant="ghost" size="sm" disabled={!someSelected}>
                     Actions
-                    <FontAwesomeIcon icon={faChevronDown} />
+                    <FontAwesomeIcon icon={faCaretDown} />
                   </Button>
                 }
               />

@@ -77,6 +77,23 @@ export type VoucherTarget =
       params: { listingId: string; spaceId: string }
     }
 
+/**
+ * Whether this deal is held by a voucher sitting with an approver.
+ *
+ * What the deal record's own Edit pencil reads. Not a bare
+ * `backOffice.status === 'Pending'` check: a shell keeps the `backOffice`
+ * record it had from before it was split, so the bare check would lock a
+ * building's header over a voucher that belongs to its suites now.
+ * {@link voucherHref} already owns the "does this deal have a voucher"
+ * question, so the rule stays in one place.
+ */
+export function isVoucherPending(deal: Listing): boolean {
+  return (
+    voucherHref(deal) !== null &&
+    deal.transaction.backOffice.status === 'Pending'
+  )
+}
+
 export interface VoucherRow {
   /** The deal this voucher settles — also the row's identity. */
   dealId: string

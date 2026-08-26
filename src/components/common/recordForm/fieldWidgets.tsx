@@ -21,6 +21,7 @@ import {
   useIngestionConflict,
 } from "#/components/deals/ingestionConflictContext";
 import type { IngestionFieldKey, YesNoNA } from "#/data/types";
+import { useFormLocked } from "./formLock";
 
 // ── Small field wrappers ─────────────────────────────────────────────────────
 export function TextField({
@@ -483,14 +484,23 @@ export function SwitchRow({
   checked: boolean;
   onChange: (v: boolean) => void;
 }) {
+  // Blueprint renders Switch as a `<span role="switch">`, so an enclosing
+  // `<fieldset disabled>` does not reach it — see `useFormLocked`. This is the
+  // one widget here that has to ask.
+  const locked = useFormLocked();
   // Switch first, label beside it. `justify-content-between` used to push the
   // two to opposite ends of the row, which needed a `maxWidth` wrapper at every
   // call site just to stop them drifting a full column apart — and still left a
   // gap wide enough that the label read as unrelated to the control.
   return (
     <div className="d-flex align-items-center gap-2 py-1">
-      <Switch checked={checked} onCheckedChange={onChange} aria-label={label} />
-      <span>{label}</span>
+      <Switch
+        checked={checked}
+        onCheckedChange={onChange}
+        aria-label={label}
+        disabled={locked}
+      />
+      <span className={locked ? "text-muted" : undefined}>{label}</span>
     </div>
   );
 }

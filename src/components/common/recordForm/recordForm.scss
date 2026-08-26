@@ -121,6 +121,19 @@
 
   &__control {
     min-width: 7rem; // 112px — a number input's floor before digits clip
+
+    // A switched-off control has to look switched off. The theme already greys
+    // `.form-control:disabled`, so every native input in this form does — but
+    // Blueprint's Select trigger also carries `bg-card`, a utility of equal
+    // specificity declared later, which wins the background straight back. That
+    // left one field in a locked column looking live while refusing every
+    // click. Restating the theme's own three disabled values under a class the
+    // utility cannot outrank is what keeps the column reading as one state.
+    &:disabled {
+      background-color: tokens.$input-disabled-bg;
+      color: tokens.$input-disabled-color;
+      border-color: tokens.$input-disabled-border-color;
+    }
   }
 
   // `flex-wrap` is what makes the container query's full-width gutter actually

@@ -48,6 +48,9 @@ import { dealSavePatch } from "#/components/deals/edit/savePatches";
 import { reseedDraft } from "#/components/deals/edit/reseedDraft";
 import { BrokerEditor } from "#/components/deals/edit/BrokerEditor";
 import { DealFinancialsSection } from "#/components/deals/edit/DealFinancialsSection";
+import { VoucherLockBanner } from "#/components/deals/edit/VoucherLockBanner";
+import { LockableFieldset } from "#/components/common/recordForm/formLock";
+import { isVoucherPending } from "#/data/vouchers";
 import { PendingPublishBanner } from "#/components/deals/edit/PendingPublishBanner";
 
 /**
@@ -91,6 +94,13 @@ export function DealEditor({
 	// Computed once — `dealShape` scans every listing to find children, so it
 	// isn't free to call more than once per render.
 	const shape = dealShape(listing);
+
+	// Submitting the voucher freezes the figures an approver is reading, and this
+	// form is the other door onto the same transaction terms. So it locks with
+	// the voucher rather than being a way around it. The header pencil that leads
+	// here deliberately stays — the form is still worth reading while a voucher is
+	// out, it just cannot be written to.
+	const voucherLocked = isVoucherPending(listing);
 
 	const [status, setStatus] = useState<PropertyStatus>(listing.status);
 	// Deal Type is fixed for a listing — kept in state so Save still persists it,
@@ -263,7 +273,19 @@ export function DealEditor({
 		back();
 	};
 
-	const actions = (
+	// A locked form has nothing to save, and nothing to cancel either — so the
+	// pair collapses to the one thing the button is still doing, which is leaving.
+	const actions = voucherLocked ? (
+		<Button
+			variant="ghost"
+			onClick={() => {
+				useStageGate.getState().clearPendingPublish();
+				back();
+			}}
+		>
+			Back
+		</Button>
+	) : (
 		<>
 			<Button
 				variant="ghost"
@@ -293,6 +315,7 @@ export function DealEditor({
 	const body = (
 		<div className="d-flex flex-column gap-6 p-4">
 			<PendingPublishBanner listing={listing} />
+			<VoucherLockBanner listing={listing} />
 			<ListingPageHeader
 				title="Edit Deal"
 				actions={
@@ -321,8 +344,16 @@ export function DealEditor({
 				</p>
 			)}
 
-			{/* `gap-6` (24px) — the group tier, matching ListingFormEditor. */}
-			<div className="d-flex flex-column gap-6">
+			{/* `gap-6` (24px) — the group tier, matching ListingFormEditor.
+
+			    A fieldset rather than a `disabled` prop threaded through ten widget
+			    components: it reaches every native control nested under it, including
+			    the ones inside BrokerEditor, EditableTable and DealFinancialsSection,
+			    and it cannot be forgotten at a new call site. */}
+			<LockableFieldset
+				className="d-flex flex-column gap-6"
+				disabled={voucherLocked}
+			>
 				{setupGroup && (
 					<FieldGroup title={setupGroup.label} icon={setupGroup.icon}>
 						<SubGroup
@@ -472,7 +503,7 @@ export function DealEditor({
 						/>
 					</FieldGroup>
 				)}
-			</div>
+			</LockableFieldset>
 
 			<div className="d-flex justify-content-end gap-2 border-top pt-4">
 				{actions}

@@ -3,7 +3,13 @@ import { createProposalListing, emptyDraft } from './createListing'
 import { addPropertyUnit, addSpaceToDeal } from './leaseSpaces'
 import { getListing } from './store'
 import { useDataStore } from './dataStore'
-import { allVouchers, voucherTotals, voucherHref } from './vouchers'
+import {
+  allVouchers,
+  isVoucherPending,
+  voucherHref,
+  voucherTotals,
+} from './vouchers'
+import { submitVoucher } from './actions'
 
 function makeSale(name: string) {
   return createProposalListing({ ...emptyDraft(), name, dealType: 'Sale' })
@@ -214,6 +220,38 @@ describe('allVouchers', () => {
   it('returns nothing when there are no deals', () => {
     resetStore()
     expect(allVouchers()).toEqual([])
+  })
+})
+
+describe('isVoucherPending', () => {
+  it('is false for a brand-new deal, whose voucher is a Draft', () => {
+    resetStore()
+    expect(isVoucherPending(makeSale('Riverside Tower'))).toBe(false)
+  })
+
+  it('is true once the voucher is submitted', () => {
+    resetStore()
+    const deal = makeSale('Riverside Tower')
+    submitVoucher(deal.id)
+    expect(isVoucherPending(getListing(deal.id)!)).toBe(true)
+  })
+
+  it('is false for a shell, whatever its leftover voucher record says', () => {
+    // The load-bearing case. A shell keeps the `backOffice` record it had from
+    // before it was split — the money belongs to its spaces now — so a bare
+    // status check would lock a building's form over a voucher that is not the
+    // building's any more. The space's own voucher is unaffected either way.
+    resetStore()
+    const parent = makeLease('Mall Assignment')
+    submitVoucher(parent.id)
+    const unit = addPropertyUnit(parent.propertyId, {
+      label: 'Suite 100', sqft: 1000, unitType: 'retail',
+    })!
+    addSpaceToDeal(parent.id, unit.id)
+
+    const shell = getListing(parent.id)!
+    expect(shell.transaction.backOffice.status).toBe('Pending')
+    expect(isVoucherPending(shell)).toBe(false)
   })
 })
 
