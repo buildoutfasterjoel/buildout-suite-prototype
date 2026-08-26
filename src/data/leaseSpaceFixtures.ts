@@ -270,10 +270,15 @@ function buildChild(
       // shell's status put a suite nobody had closed into Pending Approval, and
       // once a sign-off carries a name and a date, an inherited `Approved`
       // would credit a reviewer with approving a voucher that never existed.
-      // `applyStageDetail` is the only thing that moves a space's voucher on.
+      // The payer list is part of that same reset: it's the building's
+      // money, billed to the building's parties, and none of them were ever
+      // billed on this suite — so inheriting it would name payers against a
+      // voucher with nothing on it. `applyStageDetail` is the only thing
+      // that moves a space's voucher on.
       backOffice: {
         ...shell.transaction.backOffice,
         receivables: [],
+        payerContactIds: [],
         closeDate: null,
         status: 'Draft',
         approval: null,

@@ -308,4 +308,17 @@ describe('voucher payers seed', () => {
       expect(new Set(ids).size).toBe(ids.length)
     }
   })
+
+  it('gives a voucher with nothing billed no payers', () => {
+    // A lease suite is built by copying the building's voucher and clearing it.
+    // The payer list is part of what gets cleared: the building's payers were
+    // never billed on the suite, so a Draft suite listing them would name
+    // parties nobody invoiced.
+    for (const deal of listings) {
+      const back = deal.transaction.backOffice
+      if (back.receivables.length === 0) {
+        expect(back.payerContactIds).toEqual([])
+      }
+    }
+  })
 })

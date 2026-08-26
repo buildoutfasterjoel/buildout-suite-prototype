@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
+import type { Contact, Listing, Property, PropertyUnit, SpaceLeaseTerms } from './types'
 import { getProperty, getStore } from './store'
 import { getChildDeals } from './leaseSpaces'
 import { buildingAvailability } from './buildingAvailability'
 import { canAddSpaces, dealShape } from './dealShape'
 import { spaceVouchers } from './spaceVouchers'
 import { buildRentSchedule } from '#/components/deals/rentSchedule'
-import { SHELL_SPECS } from './leaseSpaceFixtures'
+import { SHELL_SPECS, applyLeaseSpaces } from './leaseSpaceFixtures'
 import { buildingSuites } from './buildingSuites'
 
 /**
@@ -396,6 +397,66 @@ describe('seeded media', () => {
       expect(child.marketing.photos ?? [], child.name).toEqual([])
       expect(child.marketing.links ?? [], child.name).toEqual([])
       expect(child.marketing.visualMedia ?? [], child.name).toEqual([])
+    }
+  })
+})
+
+// `applyLeaseSpaces` takes its `listings`/`properties` as plain arguments
+// rather than reading the live store, which is what makes a direct,
+// deterministic reproduction possible here: SHELL_SPECS' seeded shells (dealId
+// '107'/'104') never happen to reach this codepath with a non-empty
+// `payerContactIds` on their own voucher — neither is closed at the top level
+// today — so the `voucher payers seed` invariant in seed.test.ts holds against
+// the real dataset regardless of whether `buildChild` resets the payer list.
+// This constructs a shell whose voucher already carries a payer, the way one
+// would if its own deal had closed, and checks the one thing that copy must
+// never survive into a child.
+describe("a shell voucher already carrying payers", () => {
+  it('does not hand its payers to a proposal-stage child', () => {
+    // A 'proposal' child never reaches `applyStageDetail`'s backOffice-clearing
+    // branch — that only fires past Under Contract — so it depends entirely on
+    // `buildChild` itself resetting the copied voucher. Matches SHELL_SPECS'
+    // '104' entry, whose children are all 'proposal'.
+    const unitTemplate = {
+      id: 'unit-104-tmpl',
+      label: 'Suite 100',
+      unitType: 'office',
+      sqft: 1000,
+      saleHistory: [],
+    } as unknown as PropertyUnit
+    const property = {
+      id: 'prop-104',
+      buildingSqFt: 4000,
+      units: [unitTemplate],
+    } as unknown as Property
+    const termsTemplate = { unitId: unitTemplate.id } as unknown as SpaceLeaseTerms
+    const shell = {
+      id: 'shell-104',
+      dealId: '104',
+      propertyId: property.id,
+      name: 'Test Building',
+      slug: 'test-building',
+      dealType: 'Lease',
+      dealSide: 'seller',
+      buyerContactIds: [],
+      sellerContactIds: [],
+      financials: { rentRoll: [] },
+      marketing: { spaceLeaseTerms: [termsTemplate] },
+      transaction: {
+        // Stands in for a voucher that was billed and closed at some point —
+        // the shape `buildChild` must not hand down whole.
+        backOffice: { payerContactIds: ['building-payer'], receivables: [{ id: 'r1' }] },
+      },
+    } as unknown as Listing
+    const listings: Listing[] = [shell]
+
+    applyLeaseSpaces(listings, [property], [] as Contact[], { n: 1 })
+
+    const children = listings.filter((l) => l.parentDealId === shell.id)
+    expect(children.length).toBeGreaterThan(0)
+    for (const child of children) {
+      expect(child.transaction.backOffice.receivables).toEqual([])
+      expect(child.transaction.backOffice.payerContactIds).toEqual([])
     }
   })
 })
