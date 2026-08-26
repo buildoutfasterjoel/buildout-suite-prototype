@@ -83,8 +83,12 @@ interface DayPlanQueueState {
   step: (delta: number) => void;
   /** Record a move as finished. Shown once {@link commitPending} runs. */
   clear: (taskId: string, note: string) => void;
-  /** Apply the finished move: advance, unfold, and say what happened. */
-  commitPending: () => void;
+  /**
+   * Apply the finished move. `reveal` says whether the broker is still on the
+   * turn it belongs to: true announces it and opens the card, false advances the
+   * queue silently because the news has been overtaken.
+   */
+  commitPending: (reveal: boolean) => void;
   park: (taskId: string) => void;
   /** The call happened: release the park and finish the move. */
   resume: (note: string) => void;
@@ -138,18 +142,23 @@ export const useDayPlanQueue = create<DayPlanQueueState>((set, get) => ({
   clear: (taskId, note) =>
     set((s) => (s.cleared.includes(taskId) ? s : { pending: { taskId, note } })),
 
-  commitPending: () =>
+  commitPending: (reveal) =>
     set((s) => {
       if (!s.pending) return s;
       const { taskId, note } = s.pending;
-      return {
+      const advanced = {
         cleared: s.cleared.includes(taskId) ? s.cleared : [...s.cleared, taskId],
         index: 0,
-        note,
-        // Finishing a move is news, and news opens the card — see `collapsedBy`.
-        collapsedBy: null,
         pending: null,
       };
+      // Overtaken: the broker has said something else since, so this is no longer
+      // the answer to what they are looking at. The count catches up quietly and
+      // the note is dropped rather than saved up to surprise them later — a card
+      // reopening two turns on to report a move they finished before last asking
+      // a question reads as the rail losing its place.
+      if (!reveal) return { ...advanced, note: null };
+      // Still their turn, so it is news: say what happened and open the card.
+      return { ...advanced, note, collapsedBy: null };
     }),
 
   /**

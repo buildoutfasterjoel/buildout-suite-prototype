@@ -57,22 +57,28 @@ export function DayPlanCard({
   const { index, cleared, parkedFor, note, collapsedBy, dismissed } = q;
   const collapsed = collapsedBy !== null;
 
-  // The `arm` slot owns arming: it is rendered from the tool result that
-  // produced the queue. A later ask arms a new key, which resets the cursor,
-  // the collapse and the dismissal in one go.
+  /**
+   * The `arm` slot owns arming, and ONLY arming.
+   *
+   * Keyed on `myKey` — a string derived from the items — rather than on `items`
+   * itself, whose identity changes whenever the transcript is rebuilt. It used to
+   * also `revive()` here when the key already matched, to honour a re-ask; that
+   * turned every incidental re-render into an unfold, so the card sprang open
+   * again the moment anything was sent. Reviving belongs to the rail, which
+   * recognises a deliberate re-ask from the broker's own words and is
+   * edge-triggered on the message id, so it cannot misfire on a re-render.
+   */
   const myKey = items ? dayPlanKey(items) : null;
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
   useEffect(() => {
-    if (slot !== "arm" || !items || !myKey) return;
+    if (slot !== "arm" || !myKey) return;
     const state = useDayPlanQueue.getState();
-    // Same queue asked for again: keep the progress, but honour the ask by
-    // bringing the card back if it was closed or folded away. Re-arming here
-    // would throw away everything already worked.
-    if (state.key === myKey) {
-      if (state.dismissed || state.collapsedBy !== null) state.revive();
-      return;
-    }
-    state.arm(myKey, items);
-  }, [slot, items, myKey]);
+    // Same queue asked for again: keep the progress. Re-arming would throw away
+    // everything already worked.
+    if (state.key === myKey) return;
+    if (itemsRef.current) state.arm(myKey, itemsRef.current);
+  }, [slot, myKey]);
 
   const callPhase = useCallStore((s) => s.phase);
   const recap = useCallStore((s) => s.recap);

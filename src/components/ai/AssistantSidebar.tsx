@@ -1321,11 +1321,32 @@ export function AssistantSidebar() {
    */
   const pendingCallLog = usePendingCallLog((s) => s.pending !== null);
   const queuePending = useDayPlanQueue((q) => q.pending !== null);
+
+  /**
+   * Which ask the pending completion belongs to.
+   *
+   * The commit can land turns later than the move it reports — a call logged
+   * behind a modal, a completion that had to wait out a long reply — and by then
+   * the broker may have asked two other things. Opening the card then is the rail
+   * losing its place: it reports "Marked done. Next up…" over an answer to a
+   * different question. Comparing the ask at commit time with the ask when the
+   * move finished is what tells "still their turn" from "overtaken".
+   */
+  const pendingAskRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!queuePending) {
+      pendingAskRef.current = null;
+      return;
+    }
+    if (pendingAskRef.current === null) pendingAskRef.current = lastAsk?.id ?? "";
+  }, [queuePending, lastAsk?.id]);
+
   useEffect(() => {
     if (!queuePending || isLoading || callLive || pendingCallLog) return;
-    const t = setTimeout(() => useDayPlanQueue.getState().commitPending(), 450);
+    const stillTheirTurn = pendingAskRef.current === (lastAsk?.id ?? "");
+    const t = setTimeout(() => useDayPlanQueue.getState().commitPending(stillTheirTurn), 450);
     return () => clearTimeout(t);
-  }, [queuePending, isLoading, callLive, pendingCallLog]);
+  }, [queuePending, isLoading, callLive, pendingCallLog, lastAsk?.id]);
 
   // The recap and the BOV draft are store-driven records of something that
   // already happened, so each is drawn at the point in the transcript where it
