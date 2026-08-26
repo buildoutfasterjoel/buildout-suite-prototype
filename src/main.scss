@@ -5418,10 +5418,13 @@ $otto-progress-gutter: 28px;
     }
   }
 
-  // Voice: a ghost button — no fill, no border, no shadow, so the composer's own
-  // focus shadow is the only thing lifting off the rail. Goes purple while the
-  // mic is hot so the live state is visible without a fill swap.
-  &__mic {
+  // Voice and stop: ghost buttons — no fill, no border, no shadow, so the
+  // composer's own focus shadow is the only thing lifting off the rail. Stop is
+  // deliberately the quiet one of the pair (Figma node 259:19429): cancelling a
+  // reply is a recovery, not the thing we're inviting, so it gets the mic's
+  // restraint rather than send's gradient.
+  &__mic,
+  &__stop {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -5439,9 +5442,24 @@ $otto-progress-gutter: 28px;
       background-color: colors.$storm-grey-50;
     }
 
+    // Live: the send button's treatment (Figma node 259:19351) — same gradient,
+    // same 6px radius, same 12px glyph — so a hot mic reads as the composer's
+    // one active control. The icon swaps to solid in the component.
     &.is-live {
-      background-color: colors.$purple-heart-50;
-      color: colors.$purple-heart-700;
+      border-radius: 6px;
+      background: linear-gradient(
+        222.88deg,
+        colors.$purple-heart-500 1.85%,
+        colors.$purple-heart-950 98.15%
+      );
+      color: colors.$purple-heart-50;
+      font-size: 12px;
+
+      &:hover,
+      &:focus-visible {
+        background-color: transparent;
+        filter: brightness(1.08);
+      }
     }
   }
 

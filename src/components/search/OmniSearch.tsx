@@ -151,8 +151,8 @@ export function OmniSearch() {
    * broker can see it land, and the finished sentence is handed to the assistant
    * — which opens the rail and sends it, the same path the "Ask Otto" row uses.
    *
-   * Deliberately does NOT call `enableVoiceForMic()`: this is dictation, and
-   * speaking into a search bar shouldn't quietly switch on the assistant's voice.
+   * Dictation only — speaking into a search bar doesn't switch on the
+   * assistant's voice. Nothing does but the rail's own speaker toggle.
    */
   const {
     start: startVoice,

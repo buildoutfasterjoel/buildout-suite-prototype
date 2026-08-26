@@ -8,6 +8,7 @@ import {
   faStop,
   faXmark,
 } from "@fortawesome/pro-regular-svg-icons";
+import { faMicrophone as faMicrophoneSolid } from "@fortawesome/pro-solid-svg-icons";
 
 /** One picked file, as the composer displays it. */
 type ComposerAttachment = { id: string; name: string; meta: string };
@@ -172,31 +173,43 @@ export function ChatComposer({
           />
         </div>
         <div className="otto-composer__right">
-          <button
-            type="button"
-            className={`otto-composer__mic${listening ? " is-live" : ""}`}
-            aria-label={listening ? labels.live : labels.idle}
-            onClick={onMicToggle}
-          >
-            <FontAwesomeIcon icon={faMicrophone} />
-          </button>
-          {/* Send only exists once there's something to send (per the design);
-              mid-turn it's the stop button in the same slot. */}
+          {/* Mid-turn the right slot holds ONE control: a diminished ghost stop
+              (Figma node 259:19429). The mic is unmounted rather than left
+              alongside it — with two controls appearing and disappearing the
+              stop shifts left as the turn starts and the mic lands where the
+              stop just was, which is a misclick into "cancel the reply". */}
           {isLoading ? (
             <button
               type="button"
-              className="otto-composer__send"
+              className="otto-composer__stop"
               aria-label="Stop"
               onClick={onStop}
             >
               <FontAwesomeIcon icon={faStop} />
             </button>
           ) : (
-            draft.trim() && (
-              <button type="submit" className="otto-composer__send" aria-label="Send">
-                <FontAwesomeIcon icon={faArrowUp} />
+            <>
+              <button
+                type="button"
+                className={`otto-composer__mic${listening ? " is-live" : ""}`}
+                aria-label={listening ? labels.live : labels.idle}
+                onClick={onMicToggle}
+              >
+                {/* Solid while live, per the design: the glyph itself carries the
+                    state, so the button reads as on even at a glance. */}
+                <FontAwesomeIcon icon={listening ? faMicrophoneSolid : faMicrophone} />
               </button>
-            )
+              {/* Send only exists once there's something to send (per the
+                  design) — but never while the mic is live: dictation fills the
+                  draft word by word, and mounting send mid-sentence shoves the
+                  live mic 36px left, out from under the cursor that is about to
+                  tap it to stop. The silence pause sends; the mic cancels. */}
+              {draft.trim() && !listening && (
+                <button type="submit" className="otto-composer__send" aria-label="Send">
+                  <FontAwesomeIcon icon={faArrowUp} />
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
