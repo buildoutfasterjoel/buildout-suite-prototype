@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPhone,
@@ -242,21 +243,37 @@ export function DayPlanCard({
    */
   const header = (
     <div className="assistant-next-actions__header">
-      <button
-        type="button"
-        className="assistant-next-actions__toggle"
-        aria-expanded={!collapsed}
-        aria-label={collapsed ? "Expand next actions" : "Collapse next actions"}
-        onClick={() => q.setCollapsed(!collapsed)}
-      >
-        {/* One icon rotated rather than two swapped, so the fold can animate —
-            the same convention (and timing) as the overview accordions. */}
-        <FontAwesomeIcon
-          icon={faChevronDown}
-          className={`assistant-next-actions__chevron${collapsed ? "" : " assistant-next-actions__chevron--open"}`}
+      {/* Every control here is an unlabelled glyph, and two of them (× and the
+          fold) are the kind a broker hesitates over mid-queue — does the ×
+          dismiss the card or drop the move? So each carries a tooltip saying
+          what it does. The text matches the `aria-label` rather than paraphrasing
+          it: two names for one control is how a keyboard user and a mouse user
+          end up describing different buttons. */}
+      <Tooltip>
+        <Tooltip.Trigger
+          render={
+            <button
+              type="button"
+              className="assistant-next-actions__toggle"
+              aria-expanded={!collapsed}
+              aria-label={collapsed ? "Expand next actions" : "Collapse next actions"}
+              onClick={() => q.setCollapsed(!collapsed)}
+            >
+              {/* One icon rotated rather than two swapped, so the fold can
+                  animate — the same convention (and timing) as the overview
+                  accordions. */}
+              <FontAwesomeIcon
+                icon={faChevronDown}
+                className={`assistant-next-actions__chevron${collapsed ? "" : " assistant-next-actions__chevron--open"}`}
+              />
+              <span className="assistant-next-actions__title">Next Actions</span>
+            </button>
+          }
         />
-        <span className="assistant-next-actions__title">Next Actions</span>
-      </button>
+        <Tooltip.Content>
+          {collapsed ? "Expand next actions" : "Collapse next actions"}
+        </Tooltip.Content>
+      </Tooltip>
       {item && (
         <span className="assistant-next-actions__count">
           {position} of {remaining.length}
@@ -265,34 +282,55 @@ export function DayPlanCard({
       <div className="assistant-next-actions__nav">
         {item && (
           <>
-            <button
-              type="button"
-              className="assistant-next-actions__arrow"
-              aria-label="Previous action"
-              onClick={() => q.step(-1)}
-              disabled={remaining.length < 2}
-            >
-              <FontAwesomeIcon icon={faArrowLeft} />
-            </button>
-            <button
-              type="button"
-              className="assistant-next-actions__arrow"
-              aria-label="Next action"
-              onClick={() => q.step(1)}
-              disabled={remaining.length < 2}
-            >
-              <FontAwesomeIcon icon={faArrowRight} />
-            </button>
+            <Tooltip>
+              <Tooltip.Trigger
+                render={
+                  <button
+                    type="button"
+                    className="assistant-next-actions__arrow"
+                    aria-label="Previous action"
+                    onClick={() => q.step(-1)}
+                    disabled={remaining.length < 2}
+                  >
+                    <FontAwesomeIcon icon={faArrowLeft} />
+                  </button>
+                }
+              />
+              <Tooltip.Content>Previous action</Tooltip.Content>
+            </Tooltip>
+            <Tooltip>
+              <Tooltip.Trigger
+                render={
+                  <button
+                    type="button"
+                    className="assistant-next-actions__arrow"
+                    aria-label="Next action"
+                    onClick={() => q.step(1)}
+                    disabled={remaining.length < 2}
+                  >
+                    <FontAwesomeIcon icon={faArrowRight} />
+                  </button>
+                }
+              />
+              <Tooltip.Content>Next action</Tooltip.Content>
+            </Tooltip>
           </>
         )}
-        <button
-          type="button"
-          className="assistant-next-actions__arrow"
-          aria-label="Close next actions"
-          onClick={() => q.dismiss()}
-        >
-          <FontAwesomeIcon icon={faXmark} />
-        </button>
+        <Tooltip>
+          <Tooltip.Trigger
+            render={
+              <button
+                type="button"
+                className="assistant-next-actions__arrow"
+                aria-label="Close next actions"
+                onClick={() => q.dismiss()}
+              >
+                <FontAwesomeIcon icon={faXmark} />
+              </button>
+            }
+          />
+          <Tooltip.Content>Close next actions</Tooltip.Content>
+        </Tooltip>
       </div>
     </div>
   );
