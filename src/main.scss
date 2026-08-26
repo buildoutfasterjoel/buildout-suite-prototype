@@ -5052,13 +5052,23 @@
   animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
 }
 
-// The panel's own pixels cross-fade inside that morphing box, and quicker than
-// the box itself moves — the old snapshot is being stretched from rail width to
-// stage width, and the less time it spends on screen the less it reads as
-// stretched type.
+// The panel's own pixels cross-fade inside that morphing box, quicker than the
+// box itself moves.
+//
+// `object-fit: none` is the important half. These snapshots are replaced images,
+// and by default the browser *stretches* each one to fill the box as it morphs —
+// which is the whole "the UI zooms up and then settles" artifact: the 380px
+// rail's pixels, magnified to stage width, before the new snapshot has faded in.
+// Pinned to their natural size and registered to the panel's right edge — the
+// one edge that doesn't move between the two layouts — the box sweeps left and
+// the new layout is revealed at 1:1 instead of enlarged into place. The header
+// controls stay put across the whole transition, which is what the eye holds on
+// to.
 ::view-transition-old(assistant-rail),
 ::view-transition-new(assistant-rail) {
   animation-duration: 160ms;
+  object-fit: none;
+  object-position: top right;
 }
 
 // The page underneath, which is leaving (or coming back) whole.
