@@ -21,8 +21,8 @@ import {
   faHandshake,
   faUsers,
   faBuilding,
-  faUpRightAndDownLeftFromCenter,
-  faDownLeftAndUpRightToCenter,
+  faArrowUpRightAndArrowDownLeftFromCenter,
+  faArrowDownLeftAndArrowUpRightToCenter,
 } from "@fortawesome/pro-regular-svg-icons";
 // Solid, deliberately: the avatar's glyph is a silhouette on a pale disc, and
 // the regular weight reads as a hairline outline at 14px.
@@ -1633,8 +1633,8 @@ export function AssistantSidebar() {
             <FontAwesomeIcon
               icon={
                 expanded
-                  ? faDownLeftAndUpRightToCenter
-                  : faUpRightAndDownLeftFromCenter
+                  ? faArrowDownLeftAndArrowUpRightToCenter
+                  : faArrowUpRightAndArrowDownLeftFromCenter
               }
             />
           </button>
