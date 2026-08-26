@@ -1227,8 +1227,39 @@ export function AssistantSidebar() {
   useEffect(() => {
     if (!lastAsk || !matchesPlanIntent(lastAsk.text)) return;
     const queue = useDayPlanQueue.getState();
-    if (queue.key && (queue.dismissed || queue.collapsed)) queue.revive();
+    if (queue.key && (queue.dismissed || queue.collapsedBy !== null)) queue.revive();
   }, [lastAsk?.id, lastAsk?.text]);
+
+  /**
+   * Is another card with its own actions the live thing on screen?
+   *
+   * An email draft offers Send it / Let me edit / Delete while the queue offers
+   * Call / View / Done — six controls, two of them destructive, and nothing
+   * saying which is "the" next step. So the queue folds to its header while such
+   * a card is live and comes back when it resolves.
+   *
+   * Deliberately keyed on *another card being live*, not on "the broker sent a
+   * message". Chatting is how a lot of these moves get worked — asking for an
+   * email to the very contact the queue is pointing at is engagement with the
+   * item, not abandonment of it, so a message-based trigger would fold at
+   * exactly the wrong moment.
+   *
+   * "Live" is the newest turn: once the broker sends, deletes, or moves on, the
+   * draft is history and the queue is the working surface again. The BOV draft
+   * and the call brief are store-driven and pinned, so they count for as long as
+   * they are up.
+   */
+  const competingCardLive = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (m.role === "user") break;
+      const live = messageToolCalls(m).some(
+        (p) => emailDraftOf(p.output) !== null || marketingPackageOf(p.output) !== null,
+      );
+      if (live) return true;
+    }
+    return false;
+  }, [messages]);
 
   /**
    * Whether the in-flight turn is a "plan my day" ask, so the progress checklist
@@ -1268,6 +1299,13 @@ export function AssistantSidebar() {
   // The recap and the BOV draft are store-driven records of something that
   // already happened, so each is drawn at the point in the transcript where it
   // landed — see `useTranscriptAnchor`.
+  // Folds the queue while another action-bearing card holds the floor — see
+  // `competingCardLive`. Placed here so it can see the pinned store-driven cards
+  // (`bovDraft`, `brief`) as well as the transcript.
+  useEffect(() => {
+    useDayPlanQueue.getState().autoCollapse(competingCardLive || !!bovDraft || !!brief);
+  }, [competingCardLive, bovDraft, brief]);
+
   const recapAnchor = useTranscriptAnchor(!!recap, messagesRef);
   const bovAnchor = useTranscriptAnchor(!!bovDraft, messagesRef);
   // The day-plan queue is deliberately NOT one of those: it is the surface the

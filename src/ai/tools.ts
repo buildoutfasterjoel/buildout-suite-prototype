@@ -71,6 +71,7 @@ import {
 } from "#/components/contacts/composerSend";
 import { withPhase } from "#/ai/toolPhase";
 import { useContactSession } from "#/components/contacts/useContactSession";
+import { useDayPlanQueue } from "#/components/ai/useDayPlanQueue";
 import {
   getClientReportKpis,
   buildActivitySummaryText,
@@ -213,6 +214,23 @@ function resolveActivityContact({
   if (contact_name) return resolveContactByName(contact_name);
   const onContact = window.location.pathname.match(/^\/backoffice\/contacts\/([^/]+)/);
   return (onContact ? getContact(onContact[1]) : undefined) ?? null;
+}
+
+/**
+ * Reaching the person the queue was pointing at counts as working that move.
+ *
+ * The day-plan queue only ever noticed work done through its own buttons, so a
+ * broker who emailed Rosa instead of calling her was left with the move still on
+ * the list asking to be done again — the same gap that let a call typed into the
+ * chat go unnoticed. Clearing it here means the queue tracks the outreach rather
+ * than the button that happened to start it.
+ *
+ * Clears the move, deliberately without completing any task record behind it:
+ * emailing someone about a deliverable is not the deliverable being finished.
+ */
+function clearQueuedMoveFor(contactId: string | undefined): void {
+  if (!contactId) return;
+  useDayPlanQueue.getState().clearForContact(contactId, "Emailed them. Next up…");
 }
 
 /**
@@ -700,6 +718,7 @@ export function createClientTools({
       const fromComposer = requestComposerSend();
       if (fromComposer?.sent) {
         setPendingEmail(null);
+        clearQueuedMoveFor(fromComposer.contactId);
         return {
           sentEmail: {
             subject: fromComposer.subject,
@@ -735,6 +754,7 @@ export function createClientTools({
         date: new Date().toISOString().slice(0, 10),
       });
       setPendingEmail(null);
+      clearQueuedMoveFor(pending.contactId);
       return {
         sentEmail: {
           subject: pending.subject,

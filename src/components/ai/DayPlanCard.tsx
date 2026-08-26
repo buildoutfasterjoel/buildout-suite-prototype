@@ -54,7 +54,8 @@ export function DayPlanCard({
 }) {
   const router = useRouter();
   const q = useDayPlanQueue();
-  const { index, cleared, parkedFor, note, collapsed, dismissed } = q;
+  const { index, cleared, parkedFor, note, collapsedBy, dismissed } = q;
+  const collapsed = collapsedBy !== null;
 
   // The `arm` slot owns arming: it is rendered from the tool result that
   // produced the queue. A later ask arms a new key, which resets the cursor,
@@ -67,7 +68,7 @@ export function DayPlanCard({
     // bringing the card back if it was closed or folded away. Re-arming here
     // would throw away everything already worked.
     if (state.key === myKey) {
-      if (state.dismissed || state.collapsed) state.revive();
+      if (state.dismissed || state.collapsedBy !== null) state.revive();
       return;
     }
     state.arm(myKey, items);

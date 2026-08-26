@@ -31,8 +31,17 @@ interface DayPlanQueueState {
   parkedFor: string | null;
   /** Transient italic line above the headline ("Skipped, let me look again…"). */
   note: string | null;
-  /** Folded down to just its header. The broker's choice, so it outlives a re-render. */
-  collapsed: boolean;
+  /**
+   * Folded down to just its header, and BY WHOM.
+   *
+   * Who matters: the rail folds the queue on its own while another card with its
+   * own actions is live (an email draft's Send/Edit/Delete competing with the
+   * queue's Call/Done is the busyness this avoids), and unfolds it when that card
+   * resolves. It must never unfold something the broker folded by hand — an
+   * automatic gesture may undo an automatic gesture, never an explicit one. One
+   * field rather than two booleans so the two can't contradict each other.
+   */
+  collapsedBy: "user" | "auto" | null;
   /** Closed outright. A later `plan_my_day` arms a fresh queue and brings it back. */
   dismissed: boolean;
 
@@ -46,9 +55,17 @@ interface DayPlanQueueState {
   clear: (taskId: string, note: string) => void;
   park: (taskId: string) => void;
   resume: (note: string) => void;
+  /** The broker's own fold/unfold, from the card's chevron. */
   setCollapsed: (collapsed: boolean) => void;
+  /** The rail's fold. No-op when the broker has already folded it themselves. */
+  autoCollapse: (collapsed: boolean) => void;
   dismiss: () => void;
   revive: () => void;
+  /**
+   * Drop the queued move for a contact, worked through some other channel.
+   * No-op when nothing in the queue points at them.
+   */
+  clearForContact: (contactId: string, note: string) => void;
 }
 
 const EMPTY = {
@@ -58,7 +75,7 @@ const EMPTY = {
   cleared: [] as string[],
   parkedFor: null as string | null,
   note: null as string | null,
-  collapsed: false,
+  collapsedBy: null as "user" | "auto" | null,
   dismissed: false,
 };
 
@@ -108,7 +125,17 @@ export const useDayPlanQueue = create<DayPlanQueueState>((set, get) => ({
     }));
   },
 
-  setCollapsed: (collapsed) => set({ collapsed }),
+  setCollapsed: (collapsed) => set({ collapsedBy: collapsed ? "user" : null }),
+
+  autoCollapse: (collapsed) =>
+    set((s) => {
+      // Their fold outranks ours in both directions: we neither fold over a
+      // deliberate unfold nor unfold over a deliberate fold.
+      if (s.collapsedBy === "user") return s;
+      const next = collapsed ? "auto" : null;
+      return s.collapsedBy === next ? s : { collapsedBy: next };
+    }),
+
   dismiss: () => set({ dismissed: true }),
 
   /**
@@ -122,7 +149,20 @@ export const useDayPlanQueue = create<DayPlanQueueState>((set, get) => ({
    * An explicit ask is a request to see the queue, so it reopens and returns to
    * the top, which is also what the reply says it does.
    */
-  revive: () => set({ dismissed: false, collapsed: false, index: 0 }),
+  revive: () => set({ dismissed: false, collapsedBy: null, index: 0 }),
+
+  clearForContact: (contactId, note) =>
+    set((s) => {
+      const match = s.items.find(
+        (i) => i.contactId === contactId && !s.cleared.includes(i.taskId),
+      );
+      if (!match) return s;
+      // Clears it from the queue WITHOUT completing the underlying task record.
+      // Emailing someone about a move is not the same as the move being done —
+      // the same line the call path draws, where `resume` clears and leaves the
+      // task alone.
+      return { cleared: [...s.cleared, match.taskId], index: 0, note };
+    }),
 }));
 
 /** Stable identity for a set of queue items. */
