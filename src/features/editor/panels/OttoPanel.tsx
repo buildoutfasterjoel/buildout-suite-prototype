@@ -196,7 +196,11 @@ export function OttoPanel() {
    * narrate over the thing it is describing.
    */
   const listening = useVoice((s) => s.listening);
+  // Interim speech types into the composer, as in the rail and the omni bar —
+  // this mic is labelled "Dictate to Otto", and dictation you can't see land is
+  // just a delay before a surprise. `send()` clears the draft.
   const { start: startHandsFree, stop: stopHandsFree } = useHandsFree({
+    onInterim: (text) => setDraft(text),
     onSubmit: (text) => send(text),
   });
 

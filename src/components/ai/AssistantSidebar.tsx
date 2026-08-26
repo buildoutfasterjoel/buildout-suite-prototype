@@ -1007,7 +1007,15 @@ export function AssistantSidebar() {
 
   // Hands-free: submit final transcript to Otto, and mark that the reply should
   // be spoken back so the loop can re-arm after Otto finishes.
+  //
+  // Interim speech types straight into the composer, the same as the omni bar:
+  // the broker watches the words land, so a misheard phrase is visible *before*
+  // it is sent rather than turning up as a wrong answer. `send()` clears the
+  // draft, so the typed-in transcript doesn't need clearing here — and on the
+  // one path where `send()` bails (a turn already in flight) leaving the text in
+  // the composer is the right outcome, not a leak.
   const { start: startHandsFree, stop: stopHandsFree, stopForCall } = useHandsFree({
+    onInterim: (text) => setDraft(text),
     onSubmit: (text) => {
       speakNextReplyRef.current = true;
       send(text);
