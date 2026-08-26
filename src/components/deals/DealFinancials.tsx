@@ -34,6 +34,7 @@ import {
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type {
   DealBroker,
+  DealType,
   FinancialDeduction,
   Listing,
   TransactionSide,
@@ -43,10 +44,13 @@ import {
   COMMISSION_PLANS,
   DEDUCTION_CATEGORIES,
   partyContactIds,
+  partySectionTitle,
   TRANSACTION_SIDES,
   voucherParty,
+  type VoucherParty,
 } from "#/data/vouchers";
 import { AddBrokerModal } from "./AddBrokerModal";
+import { AddContactModal } from "./AddContactModal";
 import { notify } from "#/lib/notify";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
 import { VoucherStatusBadge } from "./VoucherStatusBadge";
@@ -557,6 +561,159 @@ function InternalCommissionsSection({
           </Table.Body>
         </Table>
       </div>
+    </Section>
+  );
+}
+
+/**
+ * The contact columns both party sections share — buyer/tenant and payer.
+ *
+ * Written once because the two tables differ only in their heading, their
+ * removal rule, and whether a Billed column follows. Two copies would drift the
+ * first time one of them gained a column.
+ */
+function PartyRowCells({ party }: { party: VoucherParty }) {
+  return (
+    <>
+      <Table.Cell>
+        {/* No link when the contact is gone — a dead link to a contact page
+            that 404s is worse than plain text. */}
+        <PersonLink
+          name={party.name}
+          contactId={party.exists ? party.contactId : undefined}
+        />
+      </Table.Cell>
+      <Table.Cell>{party.company || "—"}</Table.Cell>
+      <Table.Cell>{party.email || "—"}</Table.Cell>
+      <Table.Cell>{party.phone || "—"}</Table.Cell>
+    </>
+  );
+}
+
+/** The remove action both party tables carry. */
+function RemovePartyButton({
+  name,
+  blockedReason,
+  onRemove,
+}: {
+  name: string;
+  /** Non-null when removal is refused — greys the button and explains why. */
+  blockedReason: string | null;
+  onRemove: () => void;
+}) {
+  const button = (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label={`Remove ${name}`}
+      disabled={blockedReason !== null}
+      onClick={blockedReason !== null ? undefined : onRemove}
+    >
+      <FontAwesomeIcon icon={faTrashCan} />
+    </Button>
+  );
+  return (
+    <Tooltip>
+      <Tooltip.Trigger
+        render={
+          // A disabled button fires no pointer events, so a blocked one hangs
+          // its tooltip off a wrapper — the same trick RemoveBrokerButton uses,
+          // and the reason the rule is discoverable rather than a dead icon.
+          blockedReason !== null ? (
+            <span className="d-inline-flex">{button}</span>
+          ) : (
+            button
+          )
+        }
+      />
+      <Tooltip.Content>{blockedReason ?? `Remove ${name}`}</Tooltip.Content>
+    </Tooltip>
+  );
+}
+
+/**
+ * Who is acquiring — the deal's buyers on a sale, its tenants on a lease.
+ *
+ * The section title and the list both come from `dealType`, in one place, so a
+ * lease voucher can never show a "Buyer" heading over its tenants.
+ *
+ * Editable on a Draft. These contacts live on the deal rather than in the
+ * voucher record, so this and the Deal form's own contact fields write the same
+ * arrays — which is why Save routes through `saveVoucherDraft` like everything
+ * else here, instead of writing on each add.
+ */
+function PartySection({
+  dealType,
+  contactIds,
+  editable,
+  onChange,
+}: {
+  dealType: DealType;
+  contactIds: string[];
+  editable: boolean;
+  onChange: (next: string[]) => void;
+}) {
+  const [addOpen, setAddOpen] = useState(false);
+  const title = partySectionTitle(dealType);
+  const parties = contactIds.map(voucherParty);
+
+  return (
+    <Section
+      title={title}
+      action={
+        editable ? (
+          <Button variant="ghost" size="sm" onClick={() => setAddOpen(true)}>
+            <FontAwesomeIcon icon={faPlus} />
+            Add {title}
+          </Button>
+        ) : undefined
+      }
+    >
+      {parties.length === 0 ? (
+        <p className="text-muted mb-0">
+          No {title.toLowerCase()} has been added.
+        </p>
+      ) : (
+        <Table>
+          <Table.Header>
+            <Table.Row>
+              <Table.Head>Name</Table.Head>
+              <Table.Head>Company</Table.Head>
+              <Table.Head>Email</Table.Head>
+              <Table.Head>Phone</Table.Head>
+              {editable && <Table.Head style={{ width: 56 }} />}
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {parties.map((party) => (
+              <Table.Row key={party.contactId}>
+                <PartyRowCells party={party} />
+                {editable && (
+                  <Table.Cell>
+                    <RemovePartyButton
+                      name={party.name}
+                      blockedReason={null}
+                      onRemove={() =>
+                        onChange(
+                          contactIds.filter((id) => id !== party.contactId),
+                        )
+                      }
+                    />
+                  </Table.Cell>
+                )}
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table>
+      )}
+
+      <AddContactModal
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        takenIds={contactIds}
+        title={title}
+        onAdd={(contactId) => onChange([...contactIds, contactId])}
+      />
     </Section>
   );
 }
@@ -1711,7 +1868,20 @@ export function DealFinancials({
   const storedBrokers = listing.internalBrokers;
   const [deductions, setDeductions] = useState(stored);
   const [brokers, setBrokers] = useState(storedBrokers);
-  const dirty = deductions !== stored || brokers !== storedBrokers;
+
+  // The party list's working copy, on the same terms as the deduction and
+  // broker tables above: edited locally, committed by the one Save. `stored…`
+  // is the dirty test — every write here spreads a new array, so an add or a
+  // remove breaks identity and Save writing it through restores it.
+  const storedParties = partyContactIds(listing);
+  const [parties, setParties] = useState(storedParties);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on `storedParties` alone by design
+  useEffect(() => setParties(storedParties), [storedParties]);
+
+  const dirty =
+    deductions !== stored ||
+    brokers !== storedBrokers ||
+    parties !== storedParties;
 
   // Re-seed when the store's array moves under us — a Save of our own, or a
   // write from elsewhere (the AI rail, another tab of the same deal). This
@@ -1747,12 +1917,12 @@ export function DealFinancials({
     saveVoucherDraft(listing.id, {
       preSplitDeductions: deductions,
       internalBrokers: brokers,
-      partyContactIds: partyContactIds(listing),
+      partyContactIds: parties,
       payerContactIds: voucher.payerContactIds,
     });
     notify({
       title: "Voucher saved",
-      description: "Deductions and internal commissions updated.",
+      description: "Parties, deductions and commissions updated.",
     });
   };
 
@@ -1788,6 +1958,13 @@ export function DealFinancials({
       <VoucherApprovalBanner voucher={voucher} />
 
       <TransactionSummarySection listing={listing} editable={isDraft} />
+
+      <PartySection
+        dealType={listing.dealType}
+        contactIds={parties}
+        editable={isDraft}
+        onChange={setParties}
+      />
 
       <Separator />
 
