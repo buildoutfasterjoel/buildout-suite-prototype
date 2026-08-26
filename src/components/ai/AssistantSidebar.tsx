@@ -21,8 +21,8 @@ import {
   faHandshake,
   faUsers,
   faBuilding,
-  faUpRightAndDownLeftFromCenter,
-  faDownLeftAndUpRightToCenter,
+  faArrowUpRightAndArrowDownLeftFromCenter,
+  faArrowDownLeftAndArrowUpRightToCenter,
 } from "@fortawesome/pro-regular-svg-icons";
 // Solid, deliberately: the avatar's glyph is a silhouette on a pale disc, and
 // the regular weight reads as a hairline outline at 14px.
@@ -428,7 +428,6 @@ function ToolResultCards({
           superseded={!!emailFlow?.superseded.has(emailDraft.id)}
           showActions={!repliedPast}
           onSend={() => onQuickReply?.("Send it")}
-          onDelete={() => onQuickReply?.("Delete that draft")}
         />
       )}
       {sentEmail && <SentEmailCard sent={sentEmail} />}
@@ -1489,6 +1488,18 @@ export function AssistantSidebar() {
     return () => cancelAnimationFrame(id);
   }, [focusNonce]);
 
+  // Opening the rail focuses the composer, so the broker can start typing
+  // straight away instead of opening the rail and then clicking into it.
+  //
+  // Straight in the effect, no `requestAnimationFrame`: the field is mounted in
+  // the same commit that opened the rail, so it is already there to focus. The
+  // nonce effect above waits a frame because it has a queued prompt to let land
+  // first; this one has nothing to wait for, and a deferred focus is one a
+  // background tab (where frames never run) would drop entirely.
+  useEffect(() => {
+    if (open) fieldRef.current?.focus();
+  }, [open]);
+
   /**
    * Navigating collapses full screen back to the rail.
    *
@@ -1500,6 +1511,19 @@ export function AssistantSidebar() {
   useEffect(() => {
     if (useAssistant.getState().expanded) setExpanded(false);
   }, [pathname, setExpanded]);
+
+  /**
+   * A call going live collapses it too, for the same reason and without a
+   * navigation to trigger it: the live call bar lives on the page, so a call
+   * started from inside full screen — the queue's Call button, the greeting's
+   * "yes, call now" — put the controls for that call behind the panel that
+   * started it. Hanging up doesn't expand it again; nothing here ever does.
+   *
+   * If the call bar ever moves *into* the rail, this is the rule to delete.
+   */
+  useEffect(() => {
+    if (callLive && useAssistant.getState().expanded) setExpanded(false);
+  }, [callLive, setExpanded]);
 
   /**
    * Arriving at the chat lands on the newest message — coming back from the home
@@ -1532,12 +1556,18 @@ export function AssistantSidebar() {
       welded to it (Figma node 193:4365). The classic nav has no rounded stage to
       float on, so there it stays flush and keeps its plain left border.
 
-      Expanded, it drops the width cap and the inset and takes the whole stage;
-      `AppShell` hides the page content to make the room (Figma node 193:5009).
+      Expanded, it drops the inset and takes the whole stage (Figma node
+      193:5009). It slides between the two: the panel is positioned against the
+      stage, so both frames are just sets of edges and the move is a CSS
+      transition on them — over a page that keeps its own box the whole time.
+      `AppShell` hides that page once the panel has covered it.
     */
     <aside
-      className={`assistant-rail bg-white d-flex flex-column h-100${
-        expanded ? " assistant-rail--expanded" : " flex-shrink-0"
+      // No `h-100`: the panel's height comes from its own top/bottom edges, and
+      // a `height: 100%` alongside them wins over `bottom` — which is how the
+      // docked panel in app mode hung 8px past the bottom of the stage.
+      className={`assistant-rail bg-white d-flex flex-column${
+        expanded ? " assistant-rail--expanded" : ""
       }`}
     >
       {/* Otto's glyphs — the header otter and the starter rows' icons — are
@@ -1622,8 +1652,8 @@ export function AssistantSidebar() {
             <FontAwesomeIcon
               icon={
                 expanded
-                  ? faDownLeftAndUpRightToCenter
-                  : faUpRightAndDownLeftFromCenter
+                  ? faArrowDownLeftAndArrowUpRightToCenter
+                  : faArrowUpRightAndArrowDownLeftFromCenter
               }
             />
           </button>
@@ -1657,7 +1687,10 @@ export function AssistantSidebar() {
       <div ref={scrollRef} className="flex-grow-1 overflow-auto">
         <div
           className="assistant-rail__column d-flex flex-column"
-          style={{ padding: 20, gap: 24 }}
+          // 32px at the bottom, 20 everywhere else: the composer sits directly
+          // under this, and at an even 20 the last message crowded the input as
+          // though it were part of it.
+          style={{ padding: "20px 20px 32px", gap: 24 }}
         >
         {messages.length === 0 && !recap ? (
           <div className="text-muted small">

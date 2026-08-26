@@ -4055,6 +4055,12 @@
   }
 }
 
+// The containing block the assistant panel positions against (see
+// `.assistant-rail`), in both nav modes.
+.app-shell__stage {
+  position: relative;
+}
+
 // The rail itself. Full window height — the top bar starts to its right, not
 // above it — so the brand, the sections and the page all sit in one frame.
 .app-rail {
@@ -4471,7 +4477,7 @@
 // Assistant rail — starter prompt rows (Figma node 193:4389). Rebuilt much
 // lighter than the bordered, shadowed cards they used to be: on the home screen
 // they're the only other thing on the page, so they no longer have to fight for
-// attention. A 24px gradient disc, then the title with its hint trailing on the
+// attention. A 28px gradient disc, then the title with its hint trailing on the
 // same line — two lines of chrome per row became one line of type.
 //
 // Still a bespoke button rather than a Blueprint `Button`: every variant brings
@@ -4493,14 +4499,17 @@
     background-color: colors.$storm-grey-50;
   }
 
-  // Round gradient token holding the glyph: 24px outer, 12px glyph.
+  // Round gradient token holding the glyph: 28px outer, 12px glyph (Figma node
+  // 193:4390). The disc grew, the glyph did not — the token is what reads as the
+  // icon at a glance, and a 12px glyph in a 28px disc is the ratio the design
+  // settled on.
   &__icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     border-radius: 99px;
     @include otto-gradient-decorative;
     // Fallback for the gradient fill below (see `.assistant-rail__avatar`).
@@ -4549,7 +4558,10 @@
 .assistant-section__label {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  // 4px, not 8: the caret now trails the label (Figma node 193:8993), where it
+  // reads as punctuation on the end of the phrase rather than a control in its
+  // own column — and at 8px it looked detached from the words it belongs to.
+  gap: 4px;
   padding: 0;
   border: 0;
   background-color: transparent;
@@ -4995,21 +5007,56 @@
   }
 }
 
-// The rail's two frames. Docked it is a fixed 380px column; in the app shell it
-// pulls 8px off the stage's top and right so it reads as a card floating on the
-// page rather than a second column welded to it (Figma node 193:4365). Expanded
-// it drops both the width and the inset and takes the stage whole (193:5009).
+// The rail's two frames. Docked it is a 380px column against the right edge; in
+// the app shell it pulls 8px off the stage's top and right so it reads as a card
+// floating on the page rather than a second column welded to it (Figma node
+// 193:4365). Expanded it drops the inset and takes the stage whole (193:5009).
 //
 // The classic nav has no rounded stage to float on, so there the rail stays
 // flush and keeps a plain left border — the inset rules are scoped to app mode.
+//
+// It is POSITIONED rather than laid out, and that is what makes expanding it
+// animate. Its edges are lengths — `left` above all — so the two frames are two
+// sets of interpolable numbers and the panel slides between them. The page keeps
+// the box it already had (the stage reserves it as padding, see
+// `--railed` below), so the panel moves *over* the page and nothing on the page
+// relayouts mid-animation. As a flex item there was no such path: the panel can
+// only take the stage by driving the page's own width to zero, which relayouts
+// every card and table on it once a frame.
+$rail-width: 380px;
+$rail-inset: 8px;
+// Eases in as well as out — the previous curve left the gate at full speed,
+// which read as a snap that then slowed down rather than as a panel being moved.
+// A touch longer with it, so the gentler start doesn't cost the arrival.
+$rail-ease: cubic-bezier(0.4, 0, 0.2, 1);
+$rail-duration: 320ms;
+
 .assistant-rail {
-  width: 380px;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: calc(100% - #{$rail-width});
+  // Over the page and anything sticky inside it — a table header that outranked
+  // the panel would show through it.
+  z-index: 20;
   border-left: 1px solid var(--card-border-color, #{colors.$storm-grey-100});
+  transition:
+    left $rail-duration $rail-ease,
+    top $rail-duration $rail-ease,
+    right $rail-duration $rail-ease,
+    border-radius $rail-duration $rail-ease,
+    box-shadow $rail-duration $rail-ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 }
 
-.app-shell--app .assistant-rail:not(.assistant-rail--expanded) {
-  margin: 8px 8px 0 0;
-  height: calc(100% - 8px);
+.app-shell--app .assistant-rail {
+  top: $rail-inset;
+  right: $rail-inset;
+  left: calc(100% - #{$rail-width + $rail-inset});
   border: 1px solid var(--card-border-color, #{colors.$storm-grey-100});
   border-radius: 12px 12px 0 0;
   box-shadow:
@@ -5021,10 +5068,50 @@
 }
 
 .assistant-rail--expanded {
-  width: auto;
-  flex: 1 1 auto;
-  min-width: 0;
+  left: 0;
   border-left: 0;
+}
+
+.app-shell--app .assistant-rail--expanded {
+  top: 0;
+  right: 0;
+  left: 0;
+  border-color: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+// The width the page gives up to the docked panel. The panel is out of flow, so
+// this padding is the only thing keeping the page from running underneath it —
+// and it deliberately does NOT change when the panel expands. A page whose box
+// never moves is a page that never relayouts while the panel slides over it.
+.app-shell__stage--railed {
+  padding-right: $rail-width;
+}
+
+.app-shell--app .app-shell__stage--railed {
+  padding-right: $rail-width + $rail-inset;
+}
+
+// The page is hidden only once the panel has finished covering it, and is back
+// before it starts uncovering: `visibility` flips at the far end of the slide on
+// the way in (the delay) and at the near end on the way out (no delay). Hidden
+// rather than display-none so its box — the box everything on it is laid out
+// against — survives the trip, and so it leaves the tab order and the
+// accessibility tree while it is behind a full-screen panel.
+.app-shell__main {
+  transition: visibility 0s linear 0s;
+}
+
+.app-shell__stage--rail-full .app-shell__main {
+  visibility: hidden;
+  transition-delay: $rail-duration;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell__main {
+    transition: none;
+  }
 }
 
 // The reading column. At rail width it is simply the full panel — the cap only

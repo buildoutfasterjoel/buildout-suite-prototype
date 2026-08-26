@@ -34,9 +34,14 @@ export function AppShell() {
   const navMode = useNavMode((s) => s.mode);
   const setNavMode = useNavMode((s) => s.setMode);
   const setDesignTogglesShown = useDesignToggles((s) => s.setShown);
-  // Full-screen chat: the rail takes the whole stage and the page underneath is
-  // pulled out of the flow entirely. `open` is checked alongside `expanded` so a
-  // rail closed while expanded can never leave the page hidden behind nothing.
+  // The assistant panel is positioned over the stage rather than laid out beside
+  // it (see `.assistant-rail`), so the stage carries both facts about it: how
+  // much width the page gives up to it while it is docked, and whether it has
+  // expanded to cover the page entirely.
+  //
+  // `open` is checked alongside `expanded` for the second one so a rail closed
+  // while expanded can never leave the page hidden behind nothing.
+  const railOpen = useAssistant((s) => s.open);
   const chatFullscreen = useAssistant((s) => s.open && s.expanded);
 
   // The navbar is client-only, and not by choice. Blueprint's `Navbar` decides
@@ -121,12 +126,12 @@ export function AppShell() {
             inset is measured against the container, not the window, and the
             top-left radius clips whichever of them reaches the corner.
           */}
-          <div className="app-shell__stage flex-grow-1 d-flex overflow-hidden">
-            <main
-              className={`app-shell__main flex-grow-1 overflow-auto${
-                chatFullscreen ? " d-none" : ""
-              }`}
-            >
+          <div
+            className={`app-shell__stage flex-grow-1 d-flex overflow-hidden${
+              railOpen ? " app-shell__stage--railed" : ""
+            }${chatFullscreen ? " app-shell__stage--rail-full" : ""}`}
+          >
+            <main className="app-shell__main flex-grow-1 overflow-auto">
               {hydrated && <LiveCallBar />}
               {hydrated && <CallSessionController />}
               {hydrated && <BovWatcher />}

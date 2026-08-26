@@ -166,14 +166,12 @@ export function EmailDraftSection({
   superseded = false,
   showActions = true,
   onSend,
-  onDelete,
 }: {
   draft: EmailDraftCardData;
   version?: number;
   superseded?: boolean;
   showActions?: boolean;
   onSend: () => void;
-  onDelete: () => void;
 }) {
   return (
     <ChatSection
@@ -193,9 +191,6 @@ export function EmailDraftSection({
             Send it
           </Button>
           <OpenInEmailButton draft={draft} label="Let me edit" />
-          <Button size="sm" variant="ghost" onClick={onDelete}>
-            Delete
-          </Button>
         </div>
       )}
     </ChatSection>
