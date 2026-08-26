@@ -428,7 +428,6 @@ function ToolResultCards({
           superseded={!!emailFlow?.superseded.has(emailDraft.id)}
           showActions={!repliedPast}
           onSend={() => onQuickReply?.("Send it")}
-          onDelete={() => onQuickReply?.("Delete that draft")}
         />
       )}
       {sentEmail && <SentEmailCard sent={sentEmail} />}
