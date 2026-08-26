@@ -1069,6 +1069,37 @@ export function AssistantSidebar() {
   }, [messages]);
 
   /**
+   * Keep the transcript pinned to the bottom when the pinned region changes
+   * height.
+   *
+   * The queue card lives outside the scroller, so growing it — expanding on a
+   * completion, or arriving for the first time — shrinks the transcript's
+   * viewport underneath. `scrollTop` doesn't move, so content that was flush
+   * with the bottom ends up hidden below the fold: the sent-email card the
+   * broker had just been shown slides behind the card that opened to say what
+   * was next.
+   *
+   * `atBottomRef` is sampled from real scroll events, not measured at resize
+   * time. Shrinking a viewport fires no scroll event, so the flag still reports
+   * where the broker was *before* the card grew — which is the question worth
+   * asking. Measuring after the fact would find them 100-odd pixels off the
+   * bottom and have to guess whether they put themselves there.
+   */
+  const pinnedRef = useRef<HTMLDivElement>(null);
+  const atBottomRef = useRef(true);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      // The same 150px slack the message autoscroll uses, so "parked at the
+      // bottom" means one thing in this file.
+      atBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [view]);
+
+  /**
    * The email history, derived once per transcript change and read by every
    * draft in it — versions and what's been superseded (see {@link EmailFlow}).
    */
@@ -1359,6 +1390,25 @@ export function AssistantSidebar() {
   // slot's own guard inside `DayPlanCard`, so the wrapper never pads an element
   // that renders nothing.
   const queuePinned = useDayPlanQueue((q) => q.key !== null && !q.dismissed);
+
+  // Re-anchors the transcript when the pinned card grows or shrinks — see
+  // `atBottomRef`. Sits below `queuePinned` so it can re-observe when the card
+  // mounts and unmounts.
+  useEffect(() => {
+    const pinned = pinnedRef.current;
+    const el = scrollRef.current;
+    if (!pinned || !el) return;
+    const observer = new ResizeObserver(() => {
+      if (!atBottomRef.current) return;
+      // After paint, so the shrunken viewport is what `scrollHeight` is measured
+      // against.
+      requestAnimationFrame(() => {
+        el.scrollTop = el.scrollHeight;
+      });
+    });
+    observer.observe(pinned);
+    return () => observer.disconnect();
+  }, [queuePinned, view]);
   const recapTarget = useCallStore((s) => s.target);
   const spokenRecapRef = useRef<object | null>(null);
   useEffect(() => {
@@ -1682,7 +1732,11 @@ export function AssistantSidebar() {
         // 4px, not `pb-2`'s 8: the composer below adds 4px of its own top
         // padding, so this lands the gap between card and input at the 8px the
         // design specifies rather than 12.
-        <div className="assistant-rail__column" style={{ padding: "0 20px 4px" }}>
+        <div
+          ref={pinnedRef}
+          className="assistant-rail__column"
+          style={{ padding: "0 20px 4px" }}
+        >
           <DayPlanCard slot="pinned" />
         </div>
       )}
