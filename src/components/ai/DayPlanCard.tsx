@@ -13,7 +13,8 @@ import {
 import { faCircleCheck } from "@fortawesome/pro-solid-svg-icons";
 import type { DayPlanItem } from "#/ai/dayPlan";
 import { listAllTasks } from "#/data/selectors";
-import { getContact } from "#/data/store";
+import { getContact, getListing } from "#/data/store";
+import { dealCardLinkProps } from "#/components/deals/dealCardLink";
 import { callFlow } from "#/components/call/callFlow";
 import { useCallStore } from "#/components/call/useCallStore";
 import { usePendingCallLog } from "#/components/call/usePendingCallLog";
@@ -187,10 +188,25 @@ export function DayPlanCard({
     router.navigate({ to: `/backoffice/contacts/${item.contactId}` as never });
   };
 
-  /** Work the move: the task list, which is where a non-call move gets done. */
+  /** Work the move: the task list, the last resort when the move names no record. */
   const onOpenTask = () => {
     if (!item) return;
     router.navigate({ to: "/tasks" as never });
+  };
+
+  /**
+   * The deal behind the move. Routed through `dealCardLinkProps` rather than an
+   * interpolated path, because a space deal has its own page nested under its
+   * building — that rule lives in one place so a link can't fall out of step
+   * with it.
+   *
+   * Resolved to a real listing first: a `dealId` pointing at a record that has
+   * gone should fall back to the task list rather than navigate nowhere.
+   */
+  const dealForItem = item?.dealId ? getListing(item.dealId) : undefined;
+  const onViewDeal = () => {
+    if (!dealForItem) return onOpenTask();
+    router.navigate(dealCardLinkProps(dealForItem) as never);
   };
 
   /**
@@ -343,8 +359,14 @@ export function DayPlanCard({
           to offer than the record, and "Open task" as a fallback would just be
           the same dead end one rung down.
 
-          A task with no contact behind it keeps "Open task", because then the
-          list genuinely is the only place to go.
+          A task hangs off a contact or a deal, so with no contact it leads with
+          the DEAL. "Open task" survives only as the last resort, for a move that
+          names neither — and then the list genuinely is the only place to go.
+
+          The deal button says "View deal" rather than naming it, because the
+          reason line right above already does ("Due 13 days ago. Meridian
+          Centre."). Naming it twice buys nothing and costs a button wide enough
+          to wrap.
         */}
         <div className="assistant-next-actions__actions">
           {canCall ? (
@@ -360,6 +382,10 @@ export function DayPlanCard({
           ) : item.contactId ? (
             <Button size="sm" variant="primary" onClick={onViewRecord}>
               View {firstName ?? "record"}
+            </Button>
+          ) : dealForItem ? (
+            <Button size="sm" variant="primary" onClick={onViewDeal}>
+              View deal
             </Button>
           ) : (
             <Button size="sm" variant="primary" onClick={onOpenTask}>
