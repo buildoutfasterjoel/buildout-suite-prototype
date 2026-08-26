@@ -1461,16 +1461,26 @@ function generateListings(
     if (status === 'closed' && commissionAmount > 0) {
       const primaryPayer = buyerContacts[0] ?? sellerContacts[0]
       const otherPayer = sellerContacts.find((c) => c.id !== primaryPayer.id)
-      // One closed deal in three bills a party that is on neither side — the
-      // corporate AP department or holding company that actually cuts the
-      // cheque. The Payers section is built for exactly this, and a seed where
-      // every payer is also the buyer would make it look redundant.
+      // One closed deal bills a party that is on neither side — the corporate
+      // AP department or holding company that actually cuts the cheque. The
+      // Payers section is built for exactly this, and a seed where every payer
+      // is also the buyer would make it look redundant.
       //
       // Cycled on the deal number rather than drawn, for the same reason
       // `variant` is: only a handful of deals reach Closed, and at that sample
       // size a probability leaves the case unreachable in some runs.
+      //
+      // `% 2 === 0`, not `% 3`: keying this on the same modulus as `variant`
+      // landed on the one closed deal that is a zero-commission Lease, so the
+      // condition was true but the surrounding `commissionAmount > 0` guard
+      // never let it run — verified empirically against the generated data,
+      // not just reasoned about. `% 2` does land on a commission-bearing deal,
+      // at the cost of tying "billed to an outsider" to `split`'s modulus
+      // (they end up mutually exclusive at this sample size); that coupling is
+      // accepted because nothing else fires with only three closed,
+      // commission-bearing deals to cycle over.
       const thirdPartyPayer =
-        Number(dealId) % 3 === 2
+        Number(dealId) % 2 === 0
           ? propertyContacts.find(
               (c) =>
                 !buyerContacts.some((b) => b.id === c.id) &&
