@@ -5025,6 +5025,41 @@ body:has(.design-toggle-fab) .toast-viewport {
   }
 }
 
+// Assistant rail — a Next Action the broker has worked (Figma node 265:19858).
+// Past work like the sent-email receipt above, and wearing the same clothes: a
+// hairline down the left edge, no fill. Its own block rather than a modifier on
+// `.assistant-sent`, because the two say different things — that one is "your
+// email went"; this is "you finished a move".
+//
+// One flat 8px stack, no header row: the design's activity line repeated the
+// receipt directly above it word for word, so it comes off (see
+// `CompletedActionCard`) and what is left is the move, its reason, and the way
+// back to the record.
+.assistant-completed {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding-inline: 12px;
+  border-left: 2px solid var(--card-border-color, #{colors.$storm-grey-100});
+
+  &__headline {
+    font-size: 14px;
+    line-height: 19px;
+    font-weight: 600;
+    color: colors.$storm-grey-950;
+  }
+
+  // Full body size, matching the live card's reason line: the case for the move
+  // is what makes the record worth reading back, so it isn't demoted to a
+  // footnote just because the move is done.
+  &__reason {
+    font-size: 14px;
+    line-height: 19px;
+    color: colors.$storm-grey-950;
+  }
+}
+
 // The rail's two frames. Docked it is a 380px column against the right edge; in
 // the app shell it pulls 8px off the stage's top and right so it reads as a card
 // floating on the page rather than a second column welded to it (Figma node

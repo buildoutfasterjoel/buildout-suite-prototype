@@ -61,7 +61,8 @@ import {
 import { SentEmailCard, type SentEmailData } from "#/components/ai/SentEmailCard";
 import { OttoHome, type StarterPrompt } from "#/components/ai/OttoHome";
 import { DayPlanCard } from "#/components/ai/DayPlanCard";
-import { useDayPlanQueue } from "#/components/ai/useDayPlanQueue";
+import { useDayPlanQueue, type CompletedAction } from "#/components/ai/useDayPlanQueue";
+import { CompletedActionCard } from "#/components/ai/CompletedActionCard";
 import { ActionPlanChecklist } from "#/components/ai/ActionPlanChecklist";
 import { matchesPlanIntent, type DayPlanItem } from "#/ai/dayPlan";
 import { formatCurrency } from "#/components/deals/dealDisplay";
@@ -663,6 +664,27 @@ function useTranscriptAnchor(
     setAnchor((prev) => (prev === undefined ? (messagesRef.current.at(-1)?.id ?? null) : prev));
   }, [present, messagesRef]);
   return anchor;
+}
+
+/**
+ * The completed moves anchored at one point in the transcript.
+ *
+ * Returns `null` rather than an empty fragment when there is nothing to draw:
+ * the transcript is a flex column with a 24px gap, and an empty element still
+ * counts as a child — every message would gain a blank turn's worth of space.
+ *
+ * Keyed on the completion time as well as the task, because a move can be worked
+ * more than once across a session's queues.
+ */
+function CompletedActions({ entries }: { entries: CompletedAction[] }) {
+  if (entries.length === 0) return null;
+  return (
+    <>
+      {entries.map((c) => (
+        <CompletedActionCard key={`${c.taskId}-${c.at}`} entry={c} />
+      ))}
+    </>
+  );
 }
 
 /**
@@ -1381,7 +1403,16 @@ export function AssistantSidebar() {
   useEffect(() => {
     if (!queuePending || isLoading || callLive || pendingCallLog) return;
     const stillTheirTurn = pendingAskRef.current === (lastAsk?.id ?? "");
-    const t = setTimeout(() => useDayPlanQueue.getState().commitPending(stillTheirTurn), 450);
+    const t = setTimeout(
+      () =>
+        // The anchor is read inside the timeout, not outside it: the turn can
+        // still land a closing message in those 450ms, and the completed record
+        // belongs under whatever the rail last said — not above it.
+        useDayPlanQueue
+          .getState()
+          .commitPending(stillTheirTurn, messagesRef.current.at(-1)?.id ?? null),
+      450,
+    );
     return () => clearTimeout(t);
   }, [queuePending, isLoading, callLive, pendingCallLog, lastAsk?.id]);
 
@@ -1396,6 +1427,23 @@ export function AssistantSidebar() {
   // slot's own guard inside `DayPlanCard`, so the wrapper never pads an element
   // that renders nothing.
   const queuePinned = useDayPlanQueue((q) => q.key !== null && !q.dismissed);
+
+  /**
+   * The broker's progress through the queue, drawn into the transcript at the
+   * point each move was finished.
+   *
+   * Anchored per entry rather than as one block, because these accumulate: a
+   * single anchor would drag the whole day's history down behind the newest
+   * completion, which is the bug `useTranscriptAnchor` exists to prevent — with
+   * the added twist that the earlier entries would jump turns as well.
+   */
+  const completed = useDayPlanQueue((q) => q.completed);
+  const completedAt = (id: string | null) => completed.filter((c) => c.anchorId === id);
+  // An entry whose anchor message is gone (the transcript was reset under it)
+  // still has to be reachable, so it falls back to the end of the flow.
+  const orphanedCompleted = completed.filter(
+    (c) => c.anchorId !== null && !messages.some((m) => m.id === c.anchorId),
+  );
 
   // Re-anchors the transcript when the pinned card grows or shrinks — see
   // `atBottomRef`. Sits below `queuePinned` so it can re-observe when the card
@@ -1715,6 +1763,9 @@ export function AssistantSidebar() {
                 />
                 {recapAnchor === m.id && <CallRecapCard />}
                 {bovAnchor === m.id && <BovCard />}
+                {/* After the recap, not before it: the recap is the call itself
+                    and this is the bookkeeping that follows from it. */}
+                <CompletedActions entries={completedAt(m.id)} />
               </Fragment>
             );
           })
@@ -1723,6 +1774,7 @@ export function AssistantSidebar() {
             hang them under. */}
         {recapAnchor === null && <CallRecapCard />}
         {bovAnchor === null && <BovCard />}
+        <CompletedActions entries={completedAt(null)} />
         {/* The turn's visible work can finish before the turn does: a tool result
             lands, its card renders, and the model is still closing out. What it
             says next is suppressed anyway (see `narratedIndices`), so a spinner
@@ -1757,6 +1809,7 @@ export function AssistantSidebar() {
         {bovAnchor !== undefined &&
           bovAnchor !== null &&
           !messages.some((m) => m.id === bovAnchor) && <BovCard />}
+        <CompletedActions entries={orphanedCompleted} />
         </div>
       </div>
       )}

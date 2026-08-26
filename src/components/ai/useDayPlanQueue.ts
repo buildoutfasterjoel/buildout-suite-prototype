@@ -2,6 +2,37 @@ import { create } from "zustand";
 import type { DayPlanItem } from "#/ai/dayPlan";
 
 /**
+ * A move the broker finished, kept so the transcript carries a history of their
+ * progress through the queue (Figma 262:19694 / 265:19858).
+ *
+ * Holds a copy of the `DayPlanItem` rather than its id: the log outlives the
+ * queue it came from, and a later `plan_my_day` replaces `items` wholesale.
+ */
+export interface CompletedAction {
+  taskId: string;
+  item: DayPlanItem;
+  /**
+   * When the work happened — stamped where the move is finished, NOT where it is
+   * committed. The commit deliberately waits out the turn (see `pending`), and a
+   * call logged behind a modal can wait minutes; stamping there would report the
+   * time the broker read about it rather than the time they made the call.
+   *
+   * Not rendered: the block dropped its activity line, which was the only thing
+   * that showed a time. Kept because it is this record's identity — the same
+   * move can be worked again under a later queue, and the pair (task, instant)
+   * is what tells the two apart in a list.
+   */
+  at: string;
+  /**
+   * The transcript message this landed under, `null` when it landed before
+   * anything had been said. Same scheme as `useTranscriptAnchor` in the rail —
+   * a completed move is a record of a moment, so it stays at that moment instead
+   * of sliding to the bottom behind every later turn.
+   */
+  anchorId: string | null;
+}
+
+/**
  * The day queue's live position, held outside the transcript.
  *
  * The queue is pinned above the composer from the moment it is armed: asking for
@@ -72,7 +103,16 @@ interface DayPlanQueueState {
    * and the move in the body change together, at the moment the broker is ready
    * to read them.
    */
-  pending: { taskId: string; note: string } | null;
+  pending: { taskId: string; note: string; at: string } | null;
+  /**
+   * Every move already worked, oldest first — the broker's progress through the
+   * queue, drawn into the transcript as folded "Completed next action" sections.
+   *
+   * Deliberately NOT reset by `arm`. The queue is a working surface and a fresh
+   * `plan_my_day` replaces it; the log is history, and it belongs to the
+   * transcript it is anchored into, which the new queue does not clear.
+   */
+  completed: CompletedAction[];
 
   arm: (key: string, items: DayPlanItem[]) => void;
   /**
@@ -87,8 +127,11 @@ interface DayPlanQueueState {
    * Apply the finished move. `reveal` says whether the broker is still on the
    * turn it belongs to: true announces it and opens the card, false advances the
    * queue silently because the news has been overtaken.
+   *
+   * `anchorId` is the transcript message the completed record hangs under — the
+   * rail's business, since it is the only caller that can see the messages.
    */
-  commitPending: (reveal: boolean) => void;
+  commitPending: (reveal: boolean, anchorId?: string | null) => void;
   park: (taskId: string) => void;
   /** The call happened: release the park and finish the move. */
   resume: (note: string) => void;
@@ -119,12 +162,15 @@ const EMPTY = {
   note: null as string | null,
   collapsedBy: null as "user" | "auto" | null,
   dismissed: false,
-  pending: null as { taskId: string; note: string } | null,
+  pending: null as DayPlanQueueState["pending"],
 };
 
 export const useDayPlanQueue = create<DayPlanQueueState>((set, get) => ({
   ...EMPTY,
+  completed: [],
 
+  // `completed` is carried across deliberately — see the field's own note. It is
+  // not in EMPTY, so the spread cannot silently take it with the rest.
   arm: (key, items) => set({ ...EMPTY, key, items }),
 
   step: (delta) =>
@@ -140,16 +186,28 @@ export const useDayPlanQueue = create<DayPlanQueueState>((set, get) => ({
     }),
 
   clear: (taskId, note) =>
-    set((s) => (s.cleared.includes(taskId) ? s : { pending: { taskId, note } })),
+    set((s) =>
+      s.cleared.includes(taskId) ? s : { pending: { taskId, note, at: new Date().toISOString() } },
+    ),
 
-  commitPending: (reveal) =>
+  commitPending: (reveal, anchorId = null) =>
     set((s) => {
       if (!s.pending) return s;
-      const { taskId, note } = s.pending;
+      const { taskId, note, at } = s.pending;
+      const already = s.cleared.includes(taskId);
+      const item = s.items.find((i) => i.taskId === taskId);
       const advanced = {
-        cleared: s.cleared.includes(taskId) ? s.cleared : [...s.cleared, taskId],
+        cleared: already ? s.cleared : [...s.cleared, taskId],
         index: 0,
         pending: null,
+        // Logged on the commit rather than on the completion, so the record
+        // enters the transcript at the point the broker is actually shown it —
+        // which is also the only point where the anchor message is known.
+        // Guarded on `already` so a double commit can't log the same move twice.
+        completed:
+          already || !item
+            ? s.completed
+            : [...s.completed, { taskId, item, at, anchorId }],
       };
       // Overtaken: the broker has said something else since, so this is no longer
       // the answer to what they are looking at. The count catches up quietly and
@@ -192,7 +250,10 @@ export const useDayPlanQueue = create<DayPlanQueueState>((set, get) => ({
     // aside for it. Only the *visible* advance waits for `commitPending`.
     set((s) => ({
       parkedFor: null,
-      pending: parkedFor && !s.cleared.includes(parkedFor) ? { taskId: parkedFor, note } : s.pending,
+      pending:
+        parkedFor && !s.cleared.includes(parkedFor)
+          ? { taskId: parkedFor, note, at: new Date().toISOString() }
+          : s.pending,
     }));
   },
 
@@ -231,7 +292,7 @@ export const useDayPlanQueue = create<DayPlanQueueState>((set, get) => ({
       // Emailing someone about a move is not the same as the move being done —
       // the same line the call path draws, where `resume` clears and leaves the
       // task alone.
-      return { pending: { taskId: match.taskId, note } };
+      return { pending: { taskId: match.taskId, note, at: new Date().toISOString() } };
     }),
 }));
 

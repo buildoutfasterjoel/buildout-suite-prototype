@@ -28,7 +28,9 @@ const arm = () => useDayPlanQueue.getState().arm(dayPlanKey(ITEMS), ITEMS);
 const state = () => useDayPlanQueue.getState();
 
 beforeEach(() => {
-  // `arm` spreads EMPTY, so this is a full reset as well as a setup.
+  // `arm` spreads EMPTY, so this is a full reset as well as a setup — except for
+  // the completed log, which `arm` deliberately carries across.
+  useDayPlanQueue.setState({ completed: [] });
   arm();
 });
 
@@ -161,7 +163,7 @@ describe("deferred reveal", () => {
    */
   it("records a finished move without showing it as finished", () => {
     state().clear("t-rosa", "Marked done. Next up…");
-    expect(state().pending).toEqual({ taskId: "t-rosa", note: "Marked done. Next up…" });
+    expect(state().pending).toMatchObject({ taskId: "t-rosa", note: "Marked done. Next up…" });
     expect(state().cleared).toEqual([]);
     expect(state().note).toBeNull();
   });
@@ -258,5 +260,59 @@ describe("park no longer detaches or hides", () => {
     state().commitPending(true);
     expect(state().cleared).toEqual(["t-rosa"]);
     expect(state().index).toBe(0);
+  });
+});
+
+/**
+ * The history half of the queue. The card is a working surface and a finished
+ * move leaves it; without this the day's progress vanished entirely — the count
+ * ticked down and nothing said what had been done.
+ */
+describe("completed log", () => {
+  it("logs the move on commit, at the point in the transcript it landed", () => {
+    state().clear("t-rosa", "Marked done. Next up…");
+    // Nothing logged yet: the record appears where the broker is shown it.
+    expect(state().completed).toEqual([]);
+    state().commitPending(true, "msg-3");
+    expect(state().completed).toHaveLength(1);
+    expect(state().completed[0]).toMatchObject({ taskId: "t-rosa", anchorId: "msg-3" });
+    // A copy of the move, so the log survives the queue being replaced.
+    expect(state().completed[0].item.headline).toBe("Rosa → call on the overnight signal");
+  });
+
+  /**
+   * A commit the broker never saw still happened, so it is still history. Only
+   * the announcement is suppressed when the news has been overtaken.
+   */
+  it("logs an overtaken completion too", () => {
+    state().clear("t-rosa", "Marked done. Next up…");
+    state().commitPending(false, "msg-9");
+    expect(state().note).toBeNull();
+    expect(state().completed).toHaveLength(1);
+  });
+
+  it("anchors before the first message as null, not as a missing entry", () => {
+    state().clear("t-rosa", "Marked done. Next up…");
+    state().commitPending(true);
+    expect(state().completed[0].anchorId).toBeNull();
+  });
+
+  it("does not log the same move twice on a repeated commit", () => {
+    state().clear("t-rosa", "Marked done. Next up…");
+    state().commitPending(true, "msg-1");
+    state().commitPending(true, "msg-2");
+    expect(state().completed).toHaveLength(1);
+  });
+
+  /**
+   * The log belongs to the transcript, which a fresh `plan_my_day` does not
+   * clear — so re-planning the day must not erase the morning's progress.
+   */
+  it("survives a fresh queue arming", () => {
+    state().clear("t-rosa", "Marked done. Next up…");
+    state().commitPending(true, "msg-1");
+    arm();
+    expect(state().completed).toHaveLength(1);
+    expect(state().cleared).toEqual([]);
   });
 });
