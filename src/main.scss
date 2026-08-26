@@ -3935,14 +3935,32 @@
   }
 }
 
-// Dock toast alerts at the bottom CENTER of the screen (Blueprint defaults to
-// bottom-right). Single-class selector, loaded after the theme, so it wins by
-// source order without !important.
+// Dock toast alerts at the bottom LEFT of the screen (Blueprint defaults to
+// bottom-right). Bottom-centre was the previous home, but the assistant chat's
+// fullscreen composer sits dead-centre at the foot of the stage — a toast
+// landed on top of the input. The bottom-left corner is clear in both nav
+// modes. Single-class selector, loaded after the theme, so it wins by source
+// order without !important.
 .toast-viewport {
   right: auto;
-  left: 50%;
-  transform: translateX(-50%);
-  align-items: center;
+  left: 0;
+  align-items: flex-start;
+}
+
+// In the app shell that corner belongs to the 48px rail, so the viewport steps
+// clear of it — the same move `.design-toggle-fab` makes. Toasts render in a
+// portal outside `.app-shell--app`, so the mode comes off the `<html>` data
+// attribute AppShell stamps rather than an ancestor class.
+:root[data-nav-mode="app"] .toast-viewport {
+  left: 48px;
+}
+
+// `.design-toggle-fab` already owns that corner on contact pages, and the
+// viewport's 9999 z-index would park a toast right on top of it. Where the
+// button exists, the stack starts above it instead: 40px of button plus the
+// 16px it already sits on, plus the viewport's own 16px gap.
+body:has(.design-toggle-fab) .toast-viewport {
+  padding-bottom: 72px;
 }
 
 // ── Global top nav: item states + restyled footer controls ───────────────────
