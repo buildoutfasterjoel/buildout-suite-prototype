@@ -22,6 +22,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowRight,
   faDollarSign,
+  faEllipsisVertical,
   faFileLines,
   faPercent,
   faPlus,
@@ -36,24 +37,35 @@ import type {
   DealBroker,
   DealType,
   FinancialDeduction,
+  FinancialReceivable,
   Listing,
   TransactionSide,
 } from "#/data/types";
-import { saveVoucherDraft, submitVoucher } from "#/data/actions";
+import {
+  addReceivable,
+  deleteReceivable,
+  saveVoucherDraft,
+  submitVoucher,
+  updateReceivable,
+} from "#/data/actions";
 import {
   COMMISSION_PLANS,
   DEDUCTION_CATEGORIES,
   partyContactIds,
   partySectionTitle,
+  payerOptions,
   payerRemovalBlock,
+  receivablePayerLabel,
   TRANSACTION_SIDES,
   voucherParty,
   voucherPayers,
   type VoucherParty,
   type VoucherPayerRow,
 } from "#/data/vouchers";
+import { getAllContacts } from "#/data/store";
 import { AddBrokerModal } from "./AddBrokerModal";
 import { AddContactModal } from "./AddContactModal";
+import { NewReceivableModal } from "./NewReceivableModal";
 import { notify } from "#/lib/notify";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
 import { VoucherStatusBadge } from "./VoucherStatusBadge";
@@ -748,7 +760,7 @@ function PayersSection({
 
   return (
     <Section
-      title="Payers"
+      title="Billing"
       action={
         editable ? (
           <Button variant="ghost" size="sm" onClick={() => setAddOpen(true)}>
@@ -1158,6 +1170,127 @@ function ReceivableActionItem({
   );
 }
 
+/**
+ * A receivable's due date, edited in the cell.
+ *
+ * A bare `<input type="date">` rather than the rent schedule's click-to-reveal
+ * `EditableCell`: that pattern exists because the schedule packs seven numeric
+ * columns and needed the underline to say "this one is typeable". Receivables
+ * are four wide columns with room for a real control, and a date input carries
+ * its own picker — reimplementing reveal-on-click here would hide the only
+ * affordance the field has.
+ *
+ * Commits on change rather than blur, because picking from the native calendar
+ * fires no blur until focus leaves the cell.
+ */
+function ReceivableDateCell({
+  value,
+  onCommit,
+}: {
+  value: string;
+  onCommit: (next: string) => void;
+}) {
+  return (
+    <Input
+      type="date"
+      className="bg-card"
+      value={value}
+      aria-label="Due date"
+      onChange={(e) => onCommit(e.target.value)}
+    />
+  );
+}
+
+/**
+ * A receivable's billing description, edited in the cell.
+ *
+ * Keystrokes stay local and commit on blur, so typing a sentence is one write
+ * to the store rather than one per character — the same reason the rent
+ * schedule's cells commit on blur. Re-seeds when the stored value moves under
+ * it, which is what keeps a row honest if the same voucher is edited elsewhere.
+ */
+function ReceivableTextCell({
+  value,
+  placeholder,
+  onCommit,
+}: {
+  value: string;
+  placeholder: string;
+  onCommit: (next: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on `value` alone by design
+  useEffect(() => setDraft(value), [value]);
+  return (
+    <Input
+      className="bg-card"
+      value={draft}
+      placeholder={placeholder}
+      aria-label="Billing description"
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => draft !== value && onCommit(draft)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+        if (e.key === "Escape") setDraft(value);
+      }}
+    />
+  );
+}
+
+/**
+ * One receivable's own actions.
+ *
+ * All three credit actions are stubs and all three read as stubs — greyed, with
+ * the same `ReceivableActionItem` treatment the toolbar menu uses, because a
+ * menu item that looks live and does nothing is worse than one that says it
+ * cannot yet. Deliberately greyed unconditionally, unlike the toolbar's Apply
+ * Deposit: that one greys on a fully credited line, which reads as a live
+ * control the rest of the time and would promise something this cannot do.
+ *
+ * Delete is the only live item, and the only place a single receivable can be
+ * removed — the toolbar's Actions menu deliberately dropped its bulk Delete
+ * rather than offer the same act twice.
+ */
+function ReceivableRowMenu({
+  label,
+  onDelete,
+}: {
+  label: string;
+  onDelete: () => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenu.Trigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Actions for ${label}`}
+          >
+            <FontAwesomeIcon icon={faEllipsisVertical} />
+          </Button>
+        }
+      />
+      <DropdownMenu.Content align="end">
+        <ReceivableActionItem icon={faFileLines} disabled>
+          Create New Invoice
+        </ReceivableActionItem>
+        <ReceivableActionItem icon={faArrowRight} disabled>
+          Apply Deposit
+        </ReceivableActionItem>
+        <ReceivableActionItem icon={faArrowRight} disabled>
+          Apply Other Credit
+        </ReceivableActionItem>
+        <Separator className="my-1" />
+        <DropdownMenu.Item onClick={onDelete}>
+          <FontAwesomeIcon icon={faTrashCan} className="me-2" />
+          Delete Receivable
+        </DropdownMenu.Item>
+      </DropdownMenu.Content>
+    </DropdownMenu>
+  );
+}
+
 function ReceivablesSection({
   listing,
   editable,
@@ -1169,6 +1302,20 @@ function ReceivablesSection({
   const receivables = listing.transaction.backOffice.receivables;
   const amountTotal = sum(receivables.map((r) => r.amount));
   const creditedTotal = sum(receivables.map((r) => r.credited));
+  const [addOpen, setAddOpen] = useState(false);
+
+  // Receivable edits write straight through rather than joining the page's Save
+  // working copy — see `addReceivable` in actions.ts for why the guard differs.
+  // Every cell below commits on blur, so a keystroke is not a write.
+  const patch = (id: string, next: Partial<FinancialReceivable>) =>
+    updateReceivable(listing.id, id, next);
+
+  // The payer picker's options, and the reverse lookup a row's Select needs:
+  // `PayerOption.value` encodes both the contact and which form of them, so a
+  // row's current selection is its own composite key rather than the bare id.
+  const payerChoices = payerOptions(getAllContacts());
+  const payerValue = (r: FinancialReceivable) =>
+    r.billToCompany ? `${r.payerContactId}:company` : r.payerContactId;
 
   // Which rows the bulk actions apply to. Local state — nothing here persists,
   // and every read below goes through `selectedRows` rather than the set itself,
@@ -1209,9 +1356,9 @@ function ReceivablesSection({
           <div className="d-flex gap-2">
             <Button variant="ghost" size="sm">
               <FontAwesomeIcon icon={faPlus} />
-              Add Sales Tax
+              Set Sales Tax
             </Button>
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={() => setAddOpen(true)}>
               <FontAwesomeIcon icon={faPlus} />
               Add Receivable
             </Button>
@@ -1237,9 +1384,12 @@ function ReceivablesSection({
                 >
                   Create New Invoice
                 </ReceivableActionItem>
-                <ReceivableActionItem icon={faTrashCan}>
-                  Delete Receivables
-                </ReceivableActionItem>
+                {/* No Delete here. Deleting is a one-row act and the row's own
+                    menu owns it; a bulk Delete beside it would be a second way
+                    to do the same thing, differing only in how many rows it
+                    takes. What stays is what genuinely reads a selection —
+                    applying one deposit across several lines, or billing
+                    several lines on one invoice. */}
               </DropdownMenu.Content>
             </DropdownMenu>
           </div>
@@ -1275,11 +1425,12 @@ function ReceivablesSection({
               <Table.Head>Billing Description</Table.Head>
               <Table.Head className="text-end">Receivable Amount</Table.Head>
               <Table.Head className="text-end">Credited Amount</Table.Head>
+              {editable && <Table.Head style={{ width: 44 }} />}
             </Table.Row>
           </Table.Header>
           <Table.Body>
             {receivables.map((r) => {
-              const payer = voucherParty(r.payerContactId);
+              const label = receivablePayerLabel(r.payerContactId, r.billToCompany);
               return (
                 <Table.Row
                   key={r.id}
@@ -1297,27 +1448,95 @@ function ReceivablesSection({
                       <Checkbox
                         checked={selectedIds.has(r.id)}
                         onCheckedChange={(c) => toggleOne(r.id, c === true)}
-                        aria-label={`Select receivable for ${payer.name}`}
+                        aria-label={`Select receivable for ${label}`}
                       />
                     </Table.Cell>
                   )}
                   <Table.Cell>
-                    <div>
-                      <PersonLink
-                        name={payer.name}
-                        contactId={payer.exists ? payer.contactId : undefined}
+                    {editable ? (
+                      <Select
+                        value={payerValue(r)}
+                        onValueChange={(v) => {
+                          const choice = payerChoices.find((o) => o.value === v);
+                          if (!choice) return;
+                          patch(r.id, {
+                            payerContactId: choice.contactId,
+                            billToCompany: choice.billToCompany,
+                          });
+                        }}
+                      >
+                        <Select.Trigger className="bg-card" aria-label="Payer">
+                          {/* The label is passed explicitly rather than left to
+                              `Select.Value` to derive. This Select's value is a
+                              composite key — contact id plus which form of them
+                              — so the bare value is an id, and an unaided
+                              `Select.Value` renders exactly that. */}
+                          <Select.Value placeholder="Select a payer...">
+                            {label}
+                          </Select.Value>
+                        </Select.Trigger>
+                        <Select.Content>
+                          {payerChoices.map((o) => (
+                            <Select.Item key={o.value} value={o.value}>
+                              {o.label}
+                            </Select.Item>
+                          ))}
+                        </Select.Content>
+                      </Select>
+                    ) : (
+                      label
+                    )}
+                  </Table.Cell>
+                  <Table.Cell>
+                    {editable ? (
+                      <ReceivableDateCell
+                        value={r.dueDate}
+                        onCommit={(next) => patch(r.id, { dueDate: next })}
                       />
-                    </div>
-                    <div className="text-muted fs-small">{payer.email}</div>
+                    ) : (
+                      formatDate(r.dueDate)
+                    )}
                   </Table.Cell>
-                  <Table.Cell>{formatDate(r.dueDate)}</Table.Cell>
-                  <Table.Cell>{r.billingDescription}</Table.Cell>
+                  <Table.Cell>
+                    {editable ? (
+                      <ReceivableTextCell
+                        value={r.billingDescription}
+                        placeholder="Billing description"
+                        onCommit={(next) =>
+                          patch(r.id, { billingDescription: next })
+                        }
+                      />
+                    ) : (
+                      r.billingDescription
+                    )}
+                  </Table.Cell>
                   <Table.Cell className="text-end">
-                    {formatCurrency(r.amount)}
+                    {editable ? (
+                      <MoneyCell
+                        label="Receivable amount"
+                        unit={faDollarSign}
+                        value={r.amount}
+                        step="0.01"
+                        onChange={(v) => patch(r.id, { amount: v ?? 0 })}
+                      />
+                    ) : (
+                      formatCurrency(r.amount)
+                    )}
                   </Table.Cell>
+                  {/* Credited stays read-only at every status: it is what has
+                      been paid against this line, which is the deposit and
+                      credit actions' business, not something to type over. */}
                   <Table.Cell className="text-end">
                     {r.credited > 0 ? formatCurrency(r.credited) : "None"}
                   </Table.Cell>
+                  {editable && (
+                    <Table.Cell style={{ width: 44 }}>
+                      <ReceivableRowMenu
+                        label={label}
+                        onDelete={() => deleteReceivable(listing.id, r.id)}
+                      />
+                    </Table.Cell>
+                  )}
                 </Table.Row>
               );
             })}
@@ -1331,10 +1550,17 @@ function ReceivablesSection({
               <Table.Cell className="text-end fw-semibold">
                 {formatCurrency(creditedTotal)}
               </Table.Cell>
+              {editable && <Table.Cell />}
             </Table.Row>
           </Table.Body>
         </Table>
       )}
+
+      <NewReceivableModal
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onAdd={(input) => addReceivable(listing.id, input)}
+      />
     </Section>
   );
 }

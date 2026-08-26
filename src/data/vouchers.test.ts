@@ -9,7 +9,9 @@ import {
   isVoucherPending,
   partyContactIds,
   partySectionTitle,
+  payerOptions,
   payerRemovalBlock,
+  receivablePayerLabel,
   voucherHref,
   voucherParty,
   voucherPayers,
@@ -152,8 +154,8 @@ describe('allVouchers', () => {
     const deal = makeSale('Riverside Tower')
     const listing = getListing(deal.id)!
     listing.transaction.backOffice.receivables = [
-      { id: 'r1', payerContactId: 'c1', dueDate: '2026-01-01', billingDescription: 'Deposit', amount: 10000, credited: 4000 },
-      { id: 'r2', payerContactId: 'c2', dueDate: '2026-02-01', billingDescription: 'Balance', amount: 5000, credited: 0 },
+      { id: 'r1', payerContactId: 'c1', billToCompany: false, dueDate: '2026-01-01', billingDescription: 'Deposit', amount: 10000, credited: 4000 },
+      { id: 'r2', payerContactId: 'c2', billToCompany: false, dueDate: '2026-02-01', billingDescription: 'Balance', amount: 5000, credited: 0 },
     ]
 
     expect(allVouchers()[0]!.receivablesOutstanding).toBe(11000)
@@ -268,9 +270,9 @@ describe('voucherPayers', () => {
     const voucher = getListing(deal.id)!.transaction.backOffice
     voucher.payerContactIds = ['c1', 'c2']
     voucher.receivables = [
-      { id: 'r1', payerContactId: 'c1', dueDate: '2026-01-01', billingDescription: 'Deposit', amount: 10000, credited: 4000 },
-      { id: 'r2', payerContactId: 'c1', dueDate: '2026-02-01', billingDescription: 'Balance', amount: 5000, credited: 0 },
-      { id: 'r3', payerContactId: 'c2', dueDate: '2026-03-01', billingDescription: 'Fee', amount: 2500, credited: 0 },
+      { id: 'r1', payerContactId: 'c1', billToCompany: false, dueDate: '2026-01-01', billingDescription: 'Deposit', amount: 10000, credited: 4000 },
+      { id: 'r2', payerContactId: 'c1', billToCompany: false, dueDate: '2026-02-01', billingDescription: 'Balance', amount: 5000, credited: 0 },
+      { id: 'r3', payerContactId: 'c2', billToCompany: false, dueDate: '2026-03-01', billingDescription: 'Fee', amount: 2500, credited: 0 },
     ]
     const rows = voucherPayers(voucher)
     // Gross, not net: "Billed" answers what they were asked for. The Credited
@@ -302,6 +304,56 @@ describe('voucherPayers', () => {
   })
 })
 
+describe('receivablePayerLabel', () => {
+  function seedContact(over: Partial<Contact> = {}) {
+    const c = {
+      id: 'c1', firstName: 'Mark', lastName: 'Payer',
+      email: 'mark.payer@buildout.com', company: 'ABC, Corp.',
+    } as Contact
+    useDataStore.setState({ contacts: new Map([['c1', { ...c, ...over }]]) })
+  }
+
+  it('bills a person by name and email, so two same-named contacts read apart', () => {
+    resetStore()
+    seedContact()
+    expect(receivablePayerLabel('c1', false)).toBe('Mark Payer (mark.payer@buildout.com)')
+  })
+
+  it('bills a company by its name alone', () => {
+    resetStore()
+    seedContact()
+    expect(receivablePayerLabel('c1', true)).toBe('ABC, Corp.')
+  })
+
+  it('falls back to the person when the contact has no company', () => {
+    // `billToCompany` can only be set through a picker that omits the company
+    // form for such a contact, but a stored true must still render something.
+    resetStore()
+    seedContact({ company: '' })
+    expect(receivablePayerLabel('c1', true)).toBe('Mark Payer (mark.payer@buildout.com)')
+  })
+})
+
+describe('payerOptions', () => {
+  it('offers a contact with a company in both forms', () => {
+    const contacts = [
+      { id: 'c1', firstName: 'Mark', lastName: 'Payer', email: 'm@x.com', company: 'ABC, Corp.' },
+    ] as Contact[]
+    expect(payerOptions(contacts)).toEqual([
+      { value: 'c1', label: 'Mark Payer (m@x.com)', contactId: 'c1', billToCompany: false },
+      { value: 'c1:company', label: 'ABC, Corp.', contactId: 'c1', billToCompany: true },
+    ])
+  })
+
+  it('offers a contact with no company only as themselves', () => {
+    const contacts = [
+      { id: 'c2', firstName: 'Sole', lastName: 'Trader', email: 's@x.com', company: '' },
+    ] as Contact[]
+    expect(payerOptions(contacts)).toHaveLength(1)
+    expect(payerOptions(contacts)[0]!.billToCompany).toBe(false)
+  })
+})
+
 describe('payerRemovalBlock', () => {
   it('refuses to remove a payer that has receivables', () => {
     resetStore()
@@ -309,8 +361,8 @@ describe('payerRemovalBlock', () => {
     const voucher = getListing(deal.id)!.transaction.backOffice
     voucher.payerContactIds = ['c1']
     voucher.receivables = [
-      { id: 'r1', payerContactId: 'c1', dueDate: '2026-01-01', billingDescription: 'Deposit', amount: 10000, credited: 0 },
-      { id: 'r2', payerContactId: 'c1', dueDate: '2026-02-01', billingDescription: 'Balance', amount: 5000, credited: 0 },
+      { id: 'r1', payerContactId: 'c1', billToCompany: false, dueDate: '2026-01-01', billingDescription: 'Deposit', amount: 10000, credited: 0 },
+      { id: 'r2', payerContactId: 'c1', billToCompany: false, dueDate: '2026-02-01', billingDescription: 'Balance', amount: 5000, credited: 0 },
     ]
     const reason = payerRemovalBlock(voucherPayers(voucher)[0]!)
     expect(reason).toContain('2 receivables')
@@ -322,7 +374,7 @@ describe('payerRemovalBlock', () => {
     const voucher = getListing(deal.id)!.transaction.backOffice
     voucher.payerContactIds = ['c1']
     voucher.receivables = [
-      { id: 'r1', payerContactId: 'c1', dueDate: '2026-01-01', billingDescription: 'Deposit', amount: 10000, credited: 0 },
+      { id: 'r1', payerContactId: 'c1', billToCompany: false, dueDate: '2026-01-01', billingDescription: 'Deposit', amount: 10000, credited: 0 },
     ]
     expect(payerRemovalBlock(voucherPayers(voucher)[0]!)).toContain('1 receivable.')
   })

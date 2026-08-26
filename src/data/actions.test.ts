@@ -16,7 +16,10 @@ import {
   updateDealStage,
   updateDealTransaction,
   submitVoucher,
+  addReceivable,
+  deleteReceivable,
   reopenVoucher,
+  updateReceivable,
   saveVoucherDraft,
 } from './actions'
 import { emptyDraft } from './createListing'
@@ -577,5 +580,107 @@ describe('actions', () => {
     expect(status()).toBe('Draft')
     submitVoucher(deal.id)
     expect(status()).toBe('Pending')
+  })
+})
+
+describe('receivable writes', () => {
+  function draftDeal() {
+    const deal = [...useDataStore.getState().listings.values()][0]!
+    updateDealTransaction(deal.id, {
+      backOffice: {
+        ...deal.transaction.backOffice,
+        status: 'Draft',
+        payerContactIds: [],
+        receivables: [],
+      },
+    })
+    return deal
+  }
+
+  const input = {
+    payerContactId: 'c-payer',
+    billToCompany: true,
+    dueDate: '2026-06-22',
+    billingDescription: 'Full amount due on receipt',
+    amount: 5850,
+  }
+
+  it('addReceivable bills a new line, starting uncredited', () => {
+    const deal = draftDeal()
+    addReceivable(deal.id, input)
+    const rows = getListing(deal.id)!.transaction.backOffice.receivables
+    expect(rows).toHaveLength(1)
+    expect(rows[0]!.amount).toBe(5850)
+    expect(rows[0]!.billToCompany).toBe(true)
+    expect(rows[0]!.credited).toBe(0)
+  })
+
+  it('addReceivable puts an unlisted payer into Billing', () => {
+    // Creating a receivable is how a payer arrives — a line billing somebody the
+    // Billing section does not list would put two answers to "who is billed" on
+    // one page.
+    const deal = draftDeal()
+    addReceivable(deal.id, input)
+    expect(
+      getListing(deal.id)!.transaction.backOffice.payerContactIds,
+    ).toEqual(['c-payer'])
+  })
+
+  it('addReceivable does not list an existing payer twice', () => {
+    const deal = draftDeal()
+    addReceivable(deal.id, input)
+    addReceivable(deal.id, { ...input, amount: 100 })
+    const back = getListing(deal.id)!.transaction.backOffice
+    expect(back.payerContactIds).toEqual(['c-payer'])
+    expect(back.receivables).toHaveLength(2)
+  })
+
+  it('updateReceivable edits one row and leaves the rest alone', () => {
+    const deal = draftDeal()
+    addReceivable(deal.id, input)
+    addReceivable(deal.id, { ...input, amount: 100 })
+    const [first, second] = getListing(deal.id)!.transaction.backOffice.receivables
+    updateReceivable(deal.id, first!.id, { amount: 1, billToCompany: false })
+    const rows = getListing(deal.id)!.transaction.backOffice.receivables
+    expect(rows.find((r) => r.id === first!.id)!.amount).toBe(1)
+    expect(rows.find((r) => r.id === first!.id)!.billToCompany).toBe(false)
+    expect(rows.find((r) => r.id === second!.id)!.amount).toBe(100)
+  })
+
+  it('deleteReceivable drops the row but leaves its payer in Billing', () => {
+    // A payer with nothing billed is a real state the Billing section renders as
+    // $0. Removing them is a deliberate act, not a side effect of deleting a line.
+    const deal = draftDeal()
+    addReceivable(deal.id, input)
+    const row = getListing(deal.id)!.transaction.backOffice.receivables[0]!
+    deleteReceivable(deal.id, row.id)
+    const back = getListing(deal.id)!.transaction.backOffice
+    expect(back.receivables).toHaveLength(0)
+    expect(back.payerContactIds).toEqual(['c-payer'])
+  })
+
+  it('all three refuse a Pending voucher, and all three allow an Approved one', () => {
+    // The guard that differs from `saveVoucherDraft`. An Approved voucher still
+    // accepts additions — that is why the Receivables section stays live there —
+    // so a Draft-only guard would have made every control on it silently dead.
+    for (const status of ['Pending', 'Approved'] as const) {
+      const deal = draftDeal()
+      addReceivable(deal.id, input)
+      const seeded = getListing(deal.id)!.transaction.backOffice.receivables[0]!
+      updateDealTransaction(deal.id, {
+        backOffice: { ...getListing(deal.id)!.transaction.backOffice, status },
+      })
+
+      addReceivable(deal.id, { ...input, amount: 42 })
+      updateReceivable(deal.id, seeded.id, { amount: 7 })
+      const back = getListing(deal.id)!.transaction.backOffice
+      if (status === 'Pending') {
+        expect(back.receivables).toHaveLength(1)
+        expect(back.receivables[0]!.amount).toBe(5850)
+      } else {
+        expect(back.receivables).toHaveLength(2)
+        expect(back.receivables.find((r) => r.id === seeded.id)!.amount).toBe(7)
+      }
+    }
   })
 })

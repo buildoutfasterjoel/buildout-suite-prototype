@@ -1,4 +1,5 @@
 import type {
+  Contact,
   DealFinancials,
   DealType,
   Listing,
@@ -140,6 +141,65 @@ export function voucherParty(contactId: string): VoucherParty {
     phone: contact.phone,
     exists: true,
   }
+}
+
+/**
+ * How one receivable addresses its payer — the string the Payer Name cell shows
+ * and the payer picker selects by.
+ *
+ * Two forms of the same contact: the person, carrying their email so a broker
+ * can tell two same-named contacts apart, or the company they belong to. Which
+ * one a receivable uses is stored on the receivable (`billToCompany`), because
+ * one voucher can bill the same person directly on one line and through their
+ * entity on another.
+ */
+export function receivablePayerLabel(
+  contactId: string,
+  billToCompany: boolean,
+): string {
+  const party = voucherParty(contactId)
+  if (billToCompany && party.company) return party.company
+  return party.email ? `${party.name} (${party.email})` : party.name
+}
+
+/** One selectable payer form in the receivable picker. */
+export interface PayerOption {
+  /** `contactId` for the person, `contactId:company` for the entity — unique per option. */
+  value: string
+  label: string
+  contactId: string
+  billToCompany: boolean
+}
+
+/**
+ * Every way this voucher's contacts can be billed — each contact as a person,
+ * plus once more as their company where they have one.
+ *
+ * Drawn from a caller-supplied contact list rather than the voucher's own
+ * payers, because a receivable may bill somebody the voucher has not named yet:
+ * creating one is how a payer joins the Billing section in the first place.
+ * Contacts with no company contribute one option, not an empty second.
+ */
+export function payerOptions(contacts: Contact[]): PayerOption[] {
+  return contacts.flatMap((c) => {
+    const name = `${c.firstName} ${c.lastName}`.trim()
+    const person: PayerOption = {
+      value: c.id,
+      label: c.email ? `${name} (${c.email})` : name,
+      contactId: c.id,
+      billToCompany: false,
+    }
+    if (!c.company) return [person]
+    return [
+      person,
+      {
+        value: `${c.id}:company`,
+        label: c.company,
+        contactId: c.id,
+        billToCompany: true,
+      },
+    ]
+  })
 }
 
 /** A payer, plus what this voucher has billed them. */

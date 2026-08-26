@@ -1078,6 +1078,19 @@ export interface FinancialReceivable {
    * that billed them; the copies this replaced went stale silently.
    */
   payerContactId: string
+  /**
+   * Bill the payer's company rather than the payer themselves.
+   *
+   * A commission is often invoiced to an entity — "ABC, Corp." — with the
+   * contact merely the person who receives it. Both forms name the SAME
+   * contact, so this is a rendering choice stored per receivable rather than a
+   * second id: `payerContactId` still says who the relationship is with, and
+   * the Billing section still totals by person however each line is addressed.
+   *
+   * Always false when the contact carries no `company` — there is nothing to
+   * bill in that case, and the payer picker does not offer the company form.
+   */
+  billToCompany: boolean
   dueDate: string
   billingDescription: string
   amount: number

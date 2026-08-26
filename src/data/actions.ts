@@ -6,7 +6,7 @@ import {
   serializeContactFilters,
   type ContactFilterState,
 } from '#/components/contacts/contactFilterModel'
-import type { Contact, ContactRole, ContactSource, DealDocument, DealHistoryEntry, DealIngestion, DealMarketing, DealPitchFinancials, DealBroker, DealTask, DealTransaction, DocumentGeneration, FinancialDeduction, GeneratedSection, IngestionFieldKey, Listing, PropertyStatus, Task } from './types'
+import type { Contact, ContactRole, ContactSource, DealDocument, DealHistoryEntry, DealIngestion, DealMarketing, DealPitchFinancials, DealBroker, DealTask, DealTransaction, DocumentGeneration, FinancialDeduction, FinancialReceivable, GeneratedSection, IngestionFieldKey, Listing, PropertyStatus, Task } from './types'
 import { CURRENT_USER, TEAMMATES } from './teammates'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
 import { reconcileContactDealFields } from './contactStage'
@@ -422,6 +422,120 @@ export function saveVoucherDraft(
       return next
     }),
   }
+}
+
+/**
+ * The three receivable writes: add, edit in place, remove.
+ *
+ * **Not routed through `saveVoucherDraft`, and guarded differently on purpose.**
+ * That commits a Draft voucher's working copy, and a receivable outlives Draft:
+ * an Approved voucher still accepts additions — receivables, invoices, credits
+ * against what was approved — which is the whole reason the Receivables section
+ * stays live at that status. Sending these through the Draft-only Save would
+ * have rendered live controls on an Approved voucher whose every edit silently
+ * did nothing.
+ *
+ * So the guard is **not Pending**, matching what the section's `editable` prop
+ * already says, and these write straight through rather than joining the
+ * working copy. That also keeps the Save button honest: it commits the
+ * deduction, broker, party and payer tables, and nothing else.
+ */
+function patchReceivables(
+  dealId: string,
+  update: (rows: FinancialReceivable[]) => FinancialReceivable[],
+): { deal: Listing | null } {
+  return {
+    deal: patchListing(dealId, (l) =>
+      l.transaction.backOffice.status === 'Pending'
+        ? l
+        : {
+            ...l,
+            transaction: {
+              ...l.transaction,
+              backOffice: {
+                ...l.transaction.backOffice,
+                receivables: update(l.transaction.backOffice.receivables),
+              },
+            },
+            updatedAt: new Date().toISOString(),
+          },
+    ),
+  }
+}
+
+/**
+ * Bill a new line on this voucher.
+ *
+ * Adds the payer to `payerContactIds` when they are not already there, because
+ * a receivable naming somebody the Billing section does not list would put two
+ * answers to "who is being billed" on one page. This is the ordinary way a
+ * payer arrives: you bill someone, and they appear above.
+ *
+ * `credited` starts at 0 — a line nobody has paid against yet.
+ */
+export function addReceivable(
+  dealId: string,
+  input: {
+    payerContactId: string
+    billToCompany: boolean
+    dueDate: string
+    billingDescription: string
+    amount: number
+  },
+): { deal: Listing | null } {
+  return {
+    deal: patchListing(dealId, (l) => {
+      if (l.transaction.backOffice.status === 'Pending') return l
+      const back = l.transaction.backOffice
+      const payerContactIds = back.payerContactIds.includes(input.payerContactId)
+        ? back.payerContactIds
+        : [...back.payerContactIds, input.payerContactId]
+      return {
+        ...l,
+        transaction: {
+          ...l.transaction,
+          backOffice: {
+            ...back,
+            payerContactIds,
+            receivables: [
+              ...back.receivables,
+              { id: crypto.randomUUID(), credited: 0, ...input },
+            ],
+          },
+        },
+        updatedAt: new Date().toISOString(),
+      }
+    }),
+  }
+}
+
+/**
+ * Edit one receivable in place — the row's own fields, committed per keystroke
+ * commit rather than through Save.
+ *
+ * Changing the payer does NOT add them to `payerContactIds`: the picker only
+ * offers contacts, and a re-pointed line can leave its previous payer listed
+ * with nothing billed, which is a legitimate state the Billing section renders
+ * as $0. Removing that payer is a deliberate act, not a side effect of an edit.
+ */
+export function updateReceivable(
+  dealId: string,
+  receivableId: string,
+  patch: Partial<Omit<FinancialReceivable, 'id'>>,
+): { deal: Listing | null } {
+  return patchReceivables(dealId, (rows) =>
+    rows.map((r) => (r.id === receivableId ? { ...r, ...patch } : r)),
+  )
+}
+
+/** Drop one receivable. The payer stays in Billing, reading $0 until removed. */
+export function deleteReceivable(
+  dealId: string,
+  receivableId: string,
+): { deal: Listing | null } {
+  return patchReceivables(dealId, (rows) =>
+    rows.filter((r) => r.id !== receivableId),
+  )
 }
 
 /** Merge-patch the deal's pitch financials (asking price, price per SF, cap rate, …). */

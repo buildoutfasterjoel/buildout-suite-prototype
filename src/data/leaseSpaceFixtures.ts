@@ -480,6 +480,10 @@ function applyStageDetail(child: Listing, suiteNumber: number, tenantName?: stri
       {
         id: `recv-${child.id}`,
         payerContactId: tenantContactId,
+        // A lease commission is billed to the tenant business, not the person
+        // who signed — the one place in the fixtures where the company form is
+        // the truthful one.
+        billToCompany: true,
         dueDate: isoDate(20),
         billingDescription: `Lease commission — Suite ${suiteNumber}`,
         amount: commissionAmount,

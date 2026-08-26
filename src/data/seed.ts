@@ -1508,6 +1508,9 @@ function generateListings(
       receivables.push({
         id: faker.string.uuid(),
         payerContactId: billTo.id,
+        // The third-party payer is an entity that pays on someone's behalf, so
+        // it reads as a company; an ordinary buyer or seller is billed by name.
+        billToCompany: thirdPartyPayer !== undefined && billTo.company !== '',
         dueDate: faker.date.recent({ days: 30 }).toISOString().slice(0, 10),
         billingDescription: split ? 'Initial Payment' : 'Full Payment',
         amount: firstAmount,
@@ -1521,6 +1524,7 @@ function generateListings(
         receivables.push({
           id: faker.string.uuid(),
           payerContactId: otherPayer.id,
+          billToCompany: false,
           dueDate: faker.date.soon({ days: 45 }).toISOString().slice(0, 10),
           billingDescription: 'Balance Due',
           amount: commissionAmount - firstAmount,
