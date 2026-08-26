@@ -4055,6 +4055,12 @@
   }
 }
 
+// The containing block the assistant panel positions against (see
+// `.assistant-rail`), in both nav modes.
+.app-shell__stage {
+  position: relative;
+}
+
 // The rail itself. Full window height — the top bar starts to its right, not
 // above it — so the brand, the sections and the page all sit in one frame.
 .app-rail {
@@ -5001,21 +5007,53 @@
   }
 }
 
-// The rail's two frames. Docked it is a fixed 380px column; in the app shell it
-// pulls 8px off the stage's top and right so it reads as a card floating on the
-// page rather than a second column welded to it (Figma node 193:4365). Expanded
-// it drops both the width and the inset and takes the stage whole (193:5009).
+// The rail's two frames. Docked it is a 380px column against the right edge; in
+// the app shell it pulls 8px off the stage's top and right so it reads as a card
+// floating on the page rather than a second column welded to it (Figma node
+// 193:4365). Expanded it drops the inset and takes the stage whole (193:5009).
 //
 // The classic nav has no rounded stage to float on, so there the rail stays
 // flush and keeps a plain left border — the inset rules are scoped to app mode.
+//
+// It is POSITIONED rather than laid out, and that is what makes expanding it
+// animate. Its edges are lengths — `left` above all — so the two frames are two
+// sets of interpolable numbers and the panel slides between them. The page keeps
+// the box it already had (the stage reserves it as padding, see
+// `--railed` below), so the panel moves *over* the page and nothing on the page
+// relayouts mid-animation. As a flex item there was no such path: the panel can
+// only take the stage by driving the page's own width to zero, which relayouts
+// every card and table on it once a frame.
+$rail-width: 380px;
+$rail-inset: 8px;
+$rail-ease: cubic-bezier(0.2, 0, 0, 1);
+$rail-duration: 260ms;
+
 .assistant-rail {
-  width: 380px;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: calc(100% - #{$rail-width});
+  // Over the page and anything sticky inside it — a table header that outranked
+  // the panel would show through it.
+  z-index: 20;
   border-left: 1px solid var(--card-border-color, #{colors.$storm-grey-100});
+  transition:
+    left $rail-duration $rail-ease,
+    top $rail-duration $rail-ease,
+    right $rail-duration $rail-ease,
+    border-radius $rail-duration $rail-ease,
+    box-shadow $rail-duration $rail-ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 }
 
-.app-shell--app .assistant-rail:not(.assistant-rail--expanded) {
-  margin: 8px 8px 0 0;
-  height: calc(100% - 8px);
+.app-shell--app .assistant-rail {
+  top: $rail-inset;
+  right: $rail-inset;
+  left: calc(100% - #{$rail-width + $rail-inset});
   border: 1px solid var(--card-border-color, #{colors.$storm-grey-100});
   border-radius: 12px 12px 0 0;
   box-shadow:
@@ -5027,54 +5065,50 @@
 }
 
 .assistant-rail--expanded {
-  width: auto;
-  flex: 1 1 auto;
-  min-width: 0;
+  left: 0;
   border-left: 0;
 }
 
-// Expanding and collapsing the panel is animated by the browser, through a View
-// Transition (see `lib/viewTransition.ts` for the toggle side of it).
-//
-// Naming the rail lifts it out of the root cross-fade into a snapshot of its
-// own, so what the browser morphs is the panel: the 380px column grows into the
-// whole stage, and back. The alternative — transitioning the flex item's width
-// in CSS — animates the page beside it down to zero width, reflowing every card
-// and table on it once a frame; snapshots reflow nothing.
-.assistant-rail {
-  view-transition-name: assistant-rail;
+.app-shell--app .assistant-rail--expanded {
+  top: 0;
+  right: 0;
+  left: 0;
+  border-color: transparent;
+  border-radius: 0;
+  box-shadow: none;
 }
 
-::view-transition-group(assistant-rail) {
-  animation-duration: 260ms;
-  // Fast out of the gate, long settle: the panel arrives before the eye asks
-  // where it went.
-  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+// The width the page gives up to the docked panel. The panel is out of flow, so
+// this padding is the only thing keeping the page from running underneath it —
+// and it deliberately does NOT change when the panel expands. A page whose box
+// never moves is a page that never relayouts while the panel slides over it.
+.app-shell__stage--railed {
+  padding-right: $rail-width;
 }
 
-// The panel's own pixels cross-fade inside that morphing box, quicker than the
-// box itself moves.
-//
-// `object-fit: none` is the important half. These snapshots are replaced images,
-// and by default the browser *stretches* each one to fill the box as it morphs —
-// which is the whole "the UI zooms up and then settles" artifact: the 380px
-// rail's pixels, magnified to stage width, before the new snapshot has faded in.
-// Pinned to their natural size and registered to the panel's right edge — the
-// one edge that doesn't move between the two layouts — the box sweeps left and
-// the new layout is revealed at 1:1 instead of enlarged into place. The header
-// controls stay put across the whole transition, which is what the eye holds on
-// to.
-::view-transition-old(assistant-rail),
-::view-transition-new(assistant-rail) {
-  animation-duration: 160ms;
-  object-fit: none;
-  object-position: top right;
+.app-shell--app .app-shell__stage--railed {
+  padding-right: $rail-width + $rail-inset;
 }
 
-// The page underneath, which is leaving (or coming back) whole.
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation-duration: 200ms;
+// The page is hidden only once the panel has finished covering it, and is back
+// before it starts uncovering: `visibility` flips at the far end of the slide on
+// the way in (the delay) and at the near end on the way out (no delay). Hidden
+// rather than display-none so its box — the box everything on it is laid out
+// against — survives the trip, and so it leaves the tab order and the
+// accessibility tree while it is behind a full-screen panel.
+.app-shell__main {
+  transition: visibility 0s linear 0s;
+}
+
+.app-shell__stage--rail-full .app-shell__main {
+  visibility: hidden;
+  transition-delay: $rail-duration;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell__main {
+    transition: none;
+  }
 }
 
 // The reading column. At rail width it is simply the full panel — the cap only

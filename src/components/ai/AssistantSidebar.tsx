@@ -42,7 +42,6 @@ import { aiChat, aiConfigured } from "#/ai/relay";
 import { buildAssistantContext, serializeContext } from "#/ai/context";
 import { renderLightHtml } from "#/ai/renderLightHtml";
 import { useAssistant } from "#/ai/useAssistant";
-import { withViewTransition } from "#/lib/viewTransition";
 import { useVoice } from "#/ai/voice/useVoice";
 import { voiceEngine } from "#/ai/voice/voiceEngine";
 import { useHandsFree } from "#/ai/voice/useHandsFree";
@@ -1544,12 +1543,18 @@ export function AssistantSidebar() {
       welded to it (Figma node 193:4365). The classic nav has no rounded stage to
       float on, so there it stays flush and keeps its plain left border.
 
-      Expanded, it drops the width cap and the inset and takes the whole stage;
-      `AppShell` hides the page content to make the room (Figma node 193:5009).
+      Expanded, it drops the inset and takes the whole stage (Figma node
+      193:5009). It slides between the two: the panel is positioned against the
+      stage, so both frames are just sets of edges and the move is a CSS
+      transition on them — over a page that keeps its own box the whole time.
+      `AppShell` hides that page once the panel has covered it.
     */
     <aside
-      className={`assistant-rail bg-white d-flex flex-column h-100${
-        expanded ? " assistant-rail--expanded" : " flex-shrink-0"
+      // No `h-100`: the panel's height comes from its own top/bottom edges, and
+      // a `height: 100%` alongside them wins over `bottom` — which is how the
+      // docked panel in app mode hung 8px past the bottom of the stage.
+      className={`assistant-rail bg-white d-flex flex-column${
+        expanded ? " assistant-rail--expanded" : ""
       }`}
     >
       {/* Otto's glyphs — the header otter and the starter rows' icons — are
@@ -1629,9 +1634,7 @@ export function AssistantSidebar() {
             className="assistant-rail__control"
             aria-label={expanded ? "Exit full screen" : "Expand to full screen"}
             aria-pressed={expanded}
-            // Through a View Transition, so the panel grows into the stage and
-            // shrinks back out of it instead of teleporting between the two.
-            onClick={() => withViewTransition(toggleExpanded)}
+            onClick={toggleExpanded}
           >
             <FontAwesomeIcon
               icon={
