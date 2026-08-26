@@ -175,8 +175,9 @@ export function voucherPayers(voucher: DealFinancials): VoucherPayerRow[] {
  *
  * A payer with receivables cannot leave: the rows billing them would point at
  * nobody, and the Receivables table would name a payer the voucher does not
- * list. The rule lives here rather than only in the button that enforces it, so
- * it holds however removal is reached and can be tested without a browser.
+ * list. The rule lives here rather than only in the button that enforces it,
+ * so any future removal path can consult it, and it can be tested without a
+ * browser.
  *
  * Returns the sentence the tooltip shows rather than a boolean, because a
  * greyed button with no explanation is a dead icon — the reason is the whole

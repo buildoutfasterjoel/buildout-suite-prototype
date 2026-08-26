@@ -356,8 +356,10 @@ export interface VoucherDraft {
  *
  * Rebuilt on every save because it is denormalized: the deal's parties are the
  * truth and this is a copy, so an edited buyer would otherwise leave it naming
- * whoever used to be there. The format matches what the seed writes, so a saved
- * voucher does not suddenly read differently from an untouched one.
+ * whoever used to be there. The format matches what the seed writes — but not
+ * what `createListing.ts` writes: a deal created in-app carries `contactLabel`'s
+ * "Name · Company" format (no "& N more") until its first voucher save. That
+ * drift is accepted rather than unpicking three write sites for a label.
  */
 function buildRelatedContactsLabel(deal: Listing): string {
   const ids = [
@@ -386,8 +388,9 @@ function buildRelatedContactsLabel(deal: Listing): string {
  * button commits them — a partial save would leave the deduction total, the
  * broker splits and the payer list describing different drafts.
  *
- * `internalBrokers` and the party lists sit on the deal rather than in
- * `backOffice`, so this is also the one place that fact is spelled out.
+ * `internalBrokers` and `partyContactIds` sit on the deal rather than in
+ * `backOffice` — `payerContactIds` is the one that lands in `backOffice` — so
+ * this is also the one place that split is spelled out.
  */
 export function saveVoucherDraft(
   dealId: string,

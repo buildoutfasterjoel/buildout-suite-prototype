@@ -1751,8 +1751,10 @@ function TransactionSummarySection({
         // The deal editor's Transaction Terms group already carries every field
         // this section shows, so the voucher links to it rather than keeping a
         // second, narrower copy of the same form in a modal. A submitted voucher
-        // drops the link: the figures are the thing being approved, and once it
-        // is sent the broker has no way to change them at all.
+        // drops the link: the figures are the thing being approved, so both the
+        // voucher page and this Deal form close. The stage gate remains a
+        // separate, unguarded path to the same fields — see the `voucherLocked`
+        // comment in DealEditor.tsx.
         editable ? (
           <Tooltip>
             <Tooltip.Trigger
@@ -1838,7 +1840,7 @@ function AttestationSubmit({
   attested: boolean;
   onChange: (checked: boolean) => void;
   onSubmit: () => void;
-  /** The deduction table has edits the store has not seen yet. */
+  /** There are unsaved voucher edits the store has not seen yet. */
   dirty: boolean;
   onSave: () => void;
 }) {
@@ -1881,7 +1883,7 @@ function AttestationSubmit({
  *
  * Disabled until the broker has ticked an attestation — there is one beside
  * this button in the header and one in the page footer, and either will do —
- * and disabled again while the deduction table has edits the store has not
+ * and disabled again while there are unsaved voucher edits the store has not
  * seen. The tooltip carries whichever reason applies, because a dead primary
  * button with no explanation is the worst version of this. It hangs off a
  * wrapper `span` since a disabled button fires no pointer events, which would
@@ -1893,7 +1895,7 @@ function SubmitVoucherButton({
   onSubmit,
 }: {
   attested: boolean;
-  /** Unsaved deduction edits — submitting would send the stored figures, not these. */
+  /** Unsaved voucher edits — submitting would send the stored figures, not these. */
   unsaved: boolean;
   onSubmit: () => void;
 }) {
@@ -2016,7 +2018,7 @@ export function DealFinancials({
     });
   };
 
-  // Commit the deduction table. `updateVoucherDeductions` re-checks Draft, so a
+  // Commit the unsaved voucher edits. `saveVoucherDraft` re-checks Draft, so a
   // voucher that moved on while this page was open cannot be written to.
   const save = () => {
     if (!dirty) return;

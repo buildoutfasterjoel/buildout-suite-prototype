@@ -96,14 +96,20 @@ export function DealEditor({
 	const shape = dealShape(listing);
 
 	// Submitting the voucher freezes the figures an approver is reading, and the
-	// Transaction Terms group is the other door onto exactly those figures — price,
-	// commission, and the dates that close it out. So that ONE group locks with the
-	// voucher rather than being a way around it.
+	// Transaction Terms group is the other *form* onto exactly those figures —
+	// price, commission, and the dates that close it out. So that ONE group locks
+	// with the voucher rather than being a way around it.
 	//
 	// Deliberately just that group. Setup & Status and Deal Financials are not what
 	// the voucher is a claim about, and a broker whose voucher is out still has to
 	// be able to move the deal's stage, fix a listing date, or correct the pitch
 	// financials. The header pencil that leads here stays open for the same reason.
+	//
+	// Not the only door, though: `commitStageTransition` (src/data/actions.ts)
+	// writes salePrice, commissionPct, commissionAmount, and closeDate too, and
+	// DealStageSelect mounts the stage gate right here on PropertyDetailHeader,
+	// the same screen a frozen voucher renders on. That path stays deliberately
+	// unguarded — closing the voucher page and this form is judged enough.
 	const voucherLocked = isVoucherPending(listing);
 
 	const [status, setStatus] = useState<PropertyStatus>(listing.status);

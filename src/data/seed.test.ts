@@ -322,24 +322,6 @@ describe('voucher payers seed', () => {
     }
   })
 
-  it('bills at least one voucher to somebody who is not its buyer or tenant', () => {
-    // Weaker than the outsider test below: a seller satisfies this (a seller is
-    // neither a buyer nor a tenant), so this alone does not prove a payer from
-    // outside the deal exists — it only proves the payer isn't on the demand
-    // side. Kept because it is still a real guarantee, just not the one that
-    // guards the third-party-payer behaviour; see the next test for that.
-    const outsider = listings.some((deal) => {
-      const parties = new Set([
-        ...deal.buyerContactIds,
-        ...deal.tenantContactIds,
-      ])
-      return deal.transaction.backOffice.payerContactIds.some(
-        (id) => !parties.has(id),
-      )
-    })
-    expect(outsider).toBe(true)
-  })
-
   it('bills at least one voucher to a party on neither side of its deal', () => {
     // The Payers section exists because the payer is often nobody in the deal —
     // a corporate AP department, a holding company. A seller-payer does not show

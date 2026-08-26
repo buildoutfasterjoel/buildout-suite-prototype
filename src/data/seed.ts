@@ -1461,7 +1461,7 @@ function generateListings(
     if (status === 'closed' && commissionAmount > 0) {
       const primaryPayer = buyerContacts[0] ?? sellerContacts[0]
       const otherPayer = sellerContacts.find((c) => c.id !== primaryPayer.id)
-      // One closed deal bills a party that is on neither side — the corporate
+      // Some closed deals bill a party that is on neither side — the corporate
       // AP department or holding company that actually cuts the cheque. The
       // Payers section is built for exactly this, and a seed where every payer
       // is also the buyer would make it look redundant.
