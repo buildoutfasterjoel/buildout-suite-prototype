@@ -1,7 +1,7 @@
 import type { AnyClientTool } from "@tanstack/ai";
 import type { Contact, Listing, Property, PropertyStatus } from "#/data/types";
 import { useDataStore } from "#/data/dataStore";
-import { getContact, getListing, getProperty } from "#/data/store";
+import { addDealActivity, getContact, getListing, getProperty } from "#/data/store";
 import {
   generateFilter,
   generateEmail,
@@ -9,8 +9,31 @@ import {
   generateContactBrief,
   generateStrategy,
   generateMarketingDoc,
+  generateRecordBrief,
 } from "#/ai/generate";
 import { composeContactData } from "#/ai/contactData";
+import {
+  composeDealData,
+  composePropertyData,
+  composeTaskData,
+  type RecordDump,
+} from "#/ai/recordData";
+import {
+  searchTasks,
+  loadTask,
+  searchActivities,
+  loadActivity,
+  listAttachments,
+  searchVouchers,
+  loadVoucher,
+  searchResearchProperties,
+  loadResearchProperty,
+  pipelineTotals,
+  taskSummary,
+  voucherSummary,
+  researchSummary,
+  ownedPropertiesFor,
+} from "#/ai/recordQueries";
 import { composeBookSnapshot } from "#/ai/bookSnapshot";
 import { useListingsFilter } from "#/routes/_shell/listings/-useListingsFilter";
 import { useCallListView } from "#/routes/_shell/backoffice/contacts/-useCallListView";
@@ -31,7 +54,10 @@ import {
   addNote,
   createTask,
   createContact,
+  updateContact,
+  touchContactActivity,
 } from "#/data/actions";
+import { CURRENT_USER } from "#/data/teammates";
 import { buildDayPlan, emptyDayPlanHeadline } from "#/ai/dayPlan";
 import { parseDueDate } from "#/ai/dueDate";
 import { buildAssistantContext } from "#/ai/context";
@@ -76,12 +102,27 @@ import {
   answerAboutContactDef,
   analyzeBookDef,
   navigateToDef,
-  addNoteDef,
+  addActivityDef,
+  logCallDef,
   createTaskDef,
   findContactDef,
   createContactDef,
   planMyDayDef,
   startCallDef,
+  taskSearchDef,
+  taskLoadDef,
+  activitySearchDef,
+  activityLoadDef,
+  attachmentListDef,
+  attachmentLoadDef,
+  voucherSearchDef,
+  voucherLoadDef,
+  researchPropertySearchDef,
+  researchPropertyLoadDef,
+  dealPipelineTotalsDef,
+  updateContactDef,
+  briefDef,
+  supportDef,
 } from "./toolDefs";
 
 // ── Compact summaries — keep tool results small for the model ────────────────
@@ -135,7 +176,7 @@ export const propertySummary = (p: Property) => ({
 /**
  * Resolve a plain-English name to a contact: exact full-name match first,
  * falling back to a substring match. Used by the Phase-1 client tools
- * (`add_note`, `create_task`, `start_call`) that take a `contact_name`
+ * (`add_activity`, `log_call`, `create_task`, `start_call`) that take a `contact_name`
  * argument instead of a resolved id.
  */
 export function resolveContactByName(name: string): Contact | null {
@@ -148,6 +189,46 @@ export function resolveContactByName(name: string): Contact | null {
     null
   );
 }
+
+/**
+ * Resolve the contact an activity is being logged against: a resolved id wins,
+ * then a name, then whoever's page is open.
+ *
+ * The open page is the *last* resort deliberately, for the same reason
+ * `draft_email` orders it that way — logging "spoke to Rosa" onto Earl's record
+ * because Earl's page happened to be open is a silent corruption of the record,
+ * and the broker has no reason to go looking for it.
+ */
+function resolveActivityContact({
+  contactId,
+  contact_name,
+}: {
+  contactId?: string;
+  contact_name?: string;
+}): Contact | null {
+  if (contactId) {
+    const byId = getContact(contactId);
+    if (byId) return byId;
+  }
+  if (contact_name) return resolveContactByName(contact_name);
+  const onContact = window.location.pathname.match(/^\/backoffice\/contacts\/([^/]+)/);
+  return (onContact ? getContact(onContact[1]) : undefined) ?? null;
+}
+
+/**
+ * Otto's activity vocabulary → the compose module's.
+ *
+ * Buildout logs a property visit as a *showing*; this prototype's composer calls
+ * the same thing a tour, and has no separate kind for a text message. Mapping
+ * here rather than widening `LoggedKind` keeps the timeline's five tabs as the
+ * one list of what a logged activity can be.
+ */
+const LOG_KIND = {
+  meeting: "meeting",
+  showing: "tour",
+  message: "note",
+  note: "note",
+} as const;
 
 /** The section slugs a space's own page actually has routes for. */
 const SPACE_SECTIONS = new Set(
@@ -306,6 +387,12 @@ export function createClientTools({
           dealType: d.dealType,
         })),
         openTaskCount: detail.openTaskCount,
+        // What the broker is looking at while they ask. The contact page's
+        // "Properties" panel is built from `ownedPropertyIds` plus the properties
+        // behind their deals, and this tool used to return neither — so "make a
+        // deal for Rosa" got "she has no property on file" from an assistant
+        // staring at a panel that said otherwise.
+        ownedProperties: ownedPropertiesFor(detail.contact).map(propertySummary),
       };
     }),
 
@@ -337,13 +424,47 @@ export function createClientTools({
     }),
 
     createDealDef.client(async (args) => {
-      const { name, address } = args as { name?: string; address: string };
+      const { propertyId, name, address, dealType, sellerContactId, buyerContactId } = args as {
+        propertyId?: string;
+        name?: string;
+        address?: string;
+        dealType?: "Sale" | "Lease";
+        sellerContactId?: string;
+        buyerContactId?: string;
+      };
+      // `createProposalListing` only fabricates a stub property when no
+      // `propertyId` is given, so passing one through is the whole fix for the
+      // duplicate-building bug — a deal asked for on "the Delgado Building" was
+      // landing on a brand-new $0 / 0 SF property of the same name.
+      const linked = propertyId ? getProperty(propertyId) : undefined;
+      if (propertyId && !linked) return { error: "No property with that id." };
+      if (!linked && !address?.trim()) {
+        return {
+          error:
+            "Give me either an existing propertyId or a street address — I won't guess which building this is.",
+        };
+      }
       const { deal } = createDeal({
         ...emptyDraft(),
-        name: name ?? address,
-        address,
+        propertyId: linked?.id ?? "",
+        name: name ?? (linked ? linked.name : (address ?? "")),
+        address: linked ? "" : (address ?? ""),
+        ...(linked?.propertyType && { propertyType: linked.propertyType }),
+        ...(dealType && { dealType }),
+        // Side follows whoever was named: `createProposalListing` reads
+        // `dealSide` to decide which array the contact lands in, so a buyer
+        // passed with the default 'seller' side would be silently dropped.
+        dealSide: buyerContactId && !sellerContactId ? "buyer" : "seller",
+        sellerContactId: sellerContactId ?? "",
+        buyerContactId: buyerContactId ?? "",
       });
-      return { deal: dealSummary(deal) };
+      return {
+        deal: dealSummary(deal),
+        // Say which way it went, so the model's confirmation can't claim it used
+        // the broker's building when it actually made a new one.
+        usedExistingProperty: !!linked,
+        propertyId: deal.propertyId,
+      };
     }),
 
     updateDealStageDef.client(async (args) => {
@@ -669,26 +790,109 @@ export function createClientTools({
       return { answer };
     }),
 
-    addNoteDef.client(async (args) => {
-      const { contact_name, note_text } = args as { contact_name: string; note_text: string };
-      const c = resolveContactByName(contact_name);
-      if (!c) return { error: `No contact named "${contact_name}".` };
-      addNote(c.id, note_text);
-      return { noted: true, contactId: c.id, contactName: `${c.firstName} ${c.lastName}`.trim() };
+    addActivityDef.client(async (args) => {
+      const { type, body, contact_name, contactId, dealId } = args as {
+        type?: "note" | "meeting" | "showing" | "message";
+        body: string;
+        contact_name?: string;
+        contactId?: string;
+        dealId?: string;
+      };
+      const kind = type ?? "note";
+      if (dealId) {
+        const deal = addDealActivity(dealId, { type: kind, note: body, actor: CURRENT_USER.name });
+        return deal
+          ? { logged: true, type: kind, dealId, dealName: deal.name }
+          : { error: "Deal not found" };
+      }
+      const c = resolveActivityContact({ contactId, contact_name });
+      if (!c) {
+        return {
+          error: contact_name
+            ? `No contact named "${contact_name}".`
+            : "Tell me who or which deal to log this against.",
+        };
+      }
+      const name = `${c.firstName} ${c.lastName}`.trim();
+      // A note goes to the contact's own notes field (where the record shows it);
+      // anything else is an interaction, which belongs on the session timeline
+      // alongside logged calls and sent emails.
+      if (kind === "note") {
+        addNote(c.id, body);
+      } else {
+        useContactSession.getState().addLog(c.id, {
+          kind: LOG_KIND[kind],
+          body,
+          date: new Date().toISOString().slice(0, 10),
+        });
+        // A meeting or a showing is a touch; a note isn't. Only the former moves
+        // "last contacted" (see `log_call` for the same rule).
+        touchContactActivity(c.id);
+      }
+      return { logged: true, type: kind, contactId: c.id, contactName: name };
+    }),
+
+    logCallDef.client(async (args) => {
+      const { contact_name, contactId, dealId, outcome, duration_minutes, direction } = args as {
+        contact_name?: string;
+        contactId?: string;
+        dealId?: string;
+        outcome: string;
+        duration_minutes?: number;
+        direction?: "outbound" | "inbound";
+      };
+      const note = duration_minutes ? `${outcome} (${duration_minutes} min)` : outcome;
+      if (dealId) {
+        const deal = addDealActivity(dealId, { type: "call", note, actor: CURRENT_USER.name });
+        return deal
+          ? { logged: true, dealId, dealName: deal.name }
+          : { error: "Deal not found" };
+      }
+      const c = resolveActivityContact({ contactId, contact_name });
+      if (!c) {
+        return {
+          error: contact_name
+            ? `No contact named "${contact_name}".`
+            : "Tell me who the call was with.",
+        };
+      }
+      useContactSession.getState().addLog(c.id, {
+        kind: "call",
+        body: note,
+        date: new Date().toISOString().slice(0, 10),
+      });
+      // A logged call is activity on the record, so the People table's Last
+      // Activity column has to move with it. Deliberately NOT `lastContactedAt`:
+      // that field anchors the synthesized timeline arc (see `timelineArcs.ts`),
+      // so writing it would silently re-date the contact's whole history.
+      touchContactActivity(c.id);
+      return {
+        logged: true,
+        contactId: c.id,
+        contactName: `${c.firstName} ${c.lastName}`.trim(),
+        direction: direction ?? "outbound",
+      };
     }),
 
     createTaskDef.client(async (args) => {
-      const { task_title, contact_name, due } = args as {
+      const { task_title, contact_name, dealId, task_type, due } = args as {
         task_title: string;
         contact_name?: string;
+        dealId?: string;
+        task_type?: string;
         due?: string;
       };
       const c = contact_name ? resolveContactByName(contact_name) : null;
+      const deal = dealId ? getListing(dealId) : undefined;
       const { task } = createTask({
         name: task_title,
         dueDate: due ? parseDueDate(due) : null,
         contactId: c?.id ?? null,
-        source: "contact",
+        dealId: deal?.id ?? null,
+        type: task_type ?? null,
+        // A task hangs off whichever record it was created against, so the Tasks
+        // page badges it and the record's own list picks it up.
+        source: deal ? "deal" : "contact",
         // The assistant queued this, so the row earns its sparkle badge.
         createdByAi: true,
       });
@@ -697,6 +901,7 @@ export function createClientTools({
         title: task.name,
         due: task.dueDate,
         contactName: c ? `${c.firstName} ${c.lastName}`.trim() : null,
+        dealName: deal?.name ?? null,
       };
     }),
 
@@ -788,6 +993,252 @@ export function createClientTools({
       // over their record (mirrors the homepage "Call Rosa" CTA).
       navigate(`/backoffice/contacts/${c.id}`);
       return { started: true, contactId: c.id };
+    }),
+
+    // ── Tasks ────────────────────────────────────────────────────────────────
+
+    taskSearchDef.client(async (args) => {
+      const q = args as Parameters<typeof searchTasks>[0];
+      const { total, tasks } = searchTasks(q);
+      return {
+        total,
+        tasks: tasks.map(taskSummary),
+        // No `navs` entry: `ResultNav` only knows deals, contacts and properties,
+        // so a task list would have nowhere to send the broker. The tool answers
+        // in prose and the model names the tasks.
+        tasksPath: "/backoffice/tasks",
+      };
+    }),
+
+    taskLoadDef.client(async (args) => {
+      const { taskId } = args as { taskId: string };
+      const task = loadTask(taskId);
+      return task ? { task: taskSummary(task) } : { error: "Task not found" };
+    }),
+
+    // ── Activities ───────────────────────────────────────────────────────────
+
+    activitySearchDef.client(async (args) => {
+      const q = args as Parameters<typeof searchActivities>[0];
+      if (!q.contactId && !q.dealId) {
+        return { error: "Give me a contact or a deal to read the activity on." };
+      }
+      const { total, activities } = searchActivities(q);
+      return { total, activities };
+    }),
+
+    activityLoadDef.client(async (args) => {
+      const { activityId, contactId, dealId } = args as {
+        activityId: string;
+        contactId?: string;
+        dealId?: string;
+      };
+      const activity = loadActivity(activityId, { contactId, dealId });
+      return activity ? { activity } : { error: "Activity not found" };
+    }),
+
+    // ── Attachments ──────────────────────────────────────────────────────────
+
+    attachmentListDef.client(async (args) => {
+      const { dealId } = args as { dealId: string };
+      const deal = getListing(dealId);
+      if (!deal) return { error: "Deal not found" };
+      const items = listAttachments(dealId);
+      return {
+        dealName: deal.name,
+        total: items.filter((i) => i.kind === "file").length,
+        attachments: items,
+        documentsPath: `/listings/${buildingSectionListingId(dealId)}/documents`,
+      };
+    }),
+
+    attachmentLoadDef.client(async (args) => {
+      const { dealId, fileId } = args as { dealId: string; fileId: string };
+      const item = listAttachments(dealId).find((i) => i.id === fileId);
+      if (!item) return { error: "File not found on that deal" };
+      return {
+        attachment: item,
+        // Said out loud in the payload, not just in the tool description: the
+        // prototype stores a name and a size, and a model handed a filename will
+        // otherwise happily summarize a document it has never read.
+        contentsAvailable: false,
+      };
+    }),
+
+    // ── Vouchers ─────────────────────────────────────────────────────────────
+
+    voucherSearchDef.client(async (args) => {
+      const q = args as Parameters<typeof searchVouchers>[0];
+      const { total, vouchers } = searchVouchers(q);
+      return { total, vouchers: vouchers.map(voucherSummary), vouchersPath: "/backoffice/vouchers" };
+    }),
+
+    voucherLoadDef.client(async (args) => {
+      const { dealId } = args as { dealId: string };
+      const found = loadVoucher(dealId);
+      if (!found) {
+        return {
+          error:
+            "No voucher on that deal — either the id isn't a deal, or it's a building whose spaces each carry their own transaction.",
+        };
+      }
+      const { voucher, deal } = found;
+      const back = deal.transaction.backOffice;
+      return {
+        voucher: {
+          ...voucherSummary(voucher),
+          deductions: back.preSplitDeductions.map((d) => ({
+            category: d.category,
+            description: d.description,
+            amount: d.amount,
+          })),
+          receivables: back.receivables.map((r) => ({
+            payer: r.payerName,
+            description: r.billingDescription,
+            dueDate: r.dueDate,
+            amount: r.amount,
+            outstanding: r.amount - r.credited,
+          })),
+          approval: back.approval,
+        },
+        // `target` is a typed TanStack destination, not a string — flattened here
+        // because `navigateTo` (and the model composing a link) both take a path.
+        voucherPath: voucher.target.to
+          .replace("$listingId", voucher.target.params.listingId)
+          .replace(
+            "$spaceId",
+            "spaceId" in voucher.target.params ? voucher.target.params.spaceId : "",
+          ),
+      };
+    }),
+
+    // ── Insights research properties ─────────────────────────────────────────
+
+    researchPropertySearchDef.client(async (args) => {
+      const q = args as Parameters<typeof searchResearchProperties>[0];
+      const { total, properties } = searchResearchProperties(q);
+      return {
+        total,
+        // Deliberately NOT returned under `properties`: that key is what the rail
+        // renders as clickable property cards, and a prospect has no page in the
+        // broker's database to click through to. See `entitiesOf`.
+        researchProperties: properties.map(researchSummary),
+        insightsPath: "/prospect",
+      };
+    }),
+
+    researchPropertyLoadDef.client(async (args) => {
+      const { propertyId } = args as { propertyId: string };
+      const p = loadResearchProperty(propertyId);
+      return p
+        ? { researchProperty: researchSummary(p) }
+        : { error: "No research property with that id" };
+    }),
+
+    // ── Pipeline ─────────────────────────────────────────────────────────────
+
+    dealPipelineTotalsDef.client(async (args) => {
+      const { dealType } = args as { dealType?: "Sale" | "Lease" };
+      return { pipeline: pipelineTotals(dealType) };
+    }),
+
+    // ── Contact updates ──────────────────────────────────────────────────────
+
+    updateContactDef.client(async (args) => {
+      const { contactId, contact_name, first_name, last_name, email, phone, company, title, notes } =
+        args as {
+          contactId?: string;
+          contact_name?: string;
+          first_name?: string;
+          last_name?: string;
+          email?: string;
+          phone?: string;
+          company?: string;
+          title?: string;
+          notes?: string;
+        };
+      const target = contactId
+        ? getContact(contactId)
+        : contact_name
+          ? resolveContactByName(contact_name)
+          : null;
+      if (!target) {
+        return {
+          error: contact_name
+            ? `No contact named "${contact_name}".`
+            : "Tell me which contact to update.",
+        };
+      }
+      // `updateContact` is the Edit Contact *form's* writer: it takes the whole
+      // form, so every field the model left out has to be filled back in from the
+      // record. Passing a bare patch would blank a name, an email, a phone —
+      // whatever wasn't mentioned — which is how an update quietly becomes a wipe.
+      const sent = { first_name, last_name, email, phone, company, title, notes };
+      const changed = Object.entries(sent)
+        .filter(([, v]) => v !== undefined)
+        .map(([k]) => k);
+      const { contact } = updateContact(target.id, {
+        firstName: first_name ?? target.firstName,
+        lastName: last_name ?? target.lastName,
+        email: email ?? target.email,
+        phone: phone ?? target.phone,
+        company: company ?? target.company,
+        title: title ?? target.title,
+        notes: notes ?? target.notes,
+        emails: target.emails,
+        phones: target.phones,
+        source: target.source,
+        doNotCall: target.doNotCall,
+      });
+      if (!contact) return { error: "Contact not found" };
+      return {
+        updated: changed,
+        contactId: contact.id,
+        contactName: `${contact.firstName} ${contact.lastName}`.trim(),
+        contacts: [contactSummary(contact)],
+      };
+    }),
+
+    // ── Cross-record brief ───────────────────────────────────────────────────
+
+    briefDef.client(async (args) => {
+      const { recordType, recordId, question } = args as {
+        recordType: "deal" | "listing" | "property" | "task";
+        recordId: string;
+        question?: string;
+      };
+      // "deal" and "listing" are the same record here (a listing IS its deal),
+      // so both land on the same composer rather than the model having to guess
+      // which word this app uses.
+      const dump: RecordDump | null =
+        recordType === "property"
+          ? composePropertyData(recordId)
+          : recordType === "task"
+            ? composeTaskData(recordId)
+            : composeDealData(recordId);
+      if (!dump) return { error: `No ${recordType} with that id.` };
+      const { brief } = await withPhase("brief", `Reading ${dump.name}`, () =>
+        generateRecordBrief({
+          data: { data: dump.data, name: dump.name, kind: dump.kind, question },
+        }),
+      );
+      return { brief, recordName: dump.name, recordType: dump.kind };
+    }),
+
+    // ── Support handoff ──────────────────────────────────────────────────────
+
+    supportDef.client(async (args) => {
+      const { topic } = args as { topic: string };
+      return {
+        handoff: true,
+        topic,
+        // A canned route, not a ticket: this prototype has no support desk behind
+        // it, so the tool hands over an address rather than pretending to file
+        // anything. Saying that here keeps the model from claiming it filed one.
+        channel: "Buildout Support",
+        email: "support@buildout.com",
+        ticketFiled: false,
+      };
     }),
   ];
 }

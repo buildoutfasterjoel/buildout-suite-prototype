@@ -35,6 +35,7 @@ const PHASE_ICONS: Record<string, IconDefinition> = {
   build_call_list: faListCheck,
   research_contact: faMagnifyingGlass,
   answer_about_contact: faMagnifyingGlass,
+  brief: faMagnifyingGlass,
   analyze_book: faMagnifyingGlass,
   filter_listings: faFilter,
 };

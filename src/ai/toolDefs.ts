@@ -151,14 +151,31 @@ export const getListingDef = toolDefinition({
 export const createDealDef = toolDefinition({
   name: "createDeal",
   description:
-    "Create a new proposal-stage deal (and its property) from an address. Confirm the address with the user if ambiguous.",
+    "Create a new proposal-stage deal. ALWAYS pass `propertyId` when the deal is on a property that already exists — resolve it first with getContactDetail (which returns the contact's `ownedProperties`) or searchAll. Passing only an address FABRICATES A NEW, EMPTY PROPERTY, which leaves a $0 / 0 SF duplicate sitting next to the real building. Use `address` alone only for a property genuinely not in the CRM yet. Pass `sellerContactId` to attach the owner as you create it, rather than a separate linkContactToDeal call.",
   inputSchema: {
     type: "object",
     properties: {
-      name: { type: "string", description: "Deal/listing name. Defaults to the address." },
-      address: { type: "string", description: "Street address of the property." },
+      propertyId: {
+        type: "string",
+        description:
+          "Id of an EXISTING property to hang the deal on. Strongly preferred over address.",
+      },
+      name: { type: "string", description: "Deal/listing name. Defaults to the property or address." },
+      address: {
+        type: "string",
+        description:
+          "Street address — ONLY for a property that is not in the CRM. Ignored when propertyId is set.",
+      },
+      dealType: { type: "string", enum: ["Sale", "Lease"] },
+      sellerContactId: {
+        type: "string",
+        description: "The owner selling it. Attaches them as the seller on creation.",
+      },
+      buyerContactId: {
+        type: "string",
+        description: "The contact represented on a buy-side deal.",
+      },
     },
-    required: ["address"],
     additionalProperties: false,
   },
 });
@@ -360,17 +377,43 @@ export const buildMarketingPackageDef = toolDefinition({
 
 // ── Client actions (Phase 1, no LLM/key needed) ─────────────────────────────
 
-export const addNoteDef = toolDefinition({
-  name: "add_note",
+export const addActivityDef = toolDefinition({
+  name: "add_activity",
   description:
-    "Save a note on a contact's record. If the note also implies a follow-up action (a call, email, or reminder), ALSO call create_task for it so the reminder actually gets scheduled.",
+    "Log an activity on a contact OR a deal — a note, meeting, showing, or message. This is how anything that ALREADY HAPPENED gets on the record. Pass contact_name for a person or dealId for a deal (one of the two). A call that already happened is log_call instead; a reminder for later is create_task. If the activity also implies a follow-up (call them back, send the lease, remind me), ALSO call create_task so the reminder actually gets scheduled.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      type: {
+        type: "string",
+        enum: ["note", "meeting", "showing", "message"],
+        description: "What kind of interaction this was. Defaults to note.",
+      },
+      body: { type: "string", description: "What happened, in the broker's words." },
+      contact_name: { type: "string", description: "The person it happened with." },
+      contactId: { type: "string", description: "Resolved contact id, when you have one." },
+      dealId: { type: "string", description: "Resolved deal id, to log against a deal instead." },
+    },
+    required: ["body"],
+    additionalProperties: false,
+  },
+});
+
+export const logCallDef = toolDefinition({
+  name: "log_call",
+  description:
+    "Record a call that ALREADY HAPPENED on a contact's or a deal's timeline — 'log my call with Rosa', 'I just got off the phone with Earl'. Distinct from start_call, which dials someone NOW, and from create_task, which is a reminder to call later. Log the outcome the broker gave you; never invent what was said.",
   inputSchema: {
     type: "object",
     properties: {
       contact_name: { type: "string" },
-      note_text: { type: "string" },
+      contactId: { type: "string" },
+      dealId: { type: "string", description: "Log against a deal instead of a contact." },
+      outcome: { type: "string", description: "What came out of the call." },
+      duration_minutes: { type: "number" },
+      direction: { type: "string", enum: ["outbound", "inbound"] },
     },
-    required: ["contact_name", "note_text"],
+    required: ["outcome"],
     additionalProperties: false,
   },
 });
@@ -378,12 +421,18 @@ export const addNoteDef = toolDefinition({
 export const createTaskDef = toolDefinition({
   name: "create_task",
   description:
-    "Create a follow-up task/reminder. Use for 'remind me to…' / 'follow up …' — including reminders to CALL someone LATER (a live call NOW is start_call). due is natural language ('friday', 'in 3 days').",
+    "Create a follow-up task/reminder on a contact or a deal. Use for 'remind me to…' / 'follow up …' — including reminders to CALL someone LATER (a live call NOW is start_call, a call that already happened is log_call). due is natural language ('friday', 'in 3 days').",
   inputSchema: {
     type: "object",
     properties: {
       task_title: { type: "string" },
-      contact_name: { type: "string" },
+      contact_name: { type: "string", description: "Attach the task to this person." },
+      dealId: { type: "string", description: "Attach the task to a deal instead of a person." },
+      task_type: {
+        type: "string",
+        enum: ["call", "email", "meeting", "showing", "to-do", "follow-up"],
+        description: "What kind of task it is. Infer it from the ask when it's obvious.",
+      },
       due: { type: "string" },
     },
     required: ["task_title"],
@@ -447,6 +496,242 @@ export const startCallDef = toolDefinition({
   },
 });
 
+// ── Records the assistant can read but the broker owns elsewhere ─────────────
+//
+// Tasks, activities, attachments, vouchers and Insights prospects each have a
+// page of their own in the app. These tools let the assistant answer *from* those
+// records rather than only from deals and contacts — the gap between what the
+// shipped assistant can reach and what this prototype could.
+
+export const taskSearchDef = toolDefinition({
+  name: "task_search",
+  description:
+    "Search and filter the broker's tasks — 'what's overdue', 'what's due today', 'what do I owe on the Delgado deal'. Covers standalone tasks and the tasks embedded in a deal's planner. Resolve a person or deal to an id first when the ask names one.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      query: { type: "string", description: "Free text matched against the task title." },
+      status: { type: "string", enum: ["open", "complete"] },
+      due: {
+        type: "string",
+        enum: ["overdue", "today", "week", "unscheduled"],
+        description: "Due window. 'week' is today through seven days out.",
+      },
+      contactId: { type: "string" },
+      dealId: { type: "string" },
+      limit: { type: "number", description: "Max tasks to return (default 25)." },
+    },
+    additionalProperties: false,
+  },
+});
+
+export const taskLoadDef = toolDefinition({
+  name: "task_load",
+  description:
+    "Load one task in full — due date, type, assignee, and what record it hangs off. Get the id from task_search first.",
+  inputSchema: {
+    type: "object",
+    properties: { taskId: { type: "string" } },
+    required: ["taskId"],
+    additionalProperties: false,
+  },
+});
+
+export const activitySearchDef = toolDefinition({
+  name: "activity_search",
+  description:
+    "Read the logged activity on ONE contact or ONE deal — calls, emails, meetings, tours, notes, inquiries — optionally narrowed by type, direction or date. Use for 'when did I last talk to X', 'read her last email', 'what's happened on this deal', 'has anyone toured it'. Requires contactId or dealId, so resolve the name first. IMPORTANT: a reply from the contact is nested INSIDE the message it answers — an item with `direction: 'out'` and a `reply` field IS a message from them. Read `reply`, `thread` and `attachments` on every item before concluding anything is missing.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      contactId: { type: "string" },
+      dealId: { type: "string" },
+      type: {
+        type: "string",
+        description: "Activity type to filter on, e.g. call, email, meeting, tour, note.",
+      },
+      direction: {
+        type: "string",
+        enum: ["in", "out"],
+        description:
+          "'in' for anything that came FROM the contact, 'out' for what you sent. 'in' correctly includes a sent email that came back answered.",
+      },
+      since: { type: "string", description: "ISO date (YYYY-MM-DD) — only activity on or after it." },
+      limit: { type: "number", description: "Max activities to return (default 20)." },
+    },
+    additionalProperties: false,
+  },
+});
+
+export const activityLoadDef = toolDefinition({
+  name: "activity_load",
+  description:
+    "Load one logged activity in full, including its body. Pass the parent record too (contactId or dealId) — an activity is stored on its record, not in a global list.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      activityId: { type: "string" },
+      contactId: { type: "string" },
+      dealId: { type: "string" },
+    },
+    required: ["activityId"],
+    additionalProperties: false,
+  },
+});
+
+export const attachmentListDef = toolDefinition({
+  name: "attachment_list",
+  description:
+    "List the files in a deal's document vault — what's been uploaded, where it sits, how big it is. Use for 'what's on file for this deal', 'do we have the T-12 yet'.",
+  inputSchema: {
+    type: "object",
+    properties: { dealId: { type: "string" } },
+    required: ["dealId"],
+    additionalProperties: false,
+  },
+});
+
+export const attachmentLoadDef = toolDefinition({
+  name: "attachment_load",
+  description:
+    "Load one attachment's details from a deal's vault. Returns the file's metadata and its path — NOT its contents, so never describe or summarize what a file says.",
+  inputSchema: {
+    type: "object",
+    properties: { dealId: { type: "string" }, fileId: { type: "string" } },
+    required: ["dealId", "fileId"],
+    additionalProperties: false,
+  },
+});
+
+export const voucherSearchDef = toolDefinition({
+  name: "voucher_search",
+  description:
+    "Search the back-office vouchers — the commission settlement records on closed and closing deals. Use for 'what vouchers are pending', 'what's waiting on approval', 'what have I got outstanding'.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      query: { type: "string", description: "Free text: voucher name, deal name, identifier, address." },
+      status: { type: "string", enum: ["Draft", "Pending", "Approved"] },
+      dealStage: { type: "string", enum: PROPERTY_STATUSES as unknown as string[] },
+      brokerName: { type: "string" },
+      limit: { type: "number", description: "Max vouchers to return (default 25)." },
+    },
+    additionalProperties: false,
+  },
+});
+
+export const voucherLoadDef = toolDefinition({
+  name: "voucher_load",
+  description:
+    "Load one deal's voucher in full — gross commission, pre-split deductions, receivables, and who approved it. Keyed by the DEAL id: a voucher is a tab on its deal, not a record of its own. A shell (a building whose spaces each carry their own transaction) has no voucher.",
+  inputSchema: {
+    type: "object",
+    properties: { dealId: { type: "string" } },
+    required: ["dealId"],
+    additionalProperties: false,
+  },
+});
+
+export const researchPropertySearchDef = toolDefinition({
+  name: "research_property_search",
+  description:
+    "Search Buildout Insights — public-records property data for buildings that are NOT in the broker's database. Use for prospecting: 'find me industrial in Phoenix over 50k SF', 'who owns the buildings on that corridor'. These are research records, so always say they aren't in the book yet; adding one is a separate step the broker takes on the Insights page.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      query: { type: "string", description: "Free text: name, street, city, type." },
+      propertyType: { type: "string" },
+      city: { type: "string" },
+      state: { type: "string", description: "Two-letter state code." },
+      minSqFt: { type: "number" },
+      maxSqFt: { type: "number" },
+      limit: { type: "number", description: "Max records to return (default 12)." },
+    },
+    additionalProperties: false,
+  },
+});
+
+export const researchPropertyLoadDef = toolDefinition({
+  name: "research_property_load",
+  description:
+    "Load one Insights research property in full. Ids come from research_property_search — a research record is not in the broker's database, so getProperty will not find it.",
+  inputSchema: {
+    type: "object",
+    properties: { propertyId: { type: "string" } },
+    required: ["propertyId"],
+    additionalProperties: false,
+  },
+});
+
+export const dealPipelineTotalsDef = toolDefinition({
+  name: "deal_pipeline_totals",
+  description:
+    "Get the pipeline by the numbers: deal count and value per stage, open and closed totals, and the probability-weighted commission forecast. Use for 'what's my pipeline worth', 'how much is under contract', 'what am I on track to make'. Returns figures, not prose — analyze_book is the one that reasons.",
+  inputSchema: {
+    type: "object",
+    properties: { dealType: { type: "string", enum: ["Sale", "Lease"] } },
+    additionalProperties: false,
+  },
+});
+
+// ── Write / actions on existing records ──────────────────────────────────────
+
+export const updateContactDef = toolDefinition({
+  name: "update_contact",
+  description:
+    "Update fields on a contact who is already in the book — a new phone, a job change, a corrected email. Only pass the fields that change; anything you leave out is left alone. To ADD someone new, use create_contact. Their relationship stage is NOT settable here: it is derived from their deals (see contactStage.ts), so move the deal and the stage follows.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      contactId: { type: "string" },
+      contact_name: { type: "string", description: "Their name, when you have no id." },
+      first_name: { type: "string" },
+      last_name: { type: "string" },
+      email: { type: "string" },
+      phone: { type: "string" },
+      company: { type: "string" },
+      title: { type: "string" },
+      notes: { type: "string" },
+    },
+    additionalProperties: false,
+  },
+});
+
+// ── Cross-record ─────────────────────────────────────────────────────────────
+
+export const briefDef = toolDefinition({
+  name: "brief",
+  description:
+    "Summarize a DEAL, LISTING, PROPERTY or TASK and its recent history — where it stands, the numbers, who's involved, what's open. Use for 'brief me on the Delgado deal', 'catch me up on 400 W Monroe', or a specific question about one of those records (pass it as `question`). For a CONTACT use research_contact / answer_about_contact instead — those know what a person's brief is made of.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      recordType: { type: "string", enum: ["deal", "listing", "property", "task"] },
+      recordId: { type: "string" },
+      question: {
+        type: "string",
+        description: "A targeted question. Omit for a full brief.",
+      },
+    },
+    required: ["recordType", "recordId"],
+    additionalProperties: false,
+  },
+});
+
+export const supportDef = toolDefinition({
+  name: "support",
+  description:
+    "Hand the broker off to Buildout support. Use ONLY when they need help with the SOFTWARE that you cannot do yourself — billing, a permissions or account problem, a bug, a feature they can't find. Never use it to escape a question about their data; answer those.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      topic: { type: "string", description: "What they need help with, in one line." },
+    },
+    required: ["topic"],
+    additionalProperties: false,
+  },
+});
+
 // ── Navigation ───────────────────────────────────────────────────────────────
 
 export const navigateToDef = toolDefinition({
@@ -487,10 +772,25 @@ export const TOOL_DEFS = [
   answerAboutContactDef,
   analyzeBookDef,
   navigateToDef,
-  addNoteDef,
+  addActivityDef,
+  logCallDef,
   createTaskDef,
   findContactDef,
   createContactDef,
   planMyDayDef,
   startCallDef,
+  taskSearchDef,
+  taskLoadDef,
+  activitySearchDef,
+  activityLoadDef,
+  attachmentListDef,
+  attachmentLoadDef,
+  voucherSearchDef,
+  voucherLoadDef,
+  researchPropertySearchDef,
+  researchPropertyLoadDef,
+  dealPipelineTotalsDef,
+  updateContactDef,
+  briefDef,
+  supportDef,
 ];

@@ -556,17 +556,81 @@ function buildEmailFlow(messages: UIMessage[]): EmailFlow {
  * (see `producesArtifact` in `MessageBubble`).
  */
 const LOOKUP_TOOLS = new Set([
+  // Names as the tools are actually registered in `toolDefs.ts` — the older
+  // read tools are camelCase there, and eight of these were spelled snake_case
+  // here, so `isLookup` had been returning false for every one of them.
   "searchAll",
   "find_contact",
-  "get_contact_detail",
-  "get_property",
-  "get_listing",
-  "list_deals",
-  "list_contacts",
-  "list_deals_for_contact",
-  "list_deals_for_property",
-  "list_contacts_for_deal",
+  "getContactDetail",
+  "getProperty",
+  "getListing",
+  "listDeals",
+  "listContacts",
+  "listDealsForContact",
+  "listDealsForProperty",
+  "listContactsForDeal",
+  // The record reads added for parity with the shipped assistant. Each one is a
+  // step toward an answer, not the answer, so they chip rather than card when the
+  // same turn produces a real artifact.
+  "task_search",
+  "task_load",
+  "activity_search",
+  "activity_load",
+  "attachment_list",
+  "attachment_load",
+  "voucher_search",
+  "voucher_load",
+  "research_property_search",
+  "research_property_load",
+  "deal_pipeline_totals",
 ]);
+
+/**
+ * Tools that DO something — mutate a record, or move the app somewhere.
+ *
+ * The counterpart to `LOOKUP_TOOLS`, and read the same way: a turn that ran one
+ * of these has a result of its own, so the lookups that got it there are steps.
+ * "Make a deal for Rosa" was rendering her contact card above the deal it went
+ * on to create — the record the assistant *consulted*, presented as though it
+ * were the answer to a question about creating a deal.
+ *
+ * A write tool's OWN card still renders: this set only suppresses lookups, and
+ * `create_contact` / `update_contact` deliberately return a `contacts` array so
+ * the record they just touched is one click away.
+ *
+ * By name rather than by output shape because a write is defined by what it did,
+ * not by what it returned — `create_task` and `log_call` hand back a receipt
+ * that looks like nothing in particular.
+ */
+const ACTION_TOOLS = new Set([
+  "createDeal",
+  "updateDealStage",
+  "linkContactToDeal",
+  "createEmailDraft",
+  "createCallList",
+  "build_call_list",
+  "create_contact",
+  "update_contact",
+  "create_task",
+  "add_activity",
+  "log_call",
+  "start_call",
+  "generateDoc",
+  // Both of these leave the broker somewhere new, which is the result — a card
+  // offering to take them where they already are is the noisiest kind of noise.
+  "filter_listings",
+  "navigateTo",
+]);
+
+/**
+ * Did this call actually do the thing? A tool that came back with an error did
+ * not, and on a failed write the lookup card may be the only useful thing left
+ * on screen — so a failure must not suppress it.
+ */
+function succeeded(output: unknown): boolean {
+  const o = (output ?? {}) as { error?: unknown };
+  return o.error === undefined;
+}
 
 /**
  * Split a message's tool calls into the ones that render a card and the ones
@@ -578,36 +642,50 @@ const LOOKUP_TOOLS = new Set([
  * agree — a chip is a step and its conclusion belongs after it, while a card is
  * the answer and its lead-in belongs before it.
  */
-function splitToolCalls(toolCalls: ToolCallPart[]): {
+function splitToolCalls(
+  toolCalls: ToolCallPart[],
+  /**
+   * True when a LATER message in the same turn took an action. One turn is
+   * routinely split across two messages — the model looks a record up, then acts
+   * on it in the next message — so a message read on its own can't tell that its
+   * lookup has already been superseded. The rail can (see `actionTurns`).
+   */
+  actedElsewhereInTurn = false,
+): {
   cardCalls: ToolCallPart[];
   chipCalls: ToolCallPart[];
 } {
   /**
    * A lookup the model ran to answer something else is a step, not a result. When
-   * the same turn also produced a real artifact, its record cards are noise — a
-   * "Delgado Building, Austin TX" property card wedged above the email draft it
-   * was looked up for, which reads like the assistant answered a question nobody
-   * asked. Those calls fall back to chips ("Searching your book ✓"), which say
-   * the same thing in one line.
+   * the same turn also produced one of its own — an artifact it wrote, or an
+   * action it took — the lookup's record cards are noise: a "Delgado Building,
+   * Austin TX" property card wedged above the email draft it was looked up for,
+   * or Rosa's contact card above the deal that was just created on her building.
+   * Either reads as the assistant answering a question nobody asked. Those calls
+   * fall back to chips ("Searching your book ✓"), which say the same thing in one
+   * line.
    *
    * A lookup on its own still renders cards: "find me the Delgado Building" is a
    * turn where the record IS the answer.
    */
   const isLookup = (name: string) => LOOKUP_TOOLS.has(name);
-  const producesArtifact = toolCalls.some(
-    (p) =>
-      !isLookup(p.name) &&
-      (emailDraftOf(p.output) !== null ||
-        briefOf(p.output) !== null ||
-        answerOf(p.output) !== null ||
-        marketingPackageOf(p.output) !== null ||
-        dayPlanOf(p.output) !== null ||
-        sentEmailOf(p.output) !== null ||
-        p.name === "plan_my_day"),
-  );
+  const producesResult =
+    actedElsewhereInTurn ||
+    toolCalls.some(
+      (p) =>
+        !isLookup(p.name) &&
+        ((ACTION_TOOLS.has(p.name) && succeeded(p.output)) ||
+          emailDraftOf(p.output) !== null ||
+          briefOf(p.output) !== null ||
+          answerOf(p.output) !== null ||
+          marketingPackageOf(p.output) !== null ||
+          dayPlanOf(p.output) !== null ||
+          sentEmailOf(p.output) !== null ||
+          p.name === "plan_my_day"),
+    );
 
   const cardCalls = toolCalls.filter((p) => {
-    if (producesArtifact && isLookup(p.name)) return false;
+    if (producesResult && isLookup(p.name)) return false;
     const { deals, contacts, properties } = entitiesOf(p.output);
     return (
       deals.length > 0 ||
@@ -633,6 +711,7 @@ function splitToolCalls(toolCalls: ToolCallPart[]): {
 function MessageBubble({
   message,
   suppressNarration = false,
+  suppressLookupCards = false,
   emailFlow,
   repliedPast = false,
   onQuickReply,
@@ -650,6 +729,8 @@ function MessageBubble({
    * ("You've got a handful of moves…") flashes up and then vanishes.
    */
   suppressNarration?: boolean;
+  /** A later message in this turn acted — see `splitToolCalls`. */
+  suppressLookupCards?: boolean;
 }) {
   const text = messageText(message);
   const toolCalls = messageToolCalls(message);
@@ -664,7 +745,7 @@ function MessageBubble({
    * A lookup on its own still renders cards: "find me the Delgado Building" is a
    * turn where the record IS the answer.
    */
-  const { cardCalls, chipCalls } = splitToolCalls(toolCalls);
+  const { cardCalls, chipCalls } = splitToolCalls(toolCalls, suppressLookupCards);
 
   /**
    * Drop prose the artifact below it already carries — whether the model put it
@@ -993,6 +1074,44 @@ export function AssistantSidebar() {
   }, [messages]);
 
   /**
+   * Assistant messages belonging to a turn that DID something — created a deal,
+   * logged a call, took the broker somewhere.
+   *
+   * Whole-turn rather than per-message because the two halves arrive separately:
+   * the model looks Rosa up in one message and creates the deal on her building
+   * in the next, so the message holding her contact card never sees the write
+   * that made it redundant. Marking every message in the turn is what lets the
+   * lookup card drop back to a chip once the action lands.
+   *
+   * Reset on each user message, like `narratedIndices` — a new ask re-opens the
+   * question of what counts as this turn's result.
+   */
+  const actionTurns = useMemo(() => {
+    const out = new Set<number>();
+    let turn: number[] = [];
+    let acted = false;
+    const settle = () => {
+      if (acted) for (const i of turn) out.add(i);
+      turn = [];
+      acted = false;
+    };
+    messages.forEach((m, i) => {
+      if (m.role === "user") {
+        settle();
+        return;
+      }
+      turn.push(i);
+      if (
+        messageToolCalls(m).some((p) => ACTION_TOOLS.has(p.name) && succeeded(p.output))
+      ) {
+        acted = true;
+      }
+    });
+    settle();
+    return out;
+  }, [messages]);
+
+  /**
    * The order the transcript is *drawn* in, as indices into `messages`.
    *
    * A turn that returns results is split across two messages: the model calls
@@ -1022,7 +1141,8 @@ export function AssistantSidebar() {
       const second = messages[order[i + 1]];
       if (first.role !== "assistant" || second.role !== "assistant") continue;
       if (messageText(first).trim()) continue;
-      if (splitToolCalls(messageToolCalls(first)).cardCalls.length === 0) continue;
+      if (splitToolCalls(messageToolCalls(first), actionTurns.has(order[i])).cardCalls.length === 0)
+        continue;
       if (messageToolCalls(second).length > 0) continue;
       if (!messageText(second).trim()) continue;
       if (narratedIndices.has(order[i + 1])) continue;
@@ -1030,7 +1150,7 @@ export function AssistantSidebar() {
       i++; // the pair is settled — don't reconsider it from the other side
     }
     return order;
-  }, [messages, narratedIndices]);
+  }, [messages, narratedIndices, actionTurns]);
 
   /**
    * Index of the broker's last turn. Every assistant message above it has been
@@ -1340,6 +1460,7 @@ export function AssistantSidebar() {
                     narratedIndices.has(i) ||
                     (planPending && m.role === "assistant" && i === messages.length - 1)
                   }
+                  suppressLookupCards={actionTurns.has(i)}
                 />
               </Fragment>
             );
