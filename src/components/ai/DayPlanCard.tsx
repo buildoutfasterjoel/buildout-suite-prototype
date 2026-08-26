@@ -16,6 +16,7 @@ import { listAllTasks } from "#/data/selectors";
 import { getContact } from "#/data/store";
 import { callFlow } from "#/components/call/callFlow";
 import { useCallStore } from "#/components/call/useCallStore";
+import { usePendingCallLog } from "#/components/call/usePendingCallLog";
 import { composeCallHandoff } from "#/components/call/callHandoff";
 import { toggleTaskCompleted } from "#/components/tasks/taskCompletion";
 import { useAssistant } from "#/ai/useAssistant";
@@ -76,6 +77,8 @@ export function DayPlanCard({
   const callPhase = useCallStore((s) => s.phase);
   const recap = useCallStore((s) => s.recap);
   const callTarget = useCallStore((s) => s.target);
+  const wrapping = useCallStore((s) => s.wrapping);
+  const pendingLog = usePendingCallLog((s) => s.pending !== null);
   /**
    * Guards the resume against firing on the same tick the call starts: `phase` is
    * still whatever it was until `callFlow.open` lands, so "idle means finished"
@@ -95,14 +98,23 @@ export function DayPlanCard({
     // A recap means the call happened and was logged; falling back to "the call
     // flow went idle again" keeps a cancelled call from stranding the queue.
     if (!recap && !sawLiveCallRef.current) return;
-    // `callTarget` survives `endCall` and is cleared by `hangUp`, which is how a
-    // completed call is told from an abandoned one here. The recap itself is no
-    // longer available yet — it now arrives with the confirmed log, later than
-    // this runs — so asking for it would always have read as abandonment.
-    useDayPlanQueue
-      .getState()
-      .resume(recap || callTarget ? "Call logged. Next up…" : "Back to your queue. Next up…");
-  }, [parkedFor, callPhase, recap, callTarget]);
+    /**
+     * Did the call actually happen? Four ways of saying yes, because none of them
+     * is available at every moment this runs:
+     * - a recap is on the store (the log is confirmed);
+     * - a log is pending (including a No Answer, which is a placed call);
+     * - the recap is still being written (`wrapping`);
+     * - `callTarget` survives `endCall` and is cleared by `hangUp`.
+     *
+     * Only a hang-up before the call was placed leaves all four false, and that
+     * move was never worked — so it goes back on the queue untouched rather than
+     * being cleared as though it had been done.
+     */
+    const happened = !!recap || !!callTarget || wrapping || pendingLog;
+    const q = useDayPlanQueue.getState();
+    if (happened) q.resume("Call logged. Next up…");
+    else q.release("No call placed — still on your list.");
+  }, [parkedFor, callPhase, recap, callTarget, wrapping, pendingLog]);
 
   /**
    * Adopt a call the broker started somewhere else.

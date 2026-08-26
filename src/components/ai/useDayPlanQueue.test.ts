@@ -210,6 +210,31 @@ describe("park no longer detaches or hides", () => {
     expect(state().collapsedBy).toBeNull();
   });
 
+  /**
+   * Cancelling a call must not consume the move. `resume` finishes it; `release`
+   * hands it back — the broker never placed the call, so there is nothing to
+   * record and nothing to advance past.
+   */
+  it("release hands the move back, cleared of nothing", () => {
+    state().step(1); // browse off the top, so "same move" is a real claim
+    const cursor = state().index;
+    state().park("t-luigi");
+    state().release("No call placed — still on your list.");
+    expect(state().parkedFor).toBeNull();
+    expect(state().cleared).toEqual([]);
+    expect(state().pending).toBeNull();
+    // Same cursor, so the same move is still under it.
+    expect(state().index).toBe(cursor);
+    expect(state().note).toBe("No call placed — still on your list.");
+  });
+
+  it("release reopens the card, since the broker is back at the queue", () => {
+    state().autoFold();
+    state().park("t-rosa");
+    state().release("No call placed — still on your list.");
+    expect(state().collapsedBy).toBeNull();
+  });
+
   it("resume clears the parked move and returns to the top", () => {
     state().park("t-rosa");
     state().resume("Call logged. Next up…");

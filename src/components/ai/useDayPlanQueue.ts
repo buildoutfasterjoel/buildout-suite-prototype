@@ -86,7 +86,10 @@ interface DayPlanQueueState {
   /** Apply the finished move: advance, unfold, and say what happened. */
   commitPending: () => void;
   park: (taskId: string) => void;
+  /** The call happened: release the park and finish the move. */
   resume: (note: string) => void;
+  /** The call was abandoned: release the park and KEEP the move. */
+  release: (note: string) => void;
   /** The broker's own fold/unfold, from the card's chevron. */
   setCollapsed: (collapsed: boolean) => void;
   /**
@@ -159,6 +162,20 @@ export const useDayPlanQueue = create<DayPlanQueueState>((set, get) => ({
    * queue after the broker had actually made the call.
    */
   park: (taskId) => set({ parkedFor: taskId }),
+
+  /**
+   * The broker hung up before placing the call, so the move was never worked and
+   * stays exactly where it was — same item, same cursor, nothing cleared.
+   *
+   * The card reopens even so: they clicked Call and came back, and a queue folded
+   * behind a call that never happened leaves them with a stale header and a note
+   * they cannot read. Returning from an abandoned call is a return to the queue.
+   *
+   * `index` is deliberately untouched: `remaining` has not changed, so the cursor
+   * still points at the move they were about to make. Resetting it to 0 would
+   * move them off it — the opposite of returning to the same move.
+   */
+  release: (note) => set({ parkedFor: null, note, collapsedBy: null }),
 
   resume: (note) => {
     const { parkedFor } = get();
