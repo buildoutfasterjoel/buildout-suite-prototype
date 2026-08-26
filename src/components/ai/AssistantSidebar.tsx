@@ -1295,17 +1295,22 @@ export function AssistantSidebar() {
   // Speak the hang-up recap once when it appears (Otto reports, §6.1). This is a
   // one-way report — it must NOT enter conversationMode or re-arm the mic.
   const recap = useCallStore((s) => s.recap);
+  const callLive = useCallStore((s) => s.phase !== "idle");
   const bovDraft = useBovDraft((s) => s.draft);
+  // Folds the queue while another surface holds the floor — see
+  // `competingCardLive`. Placed here so it can see the pinned store-driven cards
+  // (`bovDraft`, `brief`) and a live call, as well as the transcript. A call is
+  // the clearest case of the lot: the call bar owns the screen, and the queue's
+  // own "Call" button is meaningless while the broker is already on the phone.
+  useEffect(() => {
+    useDayPlanQueue
+      .getState()
+      .autoCollapse(competingCardLive || callLive || !!bovDraft || !!brief);
+  }, [competingCardLive, callLive, bovDraft, brief]);
+
   // The recap and the BOV draft are store-driven records of something that
   // already happened, so each is drawn at the point in the transcript where it
   // landed — see `useTranscriptAnchor`.
-  // Folds the queue while another action-bearing card holds the floor — see
-  // `competingCardLive`. Placed here so it can see the pinned store-driven cards
-  // (`bovDraft`, `brief`) as well as the transcript.
-  useEffect(() => {
-    useDayPlanQueue.getState().autoCollapse(competingCardLive || !!bovDraft || !!brief);
-  }, [competingCardLive, bovDraft, brief]);
-
   const recapAnchor = useTranscriptAnchor(!!recap, messagesRef);
   const bovAnchor = useTranscriptAnchor(!!bovDraft, messagesRef);
   // The day-plan queue is deliberately NOT one of those: it is the surface the

@@ -27,7 +27,11 @@ interface DayPlanQueueState {
   index: number;
   /** Ids already worked or called, so they drop out of the queue. */
   cleared: string[];
-  /** The item whose call is in flight; the card hides entirely while set. */
+  /**
+   * The item whose call is in flight. `resume` clears it when the call wraps.
+   * The card stays pinned and visible throughout — folded to its header, not
+   * hidden, since it moved out of the transcript.
+   */
   parkedFor: string | null;
   /** Transient italic line above the headline ("Skipped, let me look again…"). */
   note: string | null;

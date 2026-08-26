@@ -138,13 +138,25 @@ describe("clearForContact", () => {
   });
 });
 
-describe("park no longer detaches", () => {
+describe("park no longer detaches or hides", () => {
   it("parks without any slot-switching side effect", () => {
     state().park("t-rosa");
     expect(state().parkedFor).toBe("t-rosa");
     // `detached` is gone: the card is pinned from the moment it is armed, so
     // there is no second slot to switch to.
     expect(state()).not.toHaveProperty("detached");
+  });
+
+  /**
+   * Parking must not fold the card by itself. The rail folds it for the duration
+   * of a live call (any call, not just one the queue started), which keeps that
+   * decision in one place and keeps a hand fold's precedence intact — a `park`
+   * that also folded would be a second, competing author of `collapsedBy`.
+   */
+  it("leaves the fold alone — the rail owns that while a call is live", () => {
+    expect(state().collapsedBy).toBeNull();
+    state().park("t-rosa");
+    expect(state().collapsedBy).toBeNull();
   });
 
   it("resume clears the parked move and returns to the top", () => {

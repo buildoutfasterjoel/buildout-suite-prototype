@@ -184,8 +184,13 @@ export function DayPlanCard({
   if (slot === "arm") return null;
   if (!q.key || dismissed) return null;
 
-  // On the phone — the queue steps aside until the call wraps up.
-  if (parkedFor) return null;
+  // NOT hidden during a call any more. It used to vanish while `parkedFor` was
+  // set, which made sense when the card sat in the transcript and a call scrolled
+  // it away regardless. Pinned above the composer it should stay put — the rail
+  // folds it to its header for the duration instead (a live call is another
+  // surface holding the floor, see `competingCardLive`), so the queue keeps its
+  // place and its count without offering to call someone the broker is already
+  // talking to.
 
   const firstName = item?.contactName?.split(" ")[0];
   const canCall = !!item?.isCall && !!item.contactId;
@@ -262,7 +267,16 @@ export function DayPlanCard({
   const fold = (children: ReactNode) => (
     <div className="assistant-next-actions" data-armed={armed || undefined}>
       {header}
-      <div className="assistant-next-actions__fold" data-open={!collapsed} aria-hidden={collapsed}>
+      {/* `inert` as well as `aria-hidden`: the body is clipped rather than
+          unmounted so the fold can animate, and clipping alone leaves its
+          buttons reachable by keyboard — a folded card would otherwise hand a
+          "Call" button to anyone tabbing through, mid-call included. */}
+      <div
+        className="assistant-next-actions__fold"
+        data-open={!collapsed}
+        aria-hidden={collapsed}
+        inert={collapsed}
+      >
         <div>
           <div className="assistant-next-actions__body">{children}</div>
         </div>
