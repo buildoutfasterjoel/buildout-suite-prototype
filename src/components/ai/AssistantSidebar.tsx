@@ -1668,7 +1668,10 @@ export function AssistantSidebar() {
       <div ref={scrollRef} className="flex-grow-1 overflow-auto">
         <div
           className="assistant-rail__column d-flex flex-column"
-          style={{ padding: 20, gap: 24 }}
+          // 32px at the bottom, 20 everywhere else: the composer sits directly
+          // under this, and at an even 20 the last message crowded the input as
+          // though it were part of it.
+          style={{ padding: "20px 20px 32px", gap: 24 }}
         >
         {messages.length === 0 && !recap ? (
           <div className="text-muted small">
