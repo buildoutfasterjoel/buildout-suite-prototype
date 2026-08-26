@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useRouter } from "@tanstack/react-router";
+import { Link, useLocation, useRouter } from "@tanstack/react-router";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { useChat, type UIMessage } from "@tanstack/ai-react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
@@ -61,7 +61,8 @@ import {
 import { SentEmailCard, type SentEmailData } from "#/components/ai/SentEmailCard";
 import { OttoHome, type StarterPrompt } from "#/components/ai/OttoHome";
 import { DayPlanCard } from "#/components/ai/DayPlanCard";
-import { useDayPlanQueue } from "#/components/ai/useDayPlanQueue";
+import { useDayPlanQueue, type CompletedAction } from "#/components/ai/useDayPlanQueue";
+import { CompletedActionCard } from "#/components/ai/CompletedActionCard";
 import { ActionPlanChecklist } from "#/components/ai/ActionPlanChecklist";
 import { matchesPlanIntent, type DayPlanItem } from "#/ai/dayPlan";
 import { formatCurrency } from "#/components/deals/dealDisplay";
@@ -296,22 +297,34 @@ function ResultCard({
   title,
   badge,
   meta,
+  to,
   onOpen,
 }: {
   title: string;
   badge?: string;
   meta?: string;
-  onOpen: () => void;
+  /**
+   * Destination for a card pointing at ONE record, rendered as a real link.
+   *
+   * A record card is the kind a broker cmd-clicks — read the contact without
+   * losing the conversation that produced it — and a `<button>` gives them no
+   * way to. `DealCardById` has always been a `Link`; this is the same offer for
+   * the other record types.
+   */
+  to?: string;
+  /**
+   * Fallback for a card that has somewhere to go but no plain href to go to —
+   * a property lands on the Deals grid and has to apply the filter first (see
+   * `goToNav`), which is a click handler's job, not a URL's.
+   */
+  onOpen?: () => void;
 }) {
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      // `d-block` + `w-100` on the button and `w-100` on the row: Blueprint's
-      // .btn is a centering flex container, so without these the content
-      // collapses to its intrinsic width and floats in the middle of the card.
-      className="btn d-block p-0 border rounded text-start w-100 bg-white"
-    >
+  // `d-block` + `w-100` on the control and `w-100` on the row: Blueprint's .btn
+  // is a centering flex container, so without these the content collapses to its
+  // intrinsic width and floats in the middle of the card.
+  const className = "btn d-block p-0 border rounded text-start w-100 bg-white";
+  const body = (
+    <>
       <div className="d-flex align-items-center gap-2 p-2 w-100">
         <span className="flex-grow-1 d-flex align-items-center gap-2" style={{ minWidth: 0 }}>
           <span className="fw-semibold text-truncate">{title}</span>
@@ -324,6 +337,19 @@ function ResultCard({
         <FontAwesomeIcon icon={faChevronRight} className="text-muted flex-shrink-0" />
       </div>
       {meta && <div className="text-muted small text-truncate px-2 pb-2">{meta}</div>}
+    </>
+  );
+
+  if (to) {
+    return (
+      <Link to={to as never} className={`${className} text-decoration-none text-reset`}>
+        {body}
+      </Link>
+    );
+  }
+  return (
+    <button type="button" onClick={onOpen} className={className}>
+      {body}
     </button>
   );
 }
@@ -459,7 +485,7 @@ function ToolResultCards({
             title={c.name}
             badge={c.relationship ? RELATIONSHIP_LABELS[c.relationship] ?? c.relationship : undefined}
             meta={c.company}
-            onOpen={() => router.navigate({ to: `/backoffice/contacts/${c.id}` as never })}
+            to={`/backoffice/contacts/${c.id}`}
           />
         )}
         {p && (
@@ -663,6 +689,27 @@ function useTranscriptAnchor(
     setAnchor((prev) => (prev === undefined ? (messagesRef.current.at(-1)?.id ?? null) : prev));
   }, [present, messagesRef]);
   return anchor;
+}
+
+/**
+ * The completed moves anchored at one point in the transcript.
+ *
+ * Returns `null` rather than an empty fragment when there is nothing to draw:
+ * the transcript is a flex column with a 24px gap, and an empty element still
+ * counts as a child — every message would gain a blank turn's worth of space.
+ *
+ * Keyed on the completion time as well as the task, because a move can be worked
+ * more than once across a session's queues.
+ */
+function CompletedActions({ entries }: { entries: CompletedAction[] }) {
+  if (entries.length === 0) return null;
+  return (
+    <>
+      {entries.map((c) => (
+        <CompletedActionCard key={`${c.taskId}-${c.at}`} entry={c} />
+      ))}
+    </>
+  );
 }
 
 /**
@@ -1381,7 +1428,16 @@ export function AssistantSidebar() {
   useEffect(() => {
     if (!queuePending || isLoading || callLive || pendingCallLog) return;
     const stillTheirTurn = pendingAskRef.current === (lastAsk?.id ?? "");
-    const t = setTimeout(() => useDayPlanQueue.getState().commitPending(stillTheirTurn), 450);
+    const t = setTimeout(
+      () =>
+        // The anchor is read inside the timeout, not outside it: the turn can
+        // still land a closing message in those 450ms, and the completed record
+        // belongs under whatever the rail last said — not above it.
+        useDayPlanQueue
+          .getState()
+          .commitPending(stillTheirTurn, messagesRef.current.at(-1)?.id ?? null),
+      450,
+    );
     return () => clearTimeout(t);
   }, [queuePending, isLoading, callLive, pendingCallLog, lastAsk?.id]);
 
@@ -1396,6 +1452,23 @@ export function AssistantSidebar() {
   // slot's own guard inside `DayPlanCard`, so the wrapper never pads an element
   // that renders nothing.
   const queuePinned = useDayPlanQueue((q) => q.key !== null && !q.dismissed);
+
+  /**
+   * The broker's progress through the queue, drawn into the transcript at the
+   * point each move was finished.
+   *
+   * Anchored per entry rather than as one block, because these accumulate: a
+   * single anchor would drag the whole day's history down behind the newest
+   * completion, which is the bug `useTranscriptAnchor` exists to prevent — with
+   * the added twist that the earlier entries would jump turns as well.
+   */
+  const completed = useDayPlanQueue((q) => q.completed);
+  const completedAt = (id: string | null) => completed.filter((c) => c.anchorId === id);
+  // An entry whose anchor message is gone (the transcript was reset under it)
+  // still has to be reachable, so it falls back to the end of the flow.
+  const orphanedCompleted = completed.filter(
+    (c) => c.anchorId !== null && !messages.some((m) => m.id === c.anchorId),
+  );
 
   // Re-anchors the transcript when the pinned card grows or shrinks — see
   // `atBottomRef`. Sits below `queuePinned` so it can re-observe when the card
@@ -1715,6 +1788,9 @@ export function AssistantSidebar() {
                 />
                 {recapAnchor === m.id && <CallRecapCard />}
                 {bovAnchor === m.id && <BovCard />}
+                {/* After the recap, not before it: the recap is the call itself
+                    and this is the bookkeeping that follows from it. */}
+                <CompletedActions entries={completedAt(m.id)} />
               </Fragment>
             );
           })
@@ -1723,6 +1799,7 @@ export function AssistantSidebar() {
             hang them under. */}
         {recapAnchor === null && <CallRecapCard />}
         {bovAnchor === null && <BovCard />}
+        <CompletedActions entries={completedAt(null)} />
         {/* The turn's visible work can finish before the turn does: a tool result
             lands, its card renders, and the model is still closing out. What it
             says next is suppressed anyway (see `narratedIndices`), so a spinner
@@ -1757,6 +1834,7 @@ export function AssistantSidebar() {
         {bovAnchor !== undefined &&
           bovAnchor !== null &&
           !messages.some((m) => m.id === bovAnchor) && <BovCard />}
+        <CompletedActions entries={orphanedCompleted} />
         </div>
       </div>
       )}

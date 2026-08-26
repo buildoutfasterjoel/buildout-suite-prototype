@@ -44,7 +44,7 @@ export function SentEmailCard({ sent }: { sent: SentEmailData }) {
   const first = sent.contactName.split(" ")[0];
 
   return (
-    <ChatSection label="Sent Email">
+    <ChatSection label="Sent Email" animateIn>
       <div className="assistant-sent">
         <div className="assistant-sent__header">
           <span className="assistant-sent__eyebrow">Email to {first}</span>

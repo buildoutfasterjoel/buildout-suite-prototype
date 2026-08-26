@@ -4674,7 +4674,7 @@ body:has(.design-toggle-fab) .toast-viewport {
   // Played once per armed queue (see `armed` in `DayPlanCard`), not per mount:
   // the pinned card outlives the queue inside it.
   &[data-armed] {
-    animation: next-actions-in 0.24s ease-out;
+    animation: otto-arrival 0.24s ease-out;
 
     @media (prefers-reduced-motion: reduce) {
       animation: none;
@@ -4846,7 +4846,11 @@ body:has(.design-toggle-fab) .toast-viewport {
   }
 }
 
-@keyframes next-actions-in {
+// One arrival for the whole rail: the Next Actions card being pinned, an email
+// draft landing, a receipt for a send. Shared rather than copied per block —
+// they are the same event wearing different clothes, and two keyframes with the
+// same body drift apart the first time anyone tunes one of them.
+@keyframes otto-arrival {
   from {
     opacity: 0;
     transform: translateY(6px);
@@ -4854,6 +4858,24 @@ body:has(.design-toggle-fab) .toast-viewport {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+// Something Otto has just made, arriving in the transcript. Opt-in per section
+// (see `animateIn` on `ChatSection`), so it marks work landing rather than every
+// folded line of bookkeeping.
+//
+// On the OUTER section, not the artifact inside it: the header and the block
+// appear in the same commit, and animating only the block left the label popping
+// into place above something still sliding.
+//
+// A transform rather than a height or a margin, so an arrival mid-stream cannot
+// change the transcript's scroll height under the auto-scroll.
+.assistant-section--arriving {
+  animation: otto-arrival 0.24s ease-out;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
   }
 }
 
@@ -5022,6 +5044,41 @@ body:has(.design-toggle-fab) .toast-viewport {
     line-height: 19px;
     color: colors.$storm-grey-950;
     white-space: pre-wrap;
+  }
+}
+
+// Assistant rail — a Next Action the broker has worked (Figma node 265:19858).
+// Past work like the sent-email receipt above, and wearing the same clothes: a
+// hairline down the left edge, no fill. Its own block rather than a modifier on
+// `.assistant-sent`, because the two say different things — that one is "your
+// email went"; this is "you finished a move".
+//
+// One flat 8px stack, no header row: the design's activity line repeated the
+// receipt directly above it word for word, so it comes off (see
+// `CompletedActionCard`) and what is left is the move, its reason, and the way
+// back to the record.
+.assistant-completed {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding-inline: 12px;
+  border-left: 2px solid var(--card-border-color, #{colors.$storm-grey-100});
+
+  &__headline {
+    font-size: 14px;
+    line-height: 19px;
+    font-weight: 600;
+    color: colors.$storm-grey-950;
+  }
+
+  // Full body size, matching the live card's reason line: the case for the move
+  // is what makes the record worth reading back, so it isn't demoted to a
+  // footnote just because the move is done.
+  &__reason {
+    font-size: 14px;
+    line-height: 19px;
+    color: colors.$storm-grey-950;
   }
 }
 

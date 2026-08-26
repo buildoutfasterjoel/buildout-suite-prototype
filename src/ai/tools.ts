@@ -526,7 +526,13 @@ export function createClientTools({
         buyerContactId: buyerContactId ?? "",
       });
       return {
-        deal: dealSummary(deal),
+        // An ARRAY, not a bare `deal`, and that is the whole difference between
+        // a card and nothing: `entitiesOf` in the rail reads `deals` /
+        // `contacts` / `properties`, and a single entity renders as its full
+        // clickable card. The contact family has always returned one (see
+        // `create_contact`), so a created contact was one click from its record
+        // and a created deal was a sentence saying it existed.
+        deals: [dealSummary(deal)],
         // Say which way it went, so the model's confirmation can't claim it used
         // the broker's building when it actually made a new one.
         usedExistingProperty: !!linked,
@@ -537,7 +543,9 @@ export function createClientTools({
     updateDealStageDef.client(async (args) => {
       const { dealId, status } = args as { dealId: string; status: PropertyStatus };
       const { deal } = updateDealStage(dealId, status);
-      return deal ? { deal: dealSummary(deal) } : { error: "Deal not found" };
+      // Same array, same reason as createDeal: the record just touched is one
+      // click away. `update_contact` already worked this way.
+      return deal ? { deals: [dealSummary(deal)] } : { error: "Deal not found" };
     }),
 
     linkContactToDealDef.client(async (args) => {
@@ -548,7 +556,7 @@ export function createClientTools({
       };
       const { deal } = linkContactToDeal(dealId, contactId, role);
       return deal
-        ? { deal: dealSummary(deal), linked: contactId, role }
+        ? { deals: [dealSummary(deal)], linked: contactId, role }
         : { error: "Deal not found" };
     }),
 

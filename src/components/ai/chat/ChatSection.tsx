@@ -24,6 +24,7 @@ export function ChatSection({
   label,
   defaultOpen = true,
   collapsed = false,
+  animateIn = false,
   children,
 }: {
   label: string;
@@ -33,6 +34,16 @@ export function ChatSection({
    * one-way, so it won't fight a broker who reopens it to compare versions.
    */
   collapsed?: boolean;
+  /**
+   * Play the rail's arrival animation on mount — for a section carrying
+   * something Otto has just made, which lands mid-conversation and is worth
+   * seeing arrive rather than appearing between blinks.
+   *
+   * Opt-in rather than the default: a section that only *reports* (the folded
+   * "Recommended next actions" line, a completed move) is bookkeeping, and
+   * animating those too would make every turn twitch.
+   */
+  animateIn?: boolean;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen && !collapsed);
@@ -46,7 +57,10 @@ export function ChatSection({
   return (
     // 12px open, 8px shut: the header sits closer to nothing than it does to a
     // artifact it's introducing (Figma 193:5894 vs 193:8991).
-    <div className="d-flex flex-column" style={{ gap: open ? 12 : 8 }}>
+    <div
+      className={`d-flex flex-column${animateIn ? " assistant-section--arriving" : ""}`}
+      style={{ gap: open ? 12 : 8 }}
+    >
       <button
         type="button"
         className="assistant-section__trigger"
