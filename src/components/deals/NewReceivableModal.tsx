@@ -4,10 +4,13 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Field } from "@buildoutinc/blueprint-react/ui/Field";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
-import { Select } from "@buildoutinc/blueprint-react/ui/Select";
+import { Combobox } from "@buildoutinc/blueprint-react/ui/Combobox";
 import { Textarea } from "@buildoutinc/blueprint-react/ui/Textarea";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDollarSign } from "@fortawesome/pro-regular-svg-icons";
+import {
+	faDollarSign,
+	faMagnifyingGlass,
+} from "@fortawesome/pro-regular-svg-icons";
 import { getAllContacts } from "#/data/store";
 import { payerOptions, type PayerOption } from "#/data/vouchers";
 
@@ -46,6 +49,7 @@ export function NewReceivableModal({
 	onAdd: (input: NewReceivableInput) => void;
 }) {
 	const [payer, setPayer] = useState<PayerOption | null>(null);
+	const [payerQuery, setPayerQuery] = useState("");
 	const [dueDate, setDueDate] = useState("");
 	const [amount, setAmount] = useState("");
 	const [description, setDescription] = useState("");
@@ -55,6 +59,7 @@ export function NewReceivableModal({
 	useEffect(() => {
 		if (open) {
 			setPayer(null);
+			setPayerQuery("");
 			setDueDate("");
 			setAmount("");
 			setDescription("");
@@ -91,23 +96,43 @@ export function NewReceivableModal({
 				<Modal.Body className="d-flex flex-column gap-4">
 					<Field>
 						<Field.Label>Payer</Field.Label>
-						<Select
-							value={payer?.value ?? ""}
-							onValueChange={(v) =>
-								setPayer(options.find((o) => o.value === v) ?? null)
-							}
+						{/* A Combobox, not a Select: every contact appears twice here —
+						    once as themselves and once as their company — so the list is
+						    twice the contact book and scrolling it is not a way to find
+						    anybody. Typing is. This is also why the selection is held as
+						    the option OBJECT rather than its value string: a
+						    `PayerOption.value` is a composite key (contact id plus which
+						    form), so anything rendering the bare value renders an id. */}
+						<Combobox
+							items={options}
+							value={payer}
+							inputValue={payerQuery}
+							onInputValueChange={(v: string) => setPayerQuery(v)}
+							onValueChange={(v) => {
+								const opt = v as PayerOption | null;
+								setPayer(opt);
+								setPayerQuery(opt?.label ?? "");
+							}}
 						>
-							<Select.Trigger>
-								<Select.Value placeholder="Select a payer..." />
-							</Select.Trigger>
-							<Select.Content>
-								{options.map((o) => (
-									<Select.Item key={o.value} value={o.value}>
-										{o.label}
-									</Select.Item>
-								))}
-							</Select.Content>
-						</Select>
+							<Combobox.InputGroup>
+								<InputGroup.Addon>
+									<FontAwesomeIcon icon={faMagnifyingGlass} />
+								</InputGroup.Addon>
+								<Combobox.Input placeholder="Search payers..." />
+							</Combobox.InputGroup>
+							<Combobox.Content>
+								<Combobox.Empty className="text-muted">
+									No matching payers
+								</Combobox.Empty>
+								<Combobox.List>
+									{(item: PayerOption) => (
+										<Combobox.Item key={item.value} value={item}>
+											{item.label}
+										</Combobox.Item>
+									)}
+								</Combobox.List>
+							</Combobox.Content>
+						</Combobox>
 					</Field>
 
 					<Field>
