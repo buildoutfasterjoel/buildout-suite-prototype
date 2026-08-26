@@ -177,6 +177,7 @@ export function EmailDraftSection({
     <ChatSection
       label={version > 1 ? "Edited email draft" : "Drafted an email"}
       collapsed={superseded}
+      animateIn
     >
       <EmailDraftObject draft={draft} version={version} />
       <div className="text-body">

@@ -4674,7 +4674,7 @@ body:has(.design-toggle-fab) .toast-viewport {
   // Played once per armed queue (see `armed` in `DayPlanCard`), not per mount:
   // the pinned card outlives the queue inside it.
   &[data-armed] {
-    animation: next-actions-in 0.24s ease-out;
+    animation: otto-arrival 0.24s ease-out;
 
     @media (prefers-reduced-motion: reduce) {
       animation: none;
@@ -4846,7 +4846,11 @@ body:has(.design-toggle-fab) .toast-viewport {
   }
 }
 
-@keyframes next-actions-in {
+// One arrival for the whole rail: the Next Actions card being pinned, an email
+// draft landing, a receipt for a send. Shared rather than copied per block —
+// they are the same event wearing different clothes, and two keyframes with the
+// same body drift apart the first time anyone tunes one of them.
+@keyframes otto-arrival {
   from {
     opacity: 0;
     transform: translateY(6px);
@@ -4854,6 +4858,24 @@ body:has(.design-toggle-fab) .toast-viewport {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+// Something Otto has just made, arriving in the transcript. Opt-in per section
+// (see `animateIn` on `ChatSection`), so it marks work landing rather than every
+// folded line of bookkeeping.
+//
+// On the OUTER section, not the artifact inside it: the header and the block
+// appear in the same commit, and animating only the block left the label popping
+// into place above something still sliding.
+//
+// A transform rather than a height or a margin, so an arrival mid-stream cannot
+// change the transcript's scroll height under the auto-scroll.
+.assistant-section--arriving {
+  animation: otto-arrival 0.24s ease-out;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
   }
 }
 
