@@ -283,6 +283,10 @@ export function DateField({
 }) {
   const [open, setOpen] = useState(false);
   const selected = parseDate(value);
+  // The text input is `readOnly`, so the calendar is the ONLY way to set this
+  // field — which makes it the field's real control, and it is not a native
+  // element for a disabled fieldset to reach. See `useFormLocked`.
+  const locked = useFormLocked();
   return (
     <Field className="record-form__field">
       <InputGroup>
@@ -300,24 +304,34 @@ export function DateField({
           }
         />
         <InputGroup.Addon>
-          <Popover open={open} onOpenChange={setOpen}>
-            <Popover.Trigger
-              nativeButton={false}
-              aria-label="Open date picker"
-              render={<FontAwesomeIcon icon={faCalendar} />}
-            />
-            <Popover.Content className="p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={selected}
-                defaultMonth={selected}
-                onSelect={(d) => {
-                  onChange(d ? toISODate(d) : null);
-                  setOpen(false);
-                }}
+          {/* Locked: the icon stays, so the field keeps its shape and does not
+              reflow beside its unlocked neighbours, but it is no longer a
+              trigger. Dropping the Popover entirely rather than disabling it —
+              `Popover.Trigger` renders an `<svg>` here, which has no disabled
+              state to set, and an addon that opens nothing is the whole
+              requirement. */}
+          {locked ? (
+            <FontAwesomeIcon icon={faCalendar} className="text-body-tertiary" />
+          ) : (
+            <Popover open={open} onOpenChange={setOpen}>
+              <Popover.Trigger
+                nativeButton={false}
+                aria-label="Open date picker"
+                render={<FontAwesomeIcon icon={faCalendar} />}
               />
-            </Popover.Content>
-          </Popover>
+              <Popover.Content className="p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selected}
+                  defaultMonth={selected}
+                  onSelect={(d) => {
+                    onChange(d ? toISODate(d) : null);
+                    setOpen(false);
+                  }}
+                />
+              </Popover.Content>
+            </Popover>
+          )}
         </InputGroup.Addon>
       </InputGroup>
     </Field>
