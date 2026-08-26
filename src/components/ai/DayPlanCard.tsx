@@ -329,25 +329,41 @@ export function DayPlanCard({
         </div>
         <div className="assistant-next-actions__reason">{item.reason}</div>
 
-        {/* Three slots, always: work the move, look at what it hangs off, or
-            declare it handled. The middle one is the record — the broker's
-            reflex before acting is to check who they're about to call. */}
+        {/*
+          Work the move, then declare it handled.
+
+          A CALL is its own primary, with the record beside it: the broker's
+          reflex before dialling is to read who they are about to ring.
+
+          Anything else leads with the RECORD, not the task list. "Open task" was
+          the primary here and it went to /tasks — a list, with no way to open the
+          task itself, so it left the broker to find their own row and told them
+          nothing about the work. The contact is where the task's context actually
+          is, so the nudge is to the person. No secondary: there is nothing better
+          to offer than the record, and "Open task" as a fallback would just be
+          the same dead end one rung down.
+
+          A task with no contact behind it keeps "Open task", because then the
+          list genuinely is the only place to go.
+        */}
         <div className="assistant-next-actions__actions">
           {canCall ? (
-            <Button size="sm" variant="primary" onClick={onCall}>
-              <FontAwesomeIcon icon={faPhone} />
-              Call {firstName ?? "now"}
+            <>
+              <Button size="sm" variant="primary" onClick={onCall}>
+                <FontAwesomeIcon icon={faPhone} />
+                Call {firstName ?? "now"}
+              </Button>
+              <Button size="sm" variant="outline" onClick={onViewRecord}>
+                View {firstName ?? "record"}
+              </Button>
+            </>
+          ) : item.contactId ? (
+            <Button size="sm" variant="primary" onClick={onViewRecord}>
+              View {firstName ?? "record"}
             </Button>
           ) : (
             <Button size="sm" variant="primary" onClick={onOpenTask}>
               Open task
-            </Button>
-          )}
-          {/* Only when there's actually a record behind the move — a standalone
-              task has nothing to view that "Open task" hasn't already opened. */}
-          {item.contactId && (
-            <Button size="sm" variant="outline" onClick={onViewRecord}>
-              View {firstName ?? "record"}
             </Button>
           )}
           <Button size="sm" variant="ghost" onClick={onDone}>
