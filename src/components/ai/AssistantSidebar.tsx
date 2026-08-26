@@ -49,6 +49,7 @@ import { useGreeting } from "#/ai/voice/useGreeting";
 import type { GreetingParts } from "#/ai/voice/greeting";
 import { registerStopForCall, callFlow } from "#/components/call/callFlow";
 import { useCallStore } from "#/components/call/useCallStore";
+import { usePendingCallLog } from "#/components/call/usePendingCallLog";
 import { CallRecapCard } from "#/components/call/CallRecapCard";
 import { composeRecapReport, recapSpeechText } from "#/components/call/callRecap";
 import { DealCardById } from "#/components/deals/DealCard";
@@ -60,6 +61,7 @@ import {
 import { SentEmailCard, type SentEmailData } from "#/components/ai/SentEmailCard";
 import { OttoHome, type StarterPrompt } from "#/components/ai/OttoHome";
 import { DayPlanCard } from "#/components/ai/DayPlanCard";
+import { useDayPlanQueue } from "#/components/ai/useDayPlanQueue";
 import { ActionPlanChecklist } from "#/components/ai/ActionPlanChecklist";
 import { matchesPlanIntent, type DayPlanItem } from "#/ai/dayPlan";
 import { formatCurrency } from "#/components/deals/dealDisplay";
@@ -416,7 +418,7 @@ function ToolResultCards({
             Prioritized your day, {dayPlan.length} move{dayPlan.length === 1 ? "" : "s"} queued.
             Starting you on the first one.
           </div>
-          <DayPlanCard items={dayPlan} slot="inline" />
+          <DayPlanCard items={dayPlan} slot="arm" />
         </>
       )}
       {emailDraft && (
@@ -630,6 +632,38 @@ const ACTION_TOOLS = new Set([
 function succeeded(output: unknown): boolean {
   const o = (output ?? {}) as { error?: unknown };
   return o.error === undefined;
+}
+
+/**
+ * Where a store-driven card sits in the transcript: the id of the last message
+ * that existed when it arrived, `null` if it arrived before any, `undefined`
+ * while it isn't showing.
+ *
+ * The call recap and the BOV draft come from stores rather than from a tool
+ * result, so they have no message of their own to live in. They used to render
+ * after the whole message list — correct at the instant they appeared, and wrong
+ * from the next message onward, which is how "what can you do?" got answered
+ * *above* a call recap from several turns earlier. Recording the arrival point
+ * pins them to the moment they actually happened.
+ *
+ * Reads the live messages through a ref, and the anchor is sticky once set
+ * (`prev === undefined ? … : prev`): depending on `messages` would re-run on
+ * every token and drag the card down the transcript behind each new turn, which
+ * is the original bug with extra steps.
+ */
+function useTranscriptAnchor(
+  present: boolean,
+  messagesRef: { current: UIMessage[] },
+): string | null | undefined {
+  const [anchor, setAnchor] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (!present) {
+      setAnchor(undefined);
+      return;
+    }
+    setAnchor((prev) => (prev === undefined ? (messagesRef.current.at(-1)?.id ?? null) : prev));
+  }, [present, messagesRef]);
+  return anchor;
 }
 
 /**
@@ -862,6 +896,10 @@ export function AssistantSidebar() {
   );
 
   const { messages, sendMessage, setMessages, isLoading, error, stop } = useChat({ fetcher, tools });
+  // Read by `useTranscriptAnchor`, which must see the latest messages without
+  // re-running on every streamed token.
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
 
   // Checked once (and cached) so the panel never hands `useChat` a stream from
   // an unconfigured server — a missing key is resolved entirely client-side,
@@ -1031,6 +1069,37 @@ export function AssistantSidebar() {
   }, [messages]);
 
   /**
+   * Keep the transcript pinned to the bottom when the pinned region changes
+   * height.
+   *
+   * The queue card lives outside the scroller, so growing it — expanding on a
+   * completion, or arriving for the first time — shrinks the transcript's
+   * viewport underneath. `scrollTop` doesn't move, so content that was flush
+   * with the bottom ends up hidden below the fold: the sent-email card the
+   * broker had just been shown slides behind the card that opened to say what
+   * was next.
+   *
+   * `atBottomRef` is sampled from real scroll events, not measured at resize
+   * time. Shrinking a viewport fires no scroll event, so the flag still reports
+   * where the broker was *before* the card grew — which is the question worth
+   * asking. Measuring after the fact would find them 100-odd pixels off the
+   * bottom and have to guess whether they put themselves there.
+   */
+  const pinnedRef = useRef<HTMLDivElement>(null);
+  const atBottomRef = useRef(true);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      // The same 150px slack the message autoscroll uses, so "parked at the
+      // bottom" means one thing in this file.
+      atBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [view]);
+
+  /**
    * The email history, derived once per transcript change and read by every
    * draft in it — versions and what's been superseded (see {@link EmailFlow}).
    */
@@ -1164,6 +1233,43 @@ export function AssistantSidebar() {
   }, [messages]);
 
   /**
+   * Bring a closed queue back when the broker asks for it again — from the ASK,
+   * not from the tool result.
+   *
+   * `DayPlanCard`'s `arm` slot can only revive the card when `plan_my_day`
+   * actually runs, and the model does not reliably run it twice: asked a second
+   * time it is prone to answering "same plan — no new items since last time" from
+   * what it already has in context. That leaves the broker reading prose about a
+   * card they closed, with no way to get it back. The prompt now insists on the
+   * call (see `systemPrompt.ts`), but intent is knowable here without the model's
+   * cooperation, so the recovery does not depend on it.
+   *
+   * Keyed on the message id so it fires once per ask. A tool call that *does*
+   * arrive builds a fresh queue through `arm`, which resets all of this anyway.
+   */
+  const lastAsk = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "user") {
+        return { id: messages[i].id, text: messageText(messages[i]) };
+      }
+    }
+    return null;
+  }, [messages]);
+
+  useEffect(() => {
+    if (!lastAsk || !matchesPlanIntent(lastAsk.text)) return;
+    const queue = useDayPlanQueue.getState();
+    if (queue.key && (queue.dismissed || queue.collapsedBy !== null)) queue.revive();
+  }, [lastAsk?.id, lastAsk?.text]);
+
+  useEffect(() => {
+    if (!lastAsk || !matchesPlanIntent(lastAsk.text)) return;
+    const queue = useDayPlanQueue.getState();
+    if (queue.key && (queue.dismissed || queue.collapsedBy !== null)) queue.revive();
+  }, [lastAsk?.id, lastAsk?.text]);
+
+
+  /**
    * Whether the in-flight turn is a "plan my day" ask, so the progress checklist
    * replaces the generic "Working…" line. Read off the last user message rather
    * than tracked on send, so it survives re-renders and stays correct on replay.
@@ -1197,6 +1303,112 @@ export function AssistantSidebar() {
   // Speak the hang-up recap once when it appears (Otto reports, §6.1). This is a
   // one-way report — it must NOT enter conversationMode or re-arm the mic.
   const recap = useCallStore((s) => s.recap);
+  // "In a call" for folding purposes covers the wrap-up too: the line is down
+  // but the recap is still being written, and neither is a moment to reopen the
+  // queue over.
+  const callLive = useCallStore((s) => s.phase !== "idle" || s.wrapping);
+  const bovDraft = useBovDraft((s) => s.draft);
+  /**
+   * Fold the queue whenever the broker's attention moves to something else: they
+   * sent a message and a reply is on its way, a call went live, or a draft
+   * landed. Fold only — see `collapsedBy` for why nothing here ever opens it.
+   *
+   * A plan-intent ask is exempt: that is a request to SEE the queue, and the
+   * revive effect above is already opening it. Folding it in the same tick would
+   * be the two rules cancelling each other out.
+   *
+   * Edge-triggered on the message id rather than derived from state, because
+   * "folded because you sent something" has to survive the reply arriving —
+   * a continuous rule would unfold the moment the turn settled, which is the
+   * flapping this is meant to avoid.
+   */
+  useEffect(() => {
+    if (!lastAsk || matchesPlanIntent(lastAsk.text)) return;
+    useDayPlanQueue.getState().autoFold();
+  }, [lastAsk?.id, lastAsk?.text]);
+
+  useEffect(() => {
+    if (callLive || bovDraft || brief) useDayPlanQueue.getState().autoFold();
+  }, [callLive, bovDraft, brief]);
+
+  /**
+   * Show a finished move as finished, but not until the turn has finished
+   * speaking. See `pending` on the queue store.
+   *
+   * The order the broker should read is: what just happened, then what is next.
+   * Committing on completion inverted it — the queue announced the next move
+   * while the assistant was still reporting the last one, so a recap card and an
+   * expanding card arrived together and neither had the floor.
+   *
+   * Waits on every way a turn can still be talking: the model streaming, a call
+   * in flight *or wrapping up*, and the Log Call modal. A call is not reported
+   * until the broker has confirmed it, and the recap card appears from that
+   * confirmation (see `GlobalLogCallModal`). The wrap-up matters on its own —
+   * writing the recap is a model call, and without waiting for it the commit
+   * fired in the gap between hang-up and the modal appearing, which put the
+   * queue's next move on screen while the broker still had a modal to answer.
+   * The extra beat afterwards is deliberate: landing both in the same frame reads
+   * as one event rather than a consequence.
+   */
+  const pendingCallLog = usePendingCallLog((s) => s.pending !== null);
+  const queuePending = useDayPlanQueue((q) => q.pending !== null);
+
+  /**
+   * Which ask the pending completion belongs to.
+   *
+   * The commit can land turns later than the move it reports — a call logged
+   * behind a modal, a completion that had to wait out a long reply — and by then
+   * the broker may have asked two other things. Opening the card then is the rail
+   * losing its place: it reports "Marked done. Next up…" over an answer to a
+   * different question. Comparing the ask at commit time with the ask when the
+   * move finished is what tells "still their turn" from "overtaken".
+   */
+  const pendingAskRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!queuePending) {
+      pendingAskRef.current = null;
+      return;
+    }
+    if (pendingAskRef.current === null) pendingAskRef.current = lastAsk?.id ?? "";
+  }, [queuePending, lastAsk?.id]);
+
+  useEffect(() => {
+    if (!queuePending || isLoading || callLive || pendingCallLog) return;
+    const stillTheirTurn = pendingAskRef.current === (lastAsk?.id ?? "");
+    const t = setTimeout(() => useDayPlanQueue.getState().commitPending(stillTheirTurn), 450);
+    return () => clearTimeout(t);
+  }, [queuePending, isLoading, callLive, pendingCallLog, lastAsk?.id]);
+
+  // The recap and the BOV draft are store-driven records of something that
+  // already happened, so each is drawn at the point in the transcript where it
+  // landed — see `useTranscriptAnchor`.
+  const recapAnchor = useTranscriptAnchor(!!recap, messagesRef);
+  const bovAnchor = useTranscriptAnchor(!!bovDraft, messagesRef);
+  // The day-plan queue is deliberately NOT one of those: it is the surface the
+  // broker is working, so it is pinned outside the transcript instead — from the
+  // moment it is armed, not just once a call detaches it. Mirrors the pinned
+  // slot's own guard inside `DayPlanCard`, so the wrapper never pads an element
+  // that renders nothing.
+  const queuePinned = useDayPlanQueue((q) => q.key !== null && !q.dismissed);
+
+  // Re-anchors the transcript when the pinned card grows or shrinks — see
+  // `atBottomRef`. Sits below `queuePinned` so it can re-observe when the card
+  // mounts and unmounts.
+  useEffect(() => {
+    const pinned = pinnedRef.current;
+    const el = scrollRef.current;
+    if (!pinned || !el) return;
+    const observer = new ResizeObserver(() => {
+      if (!atBottomRef.current) return;
+      // After paint, so the shrunken viewport is what `scrollHeight` is measured
+      // against.
+      requestAnimationFrame(() => {
+        el.scrollTop = el.scrollHeight;
+      });
+    });
+    observer.observe(pinned);
+    return () => observer.disconnect();
+  }, [queuePinned, view]);
   const recapTarget = useCallStore((s) => s.target);
   const spokenRecapRef = useRef<object | null>(null);
   useEffect(() => {
@@ -1213,8 +1425,7 @@ export function AssistantSidebar() {
 
   // Speak the BOV draft's summary once when it appears (Otto drafts the BOV,
   // §Phase 4C). Also a one-way report — it must NOT enter conversationMode or
-  // re-arm the mic.
-  const bovDraft = useBovDraft((s) => s.draft);
+  // re-arm the mic. (`bovDraft` is read above, alongside its transcript anchor.)
   const spokenBovRef = useRef<object | null>(null);
   useEffect(() => {
     if (!bovDraft || bovDraft === spokenBovRef.current) return;
@@ -1462,10 +1673,16 @@ export function AssistantSidebar() {
                   }
                   suppressLookupCards={actionTurns.has(i)}
                 />
+                {recapAnchor === m.id && <CallRecapCard />}
+                {bovAnchor === m.id && <BovCard />}
               </Fragment>
             );
           })
         )}
+        {/* Arrived before the broker had said anything, so there is no message to
+            hang them under. */}
+        {recapAnchor === null && <CallRecapCard />}
+        {bovAnchor === null && <BovCard />}
         {/* The turn's visible work can finish before the turn does: a tool result
             lands, its card renders, and the model is still closing out. What it
             says next is suppressed anyway (see `narratedIndices`), so a spinner
@@ -1491,18 +1708,37 @@ export function AssistantSidebar() {
         {error && (
           <div className="text-danger small">Something went wrong: {error.message}</div>
         )}
-        {/* The hang-up recap is the newest event — render it at the BOTTOM of the
-            flow (after the messages), not the top, so the conversation reads
-            chronologically. */}
-        {recap && <CallRecapCard />}
-        {/* The queue, once a call detached it from its place in the transcript —
-            it belongs below the recap it was interrupted by, not above it. */}
-        <DayPlanCard slot="bottom" />
-        {/* The BOV draft self-arrives after the underwriting result is ready
-            (§Phase 4C) — render it at the bottom of the flow too. */}
-        <BovCard />
+        {/* A card whose anchor message is gone (the transcript was reset under it)
+            still has to be reachable, so it falls back to the end of the flow
+            rather than disappearing. */}
+        {recapAnchor !== undefined &&
+          recapAnchor !== null &&
+          !messages.some((m) => m.id === recapAnchor) && <CallRecapCard />}
+        {bovAnchor !== undefined &&
+          bovAnchor !== null &&
+          !messages.some((m) => m.id === bovAnchor) && <BovCard />}
         </div>
       </div>
+      )}
+
+      {/* The day-plan queue, pinned from the moment it is armed. Outside the
+          scrolling transcript, like the call brief below — because it is not a
+          record of something that happened, it is the surface the broker is
+          *working*: one move at a time, with Call / Open / Done. Inside the flow
+          it drifted up into scrollback behind every later turn, and answers
+          appeared beneath it as though the queue were newer than they were. A
+          live surface belongs where the hands are, next to the composer. */}
+      {queuePinned && (
+        // 4px, not `pb-2`'s 8: the composer below adds 4px of its own top
+        // padding, so this lands the gap between card and input at the 8px the
+        // design specifies rather than 12.
+        <div
+          ref={pinnedRef}
+          className="assistant-rail__column"
+          style={{ padding: "0 20px 4px" }}
+        >
+          <DayPlanCard slot="pinned" />
+        </div>
       )}
 
       {/* Call brief (Phase 4A "brief me first"), raised above the composer. */}

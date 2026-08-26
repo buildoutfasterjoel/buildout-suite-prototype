@@ -71,6 +71,7 @@ import {
 } from "#/components/contacts/composerSend";
 import { withPhase } from "#/ai/toolPhase";
 import { useContactSession } from "#/components/contacts/useContactSession";
+import { useDayPlanQueue } from "#/components/ai/useDayPlanQueue";
 import {
   getClientReportKpis,
   buildActivitySummaryText,
@@ -216,6 +217,23 @@ function resolveActivityContact({
 }
 
 /**
+ * Reaching the person the queue was pointing at counts as working that move.
+ *
+ * The day-plan queue only ever noticed work done through its own buttons, so a
+ * broker who emailed Rosa instead of calling her was left with the move still on
+ * the list asking to be done again — the same gap that let a call typed into the
+ * chat go unnoticed. Clearing it here means the queue tracks the outreach rather
+ * than the button that happened to start it.
+ *
+ * Clears the move, deliberately without completing any task record behind it:
+ * emailing someone about a deliverable is not the deliverable being finished.
+ */
+function clearQueuedMoveFor(contactId: string | undefined): void {
+  if (!contactId) return;
+  useDayPlanQueue.getState().clearForContact(contactId, "Emailed them. Next up…");
+}
+
+/**
  * Otto's activity vocabulary → the compose module's.
  *
  * Buildout logs a property visit as a *showing*; this prototype's composer calls
@@ -269,6 +287,55 @@ export function rewriteSpaceDealPath(path: string): string {
   // rewrite rather than being handed to the building.
   const leaf = !section || section === "/" ? "/overview" : section;
   return `/listings/${buildingId}/spaces/${listingId}${leaf}`;
+}
+
+/**
+ * Make a tool result safe to hand back to the runtime.
+ *
+ * The runtime canonicalises a client tool's output, and its serializer is
+ * stricter than `JSON.stringify`: an `undefined` anywhere in the tree throws
+ * `Interrupt values must be JSON-compatible.`, and so does any value that isn't
+ * a plain object (a `Date`, a `Map`, a class instance). `JSON.stringify` merely
+ * drops or coerces all of those, which is why this looked like working code.
+ *
+ * The failure was invisible in the worst way. A throw was caught upstream and
+ * stored as the call's output — `{ error: "Interrupt values must be
+ * JSON-compatible." }` — so the tool "succeeded" with an error payload the
+ * model then narrated straight past: "Here are your active deals:" above no
+ * deals at all, because the rail had no `deals` array to draw cards from.
+ * `listDeals` tripped it on one line, `dealType: undefined` inside the nav it
+ * returns when the broker didn't name a deal type.
+ *
+ * Fixed here, once, rather than in each of the forty-odd tools: an optional
+ * field is the normal shape of this data, so a rule that every tool must
+ * remember to write `?? null` is a rule that gets broken by the next tool
+ * added. A round-trip through JSON is exactly the "make it JSON-compatible"
+ * the runtime is asking for.
+ */
+export function jsonSafeResult(value: unknown): unknown {
+  try {
+    // `?? null` because `JSON.stringify(undefined)` returns undefined rather
+    // than a string, which `JSON.parse` then rejects — a tool that returns
+    // nothing must not become a serialization error.
+    return JSON.parse(JSON.stringify(value ?? null));
+  } catch {
+    // Only a cycle or a BigInt reaches here. Report it as a tool error the
+    // model can speak to, rather than throwing into the runtime and having it
+    // surface as the same opaque message this whole helper exists to prevent.
+    return { error: "That result couldn't be serialized to send back." };
+  }
+}
+
+/** Wrap one client tool so whatever it returns goes through {@link jsonSafeResult}. */
+function withJsonSafeOutput(tool: AnyClientTool): AnyClientTool {
+  const { execute } = tool as AnyClientTool & {
+    execute?: (...args: never[]) => unknown | Promise<unknown>;
+  };
+  if (typeof execute !== "function") return tool;
+  return {
+    ...tool,
+    execute: async (...args: never[]) => jsonSafeResult(await execute(...args)),
+  } as AnyClientTool;
 }
 
 /**
@@ -651,6 +718,7 @@ export function createClientTools({
       const fromComposer = requestComposerSend();
       if (fromComposer?.sent) {
         setPendingEmail(null);
+        clearQueuedMoveFor(fromComposer.contactId);
         return {
           sentEmail: {
             subject: fromComposer.subject,
@@ -686,6 +754,7 @@ export function createClientTools({
         date: new Date().toISOString().slice(0, 10),
       });
       setPendingEmail(null);
+      clearQueuedMoveFor(pending.contactId);
       return {
         sentEmail: {
           subject: pending.subject,
@@ -1240,5 +1309,8 @@ export function createClientTools({
         ticketFiled: false,
       };
     }),
-  ];
+    // Every tool's output goes through the same serializer guard — see
+    // `jsonSafeResult`. Applied to the whole list rather than at each
+    // `.client()` call so a tool added later cannot opt out by forgetting.
+  ].map(withJsonSafeOutput);
 }

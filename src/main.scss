@@ -4641,6 +4641,16 @@
   display: flex;
   flex-direction: column;
   border: 1px solid colors.$purple-heart-200;
+  // Played once per armed queue (see `armed` in `DayPlanCard`), not per mount:
+  // the pinned card outlives the queue inside it.
+  &[data-armed] {
+    animation: next-actions-in 0.24s ease-out;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
   border-radius: 8px;
   overflow: hidden;
   @include otto-gradient-card;
@@ -4656,20 +4666,63 @@
     padding: 12px;
   }
 
-  // The gradient mark. A flat purple fallback for when the `<linearGradient>`
-  // def can't resolve (see `.assistant-rail__avatar`).
-  &__mark {
+  // Fold toggle + wordmark as one target (Figma 259:19166). One button rather
+  // than a bare chevron: the wordmark is the obvious thing to click to open a
+  // folded card, and a 14px glyph on its own is a mean hit area.
+  &__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     flex-shrink: 0;
-    font-size: 14px;
-    color: colors.$purple-heart-800;
+    padding: 0;
+    border: 0;
+    background-color: transparent;
+    text-align: start;
+  }
 
-    path {
-      fill: url("#otto-glyph-gradient");
+  // Collapsed points right, open points down — one icon rotated, same transform
+  // and timing as the overview accordions' chevron.
+  &__chevron {
+    flex-shrink: 0;
+    width: 14px;
+    font-size: 12px;
+    color: colors.$purple-heart-800;
+    transform: rotate(-90deg);
+    transition: transform 0.2s ease-in-out;
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  &__chevron--open {
+    transform: rotate(0deg);
+  }
+
+  // The fold. `grid-template-rows` between 0fr and 1fr animates to the body's
+  // real height without anyone having to measure it, which `max-height` would
+  // need — and a wrong guess there either clips the card or eases against a
+  // ceiling the content never reaches. The inner element owns the clipping so
+  // the body keeps its own padding.
+  &__fold {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.2s ease-in-out;
+
+    > * {
+      overflow: hidden;
+    }
+
+    &[data-open="true"] {
+      grid-template-rows: 1fr;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
     }
   }
 
   &__title {
-    flex: 1 0 0;
     min-width: 0;
     font-size: 12px;
     line-height: 19px;
@@ -4679,20 +4732,28 @@
     @include otto-gradient-text;
   }
 
-  // Prev / position / next. Browsing only — "Done" is the one control that
-  // removes a move from the queue.
+  // Browse + close, pushed to the trailing edge. Browsing only — "Done" is the
+  // one control that removes a move from the queue, and the × puts the whole
+  // card away.
   &__nav {
     display: flex;
     align-items: center;
     flex-shrink: 0;
+    margin-inline-start: auto;
   }
 
+  // 28px for the hit area, but only 20px of it counts toward layout: the header
+  // is 44px tall (12px padding on a 20px row, Figma 259:19060) and a 28px button
+  // would push it to 52. The design solves this with 20px-tall wrappers the
+  // buttons overflow at y=-4; a negative block margin is the same trick without
+  // the extra element.
   &__arrow {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 28px;
     height: 28px;
+    margin-block: -4px;
     padding: 0;
     border: 0;
     border-radius: 6px;
@@ -4712,13 +4773,14 @@
 
   // A step darker than the card's own ground, so the count reads as a badge
   // without introducing a second accent colour.
+  // 20px tall, so it sits inside the header's row rather than setting it.
   &__count {
-    padding: 4px;
+    padding-inline: 4px;
     border-radius: 6px;
     background-color: rgba(185, 132, 252, 0.3);
     color: colors.$purple-heart-800;
     font-size: 12px;
-    line-height: 13px;
+    line-height: 20px;
     font-weight: 600;
     white-space: nowrap;
   }
@@ -4751,6 +4813,17 @@
     align-items: center;
     gap: 8px;
     padding-top: 8px;
+  }
+}
+
+@keyframes next-actions-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

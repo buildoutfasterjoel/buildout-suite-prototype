@@ -106,13 +106,21 @@ describe("callFlow", () => {
     expect(useCallStore.getState().target).toBeNull();
   });
 
-  it("endCall on a connected call sets a recap and leaves idle", async () => {
+  /**
+   * The recap travels with the pending log rather than being published at
+   * hang-up: the rail's recap card reports a *logged* call, so it appears from
+   * the broker's confirm in `GlobalLogCallModal`, not from behind a modal they
+   * have not answered yet.
+   */
+  it("endCall hands the recap to the pending log and leaves idle", async () => {
     callFlow.open(CONTACT);
     await vi.advanceTimersByTimeAsync(900 * 5 + 3400 + 10);
     useCallStore.getState().appendLine("you", "Hi Marcus");
     await callFlow.endCall();
     expect(useCallStore.getState().phase).toBe("idle");
-    expect(useCallStore.getState().recap?.sentiment).toBe("positive");
+    // Not on the store yet — that is the confirm's job.
+    expect(useCallStore.getState().recap).toBeNull();
+    expect(usePendingCallLog.getState().pending?.recap?.sentiment).toBe("positive");
   });
 
   it("queues the log with the hero flag, deferring the financials email to the confirm", async () => {

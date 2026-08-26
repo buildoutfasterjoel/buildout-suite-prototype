@@ -182,6 +182,15 @@ export const callFlow = {
       draft: `Called ${target.firstName} — no answer. Try again or follow up by email.`,
       outcome: "No Answer",
       armHeroInbound: false,
+      // No transcript to summarise, so the recap states the one fact there is.
+      // It still travels through the log rather than around it, so an unanswered
+      // call reports itself in the same order as a connected one.
+      recap: {
+        sentiment: "neutral",
+        keyPoints: [`Called ${target.firstName} — no answer.`],
+        tasks: [{ title: `Try ${target.firstName} again`, due: null }],
+        opportunity: { name: "", address: "" },
+      },
     });
   },
 
@@ -220,6 +229,10 @@ export const callFlow = {
       suggestions: [],
       awaitingOwner: false,
       shouldEnd: false,
+      // The line is down but the call isn't reported yet — the recap below is a
+      // model call. Anything waiting to hear how the call went waits on this
+      // rather than on `phase`, which is already idle.
+      wrapping: true,
     });
     if (!target) {
       useCallStore.getState().reset();
@@ -244,7 +257,8 @@ export const callFlow = {
     // A new call/hangup took over during recap generation — don't surface a
     // stale recap, and don't pop a (blocking) log modal for a superseded call.
     if (mySession !== session) return;
-    useCallStore.getState().setRecap(recap);
+    // The pending log takes over the waiting from here.
+    useCallStore.getState().setWrapping(false);
     // Nothing is written to the CRM here: queue the log with the AI's summary
     // and let the broker confirm it in the Log Call modal (see
     // GlobalLogCallModal). That confirm is also what arms the hero's follow-up
@@ -252,6 +266,10 @@ export const callFlow = {
     // created from that email's "Start a Deal" action, not at hang-up.
     usePendingCallLog.getState().request({
       contactId: target.contactId,
+      // Handed over rather than published: `GlobalLogCallModal` sets it on the
+      // store once the broker confirms, so the recap card reports a call that is
+      // actually on the record.
+      recap,
       draft: composeCallNotes({
         recap,
         firstName: target.firstName,
@@ -259,7 +277,8 @@ export const callFlow = {
       }),
       armHeroInbound: isHeroCall(target),
     });
-    // The recap is set on the store, so the sidebar shows it when the broker
-    // opens it — a finished call no longer forces the panel open over their work.
+    // Nothing is on the store yet: the recap surfaces from the confirmed log, so
+    // the sidebar shows it when the broker opens the panel — a finished call
+    // still never forces the panel open over their work.
   },
 };

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { useDataStore, seedSlice } from "#/data/dataStore";
 import { createProposalListing, emptyDraft } from "#/data/createListing";
 import { addPropertyUnit, addSpaceToDeal } from "#/data/leaseSpaces";
-import { resolveContactByName, rewriteSpaceDealPath } from "./tools";
+import { createClientTools, jsonSafeResult, resolveContactByName, rewriteSpaceDealPath } from "./tools";
 
 beforeEach(() => { useDataStore.setState(seedSlice()); });
 
@@ -77,6 +77,129 @@ describe("rewriteSpaceDealPath", () => {
       "/properties/prop-1",
     ]) {
       expect(rewriteSpaceDealPath(path)).toBe(path);
+    }
+  });
+});
+
+/**
+ * The runtime canonicalises a client tool's output with a serializer stricter
+ * than `JSON.stringify`, and throws `Interrupt values must be JSON-compatible.`
+ * on an `undefined` anywhere in the tree or on any non-plain object. Mirrored
+ * here so these tests fail the way the app failed, rather than on a proxy for
+ * it — the real bug was a tool "succeeding" with an error payload the model
+ * then narrated straight past.
+ */
+function assertCanonical(value: unknown, path = "$"): void {
+  if (value === null) return;
+  if (typeof value === "string" || typeof value === "boolean") return;
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) throw new Error(`${path}: non-finite number`);
+    return;
+  }
+  if (typeof value !== "object") throw new Error(`${path}: ${typeof value} is not JSON`);
+  if (Array.isArray(value)) {
+    value.forEach((v, i) => assertCanonical(v, `${path}[${i}]`));
+    return;
+  }
+  const proto = Object.getPrototypeOf(value);
+  if (proto !== Object.prototype && proto !== null) {
+    throw new Error(`${path}: not a plain object`);
+  }
+  for (const [k, v] of Object.entries(value)) assertCanonical(v, `${path}.${k}`);
+}
+
+describe("jsonSafeResult", () => {
+  it("drops undefined properties rather than throwing on them", () => {
+    const out = jsonSafeResult({ kept: 1, dropped: undefined, nested: { gone: undefined, here: "x" } });
+    expect(out).toEqual({ kept: 1, nested: { here: "x" } });
+    assertCanonical(out);
+  });
+
+  it("nulls an undefined array entry instead of leaving a hole", () => {
+    const out = jsonSafeResult({ rows: [1, undefined, 3] }) as { rows: unknown[] };
+    expect(out.rows).toEqual([1, null, 3]);
+    assertCanonical(out);
+  });
+
+  it("coerces the values the strict serializer rejects", () => {
+    const out = jsonSafeResult({ nan: NaN, inf: Infinity, when: new Date("2026-06-15T00:00:00Z") });
+    expect(out).toEqual({ nan: null, inf: null, when: "2026-06-15T00:00:00.000Z" });
+    assertCanonical(out);
+  });
+
+  it("turns a tool that returned nothing into null, not a serialization error", () => {
+    expect(jsonSafeResult(undefined)).toBeNull();
+  });
+
+  it("reports a cycle as a tool error instead of throwing into the runtime", () => {
+    const cyclic: Record<string, unknown> = {};
+    cyclic.self = cyclic;
+    expect(jsonSafeResult(cyclic)).toEqual({
+      error: "That result couldn't be serialized to send back.",
+    });
+  });
+});
+
+describe("client tool output is canonical-safe", () => {
+  const tools = createClientTools({ navigate: () => {} });
+  const run = async (name: string, args: unknown) => {
+    const tool = tools.find((t) => t.name === name);
+    expect(tool, `no tool named ${name}`).toBeDefined();
+    const execute = (tool as { execute?: (a: unknown) => Promise<unknown> }).execute;
+    expect(execute, `${name} has no execute`).toBeTypeOf("function");
+    return execute!(args);
+  };
+
+  /**
+   * The reported bug, pinned at its narrowest point. Asked for active deals,
+   * `listDeals` built a nav carrying `dealType: undefined` — the broker named a
+   * status but not a deal type — which the runtime rejected. The throw was
+   * caught and stored as the call's output, so the rail had no `deals` array to
+   * draw cards from while the model cheerfully wrote "Here are your active
+   * deals:" above nothing.
+   */
+  it("listDeals survives a filter the broker only half-specified", async () => {
+    const out = (await run("listDeals", { status: "active" })) as {
+      error?: string;
+      deals?: unknown[];
+      navs?: unknown[];
+    };
+    expect(out.error).toBeUndefined();
+    expect(Array.isArray(out.deals)).toBe(true);
+    expect(out.navs?.length).toBe(1);
+    assertCanonical(out);
+  });
+
+  it("holds for every read tool that builds a nav or summary", async () => {
+    const contact = [...useDataStore.getState().contacts.values()][0];
+    const deal = [...useDataStore.getState().listings.values()][0];
+    const cases: Array<[string, unknown]> = [
+      ["listDeals", {}],
+      ["listDeals", { dealType: "Sale" }],
+      ["listContacts", {}],
+      ["listContacts", { relationship: "cold" }],
+      ["searchAll", { query: "a" }],
+      ["find_contact", { query: contact.firstName }],
+      ["getContactDetail", { contactId: contact.id }],
+      ["getListing", { listingId: deal.id }],
+      ["getProperty", { propertyId: deal.propertyId }],
+      ["listContactsForDeal", { dealId: deal.id }],
+      ["listDealsForContact", { contactId: contact.id }],
+      ["task_search", {}],
+      ["voucher_search", {}],
+      ["research_property_search", { limit: 3 }],
+      ["deal_pipeline_totals", {}],
+      ["attachment_list", { dealId: deal.id }],
+      ["activity_search", { dealId: deal.id }],
+    ];
+    for (const [name, args] of cases) {
+      const out = await run(name, args);
+      expect((out as { error?: string }).error, `${name} errored`).toBeUndefined();
+      try {
+        assertCanonical(out);
+      } catch (e) {
+        throw new Error(`${name} returned a non-canonical result — ${(e as Error).message}`);
+      }
     }
   });
 });
