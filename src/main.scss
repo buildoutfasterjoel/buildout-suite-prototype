@@ -5033,6 +5033,40 @@
   border-left: 0;
 }
 
+// Expanding and collapsing the panel is animated by the browser, through a View
+// Transition (see `lib/viewTransition.ts` for the toggle side of it).
+//
+// Naming the rail lifts it out of the root cross-fade into a snapshot of its
+// own, so what the browser morphs is the panel: the 380px column grows into the
+// whole stage, and back. The alternative — transitioning the flex item's width
+// in CSS — animates the page beside it down to zero width, reflowing every card
+// and table on it once a frame; snapshots reflow nothing.
+.assistant-rail {
+  view-transition-name: assistant-rail;
+}
+
+::view-transition-group(assistant-rail) {
+  animation-duration: 260ms;
+  // Fast out of the gate, long settle: the panel arrives before the eye asks
+  // where it went.
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+// The panel's own pixels cross-fade inside that morphing box, and quicker than
+// the box itself moves — the old snapshot is being stretched from rail width to
+// stage width, and the less time it spends on screen the less it reads as
+// stretched type.
+::view-transition-old(assistant-rail),
+::view-transition-new(assistant-rail) {
+  animation-duration: 160ms;
+}
+
+// The page underneath, which is leaving (or coming back) whole.
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 200ms;
+}
+
 // The reading column. At rail width it is simply the full panel — the cap only
 // bites in full screen, where an unconstrained transcript would run type across
 // the whole window. The scroller stays full-width outside it, so the scrollbar

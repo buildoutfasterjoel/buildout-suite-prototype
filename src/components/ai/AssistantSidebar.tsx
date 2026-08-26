@@ -42,6 +42,7 @@ import { aiChat, aiConfigured } from "#/ai/relay";
 import { buildAssistantContext, serializeContext } from "#/ai/context";
 import { renderLightHtml } from "#/ai/renderLightHtml";
 import { useAssistant } from "#/ai/useAssistant";
+import { withViewTransition } from "#/lib/viewTransition";
 import { useVoice } from "#/ai/voice/useVoice";
 import { voiceEngine } from "#/ai/voice/voiceEngine";
 import { useHandsFree } from "#/ai/voice/useHandsFree";
@@ -1628,7 +1629,9 @@ export function AssistantSidebar() {
             className="assistant-rail__control"
             aria-label={expanded ? "Exit full screen" : "Expand to full screen"}
             aria-pressed={expanded}
-            onClick={toggleExpanded}
+            // Through a View Transition, so the panel grows into the stage and
+            // shrinks back out of it instead of teleporting between the two.
+            onClick={() => withViewTransition(toggleExpanded)}
           >
             <FontAwesomeIcon
               icon={
