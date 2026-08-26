@@ -1201,6 +1201,36 @@ export function AssistantSidebar() {
   }, [messages]);
 
   /**
+   * Bring a closed queue back when the broker asks for it again — from the ASK,
+   * not from the tool result.
+   *
+   * `DayPlanCard`'s `arm` slot can only revive the card when `plan_my_day`
+   * actually runs, and the model does not reliably run it twice: asked a second
+   * time it is prone to answering "same plan — no new items since last time" from
+   * what it already has in context. That leaves the broker reading prose about a
+   * card they closed, with no way to get it back. The prompt now insists on the
+   * call (see `systemPrompt.ts`), but intent is knowable here without the model's
+   * cooperation, so the recovery does not depend on it.
+   *
+   * Keyed on the message id so it fires once per ask. A tool call that *does*
+   * arrive builds a fresh queue through `arm`, which resets all of this anyway.
+   */
+  const lastAsk = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "user") {
+        return { id: messages[i].id, text: messageText(messages[i]) };
+      }
+    }
+    return null;
+  }, [messages]);
+
+  useEffect(() => {
+    if (!lastAsk || !matchesPlanIntent(lastAsk.text)) return;
+    const queue = useDayPlanQueue.getState();
+    if (queue.key && (queue.dismissed || queue.collapsed)) queue.revive();
+  }, [lastAsk?.id, lastAsk?.text]);
+
+  /**
    * Whether the in-flight turn is a "plan my day" ask, so the progress checklist
    * replaces the generic "Working…" line. Read off the last user message rather
    * than tracked on send, so it survives re-renders and stays correct on replay.
