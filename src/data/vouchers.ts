@@ -1,4 +1,5 @@
 import type {
+  DealFinancials,
   DealType,
   Listing,
   PropertyStatus,
@@ -139,6 +140,70 @@ export function voucherParty(contactId: string): VoucherParty {
     phone: contact.phone,
     exists: true,
   }
+}
+
+/** A payer, plus what this voucher has billed them. */
+export interface VoucherPayerRow extends VoucherParty {
+  /**
+   * Sum of this payer's receivables, GROSS of credits — what they were asked
+   * for, not what is still outstanding. The Receivables table below carries the
+   * Credited column, and restating it here would put two different answers to
+   * "how much" on one screen.
+   */
+  billed: number
+  /**
+   * How many receivables name this payer. Drives the removal guard: a payer
+   * with receivables cannot be taken off the voucher, because the rows that
+   * bill them would point at nobody.
+   */
+  receivableCount: number
+}
+
+export function voucherPayers(voucher: DealFinancials): VoucherPayerRow[] {
+  return voucher.payerContactIds.map((contactId) => {
+    const rows = voucher.receivables.filter((r) => r.payerContactId === contactId)
+    return {
+      ...voucherParty(contactId),
+      billed: rows.reduce((sum, r) => sum + r.amount, 0),
+      receivableCount: rows.length,
+    }
+  })
+}
+
+/**
+ * Why this payer cannot be taken off the voucher, or null when they can be.
+ *
+ * A payer with receivables cannot leave: the rows billing them would point at
+ * nobody, and the Receivables table would name a payer the voucher does not
+ * list. The rule lives here rather than only in the button that enforces it, so
+ * it holds however removal is reached and can be tested without a browser.
+ *
+ * Returns the sentence the tooltip shows rather than a boolean, because a
+ * greyed button with no explanation is a dead icon — the reason is the whole
+ * value of blocking it.
+ */
+export function payerRemovalBlock(payer: VoucherPayerRow): string | null {
+  if (payer.receivableCount === 0) return null
+  const plural = payer.receivableCount === 1 ? 'receivable' : 'receivables'
+  return `${payer.name} has ${payer.receivableCount} ${plural}. Remove those first.`
+}
+
+/**
+ * The deal's acquiring party — buyers on a sale, tenants on a lease.
+ *
+ * The two live in separate arrays on the deal (`buyerContactIds` and
+ * `tenantContactIds` are deliberately distinct datasets), and the voucher shows
+ * exactly one of them. This is the single place that choice is made, so the
+ * section title and the section's writes cannot disagree about which list they
+ * are looking at.
+ */
+export function partyContactIds(deal: Listing): string[] {
+  return deal.dealType === 'Lease' ? deal.tenantContactIds : deal.buyerContactIds
+}
+
+/** What the acquiring party is called on this deal type. */
+export function partySectionTitle(dealType: DealType): string {
+  return dealType === 'Lease' ? 'Tenant' : 'Buyer'
 }
 
 export interface VoucherRow {

@@ -7,8 +7,12 @@ import { useDataStore } from './dataStore'
 import {
   allVouchers,
   isVoucherPending,
+  partyContactIds,
+  partySectionTitle,
+  payerRemovalBlock,
   voucherHref,
   voucherParty,
+  voucherPayers,
   voucherTotals,
 } from './vouchers'
 import { submitVoucher } from './actions'
@@ -254,6 +258,104 @@ describe('isVoucherPending', () => {
     const shell = getListing(parent.id)!
     expect(shell.transaction.backOffice.status).toBe('Pending')
     expect(isVoucherPending(shell)).toBe(false)
+  })
+})
+
+describe('voucherPayers', () => {
+  it('sums what each payer was billed, gross of credits', () => {
+    resetStore()
+    const deal = makeSale('Riverside Tower')
+    const voucher = getListing(deal.id)!.transaction.backOffice
+    voucher.payerContactIds = ['c1', 'c2']
+    voucher.receivables = [
+      { id: 'r1', payerContactId: 'c1', dueDate: '2026-01-01', billingDescription: 'Deposit', amount: 10000, credited: 4000 },
+      { id: 'r2', payerContactId: 'c1', dueDate: '2026-02-01', billingDescription: 'Balance', amount: 5000, credited: 0 },
+      { id: 'r3', payerContactId: 'c2', dueDate: '2026-03-01', billingDescription: 'Fee', amount: 2500, credited: 0 },
+    ]
+    const rows = voucherPayers(voucher)
+    // Gross, not net: "Billed" answers what they were asked for. The Credited
+    // column in the Receivables table answers what has been paid.
+    expect(rows.map((r) => r.billed)).toEqual([15000, 2500])
+    expect(rows.map((r) => r.receivableCount)).toEqual([2, 1])
+  })
+
+  it('reads zero for a payer with nothing billed yet', () => {
+    // A named payer with no receivable is a real state — you name who you are
+    // going to bill before you bill them — so the row stays and reads $0.
+    resetStore()
+    const deal = makeSale('Riverside Tower')
+    const voucher = getListing(deal.id)!.transaction.backOffice
+    voucher.payerContactIds = ['c1']
+    voucher.receivables = []
+    expect(voucherPayers(voucher)).toHaveLength(1)
+    expect(voucherPayers(voucher)[0]!.billed).toBe(0)
+    expect(voucherPayers(voucher)[0]!.receivableCount).toBe(0)
+  })
+
+  it('keeps the payers in the order they were added', () => {
+    resetStore()
+    const deal = makeSale('Riverside Tower')
+    const voucher = getListing(deal.id)!.transaction.backOffice
+    voucher.payerContactIds = ['c2', 'c1']
+    voucher.receivables = []
+    expect(voucherPayers(voucher).map((r) => r.contactId)).toEqual(['c2', 'c1'])
+  })
+})
+
+describe('payerRemovalBlock', () => {
+  it('refuses to remove a payer that has receivables', () => {
+    resetStore()
+    const deal = makeSale('Riverside Tower')
+    const voucher = getListing(deal.id)!.transaction.backOffice
+    voucher.payerContactIds = ['c1']
+    voucher.receivables = [
+      { id: 'r1', payerContactId: 'c1', dueDate: '2026-01-01', billingDescription: 'Deposit', amount: 10000, credited: 0 },
+      { id: 'r2', payerContactId: 'c1', dueDate: '2026-02-01', billingDescription: 'Balance', amount: 5000, credited: 0 },
+    ]
+    const reason = payerRemovalBlock(voucherPayers(voucher)[0]!)
+    expect(reason).toContain('2 receivables')
+  })
+
+  it('says "receivable" in the singular for one', () => {
+    resetStore()
+    const deal = makeSale('Riverside Tower')
+    const voucher = getListing(deal.id)!.transaction.backOffice
+    voucher.payerContactIds = ['c1']
+    voucher.receivables = [
+      { id: 'r1', payerContactId: 'c1', dueDate: '2026-01-01', billingDescription: 'Deposit', amount: 10000, credited: 0 },
+    ]
+    expect(payerRemovalBlock(voucherPayers(voucher)[0]!)).toContain('1 receivable.')
+  })
+
+  it('allows removing a payer with nothing billed', () => {
+    resetStore()
+    const deal = makeSale('Riverside Tower')
+    const voucher = getListing(deal.id)!.transaction.backOffice
+    voucher.payerContactIds = ['c1']
+    voucher.receivables = []
+    expect(payerRemovalBlock(voucherPayers(voucher)[0]!)).toBeNull()
+  })
+})
+
+describe('partyContactIds', () => {
+  it('reads the buyers on a sale', () => {
+    resetStore()
+    const deal = makeSale('Riverside Tower')
+    const listing = getListing(deal.id)!
+    listing.buyerContactIds = ['b1']
+    listing.tenantContactIds = ['t1']
+    expect(partyContactIds(listing)).toEqual(['b1'])
+    expect(partySectionTitle(listing.dealType)).toBe('Buyer')
+  })
+
+  it('reads the tenants on a lease', () => {
+    resetStore()
+    const deal = makeLease('Standalone Lease')
+    const listing = getListing(deal.id)!
+    listing.buyerContactIds = ['b1']
+    listing.tenantContactIds = ['t1']
+    expect(partyContactIds(listing)).toEqual(['t1'])
+    expect(partySectionTitle(listing.dealType)).toBe('Tenant')
   })
 })
 
