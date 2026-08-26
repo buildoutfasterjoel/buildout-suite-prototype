@@ -38,19 +38,23 @@ interface DayPlanQueueState {
   /**
    * Folded down to just its header, and BY WHOM.
    *
-   * Who matters: the rail folds the queue on its own while another card with its
-   * own actions is live (an email draft's Send/Edit/Delete competing with the
-   * queue's Call/Done is the busyness this avoids), and unfolds it when that card
-   * resolves. That unfold must never override a fold the broker made by hand — an
-   * automatic gesture may undo an automatic gesture, never an explicit one. One
-   * field rather than two booleans so the two can't contradict each other.
+   * Who matters, because the two sides are not symmetric.
    *
-   * **Finishing a move is the one exception**, and every path that clears an item
-   * takes it. A hand fold says "not now"; completing a move is the broker turning
-   * back to the queue, and the move that replaces it is news they earned by
-   * finishing the last one — so it opens even if they had folded it. Without this
-   * a fold made early in a session silently swallowed every later hand-off, which
-   * read as the card being broken.
+   * **The card is open when it has news, and folded once attention moves on.**
+   * The rail folds it whenever the broker sends a message, starts a call, or gets
+   * a draft — a reply is arriving and the reply is the thing to read, not a
+   * pinned card with a primary button sitting above the composer. Automatic
+   * folding is therefore the ONLY automatic move: nothing opens this card except
+   * news, so `autoFold` has no unfolding counterpart to argue with.
+   *
+   * What counts as news, and opens it even over a hand fold:
+   * - a move completing, by any route (Done, a call, an email);
+   * - a fresh queue arming;
+   * - the broker asking for next actions again (`revive`).
+   *
+   * A hand fold outranks an automatic one, so `autoFold` leaves it alone rather
+   * than re-stamping it. One field rather than two booleans, so the two can never
+   * contradict each other.
    */
   collapsedBy: "user" | "auto" | null;
   /** Closed outright. A later `plan_my_day` arms a fresh queue and brings it back. */
@@ -68,8 +72,11 @@ interface DayPlanQueueState {
   resume: (note: string) => void;
   /** The broker's own fold/unfold, from the card's chevron. */
   setCollapsed: (collapsed: boolean) => void;
-  /** The rail's fold. No-op when the broker has already folded it themselves. */
-  autoCollapse: (collapsed: boolean) => void;
+  /**
+   * The rail's fold. Fold-ONLY, deliberately: nothing automatic opens this card
+   * except news (see `collapsedBy`). No-op when the broker has folded it.
+   */
+  autoFold: () => void;
   dismiss: () => void;
   revive: () => void;
   /**
@@ -141,13 +148,12 @@ export const useDayPlanQueue = create<DayPlanQueueState>((set, get) => ({
 
   setCollapsed: (collapsed) => set({ collapsedBy: collapsed ? "user" : null }),
 
-  autoCollapse: (collapsed) =>
+  autoFold: () =>
     set((s) => {
-      // Their fold outranks ours in both directions: we neither fold over a
-      // deliberate unfold nor unfold over a deliberate fold.
-      if (s.collapsedBy === "user") return s;
-      const next = collapsed ? "auto" : null;
-      return s.collapsedBy === next ? s : { collapsedBy: next };
+      // A hand fold is already stronger than ours, and re-stamping it as "auto"
+      // would quietly demote it.
+      if (s.collapsedBy !== null) return s;
+      return { collapsedBy: "auto" };
     }),
 
   dismiss: () => set({ dismissed: true }),

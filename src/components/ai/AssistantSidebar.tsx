@@ -1230,36 +1230,12 @@ export function AssistantSidebar() {
     if (queue.key && (queue.dismissed || queue.collapsedBy !== null)) queue.revive();
   }, [lastAsk?.id, lastAsk?.text]);
 
-  /**
-   * Is another card with its own actions the live thing on screen?
-   *
-   * An email draft offers Send it / Let me edit / Delete while the queue offers
-   * Call / View / Done — six controls, two of them destructive, and nothing
-   * saying which is "the" next step. So the queue folds to its header while such
-   * a card is live and comes back when it resolves.
-   *
-   * Deliberately keyed on *another card being live*, not on "the broker sent a
-   * message". Chatting is how a lot of these moves get worked — asking for an
-   * email to the very contact the queue is pointing at is engagement with the
-   * item, not abandonment of it, so a message-based trigger would fold at
-   * exactly the wrong moment.
-   *
-   * "Live" is the newest turn: once the broker sends, deletes, or moves on, the
-   * draft is history and the queue is the working surface again. The BOV draft
-   * and the call brief are store-driven and pinned, so they count for as long as
-   * they are up.
-   */
-  const competingCardLive = useMemo(() => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const m = messages[i];
-      if (m.role === "user") break;
-      const live = messageToolCalls(m).some(
-        (p) => emailDraftOf(p.output) !== null || marketingPackageOf(p.output) !== null,
-      );
-      if (live) return true;
-    }
-    return false;
-  }, [messages]);
+  useEffect(() => {
+    if (!lastAsk || !matchesPlanIntent(lastAsk.text)) return;
+    const queue = useDayPlanQueue.getState();
+    if (queue.key && (queue.dismissed || queue.collapsedBy !== null)) queue.revive();
+  }, [lastAsk?.id, lastAsk?.text]);
+
 
   /**
    * Whether the in-flight turn is a "plan my day" ask, so the progress checklist
@@ -1297,16 +1273,28 @@ export function AssistantSidebar() {
   const recap = useCallStore((s) => s.recap);
   const callLive = useCallStore((s) => s.phase !== "idle");
   const bovDraft = useBovDraft((s) => s.draft);
-  // Folds the queue while another surface holds the floor — see
-  // `competingCardLive`. Placed here so it can see the pinned store-driven cards
-  // (`bovDraft`, `brief`) and a live call, as well as the transcript. A call is
-  // the clearest case of the lot: the call bar owns the screen, and the queue's
-  // own "Call" button is meaningless while the broker is already on the phone.
+  /**
+   * Fold the queue whenever the broker's attention moves to something else: they
+   * sent a message and a reply is on its way, a call went live, or a draft
+   * landed. Fold only — see `collapsedBy` for why nothing here ever opens it.
+   *
+   * A plan-intent ask is exempt: that is a request to SEE the queue, and the
+   * revive effect above is already opening it. Folding it in the same tick would
+   * be the two rules cancelling each other out.
+   *
+   * Edge-triggered on the message id rather than derived from state, because
+   * "folded because you sent something" has to survive the reply arriving —
+   * a continuous rule would unfold the moment the turn settled, which is the
+   * flapping this is meant to avoid.
+   */
   useEffect(() => {
-    useDayPlanQueue
-      .getState()
-      .autoCollapse(competingCardLive || callLive || !!bovDraft || !!brief);
-  }, [competingCardLive, callLive, bovDraft, brief]);
+    if (!lastAsk || matchesPlanIntent(lastAsk.text)) return;
+    useDayPlanQueue.getState().autoFold();
+  }, [lastAsk?.id, lastAsk?.text]);
+
+  useEffect(() => {
+    if (callLive || bovDraft || brief) useDayPlanQueue.getState().autoFold();
+  }, [callLive, bovDraft, brief]);
 
   // The recap and the BOV draft are store-driven records of something that
   // already happened, so each is drawn at the point in the transcript where it

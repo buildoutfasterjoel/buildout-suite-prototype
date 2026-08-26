@@ -34,44 +34,42 @@ beforeEach(() => {
 
 describe("collapse precedence", () => {
   /**
-   * The rule the whole `collapsedBy` field exists for: an automatic gesture may
-   * undo an automatic gesture, never an explicit one.
+   * The asymmetry the whole `collapsedBy` field exists for: folding is the only
+   * automatic move. Nothing opens the card except news, so there is no automatic
+   * unfold to argue with a hand fold — and `autoFold` leaves a hand fold alone
+   * rather than re-stamping it as its own.
    */
-  it("does not unfold what the broker folded by hand", () => {
+  it("folds on its own when the broker hasn't intervened", () => {
+    state().autoFold();
+    expect(state().collapsedBy).toBe("auto");
+  });
+
+  it("leaves a hand fold as the broker's, so it keeps its precedence", () => {
     state().setCollapsed(true);
-    state().autoCollapse(false);
+    state().autoFold();
     expect(state().collapsedBy).toBe("user");
   });
 
-  it("does not fold over a deliberate unfold either", () => {
+  it("folds again after a deliberate unfold — attention moved, not a veto", () => {
+    // An explicit unfold is "show me now", which the next thing they do satisfies.
     state().setCollapsed(true);
     state().setCollapsed(false);
-    // Back to null by their own hand — but they last acted, so an auto-fold
-    // would still be overriding them... only until they act again. An explicit
-    // unfold is recorded as `null`, which auto-fold IS allowed to take, because
-    // otherwise the queue could never fold again for the rest of the session.
-    state().autoCollapse(true);
+    state().autoFold();
     expect(state().collapsedBy).toBe("auto");
   });
 
-  it("folds and unfolds on its own when the broker hasn't intervened", () => {
-    state().autoCollapse(true);
-    expect(state().collapsedBy).toBe("auto");
-    state().autoCollapse(false);
-    expect(state().collapsedBy).toBeNull();
-  });
-
-  it("lets the broker fold over an automatic fold, and keeps it", () => {
-    state().autoCollapse(true);
-    state().setCollapsed(true);
-    state().autoCollapse(false);
-    expect(state().collapsedBy).toBe("user");
+  it("offers no automatic way to open the card", () => {
+    // The guarantee behind "nothing opens it except news": if a second automatic
+    // unfold ever appears, it has to argue with `revive` and the clear paths, and
+    // this is the test that notices.
+    expect(state()).not.toHaveProperty("autoCollapse");
+    expect(state()).not.toHaveProperty("autoExpand");
   });
 
   /**
-   * The one exception, and the reason it exists: a fold made early in a session
-   * was silently swallowing every later hand-off, so finishing a move looked
-   * like the card was broken.
+   * News opens it, even over a hand fold. A fold made early in a session was
+   * otherwise swallowing every later hand-off, so finishing a move looked like
+   * the card was broken.
    */
   it("opens on completion even over a manual fold", () => {
     state().setCollapsed(true);
@@ -104,6 +102,12 @@ describe("collapse precedence", () => {
     state().revive();
     expect(state().collapsedBy).toBeNull();
     expect(state().dismissed).toBe(false);
+  });
+
+  it("opens a freshly armed queue, whatever the last one's fold was", () => {
+    state().autoFold();
+    arm();
+    expect(state().collapsedBy).toBeNull();
   });
 });
 
