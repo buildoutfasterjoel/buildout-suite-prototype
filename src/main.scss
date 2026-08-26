@@ -5025,8 +5025,11 @@
 // every card and table on it once a frame.
 $rail-width: 380px;
 $rail-inset: 8px;
-$rail-ease: cubic-bezier(0.2, 0, 0, 1);
-$rail-duration: 260ms;
+// Eases in as well as out — the previous curve left the gate at full speed,
+// which read as a snap that then slowed down rather than as a panel being moved.
+// A touch longer with it, so the gentler start doesn't cost the arrival.
+$rail-ease: cubic-bezier(0.4, 0, 0.2, 1);
+$rail-duration: 320ms;
 
 .assistant-rail {
   position: absolute;
