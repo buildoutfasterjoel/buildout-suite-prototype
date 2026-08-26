@@ -4656,20 +4656,28 @@
     padding: 12px;
   }
 
-  // The gradient mark. A flat purple fallback for when the `<linearGradient>`
-  // def can't resolve (see `.assistant-rail__avatar`).
-  &__mark {
+  // Fold toggle + wordmark as one target (Figma 259:19166). One button rather
+  // than a bare chevron: the wordmark is the obvious thing to click to open a
+  // folded card, and a 14px glyph on its own is a mean hit area.
+  &__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     flex-shrink: 0;
-    font-size: 14px;
-    color: colors.$purple-heart-800;
+    padding: 0;
+    border: 0;
+    background-color: transparent;
+    text-align: start;
+  }
 
-    path {
-      fill: url("#otto-glyph-gradient");
-    }
+  &__chevron {
+    flex-shrink: 0;
+    width: 14px;
+    font-size: 12px;
+    color: colors.$purple-heart-800;
   }
 
   &__title {
-    flex: 1 0 0;
     min-width: 0;
     font-size: 12px;
     line-height: 19px;
@@ -4679,12 +4687,14 @@
     @include otto-gradient-text;
   }
 
-  // Prev / position / next. Browsing only — "Done" is the one control that
-  // removes a move from the queue.
+  // Browse + close, pushed to the trailing edge. Browsing only — "Done" is the
+  // one control that removes a move from the queue, and the × puts the whole
+  // card away.
   &__nav {
     display: flex;
     align-items: center;
     flex-shrink: 0;
+    margin-inline-start: auto;
   }
 
   &__arrow {

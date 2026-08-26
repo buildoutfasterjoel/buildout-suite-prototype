@@ -417,7 +417,7 @@ function ToolResultCards({
             Prioritized your day, {dayPlan.length} move{dayPlan.length === 1 ? "" : "s"} queued.
             Starting you on the first one.
           </div>
-          <DayPlanCard items={dayPlan} slot="inline" />
+          <DayPlanCard items={dayPlan} slot="arm" />
         </>
       )}
       {emailDraft && (
@@ -1241,10 +1241,11 @@ export function AssistantSidebar() {
   const recapAnchor = useTranscriptAnchor(!!recap, messagesRef);
   const bovAnchor = useTranscriptAnchor(!!bovDraft, messagesRef);
   // The day-plan queue is deliberately NOT one of those: it is the surface the
-  // broker is working, so it is pinned outside the transcript instead. This
-  // mirrors the bottom slot's own guard inside `DayPlanCard`, so the pinned
-  // wrapper never pads an element that renders nothing.
-  const queuePinned = useDayPlanQueue((q) => q.detached && q.key !== null);
+  // broker is working, so it is pinned outside the transcript instead — from the
+  // moment it is armed, not just once a call detaches it. Mirrors the pinned
+  // slot's own guard inside `DayPlanCard`, so the wrapper never pads an element
+  // that renders nothing.
+  const queuePinned = useDayPlanQueue((q) => q.key !== null && !q.dismissed);
   const recapTarget = useCallStore((s) => s.target);
   const spokenRecapRef = useRef<object | null>(null);
   useEffect(() => {
@@ -1557,16 +1558,16 @@ export function AssistantSidebar() {
       </div>
       )}
 
-      {/* The day-plan queue, once a call has detached it from its inline slot.
-          Pinned outside the scrolling transcript, like the call brief below —
-          because it is not a record of something that happened, it is the surface
-          the broker is *working*: one move at a time, with Open / Done. Inside the
-          flow it drifted up into scrollback behind every later turn, and answered
-          questions appeared beneath it as though the queue were newer than they
-          were. A live surface belongs where the hands are, next to the composer. */}
+      {/* The day-plan queue, pinned from the moment it is armed. Outside the
+          scrolling transcript, like the call brief below — because it is not a
+          record of something that happened, it is the surface the broker is
+          *working*: one move at a time, with Call / Open / Done. Inside the flow
+          it drifted up into scrollback behind every later turn, and answers
+          appeared beneath it as though the queue were newer than they were. A
+          live surface belongs where the hands are, next to the composer. */}
       {queuePinned && (
         <div className="assistant-rail__column pb-2" style={{ paddingInline: 20 }}>
-          <DayPlanCard slot="bottom" />
+          <DayPlanCard slot="pinned" />
         </div>
       )}
 

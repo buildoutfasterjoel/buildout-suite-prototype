@@ -4,11 +4,16 @@ import type { DayPlanItem } from "#/ai/dayPlan";
 /**
  * The day queue's live position, held outside the transcript.
  *
- * It starts life rendered inline under its checklist, but once the broker takes
- * a call it has to come back at the *bottom* of the chat — below the hand-off and
- * the recap — rather than back up in the history where it was. A component's
- * position is fixed by where it's mounted, so the queue is rendered in two places
- * and this store decides which one is live (see `detached`).
+ * The queue is pinned above the composer from the moment it is armed: asking for
+ * next actions *is* the broker saying they intend to work them, so the card
+ * belongs where the hands are rather than scrolling away up the transcript with
+ * the message that produced it. It earlier lived inline until a call detached it,
+ * which meant the surface being worked drifted into history — and a call started
+ * from the chat rather than the card's own button never detached it at all.
+ *
+ * The card is still *mounted* twice: once at the tool result, which owns arming
+ * (see the `arm` slot in `DayPlanCard`), and once pinned, which is the only one
+ * that draws anything.
  */
 interface DayPlanQueueState {
   /**
@@ -26,8 +31,10 @@ interface DayPlanQueueState {
   parkedFor: string | null;
   /** Transient italic line above the headline ("Skipped, let me look again…"). */
   note: string | null;
-  /** True once a call moved the queue to the bottom of the chat. */
-  detached: boolean;
+  /** Folded down to just its header. The broker's choice, so it outlives a re-render. */
+  collapsed: boolean;
+  /** Closed outright. A later `plan_my_day` arms a fresh queue and brings it back. */
+  dismissed: boolean;
 
   arm: (key: string, items: DayPlanItem[]) => void;
   /**
@@ -39,6 +46,9 @@ interface DayPlanQueueState {
   clear: (taskId: string, note: string) => void;
   park: (taskId: string) => void;
   resume: (note: string) => void;
+  setCollapsed: (collapsed: boolean) => void;
+  dismiss: () => void;
+  revive: () => void;
 }
 
 const EMPTY = {
@@ -48,7 +58,8 @@ const EMPTY = {
   cleared: [] as string[],
   parkedFor: null as string | null,
   note: null as string | null,
-  detached: false,
+  collapsed: false,
+  dismissed: false,
 };
 
 export const useDayPlanQueue = create<DayPlanQueueState>((set, get) => ({
@@ -75,8 +86,16 @@ export const useDayPlanQueue = create<DayPlanQueueState>((set, get) => ({
       note,
     })),
 
-  // Taking a call both hides the queue and moves it to the bottom for its return.
-  park: (taskId) => set({ parkedFor: taskId, detached: true }),
+  /**
+   * A call is in flight on this item — the card steps aside until it wraps up,
+   * and `resume` then clears the item.
+   *
+   * Called from the card's own Call button AND, so that "call rosa" typed into
+   * the chat counts the same, from the card's effect that adopts a live call
+   * matching the queued contact. Without that second path the move stayed on the
+   * queue after the broker had actually made the call.
+   */
+  park: (taskId) => set({ parkedFor: taskId }),
 
   resume: (note) => {
     const { parkedFor } = get();
@@ -88,6 +107,22 @@ export const useDayPlanQueue = create<DayPlanQueueState>((set, get) => ({
         parkedFor && !s.cleared.includes(parkedFor) ? [...s.cleared, parkedFor] : s.cleared,
     }));
   },
+
+  setCollapsed: (collapsed) => set({ collapsed }),
+  dismiss: () => set({ dismissed: true }),
+
+  /**
+   * Bring a queue the broker closed (or folded) back, without touching what they
+   * have already worked.
+   *
+   * `arm` deliberately no-ops when the same queue is asked for twice, so it keeps
+   * the broker's progress instead of resetting it. That guard turned a dismissal
+   * into a dead end: close the card, ask "what's next" again, get the same eight
+   * items, same key — no re-arm, `dismissed` still true, and no way back to it.
+   * An explicit ask is a request to see the queue, so it reopens and returns to
+   * the top, which is also what the reply says it does.
+   */
+  revive: () => set({ dismissed: false, collapsed: false, index: 0 }),
 }));
 
 /** Stable identity for a set of queue items. */
