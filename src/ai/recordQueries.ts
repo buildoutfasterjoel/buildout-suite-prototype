@@ -181,13 +181,26 @@ const timelineBody = (e: TimelineEvent): string =>
  * Built from `getContactDetailClient` rather than by re-deriving the contact's
  * deals, so the feed the assistant reads is the same object the contact page
  * renders — including which deals count as theirs.
+ *
+ * The three sources have to match the page's feed exactly (see the `events`
+ * memo in `ContactEngagementPanel`): session sim events, the synthesized arc,
+ * and anything logged this session. Sim events were the one that was missing,
+ * and they are the newest rows on the page — an email that self-arrives mid-demo
+ * (Rosa sending Miguel's T-12 and rent roll, `heroInbound`) sat at the top of
+ * the broker's timeline while the assistant, reading a feed without it, answered
+ * off the newest row it COULD see and reported an older exchange as her latest
+ * word. A feed that silently ends one row short of the page is worse than an
+ * empty one: it is confidently wrong about the thing the broker is looking at.
  */
 export function contactActivity(contactId: string): ActivityRow[] {
   const detail = getContactDetailClient(contactId);
   if (!detail) return [];
   const { contact, deals } = detail;
   const name = `${contact.firstName} ${contact.lastName}`.trim();
-  const synthesized = buildContactTimeline(contact, deals).map((e) => {
+  const simEvents = useContactSession.getState().simEvents[contactId] ?? [];
+  // Sim events first so they win a same-timestamp tie against the arc, which is
+  // the page's order too — they are the rows that just arrived.
+  const synthesized = [...simEvents, ...buildContactTimeline(contact, deals)].map((e) => {
     const attachments = [
       ...(e.attachments ?? []),
       ...(e.thread?.messages.flatMap((m) => m.attachments ?? []) ?? []),

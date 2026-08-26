@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { useDataStore, seedSlice } from "#/data/dataStore";
 import { createTask } from "#/data/actions";
 import { addDealActivity } from "#/data/store";
+import { useContactSession } from "#/components/contacts/useContactSession";
 import {
   hasInbound,
   ownedPropertiesFor,
@@ -199,6 +200,60 @@ describe("activity reads", () => {
     expect(email!.direction).toBe("out");
     expect(email!.reply!.body).toContain("Miguel would have framed it");
     expect(email!.reply!.from).toBeTruthy();
+  });
+
+  /**
+   * The reported bug, second variety: asked to create a deal off the T-12 and
+   * rent roll Rosa had just emailed, the assistant answered off an OLDER
+   * exchange and said there was no deal intent — because a self-arriving email
+   * lands in the session store's `simEvents`, and the feed the assistant read
+   * merged only `logged`. The row sitting at the top of the broker's timeline
+   * was the one row the model could not see.
+   */
+  it("sees a self-arriving email — the newest row on the page", () => {
+    const rosa = [...useDataStore.getState().contacts.values()].find(
+      (c) => c.firstName === "Rosa" && c.lastName === "Delgado",
+    );
+    expect(rosa).toBeDefined();
+    useContactSession.setState({ logged: {}, simEvents: {}, resolved: {}, flags: {} });
+
+    useContactSession.getState().addSimEvent(rosa!.id, {
+      id: "sim-rosa-financials-email",
+      type: "inbound-email",
+      actor: { name: "Rosa Delgado" },
+      direction: "in",
+      // Dated ahead of the seeded arc, the way "just now" always is.
+      timestamp: "2099-01-01T12:00:00.000Z",
+      seq: 2_000_000,
+      subject: "Miguel's files — the T-12 and rent roll",
+      body: "Attached are the full trailing twelve months and the current rent roll.",
+      hasAttachment: true,
+      attachments: [
+        { name: "The Delgado Building — T12.pdf", meta: "PDF · 268 KB" },
+        { name: "Delgado Rent Roll — July 2026.xlsx", meta: "XLSX · 96 KB" },
+      ],
+      source: "user",
+    });
+
+    const rows = contactActivity(rosa!.id);
+    // First, not merely present: "her last email" is answered off the top row,
+    // so being in the feed somewhere is not enough.
+    expect(rows[0].id).toBe("sim-rosa-financials-email");
+    expect(rows[0].title).toContain("T-12");
+    // The documents are what the deal gets created from, so they have to travel.
+    expect(rows[0].attachments).toEqual([
+      "The Delgado Building — T12.pdf",
+      "Delgado Rent Roll — July 2026.xlsx",
+    ]);
+
+    // And it survives the trip through the tool the model actually calls,
+    // including its default limit.
+    const searched = searchActivities({ contactId: rosa!.id });
+    expect(searched.activities[0].id).toBe("sim-rosa-financials-email");
+    const inbound = searchActivities({ contactId: rosa!.id, direction: "in" });
+    expect(inbound.activities.map((a) => a.id)).toContain("sim-rosa-financials-email");
+
+    useContactSession.setState({ logged: {}, simEvents: {}, resolved: {}, flags: {} });
   });
 
   it("counts an answered outbound email as something from the contact", () => {
