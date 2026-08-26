@@ -321,4 +321,20 @@ describe('voucher payers seed', () => {
       }
     }
   })
+
+  it('bills at least one voucher to somebody who is not its buyer or tenant', () => {
+    // The Payers section exists because the payer is often a different party —
+    // a corporate AP department, a holding company. An all-defaults seed would
+    // make the section look like a copy of the Buyer section.
+    const outsider = listings.some((deal) => {
+      const parties = new Set([
+        ...deal.buyerContactIds,
+        ...deal.tenantContactIds,
+      ])
+      return deal.transaction.backOffice.payerContactIds.some(
+        (id) => !parties.has(id),
+      )
+    })
+    expect(outsider).toBe(true)
+  })
 })

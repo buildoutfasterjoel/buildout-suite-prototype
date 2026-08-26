@@ -1461,6 +1461,25 @@ function generateListings(
     if (status === 'closed' && commissionAmount > 0) {
       const primaryPayer = buyerContacts[0] ?? sellerContacts[0]
       const otherPayer = sellerContacts.find((c) => c.id !== primaryPayer.id)
+      // One closed deal in three bills a party that is on neither side — the
+      // corporate AP department or holding company that actually cuts the
+      // cheque. The Payers section is built for exactly this, and a seed where
+      // every payer is also the buyer would make it look redundant.
+      //
+      // Cycled on the deal number rather than drawn, for the same reason
+      // `variant` is: only a handful of deals reach Closed, and at that sample
+      // size a probability leaves the case unreachable in some runs.
+      const thirdPartyPayer =
+        Number(dealId) % 3 === 2
+          ? propertyContacts.find(
+              (c) =>
+                !buyerContacts.some((b) => b.id === c.id) &&
+                !sellerContacts.some((s) => s.id === c.id),
+            )
+          : undefined
+      // Falls back to the buyer when this property has no spare contact, so a
+      // small contact list degrades to today's behaviour instead of throwing.
+      const billTo = thirdPartyPayer ?? primaryPayer
       // Cycled on the deal number rather than drawn, so the three states below
       // are all guaranteed to appear. Only a handful of deals ever reach Closed,
       // and at that sample size a probability left whole states unreachable —
@@ -1478,7 +1497,7 @@ function generateListings(
 
       receivables.push({
         id: faker.string.uuid(),
-        payerContactId: primaryPayer.id,
+        payerContactId: billTo.id,
         dueDate: faker.date.recent({ days: 30 }).toISOString().slice(0, 10),
         billingDescription: split ? 'Initial Payment' : 'Full Payment',
         amount: firstAmount,
