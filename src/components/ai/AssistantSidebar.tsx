@@ -1513,6 +1513,19 @@ export function AssistantSidebar() {
   }, [pathname, setExpanded]);
 
   /**
+   * A call going live collapses it too, for the same reason and without a
+   * navigation to trigger it: the live call bar lives on the page, so a call
+   * started from inside full screen — the queue's Call button, the greeting's
+   * "yes, call now" — put the controls for that call behind the panel that
+   * started it. Hanging up doesn't expand it again; nothing here ever does.
+   *
+   * If the call bar ever moves *into* the rail, this is the rule to delete.
+   */
+  useEffect(() => {
+    if (callLive && useAssistant.getState().expanded) setExpanded(false);
+  }, [callLive, setExpanded]);
+
+  /**
    * Arriving at the chat lands on the newest message — coming back from the home
    * screen, or reopening a rail that was collapsed mid-conversation.
    *
