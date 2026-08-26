@@ -272,6 +272,55 @@ export function rewriteSpaceDealPath(path: string): string {
 }
 
 /**
+ * Make a tool result safe to hand back to the runtime.
+ *
+ * The runtime canonicalises a client tool's output, and its serializer is
+ * stricter than `JSON.stringify`: an `undefined` anywhere in the tree throws
+ * `Interrupt values must be JSON-compatible.`, and so does any value that isn't
+ * a plain object (a `Date`, a `Map`, a class instance). `JSON.stringify` merely
+ * drops or coerces all of those, which is why this looked like working code.
+ *
+ * The failure was invisible in the worst way. A throw was caught upstream and
+ * stored as the call's output — `{ error: "Interrupt values must be
+ * JSON-compatible." }` — so the tool "succeeded" with an error payload the
+ * model then narrated straight past: "Here are your active deals:" above no
+ * deals at all, because the rail had no `deals` array to draw cards from.
+ * `listDeals` tripped it on one line, `dealType: undefined` inside the nav it
+ * returns when the broker didn't name a deal type.
+ *
+ * Fixed here, once, rather than in each of the forty-odd tools: an optional
+ * field is the normal shape of this data, so a rule that every tool must
+ * remember to write `?? null` is a rule that gets broken by the next tool
+ * added. A round-trip through JSON is exactly the "make it JSON-compatible"
+ * the runtime is asking for.
+ */
+export function jsonSafeResult(value: unknown): unknown {
+  try {
+    // `?? null` because `JSON.stringify(undefined)` returns undefined rather
+    // than a string, which `JSON.parse` then rejects — a tool that returns
+    // nothing must not become a serialization error.
+    return JSON.parse(JSON.stringify(value ?? null));
+  } catch {
+    // Only a cycle or a BigInt reaches here. Report it as a tool error the
+    // model can speak to, rather than throwing into the runtime and having it
+    // surface as the same opaque message this whole helper exists to prevent.
+    return { error: "That result couldn't be serialized to send back." };
+  }
+}
+
+/** Wrap one client tool so whatever it returns goes through {@link jsonSafeResult}. */
+function withJsonSafeOutput(tool: AnyClientTool): AnyClientTool {
+  const { execute } = tool as AnyClientTool & {
+    execute?: (...args: never[]) => unknown | Promise<unknown>;
+  };
+  if (typeof execute !== "function") return tool;
+  return {
+    ...tool,
+    execute: async (...args: never[]) => jsonSafeResult(await execute(...args)),
+  } as AnyClientTool;
+}
+
+/**
  * Build the browser-executed client tools, matched by name to the shared
  * definitions in `toolDefs.ts`. `navigate` is injected from the sidebar (which
  * holds the router). Each `execute` runs against the live Zustand store.
@@ -1240,5 +1289,8 @@ export function createClientTools({
         ticketFiled: false,
       };
     }),
-  ];
+    // Every tool's output goes through the same serializer guard — see
+    // `jsonSafeResult`. Applied to the whole list rather than at each
+    // `.client()` call so a tool added later cannot opt out by forgetting.
+  ].map(withJsonSafeOutput);
 }
