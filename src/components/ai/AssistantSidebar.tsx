@@ -1596,7 +1596,10 @@ export function AssistantSidebar() {
           appeared beneath it as though the queue were newer than they were. A
           live surface belongs where the hands are, next to the composer. */}
       {queuePinned && (
-        <div className="assistant-rail__column pb-2" style={{ paddingInline: 20 }}>
+        // 4px, not `pb-2`'s 8: the composer below adds 4px of its own top
+        // padding, so this lands the gap between card and input at the 8px the
+        // design specifies rather than 12.
+        <div className="assistant-rail__column" style={{ padding: "0 20px 4px" }}>
           <DayPlanCard slot="pinned" />
         </div>
       )}

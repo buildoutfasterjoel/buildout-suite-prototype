@@ -4697,12 +4697,18 @@
     margin-inline-start: auto;
   }
 
+  // 28px for the hit area, but only 20px of it counts toward layout: the header
+  // is 44px tall (12px padding on a 20px row, Figma 259:19060) and a 28px button
+  // would push it to 52. The design solves this with 20px-tall wrappers the
+  // buttons overflow at y=-4; a negative block margin is the same trick without
+  // the extra element.
   &__arrow {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 28px;
     height: 28px;
+    margin-block: -4px;
     padding: 0;
     border: 0;
     border-radius: 6px;
@@ -4722,13 +4728,14 @@
 
   // A step darker than the card's own ground, so the count reads as a badge
   // without introducing a second accent colour.
+  // 20px tall, so it sits inside the header's row rather than setting it.
   &__count {
-    padding: 4px;
+    padding-inline: 4px;
     border-radius: 6px;
     background-color: rgba(185, 132, 252, 0.3);
     color: colors.$purple-heart-800;
     font-size: 12px;
-    line-height: 13px;
+    line-height: 20px;
     font-weight: 600;
     white-space: nowrap;
   }
