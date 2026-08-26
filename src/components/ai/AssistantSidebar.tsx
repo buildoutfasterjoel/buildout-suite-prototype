@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useRouter } from "@tanstack/react-router";
+import { Link, useLocation, useRouter } from "@tanstack/react-router";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { useChat, type UIMessage } from "@tanstack/ai-react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
@@ -297,22 +297,34 @@ function ResultCard({
   title,
   badge,
   meta,
+  to,
   onOpen,
 }: {
   title: string;
   badge?: string;
   meta?: string;
-  onOpen: () => void;
+  /**
+   * Destination for a card pointing at ONE record, rendered as a real link.
+   *
+   * A record card is the kind a broker cmd-clicks — read the contact without
+   * losing the conversation that produced it — and a `<button>` gives them no
+   * way to. `DealCardById` has always been a `Link`; this is the same offer for
+   * the other record types.
+   */
+  to?: string;
+  /**
+   * Fallback for a card that has somewhere to go but no plain href to go to —
+   * a property lands on the Deals grid and has to apply the filter first (see
+   * `goToNav`), which is a click handler's job, not a URL's.
+   */
+  onOpen?: () => void;
 }) {
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      // `d-block` + `w-100` on the button and `w-100` on the row: Blueprint's
-      // .btn is a centering flex container, so without these the content
-      // collapses to its intrinsic width and floats in the middle of the card.
-      className="btn d-block p-0 border rounded text-start w-100 bg-white"
-    >
+  // `d-block` + `w-100` on the control and `w-100` on the row: Blueprint's .btn
+  // is a centering flex container, so without these the content collapses to its
+  // intrinsic width and floats in the middle of the card.
+  const className = "btn d-block p-0 border rounded text-start w-100 bg-white";
+  const body = (
+    <>
       <div className="d-flex align-items-center gap-2 p-2 w-100">
         <span className="flex-grow-1 d-flex align-items-center gap-2" style={{ minWidth: 0 }}>
           <span className="fw-semibold text-truncate">{title}</span>
@@ -325,6 +337,19 @@ function ResultCard({
         <FontAwesomeIcon icon={faChevronRight} className="text-muted flex-shrink-0" />
       </div>
       {meta && <div className="text-muted small text-truncate px-2 pb-2">{meta}</div>}
+    </>
+  );
+
+  if (to) {
+    return (
+      <Link to={to as never} className={`${className} text-decoration-none text-reset`}>
+        {body}
+      </Link>
+    );
+  }
+  return (
+    <button type="button" onClick={onOpen} className={className}>
+      {body}
     </button>
   );
 }
@@ -460,7 +485,7 @@ function ToolResultCards({
             title={c.name}
             badge={c.relationship ? RELATIONSHIP_LABELS[c.relationship] ?? c.relationship : undefined}
             meta={c.company}
-            onOpen={() => router.navigate({ to: `/backoffice/contacts/${c.id}` as never })}
+            to={`/backoffice/contacts/${c.id}`}
           />
         )}
         {p && (
