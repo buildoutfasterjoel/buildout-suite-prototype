@@ -1488,6 +1488,18 @@ export function AssistantSidebar() {
     return () => cancelAnimationFrame(id);
   }, [focusNonce]);
 
+  // Opening the rail focuses the composer, so the broker can start typing
+  // straight away instead of opening the rail and then clicking into it.
+  //
+  // Straight in the effect, no `requestAnimationFrame`: the field is mounted in
+  // the same commit that opened the rail, so it is already there to focus. The
+  // nonce effect above waits a frame because it has a queued prompt to let land
+  // first; this one has nothing to wait for, and a deferred focus is one a
+  // background tab (where frames never run) would drop entirely.
+  useEffect(() => {
+    if (open) fieldRef.current?.focus();
+  }, [open]);
+
   /**
    * Navigating collapses full screen back to the rail.
    *
