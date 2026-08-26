@@ -4,7 +4,7 @@ import { useVoice } from "./useVoice";
 describe("useVoice", () => {
   beforeEach(() => {
     useVoice.setState({
-      voiceEnabled: false, voiceMutedByUser: false, muted: false, paused: false,
+      voiceEnabled: false, muted: false, paused: false,
       speaking: false, listening: false, conversationMode: false,
     });
   });
@@ -12,7 +12,6 @@ describe("useVoice", () => {
   it("defaults to voice disabled, nothing active", () => {
     const s = useVoice.getState();
     expect(s.voiceEnabled).toBe(false);
-    expect(s.voiceMutedByUser).toBe(false);
     expect(s.speaking).toBe(false);
     expect(s.conversationMode).toBe(false);
   });
@@ -24,29 +23,19 @@ describe("useVoice", () => {
     expect(useVoice.getState().conversationMode).toBe(true);
   });
 
-  it("toggleVoice on enables and clears the manual-off flag", () => {
-    useVoice.setState({ voiceMutedByUser: true });
+  it("toggleVoice is the switch, both ways", () => {
     useVoice.getState().toggleVoice(true);
     expect(useVoice.getState().voiceEnabled).toBe(true);
-    expect(useVoice.getState().voiceMutedByUser).toBe(false);
-  });
-
-  it("toggleVoice off disables and sets the sticky manual-off flag", () => {
-    useVoice.getState().toggleVoice(true);
     useVoice.getState().toggleVoice(false);
     expect(useVoice.getState().voiceEnabled).toBe(false);
-    expect(useVoice.getState().voiceMutedByUser).toBe(true);
   });
 
-  it("enableVoiceForMic turns voice on from the default off state", () => {
-    useVoice.getState().enableVoiceForMic();
-    expect(useVoice.getState().voiceEnabled).toBe(true);
-  });
-
-  it("enableVoiceForMic respects a manual off (stays silent)", () => {
-    useVoice.getState().toggleVoice(false); // user deliberately muted
-    useVoice.getState().enableVoiceForMic();
+  // The mic used to enable voice for the session. It no longer may: opening the
+  // mic sets `listening` (and the rail sets conversationMode) and nothing else,
+  // so dictating one sentence can't sign the broker up for a talking assistant.
+  it("listening and conversation mode never turn voice on", () => {
+    useVoice.getState().setListening(true);
+    useVoice.getState().setConversationMode(true);
     expect(useVoice.getState().voiceEnabled).toBe(false);
-    expect(useVoice.getState().voiceMutedByUser).toBe(true);
   });
 });

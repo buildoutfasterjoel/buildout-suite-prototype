@@ -6,12 +6,6 @@ import { create } from "zustand";
  */
 interface VoiceState {
   voiceEnabled: boolean;
-  /**
-   * The user explicitly turned voice off via the toggle. Sticky: while set,
-   * starting the mic won't auto-enable voice (a deliberate off is respected).
-   * Cleared only by explicitly turning voice back on.
-   */
-  voiceMutedByUser: boolean;
   muted: boolean;
   paused: boolean;
   speaking: boolean;
@@ -23,17 +17,16 @@ interface VoiceState {
   setSpeaking: (b: boolean) => void;
   setListening: (b: boolean) => void;
   setConversationMode: (b: boolean) => void;
-  /** The header speaker toggle: on clears the manual-off flag; off sets it. */
+  /** The header speaker toggle — the ONLY way voice turns on. */
   toggleVoice: (on: boolean) => void;
-  /** Enable voice for a mic session, unless the user manually turned it off. */
-  enableVoiceForMic: () => void;
 }
 
 export const useVoice = create<VoiceState>((set) => ({
-  // Voice is off by default — the assistant is text-only until the user turns
-  // voice on or starts the mic (see toggleVoice / enableVoiceForMic).
+  // Voice is off by default, and only the user turns it on (`toggleVoice`).
+  // Nothing else may: starting the mic used to enable voice for the session,
+  // which meant dictating one sentence signed the broker up for a talking
+  // assistant they never asked for.
   voiceEnabled: false,
-  voiceMutedByUser: false,
   muted: false,
   paused: false,
   speaking: false,
@@ -45,8 +38,5 @@ export const useVoice = create<VoiceState>((set) => ({
   setSpeaking: (speaking) => set({ speaking }),
   setListening: (listening) => set({ listening }),
   setConversationMode: (conversationMode) => set({ conversationMode }),
-  toggleVoice: (on) =>
-    set({ voiceEnabled: on, voiceMutedByUser: !on }),
-  enableVoiceForMic: () =>
-    set((s) => (s.voiceMutedByUser ? {} : { voiceEnabled: true })),
+  toggleVoice: (on) => set({ voiceEnabled: on }),
 }));

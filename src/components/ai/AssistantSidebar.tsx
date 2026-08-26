@@ -1000,7 +1000,6 @@ export function AssistantSidebar() {
 
   const voiceEnabled = useVoice((s) => s.voiceEnabled);
   const toggleVoice = useVoice((s) => s.toggleVoice);
-  const enableVoiceForMic = useVoice((s) => s.enableVoiceForMic);
   const listening = useVoice((s) => s.listening);
   const setConversationMode = useVoice((s) => s.setConversationMode);
   const speakNextReplyRef = useRef(false);
@@ -1602,8 +1601,8 @@ export function AssistantSidebar() {
             aria-label={voiceEnabled ? "Turn voice off" : "Turn voice on"}
             onClick={() => {
               const next = !voiceEnabled;
-              // Sticky manual off: toggleVoice records the intent so starting the
-              // mic later won't silently turn voice back on.
+              // The only switch for Otto's voice. Nothing else flips it — not
+              // the mic, not the greeting.
               toggleVoice(next);
               if (!next) {
                 voiceEngine.cancel();
@@ -1788,9 +1787,15 @@ export function AssistantSidebar() {
               stopHandsFree();
               voiceEngine.cancel();
             } else {
-              // Starting the mic turns voice on so Otto talks back — unless the
-              // user deliberately muted it (then stay silent, STT only).
-              enableVoiceForMic();
+              // Starting the mic does NOT turn Otto's voice on: speaking to the
+              // assistant and having it speak back are two decisions, and only
+              // the header's speaker toggle makes the second one. With voice off
+              // this is dictation — the transcript types into the composer and
+              // Otto answers in text.
+              //
+              // Conversation mode is still set, so a broker who *has* turned
+              // voice on gets the hands-free loop: Otto speaks, the mic re-arms.
+              // With voice off nothing is spoken, so nothing re-arms it.
               setConversationMode(true);
               startHandsFree();
             }

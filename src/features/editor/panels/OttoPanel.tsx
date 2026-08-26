@@ -328,10 +328,10 @@ export function OttoPanel() {
               stopHandsFree();
               voiceEngine.cancel();
             } else {
-              // Dictation only — deliberately no `enableVoiceForMic()` and no
-              // conversation mode. In the rail those make Otto read its reply
-              // back; here the broker is watching the canvas change, so spoken
-              // confirmations would be narration over the thing being narrated.
+              // Dictation only — deliberately no conversation mode. In the rail
+              // that re-arms the mic after Otto speaks; here the broker is
+              // watching the canvas change, so spoken confirmations would be
+              // narration over the thing being narrated.
               startHandsFree();
             }
           }}
