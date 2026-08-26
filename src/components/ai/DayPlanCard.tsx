@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -7,7 +7,6 @@ import {
   faArrowLeft,
   faArrowRight,
   faChevronDown,
-  faChevronRight,
   faXmark,
 } from "@fortawesome/pro-regular-svg-icons";
 // Solid: the same finished-work check the task list uses (see ActionPlanChecklist).
@@ -123,6 +122,20 @@ export function DayPlanCard({
     if (match) state.park(match.taskId);
   }, [parkedFor, callPhase, callTarget]);
 
+  /**
+   * True for one beat after a new queue arms, which is what plays the card's
+   * entry animation. Keyed off the queue's identity rather than mount, because
+   * the pinned card never unmounts between queues — it would otherwise animate
+   * once per session and never again.
+   */
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    if (!q.key) return;
+    setArmed(true);
+    const t = setTimeout(() => setArmed(false), 400);
+    return () => clearTimeout(t);
+  }, [q.key]);
+
   const remaining = q.items.filter((i) => !cleared.includes(i.taskId));
   const item = remaining[Math.min(index, remaining.length - 1)];
   /** Only the top of the queue is what the broker should "start with". */
@@ -193,9 +206,11 @@ export function DayPlanCard({
         aria-label={collapsed ? "Expand next actions" : "Collapse next actions"}
         onClick={() => q.setCollapsed(!collapsed)}
       >
+        {/* One icon rotated rather than two swapped, so the fold can animate —
+            the same convention (and timing) as the overview accordions. */}
         <FontAwesomeIcon
-          icon={collapsed ? faChevronRight : faChevronDown}
-          className="assistant-next-actions__chevron"
+          icon={faChevronDown}
+          className={`assistant-next-actions__chevron${collapsed ? "" : " assistant-next-actions__chevron--open"}`}
         />
         <span className="assistant-next-actions__title">Next Actions</span>
       </button>
@@ -239,34 +254,40 @@ export function DayPlanCard({
     </div>
   );
 
-  if (collapsed) return <div className="assistant-next-actions">{header}</div>;
+  /**
+   * The fold. The body stays mounted and is clipped to nothing rather than
+   * unmounted, because a height transition needs something to transition — see
+   * `__fold` in the stylesheet.
+   */
+  const fold = (children: ReactNode) => (
+    <div className="assistant-next-actions" data-armed={armed || undefined}>
+      {header}
+      <div className="assistant-next-actions__fold" data-open={!collapsed} aria-hidden={collapsed}>
+        <div>
+          <div className="assistant-next-actions__body">{children}</div>
+        </div>
+      </div>
+    </div>
+  );
 
   // Every item worked. The card stays until the broker closes it — pinned above
   // the composer, "that's your day cleared" is the surface reporting itself
   // finished, and the × in the header is how they put it away.
   if (!item) {
-    return (
-      <div className="assistant-next-actions">
-        {header}
-        <div className="assistant-next-actions__body">
-          <div className="d-flex align-items-start gap-2">
-            <FontAwesomeIcon icon={faCircleCheck} className="text-success mt-1" />
-            <div>
-              <span className="fw-semibold">That's your day cleared.</span>{" "}
-              <span className="text-body">Want me to build a call list next?</span>
-            </div>
-          </div>
+    return fold(
+      <div className="d-flex align-items-start gap-2">
+        <FontAwesomeIcon icon={faCircleCheck} className="text-success mt-1" />
+        <div>
+          <span className="fw-semibold">That's your day cleared.</span>{" "}
+          <span className="text-body">Want me to build a call list next?</span>
         </div>
-      </div>
+      </div>,
     );
   }
 
-  return (
-    <div className="assistant-next-actions">
-      {header}
-
-      <div className="assistant-next-actions__body">
-        {note && <div className="small text-muted fst-italic">{note}</div>}
+  return fold(
+    <>
+      {note && <div className="small text-muted fst-italic">{note}</div>}
         <div className="assistant-next-actions__headline">
           {isFirstItem ? `Start with ${item.headline}` : item.headline}
         </div>
@@ -297,7 +318,6 @@ export function DayPlanCard({
             Done
           </Button>
         </div>
-      </div>
-    </div>
+    </>,
   );
 }

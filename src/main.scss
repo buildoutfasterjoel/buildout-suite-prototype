@@ -4641,6 +4641,16 @@
   display: flex;
   flex-direction: column;
   border: 1px solid colors.$purple-heart-200;
+  // Played once per armed queue (see `armed` in `DayPlanCard`), not per mount:
+  // the pinned card outlives the queue inside it.
+  &[data-armed] {
+    animation: next-actions-in 0.24s ease-out;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
   border-radius: 8px;
   overflow: hidden;
   @include otto-gradient-card;
@@ -4670,11 +4680,46 @@
     text-align: start;
   }
 
+  // Collapsed points right, open points down — one icon rotated, same transform
+  // and timing as the overview accordions' chevron.
   &__chevron {
     flex-shrink: 0;
     width: 14px;
     font-size: 12px;
     color: colors.$purple-heart-800;
+    transform: rotate(-90deg);
+    transition: transform 0.2s ease-in-out;
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  &__chevron--open {
+    transform: rotate(0deg);
+  }
+
+  // The fold. `grid-template-rows` between 0fr and 1fr animates to the body's
+  // real height without anyone having to measure it, which `max-height` would
+  // need — and a wrong guess there either clips the card or eases against a
+  // ceiling the content never reaches. The inner element owns the clipping so
+  // the body keeps its own padding.
+  &__fold {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.2s ease-in-out;
+
+    > * {
+      overflow: hidden;
+    }
+
+    &[data-open="true"] {
+      grid-template-rows: 1fr;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
   }
 
   &__title {
@@ -4768,6 +4813,17 @@
     align-items: center;
     gap: 8px;
     padding-top: 8px;
+  }
+}
+
+@keyframes next-actions-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

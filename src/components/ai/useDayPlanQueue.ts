@@ -37,9 +37,16 @@ interface DayPlanQueueState {
    * Who matters: the rail folds the queue on its own while another card with its
    * own actions is live (an email draft's Send/Edit/Delete competing with the
    * queue's Call/Done is the busyness this avoids), and unfolds it when that card
-   * resolves. It must never unfold something the broker folded by hand — an
+   * resolves. That unfold must never override a fold the broker made by hand — an
    * automatic gesture may undo an automatic gesture, never an explicit one. One
    * field rather than two booleans so the two can't contradict each other.
+   *
+   * **Finishing a move is the one exception**, and every path that clears an item
+   * takes it. A hand fold says "not now"; completing a move is the broker turning
+   * back to the queue, and the move that replaces it is news they earned by
+   * finishing the last one — so it opens even if they had folded it. Without this
+   * a fold made early in a session silently swallowed every later hand-off, which
+   * read as the card being broken.
    */
   collapsedBy: "user" | "auto" | null;
   /** Closed outright. A later `plan_my_day` arms a fresh queue and brings it back. */
@@ -101,6 +108,8 @@ export const useDayPlanQueue = create<DayPlanQueueState>((set, get) => ({
       cleared: s.cleared.includes(taskId) ? s.cleared : [...s.cleared, taskId],
       index: 0,
       note,
+      // Finishing a move reveals the next one — see `collapsedBy`.
+      collapsedBy: null,
     })),
 
   /**
@@ -122,6 +131,7 @@ export const useDayPlanQueue = create<DayPlanQueueState>((set, get) => ({
       note,
       cleared:
         parkedFor && !s.cleared.includes(parkedFor) ? [...s.cleared, parkedFor] : s.cleared,
+      collapsedBy: null,
     }));
   },
 
@@ -161,7 +171,7 @@ export const useDayPlanQueue = create<DayPlanQueueState>((set, get) => ({
       // Emailing someone about a move is not the same as the move being done —
       // the same line the call path draws, where `resume` clears and leaves the
       // task alone.
-      return { cleared: [...s.cleared, match.taskId], index: 0, note };
+      return { cleared: [...s.cleared, match.taskId], index: 0, note, collapsedBy: null };
     }),
 }));
 

@@ -68,6 +68,36 @@ describe("collapse precedence", () => {
     expect(state().collapsedBy).toBe("user");
   });
 
+  /**
+   * The one exception, and the reason it exists: a fold made early in a session
+   * was silently swallowing every later hand-off, so finishing a move looked
+   * like the card was broken.
+   */
+  it("opens on completion even over a manual fold", () => {
+    state().setCollapsed(true);
+    state().clear("t-rosa", "Marked done. Next up…");
+    expect(state().collapsedBy).toBeNull();
+  });
+
+  it("opens when a call finishes the move, over a manual fold", () => {
+    state().setCollapsed(true);
+    state().park("t-rosa");
+    state().resume("Call logged. Next up…");
+    expect(state().collapsedBy).toBeNull();
+  });
+
+  it("opens when an email finishes the move, over a manual fold", () => {
+    state().setCollapsed(true);
+    state().clearForContact("c-rosa", "Emailed them. Next up…");
+    expect(state().collapsedBy).toBeNull();
+  });
+
+  it("stays folded when an email matched nobody in the queue", () => {
+    state().setCollapsed(true);
+    state().clearForContact("c-nobody", "Emailed them. Next up…");
+    expect(state().collapsedBy).toBe("user");
+  });
+
   it("reopens on revive regardless of who folded it", () => {
     state().setCollapsed(true);
     state().dismiss();
