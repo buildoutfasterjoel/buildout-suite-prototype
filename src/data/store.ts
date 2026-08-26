@@ -358,13 +358,6 @@ function toContactOption(c: Contact): ContactOption {
   }
 }
 
-/** Every contact, sorted by name — for pickers that need the whole record. */
-export function getAllContacts(): Contact[] {
-  return [...getStore().contacts.values()].sort((a, b) =>
-    `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`),
-  )
-}
-
 /** Rich options over all contacts, for a contact picker. */
 export function getContactOptions(): ContactOption[] {
   return [...getStore().contacts.values()]

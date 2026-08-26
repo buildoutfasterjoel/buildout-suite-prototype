@@ -53,7 +53,7 @@ import {
   DEDUCTION_CATEGORIES,
   partyContactIds,
   partySectionTitle,
-  payerOptions,
+  payerFormOptions,
   payerRemovalBlock,
   receivablePayerLabel,
   TRANSACTION_SIDES,
@@ -62,7 +62,6 @@ import {
   type VoucherParty,
   type VoucherPayerRow,
 } from "#/data/vouchers";
-import { getAllContacts } from "#/data/store";
 import { AddBrokerModal } from "./AddBrokerModal";
 import { AddContactModal } from "./AddContactModal";
 import { NewReceivableModal } from "./NewReceivableModal";
@@ -1310,12 +1309,7 @@ function ReceivablesSection({
   const patch = (id: string, next: Partial<FinancialReceivable>) =>
     updateReceivable(listing.id, id, next);
 
-  // The payer picker's options, and the reverse lookup a row's Select needs:
-  // `PayerOption.value` encodes both the contact and which form of them, so a
-  // row's current selection is its own composite key rather than the bare id.
-  const payerChoices = payerOptions(getAllContacts());
-  const payerValue = (r: FinancialReceivable) =>
-    r.billToCompany ? `${r.payerContactId}:company` : r.payerContactId;
+
 
   // Which rows the bulk actions apply to. Local state — nothing here persists,
   // and every read below goes through `selectedRows` rather than the set itself,
@@ -1454,29 +1448,31 @@ function ReceivablesSection({
                   )}
                   <Table.Cell>
                     {editable ? (
+                      /* Two options, both naming this row's own payer: the
+                         person, or the company they belong to. Deliberately NOT
+                         the contact book — who a receivable bills is settled
+                         when it is created, and re-offering every contact here
+                         would let "how is this addressed" quietly become "who
+                         is this billed to". */
                       <Select
-                        value={payerValue(r)}
-                        onValueChange={(v) => {
-                          const choice = payerChoices.find((o) => o.value === v);
-                          if (!choice) return;
-                          patch(r.id, {
-                            payerContactId: choice.contactId,
-                            billToCompany: choice.billToCompany,
-                          });
-                        }}
+                        value={r.billToCompany ? "company" : "person"}
+                        onValueChange={(v) =>
+                          patch(r.id, { billToCompany: v === "company" })
+                        }
                       >
                         <Select.Trigger className="bg-card" aria-label="Payer">
-                          {/* The label is passed explicitly rather than left to
-                              `Select.Value` to derive. This Select's value is a
-                              composite key — contact id plus which form of them
-                              — so the bare value is an id, and an unaided
-                              `Select.Value` renders exactly that. */}
-                          <Select.Value placeholder="Select a payer...">
-                            {label}
-                          </Select.Value>
+                          {/* The label is passed as children, not left to
+                              `Select.Value` to derive. Blueprint's Select.Value
+                              renders the raw VALUE when given none — here that
+                              is the literal string "person" — and this is the
+                              third time in this file that has been discovered in
+                              a browser rather than by the type checker. If you
+                              add a Select whose value is not also its label,
+                              pass the label. */}
+                          <Select.Value>{label}</Select.Value>
                         </Select.Trigger>
                         <Select.Content>
-                          {payerChoices.map((o) => (
+                          {payerFormOptions(r.payerContactId).map((o) => (
                             <Select.Item key={o.value} value={o.value}>
                               {o.label}
                             </Select.Item>

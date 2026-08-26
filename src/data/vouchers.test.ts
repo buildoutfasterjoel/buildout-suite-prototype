@@ -9,7 +9,7 @@ import {
   isVoucherPending,
   partyContactIds,
   partySectionTitle,
-  payerOptions,
+  payerFormOptions,
   payerRemovalBlock,
   receivablePayerLabel,
   voucherHref,
@@ -334,23 +334,32 @@ describe('receivablePayerLabel', () => {
   })
 })
 
-describe('payerOptions', () => {
-  it('offers a contact with a company in both forms', () => {
-    const contacts = [
-      { id: 'c1', firstName: 'Mark', lastName: 'Payer', email: 'm@x.com', company: 'ABC, Corp.' },
-    ] as Contact[]
-    expect(payerOptions(contacts)).toEqual([
-      { value: 'c1', label: 'Mark Payer (m@x.com)', contactId: 'c1', billToCompany: false },
-      { value: 'c1:company', label: 'ABC, Corp.', contactId: 'c1', billToCompany: true },
+describe('payerFormOptions', () => {
+  function seedOne(over: Partial<Contact> = {}) {
+    const c = {
+      id: 'c1', firstName: 'Mark', lastName: 'Payer',
+      email: 'mark.payer@buildout.com', company: 'ABC, Corp.',
+    } as Contact
+    useDataStore.setState({ contacts: new Map([['c1', { ...c, ...over }]]) })
+  }
+
+  it('offers the person and their company — and nobody else', () => {
+    // The row's dropdown asks how ONE payer is addressed, not who is billed.
+    // Anything longer than these two would let it change the payer outright.
+    resetStore()
+    seedOne()
+    expect(payerFormOptions('c1')).toEqual([
+      { value: 'person', label: 'Mark Payer (mark.payer@buildout.com)' },
+      { value: 'company', label: 'ABC, Corp.' },
     ])
   })
 
-  it('offers a contact with no company only as themselves', () => {
-    const contacts = [
-      { id: 'c2', firstName: 'Sole', lastName: 'Trader', email: 's@x.com', company: '' },
-    ] as Contact[]
-    expect(payerOptions(contacts)).toHaveLength(1)
-    expect(payerOptions(contacts)[0]!.billToCompany).toBe(false)
+  it('offers only the person when they have no company', () => {
+    resetStore()
+    seedOne({ company: '' })
+    expect(payerFormOptions('c1')).toEqual([
+      { value: 'person', label: 'Mark Payer (mark.payer@buildout.com)' },
+    ])
   })
 })
 

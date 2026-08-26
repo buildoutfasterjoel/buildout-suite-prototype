@@ -1,5 +1,4 @@
 import type {
-  Contact,
   DealFinancials,
   DealType,
   Listing,
@@ -162,44 +161,32 @@ export function receivablePayerLabel(
   return party.email ? `${party.name} (${party.email})` : party.name
 }
 
-/** One selectable payer form in the receivable picker. */
-export interface PayerOption {
-  /** `contactId` for the person, `contactId:company` for the entity — unique per option. */
-  value: string
+/** How one receivable's own payer can be addressed. */
+export interface PayerFormOption {
+  value: 'person' | 'company'
   label: string
-  contactId: string
-  billToCompany: boolean
 }
 
 /**
- * Every way this voucher's contacts can be billed — each contact as a person,
- * plus once more as their company where they have one.
+ * The two ways to address ONE payer — as the person, or as their company.
  *
- * Drawn from a caller-supplied contact list rather than the voucher's own
- * payers, because a receivable may bill somebody the voucher has not named yet:
- * creating one is how a payer joins the Billing section in the first place.
- * Contacts with no company contribute one option, not an empty second.
+ * A receivable belongs to one person, chosen when it is created. This is the
+ * narrower question the row asks afterwards: which name goes on the invoice.
+ * So it takes a single contact id, not a contact list — offering every contact
+ * again here would let a row silently change WHO it bills under the guise of
+ * changing how they are addressed.
+ *
+ * A contact with no company gets one option. There is nothing else to bill, and
+ * a dropdown with a single choice still reads correctly as "this is the payer".
  */
-export function payerOptions(contacts: Contact[]): PayerOption[] {
-  return contacts.flatMap((c) => {
-    const name = `${c.firstName} ${c.lastName}`.trim()
-    const person: PayerOption = {
-      value: c.id,
-      label: c.email ? `${name} (${c.email})` : name,
-      contactId: c.id,
-      billToCompany: false,
-    }
-    if (!c.company) return [person]
-    return [
-      person,
-      {
-        value: `${c.id}:company`,
-        label: c.company,
-        contactId: c.id,
-        billToCompany: true,
-      },
-    ]
-  })
+export function payerFormOptions(contactId: string): PayerFormOption[] {
+  const party = voucherParty(contactId)
+  const person: PayerFormOption = {
+    value: 'person',
+    label: party.email ? `${party.name} (${party.email})` : party.name,
+  }
+  if (!party.company) return [person]
+  return [person, { value: 'company', label: party.company }]
 }
 
 /** A payer, plus what this voucher has billed them. */

@@ -11,8 +11,7 @@ import {
 	faDollarSign,
 	faMagnifyingGlass,
 } from "@fortawesome/pro-regular-svg-icons";
-import { getAllContacts } from "#/data/store";
-import { payerOptions, type PayerOption } from "#/data/vouchers";
+import { getContactOptions, type ContactOption } from "#/data/store";
 
 export interface NewReceivableInput {
 	payerContactId: string;
@@ -48,7 +47,7 @@ export function NewReceivableModal({
 	onOpenChange: (open: boolean) => void;
 	onAdd: (input: NewReceivableInput) => void;
 }) {
-	const [payer, setPayer] = useState<PayerOption | null>(null);
+	const [payer, setPayer] = useState<ContactOption | null>(null);
 	const [payerQuery, setPayerQuery] = useState("");
 	const [dueDate, setDueDate] = useState("");
 	const [amount, setAmount] = useState("");
@@ -69,13 +68,16 @@ export function NewReceivableModal({
 	// Read in the render body, not memoized, so reopening the modal picks up a
 	// contact added since — the same reason `AddContactModal` calls its source
 	// directly.
-	const options = payerOptions(getAllContacts());
+	const options = getContactOptions();
 
 	const add = () => {
 		if (!payer) return;
 		onAdd({
-			payerContactId: payer.contactId,
-			billToCompany: payer.billToCompany,
+			payerContactId: payer.value,
+			// Billed to the person by default. Switching a line to their company is
+			// the row's own dropdown — a question about this receivable, asked once
+			// it exists, not a second thing to answer while creating it.
+			billToCompany: false,
 			dueDate,
 			billingDescription: description,
 			// An empty box means zero, not NaN — the field starts blank rather than
@@ -96,20 +98,17 @@ export function NewReceivableModal({
 				<Modal.Body className="d-flex flex-column gap-4">
 					<Field>
 						<Field.Label>Payer</Field.Label>
-						{/* A Combobox, not a Select: every contact appears twice here —
-						    once as themselves and once as their company — so the list is
-						    twice the contact book and scrolling it is not a way to find
-						    anybody. Typing is. This is also why the selection is held as
-						    the option OBJECT rather than its value string: a
-						    `PayerOption.value` is a composite key (contact id plus which
-						    form), so anything rendering the bare value renders an id. */}
+						{/* The same contact picker the party sections use — one entry per
+						    person. A receivable belongs to one person; whether their name
+						    or their company goes on the invoice is the row's question, not
+						    this one. */}
 						<Combobox
 							items={options}
 							value={payer}
 							inputValue={payerQuery}
 							onInputValueChange={(v: string) => setPayerQuery(v)}
 							onValueChange={(v) => {
-								const opt = v as PayerOption | null;
+								const opt = v as ContactOption | null;
 								setPayer(opt);
 								setPayerQuery(opt?.label ?? "");
 							}}
@@ -118,16 +117,23 @@ export function NewReceivableModal({
 								<InputGroup.Addon>
 									<FontAwesomeIcon icon={faMagnifyingGlass} />
 								</InputGroup.Addon>
-								<Combobox.Input placeholder="Search payers..." />
+								<Combobox.Input placeholder="Search contacts..." />
 							</Combobox.InputGroup>
 							<Combobox.Content>
 								<Combobox.Empty className="text-muted">
-									No matching payers
+									No matching contacts
 								</Combobox.Empty>
 								<Combobox.List>
-									{(item: PayerOption) => (
+									{(item: ContactOption) => (
 										<Combobox.Item key={item.value} value={item}>
-											{item.label}
+											<div className="d-flex flex-column">
+												<span>{item.name}</span>
+												<span className="text-muted fs-small">
+													{[item.title, item.company]
+														.filter(Boolean)
+														.join(" · ")}
+												</span>
+											</div>
 										</Combobox.Item>
 									)}
 								</Combobox.List>
