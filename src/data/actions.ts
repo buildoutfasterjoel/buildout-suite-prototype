@@ -23,7 +23,7 @@ import {
   resolveConflict,
   resolvedPropertyPatch,
 } from './ingestion'
-import { getProperty, updateProperty } from './store'
+import { getContact, getProperty, updateProperty } from './store'
 
 let _callListSeq = 0
 
@@ -337,6 +337,38 @@ export function reopenVoucher(dealId: string): { deal: Listing | null } {
 export interface VoucherDraft {
   preSplitDeductions: FinancialDeduction[]
   internalBrokers: DealBroker[]
+  /**
+   * The acquiring party — buyers on a sale, tenants on a lease.
+   *
+   * ONE list, not two. The voucher shows exactly one of the two sections, so a
+   * draft carrying both would let a Sale deal hold a list of tenants that
+   * nothing renders and nothing clears. `dealType` decides where it lands, in
+   * one place, below.
+   */
+  partyContactIds: string[]
+  /** Who this voucher bills. Each is a contact id. */
+  payerContactIds: string[]
+}
+
+/**
+ * The label the Back Office vouchers list shows in its Related Contacts column,
+ * and searches.
+ *
+ * Rebuilt on every save because it is denormalized: the deal's parties are the
+ * truth and this is a copy, so an edited buyer would otherwise leave it naming
+ * whoever used to be there. The format matches what the seed writes, so a saved
+ * voucher does not suddenly read differently from an untouched one.
+ */
+function buildRelatedContactsLabel(deal: Listing): string {
+  const ids = [
+    ...deal.sellerContactIds,
+    ...deal.buyerContactIds,
+    ...deal.tenantContactIds,
+  ]
+  const first = ids.map((id) => getContact(id)).find((c) => c !== undefined)
+  if (!first) return '—'
+  const name = `${first.firstName} ${first.lastName}`.trim()
+  return ids.length > 1 ? `${name} & ${ids.length - 1} more` : name
 }
 
 /**
@@ -350,34 +382,42 @@ export interface VoucherDraft {
  *
  * Whole arrays are replaced rather than patched row by row: the tables edit
  * rows, add them, and delete them in one local working copy, and Save is a
- * statement about that copy as a whole. One write for both, because one button
- * commits both — a partial save would leave the deduction total and the broker
- * splits describing different drafts.
+ * statement about that copy as a whole. One write for all of them, because one
+ * button commits them — a partial save would leave the deduction total, the
+ * broker splits and the payer list describing different drafts.
  *
- * `internalBrokers` sits on the deal rather than in `backOffice`, so this is
- * also the one place that fact is spelled out.
+ * `internalBrokers` and the party lists sit on the deal rather than in
+ * `backOffice`, so this is also the one place that fact is spelled out.
  */
 export function saveVoucherDraft(
   dealId: string,
   draft: VoucherDraft,
 ): { deal: Listing | null } {
   return {
-    deal: patchListing(dealId, (l) =>
-      l.transaction.backOffice.status !== 'Draft'
-        ? l
-        : {
-            ...l,
-            internalBrokers: draft.internalBrokers,
-            transaction: {
-              ...l.transaction,
-              backOffice: {
-                ...l.transaction.backOffice,
-                preSplitDeductions: draft.preSplitDeductions,
-              },
-            },
-            updatedAt: new Date().toISOString(),
+    deal: patchListing(dealId, (l) => {
+      if (l.transaction.backOffice.status !== 'Draft') return l
+      const isLease = l.dealType === 'Lease'
+      const next: Listing = {
+        ...l,
+        internalBrokers: draft.internalBrokers,
+        buyerContactIds: isLease ? l.buyerContactIds : draft.partyContactIds,
+        tenantContactIds: isLease ? draft.partyContactIds : l.tenantContactIds,
+        transaction: {
+          ...l.transaction,
+          backOffice: {
+            ...l.transaction.backOffice,
+            preSplitDeductions: draft.preSplitDeductions,
+            payerContactIds: draft.payerContactIds,
           },
-    ),
+        },
+        updatedAt: new Date().toISOString(),
+      }
+      // Built from `next`, not `l` — the label has to describe the parties
+      // being saved, not the ones being replaced.
+      next.transaction.backOffice.relatedContactsLabel =
+        buildRelatedContactsLabel(next)
+      return next
+    }),
   }
 }
 

@@ -23,6 +23,7 @@ import { emptyDraft } from './createListing'
 import { closeProbabilityForStage, commissionForecast } from './commission'
 import { publishReadiness } from './stageGates'
 import { getContactDetailClient, listContactsForDeal } from './selectors'
+import { getListing } from './store'
 import { TEAMMATES } from './teammates'
 import { setNotifier, type NotifyItem } from '#/lib/notify'
 
@@ -430,6 +431,8 @@ describe('actions', () => {
     const { deal: updated } = saveVoucherDraft(deal.id, {
       preSplitDeductions: deductions,
       internalBrokers: brokers,
+      partyContactIds: deal.buyerContactIds,
+      payerContactIds: deal.transaction.backOffice.payerContactIds,
     })
     expect(updated?.transaction.backOffice.preSplitDeductions).toEqual(deductions)
     expect(updated?.internalBrokers).toEqual(brokers)
@@ -446,6 +449,8 @@ describe('actions', () => {
       const { deal: updated } = saveVoucherDraft(deal.id, {
         preSplitDeductions: [],
         internalBrokers: [],
+        partyContactIds: [],
+        payerContactIds: [],
       })
       expect(updated).toBe(seeded)
       expect(updated?.transaction.backOffice.preSplitDeductions).toBe(beforeDeductions)
@@ -454,8 +459,109 @@ describe('actions', () => {
   })
 
   it('saveVoucherDraft returns null for an unknown deal', () => {
-    const empty = { preSplitDeductions: [], internalBrokers: [] }
+    const empty = {
+      preSplitDeductions: [],
+      internalBrokers: [],
+      partyContactIds: [],
+      payerContactIds: [],
+    }
     expect(saveVoucherDraft('does-not-exist', empty).deal).toBeNull()
+  })
+
+  it('saveVoucherDraft writes the party list to buyers on a sale', () => {
+    const deal = [...useDataStore.getState().listings.values()].find(
+      (l) => l.dealType === 'Sale',
+    )!
+    updateDealTransaction(deal.id, {
+      backOffice: { ...deal.transaction.backOffice, status: 'Draft' },
+    })
+    saveVoucherDraft(deal.id, {
+      preSplitDeductions: [],
+      internalBrokers: deal.internalBrokers,
+      partyContactIds: ['buyer-1'],
+      payerContactIds: ['payer-1'],
+    })
+    const saved = getListing(deal.id)!
+    expect(saved.buyerContactIds).toEqual(['buyer-1'])
+    expect(saved.transaction.backOffice.payerContactIds).toEqual(['payer-1'])
+  })
+
+  it('saveVoucherDraft writes the party list to tenants on a lease', () => {
+    // The same draft field lands in a different array. One list in, the deal
+    // type decides where it goes — so a sale can never hold a tenant list.
+    const deal = [...useDataStore.getState().listings.values()].find(
+      (l) => l.dealType === 'Lease',
+    )!
+    updateDealTransaction(deal.id, {
+      backOffice: { ...deal.transaction.backOffice, status: 'Draft' },
+    })
+    saveVoucherDraft(deal.id, {
+      preSplitDeductions: [],
+      internalBrokers: deal.internalBrokers,
+      partyContactIds: ['tenant-1'],
+      payerContactIds: [],
+    })
+    const saved = getListing(deal.id)!
+    expect(saved.tenantContactIds).toEqual(['tenant-1'])
+    expect(saved.buyerContactIds).not.toContain('tenant-1')
+  })
+
+  it('saveVoucherDraft rebuilds relatedContactsLabel from the saved parties', () => {
+    // The label is a denormalized string the Back Office vouchers list shows
+    // and searches. It leads with the first seller, so editing the buyer list
+    // alone never moves the leading name — but it does move the trailing
+    // count, which is exactly what a stale, un-rebuilt label would get wrong.
+    // Asserting the exact string (not a `toContain`) is what makes that catch
+    // real: a `toContain(seller.firstName)` would pass whether or not the
+    // rebuild ran at all, since that name sits in both the old and new label.
+    const deal = [...useDataStore.getState().listings.values()].find(
+      (l) => l.dealType === 'Sale' && l.sellerContactIds.length > 0,
+    )!
+    const seller = useDataStore.getState().contacts.get(deal.sellerContactIds[0])!
+    const before = deal.transaction.backOffice.relatedContactsLabel
+    // One more party than the deal already has, so the "& N more" count is
+    // guaranteed to differ from `before` — a copy-pasted stale label cannot
+    // coincidentally match.
+    const newParties = [...useDataStore.getState().contacts.values()]
+      .filter((c) => !deal.sellerContactIds.includes(c.id))
+      .slice(0, deal.buyerContactIds.length + 1)
+    updateDealTransaction(deal.id, {
+      backOffice: { ...deal.transaction.backOffice, status: 'Draft' },
+    })
+    saveVoucherDraft(deal.id, {
+      preSplitDeductions: [],
+      internalBrokers: deal.internalBrokers,
+      partyContactIds: newParties.map((c) => c.id),
+      payerContactIds: [],
+    })
+    const totalParties = deal.sellerContactIds.length + newParties.length
+    const expected =
+      totalParties > 1
+        ? `${seller.firstName} ${seller.lastName} & ${totalParties - 1} more`
+        : `${seller.firstName} ${seller.lastName}`
+    const after = getListing(deal.id)!.transaction.backOffice.relatedContactsLabel
+    expect(after).toBe(expected)
+    expect(after).not.toBe(before)
+  })
+
+  it('saveVoucherDraft leaves a submitted voucher alone', () => {
+    // The Draft-only guard has to cover the new fields too, or the page's
+    // freeze is only skin-deep.
+    for (const status of ['Pending', 'Approved'] as const) {
+      const deal = [...useDataStore.getState().listings.values()][0]!
+      updateDealTransaction(deal.id, {
+        backOffice: { ...deal.transaction.backOffice, status, payerContactIds: [] },
+      })
+      saveVoucherDraft(deal.id, {
+        preSplitDeductions: [],
+        internalBrokers: deal.internalBrokers,
+        partyContactIds: ['nope'],
+        payerContactIds: ['nope'],
+      })
+      const saved = getListing(deal.id)!
+      expect(saved.transaction.backOffice.payerContactIds).toEqual([])
+      expect(saved.buyerContactIds).not.toContain('nope')
+    }
   })
 
   it('a voucher can go Draft → Pending → Draft → Pending', () => {

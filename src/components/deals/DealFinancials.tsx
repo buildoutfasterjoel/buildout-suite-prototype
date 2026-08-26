@@ -42,6 +42,7 @@ import { saveVoucherDraft, submitVoucher } from "#/data/actions";
 import {
   COMMISSION_PLANS,
   DEDUCTION_CATEGORIES,
+  partyContactIds,
   TRANSACTION_SIDES,
   voucherParty,
 } from "#/data/vouchers";
@@ -1746,6 +1747,8 @@ export function DealFinancials({
     saveVoucherDraft(listing.id, {
       preSplitDeductions: deductions,
       internalBrokers: brokers,
+      partyContactIds: partyContactIds(listing),
+      payerContactIds: voucher.payerContactIds,
     });
     notify({
       title: "Voucher saved",
