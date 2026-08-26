@@ -33,6 +33,7 @@ import {
   DOC_PROMPT,
   PROSPECT_PROMPT,
   CONTACT_BRIEF_PROMPT,
+  RECORD_BRIEF_PROMPT,
   STRATEGY_PROMPT,
   CALL_TURN_PROMPT,
   CALL_RECAP_PROMPT,
@@ -177,6 +178,24 @@ export const generateContactBrief = createServerFn({ method: "POST" })
       model: AI_MODEL_REASONING,
       system: CONTACT_BRIEF_PROMPT,
       user: `CONTACT: ${data.name}\n${data.question ? `QUESTION: ${data.question}\n` : ""}\nDATA:\n${data.data}`,
+      schema: ContactBriefSpec,
+      fallback: () => contactBriefFallback(data.data),
+    }),
+  );
+
+/** §3.10b — a NON-contact record's data dump (+ optional targeted question) →
+ * analyst brief, consumed by the `brief` agent tool (see `src/ai/tools.ts`) for
+ * deals, listings, properties and tasks. Contacts keep `generateContactBrief`:
+ * its prompt knows what a person's brief is made of, and this one doesn't.
+ * Shares `ContactBriefSpec` because both return the same single `brief` string —
+ * a second identical schema would only be a second thing to keep in step. */
+export const generateRecordBrief = createServerFn({ method: "POST" })
+  .validator((d: { data: string; name: string; kind: string; question?: string }) => d)
+  .handler(({ data }): Promise<ContactBriefSpecT> =>
+    runGenerator({
+      model: AI_MODEL_REASONING,
+      system: RECORD_BRIEF_PROMPT,
+      user: `${data.kind.toUpperCase()}: ${data.name}\n${data.question ? `QUESTION: ${data.question}\n` : ""}\nDATA:\n${data.data}`,
       schema: ContactBriefSpec,
       fallback: () => contactBriefFallback(data.data),
     }),

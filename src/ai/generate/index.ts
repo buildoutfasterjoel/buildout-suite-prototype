@@ -9,6 +9,7 @@ export {
   prospectFallback,
   generateContactBrief,
   contactBriefFallback,
+  generateRecordBrief,
   generateStrategy,
   strategyFallback,
   generateCallTurn,
