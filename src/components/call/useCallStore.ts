@@ -35,6 +35,16 @@ interface CallState {
   awaitingOwner: boolean;
   shouldEnd: boolean;
   recap: CallRecapSpecT | null;
+  /**
+   * A call has ended and its recap is still being written.
+   *
+   * `phase` is already `idle` by then — the line is down — so nothing else marks
+   * this window, and it is long enough to matter: it is a model call. Anything
+   * that should wait for the call to be *reported*, not merely hung up, waits on
+   * this (see the day-plan queue's deferred reveal). Cleared when the log request
+   * lands, which is what takes over the waiting.
+   */
+  wrapping: boolean;
   startTarget: (t: CallTarget) => void;
   setPhase: (p: CallPhase) => void;
   setCountdown: (n: number) => void;
@@ -47,6 +57,7 @@ interface CallState {
   setRecap: (r: CallRecapSpecT | null) => void;
   clearRecap: () => void;
   reset: () => void;
+  setWrapping: (wrapping: boolean) => void;
 }
 
 let _lineSeq = 0;
@@ -62,6 +73,7 @@ const IDLE = {
   awaitingOwner: false,
   shouldEnd: false,
   recap: null as CallRecapSpecT | null,
+  wrapping: false,
 };
 
 export const useCallStore = create<CallState>((set) => ({
@@ -85,6 +97,7 @@ export const useCallStore = create<CallState>((set) => ({
   setAwaitingOwner: (awaitingOwner) => set({ awaitingOwner }),
   setShouldEnd: (shouldEnd) => set({ shouldEnd }),
   setRecap: (recap) => set({ recap }),
+  setWrapping: (wrapping) => set({ wrapping }),
   clearRecap: () => set({ recap: null }),
   reset: () => set({ ...IDLE }),
 }));

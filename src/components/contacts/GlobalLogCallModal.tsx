@@ -5,6 +5,7 @@ import { heroInbound } from "#/components/call/heroInbound";
 import { rosaLoi } from "#/components/call/rosaLoi";
 import { useCallSession } from "#/components/call/useCallSession";
 import { usePendingCallLog } from "#/components/call/usePendingCallLog";
+import { useCallStore } from "#/components/call/useCallStore";
 import { useDataStore } from "#/data/dataStore";
 import { getContactDetailClient } from "#/data/selectors";
 import { addNote, touchContactActivity } from "#/data/actions";
@@ -41,6 +42,10 @@ export function GlobalLogCallModal() {
     );
     touchContactActivity(contact.id);
     notify({ title: "Call logged", description: contact.firstName });
+    // Only now does the recap card appear in the rail. It reports a logged call,
+    // so publishing it at hang-up put it on screen behind this modal, describing
+    // something not yet on the record.
+    useCallStore.getState().setRecap(pending.recap);
     // The hero's follow-up email follows the *logged* call, not hang-up, so the
     // story beats stay in order (and can't land behind this modal).
     if (pending.armHeroInbound) heroInbound.arm(contact.id);

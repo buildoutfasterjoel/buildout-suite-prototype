@@ -49,6 +49,7 @@ import { useGreeting } from "#/ai/voice/useGreeting";
 import type { GreetingParts } from "#/ai/voice/greeting";
 import { registerStopForCall, callFlow } from "#/components/call/callFlow";
 import { useCallStore } from "#/components/call/useCallStore";
+import { usePendingCallLog } from "#/components/call/usePendingCallLog";
 import { CallRecapCard } from "#/components/call/CallRecapCard";
 import { composeRecapReport, recapSpeechText } from "#/components/call/callRecap";
 import { DealCardById } from "#/components/deals/DealCard";
@@ -1271,7 +1272,10 @@ export function AssistantSidebar() {
   // Speak the hang-up recap once when it appears (Otto reports, §6.1). This is a
   // one-way report — it must NOT enter conversationMode or re-arm the mic.
   const recap = useCallStore((s) => s.recap);
-  const callLive = useCallStore((s) => s.phase !== "idle");
+  // "In a call" for folding purposes covers the wrap-up too: the line is down
+  // but the recap is still being written, and neither is a moment to reopen the
+  // queue over.
+  const callLive = useCallStore((s) => s.phase !== "idle" || s.wrapping);
   const bovDraft = useBovDraft((s) => s.draft);
   /**
    * Fold the queue whenever the broker's attention moves to something else: they
@@ -1295,6 +1299,33 @@ export function AssistantSidebar() {
   useEffect(() => {
     if (callLive || bovDraft || brief) useDayPlanQueue.getState().autoFold();
   }, [callLive, bovDraft, brief]);
+
+  /**
+   * Show a finished move as finished, but not until the turn has finished
+   * speaking. See `pending` on the queue store.
+   *
+   * The order the broker should read is: what just happened, then what is next.
+   * Committing on completion inverted it — the queue announced the next move
+   * while the assistant was still reporting the last one, so a recap card and an
+   * expanding card arrived together and neither had the floor.
+   *
+   * Waits on every way a turn can still be talking: the model streaming, a call
+   * in flight *or wrapping up*, and the Log Call modal. A call is not reported
+   * until the broker has confirmed it, and the recap card appears from that
+   * confirmation (see `GlobalLogCallModal`). The wrap-up matters on its own —
+   * writing the recap is a model call, and without waiting for it the commit
+   * fired in the gap between hang-up and the modal appearing, which put the
+   * queue's next move on screen while the broker still had a modal to answer.
+   * The extra beat afterwards is deliberate: landing both in the same frame reads
+   * as one event rather than a consequence.
+   */
+  const pendingCallLog = usePendingCallLog((s) => s.pending !== null);
+  const queuePending = useDayPlanQueue((q) => q.pending !== null);
+  useEffect(() => {
+    if (!queuePending || isLoading || callLive || pendingCallLog) return;
+    const t = setTimeout(() => useDayPlanQueue.getState().commitPending(), 450);
+    return () => clearTimeout(t);
+  }, [queuePending, isLoading, callLive, pendingCallLog]);
 
   // The recap and the BOV draft are store-driven records of something that
   // already happened, so each is drawn at the point in the transcript where it

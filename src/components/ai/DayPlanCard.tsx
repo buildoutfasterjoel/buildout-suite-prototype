@@ -95,10 +95,14 @@ export function DayPlanCard({
     // A recap means the call happened and was logged; falling back to "the call
     // flow went idle again" keeps a cancelled call from stranding the queue.
     if (!recap && !sawLiveCallRef.current) return;
+    // `callTarget` survives `endCall` and is cleared by `hangUp`, which is how a
+    // completed call is told from an abandoned one here. The recap itself is no
+    // longer available yet — it now arrives with the confirmed log, later than
+    // this runs — so asking for it would always have read as abandonment.
     useDayPlanQueue
       .getState()
-      .resume(recap ? "Call logged. Next up…" : "Back to your queue. Next up…");
-  }, [parkedFor, callPhase, recap]);
+      .resume(recap || callTarget ? "Call logged. Next up…" : "Back to your queue. Next up…");
+  }, [parkedFor, callPhase, recap, callTarget]);
 
   /**
    * Adopt a call the broker started somewhere else.

@@ -59,6 +59,20 @@ interface DayPlanQueueState {
   collapsedBy: "user" | "auto" | null;
   /** Closed outright. A later `plan_my_day` arms a fresh queue and brings it back. */
   dismissed: boolean;
+  /**
+   * A finished move waiting to be shown as finished.
+   *
+   * The queue advances and reopens the moment a move completes, which put it
+   * ahead of the story: the card announced the next move while the assistant was
+   * still reporting the last one — a recap card and an expanding queue arriving
+   * together, in the wrong order. So completion is recorded here and the rail
+   * commits it once the turn has finished speaking (see `commitPending`).
+   *
+   * The queue's own state does NOT advance until then: the count in the header
+   * and the move in the body change together, at the moment the broker is ready
+   * to read them.
+   */
+  pending: { taskId: string; note: string } | null;
 
   arm: (key: string, items: DayPlanItem[]) => void;
   /**
@@ -67,7 +81,10 @@ interface DayPlanQueueState {
    * the queue itself and leaves no note behind.
    */
   step: (delta: number) => void;
+  /** Record a move as finished. Shown once {@link commitPending} runs. */
   clear: (taskId: string, note: string) => void;
+  /** Apply the finished move: advance, unfold, and say what happened. */
+  commitPending: () => void;
   park: (taskId: string) => void;
   resume: (note: string) => void;
   /** The broker's own fold/unfold, from the card's chevron. */
@@ -95,6 +112,7 @@ const EMPTY = {
   note: null as string | null,
   collapsedBy: null as "user" | "auto" | null,
   dismissed: false,
+  pending: null as { taskId: string; note: string } | null,
 };
 
 export const useDayPlanQueue = create<DayPlanQueueState>((set, get) => ({
@@ -115,13 +133,21 @@ export const useDayPlanQueue = create<DayPlanQueueState>((set, get) => ({
     }),
 
   clear: (taskId, note) =>
-    set((s) => ({
-      cleared: s.cleared.includes(taskId) ? s.cleared : [...s.cleared, taskId],
-      index: 0,
-      note,
-      // Finishing a move reveals the next one — see `collapsedBy`.
-      collapsedBy: null,
-    })),
+    set((s) => (s.cleared.includes(taskId) ? s : { pending: { taskId, note } })),
+
+  commitPending: () =>
+    set((s) => {
+      if (!s.pending) return s;
+      const { taskId, note } = s.pending;
+      return {
+        cleared: s.cleared.includes(taskId) ? s.cleared : [...s.cleared, taskId],
+        index: 0,
+        note,
+        // Finishing a move is news, and news opens the card — see `collapsedBy`.
+        collapsedBy: null,
+        pending: null,
+      };
+    }),
 
   /**
    * A call is in flight on this item — the card steps aside until it wraps up,
@@ -136,13 +162,11 @@ export const useDayPlanQueue = create<DayPlanQueueState>((set, get) => ({
 
   resume: (note) => {
     const { parkedFor } = get();
+    // `parkedFor` clears now — the call is over, so the card must stop standing
+    // aside for it. Only the *visible* advance waits for `commitPending`.
     set((s) => ({
       parkedFor: null,
-      index: 0,
-      note,
-      cleared:
-        parkedFor && !s.cleared.includes(parkedFor) ? [...s.cleared, parkedFor] : s.cleared,
-      collapsedBy: null,
+      pending: parkedFor && !s.cleared.includes(parkedFor) ? { taskId: parkedFor, note } : s.pending,
     }));
   },
 
@@ -181,7 +205,7 @@ export const useDayPlanQueue = create<DayPlanQueueState>((set, get) => ({
       // Emailing someone about a move is not the same as the move being done —
       // the same line the call path draws, where `resume` clears and leaves the
       // task alone.
-      return { cleared: [...s.cleared, match.taskId], index: 0, note, collapsedBy: null };
+      return { pending: { taskId: match.taskId, note } };
     }),
 }));
 

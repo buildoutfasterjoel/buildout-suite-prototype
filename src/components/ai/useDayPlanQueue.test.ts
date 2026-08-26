@@ -71,9 +71,12 @@ describe("collapse precedence", () => {
    * otherwise swallowing every later hand-off, so finishing a move looked like
    * the card was broken.
    */
-  it("opens on completion even over a manual fold", () => {
+  it("opens on completion even over a manual fold — once committed", () => {
     state().setCollapsed(true);
     state().clear("t-rosa", "Marked done. Next up…");
+    // Nothing visible has changed yet: the rail commits when the turn is done.
+    expect(state().collapsedBy).toBe("user");
+    state().commitPending();
     expect(state().collapsedBy).toBeNull();
   });
 
@@ -81,18 +84,21 @@ describe("collapse precedence", () => {
     state().setCollapsed(true);
     state().park("t-rosa");
     state().resume("Call logged. Next up…");
+    state().commitPending();
     expect(state().collapsedBy).toBeNull();
   });
 
   it("opens when an email finishes the move, over a manual fold", () => {
     state().setCollapsed(true);
     state().clearForContact("c-rosa", "Emailed them. Next up…");
+    state().commitPending();
     expect(state().collapsedBy).toBeNull();
   });
 
   it("stays folded when an email matched nobody in the queue", () => {
     state().setCollapsed(true);
     state().clearForContact("c-nobody", "Emailed them. Next up…");
+    state().commitPending();
     expect(state().collapsedBy).toBe("user");
   });
 
@@ -114,6 +120,7 @@ describe("collapse precedence", () => {
 describe("clearForContact", () => {
   it("drops the move for the contact that was reached", () => {
     state().clearForContact("c-rosa", "Emailed them. Next up…");
+    state().commitPending();
     expect(state().cleared).toEqual(["t-rosa"]);
     expect(state().note).toBe("Emailed them. Next up…");
     expect(state().index).toBe(0);
@@ -121,13 +128,16 @@ describe("clearForContact", () => {
 
   it("leaves the queue alone for someone who isn't in it", () => {
     state().clearForContact("c-nobody", "Emailed them. Next up…");
+    state().commitPending();
     expect(state().cleared).toEqual([]);
     expect(state().note).toBeNull();
   });
 
   it("does not clear the same move twice", () => {
     state().clearForContact("c-rosa", "first");
+    state().commitPending();
     state().clearForContact("c-rosa", "second");
+    state().commitPending();
     expect(state().cleared).toEqual(["t-rosa"]);
     // The second call found nothing left to clear, so it left the note alone.
     expect(state().note).toBe("first");
@@ -137,8 +147,45 @@ describe("clearForContact", () => {
     // Nothing here touches tasks; the assertion is that the store's surface
     // offers no way to, so an email can't silently tick off a deliverable.
     state().clearForContact("c-luigi", "Emailed them. Next up…");
+    state().commitPending();
     expect(state().cleared).toEqual(["t-luigi"]);
     expect(Object.keys(state())).not.toContain("completeTask");
+  });
+});
+
+describe("deferred reveal", () => {
+  /**
+   * The order the broker reads: what just happened, then what is next. The queue
+   * used to advance the instant a move completed, so it announced the next move
+   * on top of the assistant still reporting the last one.
+   */
+  it("records a finished move without showing it as finished", () => {
+    state().clear("t-rosa", "Marked done. Next up…");
+    expect(state().pending).toEqual({ taskId: "t-rosa", note: "Marked done. Next up…" });
+    expect(state().cleared).toEqual([]);
+    expect(state().note).toBeNull();
+  });
+
+  it("advances the count and the note together, on commit", () => {
+    state().clear("t-rosa", "Marked done. Next up…");
+    state().commitPending();
+    expect(state().cleared).toEqual(["t-rosa"]);
+    expect(state().note).toBe("Marked done. Next up…");
+    expect(state().pending).toBeNull();
+  });
+
+  it("is a no-op with nothing pending, so a stray commit can't disturb the queue", () => {
+    const before = state().cleared;
+    state().commitPending();
+    expect(state().cleared).toBe(before);
+    expect(state().note).toBeNull();
+  });
+
+  it("ignores a move already cleared rather than queueing it twice", () => {
+    state().clear("t-rosa", "first");
+    state().commitPending();
+    state().clear("t-rosa", "again");
+    expect(state().pending).toBeNull();
   });
 });
 
@@ -166,7 +213,10 @@ describe("park no longer detaches or hides", () => {
   it("resume clears the parked move and returns to the top", () => {
     state().park("t-rosa");
     state().resume("Call logged. Next up…");
+    // The park releases at once — the call is over — but the advance waits.
     expect(state().parkedFor).toBeNull();
+    expect(state().cleared).toEqual([]);
+    state().commitPending();
     expect(state().cleared).toEqual(["t-rosa"]);
     expect(state().index).toBe(0);
   });
