@@ -60,6 +60,7 @@ import {
 import { SentEmailCard, type SentEmailData } from "#/components/ai/SentEmailCard";
 import { OttoHome, type StarterPrompt } from "#/components/ai/OttoHome";
 import { DayPlanCard } from "#/components/ai/DayPlanCard";
+import { useDayPlanQueue } from "#/components/ai/useDayPlanQueue";
 import { ActionPlanChecklist } from "#/components/ai/ActionPlanChecklist";
 import { matchesPlanIntent, type DayPlanItem } from "#/ai/dayPlan";
 import { formatCurrency } from "#/components/deals/dealDisplay";
@@ -633,6 +634,38 @@ function succeeded(output: unknown): boolean {
 }
 
 /**
+ * Where a store-driven card sits in the transcript: the id of the last message
+ * that existed when it arrived, `null` if it arrived before any, `undefined`
+ * while it isn't showing.
+ *
+ * The call recap and the BOV draft come from stores rather than from a tool
+ * result, so they have no message of their own to live in. They used to render
+ * after the whole message list — correct at the instant they appeared, and wrong
+ * from the next message onward, which is how "what can you do?" got answered
+ * *above* a call recap from several turns earlier. Recording the arrival point
+ * pins them to the moment they actually happened.
+ *
+ * Reads the live messages through a ref, and the anchor is sticky once set
+ * (`prev === undefined ? … : prev`): depending on `messages` would re-run on
+ * every token and drag the card down the transcript behind each new turn, which
+ * is the original bug with extra steps.
+ */
+function useTranscriptAnchor(
+  present: boolean,
+  messagesRef: { current: UIMessage[] },
+): string | null | undefined {
+  const [anchor, setAnchor] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (!present) {
+      setAnchor(undefined);
+      return;
+    }
+    setAnchor((prev) => (prev === undefined ? (messagesRef.current.at(-1)?.id ?? null) : prev));
+  }, [present, messagesRef]);
+  return anchor;
+}
+
+/**
  * Split a message's tool calls into the ones that render a card and the ones
  * that render a chip.
  *
@@ -862,6 +895,10 @@ export function AssistantSidebar() {
   );
 
   const { messages, sendMessage, setMessages, isLoading, error, stop } = useChat({ fetcher, tools });
+  // Read by `useTranscriptAnchor`, which must see the latest messages without
+  // re-running on every streamed token.
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
 
   // Checked once (and cached) so the panel never hands `useChat` a stream from
   // an unconfigured server — a missing key is resolved entirely client-side,
@@ -1197,6 +1234,17 @@ export function AssistantSidebar() {
   // Speak the hang-up recap once when it appears (Otto reports, §6.1). This is a
   // one-way report — it must NOT enter conversationMode or re-arm the mic.
   const recap = useCallStore((s) => s.recap);
+  const bovDraft = useBovDraft((s) => s.draft);
+  // The recap and the BOV draft are store-driven records of something that
+  // already happened, so each is drawn at the point in the transcript where it
+  // landed — see `useTranscriptAnchor`.
+  const recapAnchor = useTranscriptAnchor(!!recap, messagesRef);
+  const bovAnchor = useTranscriptAnchor(!!bovDraft, messagesRef);
+  // The day-plan queue is deliberately NOT one of those: it is the surface the
+  // broker is working, so it is pinned outside the transcript instead. This
+  // mirrors the bottom slot's own guard inside `DayPlanCard`, so the pinned
+  // wrapper never pads an element that renders nothing.
+  const queuePinned = useDayPlanQueue((q) => q.detached && q.key !== null);
   const recapTarget = useCallStore((s) => s.target);
   const spokenRecapRef = useRef<object | null>(null);
   useEffect(() => {
@@ -1213,8 +1261,7 @@ export function AssistantSidebar() {
 
   // Speak the BOV draft's summary once when it appears (Otto drafts the BOV,
   // §Phase 4C). Also a one-way report — it must NOT enter conversationMode or
-  // re-arm the mic.
-  const bovDraft = useBovDraft((s) => s.draft);
+  // re-arm the mic. (`bovDraft` is read above, alongside its transcript anchor.)
   const spokenBovRef = useRef<object | null>(null);
   useEffect(() => {
     if (!bovDraft || bovDraft === spokenBovRef.current) return;
@@ -1462,10 +1509,16 @@ export function AssistantSidebar() {
                   }
                   suppressLookupCards={actionTurns.has(i)}
                 />
+                {recapAnchor === m.id && <CallRecapCard />}
+                {bovAnchor === m.id && <BovCard />}
               </Fragment>
             );
           })
         )}
+        {/* Arrived before the broker had said anything, so there is no message to
+            hang them under. */}
+        {recapAnchor === null && <CallRecapCard />}
+        {bovAnchor === null && <BovCard />}
         {/* The turn's visible work can finish before the turn does: a tool result
             lands, its card renders, and the model is still closing out. What it
             says next is suppressed anyway (see `narratedIndices`), so a spinner
@@ -1491,18 +1544,30 @@ export function AssistantSidebar() {
         {error && (
           <div className="text-danger small">Something went wrong: {error.message}</div>
         )}
-        {/* The hang-up recap is the newest event — render it at the BOTTOM of the
-            flow (after the messages), not the top, so the conversation reads
-            chronologically. */}
-        {recap && <CallRecapCard />}
-        {/* The queue, once a call detached it from its place in the transcript —
-            it belongs below the recap it was interrupted by, not above it. */}
-        <DayPlanCard slot="bottom" />
-        {/* The BOV draft self-arrives after the underwriting result is ready
-            (§Phase 4C) — render it at the bottom of the flow too. */}
-        <BovCard />
+        {/* A card whose anchor message is gone (the transcript was reset under it)
+            still has to be reachable, so it falls back to the end of the flow
+            rather than disappearing. */}
+        {recapAnchor !== undefined &&
+          recapAnchor !== null &&
+          !messages.some((m) => m.id === recapAnchor) && <CallRecapCard />}
+        {bovAnchor !== undefined &&
+          bovAnchor !== null &&
+          !messages.some((m) => m.id === bovAnchor) && <BovCard />}
         </div>
       </div>
+      )}
+
+      {/* The day-plan queue, once a call has detached it from its inline slot.
+          Pinned outside the scrolling transcript, like the call brief below —
+          because it is not a record of something that happened, it is the surface
+          the broker is *working*: one move at a time, with Open / Done. Inside the
+          flow it drifted up into scrollback behind every later turn, and answered
+          questions appeared beneath it as though the queue were newer than they
+          were. A live surface belongs where the hands are, next to the composer. */}
+      {queuePinned && (
+        <div className="assistant-rail__column pb-2" style={{ paddingInline: 20 }}>
+          <DayPlanCard slot="bottom" />
+        </div>
       )}
 
       {/* Call brief (Phase 4A "brief me first"), raised above the composer. */}
