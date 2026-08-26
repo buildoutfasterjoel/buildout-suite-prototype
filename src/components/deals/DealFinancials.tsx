@@ -38,7 +38,7 @@ import type {
   Listing,
   TransactionSide,
 } from "#/data/types";
-import { reopenVoucher, saveVoucherDraft, submitVoucher } from "#/data/actions";
+import { saveVoucherDraft, submitVoucher } from "#/data/actions";
 import {
   COMMISSION_PLANS,
   DEDUCTION_CATEGORIES,
@@ -1488,8 +1488,8 @@ function TransactionSummarySection({
         // The deal editor's Transaction Terms group already carries every field
         // this section shows, so the voucher links to it rather than keeping a
         // second, narrower copy of the same form in a modal. A submitted voucher
-        // drops the link: the figures are the thing being approved, so editing
-        // the terms they are measured against has to go back through Draft.
+        // drops the link: the figures are the thing being approved, and once it
+        // is sent the broker has no way to change them at all.
         editable ? (
           <Tooltip>
             <Tooltip.Trigger
@@ -1679,14 +1679,14 @@ export function DealFinancials({
   const voucher = listing.transaction.backOffice;
   const isDraft = voucher.status === "Draft";
   // A Pending voucher is on an approver's desk, so the page freezes whole: no
-  // edits, no adds, no row actions anywhere below. Nothing is trapped by that —
-  // the header's Edit pulls it back to Draft and every control returns.
+  // edits, no adds, no row actions anywhere below, and no way back. Submitting
+  // is one-way for the broker — sending it is the decision, and what an approver
+  // is holding cannot be changed underneath them. Only an approver moves it now.
   //
-  // Approved is deliberately *not* frozen the same way here. It is terminal —
-  // the broker cannot take it back — and what it will eventually accept is
-  // additions (receivables, invoices, credits against what was approved) rather
-  // than a blanket lock, which needs the data reworked first. Until that pass
-  // lands it keeps the controls it has today.
+  // Approved is deliberately *not* frozen the same way here. What it will
+  // eventually accept is additions (receivables, invoices, credits against what
+  // was approved) rather than a blanket lock, which needs the data reworked
+  // first. Until that pass lands it keeps the controls it has today.
   const isPending = voucher.status === "Pending";
   // The broker's attestation, which gates both Submit buttons. Page state, not
   // stored: it is a confirmation of *this* reading of the voucher, so it should
@@ -1726,21 +1726,11 @@ export function DealFinancials({
     submitVoucher(listing.id);
     setAttested(false);
     notify({
+      // Says the irreversible part out loud. Submitting is the last thing a
+      // broker can do to a voucher, and a toast reading only "with an approver"
+      // leaves that as something to discover by looking for the Edit button.
       title: "Voucher submitted",
-      description: "It is now with an approver.",
-    });
-  };
-
-  // Edit takes a Pending voucher back off the approver's desk, which un-submits
-  // it: the attestation clears and it has to be sent again. `reopenVoucher`
-  // accepts nothing but Pending, so an approved voucher cannot come back this
-  // way even if this button were rendered by mistake.
-  const reopen = () => {
-    reopenVoucher(listing.id);
-    setAttested(false);
-    notify({
-      title: "Voucher reopened",
-      description: "Back to Draft. Submit it again when you are ready.",
+      description: "It is now with an approver and can no longer be edited.",
     });
   };
 
@@ -1768,13 +1758,13 @@ export function DealFinancials({
            deal's reads Draft. */
         meta={<VoucherStatusBadge status={voucher.status} long />}
         actions={
-          /* One action per state, and Approved has none. A Draft is the only
-             thing there is to submit — offering "Submit" on a Pending voucher
-             invited a broker to send a second time what an approver was already
-             holding. Pending offers Edit, which pulls it back. Approved offers
-             nothing: the banner below states who signed it off, and the actions
-             that remain open on a settled voucher are additions to it —
-             receivables, invoices — not an edit of the approved figures. */
+          /* Draft is the only state with an action. Submitting hands the voucher
+             over, and a broker cannot take it back: an approver reading a set of
+             figures must be reading the same ones the broker attested to, which
+             an Edit that un-submits cannot promise. So Pending offers nothing,
+             and neither does Approved — there the banner below states who signed
+             it off, and what stays open on a settled voucher is additions to it,
+             receivables and invoices, not an edit of the approved figures. */
           isDraft ? (
             <AttestationSubmit
               attested={attested}
@@ -1783,10 +1773,6 @@ export function DealFinancials({
               dirty={dirty}
               onSave={save}
             />
-          ) : isPending ? (
-            <Button variant="primary" onClick={reopen}>
-              Edit
-            </Button>
           ) : undefined
         }
       />

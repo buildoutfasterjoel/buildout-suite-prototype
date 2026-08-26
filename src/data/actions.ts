@@ -305,9 +305,16 @@ export function submitVoucher(dealId: string): { deal: Listing | null } {
  *
  * Reopening costs the submission: the voucher has to be attested to and
  * submitted again. That is the point, not a side effect — whatever the approver
- * was looking at is no longer what the brokerage is claiming. It is also the
- * only way back into the figures: a Pending voucher is frozen whole, and so is
- * the Deal form behind it, so this is the one door out of that state.
+ * was looking at is no longer what the brokerage is claiming.
+ *
+ * **Nothing in the UI calls this today.** The voucher header used to offer a
+ * broker an Edit on a Pending voucher; it does not any more, because an approver
+ * has to be reading the same figures that were attested to, which an un-submit
+ * cannot promise. Submitting is therefore one-way for the broker, and a Pending
+ * voucher only moves when an approver acts on it. This is kept, unwired, for
+ * that approver-side path: sending a voucher back is the shape a rejection
+ * takes, and the Pending-only rule it encodes is the rule such a flow needs. If
+ * the approver flow lands somewhere else, delete this and its tests.
  */
 export function reopenVoucher(dealId: string): { deal: Listing | null } {
   return {

@@ -15,8 +15,12 @@ import { isVoucherPending, voucherHref } from "#/data/vouchers";
  *
  * Names the group it applies to, because the rest of the form stays live: a
  * broker who reads "frozen" and finds Status still moving would trust neither
- * statement. The button is the other load-bearing half — the lock is undone from
- * the voucher, one page away, and nothing on this page hints at that.
+ * statement.
+ *
+ * The button goes to the voucher to *read* it, not to undo anything — a
+ * submitted voucher cannot be pulled back. It earns its place because the
+ * voucher is where the state this banner describes is actually visible, and
+ * nothing else on this page leads there.
  */
 export function VoucherLockBanner({ listing }: { listing: Listing }) {
 	if (!isVoucherPending(listing)) return null;
@@ -32,8 +36,8 @@ export function VoucherLockBanner({ listing }: { listing: Listing }) {
 			<div className="d-flex align-items-center justify-content-between gap-3">
 				<span>
 					Transaction Terms are what is being approved, so they are frozen until
-					the voucher comes back. Everything else here is still editable. Pull
-					the voucher to Draft to change the terms.
+					the approver has acted on the voucher. Everything else here is still
+					editable.
 				</span>
 				{target && (
 					<Button
@@ -43,7 +47,7 @@ export function VoucherLockBanner({ listing }: { listing: Listing }) {
 						nativeButton={false}
 						render={<Link {...target} />}
 					>
-						Go to voucher
+						View voucher
 					</Button>
 				)}
 			</div>
