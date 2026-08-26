@@ -15,7 +15,10 @@ import { faChevronDown, faChevronRight } from "@fortawesome/pro-regular-svg-icon
  *
  * The header is deliberately quiet — muted body text and a 10px caret, no fill,
  * no border. It is a label, not a control surface; the artifact underneath is
- * the thing worth looking at.
+ * the thing worth looking at. The caret trails the label rather than leading it
+ * (Figma node 193:8993): leading, it pushed every one of these headers 20px off
+ * the transcript's left edge, so a column of finished work read as indented
+ * from the prose around it.
  */
 export function ChatSection({
   label,
@@ -50,10 +53,10 @@ export function ChatSection({
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
+        <span>{label}</span>
         <span className="assistant-section__caret">
           <FontAwesomeIcon icon={open ? faChevronDown : faChevronRight} />
         </span>
-        <span>{label}</span>
       </button>
       {open && children}
     </div>

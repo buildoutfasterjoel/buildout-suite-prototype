@@ -4471,7 +4471,7 @@
 // Assistant rail — starter prompt rows (Figma node 193:4389). Rebuilt much
 // lighter than the bordered, shadowed cards they used to be: on the home screen
 // they're the only other thing on the page, so they no longer have to fight for
-// attention. A 24px gradient disc, then the title with its hint trailing on the
+// attention. A 28px gradient disc, then the title with its hint trailing on the
 // same line — two lines of chrome per row became one line of type.
 //
 // Still a bespoke button rather than a Blueprint `Button`: every variant brings
@@ -4493,14 +4493,17 @@
     background-color: colors.$storm-grey-50;
   }
 
-  // Round gradient token holding the glyph: 24px outer, 12px glyph.
+  // Round gradient token holding the glyph: 28px outer, 12px glyph (Figma node
+  // 193:4390). The disc grew, the glyph did not — the token is what reads as the
+  // icon at a glance, and a 12px glyph in a 28px disc is the ratio the design
+  // settled on.
   &__icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     border-radius: 99px;
     @include otto-gradient-decorative;
     // Fallback for the gradient fill below (see `.assistant-rail__avatar`).
@@ -4549,7 +4552,10 @@
 .assistant-section__label {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  // 4px, not 8: the caret now trails the label (Figma node 193:8993), where it
+  // reads as punctuation on the end of the phrase rather than a control in its
+  // own column — and at 8px it looked detached from the words it belongs to.
+  gap: 4px;
   padding: 0;
   border: 0;
   background-color: transparent;
