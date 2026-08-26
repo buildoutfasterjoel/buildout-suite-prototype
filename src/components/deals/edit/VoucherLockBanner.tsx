@@ -7,15 +7,16 @@ import type { Listing } from "#/data/types";
 import { isVoucherPending, voucherHref } from "#/data/vouchers";
 
 /**
- * Why every field on the Deal edit form is switched off, and how to switch them
- * back on — shown while the deal's voucher is Pending.
+ * Why the Transaction Terms group is switched off, and how to switch it back on
+ * — shown while the deal's voucher is Pending.
  *
  * Renders nothing otherwise, so the page can mount it unconditionally the way
  * {@link PendingPublishBanner} does.
  *
- * The button is the load-bearing half. A disabled form with no explanation is a
- * dead end; the lock is undone from the voucher, one page away, and a broker who
- * came here from the deal header has no reason to guess that.
+ * Names the group it applies to, because the rest of the form stays live: a
+ * broker who reads "frozen" and finds Status still moving would trust neither
+ * statement. The button is the other load-bearing half — the lock is undone from
+ * the voucher, one page away, and nothing on this page hints at that.
  */
 export function VoucherLockBanner({ listing }: { listing: Listing }) {
 	if (!isVoucherPending(listing)) return null;
@@ -30,8 +31,9 @@ export function VoucherLockBanner({ listing }: { listing: Listing }) {
 			<Alert.Title>This deal's voucher is with an approver</Alert.Title>
 			<div className="d-flex align-items-center justify-content-between gap-3">
 				<span>
-					The terms below are what is being approved, so they are frozen until
-					the voucher comes back. Pull it to Draft to edit them.
+					Transaction Terms are what is being approved, so they are frozen until
+					the voucher comes back. Everything else here is still editable. Pull
+					the voucher to Draft to change the terms.
 				</span>
 				{target && (
 					<Button

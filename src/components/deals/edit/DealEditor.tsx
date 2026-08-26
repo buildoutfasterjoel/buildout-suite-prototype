@@ -95,11 +95,15 @@ export function DealEditor({
 	// isn't free to call more than once per render.
 	const shape = dealShape(listing);
 
-	// Submitting the voucher freezes the figures an approver is reading, and this
-	// form is the other door onto the same transaction terms. So it locks with
-	// the voucher rather than being a way around it. The header pencil that leads
-	// here deliberately stays — the form is still worth reading while a voucher is
-	// out, it just cannot be written to.
+	// Submitting the voucher freezes the figures an approver is reading, and the
+	// Transaction Terms group is the other door onto exactly those figures — price,
+	// commission, and the dates that close it out. So that ONE group locks with the
+	// voucher rather than being a way around it.
+	//
+	// Deliberately just that group. Setup & Status and Deal Financials are not what
+	// the voucher is a claim about, and a broker whose voucher is out still has to
+	// be able to move the deal's stage, fix a listing date, or correct the pitch
+	// financials. The header pencil that leads here stays open for the same reason.
 	const voucherLocked = isVoucherPending(listing);
 
 	const [status, setStatus] = useState<PropertyStatus>(listing.status);
@@ -273,19 +277,7 @@ export function DealEditor({
 		back();
 	};
 
-	// A locked form has nothing to save, and nothing to cancel either — so the
-	// pair collapses to the one thing the button is still doing, which is leaving.
-	const actions = voucherLocked ? (
-		<Button
-			variant="ghost"
-			onClick={() => {
-				useStageGate.getState().clearPendingPublish();
-				back();
-			}}
-		>
-			Back
-		</Button>
-	) : (
+	const actions = (
 		<>
 			<Button
 				variant="ghost"
@@ -344,16 +336,8 @@ export function DealEditor({
 				</p>
 			)}
 
-			{/* `gap-6` (24px) — the group tier, matching ListingFormEditor.
-
-			    A fieldset rather than a `disabled` prop threaded through ten widget
-			    components: it reaches every native control nested under it, including
-			    the ones inside BrokerEditor, EditableTable and DealFinancialsSection,
-			    and it cannot be forgotten at a new call site. */}
-			<LockableFieldset
-				className="d-flex flex-column gap-6"
-				disabled={voucherLocked}
-			>
+			{/* `gap-6` (24px) — the group tier, matching ListingFormEditor. */}
+			<div className="d-flex flex-column gap-6">
 				{setupGroup && (
 					<FieldGroup title={setupGroup.label} icon={setupGroup.icon}>
 						<SubGroup
@@ -430,69 +414,74 @@ export function DealEditor({
 				)}
 
 				{termsGroup && (
-					<FieldGroup title={termsGroup.label} icon={termsGroup.icon}>
-						<SubGroup
-							label="Price & Commission"
-							description="What it sells for, and what you earn on it."
-						>
-							<FieldGrid>
-								<Col>
-									<NumberField
-										label="Sale Price"
-										value={transaction.salePrice || null}
-										onChange={setSalePrice}
-									/>
-								</Col>
-								<Col>
-									<NumberField
-										label="Gross Commission %"
-										value={transaction.commissionPct || null}
-										onChange={setCommissionPct}
-									/>
-								</Col>
-								<Col>
-									<NumberField
-										label="Gross Commission $"
-										value={transaction.commissionAmount || null}
-										onChange={setCommissionAmount}
-									/>
-								</Col>
-							</FieldGrid>
-						</SubGroup>
+					// A fieldset rather than a `disabled` prop on each field: it reaches
+					// every native control nested under it, so a field added to this
+					// group later is covered without anyone remembering to cover it.
+					<LockableFieldset disabled={voucherLocked}>
+						<FieldGroup title={termsGroup.label} icon={termsGroup.icon}>
+							<SubGroup
+								label="Price & Commission"
+								description="What it sells for, and what you earn on it."
+							>
+								<FieldGrid>
+									<Col>
+										<NumberField
+											label="Sale Price"
+											value={transaction.salePrice || null}
+											onChange={setSalePrice}
+										/>
+									</Col>
+									<Col>
+										<NumberField
+											label="Gross Commission %"
+											value={transaction.commissionPct || null}
+											onChange={setCommissionPct}
+										/>
+									</Col>
+									<Col>
+										<NumberField
+											label="Gross Commission $"
+											value={transaction.commissionAmount || null}
+											onChange={setCommissionAmount}
+										/>
+									</Col>
+								</FieldGrid>
+							</SubGroup>
 
-						<SubGroup
-							label="Milestones"
-							description="Confidence, and the dates that close it out."
-						>
-							<FieldGrid>
-								<Col>
-									<NumberField
-										label="Close Probability (%)"
-										value={transaction.closeProbability || null}
-										onChange={(v) =>
-											patchTransaction({ closeProbability: v ?? 0 })
-										}
-									/>
-								</Col>
-								<Col>
-									<DateField
-										label="Contract Executed"
-										value={transaction.contractExecutedDate}
-										onChange={(v) =>
-											patchTransaction({ contractExecutedDate: v })
-										}
-									/>
-								</Col>
-								<Col>
-									<DateField
-										label="Close Date"
-										value={transaction.closeDate}
-										onChange={(v) => patchTransaction({ closeDate: v })}
-									/>
-								</Col>
-							</FieldGrid>
-						</SubGroup>
-					</FieldGroup>
+							<SubGroup
+								label="Milestones"
+								description="Confidence, and the dates that close it out."
+							>
+								<FieldGrid>
+									<Col>
+										<NumberField
+											label="Close Probability (%)"
+											value={transaction.closeProbability || null}
+											onChange={(v) =>
+												patchTransaction({ closeProbability: v ?? 0 })
+											}
+										/>
+									</Col>
+									<Col>
+										<DateField
+											label="Contract Executed"
+											value={transaction.contractExecutedDate}
+											onChange={(v) =>
+												patchTransaction({ contractExecutedDate: v })
+											}
+										/>
+									</Col>
+									<Col>
+										<DateField
+											label="Close Date"
+											value={transaction.closeDate}
+											onChange={(v) => patchTransaction({ closeDate: v })}
+										/>
+									</Col>
+								</FieldGrid>
+							</SubGroup>
+						</FieldGroup>
+					</LockableFieldset>
 				)}
 
 				{financialsGroup && (
@@ -503,7 +492,7 @@ export function DealEditor({
 						/>
 					</FieldGroup>
 				)}
-			</LockableFieldset>
+			</div>
 
 			<div className="d-flex justify-content-end gap-2 border-top pt-4">
 				{actions}
