@@ -1478,8 +1478,7 @@ function generateListings(
 
       receivables.push({
         id: faker.string.uuid(),
-        payerName: `${primaryPayer.firstName} ${primaryPayer.lastName}`,
-        payerEmail: primaryPayer.email,
+        payerContactId: primaryPayer.id,
         dueDate: faker.date.recent({ days: 30 }).toISOString().slice(0, 10),
         billingDescription: split ? 'Initial Payment' : 'Full Payment',
         amount: firstAmount,
@@ -1492,8 +1491,7 @@ function generateListings(
       if (split && otherPayer) {
         receivables.push({
           id: faker.string.uuid(),
-          payerName: `${otherPayer.firstName} ${otherPayer.lastName}`,
-          payerEmail: otherPayer.email,
+          payerContactId: otherPayer.id,
           dueDate: faker.date.soon({ days: 45 }).toISOString().slice(0, 10),
           billingDescription: 'Balance Due',
           amount: commissionAmount - firstAmount,
@@ -1501,6 +1499,12 @@ function generateListings(
         })
       }
     }
+
+    // Derived from the receivables rather than assembled separately: the two
+    // must agree, and one of them has to be the source. A voucher with no
+    // receivables has no payers yet, which is a real state — Draft vouchers
+    // start there.
+    const payerContactIds = [...new Set(receivables.map((r) => r.payerContactId))]
 
     const grossScheduledIncome = Math.round(salePrice * 0.09)
     const otherIncome = Math.round(grossScheduledIncome * 0.04)
@@ -1611,6 +1615,7 @@ function generateListings(
           closeDate: voucherCloseDate,
           approval: voucherApproval,
           relatedContactsLabel: `${sellerName}${sellerContacts.length + buyerContacts.length > 1 ? ` & ${sellerContacts.length + buyerContacts.length - 1} more` : ''}`,
+          payerContactIds,
           preSplitDeductions,
           receivables,
         },

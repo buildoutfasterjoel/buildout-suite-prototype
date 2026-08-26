@@ -768,6 +768,14 @@ export interface DealFinancials {
   status: 'Approved' | 'Pending' | 'Draft'
   closeDate: string | null
   relatedContactsLabel: string
+  /**
+   * Who this voucher bills, in the order they were added. Each is a contact id.
+   *
+   * A voucher can bill several parties — a commission split across both sides
+   * of a deal is the ordinary case — so this is a list, and every receivable
+   * names one of them.
+   */
+  payerContactIds: string[]
   preSplitDeductions: FinancialDeduction[]
   receivables: FinancialReceivable[]
   /** Non-null exactly when `status` is `'Approved'`. */
@@ -1061,8 +1069,14 @@ export interface FinancialDeduction {
 /** Money owed to the brokerage on a deal — shown on the Financials tab. */
 export interface FinancialReceivable {
   id: string
-  payerName: string
-  payerEmail: string
+  /**
+   * Who is billed, as a contact id — not a copy of their name and email.
+   *
+   * Always one of the voucher's `payerContactIds`. Storing the reference means
+   * correcting a contact's email fixes it on every voucher that billed them;
+   * the copies this replaced went stale silently.
+   */
+  payerContactId: string
   dueDate: string
   billingDescription: string
   amount: number

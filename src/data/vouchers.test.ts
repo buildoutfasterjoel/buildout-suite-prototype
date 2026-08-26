@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import type { Contact } from './types'
 import { createProposalListing, emptyDraft } from './createListing'
 import { addPropertyUnit, addSpaceToDeal } from './leaseSpaces'
 import { getListing } from './store'
@@ -7,6 +8,7 @@ import {
   allVouchers,
   isVoucherPending,
   voucherHref,
+  voucherParty,
   voucherTotals,
 } from './vouchers'
 import { submitVoucher } from './actions'
@@ -146,8 +148,8 @@ describe('allVouchers', () => {
     const deal = makeSale('Riverside Tower')
     const listing = getListing(deal.id)!
     listing.transaction.backOffice.receivables = [
-      { id: 'r1', payerName: 'A', payerEmail: 'a@x.com', dueDate: '2026-01-01', billingDescription: 'Deposit', amount: 10000, credited: 4000 },
-      { id: 'r2', payerName: 'B', payerEmail: 'b@x.com', dueDate: '2026-02-01', billingDescription: 'Balance', amount: 5000, credited: 0 },
+      { id: 'r1', payerContactId: 'c1', dueDate: '2026-01-01', billingDescription: 'Deposit', amount: 10000, credited: 4000 },
+      { id: 'r2', payerContactId: 'c2', dueDate: '2026-02-01', billingDescription: 'Balance', amount: 5000, credited: 0 },
     ]
 
     expect(allVouchers()[0]!.receivablesOutstanding).toBe(11000)
@@ -279,5 +281,43 @@ describe('voucherTotals', () => {
       Pending: { count: 0, grossCommission: 0 },
       Approved: { count: 0, grossCommission: 0 },
     })
+  })
+})
+
+describe('voucherParty', () => {
+  it('reads name, company, email and phone off the contact', () => {
+    // `makeSale` with `emptyDraft()` links no contact — `sellerContactId` is
+    // `''`, so `createProposalListing` never resolves a seller and the store
+    // stays empty. Seeded directly instead, the way `signal.test.ts` does.
+    resetStore()
+    const contact = {
+      id: 'c1',
+      firstName: 'Dana',
+      lastName: 'Osei',
+      email: 'dana@osei.example.com',
+      phone: '555-0100',
+      company: 'Osei Retail',
+      propertyIds: [],
+      role: 'buyer',
+    } as unknown as Contact
+    useDataStore.setState({ contacts: new Map([[contact.id, contact]]) })
+
+    const party = voucherParty(contact.id)
+    expect(party.name).toBe(`${contact.firstName} ${contact.lastName}`.trim())
+    expect(party.company).toBe(contact.company)
+    expect(party.email).toBe(contact.email)
+    expect(party.exists).toBe(true)
+  })
+
+  it('keeps the row when the contact is gone', () => {
+    // A voucher is a record of what was billed. Deleting a contact must not
+    // make a billed line vanish, so this returns a readable placeholder rather
+    // than null and leaves the caller nothing to crash on.
+    resetStore()
+    const party = voucherParty('no-such-contact')
+    expect(party.name).toBe('Unknown contact')
+    expect(party.exists).toBe(false)
+    expect(party.company).toBe('')
+    expect(party.email).toBe('')
   })
 })

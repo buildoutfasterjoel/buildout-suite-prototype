@@ -449,6 +449,17 @@ function applyStageDetail(child: Listing, suiteNumber: number, tenantName?: stri
     },
   ]
 
+  // The suite's tenant is who gets billed. This used to hold
+  // `relatedContactsLabel`, a display string like "Jane Doe & 2 more", in a
+  // field meant for one person — so the Receivables table named a payer who
+  // was not a real party.
+  //
+  // Falls back to the seller when no tenant is linked: `tenantContactIds` is
+  // filled from a pool guarded by `if (tenantId)`, so a suite can reach here
+  // with none assigned, and `sellerContactIds` — copied from the shell when
+  // the child was built — is never empty.
+  const tenantContactId = child.tenantContactIds[0] ?? child.sellerContactIds[0]
+
   child.transaction.backOffice = {
     ...child.transaction.backOffice,
     name: child.name,
@@ -459,11 +470,11 @@ function applyStageDetail(child: Listing, suiteNumber: number, tenantName?: stri
     // must stay faker-free, and the seed tests pin it that way.
     approval: { reviewerId: 'omar-haddad', approvedOn: isoDate(-6) },
     closeDate: child.transaction.closeDate,
+    payerContactIds: [tenantContactId],
     receivables: [
       {
         id: `recv-${child.id}`,
-        payerName: child.transaction.backOffice.relatedContactsLabel,
-        payerEmail: 'ap@tenant.example.com',
+        payerContactId: tenantContactId,
         dueDate: isoDate(20),
         billingDescription: `Lease commission — Suite ${suiteNumber}`,
         amount: commissionAmount,

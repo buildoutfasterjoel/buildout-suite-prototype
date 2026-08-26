@@ -43,6 +43,7 @@ import {
   COMMISSION_PLANS,
   DEDUCTION_CATEGORIES,
   TRANSACTION_SIDES,
+  voucherParty,
 } from "#/data/vouchers";
 import { AddBrokerModal } from "./AddBrokerModal";
 import { notify } from "#/lib/notify";
@@ -910,9 +911,6 @@ function ReceivablesSection({
   const receivables = listing.transaction.backOffice.receivables;
   const amountTotal = sum(receivables.map((r) => r.amount));
   const creditedTotal = sum(receivables.map((r) => r.credited));
-  // Receivables don't carry a payer id, but every payer is the deal's buyer (or seller) contact.
-  const payerContactId =
-    listing.buyerContactIds[0] ?? listing.sellerContactIds[0];
 
   // Which rows the bulk actions apply to. Local state — nothing here persists,
   // and every read below goes through `selectedRows` rather than the set itself,
@@ -940,9 +938,10 @@ function ReceivablesSection({
   // receivable has nothing left to apply one to.
   const canApplyDeposit =
     someSelected && selectedRows.every((r) => r.credited < r.amount);
-  // One invoice bills one payer.
+  // One invoice bills one payer. Compared by contact id, not by name: two
+  // different contacts who happen to share a name are two payers.
   const canCreateInvoice =
-    someSelected && new Set(selectedRows.map((r) => r.payerName)).size === 1;
+    someSelected && new Set(selectedRows.map((r) => r.payerContactId)).size === 1;
 
   return (
     <Section
@@ -1021,43 +1020,49 @@ function ReceivablesSection({
             </Table.Row>
           </Table.Header>
           <Table.Body>
-            {receivables.map((r) => (
-              <Table.Row
-                key={r.id}
-                className={
-                  editable && selectedIds.has(r.id) ? "table-active" : undefined
-                }
-              >
-                {editable && (
-                  <Table.Cell
-                    style={{
-                      width: RECEIVABLE_CHECKBOX_W,
-                      minWidth: RECEIVABLE_CHECKBOX_W,
-                    }}
-                  >
-                    <Checkbox
-                      checked={selectedIds.has(r.id)}
-                      onCheckedChange={(c) => toggleOne(r.id, c === true)}
-                      aria-label={`Select receivable for ${r.payerName}`}
-                    />
+            {receivables.map((r) => {
+              const payer = voucherParty(r.payerContactId);
+              return (
+                <Table.Row
+                  key={r.id}
+                  className={
+                    editable && selectedIds.has(r.id) ? "table-active" : undefined
+                  }
+                >
+                  {editable && (
+                    <Table.Cell
+                      style={{
+                        width: RECEIVABLE_CHECKBOX_W,
+                        minWidth: RECEIVABLE_CHECKBOX_W,
+                      }}
+                    >
+                      <Checkbox
+                        checked={selectedIds.has(r.id)}
+                        onCheckedChange={(c) => toggleOne(r.id, c === true)}
+                        aria-label={`Select receivable for ${payer.name}`}
+                      />
+                    </Table.Cell>
+                  )}
+                  <Table.Cell>
+                    <div>
+                      <PersonLink
+                        name={payer.name}
+                        contactId={payer.exists ? payer.contactId : undefined}
+                      />
+                    </div>
+                    <div className="text-muted fs-small">{payer.email}</div>
                   </Table.Cell>
-                )}
-                <Table.Cell>
-                  <div>
-                    <PersonLink name={r.payerName} contactId={payerContactId} />
-                  </div>
-                  <div className="text-muted fs-small">{r.payerEmail}</div>
-                </Table.Cell>
-                <Table.Cell>{formatDate(r.dueDate)}</Table.Cell>
-                <Table.Cell>{r.billingDescription}</Table.Cell>
-                <Table.Cell className="text-end">
-                  {formatCurrency(r.amount)}
-                </Table.Cell>
-                <Table.Cell className="text-end">
-                  {r.credited > 0 ? formatCurrency(r.credited) : "None"}
-                </Table.Cell>
-              </Table.Row>
-            ))}
+                  <Table.Cell>{formatDate(r.dueDate)}</Table.Cell>
+                  <Table.Cell>{r.billingDescription}</Table.Cell>
+                  <Table.Cell className="text-end">
+                    {formatCurrency(r.amount)}
+                  </Table.Cell>
+                  <Table.Cell className="text-end">
+                    {r.credited > 0 ? formatCurrency(r.credited) : "None"}
+                  </Table.Cell>
+                </Table.Row>
+              );
+            })}
             <Table.Row>
               <Table.Cell colSpan={editable ? 4 : 3} className="fw-semibold">
                 Sum

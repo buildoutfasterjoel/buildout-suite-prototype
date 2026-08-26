@@ -2,6 +2,7 @@ import type { AnyClientTool } from "@tanstack/ai";
 import type { Contact, Listing, Property, PropertyStatus } from "#/data/types";
 import { useDataStore } from "#/data/dataStore";
 import { addDealActivity, getContact, getListing, getProperty } from "#/data/store";
+import { voucherParty } from "#/data/vouchers";
 import {
   generateFilter,
   generateEmail,
@@ -1162,7 +1163,7 @@ export function createClientTools({
             amount: d.amount,
           })),
           receivables: back.receivables.map((r) => ({
-            payer: r.payerName,
+            payer: voucherParty(r.payerContactId).name,
             description: r.billingDescription,
             dueDate: r.dueDate,
             amount: r.amount,

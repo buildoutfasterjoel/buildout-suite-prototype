@@ -278,3 +278,34 @@ describe('voucher approval seed', () => {
     }
   })
 })
+
+describe('voucher payers seed', () => {
+  const { listings, contacts } = generateDataset()
+  const contactIds = new Set(contacts.map((c) => c.id))
+
+  it('points every receivable at a contact that exists', () => {
+    for (const deal of listings) {
+      for (const r of deal.transaction.backOffice.receivables) {
+        expect(contactIds.has(r.payerContactId)).toBe(true)
+      }
+    }
+  })
+
+  it("lists every receivable's payer among the voucher's payers", () => {
+    // The rule the Payers section depends on: a receivable cannot bill someone
+    // the voucher has not named as a payer.
+    for (const deal of listings) {
+      const back = deal.transaction.backOffice
+      for (const r of back.receivables) {
+        expect(back.payerContactIds).toContain(r.payerContactId)
+      }
+    }
+  })
+
+  it('has no duplicate payers on a voucher', () => {
+    for (const deal of listings) {
+      const ids = deal.transaction.backOffice.payerContactIds
+      expect(new Set(ids).size).toBe(ids.length)
+    }
+  })
+})

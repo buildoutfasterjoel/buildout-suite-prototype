@@ -5,7 +5,7 @@ import type {
   PropertyType,
   TransactionSide,
 } from './types'
-import { getStore, getProperty } from './store'
+import { getStore, getProperty, getContact } from './store'
 import { dealShape } from './dealShape'
 
 /** The three states a voucher moves through. Mirrors `DealFinancials['status']`. */
@@ -92,6 +92,53 @@ export function isVoucherPending(deal: Listing): boolean {
     voucherHref(deal) !== null &&
     deal.transaction.backOffice.status === 'Pending'
   )
+}
+
+/**
+ * One party on a voucher — a buyer, a tenant, or a payer — resolved from the
+ * contact record for display.
+ *
+ * A party stores nothing of its own. Name, company, email and phone are read
+ * here at render time rather than copied onto the voucher, so correcting a
+ * contact corrects every voucher that names them.
+ */
+export interface VoucherParty {
+  contactId: string
+  name: string
+  company: string
+  email: string
+  phone: string
+  /**
+   * False when the contact is no longer in the store.
+   *
+   * The row still renders. A voucher is a record of who was billed, and losing
+   * a billed line because someone tidied the contact book would be a worse
+   * failure than showing a placeholder. Callers use this to decide whether to
+   * link the name to a contact page that is not there any more.
+   */
+  exists: boolean
+}
+
+export function voucherParty(contactId: string): VoucherParty {
+  const contact = getContact(contactId)
+  if (!contact) {
+    return {
+      contactId,
+      name: 'Unknown contact',
+      company: '',
+      email: '',
+      phone: '',
+      exists: false,
+    }
+  }
+  return {
+    contactId,
+    name: `${contact.firstName} ${contact.lastName}`.trim(),
+    company: contact.company,
+    email: contact.email,
+    phone: contact.phone,
+    exists: true,
+  }
 }
 
 export interface VoucherRow {
