@@ -807,16 +807,21 @@ function PayersSection({
                 )}
               </Table.Row>
             ))}
+          </Table.Body>
+          {/* A `tfoot`, matching Internal Commissions and Pre-Split Deductions:
+              the theme gives `tfoot` cells the header's background, weight and a
+              rule above them, so the total reads as the table's own summary
+              rather than one more payer — and the hand-applied `fw-semibold`
+              goes away. */}
+          <Table.Footer>
             <Table.Row>
-              <Table.Cell colSpan={4} className="fw-semibold">
-                Sum
-              </Table.Cell>
-              <Table.Cell className="text-end fw-semibold">
+              <Table.Cell colSpan={4}>Sum</Table.Cell>
+              <Table.Cell className="text-end">
                 {formatCurrency(billedTotal)}
               </Table.Cell>
               {editable && <Table.Cell />}
             </Table.Row>
-          </Table.Body>
+          </Table.Footer>
         </Table>
       )}
 
@@ -1616,19 +1621,23 @@ function ReceivablesSection({
                 </Table.Row>
               );
             })}
+          </Table.Body>
+          {/* A `tfoot`, for the same reason the other three money tables use one
+              — see the note on Pre-Split Deductions. The leading colSpan counts
+              the select-all gutter, so it moves with `editable` the way the body
+              rows above it do. */}
+          <Table.Footer>
             <Table.Row>
-              <Table.Cell colSpan={editable ? 4 : 3} className="fw-semibold">
-                Sum
-              </Table.Cell>
-              <Table.Cell className="text-end fw-semibold">
+              <Table.Cell colSpan={editable ? 4 : 3}>Sum</Table.Cell>
+              <Table.Cell className="text-end">
                 {formatCurrency(amountTotal)}
               </Table.Cell>
-              <Table.Cell className="text-end fw-semibold">
+              <Table.Cell className="text-end">
                 {formatCurrency(creditedTotal)}
               </Table.Cell>
               {editable && <Table.Cell />}
             </Table.Row>
-          </Table.Body>
+          </Table.Footer>
         </Table>
       )}
 
