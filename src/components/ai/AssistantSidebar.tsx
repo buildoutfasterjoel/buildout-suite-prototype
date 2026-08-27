@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useRouter } from "@tanstack/react-router";
+import { useLocation, useRouter } from "@tanstack/react-router";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { useChat, type UIMessage } from "@tanstack/ai-react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
@@ -21,6 +21,7 @@ import {
   faHandshake,
   faUsers,
   faBuilding,
+  faUser,
   faArrowUpRightAndArrowDownLeftFromCenter,
   faArrowDownLeftAndArrowUpRightToCenter,
 } from "@fortawesome/pro-regular-svg-icons";
@@ -52,7 +53,6 @@ import { useCallStore } from "#/components/call/useCallStore";
 import { usePendingCallLog } from "#/components/call/usePendingCallLog";
 import { CallRecapCard } from "#/components/call/CallRecapCard";
 import { composeRecapReport, recapSpeechText } from "#/components/call/callRecap";
-import { DealCardById } from "#/components/deals/DealCard";
 import {
   EmailDraftCard,
   EmailDraftSection,
@@ -70,7 +70,11 @@ import { formatCurrency } from "#/components/deals/dealDisplay";
 import { useHeroOffer, matchOfferIntent } from "#/ai/heroOffer";
 import { useUnderwritingOffer, matchUnderwritingIntent } from "#/ai/underwritingOffer";
 import { useBovFlow } from "#/components/contacts/useBovFlow";
-import { getContact } from "#/data/store";
+import { getContact, getProperty } from "#/data/store";
+import { useDataStore } from "#/data/dataStore";
+import { contactFullName } from "#/components/contacts/contactDisplay";
+import { dealCardLinkProps } from "#/components/deals/dealCardLink";
+import { RecordCard } from "#/components/records/RecordRow";
 import { signalText } from "#/data/signal";
 import { generateCallBrief, callBriefFallback } from "#/ai/generate";
 import { CallBriefCard } from "#/components/call/CallBriefCard";
@@ -152,16 +156,6 @@ type PropertyCardData = {
   id: string;
   address?: string;
   propertyType?: string;
-};
-
-const RELATIONSHIP_LABELS: Record<string, string> = {
-  cold: "Cold",
-  inquired: "Inquired",
-  nurturing: "Nurturing",
-  active: "Active",
-  pitching: "Pitching",
-  client: "Client",
-  past_client: "Past client",
 };
 
 /** Extract renderable entity arrays from a tool-call's output. */
@@ -304,65 +298,51 @@ function MarketingPackageCard({ pkg }: { pkg: MarketingPackageData }) {
   );
 }
 
-/** A clickable card row (deal or contact) that navigates on click. */
-function ResultCard({
-  title,
-  badge,
-  meta,
-  to,
-  onOpen,
-}: {
-  title: string;
-  badge?: string;
-  meta?: string;
-  /**
-   * Destination for a card pointing at ONE record, rendered as a real link.
-   *
-   * A record card is the kind a broker cmd-clicks — read the contact without
-   * losing the conversation that produced it — and a `<button>` gives them no
-   * way to. `DealCardById` has always been a `Link`; this is the same offer for
-   * the other record types.
-   */
-  to?: string;
-  /**
-   * Fallback for a card that has somewhere to go but no plain href to go to —
-   * a property lands on the Deals grid and has to apply the filter first (see
-   * `goToNav`), which is a click handler's job, not a URL's.
-   */
-  onOpen?: () => void;
-}) {
-  // `d-block` + `w-100` on the control and `w-100` on the row: Blueprint's .btn
-  // is a centering flex container, so without these the content collapses to its
-  // intrinsic width and floats in the middle of the card.
-  const className = "btn d-block p-0 border rounded text-start w-100 bg-white";
-  const body = (
-    <>
-      <div className="d-flex align-items-center gap-2 p-2 w-100">
-        <span className="flex-grow-1 d-flex align-items-center gap-2" style={{ minWidth: 0 }}>
-          <span className="fw-semibold text-truncate">{title}</span>
-          {badge && (
-            <Badge variant="secondary" appearance="muted" className="flex-shrink-0">
-              {badge}
-            </Badge>
-          )}
-        </span>
-        <FontAwesomeIcon icon={faChevronRight} className="text-muted flex-shrink-0" />
-      </div>
-      {meta && <div className="text-muted small text-truncate px-2 pb-2">{meta}</div>}
-    </>
-  );
-
-  if (to) {
-    return (
-      <Link to={to as never} className={`${className} text-decoration-none text-reset`}>
-        {body}
-      </Link>
-    );
-  }
+/**
+ * A record Otto found or made, drawn as the omni menu draws it — colored glyph
+ * badge, name, one muted meta line, and a way out to the record (Figma
+ * 276:20447 deal, 276:20455 contact).
+ *
+ * Read off the store by id rather than from the tool's summary payload, for the
+ * same reason `DealCardById` always has: the payload is a snapshot from the
+ * moment the tool ran, and a deal restaged later in the same conversation would
+ * keep reporting the stage it was created at.
+ */
+function DealResultCard({ id }: { id: string }) {
+  const listing = useDataStore((st) => st.listings.get(id));
+  if (!listing) return null;
+  const p = getProperty(listing.propertyId);
+  // The address, not the stage: the prose above a deal card has just said what
+  // stage it is in, and the one thing it never says is which building.
+  const meta = p
+    ? [p.street, [[p.city, p.state].filter(Boolean).join(", "), p.zip].filter(Boolean).join(" ")]
+        .filter(Boolean)
+        .join(" • ")
+    : undefined;
   return (
-    <button type="button" onClick={onOpen} className={className}>
-      {body}
-    </button>
+    <RecordCard
+      variant="deal"
+      icon={faHandshake}
+      title={listing.name}
+      meta={meta}
+      link={dealCardLinkProps(listing)}
+    />
+  );
+}
+
+function ContactResultCard({ id, fallbackName }: { id: string; fallbackName: string }) {
+  const contact = useDataStore((st) => st.contacts.get(id));
+  const meta = contact
+    ? [contact.title, contact.company].filter(Boolean).join(" · ")
+    : undefined;
+  return (
+    <RecordCard
+      variant="contact"
+      icon={faUser}
+      title={contact ? contactFullName(contact) : fallbackName}
+      meta={meta}
+      link={{ to: "/backoffice/contacts/$contactId", params: { contactId: id } }}
+    />
   );
 }
 
@@ -494,20 +474,22 @@ function ToolResultCards({
       <div className="d-flex flex-column" style={{ gap: 12 }}>
         {/* Above the card, not below: these are the steps that produced it. */}
         {dealBuild && <DealBuildChecklist build={dealBuild} />}
-        {d && <DealCardById listingId={d.id} showStatus />}
-        {c && (
-          <ResultCard
-            title={c.name}
-            badge={c.relationship ? RELATIONSHIP_LABELS[c.relationship] ?? c.relationship : undefined}
-            meta={c.company}
-            to={`/backoffice/contacts/${c.id}`}
-          />
-        )}
+        {d && <DealResultCard id={d.id} />}
+        {c && <ContactResultCard id={c.id} fallbackName={c.name} />}
         {p && (
-          <ResultCard
+          <RecordCard
+            variant="property"
+            icon={faBuilding}
             title={p.address ?? "Property"}
-            badge={p.propertyType}
-            onOpen={() => goToNav(router, { entity: "properties", count: 1, summary: "", listingsFacets: { search: p.address } })}
+            meta={p.propertyType}
+            onOpen={() =>
+              goToNav(router, {
+                entity: "properties",
+                count: 1,
+                summary: "",
+                listingsFacets: { search: p.address },
+              })
+            }
           />
         )}
       </div>
@@ -1819,16 +1801,19 @@ export function AssistantSidebar() {
           </div>
         </div>
       ) : (
-      /* Messages. 20px of inner padding and 24px between turns (Figma node
-         193:4680) — elements *within* one reply group tighter at 12px, which
+      /* Messages. 20px of inner padding; 12px between anything from the same
+         speaker and 24px across a change of speaker (see `.assistant-transcript`
+         — the flat 24 everywhere read as one undifferentiated column, with
+         Otto's own follow-ups pushed as far from each other as they were from
+         the question). Elements *within* one reply group stay at 12px, which
          each of them owns (see `ChatMessage`). */
       <div ref={scrollRef} className="flex-grow-1 overflow-auto">
         <div
-          className="assistant-rail__column d-flex flex-column"
+          className="assistant-rail__column assistant-transcript d-flex flex-column"
           // 32px at the bottom, 20 everywhere else: the composer sits directly
           // under this, and at an even 20 the last message crowded the input as
           // though it were part of it.
-          style={{ padding: "20px 20px 32px", gap: 24 }}
+          style={{ padding: "20px 20px 32px" }}
         >
         {/* Arrived before the broker had said anything, so there is no message to
             hang them under — which puts them at the TOP of the transcript, not

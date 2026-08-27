@@ -25,6 +25,11 @@ import { useCreateDeal } from "#/data/useCreateDeal";
 import { useOmniSearch } from "#/components/search/useOmniSearch";
 import { dealCardLinkProps } from "#/components/deals/dealCardLink";
 import { OmniSparkleIcon } from "#/components/search/OmniSparkleIcon";
+import {
+  RecordRowIcon,
+  RecordRowLabel,
+  type RecordIconVariant,
+} from "#/components/records/RecordRow";
 
 /** Max rows shown per entity group in the palette. */
 const GROUP_CAP = 5;
@@ -73,7 +78,8 @@ const TABS: { key: TabKey; label: string }[] = [
 type GroupName = "Contacts" | "Properties" | "Deals";
 
 /** Colored icon-badge treatment for a palette row. */
-type IconVariant = "contact" | "property" | "deal" | "ai";
+// The badge palette is shared with the assistant rail's record cards.
+type IconVariant = RecordIconVariant;
 
 /** A selectable palette row (record) or a trailing quick action. */
 type Entry = {
@@ -88,21 +94,6 @@ type Entry = {
   typeLabel: string;
   activate: () => void;
 };
-
-/** The 36px colored icon badge that leads each row. */
-function OmniItemIcon({
-  variant,
-  icon,
-}: {
-  variant: IconVariant;
-  icon: IconDefinition;
-}) {
-  return (
-    <span className={`omni-item__icon omni-item__icon--${variant}`}>
-      <FontAwesomeIcon icon={icon} />
-    </span>
-  );
-}
 
 export function OmniSearch() {
   const open = useOmniSearch((s) => s.open);
@@ -413,19 +404,15 @@ export function OmniSearch() {
                       onClick={() => entry.activate()}
                       className={`omni-item ${active ? "is-active" : ""}`}
                     >
-                      <OmniItemIcon variant={entry.iconVariant} icon={entry.icon} />
-                      <span className="omni-item__label">
-                        <span className="omni-item__title text-truncate">
-                          {entry.kind === "record"
+                      <RecordRowIcon variant={entry.iconVariant} icon={entry.icon} />
+                      <RecordRowLabel
+                        title={
+                          entry.kind === "record"
                             ? highlight(entry.title, query)
-                            : entry.title}
-                        </span>
-                        {entry.meta && (
-                          <span className="omni-item__meta text-truncate">
-                            {highlight(entry.meta, query)}
-                          </span>
-                        )}
-                      </span>
+                            : entry.title
+                        }
+                        meta={entry.meta && highlight(entry.meta, query)}
+                      />
                       <span className="omni-item__type">{entry.typeLabel}</span>
                     </button>
                   </div>
