@@ -1197,8 +1197,20 @@ const RECEIVABLE_COL = {
   // The unheaded QuickBooks gutter. Wide enough for an 18px chip and the cell's
   // own padding, and no wider — it is a status, not a column anyone reads down.
   sync: 40,
-  payer: 220,
-  dueDate: 150,
+  // 200, down from 220. The payer label never fits whatever it is given — it is
+  // a name plus an email — so it truncates at any width, which makes it the one
+  // column that can lend 20px to the ones that do have a natural length.
+  payer: 200,
+  // 180, not 150: at 150 the editable cell's date picker clipped its own value,
+  // "Sep 26, 2026" losing its last characters between the calendar addon and
+  // the cell edge. Sized to the longest date `formatDate` produces.
+  //
+  // These two numbers are a pair. Billing Description takes `width: 100%` and
+  // absorbs whatever the pinned columns leave, so widening the date at 220
+  // payer stole the description's room instead and clipped that. Measured in
+  // the browser at the narrowest real content area: both fit at 200/180, and
+  // the date alone fits from 170.
+  dueDate: 180,
   // The money columns are sized to their content, and their content is the
   // widest figure a commission realistically reaches — "$1,167,802.00" is a real
   // seeded value. Amount needs a little more than Credited despite showing the
@@ -1486,15 +1498,6 @@ function ReceivablesSection({
                   />
                 </Table.Head>
               )}
-              {/* No heading, by design. The badge is a row status and the
-                  tooltip names it; a "QuickBooks" header over a column that is
-                  blank three times in four would read as missing data. It sits
-                  at the head of the row rather than the tail, where the actions
-                  column would have made it look like a control. */}
-              <Table.Head
-                style={{ width: RECEIVABLE_COL.sync }}
-                aria-label="QuickBooks sync status"
-              />
               <Table.Head style={{ width: RECEIVABLE_COL.payer }}>
                 Payer Name
               </Table.Head>
@@ -1517,6 +1520,18 @@ function ReceivablesSection({
               >
                 Credited Amount
               </Table.Head>
+              {/* No heading, by design. The badge is a row status and its
+                  tooltip names it; a "QuickBooks" header over a column that is
+                  blank three times in four would read as missing data.
+                  Sits past the money rather than ahead of the payer: the money
+                  columns are what the row is read for, and a gutter in front of
+                  them pushed the first figure away from the name it belongs to.
+                  Always present — unlike the select-all gutter and the actions
+                  column, a sync status is worth showing on a frozen voucher. */}
+              <Table.Head
+                style={{ width: RECEIVABLE_COL.sync }}
+                aria-label="QuickBooks sync status"
+              />
               {editable && (
                 <Table.Head style={{ width: RECEIVABLE_COL.actions }} />
               )}
@@ -1546,9 +1561,6 @@ function ReceivablesSection({
                       />
                     </Table.Cell>
                   )}
-                  <Table.Cell style={{ width: RECEIVABLE_COL.sync }}>
-                    <QuickbooksSyncBadge synced={r.quickbooksSynced} size={18} />
-                  </Table.Cell>
                   <Table.Cell style={{ width: RECEIVABLE_COL.payer }}>
                     {editable ? (
                       /* Two options, both naming this row's own payer: the
@@ -1656,6 +1668,9 @@ function ReceivablesSection({
                   >
                     {r.credited > 0 ? formatCurrency(r.credited) : "None"}
                   </Table.Cell>
+                  <Table.Cell style={{ width: RECEIVABLE_COL.sync }}>
+                    <QuickbooksSyncBadge synced={r.quickbooksSynced} size={18} />
+                  </Table.Cell>
                   {editable && (
                     <Table.Cell style={{ width: RECEIVABLE_COL.actions }}>
                       <ReceivableRowMenu
@@ -1675,15 +1690,17 @@ function ReceivablesSection({
               rows above it do. */}
           <Table.Footer>
             <Table.Row>
-              {/* Counts the select-all gutter and the QuickBooks gutter, so it
-                  moves with `editable` the way the body rows do. */}
-              <Table.Cell colSpan={editable ? 5 : 4}>Sum</Table.Cell>
+              {/* Counts the select-all gutter, so it moves with `editable` the
+                  way the body rows do. */}
+              <Table.Cell colSpan={editable ? 4 : 3}>Sum</Table.Cell>
               <Table.Cell className="text-end">
                 {formatCurrency(amountTotal)}
               </Table.Cell>
               <Table.Cell className="text-end">
                 {formatCurrency(creditedTotal)}
               </Table.Cell>
+              {/* The sync gutter. Unconditional, like its header. */}
+              <Table.Cell />
               {editable && <Table.Cell />}
             </Table.Row>
           </Table.Footer>
