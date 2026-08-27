@@ -49,12 +49,12 @@ import {
   type ContactShare,
 } from './teammates'
 import { DEFAULT_PERSONAL_SPLIT_PCT, STAGE_CLOSE_PROBABILITY } from './commission'
-import type { DeductionCategory } from './vouchers'
+import type { DeductionCategory, VoucherStatus } from './vouchers'
 import { applyLeaseSpaces } from './leaseSpaceFixtures'
 
 const SEED = 20240101
 /** Properties that carry a deal — must stay equal to `DEAL_PIPELINE.length`. */
-const PROPERTY_COUNT = 20
+const PROPERTY_COUNT = 24
 /**
  * Properties with no deal on them at all. A brokerage's database is mostly
  * these: buildings it tracks, owns a relationship on, or picked up from
@@ -67,7 +67,7 @@ const CONTACT_COUNT = 80
 /**
  * The seeded deal pipeline — one deal per property, at an explicit stage, so
  * the Deals table reads like a real brokerage book rather than a random spread.
- * ~20 deals weighted toward the top of the funnel: several pitching, a few
+ * ~24 deals weighted toward the top of the funnel: several pitching, a few
  * active, a couple under contract, and a handful each closed and lost.
  *
  * Order and length are load-bearing: `PROPERTY_COUNT` matches this list, each
@@ -77,7 +77,16 @@ const CONTACT_COUNT = 80
  * must appear here. Deal types are explicit (not random) so Earl always lands
  * a Sale and the mix stays believable.
  */
-const DEAL_PIPELINE: { stage: ListingStage; dealType: DealType }[] = [
+type DealPipelineEntry =
+  | { stage: Exclude<ListingStage, 'closed'>; dealType: DealType }
+  /**
+   * Closed is the one stage whose voucher can be anywhere in its lifecycle, so
+   * it is the one stage that names the state. A union rather than an optional
+   * field: the compiler then refuses a closed row that forgot to say.
+   */
+  | { stage: 'closed'; dealType: DealType; voucherStatus: VoucherStatus }
+
+const DEAL_PIPELINE: DealPipelineEntry[] = [
   // Pitching — several (Earl claims a Sale here)
   { stage: 'proposal', dealType: 'Sale' },
   { stage: 'proposal', dealType: 'Sale' },
@@ -93,11 +102,33 @@ const DEAL_PIPELINE: { stage: ListingStage; dealType: DealType }[] = [
   // Under contract — a couple (Margaret claims one, buy-side)
   { stage: 'under-contract', dealType: 'Sale' },
   { stage: 'under-contract', dealType: 'Sale' },
-  // Closed — some (Patricia claims one)
-  { stage: 'closed', dealType: 'Sale' },
-  { stage: 'closed', dealType: 'Lease' },
-  { stage: 'closed', dealType: 'Sale' },
-  { stage: 'closed', dealType: 'Sale' },
+  // Closed — eight, each naming the voucher state it lands in (Patricia claims
+  // the first). Named per row rather than drawn or cycled on a modulus: at this
+  // sample size a draw leaves whole states unreachable on some runs, and a
+  // modulus makes you run the seed to find out what the book looks like.
+  //
+  // Eight rather than the four this used to hold, because only Closed deals can
+  // be Pending or Approved now — at four, two of the three states had a single
+  // voucher behind them and the Back Office index read as a rounding error
+  // rather than a queue. The mix is 3 Approved / 3 Pending / 2 Draft.
+  //
+  // Approved sits first so Patricia's closed deal reads as finished.
+  //
+  // Exactly one closed Lease, and it is a Draft. A Lease carries `salePrice` 0,
+  // so its commission is 0 and the receivables block skips it — which makes an
+  // empty voucher. Empty is a fine thing for a Draft to be and a wrong thing for
+  // a Pending or an Approved one: nothing but invoices is supposed to be
+  // outstanding by the time a broker submits. So every Pending and Approved row
+  // here is a Sale, with money on it. The Lease stays because a closed lease deal
+  // is a shape the app has to keep handling.
+  { stage: 'closed', dealType: 'Sale', voucherStatus: 'Approved' },
+  { stage: 'closed', dealType: 'Lease', voucherStatus: 'Draft' },
+  { stage: 'closed', dealType: 'Sale', voucherStatus: 'Pending' },
+  { stage: 'closed', dealType: 'Sale', voucherStatus: 'Approved' },
+  { stage: 'closed', dealType: 'Sale', voucherStatus: 'Pending' },
+  { stage: 'closed', dealType: 'Sale', voucherStatus: 'Approved' },
+  { stage: 'closed', dealType: 'Sale', voucherStatus: 'Pending' },
+  { stage: 'closed', dealType: 'Sale', voucherStatus: 'Draft' },
   // Lost — some
   { stage: 'inactive', dealType: 'Sale' },
   { stage: 'inactive', dealType: 'Sale' },
@@ -1265,7 +1296,7 @@ function generateListings(
   property: Property,
   propertyContacts: Contact[],
   dealIdRef: { n: number },
-  spec: { stage: ListingStage; dealType: DealType },
+  spec: DealPipelineEntry,
 ): Listing[] {
   // One deal per property — the pipeline shape is controlled by DEAL_PIPELINE,
   // not random per-property counts (see generateDataset).
@@ -1417,34 +1448,44 @@ function generateListings(
       (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
     )
 
-    const voucherStatus = status === 'closed'
-      ? ('Approved' as const)
-      : faker.helpers.weightedArrayElement([
-          { weight: 40, value: 'Approved' as const },
-          { weight: 40, value: 'Pending' as const },
-          { weight: 20, value: 'Draft' as const },
-        ])
+    // The deal's stage decides the voucher's state, and nothing else does.
+    //
+    // A voucher is the broker's working copy while the deal is live — they fill
+    // it in as the deal moves — so there is nothing to submit or sign off until
+    // the deal settles. Every stage short of Closed is therefore Draft, with no
+    // draw involved. A Closed deal carries its state on `DEAL_PIPELINE`; see the
+    // note there for why it is named per row.
+    //
+    // This replaced the reverse rule: Closed was always Approved and every open
+    // deal drew from a weighted mix that could hand a proposal an approved
+    // voucher. It put money through approval on deals nobody had closed.
+    const voucherStatus: VoucherStatus =
+      spec.stage === 'closed' ? spec.voucherStatus : 'Draft'
 
     const voucherCloseDate = status === 'closed'
       ? faker.date.recent({ days: 90 }).toISOString().slice(0, 10)
       : null
 
-    // Who signed the voucher off, and when. A sign-off follows the close by a
-    // few days — a voucher cannot be approved before there is a deal to settle —
-    // and where the deal has not closed at all it is simply recent.
-    const voucherApproval: VoucherApproval | null = voucherStatus !== 'Approved'
-      ? null
-      : {
-          reviewerId: faker.helpers.arrayElement(VOUCHER_APPROVER_IDS),
-          approvedOn: voucherCloseDate
-            ? new Date(
-                Date.parse(`${voucherCloseDate}T00:00:00`) +
-                  faker.number.int({ min: 1, max: 10 }) * 86_400_000,
-              )
-                .toISOString()
-                .slice(0, 10)
-            : faker.date.recent({ days: 45 }).toISOString().slice(0, 10),
-        }
+    // Who signed the voucher off, and when — a few days after the close.
+    //
+    // Only a Closed deal can be Approved now, and a Closed deal always has a
+    // close date, so the sign-off always has something to date itself from.
+    // This used to carry a second branch for an Approved voucher with no close
+    // date, dating it from "recently" instead; the stage rule above makes that
+    // state unreachable, so the branch is gone. The `&& voucherCloseDate` here
+    // is only narrowing the type — no deal can fail it.
+    const voucherApproval: VoucherApproval | null =
+      voucherStatus === 'Approved' && voucherCloseDate
+        ? {
+            reviewerId: faker.helpers.arrayElement(VOUCHER_APPROVER_IDS),
+            approvedOn: new Date(
+              Date.parse(`${voucherCloseDate}T00:00:00`) +
+                faker.number.int({ min: 1, max: 10 }) * 86_400_000,
+            )
+              .toISOString()
+              .slice(0, 10),
+          }
+        : null
 
     // What the brokerage billed out on a closed deal. Most deals bill the
     // commission in one line to one party; some split it across two, the second
@@ -1471,14 +1512,15 @@ function generateListings(
       // size a probability leaves the case unreachable in some runs.
       //
       // `% 2 === 0`, not `% 3`: keying this on the same modulus as `variant`
-      // landed on the one closed deal that is a zero-commission Lease, so the
+      // landed on a closed deal that is a zero-commission Lease, so the
       // condition was true but the surrounding `commissionAmount > 0` guard
       // never let it run — verified empirically against the generated data,
-      // not just reasoned about. `% 2` does land on a commission-bearing deal,
-      // at the cost of tying "billed to an outsider" to `split`'s modulus
-      // (they end up mutually exclusive at this sample size); that coupling is
-      // accepted because nothing else fires with only three closed,
-      // commission-bearing deals to cycle over.
+      // not just reasoned about. `% 2` does land on commission-bearing deals,
+      // at the cost of tying "billed to an outsider" to `split`'s modulus, so
+      // the two end up mutually exclusive. That coupling is still accepted: the
+      // closed group grew from four deals to eight when the voucher lifecycle
+      // moved onto the stage, which gives each modulus more deals to land on
+      // but does not un-share them.
       const thirdPartyPayer =
         Number(dealId) % 2 === 0
           ? propertyContacts.find(
@@ -1494,7 +1536,10 @@ function generateListings(
       // are all guaranteed to appear. Only a handful of deals ever reach Closed,
       // and at that sample size a probability left whole states unreachable —
       // no receivable was ever fully paid, so nothing exercised the rule that a
-      // settled receivable has nothing left to apply a deposit against.
+      // settled receivable has nothing left to apply a deposit against. Note
+      // that a Closed deal's voucher may itself be a Draft now, so some of these
+      // credited states sit on a voucher the broker has not submitted yet — a
+      // real state, not a contradiction.
       const variant = Number(dealId) % 3
       // Split on a different modulus than `variant`, so the two vary
       // independently. Sharing one would have tied "billed to two parties" to a
@@ -1533,10 +1578,40 @@ function generateListings(
       }
     }
 
+    // A deal under contract is already billed. The buyer has been accepted, so
+    // the broker names them and drafts the line while the deal is still open —
+    // which is the whole reason an open deal's voucher is a Draft and not an
+    // empty form.
+    //
+    // One line, nothing credited, due date ahead: that is what separates a
+    // voucher being worked from one being settled. The closed block above is the
+    // one that varies its credited states, because only a settled receivable has
+    // anything to have received.
+    //
+    // Not `else if`: the two conditions are exclusive by stage already, and a
+    // separate statement keeps each stage's rule readable on its own.
+    if (status === 'under-contract' && commissionAmount > 0) {
+      // Falls back to the seller exactly as the closed block does, and for the
+      // same reason: `buyerContacts` is empty when the property had only the two
+      // contacts `generateDataset` guarantees and both went to the seller side.
+      // A seller-payer is a real case, so nothing needs to be repaired — and
+      // `applyHeroes`' buyer repair runs later anyway, too late to be read here.
+      const billTo = buyerContacts[0] ?? sellerContacts[0]
+      receivables.push({
+        id: faker.string.uuid(),
+        payerContactId: billTo.id,
+        billToCompany: false,
+        dueDate: faker.date.soon({ days: 45 }).toISOString().slice(0, 10),
+        billingDescription: 'Full Payment',
+        amount: commissionAmount,
+        credited: 0,
+      })
+    }
+
     // Derived from the receivables rather than assembled separately: the two
     // must agree, and one of them has to be the source. A voucher with no
-    // receivables has no payers yet, which is a real state — Draft vouchers
-    // start there.
+    // receivables has no payers yet, which is a real state — every voucher
+    // starts there, and one stays there until the deal is under contract.
     const payerContactIds = [...new Set(receivables.map((r) => r.payerContactId))]
 
     const grossScheduledIncome = Math.round(salePrice * 0.09)

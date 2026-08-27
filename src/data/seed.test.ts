@@ -341,3 +341,54 @@ describe('voucher payers seed', () => {
     expect(outsider).toBe(true)
   })
 })
+
+describe('voucher status seed', () => {
+  const { listings } = generateDataset()
+
+  it('leaves every voucher on an unclosed deal in Draft', () => {
+    // A voucher is the broker's working document until the deal settles. There
+    // is nothing to approve before a close, so Pending and Approved are not
+    // states an open deal can reach — the stage decides, never a draw.
+    for (const deal of listings) {
+      if (deal.status === 'closed') continue
+      expect(deal.transaction.backOffice.status).toBe('Draft')
+    }
+  })
+
+  it('reaches all three states among the closed deals', () => {
+    // Closed is the only stage that spans the whole lifecycle: the broker still
+    // finalising it (Draft), submitted and waiting on the back office (Pending),
+    // and signed off (Approved). `DEAL_PIPELINE` names the mix outright rather
+    // than drawing it, so this pins that the list still covers every state.
+    const reached = new Set(
+      listings
+        .filter((deal) => deal.status === 'closed')
+        .map((deal) => deal.transaction.backOffice.status),
+    )
+    expect([...reached].sort()).toEqual(['Approved', 'Draft', 'Pending'])
+  })
+
+  it('bills an under-contract deal without crediting anything to it', () => {
+    // The broker fills the voucher up as the deal moves, so an accepted buyer
+    // is already billed by the time the deal is under contract — but nothing
+    // has been received against it, which is what separates this from a closed
+    // deal's receivables.
+    //
+    // Child spaces are excluded: `leaseSpaceFixtures` builds those by clearing
+    // the shell's voucher and only refills it at Closed, and that module has to
+    // stay faker-free.
+    const underContract = listings.filter(
+      (deal) =>
+        deal.parentDealId === null &&
+        deal.status === 'under-contract' &&
+        deal.transaction.commissionAmount > 0,
+    )
+    expect(underContract.length).toBeGreaterThan(0)
+    for (const deal of underContract) {
+      const voucher = deal.transaction.backOffice
+      expect(voucher.receivables).toHaveLength(1)
+      expect(voucher.receivables[0].credited).toBe(0)
+      expect(voucher.payerContactIds).toEqual([voucher.receivables[0].payerContactId])
+    }
+  })
+})
