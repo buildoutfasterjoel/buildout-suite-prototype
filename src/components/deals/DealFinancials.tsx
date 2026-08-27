@@ -71,6 +71,7 @@ import { VoucherStatusBadge } from "./VoucherStatusBadge";
 import { VoucherApprovalBanner } from "./VoucherApprovalBanner";
 import { dealEditTarget } from "./dealCardLink";
 import { formatCurrency, formatDate } from "./dealDisplay";
+import "./DealFinancials.scss";
 import {
   buildRentSchedule,
   computeTotal,
@@ -1141,6 +1142,32 @@ function PreSplitDeductionsSection({
 const RECEIVABLE_CHECKBOX_W = 44;
 
 /**
+ * Column widths for the Receivables table.
+ *
+ * Everything is pinned except Billing Description, which takes `width: 100%`
+ * and therefore absorbs whatever is left. That is the point: a description is
+ * the only free-text column here and the only one whose content has no natural
+ * length, while a date, a dollar amount and a name all do. Letting the browser
+ * share width evenly gave the amounts room they never use and squeezed the one
+ * column that needed it.
+ *
+ * The payer is pinned rather than sized to content so the table's columns do
+ * not jump when a row switches between a person's name and their company — the
+ * cell truncates instead (see `text-truncate` at the call site).
+ */
+const RECEIVABLE_COL = {
+  payer: 220,
+  dueDate: 150,
+  // The money columns are sized to their content, and their content is the
+  // widest figure a commission realistically reaches — "$1,167,802.00" is a real
+  // seeded value. Amount needs a little more than Credited despite showing the
+  // same magnitude: it is an input with a currency addon, not plain text.
+  amount: 150,
+  credited: 130,
+  actions: 44,
+} as const;
+
+/**
  * One item in the Receivables Actions menu, greyed when its precondition fails.
  *
  * The `disabled` prop alone would not grey it: base-ui renders a menu item as a
@@ -1211,10 +1238,12 @@ function ReceivableDateCell({
 function ReceivableTextCell({
   value,
   placeholder,
+  className,
   onCommit,
 }: {
   value: string;
   placeholder: string;
+  className?: string;
   onCommit: (next: string) => void;
 }) {
   const [draft, setDraft] = useState(value);
@@ -1222,7 +1251,7 @@ function ReceivableTextCell({
   useEffect(() => setDraft(value), [value]);
   return (
     <Input
-      className="bg-card"
+      className={`bg-card${className ? ` ${className}` : ""}`}
       value={draft}
       placeholder={placeholder}
       aria-label="Billing description"
@@ -1393,7 +1422,11 @@ function ReceivablesSection({
       {receivables.length === 0 ? (
         <p className="text-muted mb-0">No receivables have been added.</p>
       ) : (
-        <Table>
+        /* `receivables-table` pins `table-layout: fixed`, which is what makes
+           the widths below mean anything — see DealFinancials.scss. A class
+           rather than a style prop because Blueprint's `Table` does not forward
+           `style` to the rendered `<table>`. */
+        <Table className="receivables-table">
           <Table.Header>
             <Table.Row>
               {/* The gutter exists to arm the Actions menu. With the menu gone
@@ -1414,12 +1447,31 @@ function ReceivablesSection({
                   />
                 </Table.Head>
               )}
-              <Table.Head>Payer Name</Table.Head>
-              <Table.Head>Due Date</Table.Head>
-              <Table.Head>Billing Description</Table.Head>
-              <Table.Head className="text-end">Receivable Amount</Table.Head>
-              <Table.Head className="text-end">Credited Amount</Table.Head>
-              {editable && <Table.Head style={{ width: 44 }} />}
+              <Table.Head style={{ width: RECEIVABLE_COL.payer }}>
+                Payer Name
+              </Table.Head>
+              <Table.Head style={{ width: RECEIVABLE_COL.dueDate }}>
+                Due Date
+              </Table.Head>
+              {/* The only column that grows. */}
+              <Table.Head style={{ width: "100%" }}>
+                Billing Description
+              </Table.Head>
+              <Table.Head
+                className="text-end"
+                style={{ width: RECEIVABLE_COL.amount }}
+              >
+                Receivable Amount
+              </Table.Head>
+              <Table.Head
+                className="text-end"
+                style={{ width: RECEIVABLE_COL.credited }}
+              >
+                Credited Amount
+              </Table.Head>
+              {editable && (
+                <Table.Head style={{ width: RECEIVABLE_COL.actions }} />
+              )}
             </Table.Row>
           </Table.Header>
           <Table.Body>
@@ -1446,7 +1498,7 @@ function ReceivablesSection({
                       />
                     </Table.Cell>
                   )}
-                  <Table.Cell>
+                  <Table.Cell style={{ width: RECEIVABLE_COL.payer }}>
                     {editable ? (
                       /* Two options, both naming this row's own payer: the
                          person, or the company they belong to. Deliberately NOT
@@ -1460,7 +1512,16 @@ function ReceivablesSection({
                           patch(r.id, { billToCompany: v === "company" })
                         }
                       >
-                        <Select.Trigger className="bg-card" aria-label="Payer">
+                        <Select.Trigger
+                          className="bg-card"
+                          aria-label="Payer"
+                          title={label}
+                          // `min-width: 0` is what lets the label inside shrink:
+                          // a flex item refuses to go below its content width
+                          // without it, so the trigger would push the column
+                          // wider instead of the text truncating.
+                          style={{ minWidth: 0 }}
+                        >
                           {/* The label is passed as children, not left to
                               `Select.Value` to derive. Blueprint's Select.Value
                               renders the raw VALUE when given none — here that
@@ -1469,7 +1530,11 @@ function ReceivablesSection({
                               a browser rather than by the type checker. If you
                               add a Select whose value is not also its label,
                               pass the label. */}
-                          <Select.Value>{label}</Select.Value>
+                          <Select.Value>
+                            <span className="d-block text-truncate">
+                              {label}
+                            </span>
+                          </Select.Value>
                         </Select.Trigger>
                         <Select.Content>
                           {payerFormOptions(r.payerContactId).map((o) => (
@@ -1480,10 +1545,12 @@ function ReceivablesSection({
                         </Select.Content>
                       </Select>
                     ) : (
-                      label
+                      <span className="d-block text-truncate" title={label}>
+                        {label}
+                      </span>
                     )}
                   </Table.Cell>
-                  <Table.Cell>
+                  <Table.Cell style={{ width: RECEIVABLE_COL.dueDate }}>
                     {editable ? (
                       <ReceivableDateCell
                         value={r.dueDate}
@@ -1498,6 +1565,7 @@ function ReceivablesSection({
                       <ReceivableTextCell
                         value={r.billingDescription}
                         placeholder="Billing description"
+                        className="w-100"
                         onCommit={(next) =>
                           patch(r.id, { billingDescription: next })
                         }
@@ -1506,7 +1574,10 @@ function ReceivablesSection({
                       r.billingDescription
                     )}
                   </Table.Cell>
-                  <Table.Cell className="text-end">
+                  <Table.Cell
+                    className="text-end"
+                    style={{ width: RECEIVABLE_COL.amount }}
+                  >
                     {editable ? (
                       <MoneyCell
                         label="Receivable amount"
@@ -1522,11 +1593,14 @@ function ReceivablesSection({
                   {/* Credited stays read-only at every status: it is what has
                       been paid against this line, which is the deposit and
                       credit actions' business, not something to type over. */}
-                  <Table.Cell className="text-end">
+                  <Table.Cell
+                    className="text-end"
+                    style={{ width: RECEIVABLE_COL.credited }}
+                  >
                     {r.credited > 0 ? formatCurrency(r.credited) : "None"}
                   </Table.Cell>
                   {editable && (
-                    <Table.Cell style={{ width: 44 }}>
+                    <Table.Cell style={{ width: RECEIVABLE_COL.actions }}>
                       <ReceivableRowMenu
                         label={label}
                         onDelete={() => deleteReceivable(listing.id, r.id)}
