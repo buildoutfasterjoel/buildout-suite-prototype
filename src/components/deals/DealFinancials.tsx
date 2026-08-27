@@ -64,7 +64,7 @@ import {
 } from "#/data/vouchers";
 import { AddBrokerModal } from "./AddBrokerModal";
 import { AddContactModal } from "./AddContactModal";
-import { NewReceivableModal } from "./NewReceivableModal";
+import { DueDatePicker, NewReceivableModal } from "./NewReceivableModal";
 import { notify } from "#/lib/notify";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
 import { VoucherStatusBadge } from "./VoucherStatusBadge";
@@ -1197,37 +1197,6 @@ function ReceivableActionItem({
 }
 
 /**
- * A receivable's due date, edited in the cell.
- *
- * A bare `<input type="date">` rather than the rent schedule's click-to-reveal
- * `EditableCell`: that pattern exists because the schedule packs seven numeric
- * columns and needed the underline to say "this one is typeable". Receivables
- * are four wide columns with room for a real control, and a date input carries
- * its own picker — reimplementing reveal-on-click here would hide the only
- * affordance the field has.
- *
- * Commits on change rather than blur, because picking from the native calendar
- * fires no blur until focus leaves the cell.
- */
-function ReceivableDateCell({
-  value,
-  onCommit,
-}: {
-  value: string;
-  onCommit: (next: string) => void;
-}) {
-  return (
-    <Input
-      type="date"
-      className="bg-card"
-      value={value}
-      aria-label="Due date"
-      onChange={(e) => onCommit(e.target.value)}
-    />
-  );
-}
-
-/**
  * A receivable's billing description, edited in the cell.
  *
  * Keystrokes stay local and commit on blur, so typing a sentence is one write
@@ -1552,9 +1521,15 @@ function ReceivablesSection({
                   </Table.Cell>
                   <Table.Cell style={{ width: RECEIVABLE_COL.dueDate }}>
                     {editable ? (
-                      <ReceivableDateCell
+                      /* The same `DueDatePicker` the New Receivable modal uses,
+                         so one page does not offer two different date controls
+                         for the same field. A native `<input type="date">` was
+                         here first and rendered its own `mm/dd/yyyy` chrome,
+                         which belongs to the browser rather than to Blueprint. */
+                      <DueDatePicker
+                        className="bg-card"
                         value={r.dueDate}
-                        onCommit={(next) => patch(r.id, { dueDate: next })}
+                        onChange={(next) => patch(r.id, { dueDate: next })}
                       />
                     ) : (
                       formatDate(r.dueDate)

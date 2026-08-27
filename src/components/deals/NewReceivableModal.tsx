@@ -7,11 +7,70 @@ import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Combobox } from "@buildoutinc/blueprint-react/ui/Combobox";
 import { Textarea } from "@buildoutinc/blueprint-react/ui/Textarea";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { Calendar } from "@buildoutinc/blueprint-react/ui/Calendar";
+import { Popover } from "@buildoutinc/blueprint-react/ui/Popover";
 import {
+	faCalendar,
 	faDollarSign,
 	faMagnifyingGlass,
 } from "@fortawesome/pro-regular-svg-icons";
+import { DATE_FORMAT, parseDate, toISODate } from "#/lib/isoDate";
 import { getContactOptions, type ContactOption } from "#/data/store";
+
+/**
+ * A due date, picked from a Blueprint Calendar.
+ *
+ * Shared by this modal and the Receivables table's own date cell, so the two
+ * cannot drift into different date controls on one page. The value is carried
+ * as a `yyyy-mm-dd` string — what `FinancialReceivable.dueDate` stores — and
+ * `parseDate`/`toISODate` from the record-form widgets do the conversion, which
+ * keeps the "no timezone drift" handling in one place rather than two.
+ */
+export function DueDatePicker({
+	value,
+	onChange,
+	style,
+	className,
+}: {
+	value: string;
+	onChange: (next: string) => void;
+	style?: React.CSSProperties;
+	className?: string;
+}) {
+	const [open, setOpen] = useState(false);
+	const selected = parseDate(value || null);
+	return (
+		<InputGroup style={style} className={className}>
+			<InputGroup.Addon>
+				<Popover open={open} onOpenChange={setOpen}>
+					<Popover.Trigger
+						nativeButton={false}
+						aria-label="Open date picker"
+						render={<FontAwesomeIcon icon={faCalendar} />}
+					/>
+					<Popover.Content className="p-0" align="start">
+						<Calendar
+							mode="single"
+							selected={selected}
+							defaultMonth={selected}
+							onSelect={(d) => {
+								onChange(d ? toISODate(d) : "");
+								setOpen(false);
+							}}
+						/>
+					</Popover.Content>
+				</Popover>
+			</InputGroup.Addon>
+			<Input
+				type="text"
+				readOnly
+				placeholder="Pick a date"
+				aria-label="Due date"
+				value={selected ? selected.toLocaleDateString(undefined, DATE_FORMAT) : ""}
+			/>
+		</InputGroup>
+	);
+}
 
 export interface NewReceivableInput {
 	payerContactId: string;
@@ -143,15 +202,15 @@ export function NewReceivableModal({
 
 					<Field>
 						<Field.Label>Due Date</Field.Label>
-						{/* A native date input rather than the record form's Calendar
-						    popover: this modal is four short fields, not a long record
-						    form, and the popover pattern carries a label gutter that has
-						    nothing to line up with here. */}
-						<Input
-							type="date"
+						{/* The documented InputGroup + Calendar composition — a read-only
+						    Input with a calendar-icon Popover trigger in an addon. A native
+						    `<input type="date">` renders its own `mm/dd/yyyy` chrome, which
+						    is not this design system's and reads as unfinished beside the
+						    Blueprint controls around it. */}
+						<DueDatePicker
 							value={dueDate}
-							onChange={(e) => setDueDate(e.target.value)}
-							style={{ maxWidth: "12rem" }}
+							onChange={setDueDate}
+							style={{ maxWidth: "14rem" }}
 						/>
 					</Field>
 
