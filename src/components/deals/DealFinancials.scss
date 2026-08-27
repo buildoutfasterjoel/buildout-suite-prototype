@@ -64,4 +64,23 @@
     min-width: 0;
     overflow: hidden;
   }
+
+
+  // A deposit under the receivable it paid.
+  //
+  // Tinted and hairlined rather than indented with padding: the row already says
+  // what it is with a turn-down icon in the payer column, and shifting its cells
+  // would take the money out from under the Credited Amount heading — which is
+  // the whole reason these are rows in the parent's grid and not a nested table.
+  //
+  // `border-top-width: 0` closes the line between a receivable and its own
+  // deposits, so a paid line and what paid it read as one block. The block's
+  // own top border is the receivable's, which stays.
+  .receivables-table__deposit {
+    background-color: var(--color-storm-grey-50, #f7f8f9);
+
+    > td {
+      border-top-width: 0;
+    }
+  }
 }

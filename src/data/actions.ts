@@ -6,7 +6,7 @@ import {
   serializeContactFilters,
   type ContactFilterState,
 } from '#/components/contacts/contactFilterModel'
-import type { Contact, ContactRole, ContactSource, DealDocument, DealHistoryEntry, DealIngestion, DealInvoice, DealMarketing, DealPitchFinancials, DealBroker, DealTask, DealTransaction, DocumentGeneration, FinancialDeduction, FinancialReceivable, GeneratedSection, IngestionFieldKey, Listing, PropertyStatus, Task } from './types'
+import type { Contact, ContactRole, ContactSource, DealDocument, DealHistoryEntry, DealIngestion, DealInvoice, DealMarketing, DealPitchFinancials, DealBroker, DealTask, DealTransaction, DepositAllocation, DocumentGeneration, FinancialDeduction, FinancialReceivable, GeneratedSection, IngestionFieldKey, Listing, PropertyStatus, Task } from './types'
 import { CURRENT_USER, TEAMMATES } from './teammates'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
 import { reconcileContactDealFields } from './contactStage'
@@ -24,6 +24,7 @@ import {
   resolvedPropertyPatch,
 } from './ingestion'
 import { getContact, getProperty, updateProperty } from './store'
+import { deductionBalance, receivableBalance } from './deposits'
 import {
   invoiceDueDate,
   invoiceFileName,
@@ -534,6 +535,127 @@ export function updateReceivable(
   return patchReceivables(dealId, (rows) =>
     rows.map((r) => (r.id === receivableId ? { ...r, ...patch } : r)),
   )
+}
+
+/**
+ * Record money received against this voucher.
+ *
+ * Takes the allocation the modal is SHOWING rather than recomputing it here, so
+ * an admin who used Override gets what they entered. That is the whole point of
+ * the toggle — re-deriving the split at the write path would silently discard the
+ * decision it exists to allow.
+ *
+ * The caps are re-applied anyway: an allocation is clamped to what its receivable
+ * still owes and its deduction still has uncovered, and anything that lands on
+ * zero is dropped rather than stored as a line that moved nothing. A disabled
+ * input is a UI courtesy, not a guarantee about what reaches the store — the same
+ * reason `createInvoiceFromReceivables` re-checks its one-payer rule.
+ *
+ * `credited` and `covered` are moved here rather than derived from the deposit
+ * list on read. Both are already read in half a dozen places — most sharply by
+ * `invoiceLineItems`, which FREEZES `credited` onto an invoice line — and a
+ * computed sum would rewrite every one of them to show the same figures.
+ * `deposits.test.ts` and the seed test hold the two in agreement.
+ *
+ * Refuses on a Pending voucher, like every other receivable write.
+ */
+export function applyDeposit(
+  dealId: string,
+  input: {
+    /** `yyyy-mm-dd`. */
+    date: string
+    amount: number
+    referenceNumber: string
+    receivableAllocations: DepositAllocation[]
+    deductionAllocations: DepositAllocation[]
+  },
+): { deal: Listing | null; depositId: string | null } {
+  const now = new Date().toISOString()
+  const depositId = `deposit-${crypto.randomUUID()}`
+
+  const deal = patchListing(dealId, (l) => {
+    const back = l.transaction.backOffice
+    if (back.status === 'Pending') return l
+
+    // Clamped against the store's own figures, not the caller's copies, which
+    // could be a render behind whatever else has written to this voucher.
+    const receivablesById = new Map(back.receivables.map((r) => [r.id, r]))
+    const receivableAllocations = clampAllocations(
+      input.receivableAllocations,
+      (id) => {
+        const row = receivablesById.get(id)
+        return row ? receivableBalance(row) : 0
+      },
+    )
+    const deductionsById = new Map(back.preSplitDeductions.map((d) => [d.id, d]))
+    const deductionAllocations = clampAllocations(input.deductionAllocations, (id) => {
+      const row = deductionsById.get(id)
+      return row ? deductionBalance(row) : 0
+    })
+
+    // A deposit that reached nothing is not a record worth keeping — it would
+    // sit under a receivable as a child row stating that $0.00 arrived.
+    if (receivableAllocations.length === 0 && deductionAllocations.length === 0) {
+      return l
+    }
+
+    const appliedTo = new Map(receivableAllocations.map((a) => [a.targetId, a.amount]))
+    const coveredBy = new Map(deductionAllocations.map((a) => [a.targetId, a.amount]))
+
+    return {
+      ...l,
+      transaction: {
+        ...l.transaction,
+        backOffice: {
+          ...back,
+          receivables: back.receivables.map((r) => {
+            const applied = appliedTo.get(r.id)
+            return applied ? { ...r, credited: round2(r.credited + applied) } : r
+          }),
+          preSplitDeductions: back.preSplitDeductions.map((d) => {
+            const covered = coveredBy.get(d.id)
+            return covered ? { ...d, covered: round2((d.covered ?? 0) + covered) } : d
+          }),
+          deposits: [
+            ...(back.deposits ?? []),
+            {
+              id: depositId,
+              date: input.date,
+              amount: round2(input.amount),
+              referenceNumber: input.referenceNumber,
+              createdAt: now,
+              createdById: CURRENT_USER.id,
+              receivableAllocations,
+              deductionAllocations,
+            },
+          ],
+        },
+      },
+      updatedAt: now,
+    }
+  })
+
+  // `patchListing` returns the listing unchanged when the voucher is Pending, so
+  // a null id is not the only refusal — the caller reads the deal to know more.
+  return { deal, depositId: deal ? depositId : null }
+}
+
+/** Cents. Kept here rather than imported so `deposits.ts` stays free of writers. */
+function round2(n: number): number {
+  return Math.round(n * 100) / 100
+}
+
+/** Clamp each allocation to its target's balance and drop the ones left at zero. */
+function clampAllocations(
+  allocations: DepositAllocation[],
+  balanceOf: (targetId: string) => number,
+): DepositAllocation[] {
+  return allocations
+    .map((a) => ({
+      targetId: a.targetId,
+      amount: Math.max(0, Math.min(round2(a.amount), balanceOf(a.targetId))),
+    }))
+    .filter((a) => a.amount > 0)
 }
 
 /** Drop one receivable. The payer stays in Billing, reading $0 until removed. */

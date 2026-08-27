@@ -845,6 +845,14 @@ export interface DealFinancials {
   payerContactIds: string[]
   preSplitDeductions: FinancialDeduction[]
   receivables: FinancialReceivable[]
+  /**
+   * Money received against the receivables above, newest last.
+   *
+   * Optional so a voucher written before deposits existed still parses. Every
+   * write path spreads a new array onto whatever was there, so `?? []` at the
+   * read sites is the only accommodation it needs.
+   */
+  deposits?: VoucherDeposit[]
   /** Non-null exactly when `status` is `'Approved'`. */
   approval: VoucherApproval | null
 }
@@ -1131,6 +1139,51 @@ export interface FinancialDeduction {
   amount: number
   /** Amount already covered/reimbursed, or null when none. */
   covered: number | null
+}
+
+/**
+ * One line of a deposit's allocation — how much of the cash landed on one
+ * receivable, or covered one pre-split deduction.
+ *
+ * `targetId` is a `FinancialReceivable.id` on `receivableAllocations` and a
+ * `FinancialDeduction.id` on `deductionAllocations`. Two arrays rather than one
+ * with a kind tag: the two are read separately everywhere — the child rows under
+ * the receivables table want only the first, and nothing wants them merged.
+ */
+export interface DepositAllocation {
+  targetId: string
+  amount: number
+}
+
+/**
+ * Money received against this voucher's receivables — one cash receipt, spread
+ * across the lines it pays and the deductions it covers.
+ *
+ * **The allocation is stored, not recomputed.** The Apply Deposit modal derives
+ * a default split (see `previewDeposit` in `deposits.ts`), but an admin may
+ * override it line by line, and what they saved is the record of where the money
+ * actually went. Re-deriving it on read would quietly discard that decision the
+ * first time a receivable's amount was edited afterwards.
+ *
+ * A deposit does NOT create payables yet. The modal and the voucher's Payables
+ * section both say it will; that record does not exist.
+ */
+export interface VoucherDeposit {
+  id: string
+  /** `yyyy-mm-dd` — the day the money landed, not the day the row was typed. */
+  date: string
+  /** Cash received, before it is spread. May exceed the sum of its allocations. */
+  amount: number
+  /** The payer's cheque or wire reference. Free text, often blank. */
+  referenceNumber: string
+  /** ISO timestamp of when it was entered. */
+  createdAt: string
+  /** A `TEAMMATES` id — resolve it with `findTeammate`. */
+  createdById: string
+  /** What it paid, keyed by `FinancialReceivable.id`. Only lines that took money. */
+  receivableAllocations: DepositAllocation[]
+  /** What it covered, keyed by `FinancialDeduction.id`. Only lines that took money. */
+  deductionAllocations: DepositAllocation[]
 }
 
 /** Money owed to the brokerage on a deal — shown on the Financials tab. */

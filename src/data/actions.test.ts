@@ -17,6 +17,7 @@ import {
   updateDealTransaction,
   submitVoucher,
   addReceivable,
+  applyDeposit,
   deleteReceivable,
   reopenVoucher,
   updateReceivable,
@@ -681,6 +682,152 @@ describe('receivable writes', () => {
         expect(back.receivables).toHaveLength(2)
         expect(back.receivables.find((r) => r.id === seeded.id)!.amount).toBe(7)
       }
+    }
+  })
+})
+
+describe('applyDeposit', () => {
+  /** A Draft voucher carrying one $10,000 receivable and one $1,000 deduction. */
+  function voucherWithOneLine() {
+    const deal = [...useDataStore.getState().listings.values()][0]!
+    updateDealTransaction(deal.id, {
+      backOffice: {
+        ...deal.transaction.backOffice,
+        status: 'Draft',
+        payerContactIds: [],
+        receivables: [],
+        deposits: [],
+        preSplitDeductions: [
+          {
+            id: 'd1',
+            category: 'Marketing',
+            description: 'Signage',
+            pct: 0,
+            amount: 1000,
+            covered: null,
+          },
+        ],
+      },
+    })
+    addReceivable(deal.id, {
+      payerContactId: 'c-payer',
+      billToCompany: false,
+      dueDate: '2026-06-22',
+      billingDescription: 'Full Payment',
+      amount: 10000,
+    })
+    const row = getListing(deal.id)!.transaction.backOffice.receivables[0]!
+    return { deal, row }
+  }
+
+  it('files the deposit and moves credited and covered', () => {
+    const { deal, row } = voucherWithOneLine()
+    applyDeposit(deal.id, {
+      date: '2026-08-27',
+      amount: 2500,
+      referenceNumber: '123',
+      receivableAllocations: [{ targetId: row.id, amount: 2500 }],
+      deductionAllocations: [{ targetId: 'd1', amount: 250 }],
+    })
+    const back = getListing(deal.id)!.transaction.backOffice
+    expect(back.deposits).toHaveLength(1)
+    expect(back.deposits![0]!.amount).toBe(2500)
+    expect(back.deposits![0]!.referenceNumber).toBe('123')
+    expect(back.receivables[0]!.credited).toBe(2500)
+    expect(back.preSplitDeductions[0]!.covered).toBe(250)
+  })
+
+  it('keeps an overridden allocation exactly as it was entered', () => {
+    // The whole point of the Override toggle: the split the admin saved is the
+    // record of where the money went, not a default to be recomputed on read.
+    const { deal, row } = voucherWithOneLine()
+    applyDeposit(deal.id, {
+      date: '2026-08-27',
+      amount: 5000,
+      referenceNumber: '',
+      receivableAllocations: [{ targetId: row.id, amount: 1234.56 }],
+      deductionAllocations: [],
+    })
+    const back = getListing(deal.id)!.transaction.backOffice
+    expect(back.deposits![0]!.receivableAllocations).toEqual([
+      { targetId: row.id, amount: 1234.56 },
+    ])
+    // The deposit still states the cash that arrived, whatever was allocated.
+    expect(back.deposits![0]!.amount).toBe(5000)
+    expect(back.receivables[0]!.credited).toBe(1234.56)
+  })
+
+  it('clamps an allocation to what the line still owes', () => {
+    const { deal, row } = voucherWithOneLine()
+    applyDeposit(deal.id, {
+      date: '2026-08-27',
+      amount: 99999,
+      referenceNumber: '',
+      receivableAllocations: [{ targetId: row.id, amount: 99999 }],
+      deductionAllocations: [{ targetId: 'd1', amount: 99999 }],
+    })
+    const back = getListing(deal.id)!.transaction.backOffice
+    expect(back.receivables[0]!.credited).toBe(10000)
+    expect(back.preSplitDeductions[0]!.covered).toBe(1000)
+  })
+
+  it('drops allocations that moved nothing, and the deposit if none did', () => {
+    const { deal, row } = voucherWithOneLine()
+    applyDeposit(deal.id, {
+      date: '2026-08-27',
+      amount: 500,
+      referenceNumber: '',
+      receivableAllocations: [{ targetId: row.id, amount: 500 }],
+      deductionAllocations: [{ targetId: 'd1', amount: 0 }],
+    })
+    let back = getListing(deal.id)!.transaction.backOffice
+    expect(back.deposits![0]!.deductionAllocations).toEqual([])
+
+    // A deposit naming only lines that cannot take money is not filed at all.
+    applyDeposit(deal.id, {
+      date: '2026-08-27',
+      amount: 500,
+      referenceNumber: '',
+      receivableAllocations: [{ targetId: 'gone', amount: 500 }],
+      deductionAllocations: [],
+    })
+    back = getListing(deal.id)!.transaction.backOffice
+    expect(back.deposits).toHaveLength(1)
+  })
+
+  it('accumulates across deposits rather than overwriting', () => {
+    const { deal, row } = voucherWithOneLine()
+    const apply = (amount: number) =>
+      applyDeposit(deal.id, {
+        date: '2026-08-27',
+        amount,
+        referenceNumber: '',
+        receivableAllocations: [{ targetId: row.id, amount }],
+        deductionAllocations: [{ targetId: 'd1', amount: amount / 10 }],
+      })
+    apply(2000)
+    apply(3000)
+    const back = getListing(deal.id)!.transaction.backOffice
+    expect(back.deposits).toHaveLength(2)
+    expect(back.receivables[0]!.credited).toBe(5000)
+    expect(back.preSplitDeductions[0]!.covered).toBe(500)
+  })
+
+  it('refuses a Pending voucher and allows an Approved one', () => {
+    for (const status of ['Pending', 'Approved'] as const) {
+      const { deal, row } = voucherWithOneLine()
+      updateDealTransaction(deal.id, {
+        backOffice: { ...getListing(deal.id)!.transaction.backOffice, status },
+      })
+      applyDeposit(deal.id, {
+        date: '2026-08-27',
+        amount: 100,
+        referenceNumber: '',
+        receivableAllocations: [{ targetId: row.id, amount: 100 }],
+        deductionAllocations: [],
+      })
+      const back = getListing(deal.id)!.transaction.backOffice
+      expect(back.deposits ?? []).toHaveLength(status === 'Pending' ? 0 : 1)
     }
   })
 })

@@ -8,6 +8,7 @@ import type {
   DealInvoice,
   FinancialDeduction,
   FinancialReceivable,
+  VoucherDeposit,
   DealTask,
   DealTaskStatus,
   DealType,
@@ -57,6 +58,7 @@ import {
   invoiceLineItems,
   invoicePayerFileLabel,
 } from './invoices'
+import { depositReference } from './deposits'
 import { isQuickbooksSynced } from './quickbooks'
 import { applyLeaseSpaces } from './leaseSpaceFixtures'
 
@@ -1706,6 +1708,49 @@ function generateListings(
       }
     }
 
+    // The deposits behind the credited receivables above.
+    //
+    // The seed sets `credited` directly — it is the running total, and every
+    // reader from `invoiceLineItems` to the AI tools takes it from there — but a
+    // credited row with no deposit under it would expand to an empty child table
+    // and read as money that arrived from nowhere. So each credited line gets the
+    // one deposit that paid it.
+    //
+    // Nothing here draws from faker, deliberately. Hashed from the receivable id
+    // the way `isQuickbooksSynced` is, so adding deposits costs the faker stream
+    // nothing and every property, contact and deal downstream stays exactly where
+    // it was. The alternative — a `faker.number.int` for the reference — would
+    // have shifted the entire generated dataset for a four-digit string nobody
+    // reads.
+    //
+    // Deductions are deliberately left uncovered. `preSplitDeductions` seeds
+    // `covered: null`, and crediting them here would mean splitting each seeded
+    // deposit across two tables to keep the two consistent — arithmetic in the
+    // seed standing in for a deposit nobody applied through the modal. An
+    // uncovered deduction is a real state, and it is the one the Pre-Split
+    // Deductions table already renders.
+    const deposits: VoucherDeposit[] = []
+    for (const receivable of receivables) {
+      if (receivable.credited <= 0) continue
+      // Paid a little after it was billed, which is the ordinary way round.
+      const paidAt = new Date(
+        Date.parse(`${receivable.dueDate}T00:00:00`) + 2 * 86_400_000,
+      )
+      deposits.push({
+        id: `deposit-${receivable.id}`,
+        date: paidAt.toISOString().slice(0, 10),
+        amount: receivable.credited,
+        // A wire reference, spelled from the id so it is stable across reseeds.
+        referenceNumber: String(depositReference(receivable.id)),
+        createdAt: paidAt.toISOString(),
+        createdById: CURRENT_USER.id,
+        receivableAllocations: [
+          { targetId: receivable.id, amount: receivable.credited },
+        ],
+        deductionAllocations: [],
+      })
+    }
+
     const grossScheduledIncome = Math.round(salePrice * 0.09)
     const otherIncome = Math.round(grossScheduledIncome * 0.04)
     const totalScheduledIncome = grossScheduledIncome + otherIncome
@@ -1819,6 +1864,7 @@ function generateListings(
           payerContactIds,
           preSplitDeductions,
           receivables,
+          deposits,
         },
       },
       marketing: {
