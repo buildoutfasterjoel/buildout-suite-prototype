@@ -1628,8 +1628,18 @@ function generateListings(
     // Hashed from the id the push already drew, so this costs the faker stream
     // nothing (see `isQuickbooksSynced`) — and every voucher gets a mix of
     // connected and unconnected lines, whatever stage its deal is at.
+    //
+    // Gated on the payer as well as the line: QuickBooks holds no A/R record
+    // against a customer it has never heard of, so a synced receivable under an
+    // unsynced payer is a pair that cannot happen. Now that the unsynced state
+    // is visible on both, that contradiction would be on screen side by side.
+    // Looked up in `propertyContacts` rather than through `getContact`, which
+    // the seed cannot call — it is what builds the store.
+    const contactsById = new Map(propertyContacts.map((c) => [c.id, c]))
     for (const receivable of receivables) {
-      receivable.quickbooksSynced = isQuickbooksSynced(receivable.id)
+      const payer = contactsById.get(receivable.payerContactId)
+      receivable.quickbooksSynced =
+        payer?.quickbooksSynced === true && isQuickbooksSynced(receivable.id)
     }
 
     // Derived from the receivables rather than assembled separately: the two

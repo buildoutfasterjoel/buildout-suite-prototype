@@ -202,8 +202,9 @@ describe('stage-scaled detail', () => {
     expect(child.transaction.leaseCommencementDate).not.toBeNull()
     expect(child.transaction.closeDate).not.toBeNull()
     expect(child.transaction.backOffice.receivables).toHaveLength(1)
-    // Pinned synced, not hashed from the id: this voucher is Approved and its
-    // invoice has gone out, so the line is one QuickBooks would already hold.
+    // Taken from the tenant, so a settled bill can never read as connected
+    // above a tenant that is not. The fixture's tenant is in QuickBooks, so the
+    // suite's receivable is too.
     expect(child.transaction.backOffice.receivables[0].quickbooksSynced).toBe(true)
     // Both halves of "who leased it": the contact link the vouchers index reads,
     // and the roster's own Tenant Name copy.

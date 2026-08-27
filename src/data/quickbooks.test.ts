@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isQuickbooksSynced } from './quickbooks'
+import { invoiceQuickbooksSynced, isQuickbooksSynced } from './quickbooks'
 
 describe('isQuickbooksSynced', () => {
   it('gives one id the same answer every time', () => {
@@ -36,5 +36,42 @@ describe('isQuickbooksSynced', () => {
 
   it('answers for an empty id without throwing', () => {
     expect(typeof isQuickbooksSynced('')).toBe('boolean')
+  })
+})
+
+describe('invoiceQuickbooksSynced', () => {
+  const receivables = [
+    { id: 'r1', quickbooksSynced: true },
+    { id: 'r2', quickbooksSynced: true },
+    { id: 'r3', quickbooksSynced: false },
+    { id: 'r4' },
+  ]
+
+  it('is synced when every billed receivable is', () => {
+    expect(
+      invoiceQuickbooksSynced([{ receivableId: 'r1' }, { receivableId: 'r2' }], receivables),
+    ).toBe(true)
+  })
+
+  it('is not synced when any one line is not', () => {
+    // One missing line is enough: the document as a whole is not in QuickBooks.
+    expect(
+      invoiceQuickbooksSynced([{ receivableId: 'r1' }, { receivableId: 'r3' }], receivables),
+    ).toBe(false)
+  })
+
+  it('treats an absent flag as not synced', () => {
+    expect(invoiceQuickbooksSynced([{ receivableId: 'r4' }], receivables)).toBe(false)
+  })
+
+  it('is not synced when a billed receivable has been deleted', () => {
+    // The line still names it, but there is nothing left to prove it is there.
+    expect(invoiceQuickbooksSynced([{ receivableId: 'gone' }], receivables)).toBe(false)
+  })
+
+  it('is not synced with no lines at all', () => {
+    // `every` on an empty array is vacuously true, which would have made an
+    // empty invoice claim to be in QuickBooks.
+    expect(invoiceQuickbooksSynced([], receivables)).toBe(false)
   })
 })

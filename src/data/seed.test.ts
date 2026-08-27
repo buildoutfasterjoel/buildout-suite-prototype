@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { generateTasks, generateDataset } from './seed'
-import { isQuickbooksSynced } from './quickbooks'
+import { invoiceQuickbooksSynced, isQuickbooksSynced } from './quickbooks'
 import { findTeammate } from './teammates'
 import type { ListingStage } from './types'
 import { buildContactTimeline } from '#/components/contacts/timelineArcs'
@@ -497,12 +497,56 @@ describe('quickbooks sync seed', () => {
     }
   })
 
-  it('flags every receivable on every voucher', () => {
+  it('flags every receivable from its own id AND its payer', () => {
+    const byId = new Map(contacts.map((c) => [c.id, c]))
     const all = listings.flatMap((l) => l.transaction.backOffice.receivables)
     expect(all.length).toBeGreaterThan(0)
     for (const receivable of all) {
-      expect(receivable.quickbooksSynced).toBe(isQuickbooksSynced(receivable.id))
+      const payer = byId.get(receivable.payerContactId)
+      expect(receivable.quickbooksSynced).toBe(
+        payer?.quickbooksSynced === true && isQuickbooksSynced(receivable.id),
+      )
     }
+  })
+
+  it('never shows a receivable in QuickBooks under a payer that is not', () => {
+    // The invariant the whole chain exists for. QuickBooks holds no A/R record
+    // against a customer it has never heard of, and now that both states are
+    // visible, such a pair would be on screen one column apart.
+    const byId = new Map(contacts.map((c) => [c.id, c]))
+    for (const deal of listings) {
+      for (const receivable of deal.transaction.backOffice.receivables) {
+        if (!receivable.quickbooksSynced) continue
+        expect(byId.get(receivable.payerContactId)?.quickbooksSynced).toBe(true)
+      }
+    }
+  })
+
+  it('never shows an invoice in QuickBooks above a receivable that is not', () => {
+    // Same invariant, one link further down. The invoice badge is derived, so
+    // this is really a check that the seed cannot produce an invoice whose lines
+    // point at receivables it disagrees with.
+    for (const deal of listings) {
+      const receivables = deal.transaction.backOffice.receivables
+      for (const invoice of deal.invoices ?? []) {
+        if (!invoiceQuickbooksSynced(invoice.lineItems, receivables)) continue
+        for (const line of invoice.lineItems) {
+          const billed = receivables.find((r) => r.id === line.receivableId)
+          expect(billed?.quickbooksSynced).toBe(true)
+        }
+      }
+    }
+  })
+
+  it('leaves both states reachable on the invoices page', () => {
+    const states = new Set(
+      listings.flatMap((l) =>
+        (l.invoices ?? []).map((i) =>
+          invoiceQuickbooksSynced(i.lineItems, l.transaction.backOffice.receivables),
+        ),
+      ),
+    )
+    expect(states).toEqual(new Set([true, false]))
   })
 
   it('gives the receivables both states, so the badge column is never uniform', () => {
