@@ -4,13 +4,12 @@ import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
   faScrewdriverWrench,
   faCircleNotch,
-  faCheck,
   faPencil,
   faListCheck,
   faMagnifyingGlass,
   faFilter,
 } from "@fortawesome/pro-regular-svg-icons";
-import { toolLabel } from "./toolLabel";
+import { toolLabel, toolDoneLabel } from "./toolLabel";
 import { useToolPhase } from "#/ai/toolPhase";
 
 /**
@@ -41,10 +40,18 @@ const PHASE_ICONS: Record<string, IconDefinition> = {
 };
 
 /**
- * A running (or finished) tool call, as a gradient pill (Figma node 102:3967).
- * The design specifies the in-flight state; a settled call keeps the pill and
- * swaps the spinner for a check, so the chip reads as a completed step rather
- * than one still spinning forever.
+ * A running tool call, as a gradient pill (Figma node 102:3967).
+ *
+ * The moment it lands the pill is gone, replaced by one muted past-tense line —
+ * "Retrieved contact details" — in the same voice as a `ChatSection` header
+ * (`.assistant-section__label`), minus the caret, because there is nothing
+ * folded behind it to open.
+ *
+ * The pill earns its colour by being *live*: it is the one thing on screen the
+ * broker is waiting on. A settled call is bookkeeping, and keeping the gradient
+ * and a check on it left a colourful badge drawing the eye to a step that had
+ * already finished, over the answer it produced. The line still says what
+ * happened; it just stops competing with the reply for attention.
  *
  * Under a *slow* call the chip drops a connector and a status line saying what
  * the tool is doing and how long it's been at it (Figma node 252:18531). A
@@ -61,10 +68,14 @@ export function ToolChip({
   name,
   running,
   labels,
+  doneLabels,
 }: {
   name: string;
   running: boolean;
   labels?: Record<string, string>;
+  /** The surface's past-tense vocabulary, for the settled line — see
+   *  `toolDoneLabel`. */
+  doneLabels?: Record<string, string>;
 }) {
   const phase = useToolPhase((s) => s.phases[name]);
   const [elapsedMs, setElapsedMs] = useState(0);
@@ -77,18 +88,21 @@ export function ToolChip({
     return () => clearInterval(id);
   }, [running]);
 
-  const explaining = running && elapsedMs >= EXPLAIN_AFTER_MS;
+  // A landed call is a line of prose, not a control. `<div>`, like the other
+  // `.assistant-section__label` users, so a run of them stacks on its own
+  // without the chip row having to know which state each child is in.
+  if (!running) {
+    return <div className="assistant-section__label">{toolDoneLabel(name, doneLabels, labels)}</div>;
+  }
+
+  const explaining = elapsedMs >= EXPLAIN_AFTER_MS;
 
   return (
     <span className="assistant-tool-chip__stack">
       <span className="assistant-tool-chip">
         <FontAwesomeIcon icon={faScrewdriverWrench} className="assistant-tool-chip__icon" />
         {toolLabel(name, labels)}
-        <FontAwesomeIcon
-          icon={running ? faCircleNotch : faCheck}
-          spin={running}
-          className="assistant-tool-chip__spinner"
-        />
+        <FontAwesomeIcon icon={faCircleNotch} spin className="assistant-tool-chip__spinner" />
       </span>
 
       {explaining && (

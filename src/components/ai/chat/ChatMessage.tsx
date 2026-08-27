@@ -33,12 +33,16 @@ export function ChatMessage({
   chipCalls,
   showText,
   labels,
+  doneLabels,
   children,
 }: {
   message: UIMessage;
   chipCalls: ToolCallPart[];
   showText: boolean;
   labels?: Record<string, string>;
+  /** The same vocabulary in the past tense, for landed calls — see
+   *  `toolDoneLabel`. */
+  doneLabels?: Record<string, string>;
   children?: ReactNode;
 }) {
   const isUser = message.role === "user";
@@ -67,9 +71,19 @@ export function ChatMessage({
                 <MarkdownMessage content={text} />
               ))}
             {chipCalls.length > 0 && (
-              <div className="d-flex flex-wrap gap-2 mt-2">
+              // A column, not a wrapping row. Two settled calls are two muted
+              // sentences — "Retrieved contact details" beside "Pulled deals"
+              // reads as one broken line — and a running pill sits just as well
+              // stacked as it did inline.
+              <div className="d-flex flex-column align-items-start gap-2 mt-2">
                 {chipCalls.map((p, i) => (
-                  <ToolChip key={i} name={p.name} running={p.output === undefined} labels={labels} />
+                  <ToolChip
+                    key={i}
+                    name={p.name}
+                    running={p.output === undefined}
+                    labels={labels}
+                    doneLabels={doneLabels}
+                  />
                 ))}
               </div>
             )}

@@ -27,7 +27,7 @@ import { useHandsFree } from "#/ai/voice/useHandsFree";
 import { voiceEngine } from "#/ai/voice/voiceEngine";
 import { useEditorStore } from "../store";
 import { createEditorTools } from "../ai/editorTools";
-import { EDITOR_TOOL_LABELS } from "../ai/editorToolDefs";
+import { EDITOR_TOOL_LABELS, EDITOR_TOOL_LABELS_DONE } from "../ai/editorToolDefs";
 import { buildEditorContext, serializeEditorContext } from "../ai/documentContext";
 import { useOttoThread } from "./ottoThread";
 
@@ -299,6 +299,7 @@ export function OttoPanel() {
                   chipCalls={toolCalls}
                   showText={!!text}
                   labels={EDITOR_TOOL_LABELS}
+                  doneLabels={EDITOR_TOOL_LABELS_DONE}
                 />
               );
             })}

@@ -18,7 +18,11 @@ import {
   setPageLocked,
 } from "./editorTools";
 import { TEMPLATES } from "../templates";
-import { EDITOR_TOOL_DEFS, EDITOR_TOOL_LABELS } from "./editorToolDefs";
+import {
+  EDITOR_TOOL_DEFS,
+  EDITOR_TOOL_LABELS,
+  EDITOR_TOOL_LABELS_DONE,
+} from "./editorToolDefs";
 import { createBlock } from "../blocks/blockFactory";
 import type { Property } from "#/data/types";
 import type { ColumnsBlock, ListBlock, SectionBlock, TableBlock } from "../types";
@@ -807,6 +811,14 @@ describe("EDITOR_TOOL_DEFS", () => {
     // catches.
     for (const def of EDITOR_TOOL_DEFS) {
       expect(EDITOR_TOOL_LABELS[def.name]).toBeDefined();
+    }
+  });
+
+  it("has a past-tense label for every tool", () => {
+    // The settled line reads in the past tense; a tool missing from this map
+    // falls back to the running label and reads as still in flight.
+    for (const def of EDITOR_TOOL_DEFS) {
+      expect(EDITOR_TOOL_LABELS_DONE[def.name]).toBeDefined();
     }
   });
 
