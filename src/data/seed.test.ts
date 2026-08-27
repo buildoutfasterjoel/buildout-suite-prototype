@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { generateTasks, generateDataset } from './seed'
+import { isQuickbooksSynced } from './quickbooks'
 import { findTeammate } from './teammates'
 import type { ListingStage } from './types'
 import { buildContactTimeline } from '#/components/contacts/timelineArcs'
@@ -474,5 +475,40 @@ describe('invoice seed', () => {
       expect(new Set(names).size).toBe(names.length)
       for (const name of names) expect(name).toMatch(/_Invoice_\d+\.pdf$/)
     }
+  })
+})
+
+describe('quickbooks sync seed', () => {
+  const { listings, contacts } = generateDataset()
+
+  it('flags every seeded contact, and both states appear', () => {
+    const flags = contacts.map((c) => c.quickbooksSynced)
+    for (const flag of flags) expect(typeof flag).toBe('boolean')
+    expect(flags.filter(Boolean).length).toBeGreaterThan(0)
+    expect(flags.filter((f) => f === false).length).toBeGreaterThan(0)
+  })
+
+  it('derives each contact flag from its id rather than drawing it', () => {
+    // Pinning this is what protects the faker stream: the moment someone
+    // replaces the hash with a `faker` call, every value seeded after the
+    // contact loop moves, and the flagship story's contacts move with them.
+    for (const contact of contacts) {
+      expect(contact.quickbooksSynced).toBe(isQuickbooksSynced(contact.id))
+    }
+  })
+
+  it('flags every receivable on every voucher', () => {
+    const all = listings.flatMap((l) => l.transaction.backOffice.receivables)
+    expect(all.length).toBeGreaterThan(0)
+    for (const receivable of all) {
+      expect(receivable.quickbooksSynced).toBe(isQuickbooksSynced(receivable.id))
+    }
+  })
+
+  it('gives the receivables both states, so the badge column is never uniform', () => {
+    const all = listings.flatMap((l) => l.transaction.backOffice.receivables)
+    const synced = all.filter((r) => r.quickbooksSynced)
+    expect(synced.length).toBeGreaterThan(0)
+    expect(synced.length).toBeLessThan(all.length)
   })
 })

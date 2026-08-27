@@ -110,6 +110,12 @@ export interface VoucherParty {
   email: string
   phone: string
   /**
+   * Whether the contact has a counterpart in QuickBooks — the party card's sync
+   * badge. Read here with the rest of the display fields, so a contact that
+   * gets connected shows as connected on every voucher that names them.
+   */
+  quickbooksSynced: boolean
+  /**
    * False when the contact is no longer in the store.
    *
    * The row still renders. A voucher is a record of who was billed, and losing
@@ -129,6 +135,8 @@ export function voucherParty(contactId: string): VoucherParty {
       company: '',
       email: '',
       phone: '',
+      // A contact we cannot read cannot be claimed to be connected to anything.
+      quickbooksSynced: false,
       exists: false,
     }
   }
@@ -138,6 +146,7 @@ export function voucherParty(contactId: string): VoucherParty {
     company: contact.company,
     email: contact.email,
     phone: contact.phone,
+    quickbooksSynced: contact.quickbooksSynced === true,
     exists: true,
   }
 }

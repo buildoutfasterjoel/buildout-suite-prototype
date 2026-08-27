@@ -1162,6 +1162,14 @@ export interface FinancialReceivable {
   billingDescription: string
   amount: number
   credited: number
+  /**
+   * True when this receivable has a counterpart A/R record in QuickBooks.
+   *
+   * Its own flag rather than a read of the payer's: a contact can be connected
+   * while a line billed to them has not been pushed across yet, which is
+   * exactly the state the badge column is there to show.
+   */
+  quickbooksSynced?: boolean
 }
 
 export interface Comp {
@@ -1294,6 +1302,15 @@ export interface Contact {
   >
   phoneStatus: PhoneStatus
   doNotCall: boolean
+  /**
+   * True when this contact has a counterpart record in QuickBooks.
+   *
+   * Display only — see `quickbooks.ts`. Optional because absent means "not
+   * connected", which lets the contact literals in the fixtures and the create
+   * paths stay as they are: a contact made inside the app has not been synced
+   * to anything yet, and that is the honest default.
+   */
+  quickbooksSynced?: boolean
   /** Job title / position, e.g. "Managing Member". */
   title: string
   /** ISO timestamp the contact was added to the book of business. */

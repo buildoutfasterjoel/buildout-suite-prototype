@@ -508,6 +508,12 @@ function applyStageDetail(
         billingDescription: `Lease commission — Suite ${suiteNumber}`,
         amount: commissionAmount,
         credited: 0,
+        // Pinned true rather than hashed from the id like the pipeline's
+        // receivables. This voucher is Approved and its invoice has gone out,
+        // which is precisely the line that would already be in QuickBooks —
+        // leaving it to a hash would let the flagship suite show an unsynced
+        // badge on a settled bill.
+        quickbooksSynced: true,
       },
     ],
   }

@@ -57,6 +57,7 @@ import {
   invoiceLineItems,
   invoicePayerFileLabel,
 } from './invoices'
+import { isQuickbooksSynced } from './quickbooks'
 import { applyLeaseSpaces } from './leaseSpaceFixtures'
 
 const SEED = 20240101
@@ -1122,8 +1123,15 @@ function generateContact(allPropertyIds: string[]): Contact {
     faker.number.int({ min: 1, max: 4 }),
   )
 
+  // Drawn here rather than inline in the literal below, so the sync flag can
+  // hash it. Immediately before the return, which is what keeps the ORDER of
+  // faker draws — and therefore every value downstream of them — identical to
+  // what it was; hoisting this to the top of the function would re-address the
+  // whole contact book.
+  const id = faker.string.uuid()
+
   return {
-    id: faker.string.uuid(),
+    id,
     firstName: faker.person.firstName(),
     lastName: faker.person.lastName(),
     email: faker.internet.email(),
@@ -1146,6 +1154,7 @@ function generateContact(allPropertyIds: string[]): Contact {
     inquiries,
     phoneStatus,
     doNotCall: faker.datatype.boolean(0.04),
+    quickbooksSynced: isQuickbooksSynced(id),
     title: faker.helpers.arrayElement(TITLE_POOL),
     createdAt: faker.date.past({ years: 1 }).toISOString(),
     lastTouch: LAST_TOUCH_BY_SOURCE[source],
@@ -1613,6 +1622,14 @@ function generateListings(
         amount: commissionAmount,
         credited: 0,
       })
+    }
+
+    // Sync status, applied in one pass rather than repeated on each push above.
+    // Hashed from the id the push already drew, so this costs the faker stream
+    // nothing (see `isQuickbooksSynced`) — and every voucher gets a mix of
+    // connected and unconnected lines, whatever stage its deal is at.
+    for (const receivable of receivables) {
+      receivable.quickbooksSynced = isQuickbooksSynced(receivable.id)
     }
 
     // Derived from the receivables rather than assembled separately: the two
