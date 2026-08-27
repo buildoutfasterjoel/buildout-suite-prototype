@@ -4662,6 +4662,40 @@ body:has(.design-toggle-fab) .toast-viewport {
       text-decoration: line-through;
     }
   }
+
+  // A step that also says what it acted on — the deal build's scanned file
+  // names, the property its facts came from. The label keeps its own line and
+  // the detail sits under it, muted, the same pairing the deal-creation modal
+  // uses (`ai-deal-progress__detail`).
+  &__body {
+    display: flex;
+    flex: 1 0 0;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  &__detail {
+    font-size: 12px;
+    line-height: 16px;
+    color: colors.$storm-grey-500;
+    overflow-wrap: anywhere;
+  }
+
+  // Two-line rows top-align: centring a 35px stack against a 16px glyph floats
+  // the check halfway down the label it belongs to.
+  &--stacked {
+    align-items: flex-start;
+
+    .assistant-task-row__status {
+      margin-top: 1px;
+    }
+
+    // The label is a row inside the column now, not the column itself — the
+    // shared `flex: 1 0 0` would resolve against the cross axis and flatten it.
+    .assistant-task-row__label {
+      flex: 0 0 auto;
+    }
+  }
 }
 
 // Assistant rail — the Next Actions card (Figma node 193:4697). The one card

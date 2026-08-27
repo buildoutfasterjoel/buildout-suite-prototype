@@ -64,9 +64,12 @@ import { DayPlanCard } from "#/components/ai/DayPlanCard";
 import { useDayPlanQueue, type CompletedAction } from "#/components/ai/useDayPlanQueue";
 import { CompletedActionCard } from "#/components/ai/CompletedActionCard";
 import { ActionPlanChecklist } from "#/components/ai/ActionPlanChecklist";
+import { DealBuildChecklist, type DealBuildData } from "#/components/ai/DealBuildChecklist";
 import { matchesPlanIntent, type DayPlanItem } from "#/ai/dayPlan";
 import { formatCurrency } from "#/components/deals/dealDisplay";
 import { useHeroOffer, matchOfferIntent } from "#/ai/heroOffer";
+import { useUnderwritingOffer, matchUnderwritingIntent } from "#/ai/underwritingOffer";
+import { useBovFlow } from "#/components/contacts/useBovFlow";
 import { getContact } from "#/data/store";
 import { signalText } from "#/data/signal";
 import { generateCallBrief, callBriefFallback } from "#/ai/generate";
@@ -222,6 +225,17 @@ function answerOf(output: unknown): string | null {
 }
 
 /** Extract a just-sent email (from `send_email`) from a tool-call's output. */
+/**
+ * The scan → map → create working the `createDeal` tool reports, if this result
+ * came from it. Present on every successful create, so the transcript shows the
+ * same steps the AI deal modal does.
+ */
+function dealBuildOf(output: unknown): DealBuildData | null {
+  const o = (output ?? {}) as { dealBuild?: unknown };
+  const b = o.dealBuild as DealBuildData | undefined;
+  return b && Array.isArray(b.documents) ? b : null;
+}
+
 function sentEmailOf(output: unknown): SentEmailData | null {
   const o = (output ?? {}) as { sentEmail?: unknown };
   return o.sentEmail ? (o.sentEmail as SentEmailData) : null;
@@ -425,6 +439,7 @@ function ToolResultCards({
   const marketingPackage = marketingPackageOf(output);
   const dayPlan = dayPlanOf(output);
   const sentEmail = sentEmailOf(output);
+  const dealBuild = dealBuildOf(output);
   const hasRich = !!(emailDraft || marketingPackage || brief || answer || dayPlan || sentEmail);
   const total = deals.length + contacts.length + properties.length;
 
@@ -477,6 +492,8 @@ function ToolResultCards({
     const p = properties[0];
     return (
       <div className="d-flex flex-column" style={{ gap: 12 }}>
+        {/* Above the card, not below: these are the steps that produced it. */}
+        {dealBuild && <DealBuildChecklist build={dealBuild} />}
         {d && <DealCardById listingId={d.id} showStatus />}
         {c && (
           <ResultCard
@@ -759,6 +776,7 @@ function splitToolCalls(
           marketingPackageOf(p.output) !== null ||
           dayPlanOf(p.output) !== null ||
           sentEmailOf(p.output) !== null ||
+          dealBuildOf(p.output) !== null ||
           p.name === "plan_my_day"),
     );
 
@@ -776,6 +794,7 @@ function splitToolCalls(
       marketingPackageOf(p.output) !== null ||
       dayPlanOf(p.output) !== null ||
       sentEmailOf(p.output) !== null ||
+      dealBuildOf(p.output) !== null ||
       // Claim plan_my_day by name, before its output arrives: otherwise it spends
       // the streaming window classified as a chip and the tool's raw name flashes
       // above the card that replaces it.
@@ -975,6 +994,35 @@ export function AssistantSidebar() {
       // it, including the greeting's own "Yes, call now" / "Brief me first".
       setView("chat");
 
+      // A pending underwriting offer is answered here rather than by the model:
+      // "yes" opens the wizard the broker then drives, and a round-trip between
+      // the word and the dialog buys nothing but latency and a chance of the
+      // model paraphrasing instead of acting. Anything that isn't a yes clears
+      // the offer and falls through to the agent.
+      const uw = useUnderwritingOffer.getState().pendingOffer;
+      if (uw) {
+        if (matchUnderwritingIntent(content)) {
+          useUnderwritingOffer.getState().clearOffer();
+          setMessages([
+            ...messagesRef.current,
+            { id: `uw-yes-${uw.dealId}`, role: "user", parts: [{ type: "text", content }] },
+            {
+              id: `uw-open-${uw.dealId}`,
+              role: "assistant",
+              parts: [
+                {
+                  type: "text",
+                  content: `Opening the underwriting setup for ${uw.dealName} — pick a strategy and how deep to go.`,
+                },
+              ],
+            },
+          ] as UIMessage[]);
+          useBovFlow.getState().openSetup(uw.dealId, uw.contactId);
+          return;
+        }
+        useUnderwritingOffer.getState().clearOffer(); // fall through to the agent
+      }
+
       // A pending hero offer (§Phase 4A) takes priority over the normal agent
       // turn: "yes" opens the live call, "brief me first" generates a call
       // brief, and anything else clears the offer and falls through below.
@@ -1041,6 +1089,9 @@ export function AssistantSidebar() {
     },
     [isLoading, sendMessage, setMessages, messages],
   );
+
+  const underwritingOffer = useUnderwritingOffer((s) => s.pendingOffer);
+  const underwritingAsked = useUnderwritingOffer((s) => s.asked);
 
   const voiceEnabled = useVoice((s) => s.voiceEnabled);
   const toggleVoice = useVoice((s) => s.toggleVoice);
@@ -1529,6 +1580,35 @@ export function AssistantSidebar() {
       } as UIMessage,
     ]);
   }, [pendingLine, consumeLine, setMessages, messages]);
+
+  /**
+   * Offer the underwriting on a deal the assistant just created — but only once
+   * the turn it was created in has finished.
+   *
+   * Waiting on `isLoading` rather than firing from the tool: the model is still
+   * writing its own "Done — created the deal" confirmation while the tool
+   * result renders, and a question appended into that gap lands *above* the
+   * sentence it is following up on, then gets buried by it.
+   */
+  useEffect(() => {
+    if (!underwritingOffer || underwritingAsked || isLoading) return;
+    useUnderwritingOffer.getState().markAsked();
+    setMessages([
+      ...messagesRef.current,
+      {
+        id: `uw-offer-${underwritingOffer.dealId}`,
+        role: "assistant",
+        parts: [
+          {
+            type: "text",
+            content:
+              `It's got the financials on it, so I can underwrite it now — ` +
+              `want me to start building the underwriting on ${underwritingOffer.dealName}?`,
+          },
+        ],
+      } as UIMessage,
+    ]);
+  }, [underwritingOffer, underwritingAsked, isLoading, setMessages]);
 
   // A focus request from another surface (e.g. omni search "Ask Otto") focuses the
   // composer input, so once the queued prompt auto-sends the user is already

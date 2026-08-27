@@ -33,6 +33,7 @@ import {
   voucherSummary,
   researchSummary,
   ownedPropertiesFor,
+  dealOpportunityFor,
 } from "#/ai/recordQueries";
 import { composeBookSnapshot } from "#/ai/bookSnapshot";
 import { useListingsFilter } from "#/routes/_shell/listings/-useListingsFilter";
@@ -62,6 +63,12 @@ import { buildDayPlan, emptyDayPlanHeadline } from "#/ai/dayPlan";
 import { parseDueDate } from "#/ai/dueDate";
 import { buildAssistantContext } from "#/ai/context";
 import { emptyDraft } from "#/data/createListing";
+import { documentsFromContact } from "#/components/contacts/useContactSession";
+import {
+  dealSupportsUnderwriting,
+  propertyQualifiesForUnderwriting,
+} from "#/components/deals/underwriting/eligibility";
+import { useUnderwritingOffer } from "#/ai/underwritingOffer";
 import { callFlow } from "#/components/call/callFlow";
 import { useComposeFocus } from "#/components/contacts/useComposeFocus";
 import {
@@ -460,6 +467,10 @@ export function createClientTools({
         // deal for Rosa" got "she has no property on file" from an assistant
         // staring at a panel that said otherwise.
         ownedProperties: ownedPropertiesFor(detail.contact).map(propertySummary),
+        // A building of theirs with nothing tracking it, when something says now
+        // is the moment. `null` rather than omitted — an `undefined` in a tool
+        // result throws on serialize.
+        dealOpportunity: dealOpportunityFor(contactId) ?? null,
       };
     }),
 
@@ -511,6 +522,12 @@ export function createClientTools({
             "Give me either an existing propertyId or a street address — I won't guess which building this is.",
         };
       }
+      // Files the party to the deal has emailed in this session — Rosa's T-12
+      // and rent roll, say. The timeline's own "Start a Deal" action already
+      // attaches them (see `createRosaProposalDeal`); the rail's deal carries
+      // the same set, so the two ways to start a deal produce one record.
+      const partyId = sellerContactId ?? buyerContactId ?? "";
+      const sent = partyId ? documentsFromContact(partyId) : [];
       const { deal } = createDeal({
         ...emptyDraft(),
         propertyId: linked?.id ?? "",
@@ -524,7 +541,30 @@ export function createClientTools({
         dealSide: buyerContactId && !sellerContactId ? "buyer" : "seller",
         sellerContactId: sellerContactId ?? "",
         buyerContactId: buyerContactId ?? "",
+        documents: sent.map(({ name: docName, meta }) => ({
+          id: crypto.randomUUID(),
+          name: docName,
+          // "PDF · 268 KB" → "268 KB"; the chip renders the size on its own.
+          size: meta.split("·").pop()?.trim() ?? "",
+          uploadedAt: new Date().toISOString(),
+        })),
       });
+      // Offer the underwriting once the deal exists, but only where it can
+      // actually run: a suite never gets one (`dealSupportsUnderwriting`), nor
+      // does an asset class the Cactus flow doesn't cover. Answered in the
+      // rail's `send()` — see `underwritingOffer`.
+      if (
+        sellerContactId &&
+        dealSupportsUnderwriting(deal) &&
+        propertyQualifiesForUnderwriting(linked) &&
+        deal.underwriting == null
+      ) {
+        useUnderwritingOffer.getState().offer({
+          dealId: deal.id,
+          contactId: sellerContactId,
+          dealName: deal.name,
+        });
+      }
       return {
         // An ARRAY, not a bare `deal`, and that is the whole difference between
         // a card and nothing: `entitiesOf` in the rail reads `deals` /
@@ -537,6 +577,13 @@ export function createClientTools({
         // the broker's building when it actually made a new one.
         usedExistingProperty: !!linked,
         propertyId: deal.propertyId,
+        // Drives the transcript's scan → map → create checklist, so starting a
+        // deal from the rail shows the same working as the modal flow does.
+        dealBuild: {
+          documents: sent.map((d) => d.name),
+          label: `${deal.name} · Pitching`,
+          source: linked ? `${linked.name}'s record` : "The address you gave me",
+        },
       };
     }),
 
@@ -845,7 +892,11 @@ export function createClientTools({
       const { brief } = await withPhase("research_contact", `Reading ${name}'s record`, () =>
         generateContactBrief({ data: { data: composeContactData(contactId), name } }),
       );
-      return { brief, contactName: name };
+      // Reading someone's whole record is the deepest look the assistant takes,
+      // so an untracked building of theirs belongs in the answer. Grounded
+      // rather than inferred: the offer has to be able to name the property id
+      // it would create the deal on.
+      return { brief, contactName: name, dealOpportunity: dealOpportunityFor(contactId) ?? null };
     }),
 
     answerAboutContactDef.client(async (args) => {
@@ -856,7 +907,7 @@ export function createClientTools({
       const { brief } = await withPhase("answer_about_contact", `Reading ${name}'s record`, () =>
         generateContactBrief({ data: { data: composeContactData(contactId), name, question } }),
       );
-      return { brief, contactName: name };
+      return { brief, contactName: name, dealOpportunity: dealOpportunityFor(contactId) ?? null };
     }),
 
     analyzeBookDef.client(async (args) => {
@@ -1101,7 +1152,14 @@ export function createClientTools({
         return { error: "Give me a contact or a deal to read the activity on." };
       }
       const { total, activities } = searchActivities(q);
-      return { total, activities };
+      // Reading someone's timeline is exactly when an untracked building should
+      // surface: the broker is looking at what just happened, and whether it has
+      // a deal behind it is the next question. See `dealOpportunityFor`.
+      return {
+        total,
+        activities,
+        dealOpportunity: q.contactId ? (dealOpportunityFor(q.contactId) ?? null) : null,
+      };
     }),
 
     activityLoadDef.client(async (args) => {

@@ -6,6 +6,7 @@ import { useContactSession } from "#/components/contacts/useContactSession";
 import {
   hasInbound,
   ownedPropertiesFor,
+  dealOpportunityFor,
   searchTasks,
   loadTask,
   searchActivities,
@@ -139,6 +140,67 @@ describe("ownedPropertiesFor", () => {
     );
     if (!bare) return;
     expect(ownedPropertiesFor(bare)).toEqual([]);
+  });
+});
+
+describe("dealOpportunityFor", () => {
+  const rosa = () =>
+    [...useDataStore.getState().contacts.values()].find((c) => c.heroKey === "rosa")!;
+
+  it("offers the untracked building once the owner has sent something", () => {
+    const r = rosa();
+    // The story beat: her financials land on the timeline as an inbound email
+    // with the T-12 and rent roll attached, and no deal exists on the building.
+    useContactSession.getState().addSimEvent(r.id, {
+      id: "sim-financials",
+      type: "inbound-email",
+      actor: { name: "Rosa Delgado" },
+      direction: "in",
+      timestamp: new Date().toISOString(),
+      seq: 2_000_000,
+      subject: "Miguel's files",
+      body: "",
+      hasAttachment: true,
+      attachments: [{ name: "T12.pdf" }, { name: "Rent Roll.xlsx" }],
+      source: "user",
+    } as never);
+
+    const opp = dealOpportunityFor(r.id)!;
+    expect(opp).not.toBeNull();
+    expect(opp.propertyName).toMatch(/delgado/i);
+    expect(opp.reason).toContain("T12.pdf");
+  });
+
+  it("stays quiet on ownership alone — every owner would qualify", () => {
+    const store = useDataStore.getState();
+    // An owner with no signal, nothing inbound, and not being pitched.
+    const quiet = [...store.contacts.values()].find(
+      (c) =>
+        (c.ownedPropertyIds?.length ?? 0) > 0 &&
+        !c.signal &&
+        c.relationship !== "pitching" &&
+        !c.heroKey,
+    );
+    if (!quiet) return;
+    expect(dealOpportunityFor(quiet.id)).toBeNull();
+  });
+
+  it("stays quiet once a live deal already tracks the building", () => {
+    const store = useDataStore.getState();
+    const deal = [...store.listings.values()].find(
+      (l) =>
+        ["proposal", "active", "under-contract"].includes(l.status) &&
+        l.sellerContactIds.length > 0,
+    )!;
+    const sellerId = deal.sellerContactIds[0];
+    const opp = dealOpportunityFor(sellerId);
+    // Either no opening at all, or one on a DIFFERENT building — never on the
+    // one already being tracked.
+    expect(opp?.propertyId).not.toBe(deal.propertyId);
+  });
+
+  it("returns null for a contact who isn't in the book", () => {
+    expect(dealOpportunityFor("nope")).toBeNull();
   });
 });
 
