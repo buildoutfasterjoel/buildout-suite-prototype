@@ -675,7 +675,13 @@ function succeeded(output: unknown): boolean {
  */
 function useTranscriptAnchor(
   present: boolean,
-  messagesRef: { current: UIMessage[] },
+  /**
+   * The id of the message currently rendered last — NOT the last message.
+   * `displayOrder` swaps a card-only turn below the sentence that introduces it,
+   * so on such a pair the newest message is the one drawn second-to-last, and
+   * anchoring to it wedges the card between the two.
+   */
+  lastShownId: () => string | null,
 ): string | null | undefined {
   const [anchor, setAnchor] = useState<string | null | undefined>(undefined);
   useEffect(() => {
@@ -683,8 +689,8 @@ function useTranscriptAnchor(
       setAnchor(undefined);
       return;
     }
-    setAnchor((prev) => (prev === undefined ? (messagesRef.current.at(-1)?.id ?? null) : prev));
-  }, [present, messagesRef]);
+    setAnchor((prev) => (prev === undefined ? lastShownId() : prev));
+  }, [present, lastShownId]);
   return anchor;
 }
 
@@ -896,6 +902,19 @@ export function AssistantSidebar() {
     null,
   );
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Put the newest thing in the flow on screen.
+   *
+   * Waits a frame: every caller runs immediately after appending something, and
+   * the element it wants to reach hasn't been laid out yet — measuring
+   * `scrollHeight` in the same tick scrolls to where the bottom *was*.
+   */
+  const scrollToBottom = useCallback(() => {
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    });
+  }, []);
   const formRef = useRef<HTMLFormElement>(null);
   const fieldRef = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
@@ -1059,17 +1078,13 @@ export function AssistantSidebar() {
             parts: [{ type: "text", content: NOT_CONFIGURED_MESSAGE }],
           },
         ]);
-        requestAnimationFrame(() => {
-          scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-        });
+        scrollToBottom();
         return;
       }
 
-      void sendMessage(content).then(() => {
-        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-      });
+      void sendMessage(content).then(scrollToBottom);
     },
-    [isLoading, sendMessage, setMessages, messages],
+    [isLoading, sendMessage, setMessages, messages, scrollToBottom],
   );
 
   const underwritingOffer = useUnderwritingOffer((s) => s.pendingOffer);
@@ -1306,6 +1321,24 @@ export function AssistantSidebar() {
   }, [messages, narratedIndices, actionTurns]);
 
   /**
+   * The display order, for code that runs outside render and needs to know what
+   * the broker is actually looking at — see the completion commit below. Read
+   * through a ref for the same reason `messagesRef` is: depending on it would
+   * re-run that effect on every streamed token.
+   */
+  const displayOrderRef = useRef(displayOrder);
+  displayOrderRef.current = displayOrder;
+
+  /** The id of the message rendered LAST — which is not always the last message.
+   * `displayOrder` deliberately drops a card-only turn below the sentence that
+   * introduces it, so on a swapped pair those two differ. */
+  const lastShownMessageId = useCallback((): string | null => {
+    const order = displayOrderRef.current;
+    if (order.length === 0) return null;
+    return messagesRef.current[order[order.length - 1]]?.id ?? null;
+  }, []);
+
+  /**
    * Index of the broker's last turn. Every assistant message above it has been
    * replied past, which retires its quick replies: the reply *is* the answer to
    * "send it or edit it?", so leaving the buttons up offers a choice that has
@@ -1458,23 +1491,40 @@ export function AssistantSidebar() {
   useEffect(() => {
     if (!queuePending || isLoading || callLive || pendingCallLog) return;
     const stillTheirTurn = pendingAskRef.current === (lastAsk?.id ?? "");
-    const t = setTimeout(
-      () =>
-        // The anchor is read inside the timeout, not outside it: the turn can
-        // still land a closing message in those 450ms, and the completed record
-        // belongs under whatever the rail last said — not above it.
-        useDayPlanQueue
-          .getState()
-          .commitPending(stillTheirTurn, messagesRef.current.at(-1)?.id ?? null),
-      450,
-    );
+    const t = setTimeout(() => {
+      // The anchor is read inside the timeout, not outside it: the turn can
+      // still land a closing message in those 450ms, and the completed record
+      // belongs under whatever the rail last said — not above it.
+      //
+      // And it is the last message *shown*, not the last message. Anchoring to
+      // `messages.at(-1)` was right until the turn was a swapped pair: a deal
+      // card arrives in one message and the "Done — it's now Active" sentence in
+      // the next, `displayOrder` puts the card below the sentence, and the
+      // sentence is still the newer message. Every completion then anchored
+      // between the two — so marking three moves done walked the deal card down
+      // the transcript, three lines at a time.
+      useDayPlanQueue.getState().commitPending(stillTheirTurn, lastShownMessageId());
+      // Follow the record down. Marking a move done grows the transcript by a
+      // line the broker never asked to read, so nothing was scrolling for it —
+      // work three moves in a row and the conversation had quietly run off the
+      // bottom of the panel. Every other thing that appends to this flow
+      // scrolls (a sent message, the recap, the BOV), and a completion is the
+      // same shape of event: the broker acted, and the result is a new line at
+      // the end.
+      //
+      // Gated on `stillTheirTurn` for the same reason the reveal is: a
+      // completion that waited out a long answer commits under a question the
+      // broker has since moved past, and yanking them to the bottom of a
+      // conversation they are reading back through is worse than not moving.
+      if (stillTheirTurn) scrollToBottom();
+    }, 450);
     return () => clearTimeout(t);
-  }, [queuePending, isLoading, callLive, pendingCallLog, lastAsk?.id]);
+  }, [queuePending, isLoading, callLive, pendingCallLog, lastAsk?.id, scrollToBottom, lastShownMessageId]);
 
   // The recap and the BOV draft are store-driven records of something that
   // already happened, so each is drawn at the point in the transcript where it
   // landed — see `useTranscriptAnchor`.
-  const recapAnchor = useTranscriptAnchor(!!recap, messagesRef);
+  const recapAnchor = useTranscriptAnchor(!!recap, lastShownMessageId);
   // The day-plan queue is deliberately NOT one of those: it is the surface the
   // broker is working, so it is pinned outside the transcript instead — from the
   // moment it is armed, not just once a call detaches it. Mirrors the pinned
@@ -1523,13 +1573,11 @@ export function AssistantSidebar() {
     if (!recap || recap === spokenRecapRef.current) return;
     spokenRecapRef.current = recap;
     // Scroll the recap into view at the bottom of the flow (regardless of voice).
-    requestAnimationFrame(() => {
-      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-    });
+    scrollToBottom();
     if (!voiceEnabled) return;
     const { message } = composeRecapReport(recap, recapTarget?.name ?? "your contact");
     void voiceEngine.speak(recapSpeechText(message)); // no re-arm: not in conversationMode
-  }, [recap, recapTarget, voiceEnabled]);
+  }, [recap, recapTarget, voiceEnabled, scrollToBottom]);
 
   // Presenter kill-switch: Escape silences Otto instantly and ends conversation.
   useHotkey("Escape", () => {
