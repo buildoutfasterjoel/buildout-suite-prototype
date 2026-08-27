@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useRouter } from "@tanstack/react-router";
+import { useLocation, useRouter } from "@tanstack/react-router";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { useChat, type UIMessage } from "@tanstack/ai-react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
@@ -21,6 +21,7 @@ import {
   faHandshake,
   faUsers,
   faBuilding,
+  faUser,
   faArrowUpRightAndArrowDownLeftFromCenter,
   faArrowDownLeftAndArrowUpRightToCenter,
 } from "@fortawesome/pro-regular-svg-icons";
@@ -52,7 +53,6 @@ import { useCallStore } from "#/components/call/useCallStore";
 import { usePendingCallLog } from "#/components/call/usePendingCallLog";
 import { CallRecapCard } from "#/components/call/CallRecapCard";
 import { composeRecapReport, recapSpeechText } from "#/components/call/callRecap";
-import { DealCardById } from "#/components/deals/DealCard";
 import {
   EmailDraftCard,
   EmailDraftSection,
@@ -64,16 +64,21 @@ import { DayPlanCard } from "#/components/ai/DayPlanCard";
 import { useDayPlanQueue, type CompletedAction } from "#/components/ai/useDayPlanQueue";
 import { CompletedActionCard } from "#/components/ai/CompletedActionCard";
 import { ActionPlanChecklist } from "#/components/ai/ActionPlanChecklist";
+import { DealBuildChecklist, type DealBuildData } from "#/components/ai/DealBuildChecklist";
 import { matchesPlanIntent, type DayPlanItem } from "#/ai/dayPlan";
 import { formatCurrency } from "#/components/deals/dealDisplay";
 import { useHeroOffer, matchOfferIntent } from "#/ai/heroOffer";
-import { getContact } from "#/data/store";
+import { useUnderwritingOffer, matchUnderwritingIntent } from "#/ai/underwritingOffer";
+import { useBovFlow } from "#/components/contacts/useBovFlow";
+import { getContact, getProperty } from "#/data/store";
+import { useDataStore } from "#/data/dataStore";
+import { contactFullName } from "#/components/contacts/contactDisplay";
+import { dealCardLinkProps } from "#/components/deals/dealCardLink";
+import { RecordCard } from "#/components/records/RecordRow";
 import { signalText } from "#/data/signal";
 import { generateCallBrief, callBriefFallback } from "#/ai/generate";
 import { CallBriefCard } from "#/components/call/CallBriefCard";
 import type { CallBriefSpecT } from "#/ai/generate/schemas";
-import { BovCard } from "#/components/call/BovCard";
-import { useBovDraft, bovSummaryText } from "#/components/call/useBovDraft";
 
 /** Shown instead of sending when the server has no Anthropic key configured. */
 const NOT_CONFIGURED_MESSAGE =
@@ -153,16 +158,6 @@ type PropertyCardData = {
   propertyType?: string;
 };
 
-const RELATIONSHIP_LABELS: Record<string, string> = {
-  cold: "Cold",
-  inquired: "Inquired",
-  nurturing: "Nurturing",
-  active: "Active",
-  pitching: "Pitching",
-  client: "Client",
-  past_client: "Past client",
-};
-
 /** Extract renderable entity arrays from a tool-call's output. */
 function entitiesOf(output: unknown): {
   deals: DealCardData[];
@@ -224,6 +219,17 @@ function answerOf(output: unknown): string | null {
 }
 
 /** Extract a just-sent email (from `send_email`) from a tool-call's output. */
+/**
+ * The scan → map → create working the `createDeal` tool reports, if this result
+ * came from it. Present on every successful create, so the transcript shows the
+ * same steps the AI deal modal does.
+ */
+function dealBuildOf(output: unknown): DealBuildData | null {
+  const o = (output ?? {}) as { dealBuild?: unknown };
+  const b = o.dealBuild as DealBuildData | undefined;
+  return b && Array.isArray(b.documents) ? b : null;
+}
+
 function sentEmailOf(output: unknown): SentEmailData | null {
   const o = (output ?? {}) as { sentEmail?: unknown };
   return o.sentEmail ? (o.sentEmail as SentEmailData) : null;
@@ -292,65 +298,51 @@ function MarketingPackageCard({ pkg }: { pkg: MarketingPackageData }) {
   );
 }
 
-/** A clickable card row (deal or contact) that navigates on click. */
-function ResultCard({
-  title,
-  badge,
-  meta,
-  to,
-  onOpen,
-}: {
-  title: string;
-  badge?: string;
-  meta?: string;
-  /**
-   * Destination for a card pointing at ONE record, rendered as a real link.
-   *
-   * A record card is the kind a broker cmd-clicks — read the contact without
-   * losing the conversation that produced it — and a `<button>` gives them no
-   * way to. `DealCardById` has always been a `Link`; this is the same offer for
-   * the other record types.
-   */
-  to?: string;
-  /**
-   * Fallback for a card that has somewhere to go but no plain href to go to —
-   * a property lands on the Deals grid and has to apply the filter first (see
-   * `goToNav`), which is a click handler's job, not a URL's.
-   */
-  onOpen?: () => void;
-}) {
-  // `d-block` + `w-100` on the control and `w-100` on the row: Blueprint's .btn
-  // is a centering flex container, so without these the content collapses to its
-  // intrinsic width and floats in the middle of the card.
-  const className = "btn d-block p-0 border rounded text-start w-100 bg-white";
-  const body = (
-    <>
-      <div className="d-flex align-items-center gap-2 p-2 w-100">
-        <span className="flex-grow-1 d-flex align-items-center gap-2" style={{ minWidth: 0 }}>
-          <span className="fw-semibold text-truncate">{title}</span>
-          {badge && (
-            <Badge variant="secondary" appearance="muted" className="flex-shrink-0">
-              {badge}
-            </Badge>
-          )}
-        </span>
-        <FontAwesomeIcon icon={faChevronRight} className="text-muted flex-shrink-0" />
-      </div>
-      {meta && <div className="text-muted small text-truncate px-2 pb-2">{meta}</div>}
-    </>
-  );
-
-  if (to) {
-    return (
-      <Link to={to as never} className={`${className} text-decoration-none text-reset`}>
-        {body}
-      </Link>
-    );
-  }
+/**
+ * A record Otto found or made, drawn as the omni menu draws it — colored glyph
+ * badge, name, one muted meta line, and a way out to the record (Figma
+ * 276:20447 deal, 276:20455 contact).
+ *
+ * Read off the store by id rather than from the tool's summary payload, for the
+ * same reason `DealCardById` always has: the payload is a snapshot from the
+ * moment the tool ran, and a deal restaged later in the same conversation would
+ * keep reporting the stage it was created at.
+ */
+function DealResultCard({ id }: { id: string }) {
+  const listing = useDataStore((st) => st.listings.get(id));
+  if (!listing) return null;
+  const p = getProperty(listing.propertyId);
+  // The address, not the stage: the prose above a deal card has just said what
+  // stage it is in, and the one thing it never says is which building.
+  const meta = p
+    ? [p.street, [[p.city, p.state].filter(Boolean).join(", "), p.zip].filter(Boolean).join(" ")]
+        .filter(Boolean)
+        .join(" • ")
+    : undefined;
   return (
-    <button type="button" onClick={onOpen} className={className}>
-      {body}
-    </button>
+    <RecordCard
+      variant="deal"
+      icon={faHandshake}
+      title={listing.name}
+      meta={meta}
+      link={dealCardLinkProps(listing)}
+    />
+  );
+}
+
+function ContactResultCard({ id, fallbackName }: { id: string; fallbackName: string }) {
+  const contact = useDataStore((st) => st.contacts.get(id));
+  const meta = contact
+    ? [contact.title, contact.company].filter(Boolean).join(" · ")
+    : undefined;
+  return (
+    <RecordCard
+      variant="contact"
+      icon={faUser}
+      title={contact ? contactFullName(contact) : fallbackName}
+      meta={meta}
+      link={{ to: "/backoffice/contacts/$contactId", params: { contactId: id } }}
+    />
   );
 }
 
@@ -427,6 +419,7 @@ function ToolResultCards({
   const marketingPackage = marketingPackageOf(output);
   const dayPlan = dayPlanOf(output);
   const sentEmail = sentEmailOf(output);
+  const dealBuild = dealBuildOf(output);
   const hasRich = !!(emailDraft || marketingPackage || brief || answer || dayPlan || sentEmail);
   const total = deals.length + contacts.length + properties.length;
 
@@ -479,20 +472,24 @@ function ToolResultCards({
     const p = properties[0];
     return (
       <div className="d-flex flex-column" style={{ gap: 12 }}>
-        {d && <DealCardById listingId={d.id} showStatus />}
-        {c && (
-          <ResultCard
-            title={c.name}
-            badge={c.relationship ? RELATIONSHIP_LABELS[c.relationship] ?? c.relationship : undefined}
-            meta={c.company}
-            to={`/backoffice/contacts/${c.id}`}
-          />
-        )}
+        {/* Above the card, not below: these are the steps that produced it. */}
+        {dealBuild && <DealBuildChecklist build={dealBuild} />}
+        {d && <DealResultCard id={d.id} />}
+        {c && <ContactResultCard id={c.id} fallbackName={c.name} />}
         {p && (
-          <ResultCard
+          <RecordCard
+            variant="property"
+            icon={faBuilding}
             title={p.address ?? "Property"}
-            badge={p.propertyType}
-            onOpen={() => goToNav(router, { entity: "properties", count: 1, summary: "", listingsFacets: { search: p.address } })}
+            meta={p.propertyType}
+            onOpen={() =>
+              goToNav(router, {
+                entity: "properties",
+                count: 1,
+                summary: "",
+                listingsFacets: { search: p.address },
+              })
+            }
           />
         )}
       </div>
@@ -678,7 +675,13 @@ function succeeded(output: unknown): boolean {
  */
 function useTranscriptAnchor(
   present: boolean,
-  messagesRef: { current: UIMessage[] },
+  /**
+   * The id of the message currently rendered last — NOT the last message.
+   * `displayOrder` swaps a card-only turn below the sentence that introduces it,
+   * so on such a pair the newest message is the one drawn second-to-last, and
+   * anchoring to it wedges the card between the two.
+   */
+  lastShownId: () => string | null,
 ): string | null | undefined {
   const [anchor, setAnchor] = useState<string | null | undefined>(undefined);
   useEffect(() => {
@@ -686,8 +689,8 @@ function useTranscriptAnchor(
       setAnchor(undefined);
       return;
     }
-    setAnchor((prev) => (prev === undefined ? (messagesRef.current.at(-1)?.id ?? null) : prev));
-  }, [present, messagesRef]);
+    setAnchor((prev) => (prev === undefined ? lastShownId() : prev));
+  }, [present, lastShownId]);
   return anchor;
 }
 
@@ -761,6 +764,7 @@ function splitToolCalls(
           marketingPackageOf(p.output) !== null ||
           dayPlanOf(p.output) !== null ||
           sentEmailOf(p.output) !== null ||
+          dealBuildOf(p.output) !== null ||
           p.name === "plan_my_day"),
     );
 
@@ -778,6 +782,7 @@ function splitToolCalls(
       marketingPackageOf(p.output) !== null ||
       dayPlanOf(p.output) !== null ||
       sentEmailOf(p.output) !== null ||
+      dealBuildOf(p.output) !== null ||
       // Claim plan_my_day by name, before its output arrives: otherwise it spends
       // the streaming window classified as a chip and the tool's raw name flashes
       // above the card that replaces it.
@@ -897,6 +902,19 @@ export function AssistantSidebar() {
     null,
   );
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Put the newest thing in the flow on screen.
+   *
+   * Waits a frame: every caller runs immediately after appending something, and
+   * the element it wants to reach hasn't been laid out yet — measuring
+   * `scrollHeight` in the same tick scrolls to where the bottom *was*.
+   */
+  const scrollToBottom = useCallback(() => {
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    });
+  }, []);
   const formRef = useRef<HTMLFormElement>(null);
   const fieldRef = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
@@ -977,6 +995,35 @@ export function AssistantSidebar() {
       // it, including the greeting's own "Yes, call now" / "Brief me first".
       setView("chat");
 
+      // A pending underwriting offer is answered here rather than by the model:
+      // "yes" opens the wizard the broker then drives, and a round-trip between
+      // the word and the dialog buys nothing but latency and a chance of the
+      // model paraphrasing instead of acting. Anything that isn't a yes clears
+      // the offer and falls through to the agent.
+      const uw = useUnderwritingOffer.getState().pendingOffer;
+      if (uw) {
+        if (matchUnderwritingIntent(content)) {
+          useUnderwritingOffer.getState().clearOffer();
+          setMessages([
+            ...messagesRef.current,
+            { id: `uw-yes-${uw.dealId}`, role: "user", parts: [{ type: "text", content }] },
+            {
+              id: `uw-open-${uw.dealId}`,
+              role: "assistant",
+              parts: [
+                {
+                  type: "text",
+                  content: `Opening the underwriting setup for ${uw.dealName} — pick a strategy and how deep to go.`,
+                },
+              ],
+            },
+          ] as UIMessage[]);
+          useBovFlow.getState().openSetup(uw.dealId, uw.contactId);
+          return;
+        }
+        useUnderwritingOffer.getState().clearOffer(); // fall through to the agent
+      }
+
       // A pending hero offer (§Phase 4A) takes priority over the normal agent
       // turn: "yes" opens the live call, "brief me first" generates a call
       // brief, and anything else clears the offer and falls through below.
@@ -1031,18 +1078,17 @@ export function AssistantSidebar() {
             parts: [{ type: "text", content: NOT_CONFIGURED_MESSAGE }],
           },
         ]);
-        requestAnimationFrame(() => {
-          scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-        });
+        scrollToBottom();
         return;
       }
 
-      void sendMessage(content).then(() => {
-        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-      });
+      void sendMessage(content).then(scrollToBottom);
     },
-    [isLoading, sendMessage, setMessages, messages],
+    [isLoading, sendMessage, setMessages, messages, scrollToBottom],
   );
+
+  const underwritingOffer = useUnderwritingOffer((s) => s.pendingOffer);
+  const underwritingAsked = useUnderwritingOffer((s) => s.asked);
 
   const voiceEnabled = useVoice((s) => s.voiceEnabled);
   const toggleVoice = useVoice((s) => s.toggleVoice);
@@ -1275,6 +1321,24 @@ export function AssistantSidebar() {
   }, [messages, narratedIndices, actionTurns]);
 
   /**
+   * The display order, for code that runs outside render and needs to know what
+   * the broker is actually looking at — see the completion commit below. Read
+   * through a ref for the same reason `messagesRef` is: depending on it would
+   * re-run that effect on every streamed token.
+   */
+  const displayOrderRef = useRef(displayOrder);
+  displayOrderRef.current = displayOrder;
+
+  /** The id of the message rendered LAST — which is not always the last message.
+   * `displayOrder` deliberately drops a card-only turn below the sentence that
+   * introduces it, so on a swapped pair those two differ. */
+  const lastShownMessageId = useCallback((): string | null => {
+    const order = displayOrderRef.current;
+    if (order.length === 0) return null;
+    return messagesRef.current[order[order.length - 1]]?.id ?? null;
+  }, []);
+
+  /**
    * Index of the broker's last turn. Every assistant message above it has been
    * replied past, which retires its quick replies: the reply *is* the answer to
    * "send it or edit it?", so leaving the buttons up offers a choice that has
@@ -1360,7 +1424,6 @@ export function AssistantSidebar() {
   // but the recap is still being written, and neither is a moment to reopen the
   // queue over.
   const callLive = useCallStore((s) => s.phase !== "idle" || s.wrapping);
-  const bovDraft = useBovDraft((s) => s.draft);
   /**
    * Fold the queue whenever the broker's attention moves to something else: they
    * sent a message and a reply is on its way, a call went live, or a draft
@@ -1381,8 +1444,8 @@ export function AssistantSidebar() {
   }, [lastAsk?.id, lastAsk?.text]);
 
   useEffect(() => {
-    if (callLive || bovDraft || brief) useDayPlanQueue.getState().autoFold();
-  }, [callLive, bovDraft, brief]);
+    if (callLive || brief) useDayPlanQueue.getState().autoFold();
+  }, [callLive, brief]);
 
   /**
    * Show a finished move as finished, but not until the turn has finished
@@ -1428,24 +1491,40 @@ export function AssistantSidebar() {
   useEffect(() => {
     if (!queuePending || isLoading || callLive || pendingCallLog) return;
     const stillTheirTurn = pendingAskRef.current === (lastAsk?.id ?? "");
-    const t = setTimeout(
-      () =>
-        // The anchor is read inside the timeout, not outside it: the turn can
-        // still land a closing message in those 450ms, and the completed record
-        // belongs under whatever the rail last said — not above it.
-        useDayPlanQueue
-          .getState()
-          .commitPending(stillTheirTurn, messagesRef.current.at(-1)?.id ?? null),
-      450,
-    );
+    const t = setTimeout(() => {
+      // The anchor is read inside the timeout, not outside it: the turn can
+      // still land a closing message in those 450ms, and the completed record
+      // belongs under whatever the rail last said — not above it.
+      //
+      // And it is the last message *shown*, not the last message. Anchoring to
+      // `messages.at(-1)` was right until the turn was a swapped pair: a deal
+      // card arrives in one message and the "Done — it's now Active" sentence in
+      // the next, `displayOrder` puts the card below the sentence, and the
+      // sentence is still the newer message. Every completion then anchored
+      // between the two — so marking three moves done walked the deal card down
+      // the transcript, three lines at a time.
+      useDayPlanQueue.getState().commitPending(stillTheirTurn, lastShownMessageId());
+      // Follow the record down. Marking a move done grows the transcript by a
+      // line the broker never asked to read, so nothing was scrolling for it —
+      // work three moves in a row and the conversation had quietly run off the
+      // bottom of the panel. Every other thing that appends to this flow
+      // scrolls (a sent message, the recap, the BOV), and a completion is the
+      // same shape of event: the broker acted, and the result is a new line at
+      // the end.
+      //
+      // Gated on `stillTheirTurn` for the same reason the reveal is: a
+      // completion that waited out a long answer commits under a question the
+      // broker has since moved past, and yanking them to the bottom of a
+      // conversation they are reading back through is worse than not moving.
+      if (stillTheirTurn) scrollToBottom();
+    }, 450);
     return () => clearTimeout(t);
-  }, [queuePending, isLoading, callLive, pendingCallLog, lastAsk?.id]);
+  }, [queuePending, isLoading, callLive, pendingCallLog, lastAsk?.id, scrollToBottom, lastShownMessageId]);
 
   // The recap and the BOV draft are store-driven records of something that
   // already happened, so each is drawn at the point in the transcript where it
   // landed — see `useTranscriptAnchor`.
-  const recapAnchor = useTranscriptAnchor(!!recap, messagesRef);
-  const bovAnchor = useTranscriptAnchor(!!bovDraft, messagesRef);
+  const recapAnchor = useTranscriptAnchor(!!recap, lastShownMessageId);
   // The day-plan queue is deliberately NOT one of those: it is the surface the
   // broker is working, so it is pinned outside the transcript instead — from the
   // moment it is armed, not just once a call detaches it. Mirrors the pinned
@@ -1494,27 +1573,11 @@ export function AssistantSidebar() {
     if (!recap || recap === spokenRecapRef.current) return;
     spokenRecapRef.current = recap;
     // Scroll the recap into view at the bottom of the flow (regardless of voice).
-    requestAnimationFrame(() => {
-      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-    });
+    scrollToBottom();
     if (!voiceEnabled) return;
     const { message } = composeRecapReport(recap, recapTarget?.name ?? "your contact");
     void voiceEngine.speak(recapSpeechText(message)); // no re-arm: not in conversationMode
-  }, [recap, recapTarget, voiceEnabled]);
-
-  // Speak the BOV draft's summary once when it appears (Otto drafts the BOV,
-  // §Phase 4C). Also a one-way report — it must NOT enter conversationMode or
-  // re-arm the mic. (`bovDraft` is read above, alongside its transcript anchor.)
-  const spokenBovRef = useRef<object | null>(null);
-  useEffect(() => {
-    if (!bovDraft || bovDraft === spokenBovRef.current) return;
-    spokenBovRef.current = bovDraft;
-    requestAnimationFrame(() => {
-      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-    });
-    if (!voiceEnabled) return;
-    void voiceEngine.speak(bovSummaryText(bovDraft)); // one-way: no re-arm
-  }, [bovDraft, voiceEnabled]);
+  }, [recap, recapTarget, voiceEnabled, scrollToBottom]);
 
   // Presenter kill-switch: Escape silences Otto instantly and ends conversation.
   useHotkey("Escape", () => {
@@ -1547,6 +1610,35 @@ export function AssistantSidebar() {
       } as UIMessage,
     ]);
   }, [pendingLine, consumeLine, setMessages, messages]);
+
+  /**
+   * Offer the underwriting on a deal the assistant just created — but only once
+   * the turn it was created in has finished.
+   *
+   * Waiting on `isLoading` rather than firing from the tool: the model is still
+   * writing its own "Done — created the deal" confirmation while the tool
+   * result renders, and a question appended into that gap lands *above* the
+   * sentence it is following up on, then gets buried by it.
+   */
+  useEffect(() => {
+    if (!underwritingOffer || underwritingAsked || isLoading) return;
+    useUnderwritingOffer.getState().markAsked();
+    setMessages([
+      ...messagesRef.current,
+      {
+        id: `uw-offer-${underwritingOffer.dealId}`,
+        role: "assistant",
+        parts: [
+          {
+            type: "text",
+            content:
+              `It's got the financials on it, so I can underwrite it now — ` +
+              `want me to start building the underwriting on ${underwritingOffer.dealName}?`,
+          },
+        ],
+      } as UIMessage,
+    ]);
+  }, [underwritingOffer, underwritingAsked, isLoading, setMessages]);
 
   // A focus request from another surface (e.g. omni search "Ask Otto") focuses the
   // composer input, so once the queued prompt auto-sends the user is already
@@ -1664,10 +1756,13 @@ export function AssistantSidebar() {
       <div className="assistant-rail__header">
         {view === "home" ? (
           /* Nothing to resume until something's been said — and an empty rail
-             with a "Resume chatting" button is an offer that goes nowhere. */
-          messages.length > 0 ? (
+             with a "Resume chatting" button is an offer that goes nowhere.
+             A finished call counts as something: the recap card lives in the
+             chat view, so without this a call reported before the broker had
+             asked anything could only be reached by sending a message first. */
+          messages.length > 0 || recap ? (
             <Button size="sm" variant="ghost" onClick={() => setView("chat")}>
-              Resume chatting
+              {messages.length > 0 ? "Resume chatting" : "See your call recap"}
               <FontAwesomeIcon icon={faArrowRight} />
             </Button>
           ) : (
@@ -1754,17 +1849,28 @@ export function AssistantSidebar() {
           </div>
         </div>
       ) : (
-      /* Messages. 20px of inner padding and 24px between turns (Figma node
-         193:4680) — elements *within* one reply group tighter at 12px, which
+      /* Messages. 20px of inner padding; 12px between anything from the same
+         speaker and 24px across a change of speaker (see `.assistant-transcript`
+         — the flat 24 everywhere read as one undifferentiated column, with
+         Otto's own follow-ups pushed as far from each other as they were from
+         the question). Elements *within* one reply group stay at 12px, which
          each of them owns (see `ChatMessage`). */
       <div ref={scrollRef} className="flex-grow-1 overflow-auto">
         <div
-          className="assistant-rail__column d-flex flex-column"
+          className="assistant-rail__column assistant-transcript d-flex flex-column"
           // 32px at the bottom, 20 everywhere else: the composer sits directly
           // under this, and at an even 20 the last message crowded the input as
           // though it were part of it.
-          style={{ padding: "20px 20px 32px", gap: 24 }}
+          style={{ padding: "20px 20px 32px" }}
         >
+        {/* Arrived before the broker had said anything, so there is no message to
+            hang them under — which puts them at the TOP of the transcript, not
+            the bottom. Rendered after the list (where they used to be) a recap
+            from a call taken before the first question stayed pinned below every
+            answer that followed it, drifting further from the call it reported
+            with each turn. */}
+        {recapAnchor === null && <CallRecapCard />}
+        <CompletedActions entries={completedAt(null)} />
         {messages.length === 0 && !recap ? (
           <div className="text-muted small">
             Ask about your properties, contacts, and deals — or have me draft an email, build a
@@ -1787,7 +1893,6 @@ export function AssistantSidebar() {
                   suppressLookupCards={actionTurns.has(i)}
                 />
                 {recapAnchor === m.id && <CallRecapCard />}
-                {bovAnchor === m.id && <BovCard />}
                 {/* After the recap, not before it: the recap is the call itself
                     and this is the bookkeeping that follows from it. */}
                 <CompletedActions entries={completedAt(m.id)} />
@@ -1795,11 +1900,6 @@ export function AssistantSidebar() {
             );
           })
         )}
-        {/* Arrived before the broker had said anything, so there is no message to
-            hang them under. */}
-        {recapAnchor === null && <CallRecapCard />}
-        {bovAnchor === null && <BovCard />}
-        <CompletedActions entries={completedAt(null)} />
         {/* The turn's visible work can finish before the turn does: a tool result
             lands, its card renders, and the model is still closing out. What it
             says next is suppressed anyway (see `narratedIndices`), so a spinner
@@ -1831,9 +1931,6 @@ export function AssistantSidebar() {
         {recapAnchor !== undefined &&
           recapAnchor !== null &&
           !messages.some((m) => m.id === recapAnchor) && <CallRecapCard />}
-        {bovAnchor !== undefined &&
-          bovAnchor !== null &&
-          !messages.some((m) => m.id === bovAnchor) && <BovCard />}
         <CompletedActions entries={orphanedCompleted} />
         </div>
       </div>

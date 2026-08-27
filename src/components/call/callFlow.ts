@@ -6,9 +6,9 @@ import { ownerVoiceFor } from "#/ai/voice/ownerVoice";
 import { generateCallTurn, generateCallRecap } from "#/ai/generate";
 import { contactFullName, contactInitials } from "#/components/contacts/contactDisplay";
 import { usePendingCallLog } from "./usePendingCallLog";
-import { composeCallNotes } from "./callNotes";
+import { composeCallNotes, isThinRecap } from "./callNotes";
 import { getContact } from "#/data/store";
-import { isHeroCall } from "./heroRecapExtensions";
+import { isHeroCall, personaRecap } from "./heroRecapExtensions";
 import { signalText } from "#/data/signal";
 
 /**
@@ -257,6 +257,13 @@ export const callFlow = {
     // A new call/hangup took over during recap generation — don't surface a
     // stale recap, and don't pop a (blocking) log modal for a superseded call.
     if (mySession !== session) return;
+    // Swap in the persona's hand-authored recap when the model came back thin
+    // (no key, or a fallback). Done ONCE, here, rather than per-surface: the
+    // notes the modal drafts and the card the rail reports read the same spec,
+    // so the demo can't log three detailed sentences and then report "the call
+    // felt neutral" with nothing under it.
+    const heroKey = getContact(target.contactId)?.heroKey;
+    if (isThinRecap(recap)) recap = personaRecap(heroKey) ?? recap;
     // The pending log takes over the waiting from here.
     useCallStore.getState().setWrapping(false);
     // Nothing is written to the CRM here: queue the log with the AI's summary
@@ -270,11 +277,7 @@ export const callFlow = {
       // store once the broker confirms, so the recap card reports a call that is
       // actually on the record.
       recap,
-      draft: composeCallNotes({
-        recap,
-        firstName: target.firstName,
-        heroKey: getContact(target.contactId)?.heroKey,
-      }),
+      draft: composeCallNotes({ recap, firstName: target.firstName, heroKey }),
       armHeroInbound: isHeroCall(target),
     });
     // Nothing is on the store yet: the recap surfaces from the confirmed log, so

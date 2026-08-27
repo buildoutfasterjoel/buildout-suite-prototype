@@ -24,7 +24,7 @@ import { GlobalNewContactModal } from "#/components/contacts/GlobalNewContactMod
 import { GlobalAddTaskModal } from "#/components/tasks/GlobalAddTaskModal";
 import { LiveCallBar } from "#/components/call/LiveCallBar";
 import { CallSessionController } from "#/components/call/CallSessionController";
-import { BovWatcher } from "#/components/call/BovWatcher";
+import { BovFlow } from "#/components/contacts/BovFlow";
 import { RosaLeadsWatcher } from "#/components/call/RosaLeadsWatcher";
 import { IngestionWatcher } from "#/components/deals/IngestionWatcher";
 import { useDataStore } from "#/data/dataStore";
@@ -134,7 +134,6 @@ export function AppShell() {
             <main className="app-shell__main flex-grow-1 overflow-auto">
               {hydrated && <LiveCallBar />}
               {hydrated && <CallSessionController />}
-              {hydrated && <BovWatcher />}
               {hydrated && <RosaLeadsWatcher />}
               {hydrated && <IngestionWatcher />}
               {hydrated ? (
@@ -152,6 +151,10 @@ export function AppShell() {
         {hydrated && <GlobalCreateDealModal />}
         {hydrated && <GlobalStageGateModal />}
         {hydrated && <GlobalLogCallModal />}
+        {/* The underwriting → BOV wizard. Hosted here rather than on the contact
+            page: the assistant rail can offer it from anywhere, and at the top
+            of the tree none of its modals sits inside something clickable. */}
+        {hydrated && <BovFlow />}
         {hydrated && <GlobalNewContactModal />}
         {hydrated && <GlobalAddTaskModal />}
       </div>

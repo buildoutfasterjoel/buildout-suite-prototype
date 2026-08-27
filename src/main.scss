@@ -1939,6 +1939,42 @@
     font-weight: 600;
     white-space: nowrap;
   }
+
+  // The same row, standing on its own in the assistant transcript (Figma
+  // 276:20447, 276:20455). In the menu the row is one of a list under a shared
+  // panel, so it needs no edges of its own and fills on hover; alone in the
+  // flow it needs a border to read as an object, and the type label on the
+  // right gives way to the way-out glyph — a card in a conversation is
+  // something you click, where a row in a result list is something you scan.
+  &--card {
+    padding: 10px 12px;
+    border: 1px solid var(--color-storm-grey-200, #e2e6ee);
+    border-radius: var(--bp-border-radius-lg, 8px);
+    background: #fff;
+    text-decoration: none;
+
+    &:hover,
+    &:focus-visible {
+      border-color: var(--color-buildout-blue-300, #92c0fb);
+      background: #fff;
+    }
+
+    // Steps up on hover with the rest of the card rather than announcing
+    // itself: the whole row is the target, and a glyph that lights alone reads
+    // as the only clickable part of it.
+    &:hover .omni-item__go {
+      color: var(--color-buildout-blue-700, #1c50c4);
+    }
+  }
+
+  &__go {
+    flex-shrink: 0;
+    align-self: center;
+    padding-left: 8px;
+    color: var(--color-storm-grey-400, #90a1b9);
+    font-size: 14px;
+    transition: color 0.1s ease;
+  }
 }
 
 // Add-to-list modal: selectable list rows with a clear hover affordance.
@@ -4662,6 +4698,40 @@ body:has(.design-toggle-fab) .toast-viewport {
       text-decoration: line-through;
     }
   }
+
+  // A step that also says what it acted on — the deal build's scanned file
+  // names, the property its facts came from. The label keeps its own line and
+  // the detail sits under it, muted, the same pairing the deal-creation modal
+  // uses (`ai-deal-progress__detail`).
+  &__body {
+    display: flex;
+    flex: 1 0 0;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  &__detail {
+    font-size: 12px;
+    line-height: 16px;
+    color: colors.$storm-grey-500;
+    overflow-wrap: anywhere;
+  }
+
+  // Two-line rows top-align: centring a 35px stack against a 16px glyph floats
+  // the check halfway down the label it belongs to.
+  &--stacked {
+    align-items: flex-start;
+
+    .assistant-task-row__status {
+      margin-top: 1px;
+    }
+
+    // The label is a row inside the column now, not the column itself — the
+    // shared `flex: 1 0 0` would resolve against the cross axis and flatten it.
+    .assistant-task-row__label {
+      flex: 0 0 auto;
+    }
+  }
 }
 
 // Assistant rail — the Next Actions card (Figma node 193:4697). The one card
@@ -5204,6 +5274,31 @@ $rail-duration: 320ms;
 // the percentage `min-height` inside it has nothing to resolve against and the
 // greeting collapses to the top of the rail. Making the column a flex box and
 // letting the home screen grow into it hands over a real height instead.
+/**
+ * The transcript's rhythm: tight within a speaker, open across a change of one.
+ *
+ * A flat 24px everywhere made the column read as a list of equally unrelated
+ * blocks — Otto's lookup card sat as far from Otto's own sentence about it as
+ * the sentence sat from the question that prompted it. Grouping by speaker is
+ * what makes a conversation legible: 12px says "still me", 24px says "your
+ * turn".
+ *
+ * Done with an adjacent-sibling rule rather than a margin computed per message.
+ * A suppressed turn renders null, so it is not a sibling at all, and `+` reads
+ * the order the broker actually sees. Everything that is not the broker's own
+ * bubble counts as Otto's side — the recap card, the day-plan checklist, the
+ * "Working…" line — so a card between two of his turns doesn't open a gap that
+ * says a speaker changed when none did.
+ */
+.assistant-transcript {
+  gap: 12px;
+
+  > [data-chat-role="user"] + :not([data-chat-role="user"]),
+  > :not([data-chat-role="user"]) + [data-chat-role="user"] {
+    margin-top: 12px;
+  }
+}
+
 .assistant-rail__column--fill {
   display: flex;
   flex-direction: column;

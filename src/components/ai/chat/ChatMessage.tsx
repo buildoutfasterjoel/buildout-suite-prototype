@@ -46,9 +46,17 @@ export function ChatMessage({
 
   return (
     // 12px between the pieces of a single reply — the text, its tool chips, and
-    // whatever cards came back (Figma node 193:4684). The 24px that separates one
-    // turn from the next belongs to the flow, not to the turn.
-    <div className="d-flex flex-column" style={{ gap: 12 }}>
+    // whatever cards came back (Figma node 193:4684). The space that separates
+    // one turn from the next belongs to the flow, not to the turn.
+    //
+    // `data-chat-role` is what lets the flow tell a change of speaker from a
+    // continuation: the transcript sits everything 12px apart and adds another
+    // 12 across a speaker boundary, in CSS, off the adjacent sibling. Done in
+    // CSS rather than by computing each message's margin in the map, because a
+    // message that renders nothing (narration the rail suppresses) returns null
+    // and is simply not a sibling — so the rule reads the *visible* order for
+    // free, where a computed margin would have to re-derive which turns drew.
+    <div className="d-flex flex-column" style={{ gap: 12 }} data-chat-role={isUser ? "user" : "assistant"}>
       {(showText || chipCalls.length > 0) && (
         <div className={`d-flex ${isUser ? "justify-content-end" : "justify-content-start"}`}>
           <div className={isUser ? "assistant-bubble--user" : "text-body w-100"}>

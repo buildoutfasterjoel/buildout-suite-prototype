@@ -114,6 +114,76 @@ export function ownedPropertiesFor(contact: Contact): Property[] {
   return [...ids].map((id) => getProperty(id)).filter((p): p is Property => !!p);
 }
 
+/** Stages where a deal is live work. Anything else leaves the building open. */
+const LIVE_STAGES: PropertyStatus[] = ["proposal", "active", "under-contract"];
+
+/**
+ * A building the broker could be tracking and isn't.
+ *
+ * A deal in this product starts at Pitching precisely so there is somewhere to
+ * track progress toward Active — so an owner who is *engaging* about a building
+ * with no deal on it is a gap in the pipeline, not a closed door. Detected here
+ * rather than left to the model's judgement: whether a building has a live deal
+ * is a fact, and a suggestion that fires on a hunch is one the broker learns to
+ * ignore.
+ *
+ * Deliberately NOT a claim that the owner has agreed to anything. The whole
+ * point of offering Pitching is that it is the stage for a conversation that
+ * hasn't become a commitment yet — see the prompt rule that consumes this.
+ */
+export interface DealOpportunity {
+  propertyId: string;
+  propertyName: string;
+  /** What makes this look like an opening, for the model to paraphrase. */
+  reason: string;
+  /** Other owned buildings also without a live deal, so the model can say so. */
+  alsoUntracked: number;
+}
+
+/**
+ * The strongest untracked-building opening on a contact, or null.
+ *
+ * Requires BOTH halves: a building of theirs carrying no live deal, and a
+ * reason to think now is the moment — they sent something, their asset threw a
+ * signal, or the broker is already pitching them. Ownership alone is not an
+ * opening; every owner in the book would qualify and the offer would become
+ * noise.
+ */
+export function dealOpportunityFor(contactId: string): DealOpportunity | null {
+  const detail = getContactDetailClient(contactId);
+  if (!detail) return null;
+  const { contact } = detail;
+
+  const claimed = new Set(
+    listDealsForContact(contactId)
+      .filter((d) => LIVE_STAGES.includes(d.status))
+      .map((d) => d.propertyId),
+  );
+  const untracked = ownedPropertiesFor(contact).filter((p) => !claimed.has(p.id));
+  if (untracked.length === 0) return null;
+
+  // Newest first: the row that just landed is the one the broker is reacting to.
+  const rows = contactActivity(contactId);
+  const withFiles = rows.find((r) => hasInbound(r) && (r.attachments?.length ?? 0) > 0);
+
+  const reason = withFiles
+    ? `they sent ${withFiles.attachments!.join(" and ")}`
+    : contact.signal
+      ? contact.signal.detail
+      : contact.relationship === "pitching" && rows.some(hasInbound)
+        ? "you're actively pitching them and they're engaging"
+        : null;
+  if (!reason) return null;
+
+  const property = untracked[0];
+  return {
+    propertyId: property.id,
+    propertyName: property.name,
+    reason,
+    alsoUntracked: untracked.length - 1,
+  };
+}
+
 // ── Activities ───────────────────────────────────────────────────────────────
 
 /**

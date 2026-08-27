@@ -1,20 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { faAddressBook, faCheckToSlot } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact } from "#/data/types";
-import {
-  getLeadsForProperty,
-  updateListingUnderwriting,
-} from "#/data/store";
+import { getLeadsForProperty } from "#/data/store";
 import { leadsForSpaceDeal } from "#/data/unitScopedMarketing";
 import { useDataStore } from "#/data/dataStore";
 import { requestStageChange } from "#/components/deals/useStageGate";
-import { UnderwritingSetupModal } from "#/components/deals/underwriting/UnderwritingSetupModal";
 import { dealSupportsUnderwriting } from "#/components/deals/underwriting/eligibility";
-import {
-  underwritingFromSelection,
-  type UnderwritingStrategyId,
-} from "#/components/deals/underwriting/strategies";
 import { useBovFlow } from "#/components/contacts/useBovFlow";
 import { useContactSession } from "#/components/contacts/useContactSession";
 import { NewDealCard, type DealCardAction } from "#/components/deals/NewDealCard";
@@ -69,7 +61,6 @@ export function NewContactDealCard({
       cardRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }, [highlight]);
-  const [setupOpen, setSetupOpen] = useState(false);
   const bovSent = useContactSession((s) =>
     Object.values(s.logged).some((activities) =>
       activities.some((a) =>
@@ -82,30 +73,23 @@ export function NewContactDealCard({
   const relationship = dealRelationshipFor(contact, listing);
   const inquired = relationship === "inquired";
 
-  const startUnderwriting = (
-    strategy: UnderwritingStrategyId,
-    selection: Set<number>,
-  ) => {
-    updateListingUnderwriting(listingId, {
-      ...underwritingFromSelection(strategy, selection),
-      status: "generating",
-    });
-    useBovFlow.getState().start(listingId, strategy, [...selection]);
-  };
-
   /** The underwriting step still open on a Pitching deal, if any. */
   function underwritingAction(): DealCardAction | null {
     // Underwriting doesn't belong to a suite — see `dealSupportsUnderwriting`.
     // Without this, a space (in `proposal` status, a party contact carried
     // over from its parent via `addSpaceToDeal`) would offer "Build
-    // Underwriting" and route through `ContactBovFlow` into the same document
+    // Underwriting" and route through `BovFlow` into the same document
     // write the space's own Underwriting tab was removed for.
     if (!dealSupportsUnderwriting(listing!)) return null;
     const run = listing!.underwriting;
+    // Every branch hands off to the shared flow store (see `useBovFlow`), which
+    // the app shell renders. Hosting the setup dialog here instead put a modal
+    // inside this card's `onClick`, and React portals bubble through the React
+    // tree — so clicking the dialog navigated to the deal behind it.
     const open = () => {
-      if (run == null) setSetupOpen(true);
+      if (run == null) useBovFlow.getState().openSetup(listingId, contact.id);
       else if (run.status === "generated")
-        useBovFlow.getState().openPlacement(listingId);
+        useBovFlow.getState().openPlacement(listingId, contact.id);
       else void navigate(dealCardLinkProps(listing!));
     };
     switch (run?.status) {
@@ -163,13 +147,6 @@ export function NewContactDealCard({
         inquiredOn={medDate(contact.createdAt)}
         action={action()}
         onStageChange={(next) => requestStageChange(listingId, next)}
-      />
-      <UnderwritingSetupModal
-        open={setupOpen}
-        onOpenChange={setSetupOpen}
-        listing={listing}
-        fallbackStrategy="value-add"
-        onStart={startUnderwriting}
       />
     </div>
   );

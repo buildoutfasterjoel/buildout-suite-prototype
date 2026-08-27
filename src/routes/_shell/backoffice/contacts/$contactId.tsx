@@ -11,7 +11,6 @@ import { ContactOverviewColumn } from "#/components/contacts/ContactOverviewColu
 import { ContactEngagementPanel } from "#/components/contacts/ContactEngagementPanel";
 import { ContactTasksPanel } from "#/components/contacts/ContactTasksPanel";
 import { ContactBriefingSection } from "#/components/contacts/ContactBriefingSection";
-import { ContactBovFlow } from "#/components/contacts/ContactBovFlow";
 import { ContactDesignToggles } from "#/components/contacts/ContactDesignToggles";
 import { ShareContactModal } from "#/components/contacts/ShareContactModal";
 import { useContactShares } from "#/components/contacts/useContactShares";
@@ -217,10 +216,6 @@ function ContactDetailPage() {
         onChangeTier={access.changeTier}
         onRemove={access.revoke}
       />
-
-      {/* The BOV wizard (generate → save → preview → email), launched from a
-          deal card's Build Underwriting action. */}
-      <ContactBovFlow contact={contact} onLog={addLog} />
 
       {/* Floating design-comparison menu (prototype-only). */}
       <ContactDesignToggles />

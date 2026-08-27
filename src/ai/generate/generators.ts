@@ -317,7 +317,18 @@ export const generateDraftReply = createServerFn({ method: "POST" })
     }),
   );
 
-/** §4.1 — BOV narrative. REASONING model (synthesis over the deal numbers). */
+/**
+ * §4.1 — BOV narrative. REASONING model (synthesis over the deal numbers).
+ *
+ * UNUSED right now. Its reader was the assistant rail's BOV card, and the BOV
+ * moved into the wizard, whose email is hand-authored per persona and quotes
+ * only the deterministic range and occupancy note (`bovPricingFor`). Kept in
+ * the generator catalog rather than deleted — this module is a library of
+ * generators, and the narrative is the obvious next thing to want if the BOV
+ * email should ever write itself. Do not wire it into the email step's draft
+ * without reading the comment on `bovPricingFor` first: awaiting a generator
+ * there is what left the compose box empty.
+ */
 export const generateBov = createServerFn({ method: "POST" })
   .validator(
     (d: {

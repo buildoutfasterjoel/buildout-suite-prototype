@@ -120,3 +120,29 @@ export const selectFlags =
   (contactId: string) =>
   (s: ContactSessionState): string[] =>
     s.flags[contactId] ?? EMPTY;
+
+/**
+ * The files a contact has SENT the broker this session — the attachments on
+ * their inbound timeline rows (Rosa's T-12 and rent roll, say), newest first
+ * and deduped by name.
+ *
+ * A deal started off the back of an email should carry the documents that email
+ * arrived with, however it was started. The timeline's own "Start a Deal"
+ * action already did that by naming the files directly (see
+ * `createRosaProposalDeal`); this is the same set, discovered rather than
+ * hard-coded, so asking Otto for the deal produces the identical record.
+ */
+export function documentsFromContact(contactId: string): { name: string; meta: string }[] {
+  const events = useContactSession.getState().simEvents[contactId] ?? [];
+  const seen = new Set<string>();
+  const out: { name: string; meta: string }[] = [];
+  for (const e of [...events].sort((a, b) => b.seq - a.seq)) {
+    if (e.direction !== "in") continue;
+    for (const a of e.attachments ?? []) {
+      if (seen.has(a.name)) continue;
+      seen.add(a.name);
+      out.push({ name: a.name, meta: a.meta ?? "" });
+    }
+  }
+  return out;
+}

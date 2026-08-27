@@ -18,6 +18,7 @@ import {
 import type { Contact, Property } from "#/data/types";
 import { useDataStore } from "#/data/dataStore";
 import {
+  addDealActivity,
   generateUnderwritingResult,
   getProperty,
   updateListingUnderwriting,
@@ -27,6 +28,16 @@ import { TYPE_LABELS } from "#/components/properties/propertyDisplay";
 import { getPhotoUrl } from "#/components/properties/propertyDisplay";
 import { UnderwritingProgress } from "#/components/deals/underwriting/UnderwritingProgress";
 import { UnderwritingPlacementModal } from "#/components/deals/underwriting/UnderwritingPlacementModal";
+import {
+  bovPricingFor,
+  bovRangeText,
+  type BovPricing,
+} from "#/components/deals/underwriting/bovPricing";
+import { rosaClosing } from "#/components/call/rosaClosing";
+import { CURRENT_USER } from "#/data/teammates";
+import { UnderwritingSetupModal } from "#/components/deals/underwriting/UnderwritingSetupModal";
+import { underwritingFromSelection } from "#/components/deals/underwriting/strategies";
+import { useContactSession } from "#/components/contacts/useContactSession";
 import { contactFullName, todayISO } from "#/components/contacts/contactDisplay";
 import type { ComposedDraft } from "#/components/contacts/ContactComposeModule";
 import { useBovFlow } from "#/components/contacts/useBovFlow";
@@ -38,8 +49,6 @@ const FLOW_STEPS = ["Assemble", "Preview", "Email"] as const;
 function bovFileName(property: Property): string {
   return `${property.name.replace(/[^a-z0-9]+/gi, "_").replace(/^_|_$/g, "")}_BOV.pdf`;
 }
-
-const fmtM = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
 
 /**
  * The shareable link to the deal's BOV document. The owner reads it in place —
@@ -53,19 +62,34 @@ function bovDocUrl(property: Property): string {
 /**
  * The AI-drafted cover email for the BOV. Rosa gets her story-specific draft;
  * other contacts get a plausible one built from the deal's numbers. The BOV
- * link sits in the body, where a link in an email actually belongs. The real
- * product would draft from the underwrite output and the broker's notes.
+ * link sits in the body, where a link in an email actually belongs.
+ *
+ * The headline range comes from `bovPricingFor` — the underwriting run the
+ * broker just approved, occupancy-adjusted. It used to be `askingPrice * 0.97`
+ * to `* 1.05`, which meant running the underwrite changed nothing about the
+ * email quoting it, under a banner claiming the opposite. And when the T-12
+ * contradicts the marketing occupancy the note says so rather than quietly
+ * pricing around it — the owner finds out eventually, better from us.
  */
-function draftBovEmail(contact: Contact, property: Property): string {
-  const low = fmtM(property.askingPrice * 0.97);
-  const high = fmtM(property.askingPrice * 1.05);
+function draftBovEmail(
+  contact: Contact,
+  property: Property,
+  pricing: BovPricing | null,
+): string {
   const link = bovDocUrl(property);
+  // A range only when there is a run to quote. Nothing reaches this step
+  // without one — but a missing number must cost the sentence, never the whole
+  // draft. An empty compose box is the worst thing this modal can show.
+  const headline = pricing ? `Headline: ${bovRangeText(pricing)}, anchored` : "It's anchored";
+  const occupancy = pricing?.occupancyNote
+    ? `\n\nOne thing worth flagging: ${pricing.occupancyNote}`
+    : "";
   if (contact.heroKey === "rosa") {
     return (
       "Rosa,\n\nThank you for trusting me with Miguel's files. I went through the T12 and " +
-      "rent roll and put together the quiet first look we talked about. Headline: " +
-      `${low} – ${high}, anchored on the in-place rent roll with conservative assumptions ` +
-      "and no pressure behind it.\n\nHere's the full BOV:\n" +
+      `rent roll and put together the quiet first look we talked about. ${headline} ` +
+      `on the in-place rent roll with conservative assumptions ` +
+      `and no pressure behind it.${occupancy}\n\nHere's the full BOV:\n` +
       `${link}\n\nA few things I noticed:\n\n` +
       "1. In-place rents run below the corridor's going rate — upside a buyer pays for, not a problem.\n" +
       "2. The T12 carries a one-time roof repair; setting it aside lifts the valuation meaningfully.\n" +
@@ -76,8 +100,8 @@ function draftBovEmail(contact: Contact, property: Property): string {
   }
   return (
     `${contact.firstName},\n\nThanks for sharing the financials. I ran a first-pass ` +
-    `underwrite — headline: ${low} – ${high}, anchored on the in-place numbers with ` +
-    "conservative assumptions.\n\nHere's the full BOV:\n" +
+    `underwrite. ${headline} on the in-place numbers with ` +
+    `conservative assumptions.${occupancy}\n\nHere's the full BOV:\n` +
     `${link}\n\nWorth a quick conversation before you read it — open this week for a ` +
     "30-minute walk-through? I'd rather get your read before we settle on a price.\n\nJohn"
   );
@@ -242,6 +266,7 @@ function BovEmailModal({
   open,
   contact,
   property,
+  pricing,
   onBack,
   onSend,
   onClose,
@@ -249,6 +274,8 @@ function BovEmailModal({
   open: boolean;
   contact: Contact;
   property: Property;
+  /** The approved run, priced. Null only if the deal somehow has no run. */
+  pricing: BovPricing | null;
   onBack: () => void;
   onSend: (subject: string, body: string) => void;
   onClose: () => void;
@@ -267,7 +294,14 @@ function BovEmailModal({
     }
   };
 
-  // Stream the AI draft in on open — fast enough to feel live, not slow.
+  // Stream the draft in on open — fast enough to feel live, not slow.
+  //
+  // Depends on `open` alone. It briefly also waited on `pricing`, back when
+  // pricing was async, and that is exactly how this modal came to open with an
+  // empty subject and an empty body: the request it was waiting for got
+  // cancelled by an unrelated store write and nothing ever set the state. The
+  // price is computed synchronously now (see `bovPricingFor`), so there is
+  // nothing to wait for — and even a null price still drafts a whole email.
   useEffect(() => {
     if (!open) {
       stopDrafting();
@@ -277,7 +311,7 @@ function BovEmailModal({
     setBody("");
     setEditing(false);
     setDrafting(true);
-    const target = draftBovEmail(contact, property);
+    const target = draftBovEmail(contact, property, pricing);
     let i = 0;
     tickerRef.current = setInterval(() => {
       i = Math.min(i + 6, target.length);
@@ -398,27 +432,43 @@ function BovEmailModal({
 }
 
 /**
- * Orchestrates the contact-page BOV flow (see useBovFlow): the Cactus run in a
- * modal → the save-to-document prompt → the assembled BOV preview → the
- * AI-drafted send email → a timeline event linking the sent BOV. Hosted once
- * on the contact detail page; renders nothing while the flow is closed.
+ * Orchestrates the underwriting → BOV flow (see useBovFlow): the strategy and
+ * depth dialog → the Cactus run → the save-to-document prompt → the assembled
+ * BOV preview → the AI-drafted send email → a timeline event linking the sent
+ * BOV. Renders nothing while the flow is closed.
+ *
+ * Hosted ONCE, in the app shell, and driven entirely off the store — so a deal
+ * card, the deal planner, and the assistant rail all start the identical flow,
+ * and no modal in it is a child of something clickable. See `useBovFlow`.
  */
-export function ContactBovFlow({
-  contact,
-  onLog,
-}: {
-  contact: Contact;
-  /** Log the sent email into the page's activity list (timeline). */
-  onLog: (draft: ComposedDraft) => void;
-}) {
+export function BovFlow() {
   const flow = useBovFlow();
   const navigate = useNavigate();
   const listing = useDataStore((s) =>
     flow.listingId ? s.listings.get(flow.listingId) : undefined,
   );
-  if (!listing) return null;
+  const contact = useDataStore((s) =>
+    flow.contactId ? s.contacts.get(flow.contactId) : undefined,
+  );
+
+  if (!listing || !contact) return null;
   const property = getProperty(listing.propertyId);
   if (!property) return null;
+
+  /**
+   * What the run says the building is worth. Derived during render rather than
+   * held in state behind an effect — `bovPricingFor` is pure, so there is
+   * nothing to load, nothing to cancel, and no window where the email step has
+   * a modal open and no numbers to draft from.
+   */
+  const runResult = listing.underwriting?.result;
+  const pricing: BovPricing | null = runResult
+    ? bovPricingFor(property, runResult)
+    : null;
+
+  /** The sent BOV email lands on the owner's timeline, wherever we are. */
+  const onLog = (draft: ComposedDraft) =>
+    useContactSession.getState().addLog(contact.id, draft);
 
   // Open the assembled BOV in the doc editor, scrolled to the underwriting the
   // placement step just inserted. Closes the wizard first so the modal isn't
@@ -433,6 +483,16 @@ export function ContactBovFlow({
   };
 
   const handleSend = (subject: string, body: string) => {
+    // On the deal as well as on the contact. The timeline row is the broker's
+    // record of the conversation; this is the deal's record of the milestone,
+    // and it carries the number that went out.
+    addDealActivity(listing.id, {
+      type: "bov",
+      note: pricing
+        ? `Sent BOV to ${contact.firstName} — ${bovRangeText(pricing)}`
+        : `Sent BOV to ${contact.firstName}`,
+      actor: CURRENT_USER.name,
+    });
     onLog({
       kind: "email",
       body,
@@ -448,11 +508,40 @@ export function ContactBovFlow({
       title: `BOV sent to ${contactFullName(contact)}`,
       description: bovFileName(property),
     });
+    // The story continues: Rosa reads the BOV and returns the signed listing
+    // agreement, which is what puts the deal in front of the market (see
+    // rosaClosing → RosaLeadsWatcher → rosaLoi).
+    //
+    // Guarded on the persona rather than armed for every seller, because the
+    // reply is hand-authored in Rosa's voice — Miguel, the BOV read twice. The
+    // rail's old BOV card armed it unconditionally, which would have had every
+    // owner in the book sending back Rosa's letter.
+    if (contact.heroKey === "rosa") {
+      rosaClosing.arm(listing.id, contact.id);
+    }
     flow.close();
   };
 
   return (
     <>
+      {/* Step -1 — strategy and depth. The entry point for a deal with no run
+          yet; `openPlacement` skips straight past it for one that has. */}
+      <UnderwritingSetupModal
+        open={flow.step === "setup"}
+        onOpenChange={(o) => {
+          if (!o && useBovFlow.getState().step === "setup") flow.close();
+        }}
+        listing={listing}
+        fallbackStrategy="value-add"
+        onStart={(strategy, selection) => {
+          updateListingUnderwriting(listing.id, {
+            ...underwritingFromSelection(strategy, selection),
+            status: "generating",
+          });
+          flow.start(listing.id, contact.id, strategy, [...selection]);
+        }}
+      />
+
       {/* Step 0 — the Cactus run, in place on the contact. Not dismissable;
           it hands off to the save prompt the moment it finishes. */}
       <Modal
@@ -514,6 +603,7 @@ export function ContactBovFlow({
         open={flow.step === "email"}
         contact={contact}
         property={property}
+        pricing={pricing}
         onBack={flow.backToPreview}
         onSend={handleSend}
         onClose={flow.close}
