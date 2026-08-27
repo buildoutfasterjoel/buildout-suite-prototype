@@ -35,6 +35,7 @@ import {
   faTableRowsAddBelow,
   faTrashCan,
   faCaretDown,
+  faCircleInfo,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type {
@@ -656,17 +657,18 @@ function PartyContactLine({
  * nobody makes: name, company, email and phone are read ACROSS one person, never
  * down a column. The page is five money tables long by the time it reaches here,
  * so these two sections are where the density can break without losing a read.
+ *
+ * One card for both sections, carrying no money. A payer card briefly showed a
+ * Billed figure, which made it taller than the buyer card beside it for a number
+ * the receivables table already totals.
  */
 function PartyCard({
   party,
-  billed,
   editable,
   blockedReason,
   onRemove,
 }: {
   party: VoucherParty;
-  /** Payers only — what this contact is billed across the receivables below. */
-  billed?: number;
   editable: boolean;
   /** Non-null when removal is refused. Unread when not editable. */
   blockedReason?: string | null;
@@ -712,13 +714,6 @@ function PartyCard({
           <PartyContactLine icon={faEnvelope} value={party.email} />
           <PartyContactLine icon={faPhone} value={party.phone} />
         </div>
-
-        {billed !== undefined && (
-          <div className="d-flex align-items-center justify-content-between border-top pt-3">
-            <span className="text-muted">Billed</span>
-            <span className="fw-semibold">{formatCurrency(billed)}</span>
-          </div>
-        )}
       </Card.Body>
     </Card>
   );
@@ -800,9 +795,12 @@ function PartySection({
  * company pays. That is the reason this is its own list rather than a column on
  * the section beside it.
  *
- * Each card carries its own Billed figure and the section closes with their Sum,
- * which is what the table's `tfoot` used to hold. The Sum is the only downward
- * read this section has, so it is the only thing that stayed shared.
+ * Carries no money at all, which is why a payer card is the same card as a
+ * buyer card. It held a per-payer Billed figure and a Sum below them, both
+ * removed: every one of those numbers is a re-reading of the receivables, and
+ * the receivables are on this same page with their own total. Two places
+ * answering "how much" is how they come to disagree. What replaced it is one
+ * line in that section naming the figure the total is supposed to reach.
  */
 function PayersSection({
   payers,
@@ -815,7 +813,6 @@ function PayersSection({
 }) {
   const [addOpen, setAddOpen] = useState(false);
   const contactIds = payers.map((p) => p.contactId);
-  const billedTotal = sum(payers.map((p) => p.billed));
 
   return (
     <Section
@@ -837,7 +834,6 @@ function PayersSection({
             <PartyCard
               key={payer.contactId}
               party={payer}
-              billed={payer.billed}
               editable={editable}
               blockedReason={payerRemovalBlock(payer)}
               onRemove={() =>
@@ -845,15 +841,6 @@ function PayersSection({
               }
             />
           ))}
-          {/* Outside the cards, on the section itself — the total belongs to the
-              set, not to any one payer in it. Hidden at one payer, where the
-              card above it already states the same number. */}
-          {payers.length > 1 && (
-            <div className="d-flex align-items-center justify-content-between border-top pt-3">
-              <span className="fw-semibold">Sum</span>
-              <span className="fw-semibold">{formatCurrency(billedTotal)}</span>
-            </div>
-          )}
         </div>
       )}
 
@@ -1358,6 +1345,10 @@ function ReceivablesSection({
   const receivables = listing.transaction.backOffice.receivables;
   const amountTotal = sum(receivables.map((r) => r.amount));
   const creditedTotal = sum(receivables.map((r) => r.credited));
+  // The figure the total is measured against, and how far off it currently is.
+  // Positive is short, negative is over-billed.
+  const commissionAmount = listing.transaction.commissionAmount;
+  const commissionGap = commissionAmount - amountTotal;
   const [addOpen, setAddOpen] = useState(false);
 
   // Receivable edits write straight through rather than joining the page's Save
@@ -1470,6 +1461,46 @@ function ReceivablesSection({
         ) : undefined
       }
     >
+      {/* What the total is supposed to reach. The receivables are how the gross
+          commission gets billed out, so the two agreeing is the rule the whole
+          section is under — but nothing on the page said so, and the figure
+          itself lives three sections up under Transaction.
+
+          A line of text, not a validation banner: it is as true of an empty
+          section as a full one, so it reads as the rule rather than as a
+          complaint. The gap only appears once the numbers actually disagree,
+          which in a seeded voucher they do not — it is there for the broker who
+          types over an amount.
+
+          And only once a line exists. An active deal has a commission and no
+          receivables yet, because nobody bills before the deal is under
+          contract; there the gap said "$266,363.00 short", which reads as an
+          accusation about work that is not due. Nothing billed is not a
+          shortfall.
+
+          Hidden at zero commission, where "should total $0.00" would be noise.
+          A lease suite with no commission yet is the common case. */}
+      {commissionAmount > 0 && (
+        <p className="text-muted fs-small mb-0 d-flex align-items-start gap-2">
+          <FontAwesomeIcon icon={faCircleInfo} className="mt-1 flex-shrink-0" />
+          <span>
+            Receivables should total the gross commission,{" "}
+            <span className="fw-semibold">
+              {formatCurrency(commissionAmount)}
+            </span>
+            .
+            {receivables.length > 0 && commissionGap !== 0 && (
+              <span className="text-harvest-gold-700 fw-semibold">
+                {" "}
+                Currently {formatCurrency(amountTotal)} —{" "}
+                {formatCurrency(Math.abs(commissionGap))}{" "}
+                {commissionGap > 0 ? "short" : "over"}.
+              </span>
+            )}
+          </span>
+        </p>
+      )}
+
       {receivables.length === 0 ? (
         <p className="text-muted mb-0">No receivables have been added.</p>
       ) : (
