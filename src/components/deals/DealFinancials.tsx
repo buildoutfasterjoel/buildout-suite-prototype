@@ -27,6 +27,7 @@ import {
   faArrowTurnDownRight,
   faDollarSign,
   faEllipsisVertical,
+  faHashtag,
   faEnvelope,
   faPhone,
   faFileLines,
@@ -57,6 +58,7 @@ import {
   deleteReceivable,
   saveVoucherDraft,
   submitVoucher,
+  updateDepositReference,
   updateReceivable,
 } from "#/data/actions";
 import {
@@ -1253,40 +1255,77 @@ function ReceivableActionItem({
 }
 
 /**
- * A receivable's billing description, edited in the cell.
+ * A text cell on the receivables table, edited in place.
  *
  * Keystrokes stay local and commit on blur, so typing a sentence is one write
  * to the store rather than one per character — the same reason the rent
  * schedule's cells commit on blur. Re-seeds when the stored value moves under
  * it, which is what keeps a row honest if the same voucher is edited elsewhere.
+ *
+ * Shared by a receivable's billing description and its deposits' reference
+ * numbers, so the two cannot drift into different commit rules while sitting in
+ * the same column. `unit` is what tells them apart on screen: a reference takes
+ * a hash addon, matching the `$` on the money cells and the calendar on the
+ * dates, and a description takes none.
+ *
+ * `required` reverts an emptied cell instead of committing it. It has to be
+ * handled HERE rather than left to the write path: `updateDepositReference`
+ * already refuses an empty reference, but refusing means the stored `value` does
+ * not move, so the effect keyed on it never re-runs and the box stays visibly
+ * blank over a deposit that still has its number. The guard and the refusal are
+ * both wanted — one keeps the screen honest, the other keeps the store honest.
  */
 function ReceivableTextCell({
   value,
   placeholder,
+  ariaLabel,
+  unit,
+  required,
   className,
   onCommit,
 }: {
   value: string;
   placeholder: string;
+  ariaLabel: string;
+  /** Prefix icon, for a cell whose meaning is not obvious from its column. */
+  unit?: IconDefinition;
+  /** Reject an emptied cell and put the stored value back. */
+  required?: boolean;
   className?: string;
   onCommit: (next: string) => void;
 }) {
   const [draft, setDraft] = useState(value);
   // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on `value` alone by design
   useEffect(() => setDraft(value), [value]);
-  return (
+  const commit = () => {
+    if (required && !draft.trim()) {
+      setDraft(value);
+      return;
+    }
+    if (draft !== value) onCommit(draft);
+  };
+  const input = (
     <Input
       className={`bg-card${className ? ` ${className}` : ""}`}
       value={draft}
       placeholder={placeholder}
-      aria-label="Billing description"
+      aria-label={ariaLabel}
       onChange={(e) => setDraft(e.target.value)}
-      onBlur={() => draft !== value && onCommit(draft)}
+      onBlur={commit}
       onKeyDown={(e) => {
         if (e.key === "Enter") e.currentTarget.blur();
         if (e.key === "Escape") setDraft(value);
       }}
     />
+  );
+  if (!unit) return input;
+  return (
+    <InputGroup className={className}>
+      <InputGroup.Addon>
+        <FontAwesomeIcon icon={unit} />
+      </InputGroup.Addon>
+      {input}
+    </InputGroup>
   );
 }
 
@@ -1390,12 +1429,14 @@ function DepositRow({
   deposit,
   amount,
   editable,
+  onRenameReference,
   onDelete,
 }: {
   deposit: VoucherDeposit;
   /** What this deposit put against THIS receivable — not its whole amount. */
   amount: number;
   editable: boolean;
+  onRenameReference: (next: string) => void;
   onDelete: () => void;
 }) {
   return (
@@ -1428,11 +1469,35 @@ function DepositRow({
       {/* Under Billing Description, because that is what a reference number is:
           the payer's own description of the payment.
 
-          The fallback is unreachable for anything written since references
-          started being generated at save — it survives only because the field is
-          typed `string` and a deposit stored before that could still be empty. */}
-      <Table.Cell className="text-muted">
-        {deposit.referenceNumber ? `Ref ${deposit.referenceNumber}` : "No reference"}
+          Editable, on the same terms as the receivable's own cells above it. The
+          reference a deposit carries is often OURS — generated because the money
+          landed before its paperwork did — so typing in the real cheque or wire
+          number afterwards is the ordinary case rather than a correction. The
+          hash addon is what stops a bare number in the Billing Description
+          column reading as a description.
+
+          The read-only fallback is unreachable for anything written since
+          references started being generated at save; it survives only because
+          the field is typed `string` and a deposit stored before that could
+          still be empty. */}
+      <Table.Cell>
+        {editable ? (
+          <ReceivableTextCell
+            value={deposit.referenceNumber}
+            placeholder="Reference number"
+            ariaLabel="Deposit reference number"
+            unit={faHashtag}
+            required
+            className="w-100"
+            onCommit={onRenameReference}
+          />
+        ) : (
+          <span className="text-muted">
+            {deposit.referenceNumber
+              ? `Ref ${deposit.referenceNumber}`
+              : "No reference"}
+          </span>
+        )}
       </Table.Cell>
       {/* Receivable Amount stays empty. A deposit has no billed amount — the
           figure it carries is what was received, and that belongs under
@@ -1867,6 +1932,7 @@ function ReceivablesSection({
                       <ReceivableTextCell
                         value={r.billingDescription}
                         placeholder="Billing description"
+                        ariaLabel="Billing description"
                         className="w-100"
                         onCommit={(next) =>
                           patch(r.id, { billingDescription: next })
@@ -1922,6 +1988,9 @@ function ReceivablesSection({
                     deposit={deposit}
                     amount={amount}
                     editable={editable}
+                    onRenameReference={(next) =>
+                      updateDepositReference(listing.id, deposit.id, next)
+                    }
                     onDelete={() => removeDeposit(deposit.id)}
                   />
                 ))}

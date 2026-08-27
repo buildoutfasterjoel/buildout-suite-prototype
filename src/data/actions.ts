@@ -657,6 +657,52 @@ export function applyDeposit(
 }
 
 /**
+ * Correct a deposit's reference number.
+ *
+ * The only field on a deposit that can be edited. Its amount, date and
+ * allocations are the record of a payment that already happened; a reference is
+ * a label on that payment, and the one it carries is often ours — generated
+ * because the money landed before its paperwork did. Handing over the real
+ * cheque or wire number afterwards is the ordinary case, not a correction of a
+ * mistake.
+ *
+ * An empty reference is refused rather than stored, which is the same rule
+ * `applyDeposit` applies from the other side: no deposit sits in the table with
+ * nothing in that column. The cell reverts to what it had, so clearing the box
+ * and tabbing away is a no-op rather than a silent erasure.
+ *
+ * Refuses on a Pending voucher, like every other receivable write.
+ */
+export function updateDepositReference(
+  dealId: string,
+  depositId: string,
+  referenceNumber: string,
+): { deal: Listing | null } {
+  const next = referenceNumber.trim()
+  if (!next) return { deal: useDataStore.getState().listings.get(dealId) ?? null }
+
+  return {
+    deal: patchListing(dealId, (l) => {
+      const back = l.transaction.backOffice
+      if (back.status === 'Pending') return l
+      return {
+        ...l,
+        transaction: {
+          ...l.transaction,
+          backOffice: {
+            ...back,
+            deposits: (back.deposits ?? []).map((d) =>
+              d.id === depositId ? { ...d, referenceNumber: next } : d,
+            ),
+          },
+        },
+        updatedAt: new Date().toISOString(),
+      }
+    }),
+  }
+}
+
+/**
  * Remove a deposit, putting back what it moved.
  *
  * **A deposit is one cash receipt, so it comes off whole.** Deleting from one

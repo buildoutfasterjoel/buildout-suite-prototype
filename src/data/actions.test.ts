@@ -23,6 +23,7 @@ import {
   reopenVoucher,
   updateReceivable,
   saveVoucherDraft,
+  updateDepositReference,
 } from './actions'
 import { emptyDraft } from './createListing'
 import { closeProbabilityForStage, commissionForecast } from './commission'
@@ -858,6 +859,85 @@ describe('applyDeposit', () => {
     )
     expect(refs).toHaveLength(5)
     expect(new Set(refs).size).toBe(5)
+  })
+
+  it('updateDepositReference replaces the reference', () => {
+    const { deal, row } = voucherWithOneLine()
+    applyDeposit(deal.id, {
+      date: '2026-08-27',
+      amount: 100,
+      referenceNumber: '',
+      receivableAllocations: [{ targetId: row.id, amount: 100 }],
+      deductionAllocations: [],
+    })
+    const deposit = getListing(deal.id)!.transaction.backOffice.deposits![0]!
+    updateDepositReference(deal.id, deposit.id, '  WT-4471-A  ')
+    const after = getListing(deal.id)!.transaction.backOffice.deposits![0]!
+    // Trimmed: a reference padded with spaces would not match the one on the
+    // statement it is there to be matched against.
+    expect(after.referenceNumber).toBe('WT-4471-A')
+    // Nothing else on the deposit moves — the money is the record of a payment
+    // that already happened.
+    expect(after.amount).toBe(100)
+    expect(after.receivableAllocations).toEqual(deposit.receivableAllocations)
+  })
+
+  it('updateDepositReference refuses to leave a deposit with no reference', () => {
+    const { deal, row } = voucherWithOneLine()
+    applyDeposit(deal.id, {
+      date: '2026-08-27',
+      amount: 100,
+      referenceNumber: 'WT-1',
+      receivableAllocations: [{ targetId: row.id, amount: 100 }],
+      deductionAllocations: [],
+    })
+    const deposit = getListing(deal.id)!.transaction.backOffice.deposits![0]!
+    for (const empty of ['', '   ']) {
+      updateDepositReference(deal.id, deposit.id, empty)
+      expect(
+        getListing(deal.id)!.transaction.backOffice.deposits![0]!.referenceNumber,
+      ).toBe('WT-1')
+    }
+  })
+
+  it('updateDepositReference leaves the voucher’s other deposits alone', () => {
+    const { deal, row } = voucherWithOneLine()
+    for (const ref of ['A', 'B']) {
+      applyDeposit(deal.id, {
+        date: '2026-08-27',
+        amount: 100,
+        referenceNumber: ref,
+        receivableAllocations: [{ targetId: row.id, amount: 100 }],
+        deductionAllocations: [],
+      })
+    }
+    const [first, second] = getListing(deal.id)!.transaction.backOffice.deposits!
+    updateDepositReference(deal.id, first!.id, 'renamed')
+    const refs = getListing(deal.id)!.transaction.backOffice.deposits!.map(
+      (d) => d.referenceNumber,
+    )
+    expect(refs).toEqual(['renamed', second!.referenceNumber])
+  })
+
+  it('updateDepositReference refuses a Pending voucher and allows an Approved one', () => {
+    for (const status of ['Pending', 'Approved'] as const) {
+      const { deal, row } = voucherWithOneLine()
+      applyDeposit(deal.id, {
+        date: '2026-08-27',
+        amount: 100,
+        referenceNumber: 'WT-1',
+        receivableAllocations: [{ targetId: row.id, amount: 100 }],
+        deductionAllocations: [],
+      })
+      const deposit = getListing(deal.id)!.transaction.backOffice.deposits![0]!
+      updateDealTransaction(deal.id, {
+        backOffice: { ...getListing(deal.id)!.transaction.backOffice, status },
+      })
+      updateDepositReference(deal.id, deposit.id, 'WT-2')
+      expect(
+        getListing(deal.id)!.transaction.backOffice.deposits![0]!.referenceNumber,
+      ).toBe(status === 'Pending' ? 'WT-1' : 'WT-2')
+    }
   })
 
   it('deleteDeposit puts back what it moved', () => {
