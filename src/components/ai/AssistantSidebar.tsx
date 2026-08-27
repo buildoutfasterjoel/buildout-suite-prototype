@@ -5,6 +5,7 @@ import { useChat, type UIMessage } from "@tanstack/ai-react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
   faSparkles,
   faXmark,
@@ -12,14 +13,12 @@ import {
   faListCheck,
   faPhone,
   faUserPlus,
-  faChevronRight,
   faArrowLeft,
   faArrowRight,
   faMicrophone,
   faVolumeHigh,
   faVolumeXmark,
   faHandshake,
-  faUsers,
   faBuilding,
   faUser,
   faArrowUpRightAndArrowDownLeftFromCenter,
@@ -71,10 +70,13 @@ import { useHeroOffer, matchOfferIntent } from "#/ai/heroOffer";
 import { useUnderwritingOffer, matchUnderwritingIntent } from "#/ai/underwritingOffer";
 import { useBovFlow } from "#/components/contacts/useBovFlow";
 import { getContact, getProperty } from "#/data/store";
+import { dealShape, repSideLabel } from "#/data/dealShape";
 import { useDataStore } from "#/data/dataStore";
 import { contactFullName } from "#/components/contacts/contactDisplay";
 import { dealCardLinkProps } from "#/components/deals/dealCardLink";
-import { RecordCard } from "#/components/records/RecordRow";
+import { RecordCard, type RecordIconVariant } from "#/components/records/RecordRow";
+import { DealStageOutlineBadge } from "#/components/deals/DealStageBadge";
+import { ContactStageBadge } from "#/components/contacts/ContactStageBadge";
 import { signalText } from "#/data/signal";
 import { generateCallBrief, callBriefFallback } from "#/ai/generate";
 import { CallBriefCard } from "#/components/call/CallBriefCard";
@@ -312,19 +314,22 @@ function DealResultCard({ id }: { id: string }) {
   const listing = useDataStore((st) => st.listings.get(id));
   if (!listing) return null;
   const p = getProperty(listing.propertyId);
-  // The address, not the stage: the prose above a deal card has just said what
-  // stage it is in, and the one thing it never says is which building.
-  const meta = p
-    ? [p.street, [[p.city, p.state].filter(Boolean).join(", "), p.zip].filter(Boolean).join(" ")]
-        .filter(Boolean)
-        .join(" • ")
-    : undefined;
+  // Side and place, not the stage — the badge on the title line carries that
+  // now, and repeating it here would spend the card's only muted line saying a
+  // word already on screen (Figma 342:22561).
+  const meta = [
+    repSideLabel(listing),
+    p ? [p.street, [p.city, p.state].filter(Boolean).join(", ")].filter(Boolean).join(", ") : "",
+  ]
+    .filter(Boolean)
+    .join(" • ");
   return (
     <RecordCard
       variant="deal"
       icon={faHandshake}
       title={listing.name}
       meta={meta}
+      badge={<DealStageOutlineBadge stage={listing.status} shape={dealShape(listing)} />}
       link={dealCardLinkProps(listing)}
     />
   );
@@ -333,7 +338,7 @@ function DealResultCard({ id }: { id: string }) {
 function ContactResultCard({ id, fallbackName }: { id: string; fallbackName: string }) {
   const contact = useDataStore((st) => st.contacts.get(id));
   const meta = contact
-    ? [contact.title, contact.company].filter(Boolean).join(" · ")
+    ? [contact.title, contact.company].filter(Boolean).join(" • ")
     : undefined;
   return (
     <RecordCard
@@ -341,52 +346,100 @@ function ContactResultCard({ id, fallbackName }: { id: string; fallbackName: str
       icon={faUser}
       title={contact ? contactFullName(contact) : fallbackName}
       meta={meta}
+      badge={
+        contact ? <ContactStageBadge relationship={contact.relationship} /> : undefined
+      }
       link={{ to: "/backoffice/contacts/$contactId", params: { contactId: id } }}
     />
   );
 }
 
-/** Apply a nav's filter payload to the destination's bridge store, then go. */
+/**
+ * A property Otto found, drawn like its siblings and pointed at the property's
+ * own record page.
+ *
+ * It used to land on the Deals grid pre-filtered to the address, which is the
+ * long way round to a page that exists: a property has a record of its own, with
+ * its facts, its owners and every deal ever run on it. Read off the store by id
+ * for the same reason the deal and contact cards are — the tool's payload is a
+ * snapshot, and its flattened `address` string isn't the building's name.
+ */
+function PropertyResultCard({ id, fallbackTitle }: { id: string; fallbackTitle: string }) {
+  const property = useDataStore((st) => st.properties.get(id));
+  const meta = property
+    ? [property.street, [property.city, property.state].filter(Boolean).join(", ")]
+        .filter(Boolean)
+        .join(" • ")
+    : undefined;
+  return (
+    <RecordCard
+      variant="property"
+      icon={faBuilding}
+      title={property?.name || fallbackTitle}
+      meta={meta}
+      link={{ to: "/properties/$propertyId", params: { propertyId: id } }}
+    />
+  );
+}
+
+/** Apply a nav's filter payload to the destination's bridge store, then go.
+ *  Properties don't come through here — their card is a plain link (see
+ *  `ResultSummaryCard`), because `/properties?q=` says everything they carry. */
 function goToNav(router: ReturnType<typeof useRouter>, nav: ResultNav) {
   if (nav.entity === "contacts") {
     useContactsFilter.getState().apply(nav.contactsFilter ?? {});
     router.navigate({ to: "/backoffice/contacts" as never });
   } else {
-    // deals and properties both live in the Listings grid.
     useListingsFilter.getState().applyFacets(nav.listingsFacets ?? {});
     router.navigate({ to: "/listings" as never });
   }
 }
 
+/** Icon, colour and destination wording per entity — the three things that make
+ *  a many-records card read as *those* records (Figma 342:22692/22560/22559). */
+const NAV_DISPLAY: Record<
+  ResultNav["entity"],
+  { variant: RecordIconVariant; icon: IconDefinition; page: string }
+> = {
+  deals: { variant: "deal", icon: faHandshake, page: "Deals" },
+  contacts: { variant: "contact", icon: faUser, page: "Contacts" },
+  properties: { variant: "property", icon: faBuilding, page: "Properties" },
+};
+
 /**
  * Compact summary card shown when a tool returns more than one item — instead
- * of a flood of cards. Shows the count + a button that lands the broker on the
- * pre-filtered section page (see `goToNav`).
+ * of a flood of cards. Shows the count + lands the broker on the pre-filtered
+ * section page (see `goToNav`).
+ *
+ * The same `RecordCard` a single result gets, not a card of its own: the two sit
+ * one above the other in the same transcript, and drawn differently they read as
+ * two unrelated kinds of thing when they are the same answer at two sizes. What
+ * the many-card keeps from the one is the type-coloured badge (so "2 deals"
+ * looks like a deal before you read it) and the way-out glyph; what it drops is
+ * the record's own icon — the *singular* glyph, deliberately, because `faUsers`
+ * beside "2 contacts" says the count twice and stops matching the row above it.
  */
 function ResultSummaryCard({ nav, onGo }: { nav: ResultNav; onGo: () => void }) {
-  const icon =
-    nav.entity === "contacts" ? faUsers : nav.entity === "properties" ? faBuilding : faHandshake;
-  const dest = nav.entity === "contacts" ? "View in People" : "View in Deals";
+  const { variant, icon, page } = NAV_DISPLAY[nav.entity];
+  // Properties go as a link, the rest as a handler: `/properties?q=` carries the
+  // whole filter in the URL, where a deal's stage set and a contact's tags need
+  // the bridge stores `goToNav` writes.
+  const link =
+    nav.entity === "properties"
+      ? {
+          to: "/properties",
+          search: nav.propertiesQuery ? { q: nav.propertiesQuery } : ({} as Record<string, string>),
+        }
+      : undefined;
   return (
-    <button
-      type="button"
-      onClick={onGo}
-      className="btn p-0 border rounded text-start w-100 bg-white"
-    >
-      <div className="d-flex align-items-center gap-2 p-2">
-        <span
-          className="d-inline-flex align-items-center justify-content-center rounded bg-body-tertiary text-buildout-blue-700 flex-shrink-0"
-          style={{ width: 32, height: 32 }}
-        >
-          <FontAwesomeIcon icon={icon} />
-        </span>
-        <div className="flex-grow-1" style={{ minWidth: 0 }}>
-          <div className="fw-semibold text-truncate">{nav.summary}</div>
-          <div className="text-muted small">{dest} →</div>
-        </div>
-        <FontAwesomeIcon icon={faChevronRight} className="text-muted flex-shrink-0" />
-      </div>
-    </button>
+    <RecordCard
+      variant={variant}
+      icon={icon}
+      title={nav.summary}
+      meta={`View on the ${page} page`}
+      link={link}
+      onOpen={onGo}
+    />
   );
 }
 
@@ -476,22 +529,7 @@ function ToolResultCards({
         {dealBuild && <DealBuildChecklist build={dealBuild} />}
         {d && <DealResultCard id={d.id} />}
         {c && <ContactResultCard id={c.id} fallbackName={c.name} />}
-        {p && (
-          <RecordCard
-            variant="property"
-            icon={faBuilding}
-            title={p.address ?? "Property"}
-            meta={p.propertyType}
-            onOpen={() =>
-              goToNav(router, {
-                entity: "properties",
-                count: 1,
-                summary: "",
-                listingsFacets: { search: p.address },
-              })
-            }
-          />
-        )}
+        {p && <PropertyResultCard id={p.id} fallbackTitle={p.address ?? "Property"} />}
       </div>
     );
   }

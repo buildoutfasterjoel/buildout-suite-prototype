@@ -35,11 +35,32 @@ export function RecordRowIcon({
 }
 
 /** Title over meta, both truncating. `title` takes a node so the menu can pass
- * its highlighted match markup and the rail can pass a plain string. */
-export function RecordRowLabel({ title, meta }: { title: ReactNode; meta?: ReactNode }) {
+ * its highlighted match markup and the rail can pass a plain string.
+ *
+ * `badge` sits on the title's line and never shrinks — a deal's stage and a
+ * contact's relationship are the one fact worth carrying up next to the name
+ * (Figma 342:22561, 342:22557). The title yields to it rather than the other way
+ * round: a truncated name still identifies the record, a truncated stage doesn't
+ * say anything at all. */
+export function RecordRowLabel({
+  title,
+  meta,
+  badge,
+}: {
+  title: ReactNode;
+  meta?: ReactNode;
+  badge?: ReactNode;
+}) {
   return (
     <span className="omni-item__label">
-      <span className="omni-item__title text-truncate">{title}</span>
+      {badge ? (
+        <span className="omni-item__title-row">
+          <span className="omni-item__title text-truncate">{title}</span>
+          {badge}
+        </span>
+      ) : (
+        <span className="omni-item__title text-truncate">{title}</span>
+      )}
       {meta && <span className="omni-item__meta text-truncate">{meta}</span>}
     </span>
   );
@@ -59,6 +80,7 @@ export function RecordCard({
   icon,
   title,
   meta,
+  badge,
   link,
   onOpen,
 }: {
@@ -66,14 +88,22 @@ export function RecordCard({
   icon: IconDefinition;
   title: string;
   meta?: string;
-  /** Router destination, as `dealCardLinkProps` and friends produce it. */
-  link?: { to: string; params?: Record<string, string> };
+  /** Stage / relationship pill on the title's line — see `RecordRowLabel`. */
+  badge?: ReactNode;
+  /** Router destination, as `dealCardLinkProps` and friends produce it.
+   *  `search` covers the destinations that take a query rather than a record id
+   *  — `/properties?q=` behind a "5 properties matching …" card. */
+  link?: {
+    to: string;
+    params?: Record<string, string>;
+    search?: Record<string, string>;
+  };
   onOpen?: () => void;
 }) {
   const inner = (
     <>
       <RecordRowIcon variant={variant} icon={icon} />
-      <RecordRowLabel title={title} meta={meta} />
+      <RecordRowLabel title={title} meta={meta} badge={badge} />
       <span className="omni-item__go" aria-hidden="true">
         <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
       </span>

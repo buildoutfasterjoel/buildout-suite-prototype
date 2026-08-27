@@ -1924,6 +1924,25 @@
     font-weight: 500;
     line-height: 19px;
   }
+
+  // Title + its stage/relationship pill. `min-width: 0` on both the row and the
+  // title is what lets the title's `text-truncate` actually fire — a flex item
+  // defaults to `min-width: auto` and would push the badge off the card instead
+  // of ellipsing.
+  &__title-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+
+    .omni-item__title {
+      min-width: 0;
+    }
+
+    > .badge {
+      flex-shrink: 0;
+    }
+  }
   &__meta {
     color: var(--color-storm-grey-600, #506079);
     font-size: 12px;
@@ -1946,11 +1965,19 @@
   // flow it needs a border to read as an object, and the type label on the
   // right gives way to the way-out glyph — a card in a conversation is
   // something you click, where a row in a result list is something you scan.
+  //
+  // Geometry per Figma 342:22562: 8px around the icon with the right edge
+  // opened to 16px so the way-out glyph isn't jammed into the corner, a
+  // storm-grey-100 hairline, and the base card shadow — the card lifts off the
+  // transcript the way every other artifact in the rail does.
   &--card {
-    padding: 10px 12px;
-    border: 1px solid var(--color-storm-grey-200, #e2e6ee);
-    border-radius: var(--bp-border-radius-lg, 8px);
+    padding: 8px 16px 8px 8px;
+    border: 1px solid var(--color-storm-grey-100, #eceef2);
+    border-radius: var(--bp-border-radius-md, 6px);
     background: #fff;
+    box-shadow:
+      0 1px 3px 0 rgb(0 0 0 / 10%),
+      0 1px 2px -1px rgb(0 0 0 / 10%);
     text-decoration: none;
 
     &:hover,

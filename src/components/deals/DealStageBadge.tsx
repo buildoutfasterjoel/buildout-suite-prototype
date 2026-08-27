@@ -1,3 +1,4 @@
+import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import type { ListingStage } from "#/data/types";
 import { dealStageLabel, type DealShape } from "#/data/dealShape";
 import { STATUS_COLORS } from "../properties/propertyDisplay";
@@ -64,5 +65,38 @@ export function DealStageBadge({
     <StatusPill color={STATUS_COLORS[stage]}>
       {dealStageLabel(stage, shape)}
     </StatusPill>
+  );
+}
+
+/**
+ * The same stage, in the outline form a record card wants (Figma 274:20202).
+ *
+ * `DealStageBadge`'s tinted fill is right on a deal card, where the badge is the
+ * loudest thing in its own frame and the colour is doing the work. On an Otto
+ * record card it would be the loudest thing in the *conversation* — a pill
+ * shouting a colour next to a one-line name. So the fill drops to Blueprint's
+ * muted outline (`$badge-muted-outline-*`, the tokens the design names) and the
+ * stage colour survives only in the dot, which is all it needed to carry.
+ */
+export function DealStageOutlineBadge({
+  stage,
+  shape = "sale",
+}: {
+  stage: ListingStage;
+  shape?: DealShape;
+}) {
+  return (
+    <Badge
+      variant="outline"
+      appearance="muted"
+      className="d-inline-flex align-items-center gap-1 text-nowrap fw-semibold"
+      style={{ height: 20, padding: "2px 6px", borderRadius: 6, fontSize: 12, lineHeight: "13px" }}
+    >
+      <span
+        className="rounded-circle flex-shrink-0"
+        style={{ width: 8, height: 8, backgroundColor: STATUS_COLORS[stage] }}
+      />
+      {dealStageLabel(stage, shape)}
+    </Badge>
   );
 }

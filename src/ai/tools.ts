@@ -366,7 +366,7 @@ export function createClientTools({
           entity: "properties",
           count: r.properties.length,
           summary: `${r.properties.length} ${r.properties.length === 1 ? "property" : "properties"} matching “${query}”`,
-          listingsFacets: { search: query },
+          propertiesQuery: query,
         });
       if (r.deals.length)
         navs.push({
