@@ -392,3 +392,87 @@ describe('voucher status seed', () => {
     }
   })
 })
+
+describe('invoice seed', () => {
+  const { listings } = generateDataset()
+
+  it('gives every voucher past Draft an invoice, and no Draft voucher one', () => {
+    // Sending the invoices is the last thing a broker does before submitting, so
+    // the two states are exactly aligned. A Draft voucher with no invoices is
+    // also what keeps the Invoices page's empty state reachable on a fresh seed.
+    for (const deal of listings) {
+      const voucher = deal.transaction.backOffice
+      const count = deal.invoices?.length ?? 0
+      if (voucher.status === 'Draft') expect(count).toBe(0)
+      else expect(count).toBeGreaterThan(0)
+    }
+  })
+
+  it('bills every invoice line against a receivable on that same voucher', () => {
+    for (const deal of listings) {
+      const ids = new Set(deal.transaction.backOffice.receivables.map((r) => r.id))
+      for (const invoice of deal.invoices ?? []) {
+        for (const line of invoice.lineItems) {
+          expect(ids.has(line.receivableId)).toBe(true)
+        }
+      }
+    }
+  })
+
+  it('bills one payer per invoice, and one the voucher names', () => {
+    for (const deal of listings) {
+      const payers = new Set(deal.transaction.backOffice.payerContactIds)
+      for (const invoice of deal.invoices ?? []) {
+        expect(payers.has(invoice.payerContactId)).toBe(true)
+        const byLine = deal.transaction.backOffice.receivables.filter((r) =>
+          invoice.lineItems.some((l) => l.receivableId === r.id),
+        )
+        expect(new Set(byLine.map((r) => r.payerContactId))).toEqual(
+          new Set([invoice.payerContactId]),
+        )
+      }
+    }
+  })
+
+  it('names a creator who is actually on the roster', () => {
+    const invoices = listings.flatMap((l) => l.invoices ?? [])
+    expect(invoices.length).toBeGreaterThan(0)
+    for (const invoice of invoices) {
+      expect(findTeammate(invoice.createdById)).toBeDefined()
+    }
+  })
+
+  it('states the earliest of its lines as the invoice due date', () => {
+    for (const invoice of listings.flatMap((l) => l.invoices ?? [])) {
+      const earliest = invoice.lineItems
+        .map((l) => l.dueDate)
+        .sort()[0]
+      expect(invoice.dueDate).toBe(earliest)
+    }
+  })
+
+  it('agrees with the receivable it froze, since nothing has moved yet', () => {
+    // At seed time a copy and its source must match. They are allowed to diverge
+    // afterwards — that is the whole point of copying them — so this pins the
+    // starting state rather than an invariant.
+    for (const deal of listings) {
+      const byId = new Map(deal.transaction.backOffice.receivables.map((r) => [r.id, r]))
+      for (const invoice of deal.invoices ?? []) {
+        for (const line of invoice.lineItems) {
+          const r = byId.get(line.receivableId)!
+          expect(line.amount).toBe(r.amount)
+          expect(line.amountPaid).toBe(r.credited)
+          expect(line.dueDate).toBe(r.dueDate)
+        }
+      }
+    }
+  })
+
+  it('names each invoice file after its payer, numbered within the deal', () => {
+    for (const deal of listings) {
+      const names = (deal.invoices ?? []).map((i) => i.name)
+      expect(new Set(names).size).toBe(names.length)
+      for (const name of names) expect(name).toMatch(/_Invoice_\d+\.pdf$/)
+    }
+  })
+})

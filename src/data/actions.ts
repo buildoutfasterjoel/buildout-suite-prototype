@@ -6,7 +6,7 @@ import {
   serializeContactFilters,
   type ContactFilterState,
 } from '#/components/contacts/contactFilterModel'
-import type { Contact, ContactRole, ContactSource, DealDocument, DealHistoryEntry, DealIngestion, DealMarketing, DealPitchFinancials, DealBroker, DealTask, DealTransaction, DocumentGeneration, FinancialDeduction, FinancialReceivable, GeneratedSection, IngestionFieldKey, Listing, PropertyStatus, Task } from './types'
+import type { Contact, ContactRole, ContactSource, DealDocument, DealHistoryEntry, DealIngestion, DealInvoice, DealMarketing, DealPitchFinancials, DealBroker, DealTask, DealTransaction, DocumentGeneration, FinancialDeduction, FinancialReceivable, GeneratedSection, IngestionFieldKey, Listing, PropertyStatus, Task } from './types'
 import { CURRENT_USER, TEAMMATES } from './teammates'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
 import { reconcileContactDealFields } from './contactStage'
@@ -24,6 +24,14 @@ import {
   resolvedPropertyPatch,
 } from './ingestion'
 import { getContact, getProperty, updateProperty } from './store'
+import {
+  invoiceDueDate,
+  invoiceFileName,
+  invoiceLineItems,
+  invoicePayerFileLabel,
+  nextInvoiceOrdinal,
+} from './invoices'
+import { voucherParty } from './vouchers'
 
 let _callListSeq = 0
 
@@ -599,6 +607,65 @@ export function createGeneratedDocument(
   }))
 
   return { documentId: deal ? documentId : null }
+}
+
+/**
+ * Bill the selected receivables on one invoice, filed against the deal.
+ *
+ * Takes receivable ids rather than the rows themselves so the deal in the store
+ * is the source of the amounts — the caller's copies could be a render behind.
+ * The selection is read in voucher order, not in the order the ids arrive, so
+ * the invoice's lines match the table the broker just picked them from.
+ *
+ * Returns nulls rather than throwing on a selection that cannot be billed. Two
+ * cases: nothing selected, and rows that name more than one payer. One invoice
+ * bills one party, which is the same rule `canCreateInvoice` applies to enable
+ * the button — repeated here because a disabled button is a UI courtesy, not a
+ * guarantee about what reaches the store.
+ */
+export function createInvoiceFromReceivables(
+  dealId: string,
+  receivableIds: string[],
+): { invoiceId: string | null; name: string | null } {
+  const nothing = { invoiceId: null, name: null }
+  const deal = useDataStore.getState().listings.get(dealId)
+  if (!deal) return nothing
+
+  const wanted = new Set(receivableIds)
+  const billed = deal.transaction.backOffice.receivables.filter((r) => wanted.has(r.id))
+  if (billed.length === 0) return nothing
+  if (new Set(billed.map((r) => r.payerContactId)).size > 1) return nothing
+
+  const now = new Date().toISOString()
+  const invoiceId = `invoice-${crypto.randomUUID()}`
+  const lineItems = invoiceLineItems(billed)
+  // `billToCompany` is a property of the payer relationship on this voucher, and
+  // every line here names the same payer, so the first line settles it for the
+  // invoice. A selection whose rows disagreed about the form would still bill
+  // one party; taking the first is what the receivables table shows first.
+  const billToCompany = billed[0].billToCompany
+
+  const invoice: DealInvoice = {
+    id: invoiceId,
+    name: invoiceFileName(
+      invoicePayerFileLabel(voucherParty(billed[0].payerContactId), billToCompany),
+      nextInvoiceOrdinal(deal),
+    ),
+    createdAt: now,
+    createdById: CURRENT_USER.id,
+    payerContactId: billed[0].payerContactId,
+    billToCompany,
+    dueDate: invoiceDueDate(lineItems),
+    lineItems,
+  }
+
+  const patched = patchListing(dealId, (l) => ({
+    ...l,
+    invoices: [...(l.invoices ?? []), invoice],
+    updatedAt: now,
+  }))
+
+  return patched ? { invoiceId, name: invoice.name } : nothing
 }
 
 /** The generation behind a document id, or undefined if there isn't one. */

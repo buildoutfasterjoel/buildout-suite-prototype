@@ -464,6 +464,8 @@ export interface Listing {
 
   /** Context files attached when the deal was created (OMs, financials, notes). */
   documents?: DealDocument[]
+  /** Invoices filed against this deal — see {@link DealInvoice} for why these are not in `documents`. */
+  invoices?: DealInvoice[]
 
   /** The underwriting scope chosen at deal creation — a heads-up of what's coming. */
   underwriting?: DealUnderwriting
@@ -489,6 +491,71 @@ export interface DealDocument {
   aiGenerated?: boolean
   /** Present when this document came from the AI generation flow. */
   generation?: DocumentGeneration
+}
+
+/**
+ * One billed line of an invoice — one receivable, priced as of the moment the
+ * invoice was generated.
+ *
+ * `amount` and `amountPaid` are COPIES, deliberately. An invoice is a claim about
+ * a moment: once it is out the door, a payment landing against the receivable
+ * moves `FinancialReceivable.credited` but must not move what the invoice said.
+ * That is the opposite of the `payerName`/`payerEmail` copies this codebase
+ * already removed from receivables — copying a *value at a moment* is what a
+ * document does; copying an *identity* is what goes stale.
+ *
+ * `receivableId` is the reference that survives, so a line can still be traced
+ * back to the row it billed.
+ */
+export interface DealInvoiceLineItem {
+  /** The `FinancialReceivable.id` this line bills. */
+  receivableId: string
+  /** `yyyy-mm-dd`, copied from the receivable. */
+  dueDate: string
+  /** The receivable's `amount` at generation — the invoice's INVOICE AMOUNT. */
+  amount: number
+  /** The receivable's `credited` at generation — the invoice's AMOUNT PAID. */
+  amountPaid: number
+}
+
+/**
+ * An invoice filed against a deal — one PDF a broker sent, or will send, for
+ * money the voucher says is owed.
+ *
+ * **Its own array, not `documents`.** `Listing.documents` is read by the
+ * Documents page, the deal context rail, the publish preview, the stage gate,
+ * the underwriting placement modal and the contact card's count. An invoice in
+ * that array would surface in a marketing publish preview and be offered as an
+ * underwriting source file, so every one of those readers would need an
+ * is-not-an-invoice filter and every future reader would have to remember it.
+ * An invoice is still a document in the product sense — it has a filename and a
+ * PDF icon — it just is not in the array those six surfaces scan.
+ *
+ * **Only the money is stored.** Who is billed, what for, by which agent, and to
+ * which contact are all derived from the deal at render time — see
+ * `invoiceView` in `invoices.ts`. The deal is always in hand when an invoice is
+ * shown, so copying six more fields onto it would only create six more things
+ * that can disagree with the record they came from.
+ */
+export interface DealInvoice {
+  id: string
+  /** The filename the Invoices table shows, e.g. `ABC_Corp_Invoice_1.pdf`. */
+  name: string
+  /** ISO timestamp. The table shows the calendar day only. */
+  createdAt: string
+  /** A `TEAMMATES` id — resolve it with `findTeammate`. */
+  createdById: string
+  /**
+   * Who is billed, as a contact id. Every line's receivable named this same
+   * payer — one invoice bills one party, which is what `canCreateInvoice`
+   * enforces at the point of creation.
+   */
+  payerContactId: string
+  /** Bill the payer's company rather than the payer themselves. Copied from the receivables. */
+  billToCompany: boolean
+  /** `yyyy-mm-dd` — the earliest due date among the lines. */
+  dueDate: string
+  lineItems: DealInvoiceLineItem[]
 }
 
 /**
