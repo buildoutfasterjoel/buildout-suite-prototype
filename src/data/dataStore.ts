@@ -177,6 +177,14 @@ export const useDataStore = create<DataState>((set) => ({
   },
 
   persist: () => {
+    // Nothing to persist to outside a browser. `idb-keyval` reaches straight for
+    // `indexedDB`, which does not exist under SSR or in Vitest's node
+    // environment — and because the write below is debounced by 300ms, a test
+    // that merely touched the store could arm a timer that outlived it and then
+    // threw `indexedDB is not defined` as an unhandled error, attributed to
+    // whichever file happened to be running when it fired. Bailing before the
+    // timer is armed is what makes that race impossible rather than unlikely.
+    if (typeof indexedDB === 'undefined') return
     if (_persistTimer) clearTimeout(_persistTimer)
     _persistTimer = setTimeout(() => {
       const { properties, listings, comps, contacts, dealFiles, emails, callLists, contactShares, tasks } =
