@@ -1646,10 +1646,13 @@ export function AssistantSidebar() {
       <div className="assistant-rail__header">
         {view === "home" ? (
           /* Nothing to resume until something's been said — and an empty rail
-             with a "Resume chatting" button is an offer that goes nowhere. */
-          messages.length > 0 ? (
+             with a "Resume chatting" button is an offer that goes nowhere.
+             A finished call counts as something: the recap card lives in the
+             chat view, so without this a call reported before the broker had
+             asked anything could only be reached by sending a message first. */
+          messages.length > 0 || recap ? (
             <Button size="sm" variant="ghost" onClick={() => setView("chat")}>
-              Resume chatting
+              {messages.length > 0 ? "Resume chatting" : "See your call recap"}
               <FontAwesomeIcon icon={faArrowRight} />
             </Button>
           ) : (
@@ -1747,6 +1750,14 @@ export function AssistantSidebar() {
           // though it were part of it.
           style={{ padding: "20px 20px 32px", gap: 24 }}
         >
+        {/* Arrived before the broker had said anything, so there is no message to
+            hang them under — which puts them at the TOP of the transcript, not
+            the bottom. Rendered after the list (where they used to be) a recap
+            from a call taken before the first question stayed pinned below every
+            answer that followed it, drifting further from the call it reported
+            with each turn. */}
+        {recapAnchor === null && <CallRecapCard />}
+        <CompletedActions entries={completedAt(null)} />
         {messages.length === 0 && !recap ? (
           <div className="text-muted small">
             Ask about your properties, contacts, and deals — or have me draft an email, build a
@@ -1776,10 +1787,6 @@ export function AssistantSidebar() {
             );
           })
         )}
-        {/* Arrived before the broker had said anything, so there is no message to
-            hang them under. */}
-        {recapAnchor === null && <CallRecapCard />}
-        <CompletedActions entries={completedAt(null)} />
         {/* The turn's visible work can finish before the turn does: a tool result
             lands, its card renders, and the model is still closing out. What it
             says next is suppressed anyway (see `narratedIndices`), so a spinner

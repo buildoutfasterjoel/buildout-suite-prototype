@@ -1,5 +1,6 @@
 import type { CallRecapSpecT } from "#/ai/generate/schemas";
 import type { HeroKey } from "#/data/types";
+import { personaRecap } from "./heroRecapExtensions";
 
 /**
  * Turns a call recap into the notes the Log Call modal drafts for the broker.
@@ -8,23 +9,6 @@ import type { HeroKey } from "#/data/types";
  * happens next. The recap carries both — `keyPoints` and `tasks` — so the note
  * is composed from both rather than just the headline points.
  */
-
-/**
- * Hand-authored summaries for the demo personas, used when the model is
- * unavailable (no API key → `callRecapFallback`, which can't say anything
- * specific). Without these the demo's marquee call logs "you spoke with Rosa;
- * review the transcript", which reads worse than the story deserves.
- */
-const PERSONA_NOTES: Partial<Record<HeroKey, string>> = {
-  rosa:
-    "Returned Rosa's call about the loan documents she found in Miguel's papers — " +
-    "the balloon note we'd talked about. She wants to understand her options: nothing " +
-    "decided, no pressure applied. Warmest she's sounded — she offered to send the " +
-    "building's T-12 and rent roll so I can see what it actually does before we talk " +
-    "again.\n\nNext steps:\n" +
-    "- Review the T-12 and rent roll when they land\n" +
-    "- Follow up gently once I've read them — no ask",
-};
 
 /**
  * Whether a recap carries no real substance — i.e. the deterministic
@@ -62,8 +46,11 @@ export function composeCallNotes(input: {
 }): string {
   const { recap, firstName, heroKey } = input;
 
-  const persona = heroKey ? PERSONA_NOTES[heroKey] : undefined;
-  if (persona && isThinRecap(recap)) return persona;
+  // The persona's recap is composed the same way a real one is, so the note the
+  // modal drafts and the recap the rail's card reports can't drift apart — both
+  // read the one spec in `heroRecapExtensions`.
+  const persona = personaRecap(heroKey);
+  if (persona && isThinRecap(recap)) return composeCallNotes({ recap: persona, firstName });
 
   const discussed = asProse(recap.keyPoints);
   const nextSteps = recap.tasks

@@ -92,10 +92,20 @@ export function CallRecapCard() {
   return (
     <div className="border rounded p-3 bg-white d-flex flex-column gap-3">
       <div className="d-flex align-items-start gap-2">
-        <div
-          className="assistant-markdown flex-grow-1"
-          dangerouslySetInnerHTML={{ __html: renderLightHtml(report.message) }}
-        />
+        <div className="flex-grow-1 d-flex flex-column gap-2" style={{ minWidth: 0 }}>
+          <div
+            className="assistant-markdown"
+            dangerouslySetInnerHTML={{ __html: renderLightHtml(report.headline) }}
+          />
+          {/* What was actually said, in its own block. Muted, because the
+              headline is the report and this is the transcript of it. */}
+          {report.detail && (
+            <div
+              className="assistant-markdown text-muted small"
+              dangerouslySetInnerHTML={{ __html: renderLightHtml(report.detail) }}
+            />
+          )}
+        </div>
         <Button variant="ghost" size="icon-sm" aria-label="Dismiss recap" onClick={dismiss}>
           <FontAwesomeIcon icon={faXmark} />
         </Button>
@@ -105,12 +115,15 @@ export function CallRecapCard() {
         <div className="d-flex flex-column gap-2">
           <div className="d-flex align-items-center gap-2 small text-muted text-uppercase fw-semibold">
             <FontAwesomeIcon icon={faListCheck} />
-            Follow-up tasks
+            Recommended next actions
           </div>
           {drafts.map((d, i) => (
             <div key={i} className="border rounded p-2 d-flex align-items-center gap-2">
               <div className="flex-grow-1" style={{ minWidth: 0 }}>
-                <div className="fw-semibold text-truncate">{d.title}</div>
+                {/* Wraps rather than truncates: a drafted follow-up is a
+                    sentence ("Follow up gently once I've read them — no ask"),
+                    and an ellipsis in the middle of one hides the instruction. */}
+                <div className="fw-semibold">{d.title}</div>
                 {d.due && <div className="small text-muted">Due {d.due}</div>}
               </div>
               <Button variant="primary" size="sm" onClick={() => keep(i)}>
