@@ -456,6 +456,19 @@ describe('deposit seed', () => {
     }
   })
 
+  it('gives every deposit a reference, unique within its voucher', () => {
+    // No deposit may show an empty reference column, seeded or entered. The save
+    // path generates one when the broker leaves the field blank; the seed uses
+    // the same generator, so the two are the same kind of thing.
+    for (const deal of listings) {
+      const refs = (deal.transaction.backOffice.deposits ?? []).map(
+        (d) => d.referenceNumber,
+      )
+      for (const ref of refs) expect(ref).toMatch(/^[1-9]\d{3}$/)
+      expect(new Set(refs).size).toBe(refs.length)
+    }
+  })
+
   it('dates each deposit after the line it paid', () => {
     for (const deal of listings) {
       const byId = new Map(deal.transaction.backOffice.receivables.map((r) => [r.id, r]))

@@ -111,7 +111,9 @@ function PreviewTable({
                 <AppliedAmountCell
                   line={line}
                   override={
-                    overriding ? (overrides[line.targetId] ?? line.applied) : null
+                    overriding
+                      ? (overrides[line.targetId] ?? line.applied)
+                      : null
                   }
                   onOverride={(next) => onOverride(line.targetId, next)}
                 />
@@ -211,7 +213,9 @@ export function ApplyDepositModal({
   const allocationsFor = (lines: DepositPreviewLine[]): DepositAllocation[] =>
     lines.map((line) => ({
       targetId: line.targetId,
-      amount: overriding ? (overrides[line.targetId] ?? line.applied) : line.applied,
+      amount: overriding
+        ? (overrides[line.targetId] ?? line.applied)
+        : line.applied,
     }));
 
   const setOverride = (targetId: string, next: number) =>
@@ -279,10 +283,17 @@ export function ApplyDepositModal({
           <Field>
             <Field.Label>Reference Number</Field.Label>
             {/* Free text, not a number input: a wire reference is as often
-                "WT-4471-A" as it is digits, and a number field would refuse it. */}
+                "WT-4471-A" as it is digits, and a number field would refuse it.
+
+                Optional, and the placeholder says what happens if it stays that
+                way. Money often lands before its paperwork does, so requiring
+                one would push the broker into typing a placeholder that then
+                reads as the payer's real reference — while a deposit with an
+                empty reference is a row nobody can match to a bank statement.
+                Generating one at save is the way out of both. */}
             <Input
               value={reference}
-              placeholder="Cheque or wire reference"
+              placeholder="Generated if left blank"
               onChange={(e) => setReference(e.target.value)}
             />
           </Field>
@@ -303,7 +314,9 @@ export function ApplyDepositModal({
           </Alert>
 
           <div className="d-flex align-items-center justify-content-between gap-3">
-            <h5 className="mb-0">Deposit Application Preview</h5>
+            <h6 className="mb-0 fs-large fw-semibold">
+              Deposit Application Preview
+            </h6>
             <div className="d-flex align-items-center gap-2">
               <span>Override</span>
               <Switch

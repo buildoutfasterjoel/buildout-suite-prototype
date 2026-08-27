@@ -813,6 +813,52 @@ describe('applyDeposit', () => {
     expect(back.preSplitDeductions[0]!.covered).toBe(500)
   })
 
+  it('generates a reference when the broker left the field blank', () => {
+    // No deposit may sit in the table with an empty reference column — that row
+    // cannot be matched against a bank statement later.
+    const { deal, row } = voucherWithOneLine()
+    applyDeposit(deal.id, {
+      date: '2026-08-27',
+      amount: 100,
+      referenceNumber: '',
+      receivableAllocations: [{ targetId: row.id, amount: 100 }],
+      deductionAllocations: [],
+    })
+    const deposit = getListing(deal.id)!.transaction.backOffice.deposits![0]!
+    expect(deposit.referenceNumber).toMatch(/^[1-9]\d{3}$/)
+  })
+
+  it('keeps the reference the broker typed', () => {
+    const { deal, row } = voucherWithOneLine()
+    applyDeposit(deal.id, {
+      date: '2026-08-27',
+      amount: 100,
+      referenceNumber: 'WT-4471-A',
+      receivableAllocations: [{ targetId: row.id, amount: 100 }],
+      deductionAllocations: [],
+    })
+    const deposit = getListing(deal.id)!.transaction.backOffice.deposits![0]!
+    expect(deposit.referenceNumber).toBe('WT-4471-A')
+  })
+
+  it('never repeats a reference across a voucher’s deposits', () => {
+    const { deal, row } = voucherWithOneLine()
+    for (let i = 0; i < 5; i++) {
+      applyDeposit(deal.id, {
+        date: '2026-08-27',
+        amount: 100,
+        referenceNumber: '',
+        receivableAllocations: [{ targetId: row.id, amount: 100 }],
+        deductionAllocations: [],
+      })
+    }
+    const refs = getListing(deal.id)!.transaction.backOffice.deposits!.map(
+      (d) => d.referenceNumber,
+    )
+    expect(refs).toHaveLength(5)
+    expect(new Set(refs).size).toBe(5)
+  })
+
   it('refuses a Pending voucher and allows an Approved one', () => {
     for (const status of ['Pending', 'Approved'] as const) {
       const { deal, row } = voucherWithOneLine()

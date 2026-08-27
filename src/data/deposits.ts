@@ -122,22 +122,46 @@ export function previewDeposit({
 }
 
 /**
- * A stable four-digit wire reference for a seeded deposit.
+ * A four-digit reference for a deposit that arrived without one.
  *
- * Hashed from the receivable id rather than drawn from faker, for the reason
- * `isQuickbooksSynced` is: the seed calls this while generating a voucher, and a
- * `faker` call there would move the shared stream and shift every property,
- * contact and deal generated after it. This costs the stream nothing.
+ * **Every deposit carries a reference.** The field is optional to the broker —
+ * money often lands before its paperwork does — but a deposit with nothing in
+ * that column is a row nobody can match against a bank statement later, so one
+ * is generated at the point of save rather than left blank.
  *
- * Seed-only. A deposit entered through the modal carries whatever reference the
- * broker typed, including none.
+ * Bare digits, the same shape a cheque or wire reference has, because the seeded
+ * deposits already read that way and a `DEP-` prefix on half the rows would say
+ * "these two came from us" — a distinction nothing in the product acts on.
+ *
+ * Hashed from `seed` rather than drawn at random or from faker. The seed calls
+ * this while `generateDataset` is still building the store, and a `faker` call
+ * there would move the shared stream and shift every property, contact and deal
+ * generated after it (the same reason `isQuickbooksSynced` is a hash). Being
+ * deterministic also means a reseed produces the same references.
+ *
+ * `taken` makes it unique within its voucher — including against references the
+ * broker typed by hand, so a generated one cannot collide with a real cheque
+ * number already on the page. It steps forward from the hash rather than
+ * rehashing, so the first free number near it wins.
  */
-export function depositReference(receivableId: string): number {
+export function generateDepositReference(
+  seed: string,
+  taken: Iterable<string>,
+): string {
+  const used = new Set(taken)
   let hash = 0
-  for (let i = 0; i < receivableId.length; i++) {
-    hash = (hash * 31 + receivableId.charCodeAt(i)) % 1_000_003
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) % 1_000_003
   }
-  return 1000 + (hash % 9000)
+  // 9000 candidates, so this exhausts the range before giving up. A voucher with
+  // 9000 deposits on it is not a state worth failing over — the last candidate
+  // is returned even if it collides, since a duplicate reference is a far
+  // smaller problem than a deposit that refuses to save.
+  for (let step = 0; step < 9000; step++) {
+    const candidate = String(1000 + ((hash + step) % 9000))
+    if (!used.has(candidate)) return candidate
+  }
+  return String(1000 + (hash % 9000))
 }
 
 /** One deposit as it appears under the receivable it paid. */

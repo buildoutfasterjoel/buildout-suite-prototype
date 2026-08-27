@@ -1423,7 +1423,11 @@ function DepositRow({
         {editable ? formatLongDate(deposit.date) : formatDate(deposit.date)}
       </Table.Cell>
       {/* Under Billing Description, because that is what a reference number is:
-          the payer's own description of the payment. */}
+          the payer's own description of the payment.
+
+          The fallback is unreachable for anything written since references
+          started being generated at save — it survives only because the field is
+          typed `string` and a deposit stored before that could still be empty. */}
       <Table.Cell className="text-muted">
         {deposit.referenceNumber ? `Ref ${deposit.referenceNumber}` : "No reference"}
       </Table.Cell>

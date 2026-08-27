@@ -24,7 +24,11 @@ import {
   resolvedPropertyPatch,
 } from './ingestion'
 import { getContact, getProperty, updateProperty } from './store'
-import { deductionBalance, receivableBalance } from './deposits'
+import {
+  deductionBalance,
+  generateDepositReference,
+  receivableBalance,
+} from './deposits'
 import {
   invoiceDueDate,
   invoiceFileName,
@@ -622,7 +626,19 @@ export function applyDeposit(
               id: depositId,
               date: input.date,
               amount: round2(input.amount),
-              referenceNumber: input.referenceNumber,
+              // Every deposit carries a reference. The field is optional to the
+              // broker — money often lands before its paperwork does — but a row
+              // with nothing in that column cannot be matched against a bank
+              // statement later, so one is generated here rather than left
+              // blank. Generated at the WRITE path, not in the modal, because
+              // uniqueness is a question about the voucher's other deposits and
+              // only the store knows what those are.
+              referenceNumber:
+                input.referenceNumber ||
+                generateDepositReference(
+                  depositId,
+                  (back.deposits ?? []).map((d) => d.referenceNumber),
+                ),
               createdAt: now,
               createdById: CURRENT_USER.id,
               receivableAllocations,

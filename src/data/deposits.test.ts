@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { depositsForReceivable, previewDeposit } from './deposits'
+import {
+  depositsForReceivable,
+  generateDepositReference,
+  previewDeposit,
+} from './deposits'
 import type { FinancialDeduction, FinancialReceivable, VoucherDeposit } from './types'
 
 function receivable(over: Partial<FinancialReceivable> = {}): FinancialReceivable {
@@ -203,5 +207,41 @@ describe('depositsForReceivable', () => {
     const other = deposit({ receivableAllocations: [{ targetId: 'r2', amount: 5 }] })
     expect(depositsForReceivable([other], 'r1')).toEqual([])
     expect(depositsForReceivable(undefined, 'r1')).toEqual([])
+  })
+})
+
+describe('generateDepositReference', () => {
+  it('spells a four-digit reference, the same shape a wire reference has', () => {
+    expect(generateDepositReference('deposit-abc', [])).toMatch(/^[1-9]\d{3}$/)
+  })
+
+  it('gives the same seed the same reference, so a reseed is stable', () => {
+    expect(generateDepositReference('deposit-abc', [])).toBe(
+      generateDepositReference('deposit-abc', []),
+    )
+  })
+
+  it('steps past a reference the voucher already carries', () => {
+    const first = generateDepositReference('deposit-abc', [])
+    const next = generateDepositReference('deposit-abc', [first])
+    expect(next).not.toBe(first)
+    expect(Number(next)).toBe(Number(first) + 1)
+  })
+
+  it('steps past one the broker typed by hand, not just generated ones', () => {
+    // A generated reference colliding with a real cheque number on the same
+    // voucher would put two different payments under one identifier.
+    const first = generateDepositReference('deposit-abc', [])
+    const second = String(Number(first) + 1)
+    const third = generateDepositReference('deposit-abc', [first, second])
+    expect([first, second]).not.toContain(third)
+  })
+
+  it('stays in range when it has to wrap past the top of it', () => {
+    // Seeded so the hash lands near 9999 and the step has to wrap to 1000.
+    const taken = Array.from({ length: 20 }, (_, i) => String(9980 + i))
+    const ref = generateDepositReference('deposit-xyz', taken)
+    expect(Number(ref)).toBeGreaterThanOrEqual(1000)
+    expect(Number(ref)).toBeLessThanOrEqual(9999)
   })
 })

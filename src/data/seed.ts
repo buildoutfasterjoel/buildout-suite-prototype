@@ -58,7 +58,7 @@ import {
   invoiceLineItems,
   invoicePayerFileLabel,
 } from './invoices'
-import { depositReference } from './deposits'
+import { generateDepositReference } from './deposits'
 import { isQuickbooksSynced } from './quickbooks'
 import { applyLeaseSpaces } from './leaseSpaceFixtures'
 
@@ -1740,8 +1740,14 @@ function generateListings(
         id: `deposit-${receivable.id}`,
         date: paidAt.toISOString().slice(0, 10),
         amount: receivable.credited,
-        // A wire reference, spelled from the id so it is stable across reseeds.
-        referenceNumber: String(depositReference(receivable.id)),
+        // A wire reference, spelled from the id so it is stable across reseeds
+        // and unique within the voucher. The same generator the save path uses
+        // when a broker leaves the field blank, so a seeded reference and a
+        // generated one are the same kind of thing.
+        referenceNumber: generateDepositReference(
+          receivable.id,
+          deposits.map((d) => d.referenceNumber),
+        ),
         createdAt: paidAt.toISOString(),
         createdById: CURRENT_USER.id,
         receivableAllocations: [
