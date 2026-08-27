@@ -468,6 +468,7 @@ export function ContactOverviewColumn({
                     <ContactDealCard
                       key={d.id}
                       listingId={d.id}
+                      contactId={contact.id}
                       highlight={d.id === spotlightDealId}
                     />
                   ),
@@ -494,7 +495,7 @@ export function ContactOverviewColumn({
                         contact={contact}
                       />
                     ) : (
-                      <ContactDealCard key={d.id} listingId={d.id} />
+                      <ContactDealCard key={d.id} listingId={d.id} contactId={contact.id} />
                     ),
                   )}
               </>

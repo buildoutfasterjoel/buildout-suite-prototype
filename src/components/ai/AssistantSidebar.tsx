@@ -72,8 +72,6 @@ import { signalText } from "#/data/signal";
 import { generateCallBrief, callBriefFallback } from "#/ai/generate";
 import { CallBriefCard } from "#/components/call/CallBriefCard";
 import type { CallBriefSpecT } from "#/ai/generate/schemas";
-import { BovCard } from "#/components/call/BovCard";
-import { useBovDraft, bovSummaryText } from "#/components/call/useBovDraft";
 
 /** Shown instead of sending when the server has no Anthropic key configured. */
 const NOT_CONFIGURED_MESSAGE =
@@ -1360,7 +1358,6 @@ export function AssistantSidebar() {
   // but the recap is still being written, and neither is a moment to reopen the
   // queue over.
   const callLive = useCallStore((s) => s.phase !== "idle" || s.wrapping);
-  const bovDraft = useBovDraft((s) => s.draft);
   /**
    * Fold the queue whenever the broker's attention moves to something else: they
    * sent a message and a reply is on its way, a call went live, or a draft
@@ -1381,8 +1378,8 @@ export function AssistantSidebar() {
   }, [lastAsk?.id, lastAsk?.text]);
 
   useEffect(() => {
-    if (callLive || bovDraft || brief) useDayPlanQueue.getState().autoFold();
-  }, [callLive, bovDraft, brief]);
+    if (callLive || brief) useDayPlanQueue.getState().autoFold();
+  }, [callLive, brief]);
 
   /**
    * Show a finished move as finished, but not until the turn has finished
@@ -1445,7 +1442,6 @@ export function AssistantSidebar() {
   // already happened, so each is drawn at the point in the transcript where it
   // landed — see `useTranscriptAnchor`.
   const recapAnchor = useTranscriptAnchor(!!recap, messagesRef);
-  const bovAnchor = useTranscriptAnchor(!!bovDraft, messagesRef);
   // The day-plan queue is deliberately NOT one of those: it is the surface the
   // broker is working, so it is pinned outside the transcript instead — from the
   // moment it is armed, not just once a call detaches it. Mirrors the pinned
@@ -1501,20 +1497,6 @@ export function AssistantSidebar() {
     const { message } = composeRecapReport(recap, recapTarget?.name ?? "your contact");
     void voiceEngine.speak(recapSpeechText(message)); // no re-arm: not in conversationMode
   }, [recap, recapTarget, voiceEnabled]);
-
-  // Speak the BOV draft's summary once when it appears (Otto drafts the BOV,
-  // §Phase 4C). Also a one-way report — it must NOT enter conversationMode or
-  // re-arm the mic. (`bovDraft` is read above, alongside its transcript anchor.)
-  const spokenBovRef = useRef<object | null>(null);
-  useEffect(() => {
-    if (!bovDraft || bovDraft === spokenBovRef.current) return;
-    spokenBovRef.current = bovDraft;
-    requestAnimationFrame(() => {
-      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-    });
-    if (!voiceEnabled) return;
-    void voiceEngine.speak(bovSummaryText(bovDraft)); // one-way: no re-arm
-  }, [bovDraft, voiceEnabled]);
 
   // Presenter kill-switch: Escape silences Otto instantly and ends conversation.
   useHotkey("Escape", () => {
@@ -1787,7 +1769,6 @@ export function AssistantSidebar() {
                   suppressLookupCards={actionTurns.has(i)}
                 />
                 {recapAnchor === m.id && <CallRecapCard />}
-                {bovAnchor === m.id && <BovCard />}
                 {/* After the recap, not before it: the recap is the call itself
                     and this is the bookkeeping that follows from it. */}
                 <CompletedActions entries={completedAt(m.id)} />
@@ -1798,7 +1779,6 @@ export function AssistantSidebar() {
         {/* Arrived before the broker had said anything, so there is no message to
             hang them under. */}
         {recapAnchor === null && <CallRecapCard />}
-        {bovAnchor === null && <BovCard />}
         <CompletedActions entries={completedAt(null)} />
         {/* The turn's visible work can finish before the turn does: a tool result
             lands, its card renders, and the model is still closing out. What it
@@ -1831,9 +1811,6 @@ export function AssistantSidebar() {
         {recapAnchor !== undefined &&
           recapAnchor !== null &&
           !messages.some((m) => m.id === recapAnchor) && <CallRecapCard />}
-        {bovAnchor !== undefined &&
-          bovAnchor !== null &&
-          !messages.some((m) => m.id === bovAnchor) && <BovCard />}
         <CompletedActions entries={orphanedCompleted} />
         </div>
       </div>

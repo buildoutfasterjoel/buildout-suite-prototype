@@ -1,11 +1,9 @@
-import { getContact, updateListingUnderwriting } from "#/data/store";
+import { getContact } from "#/data/store";
 import { touchContactActivity } from "#/data/actions";
 import { notify } from "#/lib/notify";
 import { playArrivalChime } from "#/lib/chime";
-import { underwritingFromSelection, defaultSelectionFor } from "#/components/deals/underwriting/strategies";
 import { contactFullName } from "#/components/contacts/contactDisplay";
 import { useContactSession } from "#/components/contacts/useContactSession";
-import { useBovDraft } from "./useBovDraft";
 import { ROSA_FINANCIAL_DOCS } from "./rosaDocs";
 
 /** The financials email's timeline-row id. Deterministic so `addSimEvent`
@@ -19,16 +17,6 @@ const ARRIVAL_MS = 6_000;
 // Monotonic session so a cancel()/re-arm drops a pending arrival.
 let session = 0;
 let timer: ReturnType<typeof setTimeout> | null = null;
-
-/** Kick off the existing underwriting generation on the deal (value-add fits an existing
- * multifamily; setting underwriting also keeps the row visible at the Active stage). */
-export function startUnderwriting(dealId: string): void {
-  updateListingUnderwriting(dealId, {
-    ...underwritingFromSelection("value-add", defaultSelectionFor("value-add")),
-    status: "generating",
-  });
-  useBovDraft.getState().armFor(dealId);
-}
 
 function clearTimer() {
   if (timer) {

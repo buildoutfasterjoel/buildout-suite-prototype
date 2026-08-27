@@ -15,7 +15,7 @@ describe("dealSupportsUnderwriting", () => {
     // its parent's `underwriting` the moment it's created. A run sitting at
     // 'generated' is one click ("Save Underwriting" / `openPlacement`) away from
     // `UnderwritingPlacementModal` writing a document — the exact path a
-    // contact's deal card offers via `ContactBovFlow`. This predicate is the one
+    // contact's deal card offers via `BovFlow`. This predicate is the one
     // guard shared by that card's CTA, the other contact card, and the planner
     // row, so pinning it here pins all three.
     const parent = createProposalListing({
