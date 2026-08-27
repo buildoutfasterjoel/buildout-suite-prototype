@@ -5,6 +5,7 @@ import type {
   ListingStage,
   DealBroker,
   DealHistoryEntry,
+  DealInvoice,
   FinancialDeduction,
   FinancialReceivable,
   DealTask,
@@ -50,6 +51,12 @@ import {
 } from './teammates'
 import { DEFAULT_PERSONAL_SPLIT_PCT, STAGE_CLOSE_PROBABILITY } from './commission'
 import type { DeductionCategory, VoucherStatus } from './vouchers'
+import {
+  invoiceDueDate,
+  invoiceFileName,
+  invoiceLineItems,
+  invoicePayerFileLabel,
+} from './invoices'
 import { applyLeaseSpaces } from './leaseSpaceFixtures'
 
 const SEED = 20240101
@@ -1614,6 +1621,64 @@ function generateListings(
     // starts there, and one stays there until the deal is under contract.
     const payerContactIds = [...new Set(receivables.map((r) => r.payerContactId))]
 
+    // Invoices the broker has already sent against this voucher.
+    //
+    // Only a Pending or an Approved voucher has any. Adding invoices is the last
+    // thing a broker does before submitting — and the one thing a back-office
+    // admin may still do after — so a Draft voucher having none is what makes
+    // the Invoices page's empty state a real state rather than a bug. (Draft is
+    // also the only status where a broker can add one, which is why every
+    // seeded invoice sits on a voucher that has moved past it.)
+    //
+    // Grouped by payer, not one per receivable: one invoice bills one party,
+    // which is the rule `createInvoiceFromReceivables` enforces. At the current
+    // seed every group is a single row — a split commission bills the OTHER side,
+    // so two receivables on one voucher never share a payer — but grouping is
+    // what the rule actually is, and it follows the seed if that changes.
+    const invoices: DealInvoice[] = []
+    if (voucherStatus !== 'Draft') {
+      for (const payerId of payerContactIds) {
+        const billed = receivables.filter((r) => r.payerContactId === payerId)
+        const lineItems = invoiceLineItems(billed)
+        // Named from the contact in hand, not looked up. `invoices.ts` takes a
+        // name rather than a contact id precisely because this runs while
+        // `generateDataset` is still building the store, so there is nothing to
+        // look up in yet. Every payer is drawn from `propertyContacts`.
+        const payer = propertyContacts.find((c) => c.id === payerId)
+        // Sent in the days after the close, so it lands before the sign-off that
+        // `voucherApproval` dates from one to ten days out.
+        const sentAt = voucherCloseDate
+          ? new Date(
+              Date.parse(`${voucherCloseDate}T00:00:00`) +
+                faker.number.int({ min: 1, max: 3 }) * 86_400_000,
+            ).toISOString()
+          : createdAt
+        // Drawn from the roster rather than from `internalBrokers`, whose ids are
+        // faker uuids that `findTeammate` cannot resolve — the same reason
+        // `messageAuthors` above draws from here.
+        const author = faker.helpers.arrayElement([CURRENT_USER, ...TEAMMATES])
+        invoices.push({
+          id: faker.string.uuid(),
+          name: invoiceFileName(
+            invoicePayerFileLabel(
+              {
+                name: payer ? `${payer.firstName} ${payer.lastName}`.trim() : '',
+                company: payer?.company ?? '',
+              },
+              billed[0].billToCompany,
+            ),
+            invoices.length + 1,
+          ),
+          createdAt: sentAt,
+          createdById: author.id,
+          payerContactId: payerId,
+          billToCompany: billed[0].billToCompany,
+          dueDate: invoiceDueDate(lineItems),
+          lineItems,
+        })
+      }
+    }
+
     const grossScheduledIncome = Math.round(salePrice * 0.09)
     const otherIncome = Math.round(grossScheduledIncome * 0.04)
     const totalScheduledIncome = grossScheduledIncome + otherIncome
@@ -1668,6 +1733,7 @@ function generateListings(
       messages,
       activities: [],
       history,
+      invoices,
       financials: {
         askingPrice: salePrice,
         askingPriceUnits: 'total',

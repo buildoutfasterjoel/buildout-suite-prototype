@@ -11,6 +11,13 @@ import type {
   VisualMediaType,
 } from './types'
 import { closeProbabilityForStage } from './commission'
+import {
+  invoiceDueDate,
+  invoiceFileName,
+  invoiceLineItems,
+  invoicePayerFileLabel,
+  type InvoicePayerName,
+} from './invoices'
 import { listingGallery } from '#/components/properties/propertyDisplay'
 
 /**
@@ -354,7 +361,20 @@ const TERMS_STATUS: Record<PropertyStatus, SpaceLeaseTerms['status']> = {
  * dates reads as broken, so each stage gets the dates, history and settlement
  * records a broker would have captured getting it there.
  */
-function applyStageDetail(child: Listing, suiteNumber: number, tenantName?: string): void {
+function applyStageDetail(
+  child: Listing,
+  suiteNumber: number,
+  /**
+   * The accepted tenant's name and company, once there is one.
+   *
+   * Both halves, not just the display name: the suite's receivable bills the
+   * tenant *business*, so its invoice filename needs the company, while
+   * `spaceVouchers` and the roster print the person. One argument carrying both
+   * keeps those two from being resolved in two different places.
+   */
+  tenant?: InvoicePayerName,
+): void {
+  const tenantName = tenant?.name
   const stage = child.status
   const terms = child.marketing.spaceLeaseTerms?.[0]
   if (terms) terms.status = TERMS_STATUS[stage]
@@ -491,6 +511,34 @@ function applyStageDetail(child: Listing, suiteNumber: number, tenantName?: stri
       },
     ],
   }
+
+  // The invoice that bill went out on. An Approved voucher has one, for the same
+  // reason the pipeline seed gives one to every voucher past Draft: sending the
+  // invoices is the last thing a broker does before submitting.
+  //
+  // Built from the receivable just written rather than re-derived, and named
+  // through the same helpers the create action uses, so a suite's invoice and a
+  // broker-made one cannot disagree about what an invoice looks like. Dates come
+  // from `isoDate`, not faker — this module stays faker-free.
+  const suiteReceivable = child.transaction.backOffice.receivables[0]
+  const suiteLineItems = invoiceLineItems([suiteReceivable])
+  child.invoices = [
+    {
+      id: `invoice-${child.id}`,
+      name: invoiceFileName(
+        invoicePayerFileLabel(tenant ?? { name: '', company: '' }, suiteReceivable.billToCompany),
+        1,
+      ),
+      // Two days after the "Submit commission voucher" task completed, a day
+      // before the sign-off above.
+      createdAt: `${isoDate(-7)}T17:00:00.000Z`,
+      createdById: 'you',
+      payerContactId: suiteReceivable.payerContactId,
+      billToCompany: suiteReceivable.billToCompany,
+      dueDate: invoiceDueDate(suiteLineItems),
+      lineItems: suiteLineItems,
+    },
+  ]
 }
 
 /**
@@ -681,6 +729,7 @@ export function applyLeaseSpaces(
       // counterparty, which `stageGates` requires to reach Under Contract and
       // which `spaceVouchers` reads. Distinct from `buyerContactIds` on purpose.
       let tenantName: string | undefined
+      let tenantPayer: InvoicePayerName | undefined
       if (stage === 'under-contract' || stage === 'closed') {
         const tenantId = tenantPool[tenantIndex++]
         if (tenantId) {
@@ -688,12 +737,16 @@ export function applyLeaseSpaces(
           const tenant = contacts.find((c) => c.id === tenantId)
           // Person name, not company: `spaceVouchers` derives its Tenant column
           // from the contact this way, and the roster and the vouchers index must
-          // not print two different tenants for the same suite.
-          tenantName = tenant ? `${tenant.firstName} ${tenant.lastName}`.trim() : undefined
+          // not print two different tenants for the same suite. The company rides
+          // along for the invoice filename — see `applyStageDetail`.
+          if (tenant) {
+            tenantName = `${tenant.firstName} ${tenant.lastName}`.trim()
+            tenantPayer = { name: tenantName, company: tenant.company }
+          }
         }
       }
       if (stage === 'closed' && tenantName) closedTenantByUnit.set(unit.id, tenantName)
-      applyStageDetail(child, (i + 1) * 100, tenantName)
+      applyStageDetail(child, (i + 1) * 100, tenantPayer)
       listings.push(child)
     })
 

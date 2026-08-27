@@ -9,50 +9,30 @@ import {
   faFileLines,
   faFilePdf,
   faEllipsisVertical,
+  faPenToSquare,
+  faPrint,
+  faTrashCan,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing } from "#/data/types";
-import { getStore } from "#/data/store";
+import { findTeammate } from "#/data/teammates";
 import { ListingPageHeader } from "#/components/listings/ListingPageHeader";
 import { formatDate } from "#/components/deals/dealDisplay";
 
-interface InvoiceRow {
-  id: string;
-  name: string;
-  invoiceNumber: string;
-  activity: string;
-  activityDate: string;
-  completedBy: string;
-}
-
-/** "07/23/2026 at 9:40am PDT" — MM/DD/YYYY plus a lowercase time (local parts, like `formatDate`). */
-function formatInvoiceActivity(iso: string): string {
-  const d = new Date(iso);
-  const minutes = String(d.getMinutes()).padStart(2, "0");
-  const ampm = d.getHours() >= 12 ? "pm" : "am";
-  const hour = d.getHours() % 12 || 12;
-  return `${formatDate(iso)} at ${hour}:${minutes}${ampm} PDT`;
-}
-
-/** A single draft invoice derived from the deal — its filename keys off the primary party. */
-function draftInvoice(listing: Listing): InvoiceRow {
-  const { contacts } = getStore();
-  const contactId =
-    listing.sellerContactIds[0] ??
-    listing.buyerContactIds[0] ??
-    listing.tenantContactIds[0];
-  const contact = contactId ? contacts.get(contactId) : undefined;
-  const base = contact ? `${contact.firstName} ${contact.lastName}` : listing.name;
-  const fileName = `${base.replace(/[^A-Za-z0-9]+/g, "_")}_Invoice_Draft.pdf`;
-  return {
-    id: "draft",
-    name: fileName,
-    invoiceNumber: "Draft",
-    activity: "Created",
-    activityDate: listing.updatedAt,
-    completedBy: "",
-  };
-}
-
+/**
+ * The deal's invoices — one row per PDF that has been generated against its
+ * voucher.
+ *
+ * The rows are the deal's own records now; this used to derive a single fake
+ * "Draft" row from the deal's primary party. Three columns, because that is what
+ * a broker scanning a list of files needs: which file, when it was made, and by
+ * whom. The amounts live on the invoice and belong on the invoice, not spread
+ * across a directory of them.
+ *
+ * The row menu is deliberately inert at this stage. Edit needs the invoice view
+ * that has not been built, and Print needs a print layout; wiring Delete alone
+ * would leave one live item in a menu of three, which reads as the other two
+ * being broken rather than unbuilt.
+ */
 export function DealInvoices({
   listing,
   heading = "Invoices",
@@ -61,7 +41,7 @@ export function DealInvoices({
   /** Overridden on a shell's per-space voucher, so the suite is named. */
   heading?: string;
 }) {
-  const invoices: InvoiceRow[] = [draftInvoice(listing)];
+  const invoices = listing.invoices ?? [];
 
   return (
     <div className="d-flex flex-column gap-3 p-4">
@@ -82,7 +62,7 @@ export function DealInvoices({
           </Empty.Media>
           <Empty.Content>
             <Empty.Title>No invoices yet</Empty.Title>
-            Invoices for this deal will show up here.
+            Generate one from a receivable on this deal&rsquo;s voucher.
           </Empty.Content>
         </Empty>
       ) : (
@@ -93,48 +73,50 @@ export function DealInvoices({
                 <FontAwesomeIcon icon={faFileLines} className="text-muted" />
               </Table.Head>
               <Table.Head>Attachment Name</Table.Head>
-              <Table.Head>Invoice Number</Table.Head>
-              <Table.Head>Last Activity</Table.Head>
-              <Table.Head>Activity Date</Table.Head>
-              <Table.Head>Completed By</Table.Head>
+              <Table.Head>Created</Table.Head>
+              <Table.Head>Created By</Table.Head>
               <Table.Head />
             </Table.Row>
           </Table.Header>
           <Table.Body>
-            {invoices.map((inv) => (
-              <Table.Row key={inv.id}>
+            {invoices.map((invoice) => (
+              <Table.Row key={invoice.id}>
                 <Table.Cell>
                   <FontAwesomeIcon icon={faFilePdf} className="text-danger" />
                 </Table.Cell>
-                <Table.Cell className="fw-medium">{inv.name}</Table.Cell>
-                <Table.Cell>{inv.invoiceNumber}</Table.Cell>
-                <Table.Cell>
-                  <span className="d-inline-flex align-items-center gap-2">
-                    <span
-                      className="d-inline-flex align-items-center justify-content-center rounded-circle text-white flex-shrink-0"
-                      style={{ width: 22, height: 22, backgroundColor: "#8833ea", fontSize: 11 }}
-                      aria-hidden="true"
-                    >
-                      <FontAwesomeIcon icon={faFileInvoiceDollar} />
-                    </span>
-                    {inv.activity}
-                  </span>
-                </Table.Cell>
-                <Table.Cell>{formatInvoiceActivity(inv.activityDate)}</Table.Cell>
-                <Table.Cell>{inv.completedBy}</Table.Cell>
+                <Table.Cell className="fw-medium">{invoice.name}</Table.Cell>
+                <Table.Cell>{formatDate(invoice.createdAt)}</Table.Cell>
+                {/* Resolved through the roster rather than stored as a name, so
+                    correcting a teammate corrects every invoice they made. Falls
+                    back to an em-dash for an id no longer on the roster — the
+                    invoice is still a record of a bill that went out. */}
+                <Table.Cell>{findTeammate(invoice.createdById)?.name ?? "—"}</Table.Cell>
                 <Table.Cell className="text-end">
                   <DropdownMenu>
                     <DropdownMenu.Trigger
                       render={
-                        <Button variant="ghost" size="icon-sm" aria-label="Invoice actions">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`Actions for ${invoice.name}`}
+                        >
                           <FontAwesomeIcon icon={faEllipsisVertical} />
                         </Button>
                       }
                     />
-                    <DropdownMenu.Content>
-                      <DropdownMenu.Item>View invoice</DropdownMenu.Item>
-                      <DropdownMenu.Item>Download</DropdownMenu.Item>
-                      <DropdownMenu.Item>Delete</DropdownMenu.Item>
+                    <DropdownMenu.Content align="end">
+                      <DropdownMenu.Item>
+                        <FontAwesomeIcon icon={faPenToSquare} className="me-2" />
+                        Edit
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Item>
+                        <FontAwesomeIcon icon={faPrint} className="me-2" />
+                        Print
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Item>
+                        <FontAwesomeIcon icon={faTrashCan} className="me-2" />
+                        Delete
+                      </DropdownMenu.Item>
                     </DropdownMenu.Content>
                   </DropdownMenu>
                 </Table.Cell>

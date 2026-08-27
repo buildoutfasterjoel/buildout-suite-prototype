@@ -43,6 +43,7 @@ import type {
 } from "#/data/types";
 import {
   addReceivable,
+  createInvoiceFromReceivables,
   deleteReceivable,
   saveVoucherDraft,
   submitVoucher,
@@ -806,16 +807,21 @@ function PayersSection({
                 )}
               </Table.Row>
             ))}
+          </Table.Body>
+          {/* A `tfoot`, matching Internal Commissions and Pre-Split Deductions:
+              the theme gives `tfoot` cells the header's background, weight and a
+              rule above them, so the total reads as the table's own summary
+              rather than one more payer — and the hand-applied `fw-semibold`
+              goes away. */}
+          <Table.Footer>
             <Table.Row>
-              <Table.Cell colSpan={4} className="fw-semibold">
-                Sum
-              </Table.Cell>
-              <Table.Cell className="text-end fw-semibold">
+              <Table.Cell colSpan={4}>Sum</Table.Cell>
+              <Table.Cell className="text-end">
                 {formatCurrency(billedTotal)}
               </Table.Cell>
               {editable && <Table.Cell />}
             </Table.Row>
-          </Table.Body>
+          </Table.Footer>
         </Table>
       )}
 
@@ -1179,16 +1185,20 @@ const RECEIVABLE_COL = {
 function ReceivableActionItem({
   icon,
   disabled,
+  onClick,
   children,
 }: {
   icon: IconDefinition;
   disabled?: boolean;
+  /** Omitted by the items that are still unbuilt — Apply Deposit, Apply Other Credit. */
+  onClick?: () => void;
   children: React.ReactNode;
 }) {
   return (
     <DropdownMenu.Item
       disabled={disabled}
       className={disabled ? "disabled" : undefined}
+      onClick={onClick}
     >
       <FontAwesomeIcon icon={icon} className="me-2" />
       {children}
@@ -1250,9 +1260,11 @@ function ReceivableTextCell({
  */
 function ReceivableRowMenu({
   label,
+  onCreateInvoice,
   onDelete,
 }: {
   label: string;
+  onCreateInvoice: () => void;
   onDelete: () => void;
 }) {
   return (
@@ -1269,7 +1281,7 @@ function ReceivableRowMenu({
         }
       />
       <DropdownMenu.Content align="end">
-        <ReceivableActionItem icon={faFileLines} disabled>
+        <ReceivableActionItem icon={faFileLines} onClick={onCreateInvoice}>
           Create New Invoice
         </ReceivableActionItem>
         <ReceivableActionItem icon={faArrowRight} disabled>
@@ -1340,6 +1352,28 @@ function ReceivablesSection({
   const canCreateInvoice =
     someSelected && new Set(selectedRows.map((r) => r.payerContactId)).size === 1;
 
+  /**
+   * Bill the given receivables on one invoice, filed against the deal.
+   *
+   * The broker stays on the voucher. The invoice lands on the Invoices page and
+   * the toast names the file, which is enough to know it worked — navigating
+   * away mid-task would abandon whatever else they were doing to this voucher.
+   *
+   * The selection clears on success, so the same rows cannot be billed twice by
+   * a second click on a menu that is still open. `createInvoiceFromReceivables`
+   * re-checks the one-payer rule and returns nulls rather than throwing, so a
+   * refusal is silent here by design — the button was already disabled for it.
+   */
+  const createInvoice = (receivableIds: string[]) => {
+    const { name } = createInvoiceFromReceivables(listing.id, receivableIds);
+    if (!name) return;
+    setSelectedIds(new Set());
+    notify({
+      title: "Invoice created",
+      description: `${name} is on this deal's Invoices page.`,
+    });
+  };
+
   return (
     <Section
       title="Receivables"
@@ -1373,6 +1407,7 @@ function ReceivablesSection({
                 <ReceivableActionItem
                   icon={faFileLines}
                   disabled={!canCreateInvoice}
+                  onClick={() => createInvoice(selectedRows.map((r) => r.id))}
                 >
                   Create New Invoice
                 </ReceivableActionItem>
@@ -1578,6 +1613,7 @@ function ReceivablesSection({
                     <Table.Cell style={{ width: RECEIVABLE_COL.actions }}>
                       <ReceivableRowMenu
                         label={label}
+                        onCreateInvoice={() => createInvoice([r.id])}
                         onDelete={() => deleteReceivable(listing.id, r.id)}
                       />
                     </Table.Cell>
@@ -1585,19 +1621,23 @@ function ReceivablesSection({
                 </Table.Row>
               );
             })}
+          </Table.Body>
+          {/* A `tfoot`, for the same reason the other three money tables use one
+              — see the note on Pre-Split Deductions. The leading colSpan counts
+              the select-all gutter, so it moves with `editable` the way the body
+              rows above it do. */}
+          <Table.Footer>
             <Table.Row>
-              <Table.Cell colSpan={editable ? 4 : 3} className="fw-semibold">
-                Sum
-              </Table.Cell>
-              <Table.Cell className="text-end fw-semibold">
+              <Table.Cell colSpan={editable ? 4 : 3}>Sum</Table.Cell>
+              <Table.Cell className="text-end">
                 {formatCurrency(amountTotal)}
               </Table.Cell>
-              <Table.Cell className="text-end fw-semibold">
+              <Table.Cell className="text-end">
                 {formatCurrency(creditedTotal)}
               </Table.Cell>
               {editable && <Table.Cell />}
             </Table.Row>
-          </Table.Body>
+          </Table.Footer>
         </Table>
       )}
 
