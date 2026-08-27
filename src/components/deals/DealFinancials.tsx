@@ -1326,13 +1326,20 @@ function ReceivableRowMenu({
           Apply Other Credit
         </ReceivableActionItem>
         {/* Push this line to QuickBooks again — what a broker reaches for when
-            the row's badge says it is not there. Greyed like the two above it,
-            which is the honest reading: nothing is wired to QuickBooks, and an
-            enabled item that silently does nothing reads as broken rather than
-            as unbuilt. Offered whatever the badge says, because "force" is the
-            point — re-pushing a line that already synced is a real thing to
-            want when the two sides have drifted. */}
-        <ReceivableActionItem icon={faArrowsRotate} disabled>
+            the row's badge says it is not there.
+
+            Enabled, though nothing is wired to QuickBooks yet: Joel's call, and
+            it reads better than the alternative. Greyed was the first version,
+            on the reasoning that the two items above it are greyed for being
+            unbuilt. But greyed states a rule about the record, and there is no
+            rule here — a broker who sees an amber badge and then a dead menu
+            item learns the wrong thing about why. The two above stay greyed
+            because they are genuinely gated on a deposit that does not exist.
+
+            Offered whatever the badge says, because "force" is the point —
+            re-pushing a line that already synced is a real thing to want when
+            the two sides have drifted. */}
+        <ReceivableActionItem icon={faArrowsRotate}>
           Force Sync with QuickBooks
         </ReceivableActionItem>
         <Separator className="my-1" />
@@ -1463,8 +1470,8 @@ function ReceivablesSection({
                 {/* Here as well as on each row: pushing several lines at once is
                     the more useful half of a force sync, and an action that
                     exists in one of two mirrored receivable menus reads as an
-                    oversight. Greyed for the same reason as the row's. */}
-                <ReceivableActionItem icon={faArrowsRotate} disabled>
+                    oversight. Enabled and inert, like the row's. */}
+                <ReceivableActionItem icon={faArrowsRotate}>
                   Force Sync with QuickBooks
                 </ReceivableActionItem>
                 {/* No Delete here. Deleting is a one-row act and the row's own
