@@ -53,6 +53,7 @@ import {
   addReceivable,
   applyDeposit,
   createInvoiceFromReceivables,
+  deleteDeposit,
   deleteReceivable,
   saveVoucherDraft,
   submitVoucher,
@@ -1389,11 +1390,13 @@ function DepositRow({
   deposit,
   amount,
   editable,
+  onDelete,
 }: {
   deposit: VoucherDeposit;
   /** What this deposit put against THIS receivable — not its whole amount. */
   amount: number;
   editable: boolean;
+  onDelete: () => void;
 }) {
   return (
     <Table.Row className="receivables-table__deposit">
@@ -1442,7 +1445,22 @@ function DepositRow({
         {formatCurrency(amount)}
       </Table.Cell>
       <Table.Cell style={{ width: RECEIVABLE_COL.sync }} />
-      {editable && <Table.Cell style={{ width: RECEIVABLE_COL.actions }} />}
+      {editable && (
+        <Table.Cell style={{ width: RECEIVABLE_COL.actions }}>
+          {/* A bare trash button, not the receivable's `⋮` menu. That menu earns
+              its click by holding five items; a deposit has exactly one thing
+              that can be done to it, and burying one item behind a menu costs a
+              click to reveal what the icon already says. */}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Delete deposit ${deposit.referenceNumber}`}
+            onClick={onDelete}
+          >
+            <FontAwesomeIcon icon={faTrashCan} />
+          </Button>
+        </Table.Cell>
+      )}
     </Table.Row>
   );
 }
@@ -1556,6 +1574,28 @@ function ReceivablesSection({
     notify({
       title: "Deposit applied",
       description: `${formatCurrency(input.amount)} recorded against this voucher.`,
+    });
+  };
+
+  /**
+   * Take a deposit back off the voucher.
+   *
+   * The toast names how many receivables it came off, because a deposit split
+   * across two lines disappears from BOTH when it is deleted from either — the
+   * row that vanished from a receivable nobody clicked on is otherwise something
+   * to discover by looking. Silent on a refusal, the way the other two are:
+   * `deleteDeposit` returns a null record on a voucher it will not write to.
+   */
+  const removeDeposit = (depositId: string) => {
+    const { removed } = deleteDeposit(listing.id, depositId);
+    if (!removed) return;
+    const lines = removed.receivableAllocations.length;
+    notify({
+      title: "Deposit removed",
+      description:
+        lines > 1
+          ? `${formatCurrency(removed.amount)} reversed across ${lines} receivables.`
+          : `${formatCurrency(removed.amount)} reversed.`,
     });
   };
 
@@ -1882,6 +1922,7 @@ function ReceivablesSection({
                     deposit={deposit}
                     amount={amount}
                     editable={editable}
+                    onDelete={() => removeDeposit(deposit.id)}
                   />
                 ))}
                 </Fragment>

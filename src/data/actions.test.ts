@@ -18,6 +18,7 @@ import {
   submitVoucher,
   addReceivable,
   applyDeposit,
+  deleteDeposit,
   deleteReceivable,
   reopenVoucher,
   updateReceivable,
@@ -857,6 +858,125 @@ describe('applyDeposit', () => {
     )
     expect(refs).toHaveLength(5)
     expect(new Set(refs).size).toBe(5)
+  })
+
+  it('deleteDeposit puts back what it moved', () => {
+    const { deal, row } = voucherWithOneLine()
+    applyDeposit(deal.id, {
+      date: '2026-08-27',
+      amount: 2500,
+      referenceNumber: '123',
+      receivableAllocations: [{ targetId: row.id, amount: 2500 }],
+      deductionAllocations: [{ targetId: 'd1', amount: 250 }],
+    })
+    const deposit = getListing(deal.id)!.transaction.backOffice.deposits![0]!
+    deleteDeposit(deal.id, deposit.id)
+    const back = getListing(deal.id)!.transaction.backOffice
+    expect(back.deposits).toHaveLength(0)
+    expect(back.receivables[0]!.credited).toBe(0)
+    // Back to null, not 0: null is what the seed writes for an untouched
+    // deduction and what the table renders as "None".
+    expect(back.preSplitDeductions[0]!.covered).toBeNull()
+  })
+
+  it('deleteDeposit leaves the other deposits on the line alone', () => {
+    const { deal, row } = voucherWithOneLine()
+    const apply = (amount: number) =>
+      applyDeposit(deal.id, {
+        date: '2026-08-27',
+        amount,
+        referenceNumber: '',
+        receivableAllocations: [{ targetId: row.id, amount }],
+        deductionAllocations: [{ targetId: 'd1', amount: amount / 10 }],
+      })
+    apply(2000)
+    apply(3000)
+    const [first] = getListing(deal.id)!.transaction.backOffice.deposits!
+    deleteDeposit(deal.id, first!.id)
+    const back = getListing(deal.id)!.transaction.backOffice
+    expect(back.deposits).toHaveLength(1)
+    expect(back.receivables[0]!.credited).toBe(3000)
+    expect(back.preSplitDeductions[0]!.covered).toBe(300)
+  })
+
+  it('deleteDeposit comes off every line it touched, not just one', () => {
+    // A deposit is one cash receipt. Reversing a single line would leave a
+    // record claiming money arrived that partly did not.
+    const deal = [...useDataStore.getState().listings.values()][0]!
+    updateDealTransaction(deal.id, {
+      backOffice: {
+        ...deal.transaction.backOffice,
+        status: 'Draft',
+        payerContactIds: [],
+        receivables: [],
+        deposits: [],
+        preSplitDeductions: [],
+      },
+    })
+    for (const amount of [1000, 2000]) {
+      addReceivable(deal.id, {
+        payerContactId: 'c-payer',
+        billToCompany: false,
+        dueDate: '2026-06-22',
+        billingDescription: 'Full Payment',
+        amount,
+      })
+    }
+    const [a, b] = getListing(deal.id)!.transaction.backOffice.receivables
+    applyDeposit(deal.id, {
+      date: '2026-08-27',
+      amount: 3000,
+      referenceNumber: '',
+      receivableAllocations: [
+        { targetId: a!.id, amount: 1000 },
+        { targetId: b!.id, amount: 2000 },
+      ],
+      deductionAllocations: [],
+    })
+    const deposit = getListing(deal.id)!.transaction.backOffice.deposits![0]!
+    deleteDeposit(deal.id, deposit.id)
+    const rows = getListing(deal.id)!.transaction.backOffice.receivables
+    expect(rows.map((r) => r.credited)).toEqual([0, 0])
+  })
+
+  it('deleteDeposit reports what it removed, and nothing for an unknown id', () => {
+    const { deal, row } = voucherWithOneLine()
+    applyDeposit(deal.id, {
+      date: '2026-08-27',
+      amount: 500,
+      referenceNumber: 'WT-1',
+      receivableAllocations: [{ targetId: row.id, amount: 500 }],
+      deductionAllocations: [],
+    })
+    const deposit = getListing(deal.id)!.transaction.backOffice.deposits![0]!
+    expect(deleteDeposit(deal.id, deposit.id).removed?.referenceNumber).toBe('WT-1')
+    expect(deleteDeposit(deal.id, 'nope').removed).toBeNull()
+  })
+
+  it('deleteDeposit refuses a Pending voucher and allows an Approved one', () => {
+    for (const status of ['Pending', 'Approved'] as const) {
+      const { deal, row } = voucherWithOneLine()
+      applyDeposit(deal.id, {
+        date: '2026-08-27',
+        amount: 400,
+        referenceNumber: '',
+        receivableAllocations: [{ targetId: row.id, amount: 400 }],
+        deductionAllocations: [],
+      })
+      const deposit = getListing(deal.id)!.transaction.backOffice.deposits![0]!
+      updateDealTransaction(deal.id, {
+        backOffice: { ...getListing(deal.id)!.transaction.backOffice, status },
+      })
+      deleteDeposit(deal.id, deposit.id)
+      const back = getListing(deal.id)!.transaction.backOffice
+      if (status === 'Pending') {
+        expect(back.deposits).toHaveLength(1)
+        expect(back.receivables[0]!.credited).toBe(400)
+      } else {
+        expect(back.deposits).toHaveLength(0)
+        expect(back.receivables[0]!.credited).toBe(0)
+      }
+    }
   })
 
   it('refuses a Pending voucher and allows an Approved one', () => {

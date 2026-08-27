@@ -6,7 +6,7 @@ import {
   serializeContactFilters,
   type ContactFilterState,
 } from '#/components/contacts/contactFilterModel'
-import type { Contact, ContactRole, ContactSource, DealDocument, DealHistoryEntry, DealIngestion, DealInvoice, DealMarketing, DealPitchFinancials, DealBroker, DealTask, DealTransaction, DepositAllocation, DocumentGeneration, FinancialDeduction, FinancialReceivable, GeneratedSection, IngestionFieldKey, Listing, PropertyStatus, Task } from './types'
+import type { Contact, ContactRole, ContactSource, DealDocument, DealHistoryEntry, DealIngestion, DealInvoice, DealMarketing, DealPitchFinancials, DealBroker, DealTask, DealTransaction, DepositAllocation, DocumentGeneration, FinancialDeduction, FinancialReceivable, GeneratedSection, IngestionFieldKey, Listing, PropertyStatus, Task, VoucherDeposit } from './types'
 import { CURRENT_USER, TEAMMATES } from './teammates'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
 import { reconcileContactDealFields } from './contactStage'
@@ -654,6 +654,74 @@ export function applyDeposit(
   // `patchListing` returns the listing unchanged when the voucher is Pending, so
   // a null id is not the only refusal — the caller reads the deal to know more.
   return { deal, depositId: deal ? depositId : null }
+}
+
+/**
+ * Remove a deposit, putting back what it moved.
+ *
+ * **A deposit is one cash receipt, so it comes off whole.** Deleting from one
+ * receivable's child row removes every allocation the deposit made — including
+ * the ones under OTHER receivables and against the deductions. Reversing a
+ * single line instead would leave a record claiming money arrived that partly
+ * did not, and there is no screen on which that half-deposit would make sense.
+ * The caller says so in its toast, because a row vanishing from a receivable
+ * nobody clicked on is otherwise something to discover by looking.
+ *
+ * `credited` and `covered` are stored running totals, so undoing means
+ * subtracting rather than recomputing — the mirror of what `applyDeposit` added.
+ * Both floor at zero: a total that has drifted below what this deposit put in is
+ * a state nothing should turn negative over.
+ *
+ * A deduction that lands back at zero goes back to `null`, not `0`. Null is what
+ * the seed writes for a deduction nothing has touched, and it is what the
+ * Pre-Split Deductions table renders as "None" — so a deduction whose only
+ * credit has been reversed reads as untouched again rather than as deliberately
+ * covered for nothing.
+ *
+ * Refuses on a Pending voucher, like every other receivable write.
+ */
+export function deleteDeposit(
+  dealId: string,
+  depositId: string,
+): { deal: Listing | null; removed: VoucherDeposit | null } {
+  const before = useDataStore.getState().listings.get(dealId)
+  const back = before?.transaction.backOffice
+  const removed = back?.deposits?.find((d) => d.id === depositId) ?? null
+  if (!before || !removed || back?.status === 'Pending') {
+    return { deal: before ?? null, removed: null }
+  }
+
+  const reversed = new Map(removed.receivableAllocations.map((a) => [a.targetId, a.amount]))
+  const uncovered = new Map(removed.deductionAllocations.map((a) => [a.targetId, a.amount]))
+
+  const deal = patchListing(dealId, (l) => {
+    const voucher = l.transaction.backOffice
+    return {
+      ...l,
+      transaction: {
+        ...l.transaction,
+        backOffice: {
+          ...voucher,
+          receivables: voucher.receivables.map((r) => {
+            const applied = reversed.get(r.id)
+            return applied
+              ? { ...r, credited: Math.max(0, round2(r.credited - applied)) }
+              : r
+          }),
+          preSplitDeductions: voucher.preSplitDeductions.map((d) => {
+            const covered = uncovered.get(d.id)
+            if (!covered) return d
+            const next = Math.max(0, round2((d.covered ?? 0) - covered))
+            return { ...d, covered: next === 0 ? null : next }
+          }),
+          deposits: (voucher.deposits ?? []).filter((d) => d.id !== depositId),
+        },
+      },
+      updatedAt: new Date().toISOString(),
+    }
+  })
+
+  return { deal, removed: deal ? removed : null }
 }
 
 /** Cents. Kept here rather than imported so `deposits.ts` stays free of writers. */
