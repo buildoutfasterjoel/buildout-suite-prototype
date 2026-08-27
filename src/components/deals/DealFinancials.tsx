@@ -23,6 +23,7 @@ import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowRight,
+  faArrowsRotate,
   faDollarSign,
   faEllipsisVertical,
   faEnvelope,
@@ -1324,6 +1325,16 @@ function ReceivableRowMenu({
         <ReceivableActionItem icon={faArrowRight} disabled>
           Apply Other Credit
         </ReceivableActionItem>
+        {/* Push this line to QuickBooks again — what a broker reaches for when
+            the row's badge says it is not there. Greyed like the two above it,
+            which is the honest reading: nothing is wired to QuickBooks, and an
+            enabled item that silently does nothing reads as broken rather than
+            as unbuilt. Offered whatever the badge says, because "force" is the
+            point — re-pushing a line that already synced is a real thing to
+            want when the two sides have drifted. */}
+        <ReceivableActionItem icon={faArrowsRotate} disabled>
+          Force Sync with QuickBooks
+        </ReceivableActionItem>
         <Separator className="my-1" />
         <DropdownMenu.Item onClick={onDelete}>
           <FontAwesomeIcon icon={faTrashCan} className="me-2" />
@@ -1448,6 +1459,13 @@ function ReceivablesSection({
                   onClick={() => createInvoice(selectedRows.map((r) => r.id))}
                 >
                   Create New Invoice
+                </ReceivableActionItem>
+                {/* Here as well as on each row: pushing several lines at once is
+                    the more useful half of a force sync, and an action that
+                    exists in one of two mirrored receivable menus reads as an
+                    oversight. Greyed for the same reason as the row's. */}
+                <ReceivableActionItem icon={faArrowsRotate} disabled>
+                  Force Sync with QuickBooks
                 </ReceivableActionItem>
                 {/* No Delete here. Deleting is a one-row act and the row's own
                     menu owns it; a bulk Delete beside it would be a second way
