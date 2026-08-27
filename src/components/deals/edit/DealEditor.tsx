@@ -48,6 +48,9 @@ import { dealSavePatch } from "#/components/deals/edit/savePatches";
 import { reseedDraft } from "#/components/deals/edit/reseedDraft";
 import { BrokerEditor } from "#/components/deals/edit/BrokerEditor";
 import { DealFinancialsSection } from "#/components/deals/edit/DealFinancialsSection";
+import { VoucherLockBanner } from "#/components/deals/edit/VoucherLockBanner";
+import { LockableFieldset } from "#/components/common/recordForm/formLock";
+import { isVoucherPending } from "#/data/vouchers";
 import { PendingPublishBanner } from "#/components/deals/edit/PendingPublishBanner";
 
 /**
@@ -91,6 +94,23 @@ export function DealEditor({
 	// Computed once — `dealShape` scans every listing to find children, so it
 	// isn't free to call more than once per render.
 	const shape = dealShape(listing);
+
+	// Submitting the voucher freezes the figures an approver is reading, and the
+	// Transaction Terms group is the other *form* onto exactly those figures —
+	// price, commission, and the dates that close it out. So that ONE group locks
+	// with the voucher rather than being a way around it.
+	//
+	// Deliberately just that group. Setup & Status and Deal Financials are not what
+	// the voucher is a claim about, and a broker whose voucher is out still has to
+	// be able to move the deal's stage, fix a listing date, or correct the pitch
+	// financials. The header pencil that leads here stays open for the same reason.
+	//
+	// Not the only door, though: `commitStageTransition` (src/data/actions.ts)
+	// writes salePrice, commissionPct, commissionAmount, and closeDate too, and
+	// DealStageSelect mounts the stage gate right here on PropertyDetailHeader,
+	// the same screen a frozen voucher renders on. That path stays deliberately
+	// unguarded — closing the voucher page and this form is judged enough.
+	const voucherLocked = isVoucherPending(listing);
 
 	const [status, setStatus] = useState<PropertyStatus>(listing.status);
 	// Deal Type is fixed for a listing — kept in state so Save still persists it,
@@ -293,6 +313,7 @@ export function DealEditor({
 	const body = (
 		<div className="d-flex flex-column gap-6 p-4">
 			<PendingPublishBanner listing={listing} />
+			<VoucherLockBanner listing={listing} />
 			<ListingPageHeader
 				title="Edit Deal"
 				actions={
@@ -399,69 +420,74 @@ export function DealEditor({
 				)}
 
 				{termsGroup && (
-					<FieldGroup title={termsGroup.label} icon={termsGroup.icon}>
-						<SubGroup
-							label="Price & Commission"
-							description="What it sells for, and what you earn on it."
-						>
-							<FieldGrid>
-								<Col>
-									<NumberField
-										label="Sale Price"
-										value={transaction.salePrice || null}
-										onChange={setSalePrice}
-									/>
-								</Col>
-								<Col>
-									<NumberField
-										label="Gross Commission %"
-										value={transaction.commissionPct || null}
-										onChange={setCommissionPct}
-									/>
-								</Col>
-								<Col>
-									<NumberField
-										label="Gross Commission $"
-										value={transaction.commissionAmount || null}
-										onChange={setCommissionAmount}
-									/>
-								</Col>
-							</FieldGrid>
-						</SubGroup>
+					// A fieldset rather than a `disabled` prop on each field: it reaches
+					// every native control nested under it, so a field added to this
+					// group later is covered without anyone remembering to cover it.
+					<LockableFieldset disabled={voucherLocked}>
+						<FieldGroup title={termsGroup.label} icon={termsGroup.icon}>
+							<SubGroup
+								label="Price & Commission"
+								description="What it sells for, and what you earn on it."
+							>
+								<FieldGrid>
+									<Col>
+										<NumberField
+											label="Sale Price"
+											value={transaction.salePrice || null}
+											onChange={setSalePrice}
+										/>
+									</Col>
+									<Col>
+										<NumberField
+											label="Gross Commission %"
+											value={transaction.commissionPct || null}
+											onChange={setCommissionPct}
+										/>
+									</Col>
+									<Col>
+										<NumberField
+											label="Gross Commission $"
+											value={transaction.commissionAmount || null}
+											onChange={setCommissionAmount}
+										/>
+									</Col>
+								</FieldGrid>
+							</SubGroup>
 
-						<SubGroup
-							label="Milestones"
-							description="Confidence, and the dates that close it out."
-						>
-							<FieldGrid>
-								<Col>
-									<NumberField
-										label="Close Probability (%)"
-										value={transaction.closeProbability || null}
-										onChange={(v) =>
-											patchTransaction({ closeProbability: v ?? 0 })
-										}
-									/>
-								</Col>
-								<Col>
-									<DateField
-										label="Contract Executed"
-										value={transaction.contractExecutedDate}
-										onChange={(v) =>
-											patchTransaction({ contractExecutedDate: v })
-										}
-									/>
-								</Col>
-								<Col>
-									<DateField
-										label="Close Date"
-										value={transaction.closeDate}
-										onChange={(v) => patchTransaction({ closeDate: v })}
-									/>
-								</Col>
-							</FieldGrid>
-						</SubGroup>
-					</FieldGroup>
+							<SubGroup
+								label="Milestones"
+								description="Confidence, and the dates that close it out."
+							>
+								<FieldGrid>
+									<Col>
+										<NumberField
+											label="Close Probability (%)"
+											value={transaction.closeProbability || null}
+											onChange={(v) =>
+												patchTransaction({ closeProbability: v ?? 0 })
+											}
+										/>
+									</Col>
+									<Col>
+										<DateField
+											label="Contract Executed"
+											value={transaction.contractExecutedDate}
+											onChange={(v) =>
+												patchTransaction({ contractExecutedDate: v })
+											}
+										/>
+									</Col>
+									<Col>
+										<DateField
+											label="Close Date"
+											value={transaction.closeDate}
+											onChange={(v) => patchTransaction({ closeDate: v })}
+										/>
+									</Col>
+								</FieldGrid>
+							</SubGroup>
+						</FieldGroup>
+					</LockableFieldset>
 				)}
 
 				{financialsGroup && (

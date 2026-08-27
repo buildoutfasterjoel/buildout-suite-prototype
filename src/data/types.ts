@@ -768,6 +768,14 @@ export interface DealFinancials {
   status: 'Approved' | 'Pending' | 'Draft'
   closeDate: string | null
   relatedContactsLabel: string
+  /**
+   * Who this voucher bills, in the order they were added. Each is a contact id.
+   *
+   * A voucher can bill several parties — a commission split across both sides
+   * of a deal is the ordinary case — so this is a list, and every receivable
+   * names one of them.
+   */
+  payerContactIds: string[]
   preSplitDeductions: FinancialDeduction[]
   receivables: FinancialReceivable[]
   /** Non-null exactly when `status` is `'Approved'`. */
@@ -1061,8 +1069,28 @@ export interface FinancialDeduction {
 /** Money owed to the brokerage on a deal — shown on the Financials tab. */
 export interface FinancialReceivable {
   id: string
-  payerName: string
-  payerEmail: string
+  /**
+   * Who is billed, as a contact id — not a copy of their name and email.
+   *
+   * Meant to be one of the voucher's `payerContactIds` — an invariant the seed
+   * and the UI maintain, not one the write path enforces. Storing the
+   * reference means correcting a contact's email fixes it on every voucher
+   * that billed them; the copies this replaced went stale silently.
+   */
+  payerContactId: string
+  /**
+   * Bill the payer's company rather than the payer themselves.
+   *
+   * A commission is often invoiced to an entity — "ABC, Corp." — with the
+   * contact merely the person who receives it. Both forms name the SAME
+   * contact, so this is a rendering choice stored per receivable rather than a
+   * second id: `payerContactId` still says who the relationship is with, and
+   * the Billing section still totals by person however each line is addressed.
+   *
+   * Always false when the contact carries no `company` — there is nothing to
+   * bill in that case, and the payer picker does not offer the company form.
+   */
+  billToCompany: boolean
   dueDate: string
   billingDescription: string
   amount: number

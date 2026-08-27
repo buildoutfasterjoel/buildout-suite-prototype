@@ -16,13 +16,17 @@ import {
   updateDealStage,
   updateDealTransaction,
   submitVoucher,
+  addReceivable,
+  deleteReceivable,
   reopenVoucher,
+  updateReceivable,
   saveVoucherDraft,
 } from './actions'
 import { emptyDraft } from './createListing'
 import { closeProbabilityForStage, commissionForecast } from './commission'
 import { publishReadiness } from './stageGates'
 import { getContactDetailClient, listContactsForDeal } from './selectors'
+import { getListing } from './store'
 import { TEAMMATES } from './teammates'
 import { setNotifier, type NotifyItem } from '#/lib/notify'
 
@@ -430,6 +434,8 @@ describe('actions', () => {
     const { deal: updated } = saveVoucherDraft(deal.id, {
       preSplitDeductions: deductions,
       internalBrokers: brokers,
+      partyContactIds: deal.buyerContactIds,
+      payerContactIds: deal.transaction.backOffice.payerContactIds,
     })
     expect(updated?.transaction.backOffice.preSplitDeductions).toEqual(deductions)
     expect(updated?.internalBrokers).toEqual(brokers)
@@ -446,6 +452,8 @@ describe('actions', () => {
       const { deal: updated } = saveVoucherDraft(deal.id, {
         preSplitDeductions: [],
         internalBrokers: [],
+        partyContactIds: [],
+        payerContactIds: [],
       })
       expect(updated).toBe(seeded)
       expect(updated?.transaction.backOffice.preSplitDeductions).toBe(beforeDeductions)
@@ -454,8 +462,109 @@ describe('actions', () => {
   })
 
   it('saveVoucherDraft returns null for an unknown deal', () => {
-    const empty = { preSplitDeductions: [], internalBrokers: [] }
+    const empty = {
+      preSplitDeductions: [],
+      internalBrokers: [],
+      partyContactIds: [],
+      payerContactIds: [],
+    }
     expect(saveVoucherDraft('does-not-exist', empty).deal).toBeNull()
+  })
+
+  it('saveVoucherDraft writes the party list to buyers on a sale', () => {
+    const deal = [...useDataStore.getState().listings.values()].find(
+      (l) => l.dealType === 'Sale',
+    )!
+    updateDealTransaction(deal.id, {
+      backOffice: { ...deal.transaction.backOffice, status: 'Draft' },
+    })
+    saveVoucherDraft(deal.id, {
+      preSplitDeductions: [],
+      internalBrokers: deal.internalBrokers,
+      partyContactIds: ['buyer-1'],
+      payerContactIds: ['payer-1'],
+    })
+    const saved = getListing(deal.id)!
+    expect(saved.buyerContactIds).toEqual(['buyer-1'])
+    expect(saved.transaction.backOffice.payerContactIds).toEqual(['payer-1'])
+  })
+
+  it('saveVoucherDraft writes the party list to tenants on a lease', () => {
+    // The same draft field lands in a different array. One list in, the deal
+    // type decides where it goes — so a sale can never hold a tenant list.
+    const deal = [...useDataStore.getState().listings.values()].find(
+      (l) => l.dealType === 'Lease',
+    )!
+    updateDealTransaction(deal.id, {
+      backOffice: { ...deal.transaction.backOffice, status: 'Draft' },
+    })
+    saveVoucherDraft(deal.id, {
+      preSplitDeductions: [],
+      internalBrokers: deal.internalBrokers,
+      partyContactIds: ['tenant-1'],
+      payerContactIds: [],
+    })
+    const saved = getListing(deal.id)!
+    expect(saved.tenantContactIds).toEqual(['tenant-1'])
+    expect(saved.buyerContactIds).not.toContain('tenant-1')
+  })
+
+  it('saveVoucherDraft rebuilds relatedContactsLabel from the saved parties', () => {
+    // The label is a denormalized string the Back Office vouchers list shows
+    // and searches. It leads with the first seller, so editing the buyer list
+    // alone never moves the leading name — but it does move the trailing
+    // count, which is exactly what a stale, un-rebuilt label would get wrong.
+    // Asserting the exact string (not a `toContain`) is what makes that catch
+    // real: a `toContain(seller.firstName)` would pass whether or not the
+    // rebuild ran at all, since that name sits in both the old and new label.
+    const deal = [...useDataStore.getState().listings.values()].find(
+      (l) => l.dealType === 'Sale' && l.sellerContactIds.length > 0,
+    )!
+    const seller = useDataStore.getState().contacts.get(deal.sellerContactIds[0])!
+    const before = deal.transaction.backOffice.relatedContactsLabel
+    // One more party than the deal already has, so the "& N more" count is
+    // guaranteed to differ from `before` — a copy-pasted stale label cannot
+    // coincidentally match.
+    const newParties = [...useDataStore.getState().contacts.values()]
+      .filter((c) => !deal.sellerContactIds.includes(c.id))
+      .slice(0, deal.buyerContactIds.length + 1)
+    updateDealTransaction(deal.id, {
+      backOffice: { ...deal.transaction.backOffice, status: 'Draft' },
+    })
+    saveVoucherDraft(deal.id, {
+      preSplitDeductions: [],
+      internalBrokers: deal.internalBrokers,
+      partyContactIds: newParties.map((c) => c.id),
+      payerContactIds: [],
+    })
+    const totalParties = deal.sellerContactIds.length + newParties.length
+    const expected =
+      totalParties > 1
+        ? `${seller.firstName} ${seller.lastName} & ${totalParties - 1} more`
+        : `${seller.firstName} ${seller.lastName}`
+    const after = getListing(deal.id)!.transaction.backOffice.relatedContactsLabel
+    expect(after).toBe(expected)
+    expect(after).not.toBe(before)
+  })
+
+  it('saveVoucherDraft leaves a submitted voucher alone', () => {
+    // The Draft-only guard has to cover the new fields too, or the page's
+    // freeze is only skin-deep.
+    for (const status of ['Pending', 'Approved'] as const) {
+      const deal = [...useDataStore.getState().listings.values()][0]!
+      updateDealTransaction(deal.id, {
+        backOffice: { ...deal.transaction.backOffice, status, payerContactIds: [] },
+      })
+      saveVoucherDraft(deal.id, {
+        preSplitDeductions: [],
+        internalBrokers: deal.internalBrokers,
+        partyContactIds: ['nope'],
+        payerContactIds: ['nope'],
+      })
+      const saved = getListing(deal.id)!
+      expect(saved.transaction.backOffice.payerContactIds).toEqual([])
+      expect(saved.buyerContactIds).not.toContain('nope')
+    }
   })
 
   it('a voucher can go Draft → Pending → Draft → Pending', () => {
@@ -471,5 +580,107 @@ describe('actions', () => {
     expect(status()).toBe('Draft')
     submitVoucher(deal.id)
     expect(status()).toBe('Pending')
+  })
+})
+
+describe('receivable writes', () => {
+  function draftDeal() {
+    const deal = [...useDataStore.getState().listings.values()][0]!
+    updateDealTransaction(deal.id, {
+      backOffice: {
+        ...deal.transaction.backOffice,
+        status: 'Draft',
+        payerContactIds: [],
+        receivables: [],
+      },
+    })
+    return deal
+  }
+
+  const input = {
+    payerContactId: 'c-payer',
+    billToCompany: true,
+    dueDate: '2026-06-22',
+    billingDescription: 'Full amount due on receipt',
+    amount: 5850,
+  }
+
+  it('addReceivable bills a new line, starting uncredited', () => {
+    const deal = draftDeal()
+    addReceivable(deal.id, input)
+    const rows = getListing(deal.id)!.transaction.backOffice.receivables
+    expect(rows).toHaveLength(1)
+    expect(rows[0]!.amount).toBe(5850)
+    expect(rows[0]!.billToCompany).toBe(true)
+    expect(rows[0]!.credited).toBe(0)
+  })
+
+  it('addReceivable puts an unlisted payer into Billing', () => {
+    // Creating a receivable is how a payer arrives — a line billing somebody the
+    // Billing section does not list would put two answers to "who is billed" on
+    // one page.
+    const deal = draftDeal()
+    addReceivable(deal.id, input)
+    expect(
+      getListing(deal.id)!.transaction.backOffice.payerContactIds,
+    ).toEqual(['c-payer'])
+  })
+
+  it('addReceivable does not list an existing payer twice', () => {
+    const deal = draftDeal()
+    addReceivable(deal.id, input)
+    addReceivable(deal.id, { ...input, amount: 100 })
+    const back = getListing(deal.id)!.transaction.backOffice
+    expect(back.payerContactIds).toEqual(['c-payer'])
+    expect(back.receivables).toHaveLength(2)
+  })
+
+  it('updateReceivable edits one row and leaves the rest alone', () => {
+    const deal = draftDeal()
+    addReceivable(deal.id, input)
+    addReceivable(deal.id, { ...input, amount: 100 })
+    const [first, second] = getListing(deal.id)!.transaction.backOffice.receivables
+    updateReceivable(deal.id, first!.id, { amount: 1, billToCompany: false })
+    const rows = getListing(deal.id)!.transaction.backOffice.receivables
+    expect(rows.find((r) => r.id === first!.id)!.amount).toBe(1)
+    expect(rows.find((r) => r.id === first!.id)!.billToCompany).toBe(false)
+    expect(rows.find((r) => r.id === second!.id)!.amount).toBe(100)
+  })
+
+  it('deleteReceivable drops the row but leaves its payer in Billing', () => {
+    // A payer with nothing billed is a real state the Billing section renders as
+    // $0. Removing them is a deliberate act, not a side effect of deleting a line.
+    const deal = draftDeal()
+    addReceivable(deal.id, input)
+    const row = getListing(deal.id)!.transaction.backOffice.receivables[0]!
+    deleteReceivable(deal.id, row.id)
+    const back = getListing(deal.id)!.transaction.backOffice
+    expect(back.receivables).toHaveLength(0)
+    expect(back.payerContactIds).toEqual(['c-payer'])
+  })
+
+  it('all three refuse a Pending voucher, and all three allow an Approved one', () => {
+    // The guard that differs from `saveVoucherDraft`. An Approved voucher still
+    // accepts additions — that is why the Receivables section stays live there —
+    // so a Draft-only guard would have made every control on it silently dead.
+    for (const status of ['Pending', 'Approved'] as const) {
+      const deal = draftDeal()
+      addReceivable(deal.id, input)
+      const seeded = getListing(deal.id)!.transaction.backOffice.receivables[0]!
+      updateDealTransaction(deal.id, {
+        backOffice: { ...getListing(deal.id)!.transaction.backOffice, status },
+      })
+
+      addReceivable(deal.id, { ...input, amount: 42 })
+      updateReceivable(deal.id, seeded.id, { amount: 7 })
+      const back = getListing(deal.id)!.transaction.backOffice
+      if (status === 'Pending') {
+        expect(back.receivables).toHaveLength(1)
+        expect(back.receivables[0]!.amount).toBe(5850)
+      } else {
+        expect(back.receivables).toHaveLength(2)
+        expect(back.receivables.find((r) => r.id === seeded.id)!.amount).toBe(7)
+      }
+    }
   })
 })

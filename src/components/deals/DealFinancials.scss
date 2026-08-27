@@ -1,0 +1,53 @@
+// src/components/deals/DealFinancials.scss
+//
+// Styles for the voucher page. One rule so far, and it exists because Blueprint
+// swallows the `style` prop on `Table` — the rendered `<table>` carries no
+// inline style — so a table-level layout mode has nowhere else to live.
+
+// The Receivables table sizes its own columns.
+//
+// Under the browser's default `table-layout: auto`, a `width` on a `<th>` is a
+// suggestion the browser is free to ignore, and it sizes columns by content
+// instead. Here that read backwards: the payer column took 357px to hold a name
+// and an email, while Billing Description — the one free-text column, the only
+// one whose content has no natural length — was squeezed to 105px.
+//
+// Fixed layout makes the declared widths authoritative, so the pinned columns
+// (payer, date, both money columns, the action gutter) take exactly what they
+// are given and Billing Description's `width: 100%` absorbs the rest. It is
+// also what makes truncation possible at all: under auto layout a cell simply
+// widens to fit its text, so `text-truncate` has nothing to trim against.
+.receivables-table {
+  table-layout: fixed;
+
+  // Fixed layout stops a column from GROWING to fit its content, but it does
+  // not stop the content spilling out of the cell — and a Select trigger is a
+  // flex row whose text refuses to shrink below its own width. Without both of
+  // these the payer's name ran straight across the Due Date column.
+  //
+  // `min-width: 0` unlocks the shrink; `overflow: hidden` on the cell is what
+  // gives `text-truncate` an edge to clip against.
+  td,
+  th {
+    overflow: hidden;
+  }
+
+  .form-select,
+  .form-control {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  // Blueprint wraps a Select's value in its own span, and that span is the flex
+  // item inside the trigger. A flex item will not shrink below its content
+  // width without `min-width: 0`, so the `text-truncate` on the label INSIDE it
+  // had nothing to trim against — the name simply pushed the trigger wider than
+  // its cell, taking the chevron out of view with it.
+  //
+  // Constraining the wrapper is what makes the ellipsis appear and keeps the
+  // chevron where a broker can see there is something to open.
+  [data-slot="select-value"] {
+    min-width: 0;
+    overflow: hidden;
+  }
+}

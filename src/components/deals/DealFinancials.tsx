@@ -21,8 +21,8 @@ import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowRight,
-  faChevronDown,
   faDollarSign,
+  faEllipsisVertical,
   faFileLines,
   faPercent,
   faPlus,
@@ -30,27 +30,48 @@ import {
   faTableRowsAddAbove,
   faTableRowsAddBelow,
   faTrashCan,
+  faCaretDown,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type {
   DealBroker,
+  DealType,
   FinancialDeduction,
+  FinancialReceivable,
   Listing,
   TransactionSide,
 } from "#/data/types";
-import { reopenVoucher, saveVoucherDraft, submitVoucher } from "#/data/actions";
+import {
+  addReceivable,
+  deleteReceivable,
+  saveVoucherDraft,
+  submitVoucher,
+  updateReceivable,
+} from "#/data/actions";
 import {
   COMMISSION_PLANS,
   DEDUCTION_CATEGORIES,
+  partyContactIds,
+  partySectionTitle,
+  payerFormOptions,
+  payerRemovalBlock,
+  receivablePayerLabel,
   TRANSACTION_SIDES,
+  voucherParty,
+  voucherPayers,
+  type VoucherParty,
+  type VoucherPayerRow,
 } from "#/data/vouchers";
 import { AddBrokerModal } from "./AddBrokerModal";
+import { AddContactModal } from "./AddContactModal";
+import { DueDatePicker, NewReceivableModal } from "./NewReceivableModal";
 import { notify } from "#/lib/notify";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
 import { VoucherStatusBadge } from "./VoucherStatusBadge";
 import { VoucherApprovalBanner } from "./VoucherApprovalBanner";
 import { dealEditTarget } from "./dealCardLink";
 import { formatCurrency, formatDate } from "./dealDisplay";
+import "./DealFinancials.scss";
 import {
   buildRentSchedule,
   computeTotal,
@@ -252,7 +273,9 @@ function BreakdownSection({ listing }: { listing: Listing }) {
 
 /** A broker's own split of their gross — the second table's derived money column. */
 function brokerSplitAmount(broker: DealBroker): number {
-  return Math.round(broker.grossCommission * ((broker.personalSplitPct ?? 0) / 100));
+  return Math.round(
+    broker.grossCommission * ((broker.personalSplitPct ?? 0) / 100),
+  );
 }
 
 /** One-column dropdown cell, shared by Transaction Side and Commission Plan. */
@@ -424,7 +447,9 @@ function InternalCommissionsSection({
                       unit={faPercent}
                       value={b.commissionSplitPct}
                       step="0.1"
-                      onChange={(v) => patch(b.id, { commissionSplitPct: v ?? 0 })}
+                      onChange={(v) =>
+                        patch(b.id, { commissionSplitPct: v ?? 0 })
+                      }
                     />
                   </Table.Cell>
                   <Table.Cell>
@@ -513,7 +538,9 @@ function InternalCommissionsSection({
                       unit={faPercent}
                       value={b.personalSplitPct ?? 0}
                       step="0.1"
-                      onChange={(v) => patch(b.id, { personalSplitPct: v ?? 0 })}
+                      onChange={(v) =>
+                        patch(b.id, { personalSplitPct: v ?? 0 })
+                      }
                     />
                   ) : (
                     (b.personalSplitPct ?? 0)
@@ -553,15 +580,274 @@ function InternalCommissionsSection({
   );
 }
 
-function OutsideCommissionsSection({ brokers }: { brokers: DealBroker[] }) {
+/**
+ * The contact columns both party sections share — buyer/tenant and payer.
+ *
+ * Written once because the two tables differ only in their heading, their
+ * removal rule, and whether a Billed column follows. Two copies would drift the
+ * first time one of them gained a column.
+ */
+function PartyRowCells({ party }: { party: VoucherParty }) {
+  return (
+    <>
+      <Table.Cell>
+        {/* No link when the contact is gone — a dead link to a contact page
+            that 404s is worse than plain text. */}
+        <PersonLink
+          name={party.name}
+          contactId={party.exists ? party.contactId : undefined}
+        />
+      </Table.Cell>
+      <Table.Cell>{party.company || "—"}</Table.Cell>
+      <Table.Cell>{party.email || "—"}</Table.Cell>
+      <Table.Cell>{party.phone || "—"}</Table.Cell>
+    </>
+  );
+}
+
+/** The remove action both party tables carry. */
+function RemovePartyButton({
+  name,
+  blockedReason,
+  onRemove,
+}: {
+  name: string;
+  /** Non-null when removal is refused — greys the button and explains why. */
+  blockedReason: string | null;
+  onRemove: () => void;
+}) {
+  const button = (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label={`Remove ${name}`}
+      disabled={blockedReason !== null}
+      onClick={blockedReason !== null ? undefined : onRemove}
+    >
+      <FontAwesomeIcon icon={faTrashCan} />
+    </Button>
+  );
+  return (
+    <Tooltip>
+      <Tooltip.Trigger
+        render={
+          // A disabled button fires no pointer events, so a blocked one hangs
+          // its tooltip off a wrapper — the same trick RemoveBrokerButton uses,
+          // and the reason the rule is discoverable rather than a dead icon.
+          blockedReason !== null ? (
+            <span className="d-inline-flex">{button}</span>
+          ) : (
+            button
+          )
+        }
+      />
+      <Tooltip.Content>{blockedReason ?? `Remove ${name}`}</Tooltip.Content>
+    </Tooltip>
+  );
+}
+
+/**
+ * Who is acquiring — the deal's buyers on a sale, its tenants on a lease.
+ *
+ * The section title and the list both come from `dealType`, in one place, so a
+ * lease voucher can never show a "Buyer" heading over its tenants.
+ *
+ * Editable on a Draft. These contacts live on the deal rather than in the
+ * voucher record, so this and the Deal form's own contact fields write the same
+ * arrays — which is why Save routes through `saveVoucherDraft` like everything
+ * else here, instead of writing on each add.
+ */
+function PartySection({
+  dealType,
+  contactIds,
+  editable,
+  onChange,
+}: {
+  dealType: DealType;
+  contactIds: string[];
+  editable: boolean;
+  onChange: (next: string[]) => void;
+}) {
+  const [addOpen, setAddOpen] = useState(false);
+  const title = partySectionTitle(dealType);
+  const parties = contactIds.map(voucherParty);
+
+  return (
+    <Section
+      title={title}
+      action={
+        editable ? (
+          <Button variant="ghost" size="sm" onClick={() => setAddOpen(true)}>
+            <FontAwesomeIcon icon={faPlus} />
+            Add {title}
+          </Button>
+        ) : undefined
+      }
+    >
+      {parties.length === 0 ? (
+        <p className="text-muted mb-0">
+          No {title.toLowerCase()} has been added.
+        </p>
+      ) : (
+        <Table>
+          <Table.Header>
+            <Table.Row>
+              <Table.Head>Name</Table.Head>
+              <Table.Head>Company</Table.Head>
+              <Table.Head>Email</Table.Head>
+              <Table.Head>Phone</Table.Head>
+              {editable && <Table.Head style={{ width: 56 }} />}
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {parties.map((party) => (
+              <Table.Row key={party.contactId}>
+                <PartyRowCells party={party} />
+                {editable && (
+                  <Table.Cell>
+                    <RemovePartyButton
+                      name={party.name}
+                      blockedReason={null}
+                      onRemove={() =>
+                        onChange(
+                          contactIds.filter((id) => id !== party.contactId),
+                        )
+                      }
+                    />
+                  </Table.Cell>
+                )}
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table>
+      )}
+
+      <AddContactModal
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        takenIds={contactIds}
+        title={title}
+        onAdd={(contactId) => onChange([...contactIds, contactId])}
+      />
+    </Section>
+  );
+}
+
+/**
+ * Who this voucher bills.
+ *
+ * Sits directly above Receivables because that table references it: every
+ * receivable names one of these payers, and the two have to be readable
+ * together.
+ *
+ * A payer is usually the buyer or the tenant and often is not — a lease
+ * commission billed to a corporate AP department, a sale where a holding
+ * company pays. That is the reason this is its own list rather than a column on
+ * the section above.
+ */
+function PayersSection({
+  payers,
+  editable,
+  onChange,
+}: {
+  payers: VoucherPayerRow[];
+  editable: boolean;
+  onChange: (next: string[]) => void;
+}) {
+  const [addOpen, setAddOpen] = useState(false);
+  const contactIds = payers.map((p) => p.contactId);
+  const billedTotal = sum(payers.map((p) => p.billed));
+
+  return (
+    <Section
+      title="Billing"
+      action={
+        editable ? (
+          <Button variant="ghost" size="sm" onClick={() => setAddOpen(true)}>
+            <FontAwesomeIcon icon={faPlus} />
+            Add Payer
+          </Button>
+        ) : undefined
+      }
+    >
+      {payers.length === 0 ? (
+        <p className="text-muted mb-0">No payers have been added.</p>
+      ) : (
+        <Table>
+          <Table.Header>
+            <Table.Row>
+              <Table.Head>Name</Table.Head>
+              <Table.Head>Company</Table.Head>
+              <Table.Head>Email</Table.Head>
+              <Table.Head>Phone</Table.Head>
+              <Table.Head className="text-end">Billed</Table.Head>
+              {editable && <Table.Head style={{ width: 56 }} />}
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {payers.map((payer) => (
+              <Table.Row key={payer.contactId}>
+                <PartyRowCells party={payer} />
+                <Table.Cell className="text-end">
+                  {formatCurrency(payer.billed)}
+                </Table.Cell>
+                {editable && (
+                  <Table.Cell>
+                    <RemovePartyButton
+                      name={payer.name}
+                      blockedReason={payerRemovalBlock(payer)}
+                      onRemove={() =>
+                        onChange(
+                          contactIds.filter((id) => id !== payer.contactId),
+                        )
+                      }
+                    />
+                  </Table.Cell>
+                )}
+              </Table.Row>
+            ))}
+            <Table.Row>
+              <Table.Cell colSpan={4} className="fw-semibold">
+                Sum
+              </Table.Cell>
+              <Table.Cell className="text-end fw-semibold">
+                {formatCurrency(billedTotal)}
+              </Table.Cell>
+              {editable && <Table.Cell />}
+            </Table.Row>
+          </Table.Body>
+        </Table>
+      )}
+
+      <AddContactModal
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        takenIds={contactIds}
+        title="Payer"
+        onAdd={(contactId) => onChange([...contactIds, contactId])}
+      />
+    </Section>
+  );
+}
+
+function OutsideCommissionsSection({
+  brokers,
+  editable,
+}: {
+  brokers: DealBroker[];
+  /** False while the voucher is Pending — nothing joins the split off the approver's desk. */
+  editable: boolean;
+}) {
   return (
     <Section
       title="Outside Commissions"
       action={
-        <Button variant="ghost" size="sm">
-          <FontAwesomeIcon icon={faPlus} />
-          Add Outside Commission
-        </Button>
+        editable ? (
+          <Button variant="ghost" size="sm">
+            <FontAwesomeIcon icon={faPlus} />
+            Add Outside Commission
+          </Button>
+        ) : undefined
       }
     >
       {brokers.length === 0 ? (
@@ -780,7 +1066,9 @@ function PreSplitDeductionsSection({
                       unit={faDollarSign}
                       value={d.amount}
                       step="0.01"
-                      onChange={(amount) => patch(d.id, { amount: amount ?? 0 })}
+                      onChange={(amount) =>
+                        patch(d.id, { amount: amount ?? 0 })
+                      }
                     />
                   </Table.Cell>
                   <Table.Cell>
@@ -854,6 +1142,32 @@ function PreSplitDeductionsSection({
 const RECEIVABLE_CHECKBOX_W = 44;
 
 /**
+ * Column widths for the Receivables table.
+ *
+ * Everything is pinned except Billing Description, which takes `width: 100%`
+ * and therefore absorbs whatever is left. That is the point: a description is
+ * the only free-text column here and the only one whose content has no natural
+ * length, while a date, a dollar amount and a name all do. Letting the browser
+ * share width evenly gave the amounts room they never use and squeezed the one
+ * column that needed it.
+ *
+ * The payer is pinned rather than sized to content so the table's columns do
+ * not jump when a row switches between a person's name and their company — the
+ * cell truncates instead (see `text-truncate` at the call site).
+ */
+const RECEIVABLE_COL = {
+  payer: 220,
+  dueDate: 150,
+  // The money columns are sized to their content, and their content is the
+  // widest figure a commission realistically reaches — "$1,167,802.00" is a real
+  // seeded value. Amount needs a little more than Credited despite showing the
+  // same magnitude: it is an input with a currency addon, not plain text.
+  amount: 150,
+  credited: 130,
+  actions: 44,
+} as const;
+
+/**
  * One item in the Receivables Actions menu, greyed when its precondition fails.
  *
  * The `disabled` prop alone would not grey it: base-ui renders a menu item as a
@@ -882,13 +1196,118 @@ function ReceivableActionItem({
   );
 }
 
-function ReceivablesSection({ listing }: { listing: Listing }) {
+/**
+ * A receivable's billing description, edited in the cell.
+ *
+ * Keystrokes stay local and commit on blur, so typing a sentence is one write
+ * to the store rather than one per character — the same reason the rent
+ * schedule's cells commit on blur. Re-seeds when the stored value moves under
+ * it, which is what keeps a row honest if the same voucher is edited elsewhere.
+ */
+function ReceivableTextCell({
+  value,
+  placeholder,
+  className,
+  onCommit,
+}: {
+  value: string;
+  placeholder: string;
+  className?: string;
+  onCommit: (next: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on `value` alone by design
+  useEffect(() => setDraft(value), [value]);
+  return (
+    <Input
+      className={`bg-card${className ? ` ${className}` : ""}`}
+      value={draft}
+      placeholder={placeholder}
+      aria-label="Billing description"
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => draft !== value && onCommit(draft)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+        if (e.key === "Escape") setDraft(value);
+      }}
+    />
+  );
+}
+
+/**
+ * One receivable's own actions.
+ *
+ * All three credit actions are stubs and all three read as stubs — greyed, with
+ * the same `ReceivableActionItem` treatment the toolbar menu uses, because a
+ * menu item that looks live and does nothing is worse than one that says it
+ * cannot yet. Deliberately greyed unconditionally, unlike the toolbar's Apply
+ * Deposit: that one greys on a fully credited line, which reads as a live
+ * control the rest of the time and would promise something this cannot do.
+ *
+ * Delete is the only live item, and the only place a single receivable can be
+ * removed — the toolbar's Actions menu deliberately dropped its bulk Delete
+ * rather than offer the same act twice.
+ */
+function ReceivableRowMenu({
+  label,
+  onDelete,
+}: {
+  label: string;
+  onDelete: () => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenu.Trigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Actions for ${label}`}
+          >
+            <FontAwesomeIcon icon={faEllipsisVertical} />
+          </Button>
+        }
+      />
+      <DropdownMenu.Content align="end">
+        <ReceivableActionItem icon={faFileLines} disabled>
+          Create New Invoice
+        </ReceivableActionItem>
+        <ReceivableActionItem icon={faArrowRight} disabled>
+          Apply Deposit
+        </ReceivableActionItem>
+        <ReceivableActionItem icon={faArrowRight} disabled>
+          Apply Other Credit
+        </ReceivableActionItem>
+        <Separator className="my-1" />
+        <DropdownMenu.Item onClick={onDelete}>
+          <FontAwesomeIcon icon={faTrashCan} className="me-2" />
+          Delete Receivable
+        </DropdownMenu.Item>
+      </DropdownMenu.Content>
+    </DropdownMenu>
+  );
+}
+
+function ReceivablesSection({
+  listing,
+  editable,
+}: {
+  listing: Listing;
+  /** False while the voucher is Pending — no adds, and nothing to select rows for. */
+  editable: boolean;
+}) {
   const receivables = listing.transaction.backOffice.receivables;
   const amountTotal = sum(receivables.map((r) => r.amount));
   const creditedTotal = sum(receivables.map((r) => r.credited));
-  // Receivables don't carry a payer id, but every payer is the deal's buyer (or seller) contact.
-  const payerContactId =
-    listing.buyerContactIds[0] ?? listing.sellerContactIds[0];
+  const [addOpen, setAddOpen] = useState(false);
+
+  // Receivable edits write straight through rather than joining the page's Save
+  // working copy — see `addReceivable` in actions.ts for why the guard differs.
+  // Every cell below commits on blur, so a keystroke is not a write.
+  const patch = (id: string, next: Partial<FinancialReceivable>) =>
+    updateReceivable(listing.id, id, next);
+
+
 
   // Which rows the bulk actions apply to. Local state — nothing here persists,
   // and every read below goes through `selectedRows` rather than the set itself,
@@ -916,115 +1335,258 @@ function ReceivablesSection({ listing }: { listing: Listing }) {
   // receivable has nothing left to apply one to.
   const canApplyDeposit =
     someSelected && selectedRows.every((r) => r.credited < r.amount);
-  // One invoice bills one payer.
+  // One invoice bills one payer. Compared by contact id, not by name: two
+  // different contacts who happen to share a name are two payers.
   const canCreateInvoice =
-    someSelected && new Set(selectedRows.map((r) => r.payerName)).size === 1;
+    someSelected && new Set(selectedRows.map((r) => r.payerContactId)).size === 1;
 
   return (
     <Section
       title="Receivables"
       action={
-        <div className="d-flex gap-2">
-          <Button variant="ghost" size="sm">
-            <FontAwesomeIcon icon={faPlus} />
-            Add Sales Tax
-          </Button>
-          <Button variant="ghost" size="sm">
-            <FontAwesomeIcon icon={faPlus} />
-            Add Receivable
-          </Button>
-          <DropdownMenu>
-            <DropdownMenu.Trigger
-              render={
-                <Button variant="ghost" size="sm" disabled={!someSelected}>
-                  Actions
-                  <FontAwesomeIcon icon={faChevronDown} />
-                </Button>
-              }
-            />
-            <DropdownMenu.Content align="end">
-              <ReceivableActionItem
-                icon={faArrowRight}
-                disabled={!canApplyDeposit}
-              >
-                Apply Deposit
-              </ReceivableActionItem>
-              <ReceivableActionItem
-                icon={faFileLines}
-                disabled={!canCreateInvoice}
-              >
-                Create New Invoice
-              </ReceivableActionItem>
-              <ReceivableActionItem icon={faTrashCan}>
-                Delete Receivables
-              </ReceivableActionItem>
-            </DropdownMenu.Content>
-          </DropdownMenu>
-        </div>
+        editable ? (
+          <div className="d-flex gap-2">
+            <Button variant="ghost" size="sm">
+              <FontAwesomeIcon icon={faPlus} />
+              Set Sales Tax
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setAddOpen(true)}>
+              <FontAwesomeIcon icon={faPlus} />
+              Add Receivable
+            </Button>
+            <DropdownMenu>
+              <DropdownMenu.Trigger
+                render={
+                  <Button variant="ghost" size="sm" disabled={!someSelected}>
+                    Actions
+                    <FontAwesomeIcon icon={faCaretDown} />
+                  </Button>
+                }
+              />
+              <DropdownMenu.Content align="end">
+                <ReceivableActionItem
+                  icon={faArrowRight}
+                  disabled={!canApplyDeposit}
+                >
+                  Apply Deposit
+                </ReceivableActionItem>
+                <ReceivableActionItem
+                  icon={faFileLines}
+                  disabled={!canCreateInvoice}
+                >
+                  Create New Invoice
+                </ReceivableActionItem>
+                {/* No Delete here. Deleting is a one-row act and the row's own
+                    menu owns it; a bulk Delete beside it would be a second way
+                    to do the same thing, differing only in how many rows it
+                    takes. What stays is what genuinely reads a selection —
+                    applying one deposit across several lines, or billing
+                    several lines on one invoice. */}
+              </DropdownMenu.Content>
+            </DropdownMenu>
+          </div>
+        ) : undefined
       }
     >
       {receivables.length === 0 ? (
         <p className="text-muted mb-0">No receivables have been added.</p>
       ) : (
-        <Table>
+        /* `receivables-table` pins `table-layout: fixed`, which is what makes
+           the widths below mean anything — see DealFinancials.scss. A class
+           rather than a style prop because Blueprint's `Table` does not forward
+           `style` to the rendered `<table>`. */
+        <Table className="receivables-table">
           <Table.Header>
             <Table.Row>
-              <Table.Head
-                style={{
-                  width: RECEIVABLE_CHECKBOX_W,
-                  minWidth: RECEIVABLE_CHECKBOX_W,
-                }}
-              >
-                <Checkbox
-                  checked={allSelected}
-                  indeterminate={!allSelected && someSelected}
-                  onCheckedChange={(c) => toggleAll(c === true)}
-                  aria-label="Select all receivables"
-                />
-              </Table.Head>
-              <Table.Head>Payer Name</Table.Head>
-              <Table.Head>Due Date</Table.Head>
-              <Table.Head>Billing Description</Table.Head>
-              <Table.Head className="text-end">Receivable Amount</Table.Head>
-              <Table.Head className="text-end">Credited Amount</Table.Head>
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {receivables.map((r) => (
-              <Table.Row
-                key={r.id}
-                className={selectedIds.has(r.id) ? "table-active" : undefined}
-              >
-                <Table.Cell
+              {/* The gutter exists to arm the Actions menu. With the menu gone
+                  there is nothing a selection could do, so the column goes with
+                  it rather than leaving checkboxes that tick and mean nothing. */}
+              {editable && (
+                <Table.Head
                   style={{
                     width: RECEIVABLE_CHECKBOX_W,
                     minWidth: RECEIVABLE_CHECKBOX_W,
                   }}
                 >
                   <Checkbox
-                    checked={selectedIds.has(r.id)}
-                    onCheckedChange={(c) => toggleOne(r.id, c === true)}
-                    aria-label={`Select receivable for ${r.payerName}`}
+                    checked={allSelected}
+                    indeterminate={!allSelected && someSelected}
+                    onCheckedChange={(c) => toggleAll(c === true)}
+                    aria-label="Select all receivables"
                   />
-                </Table.Cell>
-                <Table.Cell>
-                  <div>
-                    <PersonLink name={r.payerName} contactId={payerContactId} />
-                  </div>
-                  <div className="text-muted fs-small">{r.payerEmail}</div>
-                </Table.Cell>
-                <Table.Cell>{formatDate(r.dueDate)}</Table.Cell>
-                <Table.Cell>{r.billingDescription}</Table.Cell>
-                <Table.Cell className="text-end">
-                  {formatCurrency(r.amount)}
-                </Table.Cell>
-                <Table.Cell className="text-end">
-                  {r.credited > 0 ? formatCurrency(r.credited) : "None"}
-                </Table.Cell>
-              </Table.Row>
-            ))}
+                </Table.Head>
+              )}
+              <Table.Head style={{ width: RECEIVABLE_COL.payer }}>
+                Payer Name
+              </Table.Head>
+              <Table.Head style={{ width: RECEIVABLE_COL.dueDate }}>
+                Due Date
+              </Table.Head>
+              {/* The only column that grows. */}
+              <Table.Head style={{ width: "100%" }}>
+                Billing Description
+              </Table.Head>
+              <Table.Head
+                className="text-end"
+                style={{ width: RECEIVABLE_COL.amount }}
+              >
+                Receivable Amount
+              </Table.Head>
+              <Table.Head
+                className="text-end"
+                style={{ width: RECEIVABLE_COL.credited }}
+              >
+                Credited Amount
+              </Table.Head>
+              {editable && (
+                <Table.Head style={{ width: RECEIVABLE_COL.actions }} />
+              )}
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {receivables.map((r) => {
+              const label = receivablePayerLabel(r.payerContactId, r.billToCompany);
+              return (
+                <Table.Row
+                  key={r.id}
+                  className={
+                    editable && selectedIds.has(r.id) ? "table-active" : undefined
+                  }
+                >
+                  {editable && (
+                    <Table.Cell
+                      style={{
+                        width: RECEIVABLE_CHECKBOX_W,
+                        minWidth: RECEIVABLE_CHECKBOX_W,
+                      }}
+                    >
+                      <Checkbox
+                        checked={selectedIds.has(r.id)}
+                        onCheckedChange={(c) => toggleOne(r.id, c === true)}
+                        aria-label={`Select receivable for ${label}`}
+                      />
+                    </Table.Cell>
+                  )}
+                  <Table.Cell style={{ width: RECEIVABLE_COL.payer }}>
+                    {editable ? (
+                      /* Two options, both naming this row's own payer: the
+                         person, or the company they belong to. Deliberately NOT
+                         the contact book — who a receivable bills is settled
+                         when it is created, and re-offering every contact here
+                         would let "how is this addressed" quietly become "who
+                         is this billed to". */
+                      <Select
+                        value={r.billToCompany ? "company" : "person"}
+                        onValueChange={(v) =>
+                          patch(r.id, { billToCompany: v === "company" })
+                        }
+                      >
+                        <Select.Trigger
+                          className="bg-card"
+                          aria-label="Payer"
+                          title={label}
+                          // `min-width: 0` is what lets the label inside shrink:
+                          // a flex item refuses to go below its content width
+                          // without it, so the trigger would push the column
+                          // wider instead of the text truncating.
+                          style={{ minWidth: 0 }}
+                        >
+                          {/* The label is passed as children, not left to
+                              `Select.Value` to derive. Blueprint's Select.Value
+                              renders the raw VALUE when given none — here that
+                              is the literal string "person" — and this is the
+                              third time in this file that has been discovered in
+                              a browser rather than by the type checker. If you
+                              add a Select whose value is not also its label,
+                              pass the label. */}
+                          <Select.Value>
+                            <span className="d-block text-truncate">
+                              {label}
+                            </span>
+                          </Select.Value>
+                        </Select.Trigger>
+                        <Select.Content>
+                          {payerFormOptions(r.payerContactId).map((o) => (
+                            <Select.Item key={o.value} value={o.value}>
+                              {o.label}
+                            </Select.Item>
+                          ))}
+                        </Select.Content>
+                      </Select>
+                    ) : (
+                      <span className="d-block text-truncate" title={label}>
+                        {label}
+                      </span>
+                    )}
+                  </Table.Cell>
+                  <Table.Cell style={{ width: RECEIVABLE_COL.dueDate }}>
+                    {editable ? (
+                      /* The same `DueDatePicker` the New Receivable modal uses,
+                         so one page does not offer two different date controls
+                         for the same field. A native `<input type="date">` was
+                         here first and rendered its own `mm/dd/yyyy` chrome,
+                         which belongs to the browser rather than to Blueprint. */
+                      <DueDatePicker
+                        className="bg-card"
+                        value={r.dueDate}
+                        onChange={(next) => patch(r.id, { dueDate: next })}
+                      />
+                    ) : (
+                      formatDate(r.dueDate)
+                    )}
+                  </Table.Cell>
+                  <Table.Cell>
+                    {editable ? (
+                      <ReceivableTextCell
+                        value={r.billingDescription}
+                        placeholder="Billing description"
+                        className="w-100"
+                        onCommit={(next) =>
+                          patch(r.id, { billingDescription: next })
+                        }
+                      />
+                    ) : (
+                      r.billingDescription
+                    )}
+                  </Table.Cell>
+                  <Table.Cell
+                    className="text-end"
+                    style={{ width: RECEIVABLE_COL.amount }}
+                  >
+                    {editable ? (
+                      <MoneyCell
+                        label="Receivable amount"
+                        unit={faDollarSign}
+                        value={r.amount}
+                        step="0.01"
+                        onChange={(v) => patch(r.id, { amount: v ?? 0 })}
+                      />
+                    ) : (
+                      formatCurrency(r.amount)
+                    )}
+                  </Table.Cell>
+                  {/* Credited stays read-only at every status: it is what has
+                      been paid against this line, which is the deposit and
+                      credit actions' business, not something to type over. */}
+                  <Table.Cell
+                    className="text-end"
+                    style={{ width: RECEIVABLE_COL.credited }}
+                  >
+                    {r.credited > 0 ? formatCurrency(r.credited) : "None"}
+                  </Table.Cell>
+                  {editable && (
+                    <Table.Cell style={{ width: RECEIVABLE_COL.actions }}>
+                      <ReceivableRowMenu
+                        label={label}
+                        onDelete={() => deleteReceivable(listing.id, r.id)}
+                      />
+                    </Table.Cell>
+                  )}
+                </Table.Row>
+              );
+            })}
             <Table.Row>
-              <Table.Cell colSpan={4} className="fw-semibold">
+              <Table.Cell colSpan={editable ? 4 : 3} className="fw-semibold">
                 Sum
               </Table.Cell>
               <Table.Cell className="text-end fw-semibold">
@@ -1033,10 +1595,17 @@ function ReceivablesSection({ listing }: { listing: Listing }) {
               <Table.Cell className="text-end fw-semibold">
                 {formatCurrency(creditedTotal)}
               </Table.Cell>
+              {editable && <Table.Cell />}
             </Table.Row>
           </Table.Body>
         </Table>
       )}
+
+      <NewReceivableModal
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onAdd={(input) => addReceivable(listing.id, input)}
+      />
     </Section>
   );
 }
@@ -1075,11 +1644,14 @@ function EditableCell({
   value,
   onCommit,
   align,
+  editable = true,
 }: {
   type: CellType;
   value: number | string;
   onCommit: (next: number | string) => void;
   align?: "end";
+  /** False on a frozen voucher — the same formatted value, without the affordance. */
+  editable?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -1094,6 +1666,17 @@ function EditableCell({
     if (!Number.isNaN(n))
       onCommit(type === "int" ? Math.max(1, Math.round(n)) : Math.max(0, n));
   }
+
+  const display =
+    type === "date"
+      ? formatScheduleDate(String(value))
+      : type === "currency"
+        ? formatCurrency(Number(value))
+        : String(value);
+
+  // Read-only cells route through here rather than being formatted at the call
+  // site, so a frozen schedule shows exactly the string an editable one does.
+  if (!editable) return <>{display}</>;
 
   if (editing) {
     return (
@@ -1112,13 +1695,6 @@ function EditableCell({
       />
     );
   }
-
-  const display =
-    type === "date"
-      ? formatScheduleDate(String(value))
-      : type === "currency"
-        ? formatCurrency(Number(value))
-        : String(value);
 
   return (
     <span
@@ -1196,7 +1772,14 @@ type EditableField = "startDate" | "months" | "monthlyRate" | "commissionPct";
  * value, inserting a term, or removing one re-flows the dates and recomputes the totals.
  * State is component-local (resets on reload).
  */
-function RentScheduleSection({ listing }: { listing: Listing }) {
+function RentScheduleSection({
+  listing,
+  editable,
+}: {
+  listing: Listing;
+  /** False while the voucher is Pending — the schedule is what an approver is reading. */
+  editable: boolean;
+}) {
   const initial = buildRentSchedule(listing);
   const [rows, setRows] = useState<RentScheduleRow[]>(initial?.rows ?? []);
   const [autoCalcRents, setAutoCalcRents] = useState(true);
@@ -1257,24 +1840,32 @@ function RentScheduleSection({ listing }: { listing: Listing }) {
     <Section
       title="Rent Schedule"
       action={
-        <Button variant="ghost" size="sm" onClick={addTerm}>
-          <FontAwesomeIcon icon={faPlus} />
-          Add Term
-        </Button>
+        editable ? (
+          <Button variant="ghost" size="sm" onClick={addTerm}>
+            <FontAwesomeIcon icon={faPlus} />
+            Add Term
+          </Button>
+        ) : undefined
       }
     >
-      <div className="d-flex align-items-center gap-4">
-        <ToggleControl
-          label="Auto-calculate Rents"
-          checked={autoCalcRents}
-          onChange={setAutoCalcRents}
-        />
-        <ToggleControl
-          label="Operating expenses"
-          checked={operatingExpenses}
-          onChange={setOperatingExpenses}
-        />
-      </div>
+      {/* Both toggles only shape an edit — auto-calculate escalates the rate of
+          the next term added, operating expenses is a display switch over rows
+          nobody can change — so a frozen schedule drops the row entirely rather
+          than leaving two live switches over a table that cannot move. */}
+      {editable && (
+        <div className="d-flex align-items-center gap-4">
+          <ToggleControl
+            label="Auto-calculate Rents"
+            checked={autoCalcRents}
+            onChange={setAutoCalcRents}
+          />
+          <ToggleControl
+            label="Operating expenses"
+            checked={operatingExpenses}
+            onChange={setOperatingExpenses}
+          />
+        </div>
+      )}
 
       <Table>
         <Table.Header>
@@ -1286,7 +1877,7 @@ function RentScheduleSection({ listing }: { listing: Listing }) {
             <Table.Head className="text-end">Total Rent</Table.Head>
             <Table.Head className="text-end">Commission %</Table.Head>
             <Table.Head className="text-end">Commission $</Table.Head>
-            <Table.Head />
+            {editable && <Table.Head />}
           </Table.Row>
         </Table.Header>
         <Table.Body>
@@ -1299,6 +1890,7 @@ function RentScheduleSection({ listing }: { listing: Listing }) {
                     type="date"
                     value={r.startDate}
                     onCommit={(next) => editField(i, "startDate", next)}
+                    editable={editable}
                   />
                 ) : (
                   formatScheduleDate(r.startDate)
@@ -1310,6 +1902,7 @@ function RentScheduleSection({ listing }: { listing: Listing }) {
                   type="int"
                   value={r.months}
                   onCommit={(next) => editField(i, "months", next)}
+                  editable={editable}
                 />
               </Table.Cell>
               <Table.Cell className="text-end">
@@ -1318,6 +1911,7 @@ function RentScheduleSection({ listing }: { listing: Listing }) {
                   align="end"
                   value={r.monthlyRate}
                   onCommit={(next) => editField(i, "monthlyRate", next)}
+                  editable={editable}
                 />
               </Table.Cell>
               <Table.Cell className="text-end">
@@ -1329,18 +1923,21 @@ function RentScheduleSection({ listing }: { listing: Listing }) {
                   align="end"
                   value={r.commissionPct}
                   onCommit={(next) => editField(i, "commissionPct", next)}
+                  editable={editable}
                 />
               </Table.Cell>
               <Table.Cell className="text-end">
                 {formatCurrency(r.commissionAmount)}
               </Table.Cell>
-              <Table.Cell className="text-end">
-                <RowActions
-                  onAddAbove={() => insertTerm(i)}
-                  onAddBelow={() => insertTerm(i + 1)}
-                  onRemove={() => removeTerm(i)}
-                />
-              </Table.Cell>
+              {editable && (
+                <Table.Cell className="text-end">
+                  <RowActions
+                    onAddAbove={() => insertTerm(i)}
+                    onAddBelow={() => insertTerm(i + 1)}
+                    onRemove={() => removeTerm(i)}
+                  />
+                </Table.Cell>
+              )}
             </Table.Row>
           ))}
           {total && (
@@ -1362,7 +1959,7 @@ function RentScheduleSection({ listing }: { listing: Listing }) {
               <Table.Cell className="text-end fw-semibold">
                 {formatCurrency(total.commissionAmount)}
               </Table.Cell>
-              <Table.Cell />
+              {editable && <Table.Cell />}
             </Table.Row>
           )}
         </Table.Body>
@@ -1381,7 +1978,7 @@ function TransactionSummarySection({
   editable,
 }: {
   listing: Listing;
-  /** False once the voucher is Approved: the terms are what was signed off. */
+  /** Draft only: once submitted, the terms are what an approver reads or signed off on. */
   editable: boolean;
 }) {
   const { transaction } = listing;
@@ -1424,10 +2021,11 @@ function TransactionSummarySection({
       action={
         // The deal editor's Transaction Terms group already carries every field
         // this section shows, so the voucher links to it rather than keeping a
-        // second, narrower copy of the same form in a modal. An Approved voucher
-        // drops the link: the approval is a statement about these figures, so
-        // what stays open on a settled voucher is additions — payables and
-        // receivables — not an edit of the terms they are measured against.
+        // second, narrower copy of the same form in a modal. A submitted voucher
+        // drops the link: the figures are the thing being approved, so both the
+        // voucher page and this Deal form close. The stage gate remains a
+        // separate, unguarded path to the same fields — see the `voucherLocked`
+        // comment in DealEditor.tsx.
         editable ? (
           <Tooltip>
             <Tooltip.Trigger
@@ -1513,7 +2111,7 @@ function AttestationSubmit({
   attested: boolean;
   onChange: (checked: boolean) => void;
   onSubmit: () => void;
-  /** The deduction table has edits the store has not seen yet. */
+  /** There are unsaved voucher edits the store has not seen yet. */
   dirty: boolean;
   onSave: () => void;
 }) {
@@ -1556,7 +2154,7 @@ function AttestationSubmit({
  *
  * Disabled until the broker has ticked an attestation — there is one beside
  * this button in the header and one in the page footer, and either will do —
- * and disabled again while the deduction table has edits the store has not
+ * and disabled again while there are unsaved voucher edits the store has not
  * seen. The tooltip carries whichever reason applies, because a dead primary
  * button with no explanation is the worst version of this. It hangs off a
  * wrapper `span` since a disabled button fires no pointer events, which would
@@ -1568,7 +2166,7 @@ function SubmitVoucherButton({
   onSubmit,
 }: {
   attested: boolean;
-  /** Unsaved deduction edits — submitting would send the stored figures, not these. */
+  /** Unsaved voucher edits — submitting would send the stored figures, not these. */
   unsaved: boolean;
   onSubmit: () => void;
 }) {
@@ -1616,12 +2214,16 @@ export function DealFinancials({
 }) {
   const voucher = listing.transaction.backOffice;
   const isDraft = voucher.status === "Draft";
-  // Approved is terminal: the sign-off is a statement about these figures, so
-  // the broker cannot take it back. What an approved voucher will accept is
-  // additions — receivables, invoices, credits against what was approved —
-  // which is where this header's action slot is headed once those exist.
+  // A Pending voucher is on an approver's desk, so the page freezes whole: no
+  // edits, no adds, no row actions anywhere below, and no way back. Submitting
+  // is one-way for the broker — sending it is the decision, and what an approver
+  // is holding cannot be changed underneath them. Only an approver moves it now.
+  //
+  // Approved is deliberately *not* frozen the same way here. What it will
+  // eventually accept is additions (receivables, invoices, credits against what
+  // was approved) rather than a blanket lock, which needs the data reworked
+  // first. Until that pass lands it keeps the controls it has today.
   const isPending = voucher.status === "Pending";
-  const isApproved = voucher.status === "Approved";
   // The broker's attestation, which gates both Submit buttons. Page state, not
   // stored: it is a confirmation of *this* reading of the voucher, so it should
   // not survive a reload and come back pre-ticked.
@@ -1639,7 +2241,26 @@ export function DealFinancials({
   const storedBrokers = listing.internalBrokers;
   const [deductions, setDeductions] = useState(stored);
   const [brokers, setBrokers] = useState(storedBrokers);
-  const dirty = deductions !== stored || brokers !== storedBrokers;
+
+  // The party list's working copy, on the same terms as the deduction and
+  // broker tables above: edited locally, committed by the one Save. `stored…`
+  // is the dirty test — every write here spreads a new array, so an add or a
+  // remove breaks identity and Save writing it through restores it.
+  const storedParties = partyContactIds(listing);
+  const [parties, setParties] = useState(storedParties);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on `storedParties` alone by design
+  useEffect(() => setParties(storedParties), [storedParties]);
+
+  const storedPayers = voucher.payerContactIds;
+  const [payerIds, setPayerIds] = useState(storedPayers);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on `storedPayers` alone by design
+  useEffect(() => setPayerIds(storedPayers), [storedPayers]);
+
+  const dirty =
+    deductions !== stored ||
+    brokers !== storedBrokers ||
+    parties !== storedParties ||
+    payerIds !== storedPayers;
 
   // Re-seed when the store's array moves under us — a Save of our own, or a
   // write from elsewhere (the AI rail, another tab of the same deal). This
@@ -1660,35 +2281,27 @@ export function DealFinancials({
     submitVoucher(listing.id);
     setAttested(false);
     notify({
+      // Says the irreversible part out loud. Submitting is the last thing a
+      // broker can do to a voucher, and a toast reading only "with an approver"
+      // leaves that as something to discover by looking for the Edit button.
       title: "Voucher submitted",
-      description: "It is now with an approver.",
+      description: "It is now with an approver and can no longer be edited.",
     });
   };
 
-  // Edit takes a Pending voucher back off the approver's desk, which un-submits
-  // it: the attestation clears and it has to be sent again. `reopenVoucher`
-  // accepts nothing but Pending, so an approved voucher cannot come back this
-  // way even if this button were rendered by mistake.
-  const reopen = () => {
-    reopenVoucher(listing.id);
-    setAttested(false);
-    notify({
-      title: "Voucher reopened",
-      description: "Back to Draft. Submit it again when you are ready.",
-    });
-  };
-
-  // Commit the deduction table. `updateVoucherDeductions` re-checks Draft, so a
+  // Commit the unsaved voucher edits. `saveVoucherDraft` re-checks Draft, so a
   // voucher that moved on while this page was open cannot be written to.
   const save = () => {
     if (!dirty) return;
     saveVoucherDraft(listing.id, {
       preSplitDeductions: deductions,
       internalBrokers: brokers,
+      partyContactIds: parties,
+      payerContactIds: payerIds,
     });
     notify({
       title: "Voucher saved",
-      description: "Deductions and internal commissions updated.",
+      description: "Parties, deductions and commissions updated.",
     });
   };
 
@@ -1702,13 +2315,13 @@ export function DealFinancials({
            deal's reads Draft. */
         meta={<VoucherStatusBadge status={voucher.status} long />}
         actions={
-          /* One action per state, and Approved has none. A Draft is the only
-             thing there is to submit — offering "Submit" on a Pending voucher
-             invited a broker to send a second time what an approver was already
-             holding. Pending offers Edit, which pulls it back. Approved offers
-             nothing: the banner below states who signed it off, and the actions
-             that remain open on a settled voucher are additions to it —
-             receivables, invoices — not an edit of the approved figures. */
+          /* Draft is the only state with an action. Submitting hands the voucher
+             over, and a broker cannot take it back: an approver reading a set of
+             figures must be reading the same ones the broker attested to, which
+             an Edit that un-submits cannot promise. So Pending offers nothing,
+             and neither does Approved — there the banner below states who signed
+             it off, and what stays open on a settled voucher is additions to it,
+             receivables and invoices, not an edit of the approved figures. */
           isDraft ? (
             <AttestationSubmit
               attested={attested}
@@ -1717,17 +2330,20 @@ export function DealFinancials({
               dirty={dirty}
               onSave={save}
             />
-          ) : isPending ? (
-            <Button variant="primary" onClick={reopen}>
-              Edit
-            </Button>
           ) : undefined
         }
       />
 
       <VoucherApprovalBanner voucher={voucher} />
 
-      <TransactionSummarySection listing={listing} editable={!isApproved} />
+      <TransactionSummarySection listing={listing} editable={isDraft} />
+
+      <PartySection
+        dealType={listing.dealType}
+        contactIds={parties}
+        editable={isDraft}
+        onChange={setParties}
+      />
 
       <Separator />
 
@@ -1735,7 +2351,10 @@ export function DealFinancials({
 
       <Separator />
 
-      <OutsideCommissionsSection brokers={listing.outsideBrokers} />
+      <OutsideCommissionsSection
+        brokers={listing.outsideBrokers}
+        editable={!isPending}
+      />
       <PreSplitDeductionsSection
         deductions={deductions}
         editable={isDraft}
@@ -1749,9 +2368,15 @@ export function DealFinancials({
 
       <Separator />
 
-      <RentScheduleSection listing={listing} />
+      <RentScheduleSection listing={listing} editable={!isPending} />
 
-      <ReceivablesSection listing={listing} />
+      <PayersSection
+        payers={voucherPayers({ ...voucher, payerContactIds: payerIds })}
+        editable={isDraft}
+        onChange={setPayerIds}
+      />
+
+      <ReceivablesSection listing={listing} editable={!isPending} />
 
       <Section title="Payables">
         <p className="text-muted mb-0">

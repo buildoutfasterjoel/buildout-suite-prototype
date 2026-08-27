@@ -1,11 +1,12 @@
 import type {
+  DealFinancials,
   DealType,
   Listing,
   PropertyStatus,
   PropertyType,
   TransactionSide,
 } from './types'
-import { getStore, getProperty } from './store'
+import { getStore, getProperty, getContact } from './store'
 import { dealShape } from './dealShape'
 
 /** The three states a voucher moves through. Mirrors `DealFinancials['status']`. */
@@ -76,6 +77,182 @@ export type VoucherTarget =
       to: '/listings/$listingId/spaces/$spaceId/financials'
       params: { listingId: string; spaceId: string }
     }
+
+/**
+ * Whether this deal is held by a voucher sitting with an approver.
+ *
+ * What the deal record's own Edit pencil reads. Not a bare
+ * `backOffice.status === 'Pending'` check: a shell keeps the `backOffice`
+ * record it had from before it was split, so the bare check would lock a
+ * building's header over a voucher that belongs to its suites now.
+ * {@link voucherHref} already owns the "does this deal have a voucher"
+ * question, so the rule stays in one place.
+ */
+export function isVoucherPending(deal: Listing): boolean {
+  return (
+    voucherHref(deal) !== null &&
+    deal.transaction.backOffice.status === 'Pending'
+  )
+}
+
+/**
+ * One party on a voucher — a buyer, a tenant, or a payer — resolved from the
+ * contact record for display.
+ *
+ * A party stores nothing of its own. Name, company, email and phone are read
+ * here at render time rather than copied onto the voucher, so correcting a
+ * contact corrects every voucher that names them.
+ */
+export interface VoucherParty {
+  contactId: string
+  name: string
+  company: string
+  email: string
+  phone: string
+  /**
+   * False when the contact is no longer in the store.
+   *
+   * The row still renders. A voucher is a record of who was billed, and losing
+   * a billed line because someone tidied the contact book would be a worse
+   * failure than showing a placeholder. Callers use this to decide whether to
+   * link the name to a contact page that is not there any more.
+   */
+  exists: boolean
+}
+
+export function voucherParty(contactId: string): VoucherParty {
+  const contact = getContact(contactId)
+  if (!contact) {
+    return {
+      contactId,
+      name: 'Unknown contact',
+      company: '',
+      email: '',
+      phone: '',
+      exists: false,
+    }
+  }
+  return {
+    contactId,
+    name: `${contact.firstName} ${contact.lastName}`.trim(),
+    company: contact.company,
+    email: contact.email,
+    phone: contact.phone,
+    exists: true,
+  }
+}
+
+/**
+ * How one receivable addresses its payer — the string the Payer Name cell shows
+ * and the payer picker selects by.
+ *
+ * Two forms of the same contact: the person, carrying their email so a broker
+ * can tell two same-named contacts apart, or the company they belong to. Which
+ * one a receivable uses is stored on the receivable (`billToCompany`), because
+ * one voucher can bill the same person directly on one line and through their
+ * entity on another.
+ */
+export function receivablePayerLabel(
+  contactId: string,
+  billToCompany: boolean,
+): string {
+  const party = voucherParty(contactId)
+  if (billToCompany && party.company) return party.company
+  return party.email ? `${party.name} (${party.email})` : party.name
+}
+
+/** How one receivable's own payer can be addressed. */
+export interface PayerFormOption {
+  value: 'person' | 'company'
+  label: string
+}
+
+/**
+ * The two ways to address ONE payer — as the person, or as their company.
+ *
+ * A receivable belongs to one person, chosen when it is created. This is the
+ * narrower question the row asks afterwards: which name goes on the invoice.
+ * So it takes a single contact id, not a contact list — offering every contact
+ * again here would let a row silently change WHO it bills under the guise of
+ * changing how they are addressed.
+ *
+ * A contact with no company gets one option. There is nothing else to bill, and
+ * a dropdown with a single choice still reads correctly as "this is the payer".
+ */
+export function payerFormOptions(contactId: string): PayerFormOption[] {
+  const party = voucherParty(contactId)
+  const person: PayerFormOption = {
+    value: 'person',
+    label: party.email ? `${party.name} (${party.email})` : party.name,
+  }
+  if (!party.company) return [person]
+  return [person, { value: 'company', label: party.company }]
+}
+
+/** A payer, plus what this voucher has billed them. */
+export interface VoucherPayerRow extends VoucherParty {
+  /**
+   * Sum of this payer's receivables, GROSS of credits — what they were asked
+   * for, not what is still outstanding. The Receivables table below carries the
+   * Credited column, and restating it here would put two different answers to
+   * "how much" on one screen.
+   */
+  billed: number
+  /**
+   * How many receivables name this payer. Drives the removal guard: a payer
+   * with receivables cannot be taken off the voucher, because the rows that
+   * bill them would point at nobody.
+   */
+  receivableCount: number
+}
+
+export function voucherPayers(voucher: DealFinancials): VoucherPayerRow[] {
+  return voucher.payerContactIds.map((contactId) => {
+    const rows = voucher.receivables.filter((r) => r.payerContactId === contactId)
+    return {
+      ...voucherParty(contactId),
+      billed: rows.reduce((sum, r) => sum + r.amount, 0),
+      receivableCount: rows.length,
+    }
+  })
+}
+
+/**
+ * Why this payer cannot be taken off the voucher, or null when they can be.
+ *
+ * A payer with receivables cannot leave: the rows billing them would point at
+ * nobody, and the Receivables table would name a payer the voucher does not
+ * list. The rule lives here rather than only in the button that enforces it,
+ * so any future removal path can consult it, and it can be tested without a
+ * browser.
+ *
+ * Returns the sentence the tooltip shows rather than a boolean, because a
+ * greyed button with no explanation is a dead icon — the reason is the whole
+ * value of blocking it.
+ */
+export function payerRemovalBlock(payer: VoucherPayerRow): string | null {
+  if (payer.receivableCount === 0) return null
+  const plural = payer.receivableCount === 1 ? 'receivable' : 'receivables'
+  return `${payer.name} has ${payer.receivableCount} ${plural}. Remove those first.`
+}
+
+/**
+ * The deal's acquiring party — buyers on a sale, tenants on a lease.
+ *
+ * The two live in separate arrays on the deal (`buyerContactIds` and
+ * `tenantContactIds` are deliberately distinct datasets), and the voucher shows
+ * exactly one of them. This is the single place that choice is made, so the
+ * section title and the section's writes cannot disagree about which list they
+ * are looking at.
+ */
+export function partyContactIds(deal: Listing): string[] {
+  return deal.dealType === 'Lease' ? deal.tenantContactIds : deal.buyerContactIds
+}
+
+/** What the acquiring party is called on this deal type. */
+export function partySectionTitle(dealType: DealType): string {
+  return dealType === 'Lease' ? 'Tenant' : 'Buyer'
+}
 
 export interface VoucherRow {
   /** The deal this voucher settles — also the row's identity. */

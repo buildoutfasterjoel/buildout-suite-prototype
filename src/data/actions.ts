@@ -6,7 +6,7 @@ import {
   serializeContactFilters,
   type ContactFilterState,
 } from '#/components/contacts/contactFilterModel'
-import type { Contact, ContactRole, ContactSource, DealDocument, DealHistoryEntry, DealIngestion, DealMarketing, DealPitchFinancials, DealBroker, DealTask, DealTransaction, DocumentGeneration, FinancialDeduction, GeneratedSection, IngestionFieldKey, Listing, PropertyStatus, Task } from './types'
+import type { Contact, ContactRole, ContactSource, DealDocument, DealHistoryEntry, DealIngestion, DealMarketing, DealPitchFinancials, DealBroker, DealTask, DealTransaction, DocumentGeneration, FinancialDeduction, FinancialReceivable, GeneratedSection, IngestionFieldKey, Listing, PropertyStatus, Task } from './types'
 import { CURRENT_USER, TEAMMATES } from './teammates'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
 import { reconcileContactDealFields } from './contactStage'
@@ -23,7 +23,7 @@ import {
   resolveConflict,
   resolvedPropertyPatch,
 } from './ingestion'
-import { getProperty, updateProperty } from './store'
+import { getContact, getProperty, updateProperty } from './store'
 
 let _callListSeq = 0
 
@@ -305,9 +305,16 @@ export function submitVoucher(dealId: string): { deal: Listing | null } {
  *
  * Reopening costs the submission: the voucher has to be attested to and
  * submitted again. That is the point, not a side effect — whatever the approver
- * was looking at is no longer what the brokerage is claiming. (The page's
- * sections are editable at any status today, so this changes what the voucher
- * *claims about itself*, not what can be typed into it.)
+ * was looking at is no longer what the brokerage is claiming.
+ *
+ * **Nothing in the UI calls this today.** The voucher header used to offer a
+ * broker an Edit on a Pending voucher; it does not any more, because an approver
+ * has to be reading the same figures that were attested to, which an un-submit
+ * cannot promise. Submitting is therefore one-way for the broker, and a Pending
+ * voucher only moves when an approver acts on it. This is kept, unwired, for
+ * that approver-side path: sending a voucher back is the shape a rejection
+ * takes, and the Pending-only rule it encodes is the rule such a flow needs. If
+ * the approver flow lands somewhere else, delete this and its tests.
  */
 export function reopenVoucher(dealId: string): { deal: Listing | null } {
   return {
@@ -330,6 +337,40 @@ export function reopenVoucher(dealId: string): { deal: Listing | null } {
 export interface VoucherDraft {
   preSplitDeductions: FinancialDeduction[]
   internalBrokers: DealBroker[]
+  /**
+   * The acquiring party — buyers on a sale, tenants on a lease.
+   *
+   * ONE list, not two. The voucher shows exactly one of the two sections, so a
+   * draft carrying both would let a Sale deal hold a list of tenants that
+   * nothing renders and nothing clears. `dealType` decides where it lands, in
+   * one place, below.
+   */
+  partyContactIds: string[]
+  /** Who this voucher bills. Each is a contact id. */
+  payerContactIds: string[]
+}
+
+/**
+ * The label the Back Office vouchers list shows in its Related Contacts column,
+ * and searches.
+ *
+ * Rebuilt on every save because it is denormalized: the deal's parties are the
+ * truth and this is a copy, so an edited buyer would otherwise leave it naming
+ * whoever used to be there. The format matches what the seed writes — but not
+ * what `createListing.ts` writes: a deal created in-app carries `contactLabel`'s
+ * "Name · Company" format (no "& N more") until its first voucher save. That
+ * drift is accepted rather than unpicking three write sites for a label.
+ */
+function buildRelatedContactsLabel(deal: Listing): string {
+  const ids = [
+    ...deal.sellerContactIds,
+    ...deal.buyerContactIds,
+    ...deal.tenantContactIds,
+  ]
+  const first = ids.map((id) => getContact(id)).find((c) => c !== undefined)
+  if (!first) return '—'
+  const name = `${first.firstName} ${first.lastName}`.trim()
+  return ids.length > 1 ? `${name} & ${ids.length - 1} more` : name
 }
 
 /**
@@ -343,35 +384,158 @@ export interface VoucherDraft {
  *
  * Whole arrays are replaced rather than patched row by row: the tables edit
  * rows, add them, and delete them in one local working copy, and Save is a
- * statement about that copy as a whole. One write for both, because one button
- * commits both — a partial save would leave the deduction total and the broker
- * splits describing different drafts.
+ * statement about that copy as a whole. One write for all of them, because one
+ * button commits them — a partial save would leave the deduction total, the
+ * broker splits and the payer list describing different drafts.
  *
- * `internalBrokers` sits on the deal rather than in `backOffice`, so this is
- * also the one place that fact is spelled out.
+ * `internalBrokers` and `partyContactIds` sit on the deal rather than in
+ * `backOffice` — `payerContactIds` is the one that lands in `backOffice` — so
+ * this is also the one place that split is spelled out.
  */
 export function saveVoucherDraft(
   dealId: string,
   draft: VoucherDraft,
 ): { deal: Listing | null } {
   return {
+    deal: patchListing(dealId, (l) => {
+      if (l.transaction.backOffice.status !== 'Draft') return l
+      const isLease = l.dealType === 'Lease'
+      const next: Listing = {
+        ...l,
+        internalBrokers: draft.internalBrokers,
+        buyerContactIds: isLease ? l.buyerContactIds : draft.partyContactIds,
+        tenantContactIds: isLease ? draft.partyContactIds : l.tenantContactIds,
+        transaction: {
+          ...l.transaction,
+          backOffice: {
+            ...l.transaction.backOffice,
+            preSplitDeductions: draft.preSplitDeductions,
+            payerContactIds: draft.payerContactIds,
+          },
+        },
+        updatedAt: new Date().toISOString(),
+      }
+      // Built from `next`, not `l` — the label has to describe the parties
+      // being saved, not the ones being replaced.
+      next.transaction.backOffice.relatedContactsLabel =
+        buildRelatedContactsLabel(next)
+      return next
+    }),
+  }
+}
+
+/**
+ * The three receivable writes: add, edit in place, remove.
+ *
+ * **Not routed through `saveVoucherDraft`, and guarded differently on purpose.**
+ * That commits a Draft voucher's working copy, and a receivable outlives Draft:
+ * an Approved voucher still accepts additions — receivables, invoices, credits
+ * against what was approved — which is the whole reason the Receivables section
+ * stays live at that status. Sending these through the Draft-only Save would
+ * have rendered live controls on an Approved voucher whose every edit silently
+ * did nothing.
+ *
+ * So the guard is **not Pending**, matching what the section's `editable` prop
+ * already says, and these write straight through rather than joining the
+ * working copy. That also keeps the Save button honest: it commits the
+ * deduction, broker, party and payer tables, and nothing else.
+ */
+function patchReceivables(
+  dealId: string,
+  update: (rows: FinancialReceivable[]) => FinancialReceivable[],
+): { deal: Listing | null } {
+  return {
     deal: patchListing(dealId, (l) =>
-      l.transaction.backOffice.status !== 'Draft'
+      l.transaction.backOffice.status === 'Pending'
         ? l
         : {
             ...l,
-            internalBrokers: draft.internalBrokers,
             transaction: {
               ...l.transaction,
               backOffice: {
                 ...l.transaction.backOffice,
-                preSplitDeductions: draft.preSplitDeductions,
+                receivables: update(l.transaction.backOffice.receivables),
               },
             },
             updatedAt: new Date().toISOString(),
           },
     ),
   }
+}
+
+/**
+ * Bill a new line on this voucher.
+ *
+ * Adds the payer to `payerContactIds` when they are not already there, because
+ * a receivable naming somebody the Billing section does not list would put two
+ * answers to "who is being billed" on one page. This is the ordinary way a
+ * payer arrives: you bill someone, and they appear above.
+ *
+ * `credited` starts at 0 — a line nobody has paid against yet.
+ */
+export function addReceivable(
+  dealId: string,
+  input: {
+    payerContactId: string
+    billToCompany: boolean
+    dueDate: string
+    billingDescription: string
+    amount: number
+  },
+): { deal: Listing | null } {
+  return {
+    deal: patchListing(dealId, (l) => {
+      if (l.transaction.backOffice.status === 'Pending') return l
+      const back = l.transaction.backOffice
+      const payerContactIds = back.payerContactIds.includes(input.payerContactId)
+        ? back.payerContactIds
+        : [...back.payerContactIds, input.payerContactId]
+      return {
+        ...l,
+        transaction: {
+          ...l.transaction,
+          backOffice: {
+            ...back,
+            payerContactIds,
+            receivables: [
+              ...back.receivables,
+              { id: crypto.randomUUID(), credited: 0, ...input },
+            ],
+          },
+        },
+        updatedAt: new Date().toISOString(),
+      }
+    }),
+  }
+}
+
+/**
+ * Edit one receivable in place — the row's own fields, committed per keystroke
+ * commit rather than through Save.
+ *
+ * Changing the payer does NOT add them to `payerContactIds`: the picker only
+ * offers contacts, and a re-pointed line can leave its previous payer listed
+ * with nothing billed, which is a legitimate state the Billing section renders
+ * as $0. Removing that payer is a deliberate act, not a side effect of an edit.
+ */
+export function updateReceivable(
+  dealId: string,
+  receivableId: string,
+  patch: Partial<Omit<FinancialReceivable, 'id'>>,
+): { deal: Listing | null } {
+  return patchReceivables(dealId, (rows) =>
+    rows.map((r) => (r.id === receivableId ? { ...r, ...patch } : r)),
+  )
+}
+
+/** Drop one receivable. The payer stays in Billing, reading $0 until removed. */
+export function deleteReceivable(
+  dealId: string,
+  receivableId: string,
+): { deal: Listing | null } {
+  return patchReceivables(dealId, (rows) =>
+    rows.filter((r) => r.id !== receivableId),
+  )
 }
 
 /** Merge-patch the deal's pitch financials (asking price, price per SF, cap rate, …). */

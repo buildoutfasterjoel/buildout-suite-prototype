@@ -21,6 +21,7 @@ import {
   useIngestionConflict,
 } from "#/components/deals/ingestionConflictContext";
 import type { IngestionFieldKey, YesNoNA } from "#/data/types";
+import { useFormLocked } from "./formLock";
 
 // ── Small field wrappers ─────────────────────────────────────────────────────
 export function TextField({
@@ -282,6 +283,10 @@ export function DateField({
 }) {
   const [open, setOpen] = useState(false);
   const selected = parseDate(value);
+  // The text input is `readOnly`, so the calendar is the ONLY way to set this
+  // field — which makes it the field's real control, and it is not a native
+  // element for a disabled fieldset to reach. See `useFormLocked`.
+  const locked = useFormLocked();
   return (
     <Field className="record-form__field">
       <InputGroup>
@@ -299,24 +304,34 @@ export function DateField({
           }
         />
         <InputGroup.Addon>
-          <Popover open={open} onOpenChange={setOpen}>
-            <Popover.Trigger
-              nativeButton={false}
-              aria-label="Open date picker"
-              render={<FontAwesomeIcon icon={faCalendar} />}
-            />
-            <Popover.Content className="p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={selected}
-                defaultMonth={selected}
-                onSelect={(d) => {
-                  onChange(d ? toISODate(d) : null);
-                  setOpen(false);
-                }}
+          {/* Locked: the icon stays, so the field keeps its shape and does not
+              reflow beside its unlocked neighbours, but it is no longer a
+              trigger. Dropping the Popover entirely rather than disabling it —
+              `Popover.Trigger` renders an `<svg>` here, which has no disabled
+              state to set, and an addon that opens nothing is the whole
+              requirement. */}
+          {locked ? (
+            <FontAwesomeIcon icon={faCalendar} className="text-body-tertiary" />
+          ) : (
+            <Popover open={open} onOpenChange={setOpen}>
+              <Popover.Trigger
+                nativeButton={false}
+                aria-label="Open date picker"
+                render={<FontAwesomeIcon icon={faCalendar} />}
               />
-            </Popover.Content>
-          </Popover>
+              <Popover.Content className="p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selected}
+                  defaultMonth={selected}
+                  onSelect={(d) => {
+                    onChange(d ? toISODate(d) : null);
+                    setOpen(false);
+                  }}
+                />
+              </Popover.Content>
+            </Popover>
+          )}
         </InputGroup.Addon>
       </InputGroup>
     </Field>
@@ -483,14 +498,23 @@ export function SwitchRow({
   checked: boolean;
   onChange: (v: boolean) => void;
 }) {
+  // Blueprint renders Switch as a `<span role="switch">`, so an enclosing
+  // `<fieldset disabled>` does not reach it — see `useFormLocked`. This is the
+  // one widget here that has to ask.
+  const locked = useFormLocked();
   // Switch first, label beside it. `justify-content-between` used to push the
   // two to opposite ends of the row, which needed a `maxWidth` wrapper at every
   // call site just to stop them drifting a full column apart — and still left a
   // gap wide enough that the label read as unrelated to the control.
   return (
     <div className="d-flex align-items-center gap-2 py-1">
-      <Switch checked={checked} onCheckedChange={onChange} aria-label={label} />
-      <span>{label}</span>
+      <Switch
+        checked={checked}
+        onCheckedChange={onChange}
+        aria-label={label}
+        disabled={locked}
+      />
+      <span className={locked ? "text-muted" : undefined}>{label}</span>
     </div>
   );
 }

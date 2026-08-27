@@ -278,3 +278,66 @@ describe('voucher approval seed', () => {
     }
   })
 })
+
+describe('voucher payers seed', () => {
+  const { listings, contacts } = generateDataset()
+  const contactIds = new Set(contacts.map((c) => c.id))
+
+  it('points every receivable at a contact that exists', () => {
+    for (const deal of listings) {
+      for (const r of deal.transaction.backOffice.receivables) {
+        expect(contactIds.has(r.payerContactId)).toBe(true)
+      }
+    }
+  })
+
+  it("lists every receivable's payer among the voucher's payers", () => {
+    // The rule the Payers section depends on: a receivable cannot bill someone
+    // the voucher has not named as a payer.
+    for (const deal of listings) {
+      const back = deal.transaction.backOffice
+      for (const r of back.receivables) {
+        expect(back.payerContactIds).toContain(r.payerContactId)
+      }
+    }
+  })
+
+  it('has no duplicate payers on a voucher', () => {
+    for (const deal of listings) {
+      const ids = deal.transaction.backOffice.payerContactIds
+      expect(new Set(ids).size).toBe(ids.length)
+    }
+  })
+
+  it('gives a voucher with nothing billed no payers', () => {
+    // A lease suite is built by copying the building's voucher and clearing it.
+    // The payer list is part of what gets cleared: the building's payers were
+    // never billed on the suite, so a Draft suite listing them would name
+    // parties nobody invoiced.
+    for (const deal of listings) {
+      const back = deal.transaction.backOffice
+      if (back.receivables.length === 0) {
+        expect(back.payerContactIds).toEqual([])
+      }
+    }
+  })
+
+  it('bills at least one voucher to a party on neither side of its deal', () => {
+    // The Payers section exists because the payer is often nobody in the deal —
+    // a corporate AP department, a holding company. A seller-payer does not show
+    // that: the seller is a party. Excluding them here is what makes this test
+    // guard the case the section was built for, rather than pass on a
+    // split-commission receivable that was always there.
+    const outsider = listings.some((deal) => {
+      const parties = new Set([
+        ...deal.buyerContactIds,
+        ...deal.tenantContactIds,
+        ...deal.sellerContactIds,
+      ])
+      return deal.transaction.backOffice.payerContactIds.some(
+        (id) => !parties.has(id),
+      )
+    })
+    expect(outsider).toBe(true)
+  })
+})
