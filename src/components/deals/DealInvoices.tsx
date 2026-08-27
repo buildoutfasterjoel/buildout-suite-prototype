@@ -14,6 +14,8 @@ import {
   faTrashCan,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing } from "#/data/types";
+import { invoiceQuickbooksSynced } from "#/data/quickbooks";
+import { QuickbooksSyncBadge } from "#/components/common/QuickbooksSyncBadge";
 import { findTeammate } from "#/data/teammates";
 import { ListingPageHeader } from "#/components/listings/ListingPageHeader";
 import { formatDate } from "#/components/deals/dealDisplay";
@@ -42,6 +44,9 @@ export function DealInvoices({
   heading?: string;
 }) {
   const invoices = listing.invoices ?? [];
+  // The voucher's own receivables — what an invoice's QuickBooks state is read
+  // from. Resolved once here rather than per row.
+  const receivables = listing.transaction.backOffice.receivables;
 
   return (
     <div className="d-flex flex-column gap-3 p-4">
@@ -75,6 +80,12 @@ export function DealInvoices({
               <Table.Head>Attachment Name</Table.Head>
               <Table.Head>Created</Table.Head>
               <Table.Head>Created By</Table.Head>
+              {/* Unheaded, like the same gutter on the Receivables table: the
+                  badge is a row status and its tooltip names it. */}
+              <Table.Head
+                style={{ width: 40 }}
+                aria-label="QuickBooks sync status"
+              />
               <Table.Head />
             </Table.Row>
           </Table.Header>
@@ -91,6 +102,17 @@ export function DealInvoices({
                     back to an em-dash for an id no longer on the roster — the
                     invoice is still a record of a bill that went out. */}
                 <Table.Cell>{findTeammate(invoice.createdById)?.name ?? "—"}</Table.Cell>
+                {/* Derived from the lines, never stored — an invoice cannot be
+                    in QuickBooks unless the receivables it bills are. */}
+                <Table.Cell>
+                  <QuickbooksSyncBadge
+                    synced={invoiceQuickbooksSynced(
+                      invoice.lineItems,
+                      receivables,
+                    )}
+                    size={18}
+                  />
+                </Table.Cell>
                 <Table.Cell className="text-end">
                   <DropdownMenu>
                     <DropdownMenu.Trigger

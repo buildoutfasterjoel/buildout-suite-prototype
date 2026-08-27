@@ -32,6 +32,20 @@
     overflow: hidden;
   }
 
+  // Bootstrap top-aligns table cells (`.table { vertical-align: top }`, which
+  // `tbody` inherits). That is right for a table of text, where a wrapped cell
+  // should start on the first line — but half of these cells hold a control and
+  // the other half hold plain text, and a 38px input next to a one-line "None"
+  // left the text riding along the top of the row.
+  //
+  // Body and footer only. `thead` keeps the theme's bottom alignment, which is
+  // what sits a two-line heading like "Credited Amount" against the row of
+  // single-line ones beside it.
+  tbody td,
+  tfoot td {
+    vertical-align: middle;
+  }
+
   .form-select,
   .form-control {
     min-width: 0;

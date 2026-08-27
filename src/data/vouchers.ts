@@ -110,6 +110,12 @@ export interface VoucherParty {
   email: string
   phone: string
   /**
+   * Whether the contact has a counterpart in QuickBooks — the party card's sync
+   * badge. Read here with the rest of the display fields, so a contact that
+   * gets connected shows as connected on every voucher that names them.
+   */
+  quickbooksSynced: boolean
+  /**
    * False when the contact is no longer in the store.
    *
    * The row still renders. A voucher is a record of who was billed, and losing
@@ -129,6 +135,8 @@ export function voucherParty(contactId: string): VoucherParty {
       company: '',
       email: '',
       phone: '',
+      // A contact we cannot read cannot be claimed to be connected to anything.
+      quickbooksSynced: false,
       exists: false,
     }
   }
@@ -138,6 +146,7 @@ export function voucherParty(contactId: string): VoucherParty {
     company: contact.company,
     email: contact.email,
     phone: contact.phone,
+    quickbooksSynced: contact.quickbooksSynced === true,
     exists: true,
   }
 }
@@ -196,6 +205,13 @@ export interface VoucherPayerRow extends VoucherParty {
    * for, not what is still outstanding. The Receivables table below carries the
    * Credited column, and restating it here would put two different answers to
    * "how much" on one screen.
+   *
+   * NOTHING RENDERS THIS at the moment. The Billing section showed it per payer
+   * and totalled it underneath; both went when the payer card was cut back to
+   * match the buyer card, on the reasoning above — the receivables total is the
+   * one answer to "how much", and it lives in the Receivables section. Kept
+   * because the derivation is correct and tested, and a per-payer figure is a
+   * plausible thing to want back; delete it if it is still unread later.
    */
   billed: number
   /**

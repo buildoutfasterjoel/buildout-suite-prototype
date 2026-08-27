@@ -7,7 +7,9 @@ import {
   ResponsiveContainer,
   Tooltip as ChartTooltip,
 } from "recharts";
+import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
 import { Field } from "@buildoutinc/blueprint-react/ui/Field";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
@@ -21,8 +23,11 @@ import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowRight,
+  faArrowsRotate,
   faDollarSign,
   faEllipsisVertical,
+  faEnvelope,
+  faPhone,
   faFileLines,
   faPercent,
   faPlus,
@@ -31,6 +36,7 @@ import {
   faTableRowsAddBelow,
   faTrashCan,
   faCaretDown,
+  faCircleInfo,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type {
@@ -71,7 +77,8 @@ import { ListingPageHeader } from "../listings/ListingPageHeader";
 import { VoucherStatusBadge } from "./VoucherStatusBadge";
 import { VoucherApprovalBanner } from "./VoucherApprovalBanner";
 import { dealEditTarget } from "./dealCardLink";
-import { formatCurrency, formatDate } from "./dealDisplay";
+import { formatCurrency, formatDate, initials } from "./dealDisplay";
+import { QuickbooksSyncBadge } from "#/components/common/QuickbooksSyncBadge";
 import "./DealFinancials.scss";
 import {
   buildRentSchedule,
@@ -581,32 +588,7 @@ function InternalCommissionsSection({
   );
 }
 
-/**
- * The contact columns both party sections share — buyer/tenant and payer.
- *
- * Written once because the two tables differ only in their heading, their
- * removal rule, and whether a Billed column follows. Two copies would drift the
- * first time one of them gained a column.
- */
-function PartyRowCells({ party }: { party: VoucherParty }) {
-  return (
-    <>
-      <Table.Cell>
-        {/* No link when the contact is gone — a dead link to a contact page
-            that 404s is worse than plain text. */}
-        <PersonLink
-          name={party.name}
-          contactId={party.exists ? party.contactId : undefined}
-        />
-      </Table.Cell>
-      <Table.Cell>{party.company || "—"}</Table.Cell>
-      <Table.Cell>{party.email || "—"}</Table.Cell>
-      <Table.Cell>{party.phone || "—"}</Table.Cell>
-    </>
-  );
-}
-
-/** The remove action both party tables carry. */
+/** The remove action both party cards carry. */
 function RemovePartyButton({
   name,
   blockedReason,
@@ -620,7 +602,9 @@ function RemovePartyButton({
   const button = (
     <Button
       variant="ghost"
-      size="icon"
+      // `icon-sm`, not `icon`: on a card this sits in the same row as the name,
+      // where a full-size icon button outweighed the name it belongs to.
+      size="icon-sm"
       aria-label={`Remove ${name}`}
       disabled={blockedReason !== null}
       onClick={blockedReason !== null ? undefined : onRemove}
@@ -644,6 +628,95 @@ function RemovePartyButton({
       />
       <Tooltip.Content>{blockedReason ?? `Remove ${name}`}</Tooltip.Content>
     </Tooltip>
+  );
+}
+
+/** One reachable detail on a party card — icon in a fixed gutter, value beside it. */
+function PartyContactLine({
+  icon,
+  value,
+}: {
+  icon: IconDefinition;
+  value: string;
+}) {
+  return (
+    <div className="d-flex align-items-center gap-2" style={{ minWidth: 0 }}>
+      <FontAwesomeIcon icon={icon} className="text-muted flex-shrink-0" />
+      <span className="text-truncate" title={value || undefined}>
+        {value || "—"}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * One party as a card — who they are, how to reach them, and whether QuickBooks
+ * knows them.
+ *
+ * This replaced a four-column table in both sections below. A voucher names one
+ * or two parties per side, and a table charges a header row for a comparison
+ * nobody makes: name, company, email and phone are read ACROSS one person, never
+ * down a column. The page is five money tables long by the time it reaches here,
+ * so these two sections are where the density can break without losing a read.
+ *
+ * One card for both sections, carrying no money. A payer card briefly showed a
+ * Billed figure, which made it taller than the buyer card beside it for a number
+ * the receivables table already totals.
+ */
+function PartyCard({
+  party,
+  editable,
+  blockedReason,
+  onRemove,
+}: {
+  party: VoucherParty;
+  editable: boolean;
+  /** Non-null when removal is refused. Unread when not editable. */
+  blockedReason?: string | null;
+  onRemove: () => void;
+}) {
+  return (
+    <Card>
+      <Card.Body className="d-flex flex-column gap-3">
+        <div className="d-flex align-items-start gap-3">
+          <span className="position-relative flex-shrink-0 d-inline-flex">
+            <Avatar size="lg">
+              <Avatar.Fallback>{initials(party.name)}</Avatar.Fallback>
+            </Avatar>
+            {/* Hung just OUTSIDE the avatar's lower-right corner. Flush inside
+                it (`bottom-0 end-0`) a 16px chip covered a third of the
+                initials — the ring is what separates the two, so it needs to
+                straddle the edge rather than sit within it. */}
+            <span className="position-absolute" style={{ bottom: -3, right: -3 }}>
+              <QuickbooksSyncBadge synced={party.quickbooksSynced} />
+            </span>
+          </span>
+          <div className="flex-grow-1" style={{ minWidth: 0 }}>
+            <div className="fw-semibold">
+              {/* No link when the contact is gone — a dead link to a contact
+                  page that 404s is worse than plain text. */}
+              <PersonLink
+                name={party.name}
+                contactId={party.exists ? party.contactId : undefined}
+              />
+            </div>
+            <div className="text-muted fs-small">{party.company || "—"}</div>
+          </div>
+          {editable && (
+            <RemovePartyButton
+              name={party.name}
+              blockedReason={blockedReason ?? null}
+              onRemove={onRemove}
+            />
+          )}
+        </div>
+
+        <div className="d-flex flex-column gap-1">
+          <PartyContactLine icon={faEnvelope} value={party.email} />
+          <PartyContactLine icon={faPhone} value={party.phone} />
+        </div>
+      </Card.Body>
+    </Card>
   );
 }
 
@@ -690,37 +763,18 @@ function PartySection({
           No {title.toLowerCase()} has been added.
         </p>
       ) : (
-        <Table>
-          <Table.Header>
-            <Table.Row>
-              <Table.Head>Name</Table.Head>
-              <Table.Head>Company</Table.Head>
-              <Table.Head>Email</Table.Head>
-              <Table.Head>Phone</Table.Head>
-              {editable && <Table.Head style={{ width: 56 }} />}
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {parties.map((party) => (
-              <Table.Row key={party.contactId}>
-                <PartyRowCells party={party} />
-                {editable && (
-                  <Table.Cell>
-                    <RemovePartyButton
-                      name={party.name}
-                      blockedReason={null}
-                      onRemove={() =>
-                        onChange(
-                          contactIds.filter((id) => id !== party.contactId),
-                        )
-                      }
-                    />
-                  </Table.Cell>
-                )}
-              </Table.Row>
-            ))}
-          </Table.Body>
-        </Table>
+        <div className="d-flex flex-column gap-3">
+          {parties.map((party) => (
+            <PartyCard
+              key={party.contactId}
+              party={party}
+              editable={editable}
+              onRemove={() =>
+                onChange(contactIds.filter((id) => id !== party.contactId))
+              }
+            />
+          ))}
+        </div>
       )}
 
       <AddContactModal
@@ -737,14 +791,17 @@ function PartySection({
 /**
  * Who this voucher bills.
  *
- * Sits directly above Receivables because that table references it: every
- * receivable names one of these payers, and the two have to be readable
- * together.
- *
  * A payer is usually the buyer or the tenant and often is not — a lease
  * commission billed to a corporate AP department, a sale where a holding
  * company pays. That is the reason this is its own list rather than a column on
- * the section above.
+ * the section beside it.
+ *
+ * Carries no money at all, which is why a payer card is the same card as a
+ * buyer card. It held a per-payer Billed figure and a Sum below them, both
+ * removed: every one of those numbers is a re-reading of the receivables, and
+ * the receivables are on this same page with their own total. Two places
+ * answering "how much" is how they come to disagree. What replaced it is one
+ * line in that section naming the figure the total is supposed to reach.
  */
 function PayersSection({
   payers,
@@ -757,7 +814,6 @@ function PayersSection({
 }) {
   const [addOpen, setAddOpen] = useState(false);
   const contactIds = payers.map((p) => p.contactId);
-  const billedTotal = sum(payers.map((p) => p.billed));
 
   return (
     <Section
@@ -774,55 +830,19 @@ function PayersSection({
       {payers.length === 0 ? (
         <p className="text-muted mb-0">No payers have been added.</p>
       ) : (
-        <Table>
-          <Table.Header>
-            <Table.Row>
-              <Table.Head>Name</Table.Head>
-              <Table.Head>Company</Table.Head>
-              <Table.Head>Email</Table.Head>
-              <Table.Head>Phone</Table.Head>
-              <Table.Head className="text-end">Billed</Table.Head>
-              {editable && <Table.Head style={{ width: 56 }} />}
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {payers.map((payer) => (
-              <Table.Row key={payer.contactId}>
-                <PartyRowCells party={payer} />
-                <Table.Cell className="text-end">
-                  {formatCurrency(payer.billed)}
-                </Table.Cell>
-                {editable && (
-                  <Table.Cell>
-                    <RemovePartyButton
-                      name={payer.name}
-                      blockedReason={payerRemovalBlock(payer)}
-                      onRemove={() =>
-                        onChange(
-                          contactIds.filter((id) => id !== payer.contactId),
-                        )
-                      }
-                    />
-                  </Table.Cell>
-                )}
-              </Table.Row>
-            ))}
-          </Table.Body>
-          {/* A `tfoot`, matching Internal Commissions and Pre-Split Deductions:
-              the theme gives `tfoot` cells the header's background, weight and a
-              rule above them, so the total reads as the table's own summary
-              rather than one more payer — and the hand-applied `fw-semibold`
-              goes away. */}
-          <Table.Footer>
-            <Table.Row>
-              <Table.Cell colSpan={4}>Sum</Table.Cell>
-              <Table.Cell className="text-end">
-                {formatCurrency(billedTotal)}
-              </Table.Cell>
-              {editable && <Table.Cell />}
-            </Table.Row>
-          </Table.Footer>
-        </Table>
+        <div className="d-flex flex-column gap-3">
+          {payers.map((payer) => (
+            <PartyCard
+              key={payer.contactId}
+              party={payer}
+              editable={editable}
+              blockedReason={payerRemovalBlock(payer)}
+              onRemove={() =>
+                onChange(contactIds.filter((id) => id !== payer.contactId))
+              }
+            />
+          ))}
+        </div>
       )}
 
       <AddContactModal
@@ -1162,8 +1182,23 @@ const RECEIVABLE_CHECKBOX_W = 44;
  * cell truncates instead (see `text-truncate` at the call site).
  */
 const RECEIVABLE_COL = {
-  payer: 220,
-  dueDate: 150,
+  // The unheaded QuickBooks gutter. Wide enough for an 18px chip and the cell's
+  // own padding, and no wider — it is a status, not a column anyone reads down.
+  sync: 40,
+  // 200, down from 220. The payer label never fits whatever it is given — it is
+  // a name plus an email — so it truncates at any width, which makes it the one
+  // column that can lend 20px to the ones that do have a natural length.
+  payer: 200,
+  // 180, not 150: at 150 the editable cell's date picker clipped its own value,
+  // "Sep 26, 2026" losing its last characters between the calendar addon and
+  // the cell edge. Sized to the longest date `formatDate` produces.
+  //
+  // These two numbers are a pair. Billing Description takes `width: 100%` and
+  // absorbs whatever the pinned columns leave, so widening the date at 220
+  // payer stole the description's room instead and clipped that. Measured in
+  // the browser at the narrowest real content area: both fit at 200/180, and
+  // the date alone fits from 170.
+  dueDate: 180,
   // The money columns are sized to their content, and their content is the
   // widest figure a commission realistically reaches — "$1,167,802.00" is a real
   // seeded value. Amount needs a little more than Credited despite showing the
@@ -1290,6 +1325,23 @@ function ReceivableRowMenu({
         <ReceivableActionItem icon={faArrowRight} disabled>
           Apply Other Credit
         </ReceivableActionItem>
+        {/* Push this line to QuickBooks again — what a broker reaches for when
+            the row's badge says it is not there.
+
+            Enabled, though nothing is wired to QuickBooks yet: Joel's call, and
+            it reads better than the alternative. Greyed was the first version,
+            on the reasoning that the two items above it are greyed for being
+            unbuilt. But greyed states a rule about the record, and there is no
+            rule here — a broker who sees an amber badge and then a dead menu
+            item learns the wrong thing about why. The two above stay greyed
+            because they are genuinely gated on a deposit that does not exist.
+
+            Offered whatever the badge says, because "force" is the point —
+            re-pushing a line that already synced is a real thing to want when
+            the two sides have drifted. */}
+        <ReceivableActionItem icon={faArrowsRotate}>
+          Force Sync with QuickBooks
+        </ReceivableActionItem>
         <Separator className="my-1" />
         <DropdownMenu.Item onClick={onDelete}>
           <FontAwesomeIcon icon={faTrashCan} className="me-2" />
@@ -1311,6 +1363,10 @@ function ReceivablesSection({
   const receivables = listing.transaction.backOffice.receivables;
   const amountTotal = sum(receivables.map((r) => r.amount));
   const creditedTotal = sum(receivables.map((r) => r.credited));
+  // The figure the total is measured against, and how far off it currently is.
+  // Positive is short, negative is over-billed.
+  const commissionAmount = listing.transaction.commissionAmount;
+  const commissionGap = commissionAmount - amountTotal;
   const [addOpen, setAddOpen] = useState(false);
 
   // Receivable edits write straight through rather than joining the page's Save
@@ -1411,6 +1467,13 @@ function ReceivablesSection({
                 >
                   Create New Invoice
                 </ReceivableActionItem>
+                {/* Here as well as on each row: pushing several lines at once is
+                    the more useful half of a force sync, and an action that
+                    exists in one of two mirrored receivable menus reads as an
+                    oversight. Enabled and inert, like the row's. */}
+                <ReceivableActionItem icon={faArrowsRotate}>
+                  Force Sync with QuickBooks
+                </ReceivableActionItem>
                 {/* No Delete here. Deleting is a one-row act and the row's own
                     menu owns it; a bulk Delete beside it would be a second way
                     to do the same thing, differing only in how many rows it
@@ -1423,6 +1486,46 @@ function ReceivablesSection({
         ) : undefined
       }
     >
+      {/* What the total is supposed to reach. The receivables are how the gross
+          commission gets billed out, so the two agreeing is the rule the whole
+          section is under — but nothing on the page said so, and the figure
+          itself lives three sections up under Transaction.
+
+          A line of text, not a validation banner: it is as true of an empty
+          section as a full one, so it reads as the rule rather than as a
+          complaint. The gap only appears once the numbers actually disagree,
+          which in a seeded voucher they do not — it is there for the broker who
+          types over an amount.
+
+          And only once a line exists. An active deal has a commission and no
+          receivables yet, because nobody bills before the deal is under
+          contract; there the gap said "$266,363.00 short", which reads as an
+          accusation about work that is not due. Nothing billed is not a
+          shortfall.
+
+          Hidden at zero commission, where "should total $0.00" would be noise.
+          A lease suite with no commission yet is the common case. */}
+      {commissionAmount > 0 && (
+        <p className="text-muted fs-small mb-0 d-flex align-items-start gap-2">
+          <FontAwesomeIcon icon={faCircleInfo} className="mt-1 flex-shrink-0" />
+          <span>
+            Receivables should total the gross commission,{" "}
+            <span className="fw-semibold">
+              {formatCurrency(commissionAmount)}
+            </span>
+            .
+            {receivables.length > 0 && commissionGap !== 0 && (
+              <span className="text-harvest-gold-700 fw-semibold">
+                {" "}
+                Currently {formatCurrency(amountTotal)} —{" "}
+                {formatCurrency(Math.abs(commissionGap))}{" "}
+                {commissionGap > 0 ? "short" : "over"}.
+              </span>
+            )}
+          </span>
+        </p>
+      )}
+
       {receivables.length === 0 ? (
         <p className="text-muted mb-0">No receivables have been added.</p>
       ) : (
@@ -1473,6 +1576,18 @@ function ReceivablesSection({
               >
                 Credited Amount
               </Table.Head>
+              {/* No heading, by design. The badge is a row status and its
+                  tooltip names it; a "QuickBooks" header over a column that is
+                  blank three times in four would read as missing data.
+                  Sits past the money rather than ahead of the payer: the money
+                  columns are what the row is read for, and a gutter in front of
+                  them pushed the first figure away from the name it belongs to.
+                  Always present — unlike the select-all gutter and the actions
+                  column, a sync status is worth showing on a frozen voucher. */}
+              <Table.Head
+                style={{ width: RECEIVABLE_COL.sync }}
+                aria-label="QuickBooks sync status"
+              />
               {editable && (
                 <Table.Head style={{ width: RECEIVABLE_COL.actions }} />
               )}
@@ -1609,6 +1724,9 @@ function ReceivablesSection({
                   >
                     {r.credited > 0 ? formatCurrency(r.credited) : "None"}
                   </Table.Cell>
+                  <Table.Cell style={{ width: RECEIVABLE_COL.sync }}>
+                    <QuickbooksSyncBadge synced={r.quickbooksSynced} size={18} />
+                  </Table.Cell>
                   {editable && (
                     <Table.Cell style={{ width: RECEIVABLE_COL.actions }}>
                       <ReceivableRowMenu
@@ -1628,6 +1746,8 @@ function ReceivablesSection({
               rows above it do. */}
           <Table.Footer>
             <Table.Row>
+              {/* Counts the select-all gutter, so it moves with `editable` the
+                  way the body rows do. */}
               <Table.Cell colSpan={editable ? 4 : 3}>Sum</Table.Cell>
               <Table.Cell className="text-end">
                 {formatCurrency(amountTotal)}
@@ -1635,6 +1755,8 @@ function ReceivablesSection({
               <Table.Cell className="text-end">
                 {formatCurrency(creditedTotal)}
               </Table.Cell>
+              {/* The sync gutter. Unconditional, like its header. */}
+              <Table.Cell />
               {editable && <Table.Cell />}
             </Table.Row>
           </Table.Footer>
@@ -2378,13 +2500,6 @@ export function DealFinancials({
 
       <TransactionSummarySection listing={listing} editable={isDraft} />
 
-      <PartySection
-        dealType={listing.dealType}
-        contactIds={parties}
-        editable={isDraft}
-        onChange={setParties}
-      />
-
       <Separator />
 
       <BreakdownSection listing={listing} />
@@ -2408,13 +2523,36 @@ export function DealFinancials({
 
       <Separator />
 
-      <RentScheduleSection listing={listing} editable={!isPending} />
+      {/* The two party lists, side by side, after the commissions band.
+          Two columns rather than two stacked sections because each is a short
+          list of cards — at full width a single card left most of the row empty,
+          and the pair reads as one answer to "who is on this deal" anyway.
+          They collapse to one column below `lg`, where half a row is too narrow
+          for a name, a company and an email.
 
-      <PayersSection
-        payers={voucherPayers({ ...voucher, payerContactIds: payerIds })}
-        editable={isDraft}
-        onChange={setPayerIds}
-      />
+          Billing used to sit directly above Receivables, since that table names
+          these payers. Only the rent schedule separates them now. */}
+      <div className="row g-4">
+        <div className="col-12 col-lg-6">
+          <PartySection
+            dealType={listing.dealType}
+            contactIds={parties}
+            editable={isDraft}
+            onChange={setParties}
+          />
+        </div>
+        <div className="col-12 col-lg-6">
+          <PayersSection
+            payers={voucherPayers({ ...voucher, payerContactIds: payerIds })}
+            editable={isDraft}
+            onChange={setPayerIds}
+          />
+        </div>
+      </div>
+
+      <Separator />
+
+      <RentScheduleSection listing={listing} editable={!isPending} />
 
       <ReceivablesSection listing={listing} editable={!isPending} />
 

@@ -373,6 +373,12 @@ function applyStageDetail(
    * keeps those two from being resolved in two different places.
    */
   tenant?: InvoicePayerName,
+  /**
+   * Whether the tenant is in QuickBooks. Passed in rather than pinned, so the
+   * suite's receivable cannot claim to be in QuickBooks under a tenant that is
+   * not — see the note at the receivable below.
+   */
+  tenantSynced?: boolean,
 ): void {
   const tenantName = tenant?.name
   const stage = child.status
@@ -508,6 +514,16 @@ function applyStageDetail(
         billingDescription: `Lease commission — Suite ${suiteNumber}`,
         amount: commissionAmount,
         credited: 0,
+        // Taken from the tenant rather than hashed from the id like the
+        // pipeline's receivables, and rather than pinned true.
+        //
+        // Pinned was the first version, on the reasoning that an Approved
+        // voucher whose invoice has gone out is precisely the line QuickBooks
+        // would hold. But the tenant's own flag is hashed, so a pin was only
+        // consistent by luck: one shift in the seed stream and this suite would
+        // show a settled bill as connected directly above a tenant that is not.
+        // Deriving makes that pair impossible instead of merely unlikely.
+        quickbooksSynced: tenantSynced === true,
       },
     ],
   }
@@ -730,6 +746,7 @@ export function applyLeaseSpaces(
       // which `spaceVouchers` reads. Distinct from `buyerContactIds` on purpose.
       let tenantName: string | undefined
       let tenantPayer: InvoicePayerName | undefined
+      let tenantSynced = false
       if (stage === 'under-contract' || stage === 'closed') {
         const tenantId = tenantPool[tenantIndex++]
         if (tenantId) {
@@ -742,11 +759,12 @@ export function applyLeaseSpaces(
           if (tenant) {
             tenantName = `${tenant.firstName} ${tenant.lastName}`.trim()
             tenantPayer = { name: tenantName, company: tenant.company }
+            tenantSynced = tenant.quickbooksSynced === true
           }
         }
       }
       if (stage === 'closed' && tenantName) closedTenantByUnit.set(unit.id, tenantName)
-      applyStageDetail(child, (i + 1) * 100, tenantPayer)
+      applyStageDetail(child, (i + 1) * 100, tenantPayer, tenantSynced)
       listings.push(child)
     })
 
