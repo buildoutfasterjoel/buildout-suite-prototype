@@ -43,56 +43,41 @@ const PAGE_SIZE = 25;
 /** Up to three faces, then a count — a wide column of avatars buys nothing. */
 const AVATARS_SHOWN = 3;
 
-/** The Brokers cell: overlapping faces, oldest on top, then "+n". */
+/**
+ * The Brokers cell.
+ *
+ * `Avatar.Group` owns the overlap, the ring and the radius, and `Avatar.More`
+ * renders its own `+n` — none of that is reimplemented here.
+ *
+ * Each avatar IS its tooltip trigger, via `render`, rather than sitting inside
+ * a trigger `<span>`. The group overlaps its children with
+ * `.avatar .avatar:first-child { margin-left: 0 }`, so a wrapper per avatar
+ * would make every one of them a first child and flatten the stack.
+ */
 function BrokerStack({ brokers }: { brokers: ReceivableBroker[] }) {
   if (brokers.length === 0) return <span className="text-muted">--</span>;
   const shown = brokers.slice(0, AVATARS_SHOWN);
   const extra = brokers.length - shown.length;
 
   return (
-    <div className="d-flex align-items-center">
+    <Avatar.Group>
       {shown.map((broker, i) => (
         <Tooltip key={`${broker.name}-${i}`}>
           <Tooltip.Trigger
             render={
-              <span
-                className="d-inline-flex"
-                // Overlapped rather than spaced: the column is an at-a-glance
-                // "whose money is this", not a roster to read across.
-                style={{ marginLeft: i === 0 ? 0 : -8, zIndex: shown.length - i }}
-              >
-                {/* Sized explicitly, the way the users roster does it —
-                    Avatar has no `size` prop, and passing one collapses the
-                    circle to whatever the text needs. */}
-                <Avatar
-                  className="border border-2 border-white"
-                  style={{ width: 28, height: 28 }}
-                >
-                  {broker.avatarUrl && (
-                    <Avatar.Image src={broker.avatarUrl} alt="" />
-                  )}
-                  {/* Blueprint's own fallback fill is near-white, which
-                      disappears inside the white ring that separates
-                      overlapping faces. Tinted to the same grey the chart's
-                      axis uses, so an initials avatar reads as a face rather
-                      than as floating letters. */}
-                  <Avatar.Fallback
-                    className="fw-semibold fs-small"
-                    style={{ backgroundColor: "#d7dbe3", color: "#3d4a5c" }}
-                  >
-                    {broker.initials}
-                  </Avatar.Fallback>
-                </Avatar>
-              </span>
+              <Avatar>
+                {broker.avatarUrl && (
+                  <Avatar.Image src={broker.avatarUrl} alt="" />
+                )}
+                <Avatar.Fallback>{broker.initials}</Avatar.Fallback>
+              </Avatar>
             }
           />
           <Tooltip.Content>{broker.name}</Tooltip.Content>
         </Tooltip>
       ))}
-      {extra > 0 && (
-        <span className="text-muted fs-small ms-2">+{extra}</span>
-      )}
-    </div>
+      {extra > 0 && <Avatar.More count={extra} />}
+    </Avatar.Group>
   );
 }
 
