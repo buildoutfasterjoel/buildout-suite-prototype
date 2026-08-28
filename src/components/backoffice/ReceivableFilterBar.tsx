@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { Combobox } from "@buildoutinc/blueprint-react/ui/Combobox";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
@@ -33,13 +35,27 @@ import {
 
 const DEAL_TYPES: DealType[] = ["Sale", "Lease"];
 
-/** Every facet whose value is a Set on the filter state. */
-type FacetKey =
-  | "statuses"
-  | "brokers"
-  | "stages"
-  | "dealTypes"
-  | "propertyTypes";
+/**
+ * What makes a facet trigger read as one of Blueprint's Selects.
+ *
+ * `form-select` is the class `Select.Trigger` itself carries, and
+ * `hidden-indicator` is the modifier it pairs with it — that combination drops
+ * the background-image caret and the padding reserved for it, leaving the
+ * component's own `<FontAwesomeIcon>` to sit at the right edge under
+ * `.form-select svg { margin-left: auto }`. Applied to the facet buttons so the
+ * whole toolbar reads as one family rather than as Selects beside Buttons.
+ *
+ * `w-auto` is not optional: `.form-select` is `width: 100%`, which is right for
+ * a form field in a column and wrong for a toolbar control — without it every
+ * facet claims a row of its own and the bar becomes six stacked lines.
+ */
+const SELECT_LOOK = "form-select hidden-indicator w-auto";
+
+/**
+ * The facets rendered as checkbox dropdowns. `brokers` is deliberately absent —
+ * it is a combobox now, and it writes its Set directly.
+ */
+type FacetKey = "statuses" | "stages" | "dealTypes" | "propertyTypes";
 
 /**
  * The disabled Offices control.
@@ -65,7 +81,7 @@ function OfficesDropdown() {
             <Button
               variant="outline"
               disabled
-              className="d-inline-flex align-items-center gap-2 text-nowrap"
+              className={`d-inline-flex align-items-center gap-2 text-nowrap ${SELECT_LOOK}`}
             >
               All Offices
               <FontAwesomeIcon icon={faCaretDown} />
@@ -77,6 +93,89 @@ function OfficesDropdown() {
         Offices aren't set up yet — every receivable is in one book.
       </Tooltip.Content>
     </Tooltip>
+  );
+}
+
+/**
+ * The Brokers filter — a multi-select combobox rather than a checkbox facet.
+ *
+ * The one facet whose options are *names drawn from the book* rather than a
+ * fixed vocabulary. That list grows with the brokerage, and a popover of
+ * checkboxes stops working the moment it is longer than a screen; typing to
+ * narrow is the only thing that scales. The chips also state the current
+ * selection in the toolbar itself, which a "2" badge on a closed dropdown
+ * cannot.
+ *
+ * `value` is derived from the Set on every render rather than mirrored in local
+ * state, so a reset from the empty state clears the chips too.
+ */
+function BrokerCombobox({
+  brokerNames,
+  selected,
+  onChange,
+}: {
+  brokerNames: string[];
+  selected: Set<string>;
+  onChange: (next: Set<string>) => void;
+}) {
+  // The typed text is genuinely local — it is not a filter, and it is cleared
+  // on each pick so the next name starts from the whole list.
+  const [inputValue, setInputValue] = useState("");
+
+  return (
+    // Grows with its chips but stops before it can push the rest of the toolbar
+    // off the row; past the cap the chips wrap inside the control.
+    <div style={{ minWidth: 200, maxWidth: 380, flex: "1 1 200px" }}>
+      <Combobox
+        multiple
+        items={brokerNames}
+        value={[...selected]}
+        inputValue={inputValue}
+        onInputValueChange={(v: string) => setInputValue(v)}
+        onValueChange={(v: string[]) => {
+          onChange(new Set(v));
+          setInputValue("");
+        }}
+      >
+        <Combobox.InputGroup>
+          <InputGroup.Addon>
+            <FontAwesomeIcon icon={faUserGroupSimple} />
+          </InputGroup.Addon>
+          <Combobox.Chips>
+            <Combobox.Value>
+              {(value: string[]) => (
+                <>
+                  {value.map((name) => (
+                    <Combobox.Chip key={name}>{name}</Combobox.Chip>
+                  ))}
+                  {/* The placeholder doubles as the control's label, which is
+                      why it only shows while nothing is picked — with chips in
+                      the box, "All Brokers" would be contradicting them. */}
+                  <Combobox.Input
+                    placeholder={value.length ? "" : "All Brokers"}
+                  />
+                </>
+              )}
+            </Combobox.Value>
+          </Combobox.Chips>
+          <InputGroup.Addon>
+            <Combobox.Trigger />
+          </InputGroup.Addon>
+        </Combobox.InputGroup>
+        <Combobox.Content>
+          <Combobox.Empty className="text-muted">
+            No matching brokers
+          </Combobox.Empty>
+          <Combobox.List>
+            {(item: string) => (
+              <Combobox.Item key={item} value={item}>
+                {item}
+              </Combobox.Item>
+            )}
+          </Combobox.List>
+        </Combobox.Content>
+      </Combobox>
+    </div>
   );
 }
 
@@ -151,14 +250,6 @@ export function ReceivableFilterBar({
       clear: clearer("propertyTypes"),
     },
   ];
-
-  const brokerFacet: FacetDropdownFacet = {
-    title: "All Brokers",
-    options: brokerNames.map((n) => ({ value: n, label: n })),
-    selected: filters.brokers as Set<string>,
-    toggle: toggler<string>("brokers"),
-    clear: clearer("brokers"),
-  };
 
   const yearLabel = (y: ReceivableYear) =>
     y === "all" ? "All time" : String(y);
@@ -235,16 +326,18 @@ export function ReceivableFilterBar({
         </Select>
       </div>
 
-      <FacetDropdown facet={facets[0]} />
+      <FacetDropdown facet={facets[0]} className={SELECT_LOOK} />
 
       <OfficesDropdown />
 
-      {/* The people icon marks the one facet whose options are names drawn from
-          the data rather than a fixed vocabulary. */}
-      <FacetDropdown facet={brokerFacet} icon={faUserGroupSimple} />
+      <BrokerCombobox
+        brokerNames={brokerNames}
+        selected={filters.brokers}
+        onChange={(brokers) => onChange({ ...filters, brokers })}
+      />
 
       {facets.slice(1).map((facet) => (
-        <FacetDropdown key={facet.id} facet={facet} />
+        <FacetDropdown key={facet.id} facet={facet} className={SELECT_LOOK} />
       ))}
     </div>
   );
