@@ -70,6 +70,48 @@ continuing:
    - If the branch reverted or abandoned an approach, say so in the body. That lesson is
      the one thing a deleted spec takes with it.
 
+6b. **Write the PR's own changelog entry, then push it.** The repo gates every PR on
+   having one (`.github/workflows/changelog-check.yml`), and the entry is keyed to the
+   PR's *own number* — which does not exist until step 6 has run. So this step is
+   necessarily after the PR is open, and the check will be red until it lands.
+
+   **Do not label round it.** `no-changelog` is only for a PR with nothing user-facing
+   at all — docs, chore or test-only work. Anything a person would notice earns a card.
+
+   Add the entry to the **top** of `CHANGELOG` in
+   `src/components/changelog/changelogEntries.ts`:
+
+   - `pr` — the number from step 6.
+   - `title` — the PR title.
+   - `mergedAt` — the current UTC time (`date -u +%Y-%m-%dT%H:%M:%SZ`). It is an estimate,
+     because the merge has not happened; only ordering depends on it and nothing renders it.
+   - `day` — the current **local** calendar day (`date +%Y-%m-%d`), not the UTC one.
+   - `author` — the GitHub login. Add it to `AUTHOR_NAMES` if it is not there.
+   - `area` — one of the areas already in use. Read the file rather than inventing one.
+   - `summary` — one sentence on what the PR was *for*. Not what it touched.
+   - `highlights` — one per user-facing change, `kind` being `feature`, `refinement` or
+     `fix`. Read the commit bodies, not just the subjects.
+
+   **Write sentences, not commit subjects.** `refine(voucher): every deposit carries a
+   reference number` becomes "Every deposit carries a reference number, editable in
+   place." That rewriting is the whole reason the page reads as a changelog rather than a
+   git log, and it is why this step is not automated away into a script.
+
+   Drop the housekeeping commits — `docs`, `chore`, `test`, `seed` prefixes describe work
+   nobody outside the repo can see. A card listing "delete the spec" trains people to stop
+   reading the page.
+
+   Then verify and push:
+
+   ```
+   bun --bun run scripts/changelogSlack.ts --pr <number> --check
+   bunx tsc --noEmit && bun --bun run test
+   git add src/components/changelog/changelogEntries.ts && git commit && git push
+   ```
+
+   Commit it separately with a `docs(changelog):` subject rather than amending — the PR is
+   already open and its commits have been reviewed.
+
 7. **Report the PR URL** back to Joel.
 
 **Never run `gh pr merge`.** Merging is Joel's, on GitHub. If asked to ship something
