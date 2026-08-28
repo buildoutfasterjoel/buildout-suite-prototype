@@ -15,6 +15,7 @@
  *   SLACK_BOT_TOKEN          xoxb-… (a secret)
  *   SLACK_CHANGELOG_CHANNEL  a channel id (C…) or a user id (U…) for a DM
  */
+import { appendFileSync } from "node:fs";
 import {
   CHANGELOG,
   KIND_ORDER,
@@ -141,6 +142,51 @@ function parseArgs(argv: string[]) {
   };
 }
 
+/**
+ * Say what is missing and how to fix it — on stderr, and on the checks page.
+ *
+ * GitHub shows a failing check as "Failing after 7s" and nothing else; the log
+ * is a click away, and the first person to hit this read the red X as their
+ * branch being out of date. Writing the same text to $GITHUB_STEP_SUMMARY puts
+ * it on the checks page itself. One function so the two can never disagree.
+ */
+function reportMissingEntry(pr: number): void {
+  const lines = [
+    `No changelog entry for PR #${pr}.`,
+    "",
+    "This is not a stale branch — merging main will not fix it. The check looks",
+    "for an entry filed under this PR's own number, which only exists once one",
+    "is written.",
+    "",
+    "Ask Claude to add it (`/ship` does this automatically), or add it by hand to",
+    "the top of CHANGELOG in src/components/changelog/changelogEntries.ts — pr,",
+    "title, mergedAt, day (the local calendar day), author, area, a one-line",
+    "summary, and a highlight per user-facing change with kind:",
+    "feature | refinement | fix.",
+    "",
+    "If this PR has nothing user-facing to announce (docs, chore, test only),",
+    "label it 'no-changelog' and this check will skip.",
+  ];
+  console.error(lines.join("\n"));
+
+  const summary = process.env.GITHUB_STEP_SUMMARY;
+  if (summary) {
+    const md = [
+      `## No changelog entry for PR #${pr}`,
+      "",
+      "**This is not a stale branch.** Merging `main` will not fix it — the check",
+      "looks for an entry filed under this PR's own number.",
+      "",
+      "Ask Claude to add it (`/ship` does this automatically), or add one by hand",
+      "to the top of `CHANGELOG` in `src/components/changelog/changelogEntries.ts`.",
+      "",
+      "Nothing user-facing here? Label the PR `no-changelog` and this check skips.",
+      "",
+    ].join("\n");
+    appendFileSync(summary, md);
+  }
+}
+
 async function main() {
   const { pr, check, post } = parseArgs(process.argv);
 
@@ -152,21 +198,21 @@ async function main() {
   const entry = CHANGELOG.find((e) => e.pr === pr);
 
   if (!entry) {
+    // On the merge path the gate has already had its chance, and the merge has
+    // happened. Failing here would put a red X on main for something nobody can
+    // act on any more, so say what is missing and stay green. The PR-time check
+    // is where a missing entry is meant to be noticed.
+    if (post) {
+      console.log(
+        `No changelog entry for PR #${pr} — nothing to post, so nothing was sent. ` +
+          "Add the entry and re-run this workflow by hand to announce it late.",
+      );
+      return;
+    }
+
     // The gate's whole message. It has to say what to do, not just what failed —
     // this is the first thing a contributor sees when their PR goes red.
-    console.error(
-      [
-        `No changelog entry for PR #${pr}.`,
-        "",
-        "Add one to the top of CHANGELOG in",
-        "src/components/changelog/changelogEntries.ts — pr, title, mergedAt,",
-        "day (the local calendar day), author, area, a one-line summary, and a",
-        "highlight per user-facing change with kind: feature | refinement | fix.",
-        "",
-        "If this PR has nothing user-facing to announce (docs, chore, test only),",
-        "label it 'no-changelog' and this check will skip.",
-      ].join("\n"),
-    );
+    reportMissingEntry(pr);
     process.exit(1);
   }
 
