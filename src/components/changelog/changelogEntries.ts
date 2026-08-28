@@ -117,6 +117,31 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 188,
+    title:
+      "Write each PR's changelog entry in /ship, and stop the gate surprising people",
+    mergedAt: "2026-08-28T19:31:58Z",
+    day: "2026-08-28",
+    author: "ZS-buildout",
+    area: "Platform",
+    summary:
+      "The changelog gate met its first real pull request and failed it correctly, but everything around that failure pointed the wrong way.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "Shipping a pull request now writes its own changelog entry, so the announcement is still reviewed prose but nobody has to remember to write it.",
+      },
+      {
+        kind: "fix",
+        text: "A failing changelog check now explains itself on the checks page rather than burying it in a run log — leading with the fact that it is not a stale branch, because merging the latest main was the first thing anyone tried.",
+      },
+      {
+        kind: "refinement",
+        text: "A pull request that merges without an entry no longer fails on the way out. Nothing can be done about it by then, so the run says what is missing and stays green; the check on the pull request is where it is meant to be caught.",
+      },
+    ],
+  },
+  {
     pr: 187,
     title:
       "Add payables and payments to the voucher, raised by the deposits that funded them",
