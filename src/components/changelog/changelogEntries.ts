@@ -60,7 +60,15 @@ export type ChangelogEntry = {
   /** GitHub PR number. The entry's identity — an append keys off this. */
   pr: number;
   title: string;
-  /** Full ISO timestamp from GitHub. The sort key. */
+  /**
+   * Full ISO timestamp from GitHub. The sort key.
+   *
+   * Necessarily an estimate on the entry a PR writes for itself: the entry has
+   * to exist before the check will pass, and the merge has not happened yet.
+   * Only the ordering depends on it, and a PR merges after the one below it in
+   * this array either way, so an approximate time is harmless. Nothing renders
+   * it — the page shows `day`.
+   */
   mergedAt: string;
   /**
    * `YYYY-MM-DD`, the calendar day this entry is filed under.
@@ -108,6 +116,30 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  * same order the page does.
  */
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    pr: 186,
+    title: "Add a What's New changelog page, and post each merged PR's entry to Slack",
+    mergedAt: "2026-08-28T18:54:21Z",
+    day: "2026-08-28",
+    author: "ZS-buildout",
+    area: "Platform",
+    summary:
+      "The prototype had no record of what changed between demos. This is that record, and the thing that keeps it up to date.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "A Changelog page at /changelog, reachable from the account menu — one entry per merged pull request, sorted into new features, refinements and fixes, each linking back to the PR it came from.",
+      },
+      {
+        kind: "feature",
+        text: "Every merged pull request posts its entry to Slack, with the highlights grouped by kind since Slack has no badges to carry it.",
+      },
+      {
+        kind: "feature",
+        text: "A check fails any pull request that has not written its own entry, so the announcement is always prose someone reviewed rather than a rewritten commit log. Label it no-changelog to skip, for work with nothing user-facing.",
+      },
+    ],
+  },
   {
     pr: 185,
     title: "Otto's record cards carry a stage and point at the record",
