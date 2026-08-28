@@ -3,13 +3,13 @@ import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCodePullRequest } from "@fortawesome/pro-regular-svg-icons";
 import {
-  CHANGE_KIND_META,
   authorName,
   entryKinds,
   prUrl,
   type ChangeKind,
   type ChangelogEntry,
 } from "./changelogEntries";
+import { CHANGE_KIND_META } from "./changeKindMeta";
 
 /**
  * The kind pill — "New", "Refined", "Fixed".

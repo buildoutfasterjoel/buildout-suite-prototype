@@ -1,10 +1,3 @@
-import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import {
-  faBug,
-  faPaintbrush,
-  faSparkles,
-} from "@fortawesome/pro-regular-svg-icons";
-
 /**
  * The prototype's own changelog — one entry per merged pull request.
  *
@@ -30,6 +23,14 @@ import {
  *
  * `KIND_BY_COMMIT_PREFIX` below is that last mapping, kept here so the page and
  * the appender cannot drift apart on what counts as a fix.
+ *
+ * ## Keep this module dependency-free
+ *
+ * It imports nothing. `scripts/changelogSlack.ts` and both GitHub workflows read
+ * it directly, and FontAwesome Pro and Blueprint live behind private registries
+ * — so a single import here would mean handing CI those registry tokens just to
+ * ask whether a PR has a changelog entry. Presentation lives in
+ * `changeKindMeta.ts` for exactly that reason.
  */
 
 export type ChangeKind = "feature" | "refinement" | "fix";
@@ -98,30 +99,6 @@ const AUTHOR_NAMES: Record<string, string> = {
 export function authorName(login: string): string {
   return AUTHOR_NAMES[login] ?? login;
 }
-
-export const CHANGE_KIND_META: Record<
-  ChangeKind,
-  { label: string; short: string; icon: IconDefinition; className: string }
-> = {
-  feature: {
-    label: "New features",
-    short: "New",
-    icon: faSparkles,
-    className: "changelog-kind--feature",
-  },
-  refinement: {
-    label: "Refinements",
-    short: "Refined",
-    icon: faPaintbrush,
-    className: "changelog-kind--refinement",
-  },
-  fix: {
-    label: "Bug fixes",
-    short: "Fixed",
-    icon: faBug,
-    className: "changelog-kind--fix",
-  },
-};
 
 /** Badge order, and the order the filter offers them in. */
 export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];

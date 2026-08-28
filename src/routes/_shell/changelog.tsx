@@ -5,7 +5,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCodePullRequest } from "@fortawesome/pro-regular-svg-icons";
 import {
   CHANGELOG,
-  CHANGE_KIND_META,
   KIND_ORDER,
   REPO_URL,
   groupByDay,
@@ -13,6 +12,7 @@ import {
   type ChangeKind,
   type ChangelogEntry,
 } from "#/components/changelog/changelogEntries";
+import { CHANGE_KIND_META } from "#/components/changelog/changeKindMeta";
 import { ChangelogEntryCard } from "#/components/changelog/ChangelogEntryCard";
 import { formatLongDate } from "#/components/deals/dealDisplay";
 

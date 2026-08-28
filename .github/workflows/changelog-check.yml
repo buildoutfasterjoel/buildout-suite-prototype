@@ -1,0 +1,30 @@
+# Every PR must carry its own changelog entry, or say it has nothing to announce.
+#
+# The bot that posts to Slack on merge cannot write prose, so the entry has to
+# exist before the merge. This is what makes that true. Label a PR
+# `no-changelog` to skip — for docs, chore, or test-only work with nothing
+# user-facing, which is the same rule KIND_BY_COMMIT_PREFIX already encodes.
+name: Changelog entry
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  entry:
+    # `labeled`/`unlabeled` are in the trigger list so adding the label
+    # re-runs this and turns the check green without an empty push.
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'no-changelog') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # No `bun install`. changelogEntries.ts imports nothing, and Blueprint and
+      # FontAwesome Pro sit behind private registries — installing would mean
+      # giving CI those tokens just to read a list.
+      - name: Check for a changelog entry
+        run: bun --bun run scripts/changelogSlack.ts --pr ${{ github.event.pull_request.number }} --check
