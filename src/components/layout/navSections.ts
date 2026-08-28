@@ -60,7 +60,10 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     label: "Back Office",
     icon: faDoorOpen,
-    items: [{ label: "Vouchers", href: "/backoffice/vouchers" }],
+    items: [
+      { label: "Vouchers", href: "/backoffice/vouchers" },
+      { label: "Receivables", href: "/backoffice/receivables" },
+    ],
   },
   { label: "Reports", href: "/reports", icon: faSignal },
 ];
