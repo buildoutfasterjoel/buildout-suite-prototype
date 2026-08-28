@@ -117,6 +117,38 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 189,
+    title: "Add a Back Office Receivables index beside Vouchers",
+    mergedAt: "2026-08-28T23:39:37Z",
+    day: "2026-08-28",
+    author: "buildoutfasterjoel",
+    area: "Back Office",
+    summary:
+      "The Back Office menu has had a Receivables item pointing at a page that did not exist. This is the page: every commission billed across the book, and what is still out.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "Receivables lists every billed line in the book with its payer, its due date and what is still owed — the same shape as the Vouchers list, so the two read as a pair.",
+      },
+      {
+        kind: "feature",
+        text: "A bar chart across the top shows what each month is owed and how much of it has been collected, so a late month is visible before you reach the rows.",
+      },
+      {
+        kind: "feature",
+        text: "Every line carries a status: Overdue, Open, or Fully Paid. A line paid after its due date reads Fully Paid — nobody owes it any more.",
+      },
+      {
+        kind: "feature",
+        text: "Tick the lines you want to bill and Create Invoice raises one, without going to the deal first. The button explains itself when a selection spans two deals or two payers, which an invoice cannot.",
+      },
+      {
+        kind: "refinement",
+        text: "Filter by broker by typing a name; each one you pick stays in the bar as a chip you can remove. The rest of the filters narrow the chart and the table together, so the bars always add up to the rows beneath them.",
+      },
+    ],
+  },
+  {
     pr: 188,
     title:
       "Write each PR's changelog entry in /ship, and stop the gate surprising people",
