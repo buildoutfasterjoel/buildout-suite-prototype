@@ -6,7 +6,7 @@ import {
   serializeContactFilters,
   type ContactFilterState,
 } from '#/components/contacts/contactFilterModel'
-import type { Contact, ContactRole, ContactSource, DealDocument, DealHistoryEntry, DealIngestion, DealInvoice, DealMarketing, DealPitchFinancials, DealBroker, DealTask, DealTransaction, DepositAllocation, DocumentGeneration, FinancialDeduction, FinancialReceivable, GeneratedSection, IngestionFieldKey, Listing, PropertyStatus, Task, VoucherDeposit } from './types'
+import type { Contact, ContactRole, ContactSource, DealDocument, DealHistoryEntry, DealIngestion, DealInvoice, DealMarketing, DealPitchFinancials, DealBroker, DealFinancials, DealTask, DealTransaction, DepositAllocation, DocumentGeneration, FinancialDeduction, FinancialReceivable, GeneratedSection, IngestionFieldKey, Listing, PaymentDeduction, PropertyStatus, Task, VoucherDeposit, VoucherPayable, VoucherPayment } from './types'
 import { CURRENT_USER, TEAMMATES } from './teammates'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
 import { reconcileContactDealFields } from './contactStage'
@@ -29,6 +29,11 @@ import {
   generateDepositReference,
   receivableBalance,
 } from './deposits'
+import {
+  payableBalance,
+  payableBrokers,
+  payablesForDeposit,
+} from './payables'
 import {
   invoiceDueDate,
   invoiceFileName,
@@ -561,6 +566,16 @@ export function updateReceivable(
  * computed sum would rewrite every one of them to show the same figures.
  * `deposits.test.ts` and the seed test hold the two in agreement.
  *
+ * **On an Approved voucher it also raises payables** — one per broker, each for
+ * their share of what arrived. On a Draft it raises none: there is nothing to
+ * pay out of a commission nobody has signed off, and `approveVoucher` walks the
+ * deposits already on the voucher when the sign-off finally comes.
+ *
+ * The share is figured from the deposit's own `amount`, not from the sum of its
+ * allocations. The two differ when a deposit over-pays what was billed, and what
+ * a broker is owed follows the money that ARRIVED, not the part of it the
+ * receivables could absorb.
+ *
  * Refuses on a Pending voucher, like every other receivable write.
  */
 export function applyDeposit(
@@ -619,6 +634,11 @@ export function applyDeposit(
           preSplitDeductions: back.preSplitDeductions.map((d) => {
             const covered = coveredBy.get(d.id)
             return covered ? { ...d, covered: round2((d.covered ?? 0) + covered) } : d
+          }),
+          payables: raisePayables(l, back, {
+            id: depositId,
+            date: input.date,
+            amount: round2(input.amount),
           }),
           deposits: [
             ...(back.deposits ?? []),
@@ -724,18 +744,32 @@ export function updateDepositReference(
  * credit has been reversed reads as untouched again rather than as deliberately
  * covered for nothing.
  *
+ * **The payables this deposit raised go with it, payments and all.** A payable
+ * is a claim on money that arrived; leaving one behind whose funding deposit is
+ * gone would state that the brokerage owes money it never received. Payments
+ * recorded against it are lost with it, which is why the caller's confirmation
+ * counts them out loud rather than deleting quietly.
+ *
  * Refuses on a Pending voucher, like every other receivable write.
  */
 export function deleteDeposit(
   dealId: string,
   depositId: string,
-): { deal: Listing | null; removed: VoucherDeposit | null } {
+): {
+  deal: Listing | null
+  removed: VoucherDeposit | null
+  /** The payables that went with it — what the caller's toast counts out loud. */
+  removedPayables: VoucherPayable[]
+} {
   const before = useDataStore.getState().listings.get(dealId)
   const back = before?.transaction.backOffice
   const removed = back?.deposits?.find((d) => d.id === depositId) ?? null
   if (!before || !removed || back?.status === 'Pending') {
-    return { deal: before ?? null, removed: null }
+    return { deal: before ?? null, removed: null, removedPayables: [] }
   }
+  const removedPayables = (back?.payables ?? []).filter(
+    (p) => p.depositId === depositId,
+  )
 
   const reversed = new Map(removed.receivableAllocations.map((a) => [a.targetId, a.amount]))
   const uncovered = new Map(removed.deductionAllocations.map((a) => [a.targetId, a.amount]))
@@ -761,13 +795,254 @@ export function deleteDeposit(
             return { ...d, covered: next === 0 ? null : next }
           }),
           deposits: (voucher.deposits ?? []).filter((d) => d.id !== depositId),
+          // Left `undefined` on a voucher that never had any, rather than
+          // filtered into an empty array — see `raisePayables`.
+          payables: voucher.payables?.filter((p) => p.depositId !== depositId),
         },
       },
       updatedAt: new Date().toISOString(),
     }
   })
 
-  return { deal, removed: deal ? removed : null }
+  return {
+    deal,
+    removed: deal ? removed : null,
+    removedPayables: deal ? removedPayables : [],
+  }
+}
+
+/**
+ * Sign a Pending voucher off, and raise the payables its deposits have earned.
+ *
+ * **Pending only** — the mirror of `reopenVoucher`'s rule, and for the same
+ * reason from the other side: a Draft has not been attested to, and an Approved
+ * one has already been signed. Both are no-ops, returning the listing
+ * referentially unchanged the way `submitVoucher` does.
+ *
+ * The reviewer is passed in rather than taken from `CURRENT_USER`.
+ * `VOUCHER_APPROVER_IDS` is explicit that the broker who closed the deal is the
+ * one person who must not approve it, and the signed-in user is a Broker — so a
+ * voucher signed off by `CURRENT_USER` would break the rule the roster exists to
+ * state. The caller picks from that list.
+ *
+ * **This is where back-filled payables come from.** A deposit applied while the
+ * voucher was still a Draft stored nothing to pay out; approving is the moment
+ * that becomes real, so every deposit already on the voucher raises its payables
+ * here. `raisePayables` is idempotent by `depositId`, so a deposit that somehow
+ * already has them is skipped rather than doubled.
+ *
+ * The status is moved before the payables are raised, because `raisePayables`
+ * refuses on anything but an Approved voucher — it is reading the record it is
+ * about to be part of, not the one that was there when the button was clicked.
+ */
+export function approveVoucher(
+  dealId: string,
+  reviewerId: string,
+): { deal: Listing | null } {
+  const approvedOn = new Date().toISOString().slice(0, 10)
+  return {
+    deal: patchListing(dealId, (l) => {
+      const back = l.transaction.backOffice
+      if (back.status !== 'Pending') return l
+
+      const approved: DealFinancials = {
+        ...back,
+        status: 'Approved',
+        approval: { reviewerId, approvedOn },
+      }
+      const payables = (approved.deposits ?? []).reduce(
+        (carried, deposit) =>
+          raisePayables(l, { ...approved, payables: carried }, deposit),
+        approved.payables,
+      )
+
+      return {
+        ...l,
+        transaction: {
+          ...l.transaction,
+          backOffice: { ...approved, payables },
+        },
+        updatedAt: new Date().toISOString(),
+      }
+    }),
+  }
+}
+
+/**
+ * Write one cheque against a payable.
+ *
+ * **Approved only**, which is not an extra rule so much as the only reachable
+ * one: payables exist on no other status, so there is nothing on a Draft for
+ * this to be called with.
+ *
+ * The gross is clamped to the payable's balance read from the STORE, not from
+ * the caller's copy, which could be a render behind another payment on the same
+ * row. The modal disables its input past the balance; that is a courtesy, not a
+ * guarantee about what reaches here — the same reason `applyDeposit` re-clamps
+ * its allocations.
+ *
+ * A payment that lands on zero is refused rather than stored, so no child row
+ * sits under a payable stating that $0.00 was paid.
+ *
+ * Deductions are filtered, not trusted: the repeater starts every row blank, and
+ * a row the admin added and never filled in should not be stored as a deduction
+ * of nothing. Ids are generated here for the same reason deposit references are
+ * — the modal has no business spelling one.
+ */
+export function recordPayment(
+  dealId: string,
+  payableId: string,
+  input: {
+    /** `yyyy-mm-dd`. */
+    date: string
+    grossAmount: number
+    deductions: { description: string; amount: number }[]
+  },
+): { deal: Listing | null; paymentId: string | null } {
+  const now = new Date().toISOString()
+  const paymentId = `payment-${crypto.randomUUID()}`
+  let wrote = false
+
+  const deal = patchListing(dealId, (l) => {
+    const back = l.transaction.backOffice
+    if (back.status !== 'Approved') return l
+
+    const target = back.payables?.find((p) => p.id === payableId)
+    if (!target) return l
+
+    const grossAmount = Math.min(
+      Math.max(0, round2(input.grossAmount)),
+      payableBalance(target),
+    )
+    if (grossAmount <= 0) return l
+
+    const deductions: PaymentDeduction[] = input.deductions
+      .map((d) => ({
+        id: `payment-deduction-${crypto.randomUUID()}`,
+        description: d.description.trim(),
+        amount: Math.max(0, round2(d.amount)),
+      }))
+      .filter((d) => d.description !== '' && d.amount > 0)
+
+    const payment: VoucherPayment = {
+      id: paymentId,
+      date: input.date,
+      grossAmount,
+      deductions,
+      createdAt: now,
+      createdById: CURRENT_USER.id,
+    }
+    wrote = true
+
+    return {
+      ...l,
+      transaction: {
+        ...l.transaction,
+        backOffice: {
+          ...back,
+          payables: (back.payables ?? []).map((p) =>
+            p.id === payableId
+              ? {
+                  ...p,
+                  // Sorted by the day the money went out rather than the order
+                  // the cheques were filed, so a back-dated correction sits
+                  // where it belongs — the same rule `depositsForReceivable`
+                  // applies to the rows under a receivable.
+                  payments: [...p.payments, payment].sort((a, b) =>
+                    a.date.localeCompare(b.date),
+                  ),
+                }
+              : p,
+          ),
+        },
+      },
+      updatedAt: now,
+    }
+  })
+
+  return { deal, paymentId: wrote ? paymentId : null }
+}
+
+/**
+ * Reverse one cheque.
+ *
+ * Nothing to put back by hand: a payable's Gross Paid and Net Paid are summed
+ * from its payments on read (`payables.ts`), not stored as running totals the
+ * way a receivable's `credited` is. So dropping the payment IS the reversal.
+ *
+ * That difference is deliberate. `credited` is stored because half a dozen
+ * readers — `invoiceLineItems` most sharply, which freezes it onto an invoice
+ * line — need it without walking the deposits. Nothing outside the payables
+ * table reads what a broker has been paid, so there is no total to keep.
+ */
+export function deletePayment(
+  dealId: string,
+  payableId: string,
+  paymentId: string,
+): { deal: Listing | null } {
+  return {
+    deal: patchListing(dealId, (l) => {
+      const back = l.transaction.backOffice
+      if (!back.payables?.some((p) => p.id === payableId)) return l
+
+      return {
+        ...l,
+        transaction: {
+          ...l.transaction,
+          backOffice: {
+            ...back,
+            payables: back.payables.map((p) =>
+              p.id === payableId
+                ? { ...p, payments: p.payments.filter((x) => x.id !== paymentId) }
+                : p,
+            ),
+          },
+        },
+        updatedAt: new Date().toISOString(),
+      }
+    }),
+  }
+}
+
+/**
+ * The voucher's payables with the ones this deposit raises appended.
+ *
+ * Nothing on a Draft or Pending voucher — payables exist only once a voucher is
+ * signed off. Returns the existing array untouched in that case, so the spread
+ * that calls this cannot accidentally turn `undefined` into `[]` and make a
+ * Draft voucher look like one that has been through approval.
+ *
+ * Idempotent by `depositId`: a deposit that has already raised payables raises
+ * none. `applyDeposit` cannot reach that state — its deposit id is fresh — but
+ * `approveVoucher` back-fills over a whole list, and a guard that costs one Set
+ * makes both paths safe to call twice.
+ */
+function raisePayables(
+  deal: Listing,
+  voucher: DealFinancials,
+  deposit: Pick<VoucherDeposit, 'id' | 'date' | 'amount'>,
+): VoucherPayable[] | undefined {
+  const existing = voucher.payables
+  if (voucher.status !== 'Approved') return existing
+  if ((existing ?? []).some((p) => p.depositId === deposit.id)) return existing
+
+  const raised = payablesForDeposit({
+    // `payablesForDeposit` reads only the three fields named above; the rest are
+    // filled so the call site does not have to carry a whole deposit around
+    // before one exists.
+    deposit: {
+      ...deposit,
+      referenceNumber: '',
+      createdAt: '',
+      createdById: '',
+      receivableAllocations: [],
+      deductionAllocations: [],
+    },
+    brokers: payableBrokers(deal),
+    allReceivables: voucher.receivables,
+  }).map((row) => ({ ...row, id: `payable-${crypto.randomUUID()}` }))
+
+  return [...(existing ?? []), ...raised]
 }
 
 /** Cents. Kept here rather than imported so `deposits.ts` stays free of writers. */

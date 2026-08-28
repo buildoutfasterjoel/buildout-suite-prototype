@@ -2,6 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { generateTasks, generateDataset } from './seed'
 import { invoiceQuickbooksSynced, isQuickbooksSynced } from './quickbooks'
 import { findTeammate } from './teammates'
+import {
+  payableBalance,
+  payableGrossPaid,
+  payableShare,
+} from './payables'
+import { COMMISSION_PLANS } from './vouchers'
 import type { ListingStage } from './types'
 import { buildContactTimeline } from '#/components/contacts/timelineArcs'
 import { matchesContactFilters, emptyContactFilters } from '#/components/contacts/contactFilterModel'
@@ -477,6 +483,137 @@ describe('deposit seed', () => {
         expect(deposit.date > target.dueDate).toBe(true)
       }
     }
+  })
+})
+
+describe('payable seed', () => {
+  const { listings } = generateDataset()
+  const vouchers = listings.map((deal) => deal.transaction.backOffice)
+
+  it('raises payables on Approved vouchers and on no others', () => {
+    // The rule the whole record turns on: there is nothing to pay out of a
+    // commission nobody has signed off. Draft vouchers carrying deposits are
+    // common in this seed, and they must carry no payables.
+    const approved = vouchers.filter((v) => v.status === 'Approved')
+    expect(approved.length).toBeGreaterThan(0)
+    for (const voucher of vouchers) {
+      const has = (voucher.payables ?? []).length > 0
+      if (voucher.status !== 'Approved') expect(has).toBe(false)
+    }
+    expect(approved.some((v) => (v.payables ?? []).length > 0)).toBe(true)
+  })
+
+  it('names a broker and a deposit that both exist on the deal', () => {
+    for (const deal of listings) {
+      const brokerIds = new Set(
+        [...deal.internalBrokers, ...deal.outsideBrokers].map((b) => b.id),
+      )
+      const voucher = deal.transaction.backOffice
+      const depositIds = new Set((voucher.deposits ?? []).map((d) => d.id))
+      for (const payable of voucher.payables ?? []) {
+        expect(brokerIds.has(payable.brokerId)).toBe(true)
+        expect(depositIds.has(payable.depositId)).toBe(true)
+      }
+    }
+  })
+
+  it('gives each broker their share of what arrived, and no more', () => {
+    // The whole-voucher denominator, checked from the other end: however many
+    // deposits a voucher was paid in, a broker's payables must add up to their
+    // share of the money received — never to a full gross per deposit.
+    for (const deal of listings) {
+      const voucher = deal.transaction.backOffice
+      if (!voucher.payables?.length) continue
+      const received = (voucher.deposits ?? []).reduce((t, d) => t + d.amount, 0)
+      for (const broker of [...deal.internalBrokers, ...deal.outsideBrokers]) {
+        const owed = voucher.payables
+          .filter((p) => p.brokerId === broker.id)
+          .reduce((total, p) => total + p.grossAmount, 0)
+        const expected = payableShare({
+          broker,
+          depositAmount: received,
+          allReceivables: voucher.receivables,
+        })
+        expect(owed).toBeCloseTo(expected, 1)
+        expect(owed).toBeLessThanOrEqual(broker.grossCommission + 0.01)
+      }
+    }
+  })
+
+  it('dates a payable from the deposit that funded it', () => {
+    for (const deal of listings) {
+      const voucher = deal.transaction.backOffice
+      const byId = new Map((voucher.deposits ?? []).map((d) => [d.id, d]))
+      for (const payable of voucher.payables ?? []) {
+        expect(payable.date).toBe(byId.get(payable.depositId)!.date)
+      }
+    }
+  })
+
+  it('never pays out more than a payable is worth', () => {
+    for (const voucher of vouchers) {
+      for (const payable of voucher.payables ?? []) {
+        expect(payableGrossPaid(payable)).toBeLessThanOrEqual(payable.grossAmount)
+        expect(payableBalance(payable)).toBeGreaterThanOrEqual(0)
+      }
+    }
+  })
+
+  it('part-pays some payables and leaves others open', () => {
+    // Both states have to appear, or the Gross Paid and Net Paid columns cannot
+    // show what they mean.
+    const all = vouchers.flatMap((v) => v.payables ?? [])
+    expect(all.some((p) => p.payments.length > 0)).toBe(true)
+    expect(all.some((p) => p.payments.length === 0)).toBe(true)
+    expect(
+      all.some((p) => p.payments.some((x) => x.deductions.length > 0)),
+    ).toBe(true)
+  })
+
+  it('dates a payment after the payable it settles', () => {
+    for (const voucher of vouchers) {
+      for (const payable of voucher.payables ?? []) {
+        for (const payment of payable.payments) {
+          expect(payment.date > payable.date).toBe(true)
+        }
+      }
+    }
+  })
+})
+
+describe('commission plan seed', () => {
+  const { listings } = generateDataset()
+
+  it('puts every internal broker on a real plan, and no outside broker on one', () => {
+    // A Commission Plan column reading "No Plan" on every row carries no
+    // information, and the payables table shows that column.
+    const internal = listings.flatMap((deal) => deal.internalBrokers)
+    expect(internal.length).toBeGreaterThan(0)
+    for (const broker of internal) {
+      // Inside the dropdown's own list, and never the empty answer. This is
+      // what the seed's duplicated plan list is checked against.
+      expect(COMMISSION_PLANS).toContain(broker.commissionPlan)
+      expect(broker.commissionPlan).not.toBe('No Plan')
+    }
+    for (const broker of listings.flatMap((deal) => deal.outsideBrokers)) {
+      expect(broker.commissionPlan).toBeUndefined()
+    }
+  })
+
+  it('spreads brokers across more than one plan', () => {
+    const plans = new Set(
+      listings.flatMap((deal) => deal.internalBrokers.map((b) => b.commissionPlan)),
+    )
+    expect(plans.size).toBeGreaterThan(1)
+  })
+
+  // The plan is a label; `personalSplitPct` is the money. Coupling them would
+  // move figures on every seeded deal and on the pipeline forecast.
+  it('does not let the plan move what a broker takes home', () => {
+    const splits = new Set(
+      listings.flatMap((deal) => deal.internalBrokers.map((b) => b.personalSplitPct)),
+    )
+    expect(splits.size).toBe(1)
   })
 })
 

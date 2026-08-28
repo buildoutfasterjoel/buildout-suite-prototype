@@ -853,6 +853,14 @@ export interface DealFinancials {
    * read sites is the only accommodation it needs.
    */
   deposits?: VoucherDeposit[]
+  /**
+   * What the brokerage owes its brokers, raised by the deposits above.
+   *
+   * Only ever populated on an Approved voucher. Optional on the same terms as
+   * `deposits` — a voucher written before payables existed still parses, and
+   * `?? []` at the read sites is the only accommodation it needs.
+   */
+  payables?: VoucherPayable[]
   /** Non-null exactly when `status` is `'Approved'`. */
   approval: VoucherApproval | null
 }
@@ -1165,8 +1173,10 @@ export interface DepositAllocation {
  * actually went. Re-deriving it on read would quietly discard that decision the
  * first time a receivable's amount was edited afterwards.
  *
- * A deposit does NOT create payables yet. The modal and the voucher's Payables
- * section both say it will; that record does not exist.
+ * On an APPROVED voucher a deposit also raises payables — one per broker, each
+ * for their share of what arrived. See {@link VoucherPayable}. On a Draft or
+ * Pending voucher it raises none: there is nothing to pay out of a commission
+ * nobody has signed off.
  */
 export interface VoucherDeposit {
   id: string
@@ -1184,6 +1194,83 @@ export interface VoucherDeposit {
   receivableAllocations: DepositAllocation[]
   /** What it covered, keyed by `FinancialDeduction.id`. Only lines that took money. */
   deductionAllocations: DepositAllocation[]
+}
+
+/**
+ * One deduction taken off a single payment — a hold-back, an advance already
+ * given, a fee the brokerage keeps back from this particular cheque.
+ *
+ * Nothing to do with {@link FinancialDeduction}, despite the name. A pre-split
+ * deduction is a claim on the whole commission, carries a category and a
+ * percentage, and is settled by deposits coming IN. This is free text and a
+ * figure, attached to one payment going OUT, and it exists because the Create
+ * Payment modal lets an admin write one cheque for less than the payable says
+ * and record why.
+ */
+export interface PaymentDeduction {
+  id: string
+  description: string
+  amount: number
+}
+
+/**
+ * One cheque written against a payable.
+ *
+ * Nested inside its {@link VoucherPayable} rather than held flat on the voucher
+ * with an allocation array, which is how {@link VoucherDeposit} works. A deposit
+ * is one cash receipt spread across many receivables, so it needs to say where
+ * it went; a payment is one cheque to one broker against one payable, and an
+ * allocation array here would be a one-element array on every row.
+ */
+export interface VoucherPayment {
+  id: string
+  /** `yyyy-mm-dd` — the day it was paid, not the day the row was typed. */
+  date: string
+  /**
+   * The gross this payment settles, capped at the payable's balance by
+   * `recordPayment`. What the broker actually receives is this times their own
+   * split, less `deductions` — see `paymentNet` in `payables.ts`.
+   */
+  grossAmount: number
+  /** Taken off after the broker's split. Empty on most payments. */
+  deductions: PaymentDeduction[]
+  /** ISO timestamp of when it was entered. */
+  createdAt: string
+  /** A `TEAMMATES` id — resolve it with `findTeammate`. */
+  createdById: string
+}
+
+/**
+ * Money the brokerage owes one broker, raised by one deposit.
+ *
+ * **Never filed by hand.** A payable is a consequence of money arriving, so it
+ * is created by `applyDeposit` (and back-filled by `approveVoucher` over the
+ * deposits already on the voucher) and it has no add button, no editable
+ * amount, and no delete of its own. Deleting the deposit that raised it takes
+ * it with them.
+ *
+ * **One per deposit per broker, not one running total per broker.** Two
+ * deposits raise two payables for the same person. Rolling them together would
+ * lose which deposit funded which part, and `deleteDeposit` could then no longer
+ * put back exactly what its deposit added.
+ *
+ * `brokerId` is a reference, not a copy of the name and plan — the same rule
+ * {@link FinancialReceivable.payerContactId} follows. It cannot dangle: both
+ * broker tables are editable on a Draft only, and payables exist on Approved
+ * vouchers only, so no broker can be removed out from under one.
+ */
+export interface VoucherPayable {
+  id: string
+  /** A `DealBroker.id`, found on the deal's `internalBrokers` or `outsideBrokers`. */
+  brokerId: string
+  /** The `VoucherDeposit.id` that raised it. */
+  depositId: string
+  /** `yyyy-mm-dd` — the date of that deposit, not the day the row was written. */
+  date: string
+  /** This broker's share of what that deposit brought in. */
+  grossAmount: number
+  /** Cheques written against it, oldest first. */
+  payments: VoucherPayment[]
 }
 
 /** Money owed to the brokerage on a deal — shown on the Financials tab. */

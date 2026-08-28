@@ -145,10 +145,12 @@ function PreviewTable({
  * recompute it. Turning Override back off discards the typed figures and returns
  * to the computed split, which is the only reading of "off" that stays true.
  *
- * There is no New Payables table. The note says a deposit creates payables for
- * brokers and the voucher's Payables section says the same, but that record does
- * not exist yet, and a table of figures nothing stores would be the one part of
- * this preview that was not true.
+ * There is no New Payables table, though the deposit does raise payables on an
+ * approved voucher. The preview is about where THIS money lands — which lines it
+ * pays and which deductions it covers — and a broker filing a deposit is
+ * answering that question, not the separate one about what the house owes its
+ * people. The Payables & Payments section below already lists the result, priced
+ * per broker, which a second table here would only restate.
  */
 export function ApplyDepositModal({
   open,
@@ -156,6 +158,7 @@ export function ApplyDepositModal({
   selected,
   allReceivables,
   deductions,
+  approved,
   onApply,
 }: {
   open: boolean;
@@ -165,6 +168,8 @@ export function ApplyDepositModal({
   /** Every receivable on the voucher. The deduction denominator, nothing else. */
   allReceivables: FinancialReceivable[];
   deductions: FinancialDeduction[];
+  /** Whether the voucher has been signed off — decides what the alert promises. */
+  approved: boolean;
   onApply: (input: ApplyDepositInput) => void;
 }) {
   const [date, setDate] = useState("");
@@ -298,17 +303,21 @@ export function ApplyDepositModal({
             />
           </Field>
 
-          {/* What lands beyond the receivable itself. The second line is not yet
-              true of the data — nothing creates a payable — and is kept because
-              the voucher's own Payables section already states it, so dropping it
-              here would make the two pages disagree. */}
+          {/* What lands beyond the receivable itself. The payables line is
+              conditional because the rule is: money arriving on a voucher nobody
+              has signed off pays nobody yet. Saying "create payables" on a Draft
+              would promise a section that will still be empty afterwards. */}
           <Alert severity="info" withIcon>
             <FontAwesomeIcon icon={faCircleInfo} />
             <div>
               <div className="fw-semibold">We will:</div>
               <ul className="mb-0 ps-3">
                 <li>Apply voucher deductions</li>
-                <li>Create payables for brokers</li>
+                <li>
+                  {approved
+                    ? "Create payables for brokers"
+                    : "Create payables for brokers once this voucher is approved"}
+                </li>
               </ul>
             </div>
           </Alert>

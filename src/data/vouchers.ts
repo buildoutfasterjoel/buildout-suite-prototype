@@ -63,6 +63,8 @@ export const COMMISSION_PLANS = [
   'House Split Plan',
 ] as const
 
+export type CommissionPlan = (typeof COMMISSION_PLANS)[number]
+
 /**
  * Where a deal's voucher page lives, as a typed route target.
  *

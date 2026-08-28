@@ -9,6 +9,8 @@ import type {
   FinancialDeduction,
   FinancialReceivable,
   VoucherDeposit,
+  VoucherPayable,
+  VoucherPayment,
   DealTask,
   DealTaskStatus,
   DealType,
@@ -51,7 +53,7 @@ import {
   type ContactShare,
 } from './teammates'
 import { DEFAULT_PERSONAL_SPLIT_PCT, STAGE_CLOSE_PROBABILITY } from './commission'
-import type { DeductionCategory, VoucherStatus } from './vouchers'
+import type { CommissionPlan, DeductionCategory, VoucherStatus } from './vouchers'
 import {
   invoiceDueDate,
   invoiceFileName,
@@ -59,6 +61,7 @@ import {
   invoicePayerFileLabel,
 } from './invoices'
 import { generateDepositReference } from './deposits'
+import { payablesForDeposit } from './payables'
 import { isQuickbooksSynced } from './quickbooks'
 import { applyLeaseSpaces } from './leaseSpaceFixtures'
 
@@ -1175,17 +1178,75 @@ function generateContact(allPropertyIds: string[]): Contact {
 
 // ── Listing (+ its 1:1 deal) generator ────────────────────────────────────────
 
+/**
+ * The plans a seeded internal broker is put on.
+ *
+ * Spelled out here rather than filtered from `COMMISSION_PLANS`, which would
+ * need a runtime import of `vouchers.ts` — and that module reads the store, so
+ * importing it from the seed closes a cycle (`seed` → `vouchers` → `store` →
+ * `dataStore` → `seed`) that fails at module load with "Cannot access 'SEED'
+ * before initialization". `seed.test.ts` holds this list inside
+ * `COMMISSION_PLANS`, which is the check the duplication buys.
+ *
+ * `'No Plan'` is deliberately absent. It stays in the dropdown, because it is a
+ * real answer and it is what a hand-added broker starts on; it is just not one
+ * the seed hands out, since a Commission Plan column reading "No Plan" on every
+ * row carries no information and the payables table shows that column.
+ */
+const SEEDED_COMMISSION_PLANS: CommissionPlan[] = [
+  'Standard Commission Plan',
+  'Custom Plan',
+  'House Split Plan',
+]
+
+/**
+ * Which plan a seeded broker is on, spelled from their id.
+ *
+ * **Hashed, not drawn from faker**, for the reason `hashCode` below gives.
+ * Deterministic, so a reseed puts every broker back on the same plan.
+ *
+ * The plan is a LABEL. It does not decide what the broker takes home — that is
+ * `personalSplitPct`, which the seed holds flat so the pipeline's "You" forecast
+ * stays predictable across the demo. Coupling the two would move money on every
+ * seeded deal to make a column read better.
+ */
+function commissionPlanFor(seed: string): CommissionPlan {
+  return SEEDED_COMMISSION_PLANS[hashCode(seed) % SEEDED_COMMISSION_PLANS.length]!
+}
+
+/**
+ * A stable number from a string the seed has already drawn.
+ *
+ * Used where a value has to vary across rows but must NOT cost the faker
+ * stream anything — a new `faker` call shifts every property, contact and deal
+ * generated after it, and the flagship demo is pinned to positions in that
+ * stream. Same shape as the hashes in `quickbooks.ts` and `deposits.ts`; those
+ * two keep their own so neither module depends on the seed.
+ */
+function hashCode(value: string): number {
+  let hash = 0
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash * 31 + value.charCodeAt(i)) % 1_000_003
+  }
+  return hash
+}
+
 function generateBroker(side: 'internal' | 'outside', commissionAmount: number): DealBroker {
   const splitPct = side === 'internal' ? 100 : faker.helpers.arrayElement([40, 50, 60])
+  const id = faker.string.uuid()
   return {
-    id: faker.string.uuid(),
+    id,
     name: `${faker.person.firstName()} ${faker.person.lastName()}`,
     role: side === 'internal' ? 'Primary Broker - Sell Side' : 'Outside Broker',
     email: faker.internet.email().toLowerCase(),
     side,
     commissionSplitPct: splitPct,
     grossCommission: Math.round(commissionAmount * (splitPct / 100)),
-    commissionPlan: side === 'internal' ? 'No Plan' : undefined,
+    // Hashed from the id rather than drawn, so adding this cost the faker
+    // stream nothing — see `commissionPlanFor`. Outside brokers get none: they
+    // are not on the house's books, and the payables table renders the gap as
+    // "No Plan".
+    commissionPlan: side === 'internal' ? commissionPlanFor(id) : undefined,
     // Flat house split for internal brokers — the pipeline commission forecast
     // reads this, so a single rate keeps "You" predictable across the demo.
     personalSplitPct: side === 'internal' ? DEFAULT_PERSONAL_SPLIT_PCT : undefined,
@@ -1757,6 +1818,71 @@ function generateListings(
       })
     }
 
+    // What the brokerage owes its brokers out of the deposits above.
+    //
+    // **Approved vouchers only**, which is the rule the whole record turns on:
+    // there is nothing to pay out of a commission nobody has signed off. A Draft
+    // voucher carrying deposits is a real and common state here, and its
+    // Payables section renders the note saying they arrive at approval.
+    //
+    // Built through the same `payablesForDeposit` the write path uses, so a
+    // seeded payable and one raised by the Apply Deposit modal are the same
+    // arithmetic rather than two implementations that can drift.
+    //
+    // Nothing here draws from faker, for the reason the deposits block above
+    // gives: ids are spelled from their parents and the one variable — whether a
+    // payable has been part-paid — is hashed, so every property, contact and
+    // deal downstream stays exactly where it was.
+    const payables: VoucherPayable[] = []
+    // Set once the voucher's first cheque has been written, so exactly one of
+    // them carries a hold-back. A probability was the first version and it drew
+    // nothing: only a handful of vouchers reach Approved with money against
+    // them, and at that sample size a one-in-six rule leaves the deduction row
+    // unreachable in a whole dataset — the same trap the `variant` cycling in
+    // the receivables block above exists to avoid.
+    let deducted = false
+    if (voucherStatus === 'Approved') {
+      for (const deposit of deposits) {
+        for (const row of payablesForDeposit({
+          deposit,
+          brokers: [...outsideBrokers, ...brokersWithSide],
+          allReceivables: receivables,
+        })) {
+          const id = `payable-${deposit.id}-${row.brokerId}`
+          // Roughly half the payables carry one cheque, so Gross Paid and Net
+          // Paid are not $0.00 down the whole column. A table where nothing has
+          // been paid cannot show that the two differ, which is the one thing
+          // those columns are there to say.
+          const payments: VoucherPayment[] = []
+          if (hashCode(id) % 2 === 0) {
+            const paidAt = new Date(
+              Date.parse(`${row.date}T00:00:00`) + 9 * 86_400_000,
+            )
+            payments.push({
+              id: `payment-${id}`,
+              date: paidAt.toISOString().slice(0, 10),
+              grossAmount: Math.round(row.grossAmount * 50) / 100,
+              // The voucher's first cheque carries a hold-back, so the payment
+              // row's deduction summary has something to render.
+              deductions: deducted
+                ? []
+                : [
+                    {
+                      id: `payment-deduction-${id}`,
+                      description: 'Marketing Advance',
+                      amount: 250,
+                    },
+                  ],
+              createdAt: paidAt.toISOString(),
+              createdById: CURRENT_USER.id,
+            })
+            deducted = true
+          }
+          payables.push({ ...row, id, payments })
+        }
+      }
+    }
+
     const grossScheduledIncome = Math.round(salePrice * 0.09)
     const otherIncome = Math.round(grossScheduledIncome * 0.04)
     const totalScheduledIncome = grossScheduledIncome + otherIncome
@@ -1871,6 +1997,7 @@ function generateListings(
           preSplitDeductions,
           receivables,
           deposits,
+          payables,
         },
       },
       marketing: {
