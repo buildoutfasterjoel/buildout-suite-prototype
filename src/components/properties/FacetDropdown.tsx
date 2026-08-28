@@ -23,12 +23,23 @@ export function FacetDropdown({
   facet,
   counts,
   icon,
+  className,
 }: {
   facet: FacetDropdownFacet;
   counts?: Record<string, number>;
   /** Optional leading glyph, for a facet whose options are names rather than a
    *  fixed vocabulary (e.g. Brokers) and benefits from the extra cue. */
   icon?: IconDefinition;
+  /**
+   * Extra classes for the trigger button.
+   *
+   * Exists for `form-select hidden-indicator`, which makes a facet trigger read
+   * as one of Blueprint's Selects — a toolbar that mixes the two wants them to
+   * look like one family. Note that `.form-select` gives every `svg` inside it
+   * `margin-left: auto`, so a facet passing this AND a leading `icon` would
+   * have that icon shoved to the right edge beside the caret.
+   */
+  className?: string;
 }) {
   const count = facet.selected.size;
 
@@ -43,7 +54,7 @@ export function FacetDropdown({
         render={
           <Button
             variant="outline"
-            className={`d-inline-flex align-items-center gap-2 ${count ? "active" : ""}`}
+            className={`d-inline-flex align-items-center gap-2 ${count ? "active" : ""} ${className ?? ""}`}
           >
             {icon && <FontAwesomeIcon icon={icon} />}
             {facet.title}
