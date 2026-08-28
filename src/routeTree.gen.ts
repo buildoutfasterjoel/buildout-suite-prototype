@@ -14,6 +14,7 @@ import { Route as ShellRouteImport } from './routes/_shell'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ShellAppRouteImport } from './routes/_shell/app'
 import { Route as ShellBackofficeRouteImport } from './routes/_shell/backoffice'
+import { Route as ShellChangelogRouteImport } from './routes/_shell/changelog'
 import { Route as ShellEditorRouteImport } from './routes/_shell/editor'
 import { Route as ShellEmailRouteImport } from './routes/_shell/email'
 import { Route as ShellListingsRouteImport } from './routes/_shell/listings'
@@ -119,6 +120,11 @@ const ShellAppRoute = ShellAppRouteImport.update({
 const ShellBackofficeRoute = ShellBackofficeRouteImport.update({
   id: '/backoffice',
   path: '/backoffice',
+  getParentRoute: () => ShellRoute,
+} as any)
+const ShellChangelogRoute = ShellChangelogRouteImport.update({
+  id: '/changelog',
+  path: '/changelog',
   getParentRoute: () => ShellRoute,
 } as any)
 const ShellEditorRoute = ShellEditorRouteImport.update({
@@ -587,6 +593,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/app': typeof ShellAppRouteWithChildren
   '/backoffice': typeof ShellBackofficeRouteWithChildren
+  '/changelog': typeof ShellChangelogRoute
   '/editor': typeof ShellEditorRouteWithChildren
   '/email': typeof ShellEmailRouteWithChildren
   '/listings': typeof ShellListingsRouteWithChildren
@@ -674,6 +681,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/backoffice': typeof ShellBackofficeRouteWithChildren
+  '/changelog': typeof ShellChangelogRoute
   '/editor': typeof ShellEditorRouteWithChildren
   '/editor/$listingId': typeof ShellEditorListingIdRoute
   '/email/$emailId': typeof ShellEmailEmailIdRoute
@@ -753,6 +761,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_shell/app': typeof ShellAppRouteWithChildren
   '/_shell/backoffice': typeof ShellBackofficeRouteWithChildren
+  '/_shell/changelog': typeof ShellChangelogRoute
   '/_shell/editor': typeof ShellEditorRouteWithChildren
   '/_shell/email': typeof ShellEmailRouteWithChildren
   '/_shell/listings': typeof ShellListingsRouteWithChildren
@@ -843,6 +852,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/app'
     | '/backoffice'
+    | '/changelog'
     | '/editor'
     | '/email'
     | '/listings'
@@ -930,6 +940,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/backoffice'
+    | '/changelog'
     | '/editor'
     | '/editor/$listingId'
     | '/email/$emailId'
@@ -1008,6 +1019,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/_shell/app'
     | '/_shell/backoffice'
+    | '/_shell/changelog'
     | '/_shell/editor'
     | '/_shell/email'
     | '/_shell/listings'
@@ -1133,6 +1145,13 @@ declare module '@tanstack/react-router' {
       path: '/backoffice'
       fullPath: '/backoffice'
       preLoaderRoute: typeof ShellBackofficeRouteImport
+      parentRoute: typeof ShellRoute
+    }
+    '/_shell/changelog': {
+      id: '/_shell/changelog'
+      path: '/changelog'
+      fullPath: '/changelog'
+      preLoaderRoute: typeof ShellChangelogRouteImport
       parentRoute: typeof ShellRoute
     }
     '/_shell/editor': {
@@ -2029,6 +2048,7 @@ const ShellTasksRouteWithChildren = ShellTasksRoute._addFileChildren(
 interface ShellRouteChildren {
   ShellAppRoute: typeof ShellAppRouteWithChildren
   ShellBackofficeRoute: typeof ShellBackofficeRouteWithChildren
+  ShellChangelogRoute: typeof ShellChangelogRoute
   ShellEditorRoute: typeof ShellEditorRouteWithChildren
   ShellEmailRoute: typeof ShellEmailRouteWithChildren
   ShellListingsRoute: typeof ShellListingsRouteWithChildren
@@ -2043,6 +2063,7 @@ interface ShellRouteChildren {
 const ShellRouteChildren: ShellRouteChildren = {
   ShellAppRoute: ShellAppRouteWithChildren,
   ShellBackofficeRoute: ShellBackofficeRouteWithChildren,
+  ShellChangelogRoute: ShellChangelogRoute,
   ShellEditorRoute: ShellEditorRouteWithChildren,
   ShellEmailRoute: ShellEmailRouteWithChildren,
   ShellListingsRoute: ShellListingsRouteWithChildren,

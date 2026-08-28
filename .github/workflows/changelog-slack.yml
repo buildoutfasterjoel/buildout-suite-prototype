@@ -1,0 +1,45 @@
+# Post a merged PR's changelog entry to Slack.
+#
+# The destination is a repository *variable*, not a secret, so switching between
+# a review DM and the team channel is a visible one-field edit in Settings
+# rather than a rotated secret nobody can read back:
+#
+#   SLACK_CHANGELOG_CHANNEL = U…   → DMs that user (the review run)
+#   SLACK_CHANGELOG_CHANNEL = C…   → posts to that channel (prada_team)
+#
+# The token stays a secret. Run this manually first (workflow_dispatch) against
+# an already-merged PR to confirm the wiring before letting it fire on its own.
+name: Changelog to Slack
+
+on:
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: "PR number to post (for a manual test run)"
+        required: true
+        type: string
+
+jobs:
+  post:
+    # On the pull_request path, only a merge counts — a closed-unmerged PR
+    # shipped nothing. workflow_dispatch has no PR to inspect, so it always runs.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+       !contains(github.event.pull_request.labels.*.name, 'no-changelog'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Post to Slack
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANGELOG_CHANNEL: ${{ vars.SLACK_CHANGELOG_CHANNEL }}
+          PR: ${{ github.event.inputs.pr || github.event.pull_request.number }}
+        run: bun --bun run scripts/changelogSlack.ts --pr "$PR" --post
