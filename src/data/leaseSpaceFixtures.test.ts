@@ -211,6 +211,40 @@ describe('stage-scaled detail', () => {
     expect(child.marketing.spaceLeaseTerms?.[0].tenantName).toBeTruthy()
   })
 
+  it('splits the leased suite’s commission across its own brokers', () => {
+    // The suite bills its own commission, so every figure derived from that
+    // commission has to be the suite's too. These are inherited from a lease
+    // shell, whose own `commissionAmount` is deliberately 0 — so left alone they
+    // all read $0 beside a receivable for real money, and a deposit applied to
+    // the suite raises no payable because nobody is recorded as having earned
+    // anything.
+    const child = childAtStage('closed')
+    const commission = child.transaction.commissionAmount
+    expect(commission).toBeGreaterThan(0)
+
+    for (const broker of [...child.internalBrokers, ...child.outsideBrokers]) {
+      expect(broker.grossCommission).toBeGreaterThan(0)
+      expect(broker.grossCommission).toBeLessThanOrEqual(commission)
+    }
+    for (const deduction of child.transaction.backOffice.preSplitDeductions) {
+      expect(deduction.amount).toBeGreaterThan(0)
+      expect(deduction.amount).toBeLessThan(commission)
+    }
+  })
+
+  it('leaves the shell’s own brokers and deductions at zero', () => {
+    // The child is built by spreading the shell, so its broker arrays and its
+    // deduction list start as the SAME references. Writing the suite's figures
+    // through them would credit the building with the suite's money.
+    const { shell } = shellFor(spec.dealId)
+    for (const broker of [...shell.internalBrokers, ...shell.outsideBrokers]) {
+      expect(broker.grossCommission).toBe(0)
+    }
+    for (const deduction of shell.transaction.backOffice.preSplitDeductions) {
+      expect(deduction.amount).toBe(0)
+    }
+  })
+
   it('gives the under-contract suite a tenant and an executed date, but no commission yet', () => {
     const child = childAtStage('under-contract')
     expect(child.tenantContactIds).toHaveLength(1)
