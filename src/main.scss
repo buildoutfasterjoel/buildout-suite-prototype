@@ -5839,3 +5839,143 @@ $otto-progress-gutter: 28px;
     box-shadow: 0 2px 8px rgb(0 0 0 / 8%);
   }
 }
+
+// ── Changelog / What's New ───────────────────────────────────────────────────
+//
+// A day's entries sit in a two-column block: the date in a sticky left gutter,
+// the cards to its right. The date is a gutter rather than a heading above the
+// stack so a day's work reads as one object and the date stays on screen while
+// you scroll a long day.
+.changelog {
+  // A changelog is read as prose, so the cards take a measure rather than the
+  // full width of a 1600px window. 1040px = the 160px gutter, its gap, and a
+  // card wide enough for a four-line highlight list without over-long lines.
+  //
+  // Centred in the container, so on a wide screen the column sits under the
+  // middle of the top bar rather than being pinned to the left edge with a
+  // third of the window empty beside it.
+  max-width: 1040px;
+  margin-inline: auto;
+
+  &__day {
+    display: grid;
+    grid-template-columns: 160px minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+
+  &__date {
+    position: sticky;
+    // Clears the app shell's top bar. Nothing else on the page is sticky, so
+    // this is the only offset that has to be right.
+    top: 1rem;
+    align-self: start;
+    padding-top: 0.25rem;
+  }
+
+  // Below md the gutter has nowhere to go, so the date becomes a heading and the
+  // sticky behaviour is dropped — a sticky heading in a single column overlaps
+  // the cards it labels.
+  @media (max-width: 767.98px) {
+    &__day {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.75rem;
+    }
+
+    &__date {
+      position: static;
+      padding-top: 0;
+    }
+  }
+}
+
+// The kind pill. An `outline` Badge tinted through the theme's own badge custom
+// properties, the same move `.ingestion-conflict__badge` makes — Blueprint's
+// Badge has three variants and none of them means "this is a bug fix", and three
+// kinds need three colours to be scannable down a page. Unlayered, so it wins
+// over `.badge-outline` in `@layer components`; `border-color` is set directly
+// because `.badge-outline` sets it as a plain declaration, not a property.
+.changelog-kind {
+  font-weight: 600;
+
+  // New — the brand accent, because a new feature is the headline of any entry.
+  &--feature {
+    --bp-badge-bg: #{colors.$purple-heart-50};
+    --bp-badge-color: #{colors.$purple-heart-700};
+    border-color: colors.$purple-heart-200;
+  }
+
+  // Refined — blue. Distinct from the accent at a glance, and quiet enough that
+  // a card of four refinements doesn't shout as loudly as one new feature.
+  &--refinement {
+    --bp-badge-bg: #{colors.$seagull-50};
+    --bp-badge-color: #{colors.$seagull-700};
+    border-color: colors.$seagull-200;
+  }
+
+  // Fixed — green, not red. Nothing on this page is currently broken; every fix
+  // listed is one that shipped. Green says resolved, red would say "warning" on
+  // a line whose whole point is that the warning is over.
+  &--fix {
+    --bp-badge-bg: #{colors.$mountain-meadow-50};
+    --bp-badge-color: #{colors.$mountain-meadow-700};
+    border-color: colors.$mountain-meadow-200;
+  }
+}
+
+.changelog-entry {
+  transition:
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+
+  &:hover {
+    border-color: var(--color-purple-heart-300, #ddbdfc);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 8%);
+  }
+
+  // The PR link. A chip rather than a button: it leaves the app, and a primary
+  // button on every card would make the page look like a list of things to do.
+  &__pr {
+    padding: 0.25rem 0.625rem;
+    border: 1px solid var(--bp-border-color);
+    border-radius: 999px;
+    color: colors.$storm-grey-600;
+    font-size: 13px;
+    white-space: nowrap;
+
+    &:hover,
+    &:focus-visible {
+      border-color: var(--color-purple-heart-300, #ddbdfc);
+      color: colors.$purple-heart-600;
+    }
+  }
+
+  // Highlights carry a dot rather than a per-line kind pill — the kinds are
+  // named once in the header, and at four lines a pill each turns the list into
+  // a column of badges with sentences attached.
+  &__highlights {
+    padding-left: 1.1rem;
+    list-style: none;
+
+    li {
+      position: relative;
+      padding-bottom: 0.4rem;
+      line-height: 1.45;
+
+      &:last-child {
+        padding-bottom: 0;
+      }
+
+      &::before {
+        content: "";
+        position: absolute;
+        left: -1.1rem;
+        // Centres the dot on the first line's x-height rather than its box.
+        top: 0.55em;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background-color: colors.$storm-grey-200;
+      }
+    }
+  }
+}

@@ -163,6 +163,22 @@ function Home() {
             </Card>
           </Link>
         </div>
+
+        <div className="col-md-4">
+          <Link to="/changelog" className="text-decoration-none">
+            <Card className="shadow-sm h-100">
+              <CardHeader>
+                <CardTitle>What's New</CardTitle>
+              </CardHeader>
+              <CardBody>
+                The prototype's own changelog — one entry per merged pull
+                request, sorted into new features, refinements and fixes, each
+                linking back to the PR it came from. Also reachable from the
+                account menu in the top right.
+              </CardBody>
+            </Card>
+          </Link>
+        </div>
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowsRotate,
   faBuildings,
+  faClockRotateLeft,
   faPaintbrush,
   faRectanglesMixed,
   faSidebar,
@@ -32,8 +33,9 @@ import {
  * The account dropdown in the navbar footer.
  *
  * Three zones: an inert identity card, real product settings links, and
- * prototype-only controls (persona switcher, prototype index, reset). The zones
- * are separated so demo scaffolding never reads as shipped product.
+ * prototype-only controls (persona switcher, prototype index, changelog,
+ * reset). The zones are separated so demo scaffolding never reads as shipped
+ * product.
  */
 export function AccountMenu() {
   const navigate = useNavigate();
@@ -194,6 +196,13 @@ export function AccountMenu() {
           >
             <FontAwesomeIcon icon={faRectanglesMixed} />
             Prototype index
+          </Navbar.GroupMenuItem>
+          <Navbar.GroupMenuItem
+            className="d-flex align-items-center gap-2"
+            onClick={() => navigate({ to: "/changelog" })}
+          >
+            <FontAwesomeIcon icon={faClockRotateLeft} />
+            Changelog
           </Navbar.GroupMenuItem>
           <Navbar.GroupMenuItem
             className="d-flex align-items-center gap-2"
