@@ -9,7 +9,7 @@ import { Pagination } from "@buildoutinc/blueprint-react/ui/Pagination";
 import { Table } from "@buildoutinc/blueprint-react/ui/Table";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBriefcaseBlank, faFileInvoiceDollar } from "@fortawesome/pro-regular-svg-icons";
+import { faFileInvoiceDollar } from "@fortawesome/pro-regular-svg-icons";
 import { useDataStore } from "#/data/dataStore";
 import { createInvoiceFromReceivables } from "#/data/actions";
 import { notify } from "#/lib/notify";
@@ -121,7 +121,10 @@ function ReceivablesPage() {
   // Options drawn from the book rather than a fixed roster — an option nothing
   // matches is a dead end. Same call the voucher toolbar makes.
   const brokerNames = useMemo(
-    () => [...new Set(rows.flatMap((r) => r.brokerNames))].sort((a, b) => a.localeCompare(b)),
+    () =>
+      [...new Set(rows.flatMap((r) => r.brokerNames))].sort((a, b) =>
+        a.localeCompare(b),
+      ),
     [rows],
   );
 
@@ -221,13 +224,10 @@ function ReceivablesPage() {
       {/* Header band — the full-bleed identity strip a deal page opens with. */}
       <div className="bg-card border-bottom flex-shrink-0">
         <div className="container p-4 d-flex align-items-center justify-content-between gap-3">
-          <div className="d-flex align-items-center gap-3">
-            <FontAwesomeIcon icon={faBriefcaseBlank} className="text-muted fs-4" />
-            <div>
-              <h1 className="fs-4 mb-0 fw-semibold">Receivables</h1>
-              <div className="text-muted fs-small">
-                Track commissions due for collection
-              </div>
+          <div className="d-flex flex-column gap-0">
+            <h1 className="fs-4 mb-0 fw-semibold">Receivables</h1>
+            <div className="text-muted fs-small">
+              Track commissions due for collection
             </div>
           </div>
           <div className="d-flex align-items-center gap-3">
@@ -266,201 +266,207 @@ function ReceivablesPage() {
 
       <div className="flex-grow-1 overflow-auto" style={{ minHeight: 0 }}>
         <div className="container d-flex flex-column gap-4 py-4">
-        <Card className="shadow flex-shrink-0">
-          <Card.Body>
-            <ReceivableFilterBar
-              filters={filters}
-              brokerNames={brokerNames}
-              years={years}
-              onChange={updateFilters}
-            />
-          </Card.Body>
-        </Card>
+          <Card className="shadow flex-shrink-0">
+            <Card.Body>
+              <ReceivableFilterBar
+                filters={filters}
+                brokerNames={brokerNames}
+                years={years}
+                onChange={updateFilters}
+              />
+            </Card.Body>
+          </Card>
 
-        <Card className="shadow flex-shrink-0">
-          <Card.Body>
-            <ReceivableChart buckets={buckets} />
-          </Card.Body>
-        </Card>
+          <Card className="shadow flex-shrink-0">
+            <Card.Body>
+              <ReceivableChart buckets={buckets} />
+            </Card.Body>
+          </Card>
 
-        <Card className="shadow flex-shrink-0">
-          <Card.Body className="d-flex flex-column gap-3">
-            {filtered.length === 0 ? (
-              <Empty className="flex-shrink-0">
-                <Empty.Media>
-                  <FontAwesomeIcon icon={faFileInvoiceDollar} />
-                </Empty.Media>
-                <Empty.Content>
-                  <Empty.Title>No receivables match</Empty.Title>
-                  {activeFilterCount > 0
-                    ? "Widen the year or clear a filter."
-                    : "Nothing has been billed yet."}
-                </Empty.Content>
-                {activeFilterCount > 0 && (
-                  <Empty.Actions>
-                    <Button
-                      variant="outline"
-                      onClick={() => updateFilters(emptyReceivableFilters(now))}
-                    >
-                      Reset filters
-                    </Button>
-                  </Empty.Actions>
-                )}
-              </Empty>
-            ) : (
-              <>
-                {/* The one scrolling region on the page. `style` lands on
+          <Card className="shadow flex-shrink-0">
+            <Card.Body className="d-flex flex-column gap-3">
+              {filtered.length === 0 ? (
+                <Empty className="flex-shrink-0">
+                  <Empty.Media>
+                    <FontAwesomeIcon icon={faFileInvoiceDollar} />
+                  </Empty.Media>
+                  <Empty.Content>
+                    <Empty.Title>No receivables match</Empty.Title>
+                    {activeFilterCount > 0
+                      ? "Widen the year or clear a filter."
+                      : "Nothing has been billed yet."}
+                  </Empty.Content>
+                  {activeFilterCount > 0 && (
+                    <Empty.Actions>
+                      <Button
+                        variant="outline"
+                        onClick={() =>
+                          updateFilters(emptyReceivableFilters(now))
+                        }
+                      >
+                        Reset filters
+                      </Button>
+                    </Empty.Actions>
+                  )}
+                </Empty>
+              ) : (
+                <>
+                  {/* The one scrolling region on the page. `style` lands on
                     Blueprint's `.table-container` (which already carries the
                     border and `overflow: auto`), while `className` lands on the
                     `<table>` — so the frame stays put and only the rows travel.
                     `.table-wide` restores the width Bootstrap's `.table` takes
                     away, or eleven columns would compress instead of scroll. */}
-                <Table className="table-wide">
-                  <Table.Header sticky>
-                    <Table.Row>
-                      <Table.Head style={{ width: 40 }}>
-                        <Checkbox
-                          checked={allOnPageSelected}
-                          onCheckedChange={togglePage}
-                          aria-label="Select every receivable on this page"
-                        />
-                      </Table.Head>
-                      <Table.Head>Voucher</Table.Head>
-                      <Table.Head>Brokers</Table.Head>
-                      <Table.Head>Invoices</Table.Head>
-                      <Table.Head>Payer</Table.Head>
-                      <Table.Head>Due Date</Table.Head>
-                      <Table.Head>Status</Table.Head>
-                      <Table.Head>Description</Table.Head>
-                      <Table.Head className="text-end">Amount</Table.Head>
-                      <Table.Head className="text-end">Deposits</Table.Head>
-                      <Table.Head className="text-end">Other Credits</Table.Head>
-                      <Table.Head className="text-end">Open / Due</Table.Head>
-                    </Table.Row>
-                  </Table.Header>
-                  <Table.Body>
-                    {/* Foots the filtered set, so it always agrees with the
+                  <Table className="table-wide">
+                    <Table.Header sticky>
+                      <Table.Row>
+                        <Table.Head style={{ width: 40 }}>
+                          <Checkbox
+                            checked={allOnPageSelected}
+                            onCheckedChange={togglePage}
+                            aria-label="Select every receivable on this page"
+                          />
+                        </Table.Head>
+                        <Table.Head>Voucher</Table.Head>
+                        <Table.Head>Brokers</Table.Head>
+                        <Table.Head>Invoices</Table.Head>
+                        <Table.Head>Payer</Table.Head>
+                        <Table.Head>Due Date</Table.Head>
+                        <Table.Head>Status</Table.Head>
+                        <Table.Head>Description</Table.Head>
+                        <Table.Head className="text-end">Amount</Table.Head>
+                        <Table.Head className="text-end">Deposits</Table.Head>
+                        <Table.Head className="text-end">
+                          Other Credits
+                        </Table.Head>
+                        <Table.Head className="text-end">Open / Due</Table.Head>
+                      </Table.Row>
+                    </Table.Header>
+                    <Table.Body>
+                      {/* Foots the filtered set, so it always agrees with the
                         table beneath it — and sits under the sticky header
                         rather than at the end, where a total is only reached
                         by scrolling past everything it describes. */}
-                    <Table.Row className="fw-semibold bg-body-secondary">
-                      <Table.Cell />
-                      <Table.Cell className="text-nowrap">
-                        TOTAL ({totals.count})
-                      </Table.Cell>
-                      <Table.Cell colSpan={6} />
-                      <Table.Cell className="text-end text-nowrap">
-                        {formatCurrency(totals.amount)}
-                      </Table.Cell>
-                      <Table.Cell className="text-end text-nowrap">
-                        {formatCurrency(totals.deposits)}
-                      </Table.Cell>
-                      <Table.Cell className="text-end text-nowrap">
-                        {formatCurrency(totals.otherCredits)}
-                      </Table.Cell>
-                      <Table.Cell className="text-end text-nowrap">
-                        {formatCurrency(totals.openDue)}
-                      </Table.Cell>
-                    </Table.Row>
-
-                    {visible.map((row: ReceivableRow) => (
-                      // No whole-row click. The Voucher cell is the one
-                      // destination, for the reason the Vouchers table gives:
-                      // a row that both navigates and holds a link teaches two
-                      // rules at once.
-                      <Table.Row key={row.key}>
-                        <Table.Cell>
-                          <Checkbox
-                            checked={selected.has(row.key)}
-                            onCheckedChange={() => toggleRow(row.key)}
-                            aria-label={`Select ${row.voucherName}, ${row.payerName}`}
-                          />
-                        </Table.Cell>
-                        <Table.Cell className="fw-medium text-nowrap">
-                          <Link {...row.target}>{row.voucherName}</Link>
-                        </Table.Cell>
-                        <Table.Cell>
-                          <BrokerStack brokers={row.brokers} />
-                        </Table.Cell>
-                        <Table.Cell className="text-muted">
-                          {row.invoiceCount || "--"}
-                        </Table.Cell>
+                      <Table.Row className="fw-semibold bg-body-secondary">
+                        <Table.Cell />
                         <Table.Cell className="text-nowrap">
-                          {row.payerName}
+                          TOTAL ({totals.count})
                         </Table.Cell>
-                        <Table.Cell className="text-nowrap">
-                          {formatDate(row.dueDate)}
-                        </Table.Cell>
-                        <Table.Cell>
-                          <ReceivableStatusBadge status={row.status} />
-                        </Table.Cell>
-                        <Table.Cell className="text-muted">
-                          {row.description || "--"}
+                        <Table.Cell colSpan={6} />
+                        <Table.Cell className="text-end text-nowrap">
+                          {formatCurrency(totals.amount)}
                         </Table.Cell>
                         <Table.Cell className="text-end text-nowrap">
-                          {formatCurrency(row.amount)}
+                          {formatCurrency(totals.deposits)}
                         </Table.Cell>
                         <Table.Cell className="text-end text-nowrap">
-                          {formatCurrency(row.deposits)}
+                          {formatCurrency(totals.otherCredits)}
                         </Table.Cell>
                         <Table.Cell className="text-end text-nowrap">
-                          {formatCurrency(row.otherCredits)}
-                        </Table.Cell>
-                        <Table.Cell className="text-end text-nowrap">
-                          {formatCurrency(row.openDue)}
+                          {formatCurrency(totals.openDue)}
                         </Table.Cell>
                       </Table.Row>
-                    ))}
-                  </Table.Body>
-                </Table>
 
-                {pageCount > 1 && (
-                  // Centred in the card, matching the Vouchers table.
-                  // Blueprint's Pagination root is a bare <nav>, so alignment is
-                  // the caller's to set.
-                  <Pagination className="d-flex justify-content-center flex-shrink-0">
-                    <Pagination.Content>
-                      <Pagination.Item>
-                        <Pagination.Previous
-                          href="#"
-                          aria-disabled={current === 1}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setPage((p) => Math.max(1, p - 1));
-                          }}
-                        />
-                      </Pagination.Item>
-                      {Array.from({ length: pageCount }, (_, i) => i + 1).map((n) => (
-                        <Pagination.Item key={n}>
-                          <Pagination.Link
+                      {visible.map((row: ReceivableRow) => (
+                        // No whole-row click. The Voucher cell is the one
+                        // destination, for the reason the Vouchers table gives:
+                        // a row that both navigates and holds a link teaches two
+                        // rules at once.
+                        <Table.Row key={row.key}>
+                          <Table.Cell>
+                            <Checkbox
+                              checked={selected.has(row.key)}
+                              onCheckedChange={() => toggleRow(row.key)}
+                              aria-label={`Select ${row.voucherName}, ${row.payerName}`}
+                            />
+                          </Table.Cell>
+                          <Table.Cell className="fw-medium text-nowrap">
+                            <Link {...row.target}>{row.voucherName}</Link>
+                          </Table.Cell>
+                          <Table.Cell>
+                            <BrokerStack brokers={row.brokers} />
+                          </Table.Cell>
+                          <Table.Cell className="text-muted">
+                            {row.invoiceCount || "--"}
+                          </Table.Cell>
+                          <Table.Cell className="text-nowrap">
+                            {row.payerName}
+                          </Table.Cell>
+                          <Table.Cell className="text-nowrap">
+                            {formatDate(row.dueDate)}
+                          </Table.Cell>
+                          <Table.Cell>
+                            <ReceivableStatusBadge status={row.status} />
+                          </Table.Cell>
+                          <Table.Cell className="text-muted">
+                            {row.description || "--"}
+                          </Table.Cell>
+                          <Table.Cell className="text-end text-nowrap">
+                            {formatCurrency(row.amount)}
+                          </Table.Cell>
+                          <Table.Cell className="text-end text-nowrap">
+                            {formatCurrency(row.deposits)}
+                          </Table.Cell>
+                          <Table.Cell className="text-end text-nowrap">
+                            {formatCurrency(row.otherCredits)}
+                          </Table.Cell>
+                          <Table.Cell className="text-end text-nowrap">
+                            {formatCurrency(row.openDue)}
+                          </Table.Cell>
+                        </Table.Row>
+                      ))}
+                    </Table.Body>
+                  </Table>
+
+                  {pageCount > 1 && (
+                    // Centred in the card, matching the Vouchers table.
+                    // Blueprint's Pagination root is a bare <nav>, so alignment is
+                    // the caller's to set.
+                    <Pagination className="d-flex justify-content-center flex-shrink-0">
+                      <Pagination.Content>
+                        <Pagination.Item>
+                          <Pagination.Previous
                             href="#"
-                            isActive={n === current}
+                            aria-disabled={current === 1}
                             onClick={(e) => {
                               e.preventDefault();
-                              setPage(n);
+                              setPage((p) => Math.max(1, p - 1));
                             }}
-                          >
-                            {n}
-                          </Pagination.Link>
+                          />
                         </Pagination.Item>
-                      ))}
-                      <Pagination.Item>
-                        <Pagination.Next
-                          href="#"
-                          aria-disabled={current === pageCount}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setPage((p) => Math.min(pageCount, p + 1));
-                          }}
-                        />
-                      </Pagination.Item>
-                    </Pagination.Content>
-                  </Pagination>
-                )}
-              </>
-            )}
-          </Card.Body>
-        </Card>
+                        {Array.from({ length: pageCount }, (_, i) => i + 1).map(
+                          (n) => (
+                            <Pagination.Item key={n}>
+                              <Pagination.Link
+                                href="#"
+                                isActive={n === current}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setPage(n);
+                                }}
+                              >
+                                {n}
+                              </Pagination.Link>
+                            </Pagination.Item>
+                          ),
+                        )}
+                        <Pagination.Item>
+                          <Pagination.Next
+                            href="#"
+                            aria-disabled={current === pageCount}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setPage((p) => Math.min(pageCount, p + 1));
+                            }}
+                          />
+                        </Pagination.Item>
+                      </Pagination.Content>
+                    </Pagination>
+                  )}
+                </>
+              )}
+            </Card.Body>
+          </Card>
         </div>
       </div>
     </div>
