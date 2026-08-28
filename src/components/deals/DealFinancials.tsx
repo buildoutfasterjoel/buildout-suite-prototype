@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   Cell,
@@ -24,8 +24,10 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowRight,
   faArrowsRotate,
+  faArrowTurnDownRight,
   faDollarSign,
   faEllipsisVertical,
+  faHashtag,
   faEnvelope,
   faPhone,
   faFileLines,
@@ -44,15 +46,19 @@ import type {
   DealType,
   FinancialDeduction,
   FinancialReceivable,
+  VoucherDeposit,
   Listing,
   TransactionSide,
 } from "#/data/types";
 import {
   addReceivable,
+  applyDeposit,
   createInvoiceFromReceivables,
+  deleteDeposit,
   deleteReceivable,
   saveVoucherDraft,
   submitVoucher,
+  updateDepositReference,
   updateReceivable,
 } from "#/data/actions";
 import {
@@ -69,7 +75,9 @@ import {
   type VoucherParty,
   type VoucherPayerRow,
 } from "#/data/vouchers";
+import { depositsForReceivable } from "#/data/deposits";
 import { AddBrokerModal } from "./AddBrokerModal";
+import { ApplyDepositModal, type ApplyDepositInput } from "./ApplyDepositModal";
 import { AddContactModal } from "./AddContactModal";
 import { DueDatePicker, NewReceivableModal } from "./NewReceivableModal";
 import { notify } from "#/lib/notify";
@@ -77,7 +85,12 @@ import { ListingPageHeader } from "../listings/ListingPageHeader";
 import { VoucherStatusBadge } from "./VoucherStatusBadge";
 import { VoucherApprovalBanner } from "./VoucherApprovalBanner";
 import { dealEditTarget } from "./dealCardLink";
-import { formatCurrency, formatDate, initials } from "./dealDisplay";
+import {
+  formatCurrency,
+  formatDate,
+  formatLongDate,
+  initials,
+} from "./dealDisplay";
 import { QuickbooksSyncBadge } from "#/components/common/QuickbooksSyncBadge";
 import "./DealFinancials.scss";
 import {
@@ -1242,63 +1255,107 @@ function ReceivableActionItem({
 }
 
 /**
- * A receivable's billing description, edited in the cell.
+ * A text cell on the receivables table, edited in place.
  *
  * Keystrokes stay local and commit on blur, so typing a sentence is one write
  * to the store rather than one per character — the same reason the rent
  * schedule's cells commit on blur. Re-seeds when the stored value moves under
  * it, which is what keeps a row honest if the same voucher is edited elsewhere.
+ *
+ * Shared by a receivable's billing description and its deposits' reference
+ * numbers, so the two cannot drift into different commit rules while sitting in
+ * the same column. `unit` is what tells them apart on screen: a reference takes
+ * a hash addon, matching the `$` on the money cells and the calendar on the
+ * dates, and a description takes none.
+ *
+ * `required` reverts an emptied cell instead of committing it. It has to be
+ * handled HERE rather than left to the write path: `updateDepositReference`
+ * already refuses an empty reference, but refusing means the stored `value` does
+ * not move, so the effect keyed on it never re-runs and the box stays visibly
+ * blank over a deposit that still has its number. The guard and the refusal are
+ * both wanted — one keeps the screen honest, the other keeps the store honest.
  */
 function ReceivableTextCell({
   value,
   placeholder,
+  ariaLabel,
+  unit,
+  required,
   className,
   onCommit,
 }: {
   value: string;
   placeholder: string;
+  ariaLabel: string;
+  /** Prefix icon, for a cell whose meaning is not obvious from its column. */
+  unit?: IconDefinition;
+  /** Reject an emptied cell and put the stored value back. */
+  required?: boolean;
   className?: string;
   onCommit: (next: string) => void;
 }) {
   const [draft, setDraft] = useState(value);
   // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on `value` alone by design
   useEffect(() => setDraft(value), [value]);
-  return (
+  const commit = () => {
+    if (required && !draft.trim()) {
+      setDraft(value);
+      return;
+    }
+    if (draft !== value) onCommit(draft);
+  };
+  const input = (
     <Input
       className={`bg-card${className ? ` ${className}` : ""}`}
       value={draft}
       placeholder={placeholder}
-      aria-label="Billing description"
+      aria-label={ariaLabel}
       onChange={(e) => setDraft(e.target.value)}
-      onBlur={() => draft !== value && onCommit(draft)}
+      onBlur={commit}
       onKeyDown={(e) => {
         if (e.key === "Enter") e.currentTarget.blur();
         if (e.key === "Escape") setDraft(value);
       }}
     />
   );
+  if (!unit) return input;
+  return (
+    <InputGroup className={className}>
+      <InputGroup.Addon>
+        <FontAwesomeIcon icon={unit} />
+      </InputGroup.Addon>
+      {input}
+    </InputGroup>
+  );
 }
 
 /**
  * One receivable's own actions.
  *
- * All three credit actions are stubs and all three read as stubs — greyed, with
- * the same `ReceivableActionItem` treatment the toolbar menu uses, because a
- * menu item that looks live and does nothing is worse than one that says it
- * cannot yet. Deliberately greyed unconditionally, unlike the toolbar's Apply
- * Deposit: that one greys on a fully credited line, which reads as a live
- * control the rest of the time and would promise something this cannot do.
+ * **Apply Deposit here means this row alone.** The toolbar's copy of the item
+ * takes the whole selection; this one hands the modal a single receivable, which
+ * is what makes two entry points to the same modal mean two different things.
+ * It greys on a settled line, the way the toolbar's already did — a receivable
+ * with nothing outstanding has nothing left to receive.
  *
- * Delete is the only live item, and the only place a single receivable can be
- * removed — the toolbar's Actions menu deliberately dropped its bulk Delete
+ * Apply Other Credit stays greyed and unbuilt. A menu item that looks live and
+ * does nothing is worse than one that says it cannot yet.
+ *
+ * Delete is the only other live item, and the only place a single receivable can
+ * be removed — the toolbar's Actions menu deliberately dropped its bulk Delete
  * rather than offer the same act twice.
  */
 function ReceivableRowMenu({
   label,
+  settled,
+  onApplyDeposit,
   onCreateInvoice,
   onDelete,
 }: {
   label: string;
+  /** Nothing outstanding on this line, so a deposit has nothing to land on. */
+  settled: boolean;
+  onApplyDeposit: () => void;
   onCreateInvoice: () => void;
   onDelete: () => void;
 }) {
@@ -1319,7 +1376,11 @@ function ReceivableRowMenu({
         <ReceivableActionItem icon={faFileLines} onClick={onCreateInvoice}>
           Create New Invoice
         </ReceivableActionItem>
-        <ReceivableActionItem icon={faArrowRight} disabled>
+        <ReceivableActionItem
+          icon={faArrowRight}
+          disabled={settled}
+          onClick={onApplyDeposit}
+        >
           Apply Deposit
         </ReceivableActionItem>
         <ReceivableActionItem icon={faArrowRight} disabled>
@@ -1349,6 +1410,123 @@ function ReceivableRowMenu({
         </DropdownMenu.Item>
       </DropdownMenu.Content>
     </DropdownMenu>
+  );
+}
+
+/**
+ * One deposit, rendered under the receivable it paid.
+ *
+ * A row in the PARENT table's grid rather than a nested table. The receivables
+ * table pins `table-layout: fixed` with per-column widths (`RECEIVABLE_COL`), so
+ * a table inside a spanning cell would size its own columns and the figures
+ * would land nowhere near the ones they belong under — the whole reason to show
+ * a deposit beside its receivable is that $5,555.55 sits under Credited Amount.
+ *
+ * Always visible, not behind a disclosure: a voucher carries a handful of these,
+ * and hiding one row costs a click to save nothing.
+ */
+function DepositRow({
+  deposit,
+  amount,
+  editable,
+  onRenameReference,
+  onDelete,
+}: {
+  deposit: VoucherDeposit;
+  /** What this deposit put against THIS receivable — not its whole amount. */
+  amount: number;
+  editable: boolean;
+  onRenameReference: (next: string) => void;
+  onDelete: () => void;
+}) {
+  return (
+    <Table.Row className="receivables-table__deposit">
+      {editable && (
+        <Table.Cell
+          style={{
+            width: RECEIVABLE_CHECKBOX_W,
+            minWidth: RECEIVABLE_CHECKBOX_W,
+          }}
+        />
+      )}
+      <Table.Cell style={{ width: RECEIVABLE_COL.payer }}>
+        <span className="d-inline-flex align-items-center gap-2 text-muted">
+          <FontAwesomeIcon icon={faArrowTurnDownRight} />
+          Deposit
+        </span>
+      </Table.Cell>
+      {/* Follows whatever the Due Date column above it is showing. That column
+          renders two different formats — the editable `DueDatePicker` spells
+          "Aug 13, 2026", the frozen cell spells "08/13/2026" — and a deposit
+          date in the other one sat directly under it looking like a different
+          kind of date. */}
+      <Table.Cell
+        className="text-muted"
+        style={{ width: RECEIVABLE_COL.dueDate }}
+      >
+        {editable ? formatLongDate(deposit.date) : formatDate(deposit.date)}
+      </Table.Cell>
+      {/* Under Billing Description, because that is what a reference number is:
+          the payer's own description of the payment.
+
+          Editable, on the same terms as the receivable's own cells above it. The
+          reference a deposit carries is often OURS — generated because the money
+          landed before its paperwork did — so typing in the real cheque or wire
+          number afterwards is the ordinary case rather than a correction. The
+          hash addon is what stops a bare number in the Billing Description
+          column reading as a description.
+
+          The read-only fallback is unreachable for anything written since
+          references started being generated at save; it survives only because
+          the field is typed `string` and a deposit stored before that could
+          still be empty. */}
+      <Table.Cell>
+        {editable ? (
+          <ReceivableTextCell
+            value={deposit.referenceNumber}
+            placeholder="Reference number"
+            ariaLabel="Deposit reference number"
+            unit={faHashtag}
+            required
+            className="w-100"
+            onCommit={onRenameReference}
+          />
+        ) : (
+          <span className="text-muted">
+            {deposit.referenceNumber
+              ? `Ref ${deposit.referenceNumber}`
+              : "No reference"}
+          </span>
+        )}
+      </Table.Cell>
+      {/* Receivable Amount stays empty. A deposit has no billed amount — the
+          figure it carries is what was received, and that belongs under
+          Credited Amount beside the running total it moved. */}
+      <Table.Cell style={{ width: RECEIVABLE_COL.amount }} />
+      <Table.Cell
+        className="text-end text-muted"
+        style={{ width: RECEIVABLE_COL.credited }}
+      >
+        {formatCurrency(amount)}
+      </Table.Cell>
+      <Table.Cell style={{ width: RECEIVABLE_COL.sync }} />
+      {editable && (
+        <Table.Cell style={{ width: RECEIVABLE_COL.actions }}>
+          {/* A bare trash button, not the receivable's `⋮` menu. That menu earns
+              its click by holding five items; a deposit has exactly one thing
+              that can be done to it, and burying one item behind a menu costs a
+              click to reveal what the icon already says. */}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Delete deposit ${deposit.referenceNumber}`}
+            onClick={onDelete}
+          >
+            <FontAwesomeIcon icon={faTrashCan} />
+          </Button>
+        </Table.Cell>
+      )}
+    </Table.Row>
   );
 }
 
@@ -1430,6 +1608,62 @@ function ReceivablesSection({
     });
   };
 
+  /**
+   * Which receivables the open deposit may touch — the scope, held apart from
+   * whether the modal is showing.
+   *
+   * Two pieces of state rather than a nullable array, so the rows survive the
+   * modal's close: emptying them on close would blank the preview tables while
+   * they are still on screen fading out.
+   */
+  const [depositRows, setDepositRows] = useState<FinancialReceivable[]>([]);
+  const [depositOpen, setDepositOpen] = useState(false);
+
+  const openDeposit = (rows: FinancialReceivable[]) => {
+    setDepositRows(rows);
+    setDepositOpen(true);
+  };
+
+  /**
+   * File the deposit against the voucher.
+   *
+   * The selection clears on success for the same reason billing does: a menu
+   * left open over rows that have just been paid should not offer to pay them
+   * again. `applyDeposit` re-applies the caps and returns a null id on a voucher
+   * it refuses, so a refusal is silent here — the control was already disabled.
+   */
+  const applyDepositToVoucher = (input: ApplyDepositInput) => {
+    const { depositId } = applyDeposit(listing.id, input);
+    if (!depositId) return;
+    setSelectedIds(new Set());
+    notify({
+      title: "Deposit applied",
+      description: `${formatCurrency(input.amount)} recorded against this voucher.`,
+    });
+  };
+
+  /**
+   * Take a deposit back off the voucher.
+   *
+   * The toast names how many receivables it came off, because a deposit split
+   * across two lines disappears from BOTH when it is deleted from either — the
+   * row that vanished from a receivable nobody clicked on is otherwise something
+   * to discover by looking. Silent on a refusal, the way the other two are:
+   * `deleteDeposit` returns a null record on a voucher it will not write to.
+   */
+  const removeDeposit = (depositId: string) => {
+    const { removed } = deleteDeposit(listing.id, depositId);
+    if (!removed) return;
+    const lines = removed.receivableAllocations.length;
+    notify({
+      title: "Deposit removed",
+      description:
+        lines > 1
+          ? `${formatCurrency(removed.amount)} reversed across ${lines} receivables.`
+          : `${formatCurrency(removed.amount)} reversed.`,
+    });
+  };
+
   return (
     <Section
       title="Receivables"
@@ -1454,9 +1688,13 @@ function ReceivablesSection({
                 }
               />
               <DropdownMenu.Content align="end">
+                {/* The whole selection, filled oldest due date first. The row's
+                    own copy of this item passes a single receivable instead —
+                    that difference is the only thing separating the two. */}
                 <ReceivableActionItem
                   icon={faArrowRight}
                   disabled={!canApplyDeposit}
+                  onClick={() => openDeposit(selectedRows)}
                 >
                   Apply Deposit
                 </ReceivableActionItem>
@@ -1596,9 +1834,13 @@ function ReceivablesSection({
           <Table.Body>
             {receivables.map((r) => {
               const label = receivablePayerLabel(r.payerContactId, r.billToCompany);
+              const paidBy = depositsForReceivable(
+                listing.transaction.backOffice.deposits,
+                r.id,
+              );
               return (
+                <Fragment key={r.id}>
                 <Table.Row
-                  key={r.id}
                   className={
                     editable && selectedIds.has(r.id) ? "table-active" : undefined
                   }
@@ -1690,6 +1932,7 @@ function ReceivablesSection({
                       <ReceivableTextCell
                         value={r.billingDescription}
                         placeholder="Billing description"
+                        ariaLabel="Billing description"
                         className="w-100"
                         onCommit={(next) =>
                           patch(r.id, { billingDescription: next })
@@ -1731,12 +1974,27 @@ function ReceivablesSection({
                     <Table.Cell style={{ width: RECEIVABLE_COL.actions }}>
                       <ReceivableRowMenu
                         label={label}
+                        settled={r.credited >= r.amount}
+                        onApplyDeposit={() => openDeposit([r])}
                         onCreateInvoice={() => createInvoice([r.id])}
                         onDelete={() => deleteReceivable(listing.id, r.id)}
                       />
                     </Table.Cell>
                   )}
                 </Table.Row>
+                {paidBy.map(({ deposit, amount }) => (
+                  <DepositRow
+                    key={deposit.id}
+                    deposit={deposit}
+                    amount={amount}
+                    editable={editable}
+                    onRenameReference={(next) =>
+                      updateDepositReference(listing.id, deposit.id, next)
+                    }
+                    onDelete={() => removeDeposit(deposit.id)}
+                  />
+                ))}
+                </Fragment>
               );
             })}
           </Table.Body>
@@ -1767,6 +2025,18 @@ function ReceivablesSection({
         open={addOpen}
         onOpenChange={setAddOpen}
         onAdd={(input) => addReceivable(listing.id, input)}
+      />
+
+      {/* `allReceivables` is the whole voucher whatever the scope is: a
+          deduction is a claim on the entire commission, so its share is measured
+          against every line, not against the ones that happen to be selected. */}
+      <ApplyDepositModal
+        open={depositOpen}
+        onOpenChange={setDepositOpen}
+        selected={depositRows}
+        allReceivables={receivables}
+        deductions={listing.transaction.backOffice.preSplitDeductions}
+        onApply={applyDepositToVoucher}
       />
     </Section>
   );

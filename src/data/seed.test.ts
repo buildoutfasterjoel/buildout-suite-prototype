@@ -394,6 +394,92 @@ describe('voucher status seed', () => {
   })
 })
 
+describe('deposit seed', () => {
+  const { listings } = generateDataset()
+
+  it('puts exactly one deposit behind every credited receivable', () => {
+    // A credited row with nothing under it would expand to an empty child table
+    // and read as money that arrived from nowhere.
+    const credited = listings.flatMap((deal) =>
+      deal.transaction.backOffice.receivables.filter((r) => r.credited > 0),
+    )
+    expect(credited.length).toBeGreaterThan(0)
+    for (const deal of listings) {
+      const voucher = deal.transaction.backOffice
+      const paid = new Set(
+        voucher.receivables.filter((r) => r.credited > 0).map((r) => r.id),
+      )
+      const depositedAgainst = (voucher.deposits ?? []).flatMap((d) =>
+        d.receivableAllocations.map((a) => a.targetId),
+      )
+      expect(new Set(depositedAgainst)).toEqual(paid)
+      expect(depositedAgainst).toHaveLength(paid.size)
+    }
+  })
+
+  it('keeps stored credited equal to what its deposits allocated', () => {
+    // `credited` is a stored running total rather than a sum computed from the
+    // deposits — see `applyDeposit` for why. This is what stops the two drifting.
+    for (const deal of listings) {
+      const voucher = deal.transaction.backOffice
+      const allocated = new Map<string, number>()
+      for (const deposit of voucher.deposits ?? []) {
+        for (const a of deposit.receivableAllocations) {
+          allocated.set(a.targetId, (allocated.get(a.targetId) ?? 0) + a.amount)
+        }
+      }
+      for (const r of voucher.receivables) {
+        expect(allocated.get(r.id) ?? 0).toBe(r.credited)
+      }
+    }
+  })
+
+  it('never credits a receivable past what it billed', () => {
+    for (const deal of listings) {
+      for (const r of deal.transaction.backOffice.receivables) {
+        expect(r.credited).toBeLessThanOrEqual(r.amount)
+      }
+    }
+  })
+
+  it('leaves every seeded deduction uncovered', () => {
+    // Deliberate: crediting them in the seed would mean splitting each deposit
+    // across two tables to keep the two consistent, which is arithmetic standing
+    // in for a deposit nobody applied.
+    for (const deal of listings) {
+      for (const deposit of deal.transaction.backOffice.deposits ?? []) {
+        expect(deposit.deductionAllocations).toEqual([])
+      }
+      for (const d of deal.transaction.backOffice.preSplitDeductions) {
+        expect(d.covered).toBeNull()
+      }
+    }
+  })
+
+  it('gives every deposit a reference, unique within its voucher', () => {
+    // No deposit may show an empty reference column, seeded or entered. The save
+    // path generates one when the broker leaves the field blank; the seed uses
+    // the same generator, so the two are the same kind of thing.
+    for (const deal of listings) {
+      const refs = (deal.transaction.backOffice.deposits ?? []).map(
+        (d) => d.referenceNumber,
+      )
+      for (const ref of refs) expect(ref).toMatch(/^[1-9]\d{3}$/)
+      expect(new Set(refs).size).toBe(refs.length)
+    }
+  })
+
+  it('dates each deposit after the line it paid', () => {
+    for (const deal of listings) {
+      const byId = new Map(deal.transaction.backOffice.receivables.map((r) => [r.id, r]))
+      for (const deposit of deal.transaction.backOffice.deposits ?? []) {
+        const target = byId.get(deposit.receivableAllocations[0].targetId)!
+        expect(deposit.date > target.dueDate).toBe(true)
+      }
+    }
+  })
+})
+
 describe('invoice seed', () => {
   const { listings } = generateDataset()
 

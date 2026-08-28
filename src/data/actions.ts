@@ -6,7 +6,7 @@ import {
   serializeContactFilters,
   type ContactFilterState,
 } from '#/components/contacts/contactFilterModel'
-import type { Contact, ContactRole, ContactSource, DealDocument, DealHistoryEntry, DealIngestion, DealInvoice, DealMarketing, DealPitchFinancials, DealBroker, DealTask, DealTransaction, DocumentGeneration, FinancialDeduction, FinancialReceivable, GeneratedSection, IngestionFieldKey, Listing, PropertyStatus, Task } from './types'
+import type { Contact, ContactRole, ContactSource, DealDocument, DealHistoryEntry, DealIngestion, DealInvoice, DealMarketing, DealPitchFinancials, DealBroker, DealTask, DealTransaction, DepositAllocation, DocumentGeneration, FinancialDeduction, FinancialReceivable, GeneratedSection, IngestionFieldKey, Listing, PropertyStatus, Task, VoucherDeposit } from './types'
 import { CURRENT_USER, TEAMMATES } from './teammates'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
 import { reconcileContactDealFields } from './contactStage'
@@ -24,6 +24,11 @@ import {
   resolvedPropertyPatch,
 } from './ingestion'
 import { getContact, getProperty, updateProperty } from './store'
+import {
+  deductionBalance,
+  generateDepositReference,
+  receivableBalance,
+} from './deposits'
 import {
   invoiceDueDate,
   invoiceFileName,
@@ -534,6 +539,253 @@ export function updateReceivable(
   return patchReceivables(dealId, (rows) =>
     rows.map((r) => (r.id === receivableId ? { ...r, ...patch } : r)),
   )
+}
+
+/**
+ * Record money received against this voucher.
+ *
+ * Takes the allocation the modal is SHOWING rather than recomputing it here, so
+ * an admin who used Override gets what they entered. That is the whole point of
+ * the toggle — re-deriving the split at the write path would silently discard the
+ * decision it exists to allow.
+ *
+ * The caps are re-applied anyway: an allocation is clamped to what its receivable
+ * still owes and its deduction still has uncovered, and anything that lands on
+ * zero is dropped rather than stored as a line that moved nothing. A disabled
+ * input is a UI courtesy, not a guarantee about what reaches the store — the same
+ * reason `createInvoiceFromReceivables` re-checks its one-payer rule.
+ *
+ * `credited` and `covered` are moved here rather than derived from the deposit
+ * list on read. Both are already read in half a dozen places — most sharply by
+ * `invoiceLineItems`, which FREEZES `credited` onto an invoice line — and a
+ * computed sum would rewrite every one of them to show the same figures.
+ * `deposits.test.ts` and the seed test hold the two in agreement.
+ *
+ * Refuses on a Pending voucher, like every other receivable write.
+ */
+export function applyDeposit(
+  dealId: string,
+  input: {
+    /** `yyyy-mm-dd`. */
+    date: string
+    amount: number
+    referenceNumber: string
+    receivableAllocations: DepositAllocation[]
+    deductionAllocations: DepositAllocation[]
+  },
+): { deal: Listing | null; depositId: string | null } {
+  const now = new Date().toISOString()
+  const depositId = `deposit-${crypto.randomUUID()}`
+
+  const deal = patchListing(dealId, (l) => {
+    const back = l.transaction.backOffice
+    if (back.status === 'Pending') return l
+
+    // Clamped against the store's own figures, not the caller's copies, which
+    // could be a render behind whatever else has written to this voucher.
+    const receivablesById = new Map(back.receivables.map((r) => [r.id, r]))
+    const receivableAllocations = clampAllocations(
+      input.receivableAllocations,
+      (id) => {
+        const row = receivablesById.get(id)
+        return row ? receivableBalance(row) : 0
+      },
+    )
+    const deductionsById = new Map(back.preSplitDeductions.map((d) => [d.id, d]))
+    const deductionAllocations = clampAllocations(input.deductionAllocations, (id) => {
+      const row = deductionsById.get(id)
+      return row ? deductionBalance(row) : 0
+    })
+
+    // A deposit that reached nothing is not a record worth keeping — it would
+    // sit under a receivable as a child row stating that $0.00 arrived.
+    if (receivableAllocations.length === 0 && deductionAllocations.length === 0) {
+      return l
+    }
+
+    const appliedTo = new Map(receivableAllocations.map((a) => [a.targetId, a.amount]))
+    const coveredBy = new Map(deductionAllocations.map((a) => [a.targetId, a.amount]))
+
+    return {
+      ...l,
+      transaction: {
+        ...l.transaction,
+        backOffice: {
+          ...back,
+          receivables: back.receivables.map((r) => {
+            const applied = appliedTo.get(r.id)
+            return applied ? { ...r, credited: round2(r.credited + applied) } : r
+          }),
+          preSplitDeductions: back.preSplitDeductions.map((d) => {
+            const covered = coveredBy.get(d.id)
+            return covered ? { ...d, covered: round2((d.covered ?? 0) + covered) } : d
+          }),
+          deposits: [
+            ...(back.deposits ?? []),
+            {
+              id: depositId,
+              date: input.date,
+              amount: round2(input.amount),
+              // Every deposit carries a reference. The field is optional to the
+              // broker — money often lands before its paperwork does — but a row
+              // with nothing in that column cannot be matched against a bank
+              // statement later, so one is generated here rather than left
+              // blank. Generated at the WRITE path, not in the modal, because
+              // uniqueness is a question about the voucher's other deposits and
+              // only the store knows what those are.
+              referenceNumber:
+                input.referenceNumber ||
+                generateDepositReference(
+                  depositId,
+                  (back.deposits ?? []).map((d) => d.referenceNumber),
+                ),
+              createdAt: now,
+              createdById: CURRENT_USER.id,
+              receivableAllocations,
+              deductionAllocations,
+            },
+          ],
+        },
+      },
+      updatedAt: now,
+    }
+  })
+
+  // `patchListing` returns the listing unchanged when the voucher is Pending, so
+  // a null id is not the only refusal — the caller reads the deal to know more.
+  return { deal, depositId: deal ? depositId : null }
+}
+
+/**
+ * Correct a deposit's reference number.
+ *
+ * The only field on a deposit that can be edited. Its amount, date and
+ * allocations are the record of a payment that already happened; a reference is
+ * a label on that payment, and the one it carries is often ours — generated
+ * because the money landed before its paperwork did. Handing over the real
+ * cheque or wire number afterwards is the ordinary case, not a correction of a
+ * mistake.
+ *
+ * An empty reference is refused rather than stored, which is the same rule
+ * `applyDeposit` applies from the other side: no deposit sits in the table with
+ * nothing in that column. The cell reverts to what it had, so clearing the box
+ * and tabbing away is a no-op rather than a silent erasure.
+ *
+ * Refuses on a Pending voucher, like every other receivable write.
+ */
+export function updateDepositReference(
+  dealId: string,
+  depositId: string,
+  referenceNumber: string,
+): { deal: Listing | null } {
+  const next = referenceNumber.trim()
+  if (!next) return { deal: useDataStore.getState().listings.get(dealId) ?? null }
+
+  return {
+    deal: patchListing(dealId, (l) => {
+      const back = l.transaction.backOffice
+      if (back.status === 'Pending') return l
+      return {
+        ...l,
+        transaction: {
+          ...l.transaction,
+          backOffice: {
+            ...back,
+            deposits: (back.deposits ?? []).map((d) =>
+              d.id === depositId ? { ...d, referenceNumber: next } : d,
+            ),
+          },
+        },
+        updatedAt: new Date().toISOString(),
+      }
+    }),
+  }
+}
+
+/**
+ * Remove a deposit, putting back what it moved.
+ *
+ * **A deposit is one cash receipt, so it comes off whole.** Deleting from one
+ * receivable's child row removes every allocation the deposit made — including
+ * the ones under OTHER receivables and against the deductions. Reversing a
+ * single line instead would leave a record claiming money arrived that partly
+ * did not, and there is no screen on which that half-deposit would make sense.
+ * The caller says so in its toast, because a row vanishing from a receivable
+ * nobody clicked on is otherwise something to discover by looking.
+ *
+ * `credited` and `covered` are stored running totals, so undoing means
+ * subtracting rather than recomputing — the mirror of what `applyDeposit` added.
+ * Both floor at zero: a total that has drifted below what this deposit put in is
+ * a state nothing should turn negative over.
+ *
+ * A deduction that lands back at zero goes back to `null`, not `0`. Null is what
+ * the seed writes for a deduction nothing has touched, and it is what the
+ * Pre-Split Deductions table renders as "None" — so a deduction whose only
+ * credit has been reversed reads as untouched again rather than as deliberately
+ * covered for nothing.
+ *
+ * Refuses on a Pending voucher, like every other receivable write.
+ */
+export function deleteDeposit(
+  dealId: string,
+  depositId: string,
+): { deal: Listing | null; removed: VoucherDeposit | null } {
+  const before = useDataStore.getState().listings.get(dealId)
+  const back = before?.transaction.backOffice
+  const removed = back?.deposits?.find((d) => d.id === depositId) ?? null
+  if (!before || !removed || back?.status === 'Pending') {
+    return { deal: before ?? null, removed: null }
+  }
+
+  const reversed = new Map(removed.receivableAllocations.map((a) => [a.targetId, a.amount]))
+  const uncovered = new Map(removed.deductionAllocations.map((a) => [a.targetId, a.amount]))
+
+  const deal = patchListing(dealId, (l) => {
+    const voucher = l.transaction.backOffice
+    return {
+      ...l,
+      transaction: {
+        ...l.transaction,
+        backOffice: {
+          ...voucher,
+          receivables: voucher.receivables.map((r) => {
+            const applied = reversed.get(r.id)
+            return applied
+              ? { ...r, credited: Math.max(0, round2(r.credited - applied)) }
+              : r
+          }),
+          preSplitDeductions: voucher.preSplitDeductions.map((d) => {
+            const covered = uncovered.get(d.id)
+            if (!covered) return d
+            const next = Math.max(0, round2((d.covered ?? 0) - covered))
+            return { ...d, covered: next === 0 ? null : next }
+          }),
+          deposits: (voucher.deposits ?? []).filter((d) => d.id !== depositId),
+        },
+      },
+      updatedAt: new Date().toISOString(),
+    }
+  })
+
+  return { deal, removed: deal ? removed : null }
+}
+
+/** Cents. Kept here rather than imported so `deposits.ts` stays free of writers. */
+function round2(n: number): number {
+  return Math.round(n * 100) / 100
+}
+
+/** Clamp each allocation to its target's balance and drop the ones left at zero. */
+function clampAllocations(
+  allocations: DepositAllocation[],
+  balanceOf: (targetId: string) => number,
+): DepositAllocation[] {
+  return allocations
+    .map((a) => ({
+      targetId: a.targetId,
+      amount: Math.max(0, Math.min(round2(a.amount), balanceOf(a.targetId))),
+    }))
+    .filter((a) => a.amount > 0)
 }
 
 /** Drop one receivable. The payer stays in Billing, reading $0 until removed. */
