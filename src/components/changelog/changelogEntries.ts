@@ -117,6 +117,35 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 187,
+    title:
+      "Add payables and payments to the voucher, raised by the deposits that funded them",
+    mergedAt: "2026-08-28T19:16:35Z",
+    day: "2026-08-28",
+    author: "buildoutfasterjoel",
+    area: "Back Office",
+    summary:
+      "Money going out of the brokerage on a settled voucher: what each broker is owed, and the cheques written against it.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "An approved voucher raises a payable per broker per deposit — outside brokers first, then the house's own, because a co-broke comes off the top before the brokerage splits what is left. That is the order the money actually leaves in.",
+      },
+      {
+        kind: "feature",
+        text: "A payment is one cheque against one payable, and a payable can carry several. Gross is what the deal owes the broker; net is what they take home after their split and whatever came off that payment.",
+      },
+      {
+        kind: "refinement",
+        text: "A payable is raised by a deposit, never filed by hand — no add button, no editable amount, no delete of its own. The way to change one is to change the deposit that raised it.",
+      },
+      {
+        kind: "fix",
+        text: "A leased suite gets its own broker splits and deductions in the demo data, rather than inheriting its building's.",
+      },
+    ],
+  },
+  {
     pr: 186,
     title: "Add a What's New changelog page, and post each merged PR's entry to Slack",
     mergedAt: "2026-08-28T18:54:21Z",
