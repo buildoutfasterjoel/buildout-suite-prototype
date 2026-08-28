@@ -357,6 +357,55 @@ const TERMS_STATUS: Record<PropertyStatus, SpaceLeaseTerms['status']> = {
 }
 
 /**
+ * Spread a leased suite's commission across the figures derived from it: its
+ * pre-split deductions, and what each broker earned.
+ *
+ * **Why this is needed at all.** A suite inherits its brokers and its deduction
+ * list from the shell it was split out of, and a lease shell's own
+ * `commissionAmount` is pinned to 0 on purpose — the building holds no money,
+ * its suites do. So every figure derived from a commission arrives here reading
+ * $0: the deduction has a real percentage against nothing, and both brokers are
+ * recorded as having earned nothing on a suite that just billed real money.
+ *
+ * That was invisible until payables existed. Nothing read `grossCommission` on a
+ * suite before, so a deposit applied to the one Approved suite voucher in the
+ * seed raised no payables — every broker's share of the money was zero — and
+ * there was no way to tell that from a rule correctly declining to pay out.
+ *
+ * **New objects, never mutation.** `buildChild` spreads the shell, so the child
+ * starts sharing its `internalBrokers`, `outsideBrokers` and
+ * `preSplitDeductions` by reference. Writing through them would credit the
+ * building with the suite's commission — and, with several suites per shell,
+ * each suite would overwrite the last. `leaseSpaceFixtures.test.ts` pins the
+ * shell's own figures at zero to hold that.
+ *
+ * The arithmetic mirrors `generateBroker` in `seed.ts`: an internal broker takes
+ * their split of what is left after deductions, an outside broker takes theirs
+ * off the gross. Faker-free, like everything else in this module.
+ */
+function applySuiteCommission(child: Listing, commissionAmount: number): void {
+  const deductions = child.transaction.backOffice.preSplitDeductions.map((d) => ({
+    ...d,
+    amount: Math.round(commissionAmount * (d.pct / 100)),
+  }))
+  const netCommission =
+    commissionAmount - deductions.reduce((total, d) => total + d.amount, 0)
+
+  child.transaction.backOffice = {
+    ...child.transaction.backOffice,
+    preSplitDeductions: deductions,
+  }
+  child.internalBrokers = child.internalBrokers.map((b) => ({
+    ...b,
+    grossCommission: Math.round(netCommission * (b.commissionSplitPct / 100)),
+  }))
+  child.outsideBrokers = child.outsideBrokers.map((b) => ({
+    ...b,
+    grossCommission: Math.round(commissionAmount * (b.commissionSplitPct / 100)),
+  }))
+}
+
+/**
  * Fill in what a space's stage implies. A Leased suite with no commission and no
  * dates reads as broken, so each stage gets the dates, history and settlement
  * records a broker would have captured getting it there.
@@ -461,6 +510,7 @@ function applyStageDetail(
     : 0
 
   child.transaction.commissionAmount = commissionAmount
+  applySuiteCommission(child, commissionAmount)
   child.transaction.closeDate = isoDate(-10)
   child.transaction.leaseCommencementDate = isoDate(-5)
   child.transaction.closeProbability = closeProbabilityForStage('closed')

@@ -56,6 +56,7 @@ import {
   createInvoiceFromReceivables,
   deleteDeposit,
   deleteReceivable,
+  approveVoucher,
   saveVoucherDraft,
   submitVoucher,
   updateDepositReference,
@@ -81,6 +82,7 @@ import { ApplyDepositModal, type ApplyDepositInput } from "./ApplyDepositModal";
 import { AddContactModal } from "./AddContactModal";
 import { DueDatePicker, NewReceivableModal } from "./NewReceivableModal";
 import { notify } from "#/lib/notify";
+import { findTeammate } from "#/data/teammates";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
 import { VoucherStatusBadge } from "./VoucherStatusBadge";
 import { VoucherApprovalBanner } from "./VoucherApprovalBanner";
@@ -92,6 +94,9 @@ import {
   initials,
 } from "./dealDisplay";
 import { QuickbooksSyncBadge } from "#/components/common/QuickbooksSyncBadge";
+import { Section } from "./VoucherSection";
+import { PayablesSection } from "./VoucherPayables";
+import { ApproveVoucherModal } from "./ApproveVoucherModal";
 import "./DealFinancials.scss";
 import {
   buildRentSchedule,
@@ -102,6 +107,11 @@ import {
   type RentScheduleRow,
 } from "./rentSchedule";
 
+/** `1 payable` / `2 payables` — the toasts below count records the user did not ask for by name. */
+function plural(count: number, noun: string): string {
+  return count === 1 ? noun : `${noun}s`;
+}
+
 /** Chart colors — same brand hues already used for the app's other recharts series. */
 const DEDUCTIONS_COLOR = "#8833ea";
 const BROKER_COLOR = "#2968e7";
@@ -109,27 +119,6 @@ const UNALLOCATED_COLOR = "#e27400";
 
 function sum(values: number[]): number {
   return values.reduce((total, v) => total + v, 0);
-}
-
-/** Borderless group: a heading (+ optional action) over its content — sections are set apart by gap, not a card. */
-function Section({
-  title,
-  action,
-  children,
-}: {
-  title: string;
-  action?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="d-flex flex-column gap-3">
-      <div className="d-flex align-items-center justify-content-between gap-2">
-        <h3 className="fs-large fw-semibold mb-0">{title}</h3>
-        {action}
-      </div>
-      {children}
-    </section>
-  );
 }
 
 /** A person's name — links to their contact record when one is resolvable, plain text otherwise. */
@@ -1652,15 +1641,26 @@ function ReceivablesSection({
    * `deleteDeposit` returns a null record on a voucher it will not write to.
    */
   const removeDeposit = (depositId: string) => {
-    const { removed } = deleteDeposit(listing.id, depositId);
+    const { removed, removedPayables } = deleteDeposit(listing.id, depositId);
     if (!removed) return;
     const lines = removed.receivableAllocations.length;
+    const spread =
+      lines > 1
+        ? `${formatCurrency(removed.amount)} reversed across ${lines} receivables`
+        : `${formatCurrency(removed.amount)} reversed`;
+    // What it took with it. A payable is raised by the deposit that funded it,
+    // so deleting one removes what it owed the brokers — and any cheques already
+    // written against it. That is not something to discover by scrolling down.
+    const cheques = removedPayables.reduce((t, p) => t + p.payments.length, 0);
+    const payables =
+      removedPayables.length === 0
+        ? ""
+        : cheques > 0
+          ? `, along with ${removedPayables.length} ${plural(removedPayables.length, "payable")} and ${cheques} recorded ${plural(cheques, "payment")}`
+          : `, along with ${removedPayables.length} ${plural(removedPayables.length, "payable")}`;
     notify({
       title: "Deposit removed",
-      description:
-        lines > 1
-          ? `${formatCurrency(removed.amount)} reversed across ${lines} receivables.`
-          : `${formatCurrency(removed.amount)} reversed.`,
+      description: `${spread}${payables}.`,
     });
   };
 
@@ -2036,6 +2036,7 @@ function ReceivablesSection({
         selected={depositRows}
         allReceivables={receivables}
         deductions={listing.transaction.backOffice.preSplitDeductions}
+        approved={listing.transaction.backOffice.status === "Approved"}
         onApply={applyDepositToVoucher}
       />
     </Section>
@@ -2660,6 +2661,9 @@ export function DealFinancials({
   // stored: it is a confirmation of *this* reading of the voucher, so it should
   // not survive a reload and come back pre-ticked.
   const [attested, setAttested] = useState(false);
+  // The approver's dialog. Pending only — see `ApproveVoucherModal` for why
+  // approving asks who is signing rather than assuming the current user.
+  const [approving, setApproving] = useState(false);
 
   // The deduction table's working copy. Held here rather than in the section
   // because Save sits up in the header cluster beside Submit, and the two have
@@ -2721,6 +2725,22 @@ export function DealFinancials({
     });
   };
 
+  // Sign the voucher off. `approveVoucher` re-checks Pending and raises the
+  // payables for whatever deposits are already filed, so the toast can say what
+  // landed rather than only that the status moved.
+  const approve = (reviewerId: string) => {
+    const { deal } = approveVoucher(listing.id, reviewerId);
+    const raised = deal?.transaction.backOffice.payables?.length ?? 0;
+    const approverName = findTeammate(reviewerId)?.name ?? "an approver";
+    notify({
+      title: "Voucher approved",
+      description:
+        raised > 0
+          ? `Signed off by ${approverName}. ${raised} ${plural(raised, "payable")} created.`
+          : `Signed off by ${approverName}.`,
+    });
+  };
+
   // Commit the unsaved voucher edits. `saveVoucherDraft` re-checks Draft, so a
   // voucher that moved on while this page was open cannot be written to.
   const save = () => {
@@ -2762,8 +2782,22 @@ export function DealFinancials({
               dirty={dirty}
               onSave={save}
             />
+          ) : isPending ? (
+            /* The approver's side of the one-way submit. A broker cannot take a
+               Pending voucher back, so this is the only thing that moves it —
+               and the only way a voucher reaches Approved outside the seed. */
+            <Button variant="primary" onClick={() => setApproving(true)}>
+              Approve Voucher
+            </Button>
           ) : undefined
         }
+      />
+
+      <ApproveVoucherModal
+        open={approving}
+        onOpenChange={setApproving}
+        depositCount={(voucher.deposits ?? []).length}
+        onApprove={approve}
       />
 
       <VoucherApprovalBanner voucher={voucher} />
@@ -2826,12 +2860,7 @@ export function DealFinancials({
 
       <ReceivablesSection listing={listing} editable={!isPending} />
 
-      <Section title="Payables">
-        <p className="text-muted mb-0">
-          Payables will be automatically created when deposits are applied to
-          this deal.
-        </p>
-      </Section>
+      <PayablesSection listing={listing} />
 
       {/* The header's cluster again, at the end of the page. This is a long
           scroll — commission breakdown, splits, rent schedule, receivables — and

@@ -18,13 +18,17 @@ import {
   submitVoucher,
   addReceivable,
   applyDeposit,
+  approveVoucher,
   deleteDeposit,
+  deletePayment,
+  recordPayment,
   deleteReceivable,
   reopenVoucher,
   updateReceivable,
   saveVoucherDraft,
   updateDepositReference,
 } from './actions'
+import { payableBalance, payableGrossPaid, payableNetPaid } from './payables'
 import { emptyDraft } from './createListing'
 import { closeProbabilityForStage, commissionForecast } from './commission'
 import { publishReadiness } from './stageGates'
@@ -1075,5 +1079,280 @@ describe('applyDeposit', () => {
       const back = getListing(deal.id)!.transaction.backOffice
       expect(back.deposits ?? []).toHaveLength(status === 'Pending' ? 0 : 1)
     }
+  })
+})
+
+describe('payables', () => {
+  /**
+   * A voucher with one $10,000 receivable, one internal broker on a 55% split
+   * and one outside broker, at whatever status is asked for.
+   *
+   * The brokers are written flat rather than through `saveVoucherDraft` because
+   * these tests are about what a deposit does with them, not about how they got
+   * onto the deal.
+   */
+  function voucherWithBrokers(status: 'Draft' | 'Pending' | 'Approved') {
+    const deal = [...useDataStore.getState().listings.values()][0]!
+    updateDeal(deal.id, {
+      internalBrokers: [
+        {
+          id: 'b-in',
+          name: 'Nikos Buse',
+          role: 'Primary Broker - Sell Side',
+          email: 'nikos@buildout.com',
+          side: 'internal',
+          commissionSplitPct: 100,
+          grossCommission: 6000,
+          commissionPlan: 'Standard Commission Plan',
+          personalSplitPct: 55,
+        },
+      ],
+      outsideBrokers: [
+        {
+          id: 'b-out',
+          name: 'Outside Broker Co.',
+          role: 'Outside Broker',
+          email: 'co@outside.com',
+          side: 'outside',
+          commissionSplitPct: 40,
+          grossCommission: 4000,
+        },
+      ],
+    })
+    updateDealTransaction(deal.id, {
+      backOffice: {
+        ...getListing(deal.id)!.transaction.backOffice,
+        status: 'Draft',
+        payerContactIds: [],
+        receivables: [],
+        deposits: [],
+        payables: undefined,
+        preSplitDeductions: [],
+      },
+    })
+    addReceivable(deal.id, {
+      payerContactId: 'c-payer',
+      billToCompany: false,
+      dueDate: '2026-06-22',
+      billingDescription: 'Full Payment',
+      amount: 10000,
+    })
+    const row = getListing(deal.id)!.transaction.backOffice.receivables[0]!
+    if (status !== 'Draft') {
+      updateDealTransaction(deal.id, {
+        backOffice: { ...getListing(deal.id)!.transaction.backOffice, status },
+      })
+    }
+    return { deal, row }
+  }
+
+  const deposit = (dealId: string, rowId: string, amount: number) =>
+    applyDeposit(dealId, {
+      date: '2026-08-27',
+      amount,
+      referenceNumber: '',
+      receivableAllocations: [{ targetId: rowId, amount }],
+      deductionAllocations: [],
+    })
+
+  const back = (dealId: string) => getListing(dealId)!.transaction.backOffice
+
+  it('raises one payable per broker when a deposit lands on an Approved voucher', () => {
+    const { deal, row } = voucherWithBrokers('Approved')
+    deposit(deal.id, row.id, 5000)
+
+    const payables = back(deal.id).payables!
+    // Half the voucher arrived, so each broker is owed half their gross.
+    // Outside first — a co-broke comes off the top.
+    expect(payables.map((p) => [p.brokerId, p.grossAmount])).toEqual([
+      ['b-out', 2000],
+      ['b-in', 3000],
+    ])
+    expect(payables.every((p) => p.date === '2026-08-27')).toBe(true)
+    expect(payables.every((p) => p.payments.length === 0)).toBe(true)
+  })
+
+  it('raises none on a Draft voucher', () => {
+    const { deal, row } = voucherWithBrokers('Draft')
+    deposit(deal.id, row.id, 5000)
+    expect(back(deal.id).deposits).toHaveLength(1)
+    expect(back(deal.id).payables).toBeUndefined()
+  })
+
+  it('approveVoucher back-fills payables for the deposits already filed', () => {
+    // The state the gate creates: money arrived while the voucher was still a
+    // Draft, so nothing was payable at the time. Approving is when it becomes so.
+    const { deal, row } = voucherWithBrokers('Draft')
+    deposit(deal.id, row.id, 5000)
+    deposit(deal.id, row.id, 5000)
+    expect(back(deal.id).payables).toBeUndefined()
+
+    submitVoucher(deal.id)
+    approveVoucher(deal.id, 'omar-haddad')
+
+    const voucher = back(deal.id)
+    expect(voucher.status).toBe('Approved')
+    expect(voucher.approval!.reviewerId).toBe('omar-haddad')
+    // Two deposits x two brokers, and the two halves add back up to each
+    // broker's whole gross — the reason the share is measured against the whole
+    // voucher rather than the receivables one deposit touched.
+    expect(voucher.payables).toHaveLength(4)
+    const owed = (brokerId: string) =>
+      voucher.payables!
+        .filter((p) => p.brokerId === brokerId)
+        .reduce((total, p) => total + p.grossAmount, 0)
+    expect(owed('b-in')).toBe(6000)
+    expect(owed('b-out')).toBe(4000)
+  })
+
+  it('approveVoucher refuses anything but a Pending voucher', () => {
+    for (const status of ['Draft', 'Approved'] as const) {
+      const { deal } = voucherWithBrokers(status)
+      const before = getListing(deal.id)!
+      approveVoucher(deal.id, 'omar-haddad')
+      expect(back(deal.id).status).toBe(status)
+      expect(getListing(deal.id)).toBe(before)
+    }
+  })
+
+  it('does not raise a second set of payables for a deposit that has them', () => {
+    const { deal, row } = voucherWithBrokers('Approved')
+    deposit(deal.id, row.id, 5000)
+    const depositId = back(deal.id).deposits![0]!.id
+    // Reaching the back-fill directly, the way a re-approval would.
+    updateDealTransaction(deal.id, {
+      backOffice: { ...back(deal.id), status: 'Pending' },
+    })
+    approveVoucher(deal.id, 'priya-nair')
+    expect(
+      back(deal.id).payables!.filter((p) => p.depositId === depositId),
+    ).toHaveLength(2)
+  })
+
+  it('deleteDeposit takes its payables with it, payments and all', () => {
+    const { deal, row } = voucherWithBrokers('Approved')
+    deposit(deal.id, row.id, 5000)
+    deposit(deal.id, row.id, 5000)
+    const [first, second] = back(deal.id).deposits!
+    recordPayment(deal.id, back(deal.id).payables![0]!.id, {
+      date: '2026-09-01',
+      grossAmount: 500,
+      deductions: [],
+    })
+
+    deleteDeposit(deal.id, first!.id)
+    const payables = back(deal.id).payables!
+    expect(payables).toHaveLength(2)
+    expect(payables.every((p) => p.depositId === second!.id)).toBe(true)
+  })
+
+  it('recordPayment writes a cheque and moves gross and net paid', () => {
+    const { deal, row } = voucherWithBrokers('Approved')
+    deposit(deal.id, row.id, 10000)
+    const payable = back(deal.id).payables!.find((p) => p.brokerId === 'b-in')!
+    expect(payable.grossAmount).toBe(6000)
+
+    recordPayment(deal.id, payable.id, {
+      date: '2026-09-01',
+      grossAmount: 2000,
+      deductions: [{ description: 'Advance', amount: 100 }],
+    })
+
+    const after = back(deal.id).payables!.find((p) => p.id === payable.id)!
+    const broker = getListing(deal.id)!.internalBrokers[0]!
+    expect(payableGrossPaid(after)).toBe(2000)
+    // 2000 x 55% = 1100, less the 100 advance.
+    expect(payableNetPaid(after, broker)).toBe(1000)
+    expect(payableBalance(after)).toBe(4000)
+  })
+
+  it('recordPayment clamps to the balance and refuses one that lands on zero', () => {
+    const { deal, row } = voucherWithBrokers('Approved')
+    deposit(deal.id, row.id, 10000)
+    const payable = back(deal.id).payables!.find((p) => p.brokerId === 'b-out')!
+
+    recordPayment(deal.id, payable.id, {
+      date: '2026-09-01',
+      grossAmount: 99999,
+      deductions: [],
+    })
+    let after = back(deal.id).payables!.find((p) => p.id === payable.id)!
+    expect(after.payments[0]!.grossAmount).toBe(4000)
+    expect(payableBalance(after)).toBe(0)
+
+    // Nothing left to pay, so a second cheque is not filed.
+    const { paymentId } = recordPayment(deal.id, payable.id, {
+      date: '2026-09-02',
+      grossAmount: 500,
+      deductions: [],
+    })
+    after = back(deal.id).payables!.find((p) => p.id === payable.id)!
+    expect(paymentId).toBeNull()
+    expect(after.payments).toHaveLength(1)
+  })
+
+  it('recordPayment drops deduction rows the admin never filled in', () => {
+    const { deal, row } = voucherWithBrokers('Approved')
+    deposit(deal.id, row.id, 10000)
+    const payable = back(deal.id).payables![0]!
+    recordPayment(deal.id, payable.id, {
+      date: '2026-09-01',
+      grossAmount: 1000,
+      deductions: [
+        { description: 'Advance', amount: 100 },
+        { description: '', amount: 50 },
+        { description: 'Blank', amount: 0 },
+      ],
+    })
+    const payment = back(deal.id).payables![0]!.payments[0]!
+    expect(payment.deductions.map((d) => d.description)).toEqual(['Advance'])
+  })
+
+  it('recordPayment keeps payments in date order, back-dated ones included', () => {
+    const { deal, row } = voucherWithBrokers('Approved')
+    deposit(deal.id, row.id, 10000)
+    const payable = back(deal.id).payables![0]!
+    for (const date of ['2026-09-10', '2026-09-01', '2026-09-05']) {
+      recordPayment(deal.id, payable.id, { date, grossAmount: 100, deductions: [] })
+    }
+    expect(back(deal.id).payables![0]!.payments.map((p) => p.date)).toEqual([
+      '2026-09-01',
+      '2026-09-05',
+      '2026-09-10',
+    ])
+  })
+
+  it('deletePayment puts the totals back, nothing stored to undo', () => {
+    const { deal, row } = voucherWithBrokers('Approved')
+    deposit(deal.id, row.id, 10000)
+    const payable = back(deal.id).payables![0]!
+    recordPayment(deal.id, payable.id, {
+      date: '2026-09-01',
+      grossAmount: 1000,
+      deductions: [],
+    })
+    const paymentId = back(deal.id).payables![0]!.payments[0]!.id
+
+    deletePayment(deal.id, payable.id, paymentId)
+    const after = back(deal.id).payables!.find((p) => p.id === payable.id)!
+    expect(after.payments).toHaveLength(0)
+    expect(payableGrossPaid(after)).toBe(0)
+    expect(payableBalance(after)).toBe(after.grossAmount)
+  })
+
+  it('recordPayment refuses on a voucher that is not Approved', () => {
+    const { deal, row } = voucherWithBrokers('Approved')
+    deposit(deal.id, row.id, 10000)
+    const payable = back(deal.id).payables![0]!
+    updateDealTransaction(deal.id, {
+      backOffice: { ...back(deal.id), status: 'Draft' },
+    })
+    const { paymentId } = recordPayment(deal.id, payable.id, {
+      date: '2026-09-01',
+      grossAmount: 100,
+      deductions: [],
+    })
+    expect(paymentId).toBeNull()
+    expect(back(deal.id).payables![0]!.payments).toHaveLength(0)
   })
 })
