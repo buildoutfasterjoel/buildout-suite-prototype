@@ -92,3 +92,18 @@ export function spaceAvailability(childStatus: PropertyStatus): SpaceAvailabilit
       return 'Not advertised'
   }
 }
+
+/**
+ * Which side the broker works, in the vocabulary of the deal type: a Sale has a
+ * Seller and a Buyer, a Lease has a Landlord and a Tenant.
+ *
+ * The long `DEAL_SIDE_LABELS` ("Seller / Landlord") exist because a pipeline
+ * filter spans both deal types at once and has to name both. On a single deal
+ * only one of the two words is ever true, so it says just that one.
+ */
+export function repSideLabel(deal: Listing): string {
+  if (deal.dealType === 'Lease') {
+    return deal.dealSide === 'buyer' ? 'Tenant' : 'Landlord'
+  }
+  return deal.dealSide === 'buyer' ? 'Buyer' : 'Seller'
+}

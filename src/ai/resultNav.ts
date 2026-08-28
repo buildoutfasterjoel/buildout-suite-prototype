@@ -34,4 +34,13 @@ export interface ResultNav {
   summary: string;
   listingsFacets?: ListingsFacets;
   contactsFilter?: ContactsFilterPayload;
+  /**
+   * The address/name search a `properties` nav lands with, as `/properties?q=`.
+   *
+   * A plain string rather than a facet payload because that page's destination
+   * is a URL, not a bridge store: properties never carry stage or deal-type, so
+   * there is nothing here that a query param can't say, and saying it in the URL
+   * is what lets the card be a link the broker can cmd-click.
+   */
+  propertiesQuery?: string;
 }

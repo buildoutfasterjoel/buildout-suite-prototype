@@ -40,6 +40,13 @@ import {
 import { filterProperties } from "#/components/properties/propertyIndexFilters";
 
 export const Route = createFileRoute("/_shell/properties/")({
+  // `?q=` pre-fills the address/name search, the same contract `/listings`
+  // carries. It exists so a "5 properties matching …" card in Otto's rail can
+  // be a real link a broker cmd-clicks, rather than a button that has to stash
+  // state in a store and navigate — see `ResultSummaryCard`.
+  validateSearch: (search: Record<string, unknown>): { q?: string } => ({
+    q: typeof search.q === "string" ? search.q : undefined,
+  }),
   component: PropertiesIndex,
   head: () => ({ meta: [{ title: "Properties | Buildout Suite" }] }),
 });
@@ -63,8 +70,11 @@ const MODE_STORAGE_KEY = "properties:mode";
 
 function PropertiesIndex() {
   const navigate = useNavigate();
+  const { q } = Route.useSearch();
   const [mode, setMode] = useState<Mode>("owned");
-  const [query, setQuery] = useState("");
+  // Seeded from `?q=`, then owned by the box: arriving with a query pre-fills
+  // the search, and typing over it is a plain edit, not a fight with the URL.
+  const [query, setQuery] = useState(q ?? "");
   const [facets, setFacets] = useState<PropertyFacetState>(EMPTY_FACETS);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -141,6 +151,14 @@ function PropertiesIndex() {
     () => prospects.find((p) => p.id === flyoutId) ?? null,
     [prospects, flyoutId],
   );
+
+  // Follow `?q=` on a *re*-navigation, not just on mount. The assistant rail is
+  // global, so "search my properties for X" can be asked while already standing
+  // on this page — same route, no remount, and without this the search box would
+  // keep showing the previous query while the link claimed to have applied one.
+  useEffect(() => {
+    if (q != null) setQuery(q);
+  }, [q]);
 
   // Restore the last-used mode on mount. Reading in an effect keeps SSR
   // rendering the default, avoiding a hydration mismatch.

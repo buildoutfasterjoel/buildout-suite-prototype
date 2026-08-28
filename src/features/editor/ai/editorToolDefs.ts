@@ -329,6 +329,28 @@ export const EDITOR_TOOL_LABELS: Record<string, string> = {
   setPageLocked: "Changing the layout lock",
 };
 
+/**
+ * The same vocabulary in the past tense, for a landed call's settled line (see
+ * `toolDoneLabel`). Kept beside its present-tense twin so a renamed tool takes
+ * both labels with it; `editorTools.test.ts` guards that neither map drifts.
+ */
+export const EDITOR_TOOL_LABELS_DONE: Record<string, string> = {
+  readPage: "Read the page",
+  editBlockText: "Rewrote copy",
+  setTableCells: "Filled the table",
+  addTableRow: "Added a row",
+  removeTableRow: "Removed a row",
+  setListItems: "Rewrote the list",
+  addBlock: "Added a block",
+  removeBlock: "Removed a block",
+  moveBlock: "Moved a block",
+  addPage: "Added a page",
+  removePage: "Removed a page",
+  renamePage: "Renamed the page",
+  goToPage: "Went to the page",
+  setPageLocked: "Changed the layout lock",
+};
+
 /** Every editor tool definition — passed to `chat({ tools })` by the relay. */
 export const EDITOR_TOOL_DEFS = [
   readPageDef,
