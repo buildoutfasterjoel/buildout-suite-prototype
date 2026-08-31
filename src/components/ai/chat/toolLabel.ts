@@ -48,6 +48,9 @@ export const SUITE_TOOL_LABELS: Record<string, string> = {
   research_property_load: "Reading the record",
   deal_pipeline_totals: "Totalling the pipeline",
   update_contact: "Updating contact",
+  contact_tags: "Reading tags",
+  add_contact_tags: "Adding tags",
+  remove_contact_tags: "Removing tags",
   brief: "Reading the record",
   support: "Handing you off",
 };
@@ -109,6 +112,9 @@ export const SUITE_TOOL_LABELS_DONE: Record<string, string> = {
   research_property_load: "Read the record",
   deal_pipeline_totals: "Totalled the pipeline",
   update_contact: "Updated contact",
+  contact_tags: "Read tags",
+  add_contact_tags: "Added tags",
+  remove_contact_tags: "Removed tags",
   brief: "Read the record",
   support: "Handed you off",
 };

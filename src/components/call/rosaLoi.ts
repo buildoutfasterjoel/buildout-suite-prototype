@@ -6,6 +6,7 @@ import { contactFullName } from "#/components/contacts/contactDisplay";
 import { useContactSession } from "#/components/contacts/useContactSession";
 import { DELGADO_LOI } from "./rosaDocs";
 import { DELGADO_BUYER_LEAD_ID } from "./rosaLeads";
+import { CURRENT_USER_FIRST_NAME } from "#/data/teammates";
 
 /** The LOI email's timeline-row id. Deterministic so `addSimEvent` dedupes it
  * and a replay-reset can clear it by id. */
@@ -61,7 +62,7 @@ function onArrive(contactId: string, propertyId: string, mySession: number) {
     seq: 2_000_002,
     subject,
     body:
-      "John — good call. I've walked past that building for fifteen years and I already know what it is. Attached is our letter of intent: all cash, thirty-day close, no financing contingency. I'm not going to gut it and I'm not going to churn the tenants. Tell the owner that part. — Marcus",
+      `${CURRENT_USER_FIRST_NAME} — good call. I've walked past that building for fifteen years and I already know what it is. Attached is our letter of intent: all cash, thirty-day close, no financing contingency. I'm not going to gut it and I'm not going to churn the tenants. Tell the owner that part. — Marcus`,
     hasAttachment: true,
     attachments: [{ name: DELGADO_LOI.name, meta: DELGADO_LOI.meta }],
     associations: deal

@@ -1742,6 +1742,75 @@ export function updateContact(
 }
 
 /**
+ * Add segment tags to a contact and persist.
+ *
+ * Matching is case-insensitive on the way in: adding "vip" to someone who
+ * already carries "VIP" is a no-op, not a second chip. The tag facet on the
+ * People page is derived from the contacts themselves, so a duplicate that
+ * differs only in case would split one segment into two filters that each find
+ * half the book. The stored spelling is whatever arrived first.
+ *
+ * Returns the tags that were actually new, so a caller can report what it did
+ * rather than what it was asked to do.
+ */
+export function addContactTags(
+  id: string,
+  tags: string[],
+): { contact: Contact | null; added: string[] } {
+  const existing = useDataStore.getState().contacts.get(id)
+  if (!existing) return { contact: null, added: [] }
+
+  const have = new Set(existing.tags.map((t) => t.toLowerCase()))
+  const added: string[] = []
+  for (const raw of tags) {
+    const tag = raw.trim()
+    if (!tag || have.has(tag.toLowerCase())) continue
+    have.add(tag.toLowerCase())
+    added.push(tag)
+  }
+  if (!added.length) return { contact: existing, added: [] }
+
+  const contact: Contact = { ...existing, tags: [...existing.tags, ...added] }
+  useDataStore.setState((s) => {
+    const contacts = new Map(s.contacts)
+    contacts.set(id, contact)
+    return { contacts }
+  })
+  useDataStore.getState().persist()
+  return { contact, added }
+}
+
+/**
+ * Remove segment tags from a contact and persist. Case-insensitive for the same
+ * reason as `addContactTags` — "vip" has to take off the chip that reads "VIP",
+ * or removal silently does nothing. Returns the tags actually removed, in the
+ * spelling the record was carrying.
+ */
+export function removeContactTags(
+  id: string,
+  tags: string[],
+): { contact: Contact | null; removed: string[] } {
+  const existing = useDataStore.getState().contacts.get(id)
+  if (!existing) return { contact: null, removed: [] }
+
+  const drop = new Set(tags.map((t) => t.trim().toLowerCase()).filter(Boolean))
+  const removed = existing.tags.filter((t) => drop.has(t.toLowerCase()))
+  if (!removed.length) return { contact: existing, removed: [] }
+
+  const contact: Contact = {
+    ...existing,
+    tags: existing.tags.filter((t) => !drop.has(t.toLowerCase())),
+  }
+  useDataStore.setState((s) => {
+    const contacts = new Map(s.contacts)
+    contacts.set(id, contact)
+    return { contacts }
+  })
+  useDataStore.getState().persist()
+  return { contact, removed }
+}
+
+/**
  * Append a timestamped note line to a contact's freeform `notes` and persist.
  * Used by the AI `add_note` tool and any manual note affordance.
  */

@@ -5,6 +5,7 @@ import { playArrivalChime } from "#/lib/chime";
 import { contactFullName } from "#/components/contacts/contactDisplay";
 import { useContactSession } from "#/components/contacts/useContactSession";
 import { ROSA_SIGNED_AGREEMENT } from "./rosaDocs";
+import { CURRENT_USER_FIRST_NAME } from "#/data/teammates";
 
 /** The signed-agreement email's timeline-row id. Deterministic so `addSimEvent`
  * dedupes it and R2's replay-reset can clear it by id. */
@@ -61,7 +62,7 @@ function onArrive(dealId: string, ownerContactId: string, mySession: number) {
     seq: 2_000_001,
     subject,
     body:
-      "John — Miguel never signed anything until he trusted the person across the table. I read the BOV twice, and then the agreement twice more. It's signed and attached. Find the operator who'll love this building the way he did. — Rosa",
+      `${CURRENT_USER_FIRST_NAME} — Miguel never signed anything until he trusted the person across the table. I read the BOV twice, and then the agreement twice more. It's signed and attached. Find the operator who'll love this building the way he did. — Rosa`,
     hasAttachment: true,
     attachments: [{ name: ROSA_SIGNED_AGREEMENT.name, meta: ROSA_SIGNED_AGREEMENT.meta }],
     actionBar: { primary: "Activate Listing", ghosts: ["Reply"] },

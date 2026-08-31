@@ -30,7 +30,15 @@ export interface BovPricing {
   occupancyNote: string;
 }
 
-const money = (n: number) => `$${(n / 1_000_000).toFixed(1)}M`;
+/**
+ * The headline scale. Millions for the usual deal, thousands below that — a
+ * small building priced in millions reads "$0.2M – $0.2M", which loses the
+ * whole range to rounding and makes the underwrite look like it found nothing.
+ */
+const money = (n: number) =>
+  n >= 1_000_000
+    ? `$${(n / 1_000_000).toFixed(1)}M`
+    : `$${Math.round(n / 1_000).toLocaleString("en-US")}K`;
 
 /** Price the BOV from the approved run. Pure — same inputs, same numbers. */
 export function bovPricingFor(
