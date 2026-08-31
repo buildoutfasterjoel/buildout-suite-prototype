@@ -83,6 +83,8 @@ export interface DepositRow {
   brokers: ReceivableBroker[]
   /** The payer's cheque or wire reference. Every deposit carries one. */
   referenceNumber: string
+  /** The cheque's own number, or empty on money that arrived another way. */
+  checkNumber: string
   /** Who paid, as the row addresses them — or `Multiple`. See {@link depositPayer}. */
   payerName: string
   /** The day the money landed, `yyyy-mm-dd`. */
@@ -272,6 +274,10 @@ export function allDeposits(): DepositRow[] {
           target,
           brokers,
           referenceNumber: deposit.referenceNumber,
+          // Flattened to `''` for the row, where the column renders a dash and
+          // nothing needs to tell "no cheque" from "cheque with no number" —
+          // that distinction lives on the record, not in a table cell.
+          checkNumber: deposit.checkNumber ?? '',
           payerName: payer,
           date: deposit.date,
           amount: deposit.amount,
@@ -297,6 +303,7 @@ export function allDeposits(): DepositRow[] {
             voucher.name,
             deal.name,
             deposit.referenceNumber,
+            deposit.checkNumber ?? '',
             String(deposit.amount),
             deposit.amount.toFixed(2),
           ]

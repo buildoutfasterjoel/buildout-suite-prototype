@@ -634,6 +634,43 @@ describe('commission plan seed', () => {
   })
 })
 
+describe('deposit check number seed', () => {
+  const { listings } = generateDataset()
+  const deposits = listings.flatMap(
+    (deal) => deal.transaction.backOffice.deposits ?? [],
+  )
+
+  it('leaves both states in the book, so the Check # column is never uniform', () => {
+    expect(deposits.length).toBeGreaterThan(0)
+    // A column that is all dashes, or all numbers, cannot show that the field
+    // is optional — which is the one thing it has to say.
+    expect(deposits.some((d) => d.checkNumber)).toBe(true)
+    expect(deposits.some((d) => !d.checkNumber)).toBe(true)
+  })
+
+  it('writes no empty check number, only an absent one', () => {
+    for (const deposit of deposits) {
+      if ('checkNumber' in deposit) expect(deposit.checkNumber).toBeTruthy()
+    }
+  })
+
+  it('gives every deposit a reference, cheque or not', () => {
+    for (const deposit of deposits) {
+      expect(deposit.referenceNumber).toBeTruthy()
+    }
+  })
+
+  // Both were first hashed from the bare receivable id into the same range, so
+  // every cheque row read "Ref 1898 / Check 1898" — two fields whose whole
+  // point is that they are not the same fact, printed as if they were.
+  it('never prints a cheque number equal to its own reference', () => {
+    for (const deposit of deposits) {
+      if (!deposit.checkNumber) continue
+      expect(deposit.checkNumber).not.toBe(deposit.referenceNumber)
+    }
+  })
+})
+
 describe('commission split seed', () => {
   const { listings } = generateDataset()
 

@@ -159,6 +159,14 @@ export const CHANGELOG: ChangelogEntry[] = [
         text: "As you fill the lines in, a running total says how much of the deposit is still left to place — and turns red, with Save switched off, if you apply more than actually arrived.",
       },
       {
+        kind: "feature",
+        text: "A deposit now records the check number as well as the reference number — two different facts that were being collapsed into one. Both modals ask for it, the Deposits page has a Check # column, and you can correct it on the voucher afterwards.",
+      },
+      {
+        kind: "feature",
+        text: "The voucher picker in New Deposit shows each voucher's status beside its name, so you can see whether it is a Draft or Approved before you file money against it.",
+      },
+      {
         kind: "refinement",
         text: "When one deposit paid two different parties, the Payer cell reads Multiple rather than naming one of them over the other. Search still finds the row under either name.",
       },

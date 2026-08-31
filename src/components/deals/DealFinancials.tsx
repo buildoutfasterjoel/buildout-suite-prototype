@@ -28,6 +28,7 @@ import {
   faDollarSign,
   faEllipsisVertical,
   faHashtag,
+  faMoneyCheckPen,
   faEnvelope,
   faPhone,
   faFileLines,
@@ -59,6 +60,7 @@ import {
   approveVoucher,
   saveVoucherDraft,
   submitVoucher,
+  updateDepositCheckNumber,
   updateDepositReference,
   updateReceivable,
 } from "#/data/actions";
@@ -1419,6 +1421,7 @@ function DepositRow({
   amount,
   editable,
   onRenameReference,
+  onRenameCheckNumber,
   onDelete,
 }: {
   deposit: VoucherDeposit;
@@ -1426,6 +1429,7 @@ function DepositRow({
   amount: number;
   editable: boolean;
   onRenameReference: (next: string) => void;
+  onRenameCheckNumber: (next: string) => void;
   onDelete: () => void;
 }) {
   return (
@@ -1469,29 +1473,52 @@ function DepositRow({
           references started being generated at save; it survives only because
           the field is typed `string` and a deposit stored before that could
           still be empty. */}
-      <Table.Cell>
+      {/* Spans Billing Description AND Receivable Amount.
+          
+          The amount cell on a deposit row is deliberately empty — a deposit has
+          no billed figure — so the two controls take room that was already
+          blank rather than squeezing into the description column alone, where
+          "1898" and "90849" both clipped to two characters. `table-layout:
+          fixed` sizes the grid from the header row, so spanning here costs the
+          receivable rows above nothing and Credited Amount still lines up. */}
+      <Table.Cell colSpan={2}>
         {editable ? (
-          <ReceivableTextCell
-            value={deposit.referenceNumber}
-            placeholder="Reference number"
-            ariaLabel="Deposit reference number"
-            unit={faHashtag}
-            required
-            className="w-100"
-            onCommit={onRenameReference}
-          />
+          <div className="d-flex gap-2 align-items-center">
+            <ReceivableTextCell
+              value={deposit.referenceNumber}
+              placeholder="Reference number"
+              ariaLabel="Deposit reference number"
+              unit={faHashtag}
+              required
+              className="w-100"
+              onCommit={onRenameReference}
+            />
+            {/* Not `required`, unlike the reference beside it. Clearing this one
+                is a real correction — "that was a wire, not a cheque" — where
+                clearing a reference would leave a row nothing can be matched
+                against. */}
+            <ReceivableTextCell
+              value={deposit.checkNumber ?? ""}
+              placeholder="Check number"
+              ariaLabel="Deposit check number"
+              unit={faMoneyCheckPen}
+              className="w-100"
+              onCommit={onRenameCheckNumber}
+            />
+          </div>
         ) : (
           <span className="text-muted">
-            {deposit.referenceNumber
-              ? `Ref ${deposit.referenceNumber}`
-              : "No reference"}
+            {[
+              deposit.referenceNumber
+                ? `Ref ${deposit.referenceNumber}`
+                : "No reference",
+              deposit.checkNumber ? `Check ${deposit.checkNumber}` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           </span>
         )}
       </Table.Cell>
-      {/* Receivable Amount stays empty. A deposit has no billed amount — the
-          figure it carries is what was received, and that belongs under
-          Credited Amount beside the running total it moved. */}
-      <Table.Cell style={{ width: RECEIVABLE_COL.amount }} />
       <Table.Cell
         className="text-end text-muted"
         style={{ width: RECEIVABLE_COL.credited }}
@@ -1990,6 +2017,9 @@ function ReceivablesSection({
                     editable={editable}
                     onRenameReference={(next) =>
                       updateDepositReference(listing.id, deposit.id, next)
+                    }
+                    onRenameCheckNumber={(next) =>
+                      updateDepositCheckNumber(listing.id, deposit.id, next)
                     }
                     onDelete={() => removeDeposit(deposit.id)}
                   />

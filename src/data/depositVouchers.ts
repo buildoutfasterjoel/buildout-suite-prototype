@@ -8,7 +8,7 @@
 import type { FinancialDeduction, FinancialReceivable } from './types'
 import { getStore, getProperty } from './store'
 import { receivableBalance } from './deposits'
-import { voucherHref } from './vouchers'
+import { voucherHref, type VoucherStatus } from './vouchers'
 
 export interface DepositVoucherOption {
   /** What `applyDeposit` is called with. Also the option's identity. */
@@ -23,8 +23,14 @@ export interface DepositVoucherOption {
   receivables: FinancialReceivable[]
   /** The deduction denominator is the whole voucher, so these come whole too. */
   deductions: FinancialDeduction[]
-  /** Whether the voucher is signed off — decides what the modal's alert promises. */
-  approved: boolean
+  /**
+   * Where the voucher stands. Shown as a badge in the picker, and read for
+   * whether the modal's alert promises payables now or at approval.
+   *
+   * The status itself rather than an `approved` boolean: the picker has to name
+   * it, and a boolean would have the same fact spelled two ways in one option.
+   */
+  status: VoucherStatus
 }
 
 /** Money is counted in cents, so no float tail leaks into a total. */
@@ -81,7 +87,7 @@ export function depositVouchers(): DepositVoucherOption[] {
           outstanding,
           receivables: voucher.receivables,
           deductions: voucher.preSplitDeductions,
-          approved: voucher.status === 'Approved',
+          status: voucher.status,
         },
       ]
     })

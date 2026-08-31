@@ -28,6 +28,7 @@ import {
   reopenVoucher,
   updateReceivable,
   saveVoucherDraft,
+  updateDepositCheckNumber,
   updateDepositReference,
 } from './actions'
 import { payableBalance, payableGrossPaid, payableNetPaid } from './payables'
@@ -944,6 +945,85 @@ describe('applyDeposit', () => {
         getListing(deal.id)!.transaction.backOffice.deposits![0]!.referenceNumber,
       ).toBe(status === 'Pending' ? 'WT-1' : 'WT-2')
     }
+  })
+
+  it('stores a check number when the money arrived as one', () => {
+    const { deal, row } = voucherWithOneLine()
+    applyDeposit(deal.id, {
+      date: '2026-08-27',
+      amount: 100,
+      referenceNumber: 'WT-1',
+      checkNumber: '  8812  ',
+      receivableAllocations: [{ targetId: row.id, amount: 100 }],
+      deductionAllocations: [],
+    })
+    const deposit = getListing(deal.id)!.transaction.backOffice.deposits![0]!
+    expect(deposit.checkNumber).toBe('8812')
+    // A separate fact from the reference, not a second name for it.
+    expect(deposit.referenceNumber).toBe('WT-1')
+  })
+
+  it('leaves a wire carrying no check number key at all', () => {
+    const { deal, row } = voucherWithOneLine()
+    applyDeposit(deal.id, {
+      date: '2026-08-27',
+      amount: 100,
+      referenceNumber: 'WT-1',
+      checkNumber: '   ',
+      receivableAllocations: [{ targetId: row.id, amount: 100 }],
+      deductionAllocations: [],
+    })
+    const deposit = getListing(deal.id)!.transaction.backOffice.deposits![0]!
+    // Absent, not `''`: an empty string would claim a cheque number was
+    // recorded and left blank, which is a different fact.
+    expect('checkNumber' in deposit).toBe(false)
+  })
+
+  it('updateDepositCheckNumber sets, trims and clears', () => {
+    const { deal, row } = voucherWithOneLine()
+    applyDeposit(deal.id, {
+      date: '2026-08-27',
+      amount: 100,
+      referenceNumber: 'WT-1',
+      receivableAllocations: [{ targetId: row.id, amount: 100 }],
+      deductionAllocations: [],
+    })
+    const deposit = getListing(deal.id)!.transaction.backOffice.deposits![0]!
+    const read = () =>
+      getListing(deal.id)!.transaction.backOffice.deposits![0]!
+
+    updateDepositCheckNumber(deal.id, deposit.id, '  8812 ')
+    expect(read().checkNumber).toBe('8812')
+
+    // Cleared, unlike a reference — "that was a wire, not a cheque" is a
+    // correction the broker is entitled to make, and it removes the key.
+    updateDepositCheckNumber(deal.id, deposit.id, '   ')
+    expect('checkNumber' in read()).toBe(false)
+    // The reference is untouched by either write.
+    expect(read().referenceNumber).toBe('WT-1')
+  })
+
+  it('updateDepositCheckNumber refuses a Pending voucher', () => {
+    const { deal, row } = voucherWithOneLine()
+    applyDeposit(deal.id, {
+      date: '2026-08-27',
+      amount: 100,
+      referenceNumber: 'WT-1',
+      checkNumber: '1111',
+      receivableAllocations: [{ targetId: row.id, amount: 100 }],
+      deductionAllocations: [],
+    })
+    const deposit = getListing(deal.id)!.transaction.backOffice.deposits![0]!
+    updateDealTransaction(deal.id, {
+      backOffice: {
+        ...getListing(deal.id)!.transaction.backOffice,
+        status: 'Pending',
+      },
+    })
+    updateDepositCheckNumber(deal.id, deposit.id, '2222')
+    expect(
+      getListing(deal.id)!.transaction.backOffice.deposits![0]!.checkNumber,
+    ).toBe('1111')
   })
 
   it('deleteDeposit puts back what it moved', () => {

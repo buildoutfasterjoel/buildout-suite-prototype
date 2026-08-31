@@ -1402,6 +1402,18 @@ function generateListings(
   propertyContacts: Contact[],
   dealIdRef: { n: number },
   spec: DealPipelineEntry,
+  /**
+   * How many deposits the book has written so far, shared across every deal.
+   *
+   * A counter rather than a hash, and a shared one rather than a per-voucher
+   * index. The whole seeded book carries only a handful of deposits, spread one
+   * per voucher — at that sample size a 50/50 hash draws all-or-nothing (it
+   * first drew nothing), and a per-voucher index gives every deposit position 0
+   * and so the same answer. Only a counter that spans vouchers alternates. The
+   * same trap the payment hold-back below and the receivable `variant` cycling
+   * above both exist to avoid.
+   */
+  depositRef: { n: number },
 ): Listing[] {
   // One deal per property — the pipeline shape is controlled by DEAL_PIPELINE,
   // not random per-property counts (see generateDataset).
@@ -1861,6 +1873,29 @@ function generateListings(
           receivable.id,
           deposits.map((d) => d.referenceNumber),
         ),
+        // Every other deposit arrived as a cheque; the rest are wires and ACH
+        // transfers, which carry no cheque number at all. Both states have to be
+        // in the book or the Check # column is either uniformly empty or
+        // uniformly filled, and in neither case does it show that the field is
+        // optional. See `depositRef` for why this alternates rather than hashes.
+        //
+        // The number itself is hashed, not drawn: a `faker` call here would move
+        // the shared stream and shift every property, contact and deal generated
+        // after it. The key is spread in rather than set to `''`, so a wire
+        // matches the shape `applyDeposit` writes for one.
+        //
+        // Hashed from a DIFFERENT string than the reference above, and into a
+        // different range. Both were first hashed from the bare receivable id,
+        // which made every cheque row read "Ref 1898 / Check 1898" — two fields
+        // whose whole point is that they are not the same fact, printed as if
+        // they were.
+        ...(depositRef.n++ % 2 === 0
+          ? {
+              checkNumber: String(
+                10_000 + (hashCode(`check-${receivable.id}`) % 90_000),
+              ),
+            }
+          : {}),
         createdAt: paidAt.toISOString(),
         createdById: CURRENT_USER.id,
         receivableAllocations: [
@@ -2648,10 +2683,19 @@ export function generateDataset() {
   // tracked properties are deliberately not in this list — they keep the null
   // status `generateProperty` gave them.
   const dealIdRef = { n: 100 }
+  // Shared across every deal, so the cheque / wire alternation actually
+  // alternates — see `depositRef` on `generateListings`.
+  const depositRef = { n: 0 }
   const listings = dealProperties.flatMap((p, i) => {
     const spec = DEAL_PIPELINE[i % DEAL_PIPELINE.length]
     p.status = spec.stage
-    return generateListings(p, contactsByProperty.get(p.id) ?? contacts, dealIdRef, spec)
+    return generateListings(
+      p,
+      contactsByProperty.get(p.id) ?? contacts,
+      dealIdRef,
+      spec,
+      depositRef,
+    )
   })
 
   // Overwrite five generated contacts with the hand-authored hero personas and

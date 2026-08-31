@@ -123,13 +123,12 @@ function DepositsPage() {
   const voucherOptions = depositVouchers();
 
   function saveDeposit(input: NewDepositInput) {
-    const { depositId } = applyDeposit(input.dealId, {
-      date: input.date,
-      amount: input.amount,
-      referenceNumber: input.referenceNumber,
-      receivableAllocations: input.receivableAllocations,
-      deductionAllocations: input.deductionAllocations,
-    });
+    // Spread, not field by field. The listed-out version silently dropped
+    // `checkNumber` when that field was added — `applyDeposit` takes it as
+    // optional, so nothing failed to compile and the value just never arrived.
+    // `dealId` is the one field the action takes as its own argument.
+    const { dealId, ...deposit } = input;
+    const { depositId } = applyDeposit(dealId, deposit);
     if (!depositId) {
       notify({
         title: "Couldn't file the deposit",
@@ -232,6 +231,7 @@ function DepositsPage() {
                         <Table.Head>Voucher</Table.Head>
                         <Table.Head>Brokers</Table.Head>
                         <Table.Head>Ref #</Table.Head>
+                        <Table.Head>Check #</Table.Head>
                         <Table.Head>Payer</Table.Head>
                         <Table.Head>Date</Table.Head>
                         <Table.Head className="text-end">Amount</Table.Head>
@@ -258,7 +258,7 @@ function DepositsPage() {
                         <Table.Cell className="text-nowrap">
                           TOTAL ({totals.count})
                         </Table.Cell>
-                        <Table.Cell colSpan={4} />
+                        <Table.Cell colSpan={5} />
                         <Table.Cell className="text-end text-nowrap">
                           {formatCurrency(totals.amount)}
                         </Table.Cell>
@@ -290,6 +290,13 @@ function DepositsPage() {
                           </Table.Cell>
                           <Table.Cell className="text-nowrap">
                             {row.referenceNumber || "--"}
+                          </Table.Cell>
+                          {/* Muted, unlike Ref #. Every deposit has a
+                              reference and only some arrived as a cheque, so
+                              this column is mostly dashes and should not pull
+                              the eye down a column of them. */}
+                          <Table.Cell className="text-nowrap text-muted">
+                            {row.checkNumber || "--"}
                           </Table.Cell>
                           <Table.Cell className="text-nowrap">
                             {row.payerName}

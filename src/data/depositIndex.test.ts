@@ -565,3 +565,29 @@ describe('depositYears', () => {
     expect(depositYears([], NOW)).toEqual([2026])
   })
 })
+
+describe('check numbers', () => {
+  it('carries a deposit\'s cheque number onto its row, and finds it by search', () => {
+    resetStore()
+    addContact('c-1', 'Mandana', 'Massih')
+    const deal = makeSale('1135 Kline St')
+    setVoucher(deal.id, {
+      receivables: [receivable()],
+      deposits: [deposit({ referenceNumber: 'ACH 6/9', checkNumber: '8812' })],
+    })
+
+    const row = onlyRow(deal.id)
+    expect(row.checkNumber).toBe('8812')
+    expect(row.searchText).toContain('8812')
+  })
+
+  it('reads money that arrived without a cheque as an empty cheque number', () => {
+    resetStore()
+    addContact('c-1', 'Mandana', 'Massih')
+    const deal = makeSale('1135 Kline St')
+    setVoucher(deal.id, { receivables: [receivable()], deposits: [deposit()] })
+    // Flattened for the row: the column renders a dash, and the difference
+    // between "no cheque" and "cheque with no number" lives on the record.
+    expect(onlyRow(deal.id).checkNumber).toBe('')
+  })
+})

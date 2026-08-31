@@ -22,6 +22,7 @@ import { voucherParty } from "#/data/vouchers";
 import type { DepositAllocation } from "#/data/types";
 import { toISODate } from "#/lib/isoDate";
 import { DueDatePicker } from "#/components/deals/NewReceivableModal";
+import { VoucherStatusBadge } from "#/components/deals/VoucherStatusBadge";
 import { formatCurrency, formatDate } from "#/components/deals/dealDisplay";
 import type { DepositVoucherOption } from "#/data/depositVouchers";
 
@@ -30,6 +31,8 @@ export interface NewDepositInput {
   date: string;
   amount: number;
   referenceNumber: string;
+  /** Blank when the money did not arrive as a cheque. */
+  checkNumber: string;
   receivableAllocations: DepositAllocation[];
   deductionAllocations: DepositAllocation[];
 }
@@ -117,6 +120,7 @@ export function NewDepositModal({
   const [date, setDate] = useState("");
   const [amount, setAmount] = useState("");
   const [reference, setReference] = useState("");
+  const [checkNumber, setCheckNumber] = useState("");
   /** Keyed by receivable id, held as typed text so a half-typed "1." survives. */
   const [lines, setLines] = useState<Record<string, string>>({});
 
@@ -130,6 +134,7 @@ export function NewDepositModal({
     setDate(toISODate(new Date()));
     setAmount("");
     setReference("");
+    setCheckNumber("");
     setLines({});
   }, [open]);
 
@@ -197,6 +202,7 @@ export function NewDepositModal({
       date,
       amount: parsedAmount,
       referenceNumber: reference.trim(),
+      checkNumber: checkNumber.trim(),
       receivableAllocations: allocations,
       deductionAllocations: deductionLines
         .filter((line) => line.applied > 0)
@@ -245,7 +251,16 @@ export function NewDepositModal({
                     <Combobox.Item key={item.dealId} value={item}>
                       <div className="d-flex justify-content-between gap-3 w-100">
                         <div className="d-flex flex-column">
-                          <span>{item.label}</span>
+                          {/* The badge sits beside the name rather than in the
+                              right-hand column, because it qualifies the
+                              voucher and the figure opposite qualifies the
+                              money. Only Draft and Approved can appear —
+                              `depositVouchers` drops Pending, since
+                              `applyDeposit` refuses one. */}
+                          <span className="d-inline-flex align-items-center gap-2">
+                            {item.label}
+                            <VoucherStatusBadge status={item.status} />
+                          </span>
                           <span className="text-muted fs-small">
                             {item.sublabel}
                           </span>
@@ -299,6 +314,20 @@ export function NewDepositModal({
                     value={reference}
                     placeholder="Generated if left blank"
                     onChange={(e) => setReference(e.target.value)}
+                  />
+                </Field>
+
+                <Field style={{ flex: "1 1 10rem" }}>
+                  <Field.Label>Check Number</Field.Label>
+                  {/* A different fact from the reference beside it, not a
+                      second name for it: every deposit has a reference, and
+                      only a cheque has a cheque number. Nothing is generated
+                      here, so the placeholder says what leaving it empty
+                      means. */}
+                  <Input
+                    value={checkNumber}
+                    placeholder="If paid by check"
+                    onChange={(e) => setCheckNumber(e.target.value)}
                   />
                 </Field>
               </div>
@@ -442,7 +471,7 @@ export function NewDepositModal({
                   <ul className="mb-0 ps-3">
                     <li>Apply voucher deductions</li>
                     <li>
-                      {voucher.approved
+                      {voucher.status === "Approved"
                         ? "Create payables for brokers"
                         : "Create payables for brokers once this voucher is approved"}
                     </li>

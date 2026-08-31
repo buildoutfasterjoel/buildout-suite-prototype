@@ -585,6 +585,8 @@ export function applyDeposit(
     date: string
     amount: number
     referenceNumber: string
+    /** The cheque's own number, when the money came as one. Blank for a wire. */
+    checkNumber?: string
     receivableAllocations: DepositAllocation[]
     deductionAllocations: DepositAllocation[]
   },
@@ -659,6 +661,13 @@ export function applyDeposit(
                   depositId,
                   (back.deposits ?? []).map((d) => d.referenceNumber),
                 ),
+              // Spread rather than set, so a wire carries no `checkNumber` key
+              // at all. An empty string there would claim a cheque number was
+              // recorded and left blank, which is a different fact from the
+              // money never having arrived as a cheque.
+              ...(input.checkNumber?.trim()
+                ? { checkNumber: input.checkNumber.trim() }
+                : {}),
               createdAt: now,
               createdById: CURRENT_USER.id,
               receivableAllocations,
@@ -693,6 +702,51 @@ export function applyDeposit(
  *
  * Refuses on a Pending voucher, like every other receivable write.
  */
+/**
+ * Correct a deposit's cheque number, or clear it.
+ *
+ * The mirror of {@link updateDepositReference} with one rule reversed: an empty
+ * value is ACCEPTED here and stored as no cheque number at all. A reference is
+ * required because every deposit must be matchable against a bank statement, so
+ * clearing one is a mistake worth refusing. A cheque number is a fact about how
+ * the money arrived, and "this was a wire, not a cheque" is a correction the
+ * broker is entitled to make.
+ *
+ * The key is deleted rather than set to `''`, so a corrected row is
+ * indistinguishable from one that never claimed a cheque.
+ *
+ * Refuses on a Pending voucher, like every other receivable write.
+ */
+export function updateDepositCheckNumber(
+  dealId: string,
+  depositId: string,
+  checkNumber: string,
+): { deal: Listing | null } {
+  const next = checkNumber.trim()
+
+  return {
+    deal: patchListing(dealId, (l) => {
+      const back = l.transaction.backOffice
+      if (back.status === 'Pending') return l
+      return {
+        ...l,
+        transaction: {
+          ...l.transaction,
+          backOffice: {
+            ...back,
+            deposits: (back.deposits ?? []).map((d) => {
+              if (d.id !== depositId) return d
+              const { checkNumber: _dropped, ...rest } = d
+              return next ? { ...rest, checkNumber: next } : rest
+            }),
+          },
+        },
+        updatedAt: new Date().toISOString(),
+      }
+    }),
+  }
+}
+
 export function updateDepositReference(
   dealId: string,
   depositId: string,

@@ -58,7 +58,7 @@ describe('depositVouchers', () => {
     expect(options).toHaveLength(1)
     expect(options[0].outstanding).toBe(42000)
     expect(options[0].receivables).toHaveLength(2)
-    expect(options[0].approved).toBe(false)
+    expect(options[0].status).toBe('Draft')
   })
 
   it('drops a voucher once its receivables are fully paid', () => {
