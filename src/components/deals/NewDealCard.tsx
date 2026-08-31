@@ -13,7 +13,11 @@ import {
 import { dealHeadlineLabel } from "#/components/deals/dealDisplay";
 import { NewDealStageChip } from "#/components/deals/NewDealStageChip";
 import { dealShape } from "#/data/dealShape";
-import { CardBadge, BadgeDivider } from "#/components/deals/DealCardBadges";
+import {
+  CardBadge,
+  BadgeDivider,
+  CLASSIC_BADGE,
+} from "#/components/deals/DealCardBadges";
 import {
   relationshipBadge,
   relationshipTooltip,
@@ -174,6 +178,7 @@ export function NewDealCard({
               color={side.color}
               tooltip={side.tooltip}
             />
+            {listing.isClassic && <CardBadge {...CLASSIC_BADGE} />}
             {/* The divider belongs to the relationship badge, not to the row —
                 kept in one nowrap group so a wrap carries the rule down with it
                 and it still reads as a separation from the badges above. */}

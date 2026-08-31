@@ -1,4 +1,5 @@
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPencil,
@@ -17,6 +18,7 @@ import {
 } from "./propertyDisplay";
 import { dealShape, dealStageLabel } from "#/data/dealShape";
 import { dealHeadlineLabel } from "#/components/deals/dealDisplay";
+import { CLASSIC_BADGE } from "#/components/deals/DealCardBadges";
 import { AvatarGroup } from "./AvatarGroup";
 
 export function PropertyCard({ listing }: { listing: Listing }) {
@@ -74,17 +76,46 @@ export function PropertyCard({ listing }: { listing: Listing }) {
               <FontAwesomeIcon icon={faSignHanging} style={{ fontSize: 9 }} />
               {dealStageLabel(listing.status, dealShape(listing))}
             </span>
-            <span
-              className="fw-semibold text-white"
-              style={{
-                backgroundColor: "#62748e",
-                borderRadius: 6,
-                padding: "3px 6px",
-                fontSize: 10,
-              }}
-            >
-              #{refId}
-            </span>
+            {/* Identity, not state: the classic marker sits with the reference
+                id rather than beside the stage, and takes the same dark pill —
+                the badge spec's light fill would wash out over a photo. */}
+            <div className="d-flex align-items-center gap-1">
+              {listing.isClassic && (
+                <Tooltip>
+                  <Tooltip.Trigger
+                    render={
+                      <span
+                        className="d-inline-flex align-items-center gap-1 fw-semibold text-white"
+                        style={{
+                          backgroundColor: "#62748e",
+                          borderRadius: 6,
+                          padding: "3px 6px",
+                          fontSize: 10,
+                        }}
+                      >
+                        <FontAwesomeIcon
+                          icon={CLASSIC_BADGE.icon}
+                          style={{ fontSize: 9 }}
+                        />
+                        {CLASSIC_BADGE.label}
+                      </span>
+                    }
+                  />
+                  <Tooltip.Content>{CLASSIC_BADGE.tooltip}</Tooltip.Content>
+                </Tooltip>
+              )}
+              <span
+                className="fw-semibold text-white"
+                style={{
+                  backgroundColor: "#62748e",
+                  borderRadius: 6,
+                  padding: "3px 6px",
+                  fontSize: 10,
+                }}
+              >
+                #{refId}
+              </span>
+            </div>
           </div>
         </div>
 
