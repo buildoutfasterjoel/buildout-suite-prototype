@@ -113,8 +113,9 @@ The panel is ~32rem, where six horizontal labels do not fit.
 
 ## Editing
 
-Autosave — each control writes on change. The footer keeps Close and View
-Contact; there is no Save button and so no half-committed state.
+Autosave — each control writes on change. The footer holds Close, Delete
+Inquiry and View Contact; there is no Save button and so no half-committed
+state.
 
 Editable: Inquiry Status, Referral Source, Sale Doc Access Level, Signed CA,
 CA file.
@@ -125,7 +126,8 @@ performs, not broker-set, so they are read-only too.
 
 ## Delete Inquiry
 
-A destructive button at the foot of the panel behind a confirmation dialog. It
+A destructive button in the panel footer, beside View Contact, behind a
+confirmation dialog. It
 deletes the *lead*, not the person: the contact stays in the CRM and View
 Contact still reaches them.
 

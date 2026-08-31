@@ -269,30 +269,35 @@ export function InquiryFlyout({
                 }
               />
             </Section>
-
-            <div className="border-top pt-3">
-              <Button variant="destructive" onClick={() => setConfirmDelete(true)}>
-                <FontAwesomeIcon icon={faTrash} />
-                Delete Inquiry
-              </Button>
-            </div>
           </Offcanvas.Body>
 
           <Offcanvas.Footer className="d-flex justify-content-between gap-2">
             <Offcanvas.Close render={<Button variant="outline">Close</Button>} />
-            <Button
-              variant="primary"
-              nativeButton={false}
-              render={
-                <Link
-                  to="/backoffice/contacts/$contactId"
-                  params={{ contactId: inquiry.id }}
-                >
-                  <FontAwesomeIcon icon={faUser} />
-                  View Contact
-                </Link>
-              }
-            />
+            {/* Delete sits on the primary's near side rather than against it:
+                it is the destructive one, so it keeps a button's width between
+                itself and the action people reach for by habit. */}
+            <div className="d-flex gap-2">
+              <Button
+                variant="destructive"
+                onClick={() => setConfirmDelete(true)}
+              >
+                <FontAwesomeIcon icon={faTrash} />
+                Delete Inquiry
+              </Button>
+              <Button
+                variant="primary"
+                nativeButton={false}
+                render={
+                  <Link
+                    to="/backoffice/contacts/$contactId"
+                    params={{ contactId: inquiry.id }}
+                  >
+                    <FontAwesomeIcon icon={faUser} />
+                    View Contact
+                  </Link>
+                }
+              />
+            </div>
           </Offcanvas.Footer>
         </Offcanvas.Content>
       </Offcanvas>
