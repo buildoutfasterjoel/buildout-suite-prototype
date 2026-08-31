@@ -10,7 +10,18 @@ const config = defineConfig({
   resolve: { tsconfigPaths: true },
   plugins: [
     devtools(),
-    nitro({ rollupConfig: { external: [/^@sentry\//] } }),
+    nitro({
+      // Only read by the aws-amplify preset (NITRO_PRESET=aws_amplify), which
+      // writes it into deploy-manifest.json as the compute resource's runtime.
+      // Left unset, Nitro defaults to nodejs20.x — a version that reached end
+      // of life in April 2026, so it gets no more security patches. AWS's
+      // deployment spec accepts nodejs20.x, nodejs22.x and nodejs24.x; 22 is
+      // the one we develop on locally, so what we verify here is what runs in
+      // production. Ignored entirely by every other preset, including the
+      // default build.
+      awsAmplify: { runtime: "nodejs22.x" },
+      rollupConfig: { external: [/^@sentry\//] },
+    }),
     tanstackStart(),
     viteReact(),
   ],
