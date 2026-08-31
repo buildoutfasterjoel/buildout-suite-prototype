@@ -16,3 +16,6 @@ todos.json
 
 # Playwright MCP scratch output (snapshots, console logs, screenshots)
 .playwright-mcp
+
+# AWS Amplify build output (NITRO_PRESET=aws_amplify)
+.amplify-hosting
