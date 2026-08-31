@@ -117,6 +117,46 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 197,
+    title: "Add a Deposits page to Back Office, and stop double-paying a co-broked deal's brokers",
+    mergedAt: "2026-08-31T23:20:00Z",
+    day: "2026-08-31",
+    author: "buildoutfasterjoel",
+    area: "Back Office",
+    summary:
+      "Receivables tells you what has been billed and how much is still out. Deposits picks the money up from there: every cash receipt in the book on one page, each one split into what was held back before the split, what reached your brokers, what you still owe them, and what the house kept. Building it turned up a real arithmetic bug underneath — on any deal with an outside broker, the brokers were owed more commission than the deal had billed.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "Back Office now has a Deposits page listing every payment received, with the voucher, the brokers on it, the reference number, who paid and when.",
+      },
+      {
+        kind: "feature",
+        text: "Four columns say where each deposit went — Deducted Pre-Split, Paid To Brokers, Open Payables and Collected House Split — and they always add back up to the amount that landed.",
+      },
+      {
+        kind: "feature",
+        text: "A chart across the year shows the same split month by month, or by quarter, so you can see at a glance which months brought money in and how much of it is still owed out to brokers.",
+      },
+      {
+        kind: "feature",
+        text: "Search finds a deposit by amount, reference number, payer or voucher name, and you can narrow the page by year, broker, deal type or property type.",
+      },
+      {
+        kind: "fix",
+        text: "On a deal with an outside broker, the house broker kept the whole commission and the outside broker's share was added on top — so the two of them were owed up to 160% of what the deal had billed. The co-broke now comes off the top and the house splits what is left, which is how the money actually moves.",
+      },
+      {
+        kind: "refinement",
+        text: "Paid To Brokers is the cheque the broker actually received, after their own split and any hold-back. Open Payables is the gross figure the next cheque is written against, which is the number the voucher shows you.",
+      },
+      {
+        kind: "refinement",
+        text: "When one deposit paid two different parties, the Payer cell reads Multiple rather than naming one of them over the other. Search still finds the row under either name.",
+      },
+    ],
+  },
+  {
     pr: 196,
     title:
       "Rename a deal's Leads to Inquiries, and open each one in a panel the broker can work",
