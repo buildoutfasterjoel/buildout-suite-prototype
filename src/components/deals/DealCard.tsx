@@ -21,6 +21,7 @@ import { dealShape } from "#/data/dealShape";
 import { DealStageBadge } from "./DealStageBadge";
 import { dealHeadlineLabel } from "./dealDisplay";
 import { dealCardLinkProps } from "#/components/deals/dealCardLink";
+import { CLASSIC_BADGE } from "#/components/deals/DealCardBadges";
 import {
   TYPE_ICONS,
   TYPE_LABELS,
@@ -160,6 +161,28 @@ export function DealCardView({
                 }
               />
               <Tooltip.Content>{typeLabel}</Tooltip.Content>
+            </Tooltip>
+          )}
+          {/* Classic first — see NewDealCard's badge row. */}
+          {listing.isClassic && (
+            <Tooltip>
+              <Tooltip.Trigger
+                render={
+                  <span
+                    className="d-inline-flex align-items-center gap-1 fw-semibold text-nowrap fs-small"
+                    style={{
+                      backgroundColor: CLASSIC_BADGE.bg,
+                      color: CLASSIC_BADGE.color,
+                      borderRadius: 6,
+                      padding: "2px 6px",
+                    }}
+                  >
+                    <FontAwesomeIcon icon={CLASSIC_BADGE.icon} />
+                    {CLASSIC_BADGE.label}
+                  </span>
+                }
+              />
+              <Tooltip.Content>{CLASSIC_BADGE.tooltip}</Tooltip.Content>
             </Tooltip>
           )}
           <span

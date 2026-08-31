@@ -98,7 +98,11 @@ export function PropertyDetailSidebar({
   // from canAddSpaces, which governs only the Add-space buttons, not navigation.
   const leaseParent = isLeaseParent(listing);
 
-  const navGroups = visibleNavGroups(shape, { leaseParent, showsUnderwriting });
+  const navGroups = visibleNavGroups(shape, {
+    leaseParent,
+    showsUnderwriting,
+    isClassic: listing.isClassic,
+  });
 
   function handleTabChange(value: string) {
     const item = navGroups

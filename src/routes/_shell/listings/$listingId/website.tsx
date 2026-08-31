@@ -10,5 +10,12 @@ function WebsiteRoute() {
   const { listingId } = Route.useParams();
   const listing = getStore().listings.get(listingId);
   if (!listing) return null;
-  return <ListingWebsite listing={listing} />;
+  // A classic deal splits this page in two: Web Activity takes the analytics
+  // tab, so Website opens on settings. Every other deal lands on analytics.
+  return (
+    <ListingWebsite
+      listing={listing}
+      defaultTab={listing.isClassic ? "settings" : "analytics"}
+    />
+  );
 }

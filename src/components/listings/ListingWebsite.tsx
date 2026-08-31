@@ -24,8 +24,19 @@ import { WebsiteActivityLog } from "./WebsiteActivityLog";
 
 const TRAFFIC_COLOR = "#8833ea";
 
-/** Marketing-site page for a listing: site settings and traffic analytics, split into tabs. */
-export function ListingWebsite({ listing }: { listing: Listing }) {
+/** Marketing-site page for a listing: site settings and traffic analytics, split into tabs.
+ *
+ * `defaultTab` exists for the classic deal sidebar, which splits this one page
+ * across two nav items — Web Activity opens the analytics half, Website the
+ * settings half. Every other caller omits it and lands on analytics as before.
+ */
+export function ListingWebsite({
+  listing,
+  defaultTab = "analytics",
+}: {
+  listing: Listing;
+  defaultTab?: "analytics" | "settings";
+}) {
   const traffic = getListingTraffic(listing.id);
 
   return (
@@ -40,7 +51,7 @@ export function ListingWebsite({ listing }: { listing: Listing }) {
         }
       />
 
-      <Tabs defaultValue="analytics">
+      <Tabs defaultValue={defaultTab}>
         <Tabs.List>
           <Tabs.Tab
             value="analytics"

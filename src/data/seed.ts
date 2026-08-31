@@ -90,7 +90,7 @@ const CONTACT_COUNT = 80
  * must appear here. Deal types are explicit (not random) so Earl always lands
  * a Sale and the mix stays believable.
  */
-type DealPipelineEntry =
+type DealPipelineEntry = (
   | { stage: Exclude<ListingStage, 'closed'>; dealType: DealType }
   /**
    * Closed is the one stage whose voucher can be anywhere in its lifecycle, so
@@ -98,10 +98,20 @@ type DealPipelineEntry =
    * field: the compiler then refuses a closed row that forgot to say.
    */
   | { stage: 'closed'; dealType: DealType; voucherStatus: VoucherStatus }
+) & {
+  /**
+   * Renders this deal in classic mode. Set on the pipeline row rather than drawn
+   * per deal so which deal is classic is readable here and identical every run —
+   * a faker draw would also reshuffle every seeded value after it.
+   */
+  isClassic?: true
+}
 
 const DEAL_PIPELINE: DealPipelineEntry[] = [
   // Pitching — several (Earl claims a Sale here)
-  { stage: 'proposal', dealType: 'Sale' },
+  // The first row is the one classic deal in the book — see `isClassic` on
+  // DealPipelineEntry. Exactly one, and it is first so it is easy to find.
+  { stage: 'proposal', dealType: 'Sale', isClassic: true },
   { stage: 'proposal', dealType: 'Sale' },
   { stage: 'proposal', dealType: 'Lease' },
   { stage: 'proposal', dealType: 'Sale' },
@@ -1922,6 +1932,7 @@ function generateListings(
       publishedAt,
       dealType,
       dealSide,
+      isClassic: spec.isClassic ?? false,
       unitId: marketingUnitId,
       parentDealId: null,
 

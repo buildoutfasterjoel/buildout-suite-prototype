@@ -13,7 +13,11 @@ import {
 import { dealHeadlineLabel } from "#/components/deals/dealDisplay";
 import { NewDealStageChip } from "#/components/deals/NewDealStageChip";
 import { dealShape } from "#/data/dealShape";
-import { CardBadge, BadgeDivider } from "#/components/deals/DealCardBadges";
+import {
+  CardBadge,
+  BadgeDivider,
+  CLASSIC_BADGE,
+} from "#/components/deals/DealCardBadges";
 import {
   relationshipBadge,
   relationshipTooltip,
@@ -167,6 +171,9 @@ export function NewDealCard({
                 onChange={onStageChange}
               />
             )}
+            {/* Classic leads the row: it says which page this deal opens, so it
+                is read before the deal's own facts rather than after them. */}
+            {listing.isClassic && <CardBadge {...CLASSIC_BADGE} />}
             <CardBadge
               icon={side.icon}
               label={side.label}

@@ -71,7 +71,11 @@ function PropertyDetail() {
 
   // The building's current section is the first segment after its id. A space
   // page computes its own active label from `subsectionLabel` instead.
-  const { sectionLabel } = dealBreadcrumbTrail(pathname, listingId);
+  const { sectionLabel } = dealBreadcrumbTrail(
+    pathname,
+    listingId,
+    listing.isClassic,
+  );
 
   return (
     <div className="h-100 overflow-y-auto overflow-x-hidden">

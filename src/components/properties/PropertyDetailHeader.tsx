@@ -18,6 +18,7 @@ import type { Listing } from "#/data/types";
 import { getProperty, getListing } from "#/data/store";
 import { canAddSpaces } from "#/data/dealShape";
 import { dealBreadcrumbTrail } from "#/components/properties/dealNav";
+import { CLASSIC_BADGE } from "#/components/deals/DealCardBadges";
 import { hash, getRefId, getPhotoUrl } from "./propertyDisplay";
 import { AvatarGroup } from "./AvatarGroup";
 import { SyndicationStatus } from "#/components/listings/SyndicationStatus";
@@ -36,7 +37,11 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
   const property = getProperty(listing.propertyId);
   const address = `${property?.street}, ${property?.city}, ${property?.state} ${property?.zip}`;
   const { pathname } = useLocation();
-  const { sectionLabel, detailId } = dealBreadcrumbTrail(pathname, listing.id);
+  const { sectionLabel, detailId } = dealBreadcrumbTrail(
+    pathname,
+    listing.id,
+    listing.isClassic,
+  );
   // The detail id is a space deal's id; its human name is the suite's label,
   // which lives on this same property's units. Resolved here because
   // dealBreadcrumbTrail is deliberately store-free.
@@ -156,6 +161,25 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
             </h1>
             <div className="text-muted text-truncate">{address}</div>
             <div className="d-flex align-items-center gap-2 mt-2">
+              {/* First in the row, so "this is the classic deal" is read before
+                  the deal's own facts. A Blueprint `Badge` rather than the card
+                  pill from `CLASSIC_BADGE`: that one carries card geometry, and
+                  here the badge has to sit flush with the two beside it. The
+                  glyph and the wording are the shared spec's, so the marker
+                  reads as the same thing it does on the deal's card. */}
+              {listing.isClassic && (
+                <Tooltip>
+                  <Tooltip.Trigger
+                    render={
+                      <Badge variant="secondary" appearance="muted">
+                        <FontAwesomeIcon icon={CLASSIC_BADGE.icon} />
+                        {CLASSIC_BADGE.label}
+                      </Badge>
+                    }
+                  />
+                  <Tooltip.Content>{CLASSIC_BADGE.tooltip}</Tooltip.Content>
+                </Tooltip>
+              )}
               <Badge variant="secondary" appearance="muted">
                 {listing.dealType}
               </Badge>
@@ -197,20 +221,35 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
                       // Tooltip describes a trigger, it does not name it, so an
                       // icon-only pencil reads as an unlabelled button to a
                       // screen reader until hover — which never happens there.
-                      aria-label="Edit deal"
+                      aria-label={
+                        listing.isClassic ? "Edit listing" : "Edit deal"
+                      }
                       nativeButton={false}
                       render={
-                        <Link
-                          to="/listings/$listingId/edit"
-                          params={{ listingId: listing.id }}
-                        />
+                        // A classic deal has no Listing section in its sidebar —
+                        // the listing form is what this button opens instead of
+                        // the deal form. Two `Link`s rather than one with an
+                        // interpolated `to`: `Link` takes a typed route literal.
+                        listing.isClassic ? (
+                          <Link
+                            to="/listings/$listingId/listing"
+                            params={{ listingId: listing.id }}
+                          />
+                        ) : (
+                          <Link
+                            to="/listings/$listingId/edit"
+                            params={{ listingId: listing.id }}
+                          />
+                        )
                       }
                     >
                       <FontAwesomeIcon icon={faPencil} />
                     </Button>
                   }
                 />
-                <Tooltip.Content>Edit Deal</Tooltip.Content>
+                <Tooltip.Content>
+                  {listing.isClassic ? "Edit Listing" : "Edit Deal"}
+                </Tooltip.Content>
               </Tooltip>
             </div>
             <DropdownMenu>

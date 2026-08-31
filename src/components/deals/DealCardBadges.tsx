@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faClockRotateLeft } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
 /**
@@ -8,6 +9,24 @@ import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
  * one shape — 20px tall, 4px padding, 6px radius, a 10px leading glyph and a
  * 12px semibold label — and differ only in fill (see newCardTokens).
  */
+
+/**
+ * "Classic" — this deal opens in the classic layout (see `Listing.isClassic`).
+ * One spec for all three deal cards so the word, the glyph and the explanation
+ * stay identical wherever a deal is carded; each card applies its own fill,
+ * because the property card's badges ride on a photo and these two don't.
+ *
+ * Neutral storm-grey rather than a color of its own: classic is a rendering
+ * choice on the deal, not a stage or a warning, so it must not compete with the
+ * badges beside it that do carry deal meaning.
+ */
+export const CLASSIC_BADGE = {
+  icon: faClockRotateLeft,
+  label: "Classic",
+  tooltip: "Opens in the classic Buildout layout",
+  bg: "#eceef2", // storm-grey/100
+  color: "#22262f", // storm-grey/950
+} as const;
 
 /**
  * A filled 20px badge with a leading glyph, optionally wrapped in a tooltip.

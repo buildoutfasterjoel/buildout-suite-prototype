@@ -1,5 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { BUILDING_OWNED_HREFS, dealBreadcrumbTrail, NAV_GROUPS, visibleNavGroups } from "./dealNav";
+import { readdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import {
+  BUILDING_OWNED_HREFS,
+  CLASSIC_LANDING_HREF,
+  CLASSIC_NAV_GROUPS,
+  dealBreadcrumbTrail,
+  NAV_GROUPS,
+  visibleNavGroups,
+} from "./dealNav";
 
 const ID = "deal-1";
 
@@ -333,5 +342,125 @@ describe("the building-owned sections", () => {
     // of Marketing's ten items must not trip that.
     const labels = visibleNavGroups("space", opts).map((g) => g.label);
     expect(labels).toContain("Marketing");
+  });
+});
+
+describe("classic deal nav", () => {
+  const opts = { leaseParent: false, showsUnderwriting: true, isClassic: true };
+
+  it("swaps the whole set rather than filtering the modern one", () => {
+    expect(visibleNavGroups("sale", opts)).toEqual(CLASSIC_NAV_GROUPS);
+  });
+
+  it("ignores every shape rule — a classic deal is a plain top-level deal", () => {
+    // Underwriting off, no lease parent, and a shell shape would each change the
+    // modern set. None of them may reach the classic one.
+    for (const shape of ["sale", "flat-lease", "shell", "space"] as const) {
+      expect(
+        visibleNavGroups(shape, {
+          leaseParent: true,
+          showsUnderwriting: false,
+          isClassic: true,
+        }),
+      ).toEqual(CLASSIC_NAV_GROUPS);
+    }
+  });
+
+  it("holds the three legacy groups, under our names for them", () => {
+    // Legacy reads PROJECT / LISTING / DEAL. We keep calling the record a deal,
+    // so the first group is Deal and the third — which would collide — is
+    // Financials, the modern sidebar's Back Office.
+    expect(CLASSIC_NAV_GROUPS.map((g) => g.label)).toEqual([
+      "Deal",
+      "Listing",
+      "Financials",
+    ]);
+  });
+
+  it("holds exactly the legacy items, in the legacy order", () => {
+    expect(CLASSIC_NAV_GROUPS.map((g) => g.items.map((i) => i.label))).toEqual([
+      ["Leads", "Client Report", "Attachments", "Tasks", "Activities"],
+      [
+        "Documents",
+        "Web Activity",
+        "Website",
+        "Email",
+        "Syndication",
+        "Grids",
+        "Plans",
+        "Media",
+        "Demographics",
+      ],
+      ["Deals"],
+    ]);
+  });
+
+  it("drops the Suite-only sections", () => {
+    // Not in the legacy sidebar, so not on a classic deal. Overview is the one
+    // that matters most: it is why the deal lands on Leads instead.
+    const hrefs = CLASSIC_NAV_GROUPS.flatMap((g) => g.items.map((i) => i.href));
+    for (const gone of [
+      "history",
+      "spaces",
+      "underwriting",
+      "notes",
+      "financial-documents",
+      "financials",
+      "vouchers",
+      "listing",
+      "details",
+    ]) {
+      expect(hrefs).not.toContain(gone);
+    }
+    // Overview is reachable, but only under the Tasks label — see below.
+    expect(hrefs).toContain("overview");
+  });
+
+  it("lands on the first item in the sidebar", () => {
+    expect(CLASSIC_LANDING_HREF).toBe(CLASSIC_NAV_GROUPS[0].items[0].href);
+  });
+
+  it("points every item at a section route that exists", () => {
+    // The sidebar builds `${basePath}/${href}` and a bad href fails as a blank
+    // page at runtime, which `vite build` does not catch. Reads the route
+    // directory so a renamed or deleted section fails here instead.
+    const dir = fileURLToPath(
+      new URL("../../routes/_shell/listings/$listingId/", import.meta.url),
+    );
+    const routes = readdirSync(dir, { withFileTypes: true }).map((e) =>
+      e.name.replace(/\.tsx$/, ""),
+    );
+    for (const item of CLASSIC_NAV_GROUPS.flatMap((g) => g.items)) {
+      expect(routes, `no route for ${item.label}`).toContain(item.href);
+    }
+  });
+
+  it("names the sections the way the classic sidebar names them", () => {
+    // The crumb reads its label from the same set the sidebar renders, so the
+    // three renamed sections must read as their classic names, not their modern
+    // ones. Getting this wrong is invisible until someone reads the crumb.
+    const label = (href: string) =>
+      dealBreadcrumbTrail(`/listings/${ID}/${href}`, ID, true).sectionLabel;
+    expect(label("overview")).toBe("Tasks");
+    expect(label("files")).toBe("Attachments");
+    expect(label("activities")).toBe("Activities");
+    expect(label("deals")).toBe("Deals");
+    // And the modern names still win when the deal is not classic.
+    expect(dealBreadcrumbTrail(`/listings/${ID}/overview`, ID).sectionLabel).toBe(
+      "Overview",
+    );
+    expect(dealBreadcrumbTrail(`/listings/${ID}/files`, ID).sectionLabel).toBe(
+      "Files",
+    );
+  });
+
+  it("reports no crumb for a classic-only section on a modern deal", () => {
+    // `syndication`, `web-activity` and `deals` are absent from NAV_GROUPS, so a
+    // modern deal must not label them — it cannot navigate to them either.
+    for (const href of ["syndication", "web-activity", "deals"]) {
+      expect(
+        dealBreadcrumbTrail(`/listings/${ID}/${href}`, ID).sectionLabel,
+      ).toBeNull();
+    }
   });
 });
