@@ -283,4 +283,16 @@ describe("contact tag tools", () => {
     const bare = await run("contact_tags", {});
     expect(bare.error).toBeTruthy();
   });
+
+  /**
+   * An id that didn't resolve is a different failure from no id at all. Told
+   * "tell me which contact", the model goes back to the broker for something
+   * they already gave it.
+   */
+  it("distinguishes an unresolvable id from a missing one", async () => {
+    const byId = await run("contact_tags", { contactId: "no-such-id" });
+    expect(byId.error).toContain("no-such-id");
+    const missing = await run("contact_tags", {});
+    expect(missing.error).not.toContain("no-such-id");
+  });
 });

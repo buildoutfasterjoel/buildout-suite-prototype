@@ -47,6 +47,9 @@ const sf = (n: number) => `${Math.round(n).toLocaleString("en-US")} SF`;
 /** "Mar 2025" — a comp's sale date, `months` back from today. */
 function monthsAgo(months: number): string {
   const d = new Date();
+  // To the 1st before stepping back, or a month-end date lands past the short
+  // month it was aimed at — on the 31st, "9 months ago" prints the 10th month.
+  d.setDate(1);
   d.setMonth(d.getMonth() - months);
   return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
 }

@@ -167,6 +167,10 @@ function resolveTagTarget(
       ? resolveContactByName(contactName)
       : null;
   if (contact) return { contact };
+  // Three different failures, three different answers. "Tell me which contact"
+  // in response to an id that simply didn't resolve sends the model back to the
+  // broker for something they already gave it.
+  if (contactId) return { error: `No contact with id ${contactId}.` };
   return {
     error: contactName
       ? `No contact named "${contactName}".`
