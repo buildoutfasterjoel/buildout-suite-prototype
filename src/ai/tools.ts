@@ -1011,7 +1011,11 @@ export function createClientTools({
      * that is already unsaved.
      */
     stageFieldValueDef.client(async (args) => {
-      const { text, changed } = args as { text: string; changed?: string };
+      const { text, subject, changed } = args as {
+        text: string;
+        subject?: string;
+        changed?: string;
+      };
       const ask = useAssistant.getState().fieldAsk;
       if (!ask) {
         return {
@@ -1021,10 +1025,28 @@ export function createClientTools({
       }
       const contact = getContact(ask.target.contactId);
       if (!contact) return { error: "That field's record is no longer loaded." };
-      useComposeFocus.getState().requestNoteDraft({
+      const { activity } = ask.target;
+      useComposeFocus.getState().requestActivityDraft({
         contactId: ask.target.contactId,
+        kind: activity,
         body: text,
+        // Only ever passed on an email, and only when the model set one —
+        // `undefined` here is what leaves the broker's own subject standing.
+        subject: activity === "email" ? subject : undefined,
       });
+      // A staged email has to be sendable from anywhere, the same as one from
+      // `draft_email` — otherwise "send it" works only while the composer is
+      // the surface in focus. Subject falls back to what is already there,
+      // which `send_email` prefers from the live composer anyway.
+      if (activity === "email") {
+        setPendingEmail({
+          contactId: contact.id,
+          contactName: `${contact.firstName} ${contact.lastName}`.trim(),
+          to: contact.email,
+          subject: subject ?? "",
+          body: text,
+        });
+      }
       // The pinned value follows what was just written, so the next revision
       // revises THIS text rather than the version before it.
       useAssistant.getState().updateFieldAskValue(text);

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { ComposeKind } from "#/components/contacts/contactDisplay";
 
 /**
  * One preset "revise" chip offered alongside a pinned field ask — the doc's
@@ -21,13 +22,18 @@ export interface FieldAskAction {
  * section of the app the broker happens to be standing in.
  */
 /**
- * Where the staging tool writes. Kept as a discriminated union so a second
- * field type (a listing's marketing description, an email body) adds a variant
- * rather than widening a bag of optional ids.
+ * Where the staging tool writes. A discriminated union so the next field type —
+ * a listing's marketing description, a deal's summary — adds a variant rather
+ * than widening a bag of optional ids.
+ *
+ * `activity` is the composer tab, which is what lets one variant cover all five
+ * fields in the Log Activity block: they share a record, a staging path and a
+ * review surface, and differ only in which tab holds the text.
  */
 export type FieldAskTarget = {
-  kind: "contact-note";
+  kind: "contact-activity";
   contactId: string;
+  activity: ComposeKind;
 };
 
 export interface FieldAsk {
