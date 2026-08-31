@@ -117,6 +117,35 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 192,
+    title:
+      "Let a wide monitor keep the contact page's three columns with the assistant rail open",
+    mergedAt: "2026-08-31T16:49:22Z",
+    day: "2026-08-31",
+    author: "ZS-buildout",
+    area: "Contacts",
+    summary:
+      "Opening Otto beside a contact no longer costs you the third column when the screen has room for both. The page now asks whether what is left over fits three columns, instead of assuming the rail never leaves room for them.",
+    highlights: [
+      {
+        kind: "fix",
+        text: "On a wide monitor, opening Otto beside a contact keeps all three columns. Briefing and Tasks stay where they were instead of folding into tabs the moment the panel appears.",
+      },
+      {
+        kind: "fix",
+        text: "A laptop still drops to two columns with Otto open, as before — the point is that the screen decides, not the panel.",
+      },
+      {
+        kind: "fix",
+        text: "The contact page keeps its full width when it is showing three columns. It previously pulled itself narrower whenever Otto was open, which left the middle column too tight to hold a timeline row at any screen size.",
+      },
+      {
+        kind: "fix",
+        text: "On a narrow window the middle column no longer runs off the edge of the page and cuts the timeline off where you cannot scroll to it.",
+      },
+    ],
+  },
+  {
     pr: 191,
     title: "Render one deal with Buildout Classic's sidebar, marked by a Classic badge",
     mergedAt: "2026-08-31T16:30:52Z",
