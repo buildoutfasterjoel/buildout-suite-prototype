@@ -10,7 +10,7 @@ import type {
   SpaceLeaseTerms,
   VisualMediaType,
 } from './types'
-import { closeProbabilityForStage } from './commission'
+import { closeProbabilityForStage, splitNetCommission } from './commission'
 import {
   invoiceDueDate,
   invoiceFileName,
@@ -379,9 +379,14 @@ const TERMS_STATUS: Record<PropertyStatus, SpaceLeaseTerms['status']> = {
  * each suite would overwrite the last. `leaseSpaceFixtures.test.ts` pins the
  * shell's own figures at zero to hold that.
  *
- * The arithmetic mirrors `generateBroker` in `seed.ts`: an internal broker takes
- * their split of what is left after deductions, an outside broker takes theirs
- * off the gross. Faker-free, like everything else in this module.
+ * The arithmetic mirrors `generateBroker` and its reconciliation in `seed.ts`:
+ * pre-split deductions come off the gross, the co-broke comes off what is left,
+ * and the house's own brokers divide the remainder. Faker-free, like everything
+ * else in this module.
+ *
+ * Splitting a shell copies its brokers onto every suite, so a bug here is a bug
+ * multiplied by the suite count — which is why this follows the same order the
+ * money leaves rather than an approximation of it.
  */
 function applySuiteCommission(child: Listing, commissionAmount: number): void {
   const deductions = child.transaction.backOffice.preSplitDeductions.map((d) => ({
@@ -395,14 +400,13 @@ function applySuiteCommission(child: Listing, commissionAmount: number): void {
     ...child.transaction.backOffice,
     preSplitDeductions: deductions,
   }
-  child.internalBrokers = child.internalBrokers.map((b) => ({
-    ...b,
-    grossCommission: Math.round(netCommission * (b.commissionSplitPct / 100)),
-  }))
-  child.outsideBrokers = child.outsideBrokers.map((b) => ({
-    ...b,
-    grossCommission: Math.round(commissionAmount * (b.commissionSplitPct / 100)),
-  }))
+  const split = splitNetCommission({
+    internal: child.internalBrokers,
+    outside: child.outsideBrokers,
+    netCommission,
+  })
+  child.internalBrokers = split.internal
+  child.outsideBrokers = split.outside
 }
 
 /**

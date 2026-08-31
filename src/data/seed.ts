@@ -52,7 +52,11 @@ import {
   type AccessTier,
   type ContactShare,
 } from './teammates'
-import { DEFAULT_PERSONAL_SPLIT_PCT, STAGE_CLOSE_PROBABILITY } from './commission'
+import {
+  DEFAULT_PERSONAL_SPLIT_PCT,
+  STAGE_CLOSE_PROBABILITY,
+  splitNetCommission,
+} from './commission'
 import type { CommissionPlan, DeductionCategory, VoucherStatus } from './vouchers'
 import {
   invoiceDueDate,
@@ -1241,6 +1245,18 @@ function hashCode(value: string): number {
   return hash
 }
 
+/**
+ * One broker and their share.
+ *
+ * `commissionAmount` is the pool this broker is drawn from, which for both
+ * sides is the commission NET of pre-split deductions — those come off the
+ * gross before any broker splits it.
+ *
+ * The internal broker's 100% is provisional. A co-broked deal takes the outside
+ * broker's share off the top afterwards and rescales this one; see the
+ * reconciliation at the call site, which is where it has to happen because the
+ * coin-flip for an outside broker is drawn after this.
+ */
 function generateBroker(side: 'internal' | 'outside', commissionAmount: number): DealBroker {
   const splitPct = side === 'internal' ? 100 : faker.helpers.arrayElement([40, 50, 60])
   const id = faker.string.uuid()
@@ -1423,10 +1439,36 @@ function generateListings(
     ]
     const netCommission = commissionAmount - deductionAmount
 
-    const internalBrokers = [generateBroker('internal', netCommission)]
-    const outsideBrokers = faker.datatype.boolean({ probability: 0.4 })
-      ? [generateBroker('outside', commissionAmount)]
+    const drawnInternalBrokers = [generateBroker('internal', netCommission)]
+    const drawnOutsideBrokers = faker.datatype.boolean({ probability: 0.4 })
+      ? [generateBroker('outside', netCommission)]
       : []
+
+    // The co-broke comes off the top, and the house's own people divide what is
+    // left — see `splitNetCommission` for why paying both sides a share of the
+    // same net is a bug rather than a rounding difference.
+    //
+    // Reconciled HERE rather than inside `generateBroker` because the internal
+    // broker is drawn BEFORE the coin-flip that decides whether there is an
+    // outside broker at all, and reordering those two faker calls would reshuffle
+    // every seeded value downstream. The same constraint `brokersWithSide` below
+    // works around, for the same reason.
+    const coBrokePct = drawnOutsideBrokers.reduce(
+      (t, b) => t + b.commissionSplitPct,
+      0,
+    )
+    const { internal: internalBrokers, outside: outsideBrokers } =
+      splitNetCommission({
+        internal: drawnInternalBrokers.map((b) => ({
+          ...b,
+          // The provisional 100% becomes what the co-broke left behind.
+          commissionSplitPct: Math.round(
+            b.commissionSplitPct * ((100 - coBrokePct) / 100),
+          ),
+        })),
+        outside: drawnOutsideBrokers,
+        netCommission,
+      })
 
     // Which side of the deal the broker represents.
     const dealSide: DealSide = faker.helpers.weightedArrayElement([

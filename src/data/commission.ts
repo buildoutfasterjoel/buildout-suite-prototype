@@ -111,3 +111,60 @@ export function commissionForecast(deals: Listing[]): CommissionForecast {
     { you: 0, brokerage: 0 },
   );
 }
+
+/**
+ * How a deal's net commission divides between the brokers on it.
+ *
+ * One rule for both sides: **`commissionSplitPct` is a share of the same pool**,
+ * the commission net of pre-split deductions. So the percentages across both
+ * lists sum to 100, and the grosses sum to the net.
+ *
+ * The order matters, and it is the order the money actually leaves. A co-broke
+ * is settled off the top, and the house's own people divide what is left — so
+ * the outside brokers are paid first here, and the internal ones take the exact
+ * remainder rather than a second percentage of the same net. Giving both sides
+ * their own slice of the net is the bug this function exists to prevent: a
+ * co-broked deal's brokers were owed 135-160% of what the deal had billed, which
+ * surfaced as a $0.00 house split on the Deposits index.
+ *
+ * The remainder is divided by each internal broker's share of the internal
+ * total, not by their raw percentage, so the last cent lands somewhere instead
+ * of being rounded away. With one internal broker — every seeded deal today —
+ * that is simply the whole remainder.
+ *
+ * Generic over the broker so both the seeded `DealBroker` and a suite's copy of
+ * one go through the same arithmetic; only `commissionSplitPct` is read and only
+ * `grossCommission` is written.
+ */
+export function splitNetCommission<
+  T extends { commissionSplitPct: number; grossCommission: number },
+>({
+  outside,
+  internal,
+  netCommission,
+}: {
+  outside: T[];
+  internal: T[];
+  netCommission: number;
+}): { outside: T[]; internal: T[] } {
+  const paidOutside = outside.map((b) => ({
+    ...b,
+    grossCommission: Math.round(netCommission * (b.commissionSplitPct / 100)),
+  }));
+
+  const remainder =
+    netCommission - paidOutside.reduce((total, b) => total + b.grossCommission, 0);
+  const internalPct = internal.reduce((total, b) => total + b.commissionSplitPct, 0);
+  const paidInternal = internal.map((b) => ({
+    ...b,
+    // A deal whose internal brokers carry no split between them — the whole
+    // co-broke case, or a voucher mid-edit — pays them nothing rather than
+    // dividing by zero.
+    grossCommission:
+      internalPct > 0
+        ? Math.round(remainder * (b.commissionSplitPct / internalPct))
+        : 0,
+  }));
+
+  return { outside: paidOutside, internal: paidInternal };
+}

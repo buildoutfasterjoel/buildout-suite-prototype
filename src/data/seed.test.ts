@@ -634,6 +634,55 @@ describe('commission plan seed', () => {
   })
 })
 
+describe('commission split seed', () => {
+  const { listings } = generateDataset()
+
+  /** Pre-split deductions come off the gross before any broker splits it. */
+  function netCommission(deal: (typeof listings)[number]): number {
+    const back = deal.transaction.backOffice
+    const deducted = back.preSplitDeductions.reduce((t, d) => t + d.amount, 0)
+    return deal.transaction.commissionAmount - deducted
+  }
+
+  it('splits one pool between both sides, so the percentages sum to 100', () => {
+    for (const deal of listings) {
+      const brokers = [...deal.outsideBrokers, ...deal.internalBrokers]
+      if (brokers.length === 0) continue
+      const pct = brokers.reduce((t, b) => t + b.commissionSplitPct, 0)
+      expect(pct, deal.name).toBe(100)
+    }
+  })
+
+  /**
+   * The regression this suite exists for.
+   *
+   * The seed used to give the internal broker 100% of the net commission and
+   * add the outside broker's 40-60% on top, so a co-broked deal's brokers were
+   * owed 135-160% of what the deal had billed. Nothing surfaced it until the
+   * Deposits index summed a voucher's payables against the deposit that funded
+   * them, where it read as a $0.00 Collected House Split.
+   */
+  it('never owes its brokers more than the commission they are splitting', () => {
+    for (const deal of listings) {
+      const brokers = [...deal.outsideBrokers, ...deal.internalBrokers]
+      if (brokers.length === 0) continue
+      const owed = brokers.reduce((t, b) => t + b.grossCommission, 0)
+      expect(owed, deal.name).toBeLessThanOrEqual(netCommission(deal))
+    }
+  })
+
+  it('leaves co-broked deals in the book, or the rule above proves nothing', () => {
+    const coBroked = listings.filter((deal) => deal.outsideBrokers.length > 0)
+    expect(coBroked.length).toBeGreaterThan(0)
+    // And the internal broker on one really is taking less than the whole pool.
+    for (const deal of coBroked) {
+      for (const broker of deal.internalBrokers) {
+        expect(broker.commissionSplitPct, deal.name).toBeLessThan(100)
+      }
+    }
+  })
+})
+
 describe('invoice seed', () => {
   const { listings } = generateDataset()
 
