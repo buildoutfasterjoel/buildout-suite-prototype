@@ -117,6 +117,34 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 191,
+    title: "Render one deal with Buildout Classic's sidebar, marked by a Classic badge",
+    mergedAt: "2026-08-31T16:30:52Z",
+    day: "2026-08-31",
+    author: "buildoutfasterjoel",
+    area: "Deals",
+    summary:
+      "A deal can now open the way Buildout Classic showed it. One seeded deal carries the flag, so the legacy layout and the current one can be compared side by side on the same record.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "The Thompson Block now opens with Buildout Classic's sidebar — Deal, Listing and Financials, in legacy's order — over the deal page we already have. It is still a deal, and every section is the section it always was.",
+      },
+      {
+        kind: "feature",
+        text: "A grey Classic badge leads the deal's header and every card the deal appears on, so you can tell a classic deal before you open it.",
+      },
+      {
+        kind: "feature",
+        text: "The classic sidebar's Deals page lists the deals on the listing across legacy's eleven columns, with the deal title pinned in place while the rest of the row scrolls.",
+      },
+      {
+        kind: "refinement",
+        text: "On a classic deal the pencil button edits the listing rather than the deal, and Web Activity and Website open the two halves of the Website page — the split legacy had.",
+      },
+    ],
+  },
+  {
     pr: 189,
     title: "Add a Back Office Receivables index beside Vouchers",
     mergedAt: "2026-08-28T23:39:37Z",
