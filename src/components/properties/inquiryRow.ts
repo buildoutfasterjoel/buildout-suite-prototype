@@ -106,7 +106,7 @@ export function toInquiry(contact: Contact, listingId: string): Inquiry {
   const name = `${contact.firstName} ${contact.lastName}`;
   const edited = contact.inquiryDetails?.[listingId];
 
-  const verified = edited?.verified ?? oneIn(3, contact.id, "verified");
+  const verified = oneIn(3, contact.id, "verified");
 
   // Once a broker has touched the CA at all, its file and date are exactly what
   // they left — never the synthesized ones. Otherwise flipping the "mark signed"
@@ -136,7 +136,7 @@ export function toInquiry(contact: Contact, listingId: string): Inquiry {
     accessLevel:
       edited?.accessLevel ?? pickFor(ACCESS_LEVELS, contact.id, "access-level"),
     verified,
-    status: fresh ? "New" : leadStatusFor(contact.id),
+    status: edited?.status ?? (fresh ? "New" : leadStatusFor(contact.id)),
     referralSource:
       edited?.referralSource ??
       pickFor(REFERRAL_SOURCES, contact.id, "referral-source"),

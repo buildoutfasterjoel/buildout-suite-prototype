@@ -60,11 +60,16 @@ describe("toInquiry — broker overrides", () => {
 
   it("prefers a stored value over the synthesized one", () => {
     const row = toInquiry(
-      withEdit({ accessLevel: "High", referralSource: "Referral" }),
+      withEdit({
+        accessLevel: "High",
+        referralSource: "Referral",
+        status: "Qualified",
+      }),
       "L1",
     );
     expect(row.accessLevel).toBe("High");
     expect(row.referralSource).toBe("Referral");
+    expect(row.status).toBe("Qualified");
   });
 
   it("keeps an override scoped to its own listing", () => {

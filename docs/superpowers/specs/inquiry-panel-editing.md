@@ -7,18 +7,20 @@ In-flight. Delete with the branch when it ships.
 The inquiry offcanvas (shipped in the previous commit as a read-only panel)
 becomes the place a broker *works* an inquiry:
 
-1. **Editable inquiry fields** — Sale Doc Access Level, Referral Source, Account
-   Status. Autosave on change.
+1. **Editable inquiry fields** — Inquiry Status, Referral Source, Sale Doc
+   Access Level. Autosave on change. The set is pinned to the real product's
+   Lead edit form (Joel's screenshot); Account Status is *not* in it, and stays
+   read-only because the lead verifies their own email on the website.
 2. **A Confidentiality Agreement section** — a non-functioning "upload" that
-   attaches a fake signed CA, plus a switch marking the CA signed.
+   attaches a fake signed CA, plus a Signed CA checkbox.
 3. **A lead journey bar** — where this lead stands across six stages driven by
    what they did outside the app.
 
 ## The data problem, and why SEED_VERSION does not move
 
-Every inquiry-only column (`accessLevel`, `referralSource`, `verified`, the 1031
-pair) is synthesized in `toInquiry` from a hash of the contact id. Nothing is
-stored, so nothing can be edited.
+Every inquiry-only column (`accessLevel`, `referralSource`, `status`, `verified`,
+the 1031 pair) is synthesized in `toInquiry` from a hash of the contact id.
+Nothing is stored, so nothing can be edited.
 
 The fix is to store **only the broker's overrides** and keep the synthesized
 values as defaults:
@@ -44,7 +46,7 @@ inquiryDetails?: Record<string, {
   date?: string             // existing
   accessLevel?: AccessLevel // NEW, all optional, all broker-set
   referralSource?: string
-  verified?: boolean
+  status?: string
   caSigned?: boolean
   caFileName?: string
   caSignedAt?: string
@@ -80,7 +82,7 @@ Six stages, in funnel order:
 |---|-------------------|-------------------------------------------|
 | 0 | Public Documents  | always reached — they inquired             |
 | 1 | Created Profile   | synthesized off the contact id             |
-| 2 | Verified Email    | the existing Account Status                |
+| 2 | Verified Email    | the existing Account Status (read-only)    |
 | 3 | Low Documents     | Sale Doc Access Level ≥ Low                |
 | 4 | Medium Documents  | Sale Doc Access Level ≥ Medium             |
 | 5 | High Documents    | Sale Doc Access Level = High               |
@@ -114,12 +116,26 @@ The panel is ~32rem, where six horizontal labels do not fit.
 Autosave — each control writes on change. The footer keeps Close and View
 Contact; there is no Save button and so no half-committed state.
 
-Editable: Sale Doc Access Level, Referral Source, Account Status, CA signed,
+Editable: Inquiry Status, Referral Source, Sale Doc Access Level, Signed CA,
 CA file.
 
-Read-only: name, email, phone, company, role, dates, Space, the 1031 pair,
-Added By, Link Sent. Stages 0 and 1 are external facts the lead performs, not
-broker-set, so they are read-only too.
+Read-only: name, email, phone, company, role, dates, Space, Account Status,
+the 1031 pair, Added By, Link Sent. Stages 0 and 1 are external facts the lead
+performs, not broker-set, so they are read-only too.
+
+## Delete Inquiry
+
+A destructive button at the foot of the panel behind a confirmation dialog. It
+deletes the *lead*, not the person: the contact stays in the CRM and View
+Contact still reaches them.
+
+The roster has two doors (`getLeadsForProperty`): you are on it if you inquired
+on one of the property's listings, **or** if you are linked to the property at
+all. Dropping only the inquiry would leave a property-linked contact sitting in
+the list after the broker deleted them — a delete that visibly does nothing. So
+`deleteInquiry` drops the property link too, but only once no inquiry on that
+property remains: someone who inquired on two suites and lost one is still a
+lead on the building.
 
 ## The CA upload
 
@@ -137,4 +153,12 @@ introducing one.
   panel makes CA real, since the filter for it already exists.
 - **Making the filter dropdowns actually filter.** They are visual-only today
   and stay that way.
+- **A Notes field.** In the reference form but deliberately skipped — Joel
+  expects notes to belong to the contact in the new version. The Client Report's
+  existing Notes column keeps its own throwaway `useState`.
+- **An "Inquired" status.** In the reference form; not added, because
+  `LEAD_STATUSES` is shared with the Client Report and the five we have are the
+  app's settled vocabulary.
+- **The row menu's "Remove" item.** Still inert, like its Export / Send Email
+  siblings. Only the panel deletes.
 - **Editing the 1031 pair.** Also synthesized; no one asked to set it.

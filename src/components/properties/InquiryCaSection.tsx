@@ -1,6 +1,6 @@
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
-import { Switch } from "@buildoutinc/blueprint-react/ui/Switch";
+import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowUpFromBracket,
@@ -45,7 +45,7 @@ export function InquiryCaSection({ inquiry }: { inquiry: Inquiry }) {
 
   return (
     <div>
-      <div className="d-flex align-items-center justify-content-between gap-2 mb-1">
+      <div className="d-flex align-items-center justify-content-between gap-2">
         <div className="fw-semibold fs-large">Confidentiality Agreement</div>
         <Badge
           variant={inquiry.caSigned ? "primary" : "secondary"}
@@ -61,6 +61,12 @@ export function InquiryCaSection({ inquiry }: { inquiry: Inquiry }) {
           )}
         </Badge>
       </div>
+
+      <p className="text-muted mb-2">
+        {inquiry.caSigned
+          ? "This user has signed a CA, so they will not be asked to sign one on the website."
+          : "This user has not signed a CA. If you have a signed CA from them, you can upload it here and they will not have to sign it on the website."}
+      </p>
 
       {inquiry.caFileName ? (
         <div className="d-flex align-items-center gap-2 rounded border p-2">
@@ -84,24 +90,29 @@ export function InquiryCaSection({ inquiry }: { inquiry: Inquiry }) {
           </Button>
         </div>
       ) : (
-        <div className="inquiry-ca__dropzone rounded border p-3 text-center">
-          {/* Signed with no document means a broker marked it by hand. Saying
-              "no signed CA" there contradicts the Signed badge above it. */}
-          <div className="text-muted mb-2">
-            {inquiry.caSigned
-              ? "Marked signed outside the app — no document on file."
-              : "No signed CA on file for this inquiry."}
-          </div>
+        <div className="inquiry-ca__dropzone rounded border p-4 text-center">
+          <FontAwesomeIcon
+            icon={faArrowUpFromBracket}
+            className="text-primary mb-2"
+            size="lg"
+          />
+          <div className="fw-semibold">Drag &amp; Drop CA here</div>
+          <div className="text-muted fs-small mb-2">or</div>
           <Button variant="outline" onClick={upload}>
-            <FontAwesomeIcon icon={faArrowUpFromBracket} />
-            Upload signed CA
+            Browse Files
           </Button>
+          {/* Signed with no document means a broker ticked the box by hand.
+              The dropzone stays, because there is still no file to show. */}
+          {inquiry.caSigned && (
+            <div className="text-muted fs-small mt-2">
+              Marked signed by hand — no document on file.
+            </div>
+          )}
         </div>
       )}
 
-      <div className="d-flex align-items-center justify-content-between gap-3 border-bottom py-2 mt-2">
-        <span className="text-muted">Mark CA as signed</span>
-        <Switch
+      <label className="d-flex align-items-center gap-2 mt-3">
+        <Checkbox
           checked={inquiry.caSigned}
           onCheckedChange={(c) =>
             updateInquiry(inquiry.id, inquiry.listingId, {
@@ -113,9 +124,10 @@ export function InquiryCaSection({ inquiry }: { inquiry: Inquiry }) {
                 : { caFileName: undefined, caSignedAt: undefined }),
             })
           }
-          aria-label={`Mark the CA signed for ${inquiry.name}`}
+          aria-label={`Signed CA for ${inquiry.name}`}
         />
-      </div>
+        Signed CA
+      </label>
     </div>
   );
 }

@@ -1461,8 +1461,8 @@ export interface Contact {
        */
       accessLevel?: 'Low' | 'Medium' | 'High'
       referralSource?: string
-      /** The lead's account status — "Verified" in the table's terms. */
-      verified?: boolean
+      /** Inquiry status — "Lead Status" in the product this mirrors. */
+      status?: string
       /** Whether the signed confidentiality agreement is on file. */
       caSigned?: boolean
       /** Display name of the "uploaded" CA. No bytes exist — see the CA section
