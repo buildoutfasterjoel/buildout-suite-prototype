@@ -117,6 +117,31 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 195,
+    title:
+      "Pace Otto's replies out with a per-word fade, so a buffered response still reads as live",
+    mergedAt: "2026-08-31T20:25:19Z",
+    day: "2026-08-31",
+    author: "buildoutfasterjoel",
+    area: "Otto",
+    summary:
+      "On the hosted prototype Otto went quiet for several seconds and then dropped a finished paragraph in one go, because AWS Amplify holds a reply back until it is complete. His answers now arrive a word at a time, each fading in, at the pace they used to arrive at.",
+    highlights: [
+      {
+        kind: "refinement",
+        text: "Otto's replies appear a word at a time, each one fading in, instead of landing as a finished block of text after a silence.",
+      },
+      {
+        kind: "refinement",
+        text: "A reply Otto speaks aloud still appears all at once, so the words on screen cannot drift out of step with his voice. Asking for reduced motion turns the effect off too.",
+      },
+      {
+        kind: "fix",
+        text: "The conversation keeps pace with a reply as it appears, rather than letting the newest lines run on below the bottom of the panel. Scrolling up to re-read something earlier still holds your place.",
+      },
+    ],
+  },
+  {
     pr: 194,
     title:
       "Carry runtime environment variables into the Amplify compute bundle, so the gate and Otto work when deployed",
