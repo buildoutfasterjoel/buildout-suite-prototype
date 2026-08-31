@@ -2403,6 +2403,52 @@
   border-color: var(--bp-warning-border-subtle);
 }
 
+// The "+" beside a contact's tags: a list of the tags the book already uses,
+// toggled in place, with free text for a new one.
+.contact-tag-picker {
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    max-height: 208px;
+    overflow-y: auto;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 8px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    font-size: 13px;
+    text-align: left;
+    color: var(--color-storm-grey-700, #424e62);
+
+    &:hover {
+      background: var(--color-storm-grey-50, #f6f7f9);
+    }
+    // A tag already on the record. It stays clickable — clicking takes it off,
+    // which is the same gesture as the chip's ×, reachable from the same list.
+    &.is-applied {
+      color: var(--color-mountain-meadow-700, #008a5e);
+      font-weight: 600;
+    }
+  }
+
+  &__icon {
+    flex-shrink: 0;
+    width: 12px;
+    color: var(--color-storm-grey-400, #8b97a8);
+
+    .is-applied & {
+      color: inherit;
+    }
+  }
+}
+
 // ── BOV flow (contact page): stepper, cover preview, email chrome ──
 .bov-stepper {
   display: inline-flex;

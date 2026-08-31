@@ -23,6 +23,7 @@ import {
 import { ContactStageBadge } from "#/components/contacts/ContactStageBadge";
 import { ContactSection } from "#/components/contacts/ContactSection";
 import { ContactChip } from "#/components/contacts/ContactChip";
+import { ContactTagPicker } from "#/components/contacts/ContactTagPicker";
 import { ContactHeroAccessAvatars } from "#/components/contacts/ContactHeroAccessAvatars";
 import { ContactHeroInfo } from "#/components/contacts/ContactHeroInfo";
 import { useComposeFocus } from "#/components/contacts/useComposeFocus";
@@ -396,21 +397,7 @@ export function ContactOverviewColumn({
                     onRemove={() => removeContactTags(contact.id, [t])}
                   />
                 ))}
-                <Tooltip>
-                  <Tooltip.Trigger
-                    render={
-                      <Button
-                        variant="ghost"
-                        appearance="muted"
-                        size="icon-sm"
-                        aria-label="Add tags"
-                      >
-                        <FontAwesomeIcon icon={faPlus} />
-                      </Button>
-                    }
-                  />
-                  <Tooltip.Content>Add Tags</Tooltip.Content>
-                </Tooltip>
+                <ContactTagPicker contact={contact} />
               </div>
             </div>
 
