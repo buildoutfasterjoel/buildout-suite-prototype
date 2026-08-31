@@ -1191,8 +1191,22 @@ export interface VoucherDeposit {
   date: string
   /** Cash received, before it is spread. May exceed the sum of its allocations. */
   amount: number
-  /** The payer's cheque or wire reference. Free text, often blank. */
+  /** The payer's cheque or wire reference. Free text, never stored blank. */
   referenceNumber: string
+  /**
+   * The number printed on the cheque, when the money arrived as one.
+   *
+   * **Not the same field as {@link VoucherDeposit.referenceNumber}, and not a
+   * rename of it.** A reference is how the payment is identified in the books —
+   * every deposit has one, generated at save if the broker had nothing to type.
+   * A cheque number belongs to the payer's cheque, and most deposits are wires
+   * or ACH transfers that have none.
+   *
+   * So this is optional where the reference is not, and absent rather than
+   * empty: a `''` on a wire would claim a cheque number was recorded and left
+   * blank, which is a different fact from there being no cheque.
+   */
+  checkNumber?: string
   /** ISO timestamp of when it was entered. */
   createdAt: string
   /** A `TEAMMATES` id — resolve it with `findTeammate`. */

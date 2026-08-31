@@ -194,3 +194,47 @@ export function depositsForReceivable(
     })
     .sort((a, b) => a.deposit.date.localeCompare(b.deposit.date))
 }
+
+/** Where a hand-typed deposit allocation stands against the cash it is spreading. */
+export interface AllocationTally {
+  /** Everything typed across the receivable lines. */
+  allocated: number
+  /**
+   * Cash the lines have not claimed yet. Never negative — over-allocation is
+   * reported by {@link AllocationTally.overAllocated} instead, so a caller
+   * rendering "$X left to apply" cannot print a negative dollar figure.
+   */
+  unallocated: number
+  /** How far past the deposit the lines have gone. 0 when they fit. */
+  overAllocated: number
+}
+
+/**
+ * The running total under a hand-allocated deposit.
+ *
+ * The Back Office New Deposit modal does not split a deposit for you — every
+ * receivable starts at $0.00 and the broker types where the money goes, so the
+ * one thing the form owes them is a live answer to "how much is left".
+ *
+ * Deductions are deliberately not counted. A deduction is a second reading of
+ * the same money rather than a slice taken out of it (see {@link previewDeposit}),
+ * so counting it here would tell a broker who has fully allocated their deposit
+ * that they still have hundreds of dollars to place.
+ *
+ * Unallocated cash is allowed — a deposit can legitimately exceed what these
+ * lines can absorb — but over-allocation is not, which is why the two are
+ * separate fields rather than one signed number.
+ */
+export function allocationTally(
+  amount: number,
+  allocations: Iterable<number>,
+): AllocationTally {
+  let allocated = 0
+  for (const value of allocations) allocated = toCents(allocated + value)
+  const difference = toCents(Math.max(0, amount) - allocated)
+  return {
+    allocated,
+    unallocated: Math.max(0, difference),
+    overAllocated: Math.max(0, -difference),
+  }
+}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  allocationTally,
   depositsForReceivable,
   generateDepositReference,
   previewDeposit,
@@ -243,5 +244,55 @@ describe('generateDepositReference', () => {
     const ref = generateDepositReference('deposit-xyz', taken)
     expect(Number(ref)).toBeGreaterThanOrEqual(1000)
     expect(Number(ref)).toBeLessThanOrEqual(9999)
+  })
+})
+
+describe('allocationTally', () => {
+  it('reports the whole deposit as unallocated before anything is typed', () => {
+    expect(allocationTally(30000, [0, 0, 0])).toEqual({
+      allocated: 0,
+      unallocated: 30000,
+      overAllocated: 0,
+    })
+  })
+
+  it('counts down as the lines are filled in', () => {
+    expect(allocationTally(30000, [12000, 5500.5])).toEqual({
+      allocated: 17500.5,
+      unallocated: 12499.5,
+      overAllocated: 0,
+    })
+  })
+
+  it('reads a fully placed deposit as nothing left and nothing over', () => {
+    expect(allocationTally(818.12, [409.06, 409.06])).toEqual({
+      allocated: 818.12,
+      unallocated: 0,
+      overAllocated: 0,
+    })
+  })
+
+  // Two separate fields rather than one signed number, so a caller rendering
+  // "$X left to apply" can never print a negative dollar figure.
+  it('reports going past the deposit as over-allocated, not as negative room', () => {
+    expect(allocationTally(1000, [600, 700])).toEqual({
+      allocated: 1300,
+      unallocated: 0,
+      overAllocated: 300,
+    })
+  })
+
+  it('treats a deposit with no amount yet as nothing to place', () => {
+    expect(allocationTally(0, [])).toEqual({
+      allocated: 0,
+      unallocated: 0,
+      overAllocated: 0,
+    })
+  })
+
+  it('keeps the running total on the cent through a float tail', () => {
+    // 0.1 + 0.2 is 0.30000000000000004 before rounding.
+    expect(allocationTally(1, [0.1, 0.2]).allocated).toBe(0.3)
+    expect(allocationTally(1, [0.1, 0.2]).unallocated).toBe(0.7)
   })
 })
