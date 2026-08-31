@@ -117,6 +117,31 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 194,
+    title:
+      "Carry runtime environment variables into the Amplify compute bundle, so the gate and Otto work when deployed",
+    mergedAt: "2026-08-31T19:17:04Z",
+    day: "2026-08-31",
+    author: "buildoutfasterjoel",
+    area: "Platform",
+    summary:
+      "On the AWS Amplify deployment, Otto said it had no API key and the password gate let everyone straight in. Amplify hands environment variables to the build but not to the running server, so the two of them were reading settings that were never there. The build now passes them across on purpose.",
+    highlights: [
+      {
+        kind: "fix",
+        text: "Otto answers on the hosted prototype instead of reporting that the assistant is not configured.",
+      },
+      {
+        kind: "fix",
+        text: "The password gate protects the hosted prototype again. It had been letting everyone through, because a password it cannot read looks the same to it as no password being set.",
+      },
+      {
+        kind: "fix",
+        text: "Otto's voice works on the hosted prototype, rather than falling back to the browser's own speech.",
+      },
+    ],
+  },
+  {
     pr: 192,
     title:
       "Let a wide monitor keep the contact page's three columns with the assistant rail open",

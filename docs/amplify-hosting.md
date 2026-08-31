@@ -75,9 +75,63 @@ Amplify Hosting compute expects, so leave it alone.
    | `ANTHROPIC_API_KEY` | Otto | no — Otto fails without it |
    | `ELEVENLABS_API_KEY` | Otto's voice | no — falls back to browser speech |
 
-   `bunfig.toml` reads the two tokens straight from the environment, so setting
-   them in the console is all that is needed. Do not name the GitHub one
-   `GITHUB_TOKEN` — see the note in `CLAUDE.md`.
+   `bunfig.toml` reads the two tokens straight from the environment, so for the
+   build-time pair, setting them in the console is all that is needed. Do not
+   name the GitHub one `GITHUB_TOKEN` — see the note in `CLAUDE.md`.
+
+   **Setting the run-time ones in the console is *not* enough on its own.** See
+   the next section.
+
+## Console variables do not reach the running server
+
+This one cost a deploy. Amplify passes console environment variables to the
+build container only, and AWS does it deliberately:
+
+> a Next.js server component doesn't have access to those environment variables
+> by default. **This behavior is intentional** to protect any secrets stored in
+> environment variables that your application uses during the build phase.
+>
+> — [Making environment variables accessible to server-side runtimes](https://docs.aws.amazon.com/amplify/latest/userguide/ssr-environment-variables.html)
+
+The build-time pair was unaffected, which is exactly why this is easy to miss:
+`bun install` succeeded, the build went green, the site loaded. Everything read
+through `process.env` at *request* time got nothing, and both failures were
+silent:
+
+- **The password gate admitted everyone.** `src/lib/auth.ts` treats an unset
+  `PROTOTYPE_PASSWORD` as "no gate configured" and returns `authenticated:
+  true`. No password set means no password asked — the prototype was public.
+- **Otto reported itself unconfigured**, because `aiConfigured` saw no
+  `ANTHROPIC_API_KEY`.
+
+`amplify.yml` now carries them across: it writes an allowlisted set into
+`.amplify-hosting/compute/default/.env` after the build, and
+`deploy/amplify-server.js` replaces the preset's entrypoint so the file is
+loaded before the app starts. The build log prints the variable *names* it
+carried, so a missing one shows up there rather than as broken behaviour later.
+
+Adding a new runtime variable means adding it to that allowlist. It is an
+allowlist on purpose — a blanket `env` dump would copy the registry tokens into
+the bundle, where the server has no use for them.
+
+### What this costs, and what it does not
+
+The values sit in a file inside the deployment bundle, so **anyone with access
+to your AWS deployment artifacts can read them**. AWS says as much, and
+recommends against it. It was accepted here deliberately: this is a prototype,
+and the alternative — an [SSR Compute
+role](https://docs.aws.amazon.com/amplify/latest/userguide/amplify-SSR-compute-role.html)
+plus SSM Parameter Store, which keeps secrets out of the bundle entirely — is
+real IAM work for a demo. If a key is ever exposed, rotate it.
+
+What this does **not** do is expose anything to the public. `compute/` is never
+web-served; only `static/` is. Verified: `/.env` returns a redirect to `/login`
+and never serves the file.
+
+The public-facing risk is a different one, and it is the password gate rather
+than the key store. An open site means anyone can talk to Otto and spend the
+Anthropic budget, no matter where the key lives. That is what
+`PROTOTYPE_PASSWORD` reaching the runtime prevents.
 
 ## Verifying a build locally
 
