@@ -44,6 +44,41 @@ export function PropertyCard({ listing }: { listing: Listing }) {
             style={{ objectFit: "cover", display: "block" }}
           />
 
+          {/* top-left: the classic marker, alone. A classic deal is a separate
+              thing from the deal facts in the other three corners, so it gets
+              the empty corner rather than riding along with one of them. Dark
+              pill like its neighbours — the badge spec's light fill washes out
+              over a photo. */}
+          {listing.isClassic && (
+            <div
+              className="position-absolute d-flex align-items-center"
+              style={{ top: 12, left: 12 }}
+            >
+              <Tooltip>
+                <Tooltip.Trigger
+                  render={
+                    <span
+                      className="d-inline-flex align-items-center gap-1 fw-semibold text-white"
+                      style={{
+                        backgroundColor: "#62748e",
+                        borderRadius: 6,
+                        padding: "3px 6px",
+                        fontSize: 10,
+                      }}
+                    >
+                      <FontAwesomeIcon
+                        icon={CLASSIC_BADGE.icon}
+                        style={{ fontSize: 9 }}
+                      />
+                      {CLASSIC_BADGE.label}
+                    </span>
+                  }
+                />
+                <Tooltip.Content>{CLASSIC_BADGE.tooltip}</Tooltip.Content>
+              </Tooltip>
+            </div>
+          )}
+
           {/* top-right: avatar group + edit */}
           <div
             className="position-absolute d-flex align-items-center gap-2"
@@ -76,46 +111,17 @@ export function PropertyCard({ listing }: { listing: Listing }) {
               <FontAwesomeIcon icon={faSignHanging} style={{ fontSize: 9 }} />
               {dealStageLabel(listing.status, dealShape(listing))}
             </span>
-            {/* Identity, not state: the classic marker sits with the reference
-                id rather than beside the stage, and takes the same dark pill —
-                the badge spec's light fill would wash out over a photo. */}
-            <div className="d-flex align-items-center gap-1">
-              {listing.isClassic && (
-                <Tooltip>
-                  <Tooltip.Trigger
-                    render={
-                      <span
-                        className="d-inline-flex align-items-center gap-1 fw-semibold text-white"
-                        style={{
-                          backgroundColor: "#62748e",
-                          borderRadius: 6,
-                          padding: "3px 6px",
-                          fontSize: 10,
-                        }}
-                      >
-                        <FontAwesomeIcon
-                          icon={CLASSIC_BADGE.icon}
-                          style={{ fontSize: 9 }}
-                        />
-                        {CLASSIC_BADGE.label}
-                      </span>
-                    }
-                  />
-                  <Tooltip.Content>{CLASSIC_BADGE.tooltip}</Tooltip.Content>
-                </Tooltip>
-              )}
-              <span
-                className="fw-semibold text-white"
-                style={{
-                  backgroundColor: "#62748e",
-                  borderRadius: 6,
-                  padding: "3px 6px",
-                  fontSize: 10,
-                }}
-              >
-                #{refId}
-              </span>
-            </div>
+            <span
+              className="fw-semibold text-white"
+              style={{
+                backgroundColor: "#62748e",
+                borderRadius: 6,
+                padding: "3px 6px",
+                fontSize: 10,
+              }}
+            >
+              #{refId}
+            </span>
           </div>
         </div>
 

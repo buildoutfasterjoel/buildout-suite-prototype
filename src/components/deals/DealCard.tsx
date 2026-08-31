@@ -163,18 +163,7 @@ export function DealCardView({
               <Tooltip.Content>{typeLabel}</Tooltip.Content>
             </Tooltip>
           )}
-          <span
-            className="d-inline-flex align-items-center gap-1 fw-semibold text-nowrap fs-small"
-            style={{
-              backgroundColor: `color-mix(in srgb, ${sideDisplay.color} 12%, transparent)`,
-              color: sideDisplay.color,
-              borderRadius: 6,
-              padding: "2px 6px",
-            }}
-          >
-            <FontAwesomeIcon icon={sideDisplay.icon} />
-            {sideDisplay[listing.dealType]}
-          </span>
+          {/* Classic first — see NewDealCard's badge row. */}
           {listing.isClassic && (
             <Tooltip>
               <Tooltip.Trigger
@@ -196,6 +185,18 @@ export function DealCardView({
               <Tooltip.Content>{CLASSIC_BADGE.tooltip}</Tooltip.Content>
             </Tooltip>
           )}
+          <span
+            className="d-inline-flex align-items-center gap-1 fw-semibold text-nowrap fs-small"
+            style={{
+              backgroundColor: `color-mix(in srgb, ${sideDisplay.color} 12%, transparent)`,
+              color: sideDisplay.color,
+              borderRadius: 6,
+              padding: "2px 6px",
+            }}
+          >
+            <FontAwesomeIcon icon={sideDisplay.icon} />
+            {sideDisplay[listing.dealType]}
+          </span>
           {(showStatus || action) && (
             <div className="ms-auto d-flex align-items-center gap-2">
               {showStatus && (

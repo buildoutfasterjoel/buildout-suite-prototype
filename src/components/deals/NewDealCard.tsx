@@ -171,6 +171,9 @@ export function NewDealCard({
                 onChange={onStageChange}
               />
             )}
+            {/* Classic leads the row: it says which page this deal opens, so it
+                is read before the deal's own facts rather than after them. */}
+            {listing.isClassic && <CardBadge {...CLASSIC_BADGE} />}
             <CardBadge
               icon={side.icon}
               label={side.label}
@@ -178,7 +181,6 @@ export function NewDealCard({
               color={side.color}
               tooltip={side.tooltip}
             />
-            {listing.isClassic && <CardBadge {...CLASSIC_BADGE} />}
             {/* The divider belongs to the relationship badge, not to the row —
                 kept in one nowrap group so a wrap carries the rule down with it
                 and it still reads as a separation from the badges above. */}
