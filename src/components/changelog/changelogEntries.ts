@@ -117,6 +117,47 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 190,
+    title:
+      "Give the previewed BOV its full page set, and let tags be read and written by Otto and by hand",
+    mergedAt: "2026-08-31T15:18:36Z",
+    day: "2026-08-31",
+    author: "ZS-buildout",
+    area: "Documents",
+    summary:
+      "The BOV a broker previews before sending is a whole document now, and a contact's tags can be changed — by asking Otto, or from the record itself.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "The Broker Opinion of Value reads as a real document end to end: a cover, the opinion of value with its headline range, the property, whatever the underwriting run produced, comparable sales bracketing the building, and a weighted conclusion with a recommended list price. A quick screen previews a shorter BOV than a thorough one, and the page count follows the pages that exist.",
+      },
+      {
+        kind: "feature",
+        text: "Otto can read, add and remove a contact's tags. It checks the tags already in use across the book before adding one, so \u201cInvestor\u201d does not quietly become a second segment called \u201cinvestors\u201d.",
+      },
+      {
+        kind: "feature",
+        text: "The + beside a contact's tags opens a picker over the tags the book already uses \u2014 click to apply, click again to take off \u2014 with free text for a genuinely new one.",
+      },
+      {
+        kind: "fix",
+        text: "A tag removed from a contact stays removed. The chips were remembered only for as long as the page was open, so a reload brought them back.",
+      },
+      {
+        kind: "fix",
+        text: "The BOV email and the document now sign off as the broker who is signed in. Every draft was signed \u201cJohn\u201d, and the owners who wrote back addressed him the same way \u2014 a name that appears nowhere else in the product.",
+      },
+      {
+        kind: "fix",
+        text: "A building worth less than a million no longer prices at \u201c$0.2M \u2013 $0.2M\u201d. Below a million the range reads in thousands, so it stays a range.",
+      },
+      {
+        kind: "refinement",
+        text: "Property type reads as \u201cSpecial Purpose\u201d rather than \u201cspecial-purpose\u201d wherever the underwriting prints it, and the property page of a BOV shows three photos of the building that are not the one already filling its cover.",
+      },
+    ],
+  },
+  {
     pr: 188,
     title:
       "Write each PR's changelog entry in /ship, and stop the gate surprising people",
