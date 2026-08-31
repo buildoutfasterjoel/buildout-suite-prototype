@@ -217,7 +217,11 @@ export function BovPreviewPages({ property, contact, pricing, result }: BovPrevi
   const compAvgPerSf = comps.reduce((sum, x) => sum + x.perSf, 0) / comps.length;
   const compAvgCap = comps.reduce((sum, x) => sum + x.cap, 0) / comps.length;
   const rangeText = pricing ? bovRangeText(pricing) : `${short(low)} – ${short(high)}`;
-  const photos = galleryPhotoIds(property.id, 3);
+  // Four, minus the hero: `galleryPhotoIds` leads with the hero photo so a
+  // listing's gallery agrees with its card thumbnail, and the hero is already
+  // the cover. Keeping it here would show the reader the same building shot
+  // twice, two pages apart.
+  const photos = galleryPhotoIds(property.id, 4).slice(1);
 
   // Two run sections per sheet, matching how the document editor lays the same
   // sections out — a broker flipping from the preview into the editor sees the
