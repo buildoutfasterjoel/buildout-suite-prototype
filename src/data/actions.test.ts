@@ -4,6 +4,8 @@ import {
   createCallList,
   commitStageTransition,
   createContact,
+  addContactTags,
+  removeContactTags,
   createDeal,
   createEmailDraft,
   createTask,
@@ -1354,5 +1356,59 @@ describe('payables', () => {
     })
     expect(paymentId).toBeNull()
     expect(back(deal.id).payables![0]!.payments).toHaveLength(0)
+  })
+})
+
+describe('contact tags', () => {
+  const tagsOf = (id: string) => useDataStore.getState().contacts.get(id)!.tags
+
+  const tagged = (tags: string[]) => {
+    const { contact } = createContact({ firstName: 'Tag', lastName: 'Target', tags })
+    return contact
+  }
+
+  it('adds tags and reports which were new', () => {
+    const c = tagged(['VIP'])
+    const { added } = addContactTags(c.id, ['Investor', '1031'])
+    expect(added).toEqual(['Investor', '1031'])
+    expect(tagsOf(c.id)).toEqual(['VIP', 'Investor', '1031'])
+  })
+
+  /**
+   * The People page derives its tag filter from the contacts themselves, so a
+   * second spelling of the same tag would split one segment into two filters
+   * that each find half the book.
+   */
+  it('skips a tag the contact already carries, whatever the case', () => {
+    const c = tagged(['VIP'])
+    const { added } = addContactTags(c.id, ['vip', 'Vip '])
+    expect(added).toEqual([])
+    expect(tagsOf(c.id)).toEqual(['VIP'])
+  })
+
+  it('ignores blanks and de-duplicates within one call', () => {
+    const c = tagged([])
+    const { added } = addContactTags(c.id, ['  ', 'Investor', 'investor'])
+    expect(added).toEqual(['Investor'])
+    expect(tagsOf(c.id)).toEqual(['Investor'])
+  })
+
+  it('removes case-insensitively and reports the spelling it removed', () => {
+    const c = tagged(['VIP', 'Investor'])
+    const { removed } = removeContactTags(c.id, ['vip'])
+    expect(removed).toEqual(['VIP'])
+    expect(tagsOf(c.id)).toEqual(['Investor'])
+  })
+
+  it('removing a tag the contact does not carry changes nothing', () => {
+    const c = tagged(['VIP'])
+    const { removed } = removeContactTags(c.id, ['Investor'])
+    expect(removed).toEqual([])
+    expect(tagsOf(c.id)).toEqual(['VIP'])
+  })
+
+  it('returns a null contact for an unknown id rather than throwing', () => {
+    expect(addContactTags('nope', ['VIP']).contact).toBeNull()
+    expect(removeContactTags('nope', ['VIP']).contact).toBeNull()
   })
 })

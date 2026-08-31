@@ -191,6 +191,7 @@ describe("client tool output is canonical-safe", () => {
       ["deal_pipeline_totals", {}],
       ["attachment_list", { dealId: deal.id }],
       ["activity_search", { dealId: deal.id }],
+      ["contact_tags", { contactId: contact.id }],
     ];
     for (const [name, args] of cases) {
       const out = await run(name, args);
@@ -201,5 +202,85 @@ describe("client tool output is canonical-safe", () => {
         throw new Error(`${name} returned a non-canonical result — ${(e as Error).message}`);
       }
     }
+  });
+});
+
+describe("contact tag tools", () => {
+  const tools = createClientTools({ navigate: () => {} });
+  const run = async (name: string, args: unknown) => {
+    const tool = tools.find((t) => t.name === name);
+    expect(tool, `no tool named ${name}`).toBeDefined();
+    const execute = (tool as { execute?: (a: unknown) => Promise<unknown> }).execute;
+    return execute!(args) as Promise<Record<string, unknown>>;
+  };
+  const someone = () => [...useDataStore.getState().contacts.values()][0];
+  const tagsOf = (id: string) => useDataStore.getState().contacts.get(id)!.tags;
+
+  it("reads a contact's tags and the tags in use across the book", async () => {
+    const c = someone();
+    const out = await run("contact_tags", { contactId: c.id });
+    expect(out.error).toBeUndefined();
+    expect(out.tags).toEqual(c.tags);
+    // Every tag on the record is also in the book-wide list the model picks from.
+    for (const t of c.tags) expect(out.tagsInUse as string[]).toContain(t);
+    assertCanonical(out);
+  });
+
+  it("resolves the contact by name when it has no id", async () => {
+    const c = someone();
+    const out = await run("contact_tags", {
+      contact_name: `${c.firstName} ${c.lastName}`.trim(),
+    });
+    expect(out.contactId).toBe(c.id);
+  });
+
+  it("adds a tag and hands back the record for its card", async () => {
+    const c = someone();
+    // A tag no seeded contact carries — the seed's own pool ("1031 exchange",
+    // "Out-of-state") would exercise the already-present path instead.
+    const out = await run("add_contact_tags", { contactId: c.id, tags: ["Rooftop Solar"] });
+    expect(out.added).toEqual(["Rooftop Solar"]);
+    expect(tagsOf(c.id)).toContain("Rooftop Solar");
+    // `contacts` is what renders the contact card — same contract as update_contact.
+    expect((out.contacts as unknown[]).length).toBe(1);
+    assertCanonical(out);
+  });
+
+  /**
+   * A no-op has to read as a no-op. Reported as `alreadyPresent` rather than
+   * dropped, or "add VIP" on someone already tagged VIP comes back as a success
+   * the broker then can't find any trace of.
+   */
+  it("reports a tag that was already there instead of claiming to add it", async () => {
+    const c = someone();
+    await run("add_contact_tags", { contactId: c.id, tags: ["VIP"] });
+    const out = await run("add_contact_tags", { contactId: c.id, tags: ["vip"] });
+    expect(out.added).toEqual([]);
+    expect(out.alreadyPresent).toEqual(["vip"]);
+    expect(tagsOf(c.id).filter((t) => t.toLowerCase() === "vip")).toEqual(["VIP"]);
+  });
+
+  it("removes a tag case-insensitively", async () => {
+    const c = someone();
+    await run("add_contact_tags", { contactId: c.id, tags: ["Investor"] });
+    const out = await run("remove_contact_tags", { contactId: c.id, tags: ["investor"] });
+    expect(out.removed).toEqual(["Investor"]);
+    expect(tagsOf(c.id)).not.toContain("Investor");
+    assertCanonical(out);
+  });
+
+  it("says a tag was not there rather than erroring", async () => {
+    const c = someone();
+    const out = await run("remove_contact_tags", { contactId: c.id, tags: ["Nonexistent"] });
+    expect(out.error).toBeUndefined();
+    expect(out.removed).toEqual([]);
+    expect(out.notPresent).toEqual(["Nonexistent"]);
+  });
+
+  it("errors by name when the contact cannot be resolved", async () => {
+    const out = await run("add_contact_tags", { contact_name: "Zzz Nobody", tags: ["VIP"] });
+    expect(out.error).toContain("Zzz Nobody");
+    const bare = await run("contact_tags", {});
+    expect(bare.error).toBeTruthy();
   });
 });

@@ -645,6 +645,7 @@ const LOOKUP_TOOLS = new Set([
   "research_property_search",
   "research_property_load",
   "deal_pipeline_totals",
+  "contact_tags",
 ]);
 
 /**
@@ -673,6 +674,8 @@ const ACTION_TOOLS = new Set([
   "build_call_list",
   "create_contact",
   "update_contact",
+  "add_contact_tags",
+  "remove_contact_tags",
   "create_task",
   "add_activity",
   "log_call",

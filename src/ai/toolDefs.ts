@@ -697,6 +697,60 @@ export const updateContactDef = toolDefinition({
   },
 });
 
+export const contactTagsDef = toolDefinition({
+  name: "contact_tags",
+  description:
+    "Read the segment tags on one contact, plus every tag already in use across the book. Call this BEFORE adding a tag so you reuse the spelling the broker already segments on (\"Investor\", not \"investors\") — a near-duplicate splits one segment into two filters that each find half the book.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      contactId: { type: "string" },
+      contact_name: { type: "string", description: "Their name, when you have no id." },
+    },
+    additionalProperties: false,
+  },
+});
+
+export const addContactTagsDef = toolDefinition({
+  name: "add_contact_tags",
+  description:
+    "Add one or more segment tags to a contact — how the broker groups their book (VIP, Investor, 1031, Do Not Solicit). Tags already on the record are skipped, case-insensitively. Use `contact_tags` first to match an existing tag's spelling. This is NOT the relationship stage (cold/nurturing/client), which is derived from their deals and cannot be set.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      contactId: { type: "string" },
+      contact_name: { type: "string", description: "Their name, when you have no id." },
+      tags: {
+        type: "array",
+        items: { type: "string" },
+        description: "The tags to add, e.g. [\"Investor\", \"1031\"].",
+      },
+    },
+    required: ["tags"],
+    additionalProperties: false,
+  },
+});
+
+export const removeContactTagsDef = toolDefinition({
+  name: "remove_contact_tags",
+  description:
+    "Remove one or more segment tags from a contact. Matching is case-insensitive. Removing a tag the contact does not carry is reported back, not treated as an error.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      contactId: { type: "string" },
+      contact_name: { type: "string", description: "Their name, when you have no id." },
+      tags: {
+        type: "array",
+        items: { type: "string" },
+        description: "The tags to remove.",
+      },
+    },
+    required: ["tags"],
+    additionalProperties: false,
+  },
+});
+
 // ── Cross-record ─────────────────────────────────────────────────────────────
 
 export const briefDef = toolDefinition({
@@ -791,6 +845,9 @@ export const TOOL_DEFS = [
   researchPropertyLoadDef,
   dealPipelineTotalsDef,
   updateContactDef,
+  contactTagsDef,
+  addContactTagsDef,
+  removeContactTagsDef,
   briefDef,
   supportDef,
 ];

@@ -57,6 +57,8 @@ import {
   createTask,
   createContact,
   updateContact,
+  addContactTags,
+  removeContactTags,
   touchContactActivity,
 } from "#/data/actions";
 import { CURRENT_USER } from "#/data/teammates";
@@ -130,6 +132,9 @@ import {
   researchPropertyLoadDef,
   dealPipelineTotalsDef,
   updateContactDef,
+  contactTagsDef,
+  addContactTagsDef,
+  removeContactTagsDef,
   briefDef,
   supportDef,
 } from "./toolDefs";
@@ -145,6 +150,29 @@ const contactSummary = (c: Contact) => ({
   email: c.email,
   phone: c.phone,
 });
+
+/**
+ * Resolve the contact a tag tool is talking about, by id or by name. Returns the
+ * error object the tool should hand straight back when there is no match — the
+ * three tag tools each accept both forms, and a bare "Contact not found" tells
+ * the model nothing about which half of the lookup failed.
+ */
+function resolveTagTarget(
+  contactId: string | undefined,
+  contactName: string | undefined,
+): { contact: Contact } | { error: string } {
+  const contact = contactId
+    ? getContact(contactId)
+    : contactName
+      ? resolveContactByName(contactName)
+      : null;
+  if (contact) return { contact };
+  return {
+    error: contactName
+      ? `No contact named "${contactName}".`
+      : "Tell me which contact's tags to work with.",
+  };
+}
 
 const dealSummary = (l: Listing) => {
   const p = getProperty(l.propertyId);
@@ -1329,6 +1357,83 @@ export function createClientTools({
       if (!contact) return { error: "Contact not found" };
       return {
         updated: changed,
+        contactId: contact.id,
+        contactName: `${contact.firstName} ${contact.lastName}`.trim(),
+        contacts: [contactSummary(contact)],
+      };
+    }),
+
+    // ── Contact tags ─────────────────────────────────────────────────────────
+    //
+    // Tags are the broker's own segmentation — the thing the People page filters
+    // on — so they are read and written as their own small surface rather than
+    // through `update_contact`. That tool is the Edit Contact form's writer: it
+    // takes the whole form back, which makes "add one tag" a round-trip through
+    // every other field on the record.
+
+    contactTagsDef.client(async (args) => {
+      const { contactId, contact_name } = args as {
+        contactId?: string;
+        contact_name?: string;
+      };
+      const target = resolveTagTarget(contactId, contact_name);
+      if ("error" in target) return target;
+      // Every tag in the book, so the model matches an existing spelling instead
+      // of coining a near-duplicate that segments half the same people.
+      const inUse = [
+        ...new Set(
+          [...useDataStore.getState().contacts.values()].flatMap((c) => c.tags),
+        ),
+      ].sort();
+      return {
+        contactId: target.contact.id,
+        contactName: `${target.contact.firstName} ${target.contact.lastName}`.trim(),
+        tags: target.contact.tags,
+        tagsInUse: inUse,
+      };
+    }),
+
+    addContactTagsDef.client(async (args) => {
+      const { contactId, contact_name, tags } = args as {
+        contactId?: string;
+        contact_name?: string;
+        tags: string[];
+      };
+      const target = resolveTagTarget(contactId, contact_name);
+      if ("error" in target) return target;
+      const { contact, added } = addContactTags(target.contact.id, tags ?? []);
+      if (!contact) return { error: "Contact not found" };
+      return {
+        added,
+        // What was asked for but already there. Reported rather than silently
+        // dropped, so "add VIP" on someone already tagged VIP reads as a no-op
+        // instead of a success the broker can't find on the record.
+        alreadyPresent: (tags ?? [])
+          .map((t) => t.trim())
+          .filter((t) => t && !added.some((a) => a.toLowerCase() === t.toLowerCase())),
+        tags: contact.tags,
+        contactId: contact.id,
+        contactName: `${contact.firstName} ${contact.lastName}`.trim(),
+        contacts: [contactSummary(contact)],
+      };
+    }),
+
+    removeContactTagsDef.client(async (args) => {
+      const { contactId, contact_name, tags } = args as {
+        contactId?: string;
+        contact_name?: string;
+        tags: string[];
+      };
+      const target = resolveTagTarget(contactId, contact_name);
+      if ("error" in target) return target;
+      const { contact, removed } = removeContactTags(target.contact.id, tags ?? []);
+      if (!contact) return { error: "Contact not found" };
+      return {
+        removed,
+        notPresent: (tags ?? [])
+          .map((t) => t.trim())
+          .filter((t) => t && !removed.some((r) => r.toLowerCase() === t.toLowerCase())),
+        tags: contact.tags,
         contactId: contact.id,
         contactName: `${contact.firstName} ${contact.lastName}`.trim(),
         contacts: [contactSummary(contact)],
