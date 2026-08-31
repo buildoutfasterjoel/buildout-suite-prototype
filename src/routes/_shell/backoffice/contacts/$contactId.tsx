@@ -91,9 +91,10 @@ function ContactDetailPage() {
   // the middle column's stack or into a tab strip beside the Timeline (the
   // `narrowLayout` design option decides which).
   //
-  // The assistant rail counts as narrow on its own: it takes 380px off a page
-  // that's already capped, so the squeeze is the same whether the viewport
-  // shrank or the rail opened (see `useContactNarrow`).
+  // The docked assistant rail shifts the breakpoint by its own 388px rather
+  // than forcing narrow outright: what matters is the width left over for the
+  // columns, not how it was spent. A big monitor keeps all three columns with
+  // the rail open; a laptop drops to two (see `useContactNarrow`).
   const assistantOpen = useAssistant((s) => s.open);
   const isNarrow = useContactNarrow(assistantOpen);
   const narrowLayoutPref = useContactUiPrefs((s) => s.narrowLayout);
@@ -128,10 +129,12 @@ function ContactDetailPage() {
   return (
     <div
       className="d-flex flex-column h-100 overflow-hidden p-4 gap-3 mx-auto w-100"
-      // The rail pulls the cap in with it: at 96rem the two remaining columns
+      // The cap follows the column count, not the rail: two columns at 96rem
       // just absorb the freed width and the middle one stretches past a
       // comfortable measure, which reads as sprawl rather than breathing room.
-      style={{ maxWidth: assistantOpen ? "72rem" : "96rem" }}
+      // Three columns use the full cap even with the rail open — capping on
+      // rail state made three columns impossible at any monitor size.
+      style={{ maxWidth: isNarrow ? "72rem" : "96rem" }}
     >
       {/* Fixed top bar */}
       <ContactDetailTopBar contact={contact} />
@@ -152,7 +155,22 @@ function ContactDetailPage() {
             onOpenShare={() => setShareOpen(true)}
           />
         </div>
-        <div className="flex-grow-1 h-100 overflow-auto panel-scroll">
+        <div
+          className="flex-grow-1 h-100 overflow-auto panel-scroll"
+          // Floor, not a target: the timeline's Log Activity tab row clips
+          // below this. Fixed-width neighbors (columns, a future panel) must
+          // never squish the middle silently — past the floor the row
+          // overflows instead, which is visible in development.
+          //
+          // Three columns only. The row is `overflow-hidden`, so a floor the
+          // width can't meet clips instead of scrolling — and in the narrow
+          // arrangement the width genuinely can't meet it: at 768px the floor
+          // put this column 74px past the row's edge and cut the timeline off,
+          // where without it the column shrinks to 316px and stays whole.
+          // Narrow has one fixed neighbour and no rival to protect against, so
+          // it shrinks — until the sub-1024 tiers get a layout of their own.
+          style={{ minWidth: isNarrow ? undefined : "24rem" }}
+        >
           <ContactEngagementPanel
             contact={contact}
             deals={deals}
