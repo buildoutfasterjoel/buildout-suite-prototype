@@ -64,9 +64,64 @@ NITRO_PRESET=aws_amplify bun --bun run build
 node .amplify-hosting/compute/default/server.js   # serves on :3000
 ```
 
-## Open question: does Otto still stream?
+## Streaming: the server side is confirmed good
 
-Otto streams its replies over SSE. It is not yet confirmed whether Amplify's
-compute platform passes a streamed response through or buffers it. If it
-buffers, Otto still answers, but the whole reply appears at once instead of
-word by word. Confirm this on the first real deploy.
+Otto streams its replies over SSE. Two things were checked.
+
+### `awsLambda.streaming` does not apply here — do not set it
+
+Nitro's AWS docs describe a `awsLambda: { streaming: true }` option. It looks
+like the fix for streaming, but it belongs to a **different preset** and is
+silently ignored by ours.
+
+It works by swapping the build entry file (`_presets.mjs:178`):
+
+```js
+entry: "./aws-lambda/runtime/aws-lambda",
+awsLambda: { streaming: false },
+hooks: { "rollup:before": (nitro, rollupConfig) => {
+  if (nitro.options.awsLambda?.streaming) rollupConfig.input += "-streaming";
+}}
+```
+
+There is an `aws-lambda-streaming.mjs` to swap to. There is no
+`aws-amplify-streaming.mjs`. Setting the flag in `vite.config.ts` produces no
+error, no warning, and no change in output — so it reads like a fix that isn't
+one.
+
+It is also unnecessary. The flag exists because a raw Lambda handler buffers by
+default and needs AWS's `streamifyResponse` wrapper. The `aws-amplify` preset
+does not build a Lambda handler at all — it builds a plain Node web server:
+
+```js
+const server = new Server(toNodeHandler(nitroApp.fetch));
+server.listen(3e3, ...)
+```
+
+`node:http` streams by default. There is nothing to switch on.
+
+### Measured locally: it streams
+
+Verified against a real `NITRO_PRESET=aws_amplify` build, driving the real Otto
+rail in a browser and timestamping each SSE chunk as it arrived:
+
+| Measure | Result |
+| --- | --- |
+| Response content type | `text/event-stream` |
+| Chunks | 14 |
+| Arrival times | 1, 2, 456, 1008, 1546, 2097, 2655, 3200, 3737, 4285, 4828, 5889 ms |
+| Spread | 5.9 s, every chunk at a distinct time |
+| Console errors | none |
+
+Chunks arriving ~550 ms apart is streaming. A buffered response would deliver
+all 14 at once at the end.
+
+### What is still unknown
+
+Only the part that cannot be tested from a laptop: whether Amplify's own
+compute proxy and CloudFront pass the stream through, or buffer it before
+sending it on. No Nitro setting can change that — by then our server has
+already done the right thing.
+
+So if Otto stops streaming after deploy, the cause is Amplify's edge, not this
+repo. Do not go looking for a Nitro flag.
