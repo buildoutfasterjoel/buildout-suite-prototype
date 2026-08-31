@@ -436,6 +436,13 @@ export interface Listing {
   publishedAt: string | null
   dealType: DealType
   dealSide: DealSide // whether the broker represents the seller or the buyer
+  /**
+   * True when this deal renders in classic mode: the current deal page, but laid
+   * out with the navigation structure and information Buildout Classic showed.
+   * A presentation choice on the deal, not a different kind of deal — every
+   * other field means the same thing either way.
+   */
+  isClassic: boolean
   /** The Property unit this deal is scoped to, or null when it covers the whole property. */
   unitId: string | null
 

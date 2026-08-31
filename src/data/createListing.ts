@@ -611,6 +611,9 @@ export function createProposalListing(draft: NewListingDraft): Listing {
     publishedAt: null,
     dealType: draft.dealType,
     dealSide: draft.dealSide,
+    // A deal created in Suite is never classic — classic mode is for deals that
+    // came over from the legacy app.
+    isClassic: false,
     unitId: isSpace ? (draft.unitId ?? null) : null,
     parentDealId: null,
 

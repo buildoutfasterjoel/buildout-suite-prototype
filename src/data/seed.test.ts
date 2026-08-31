@@ -146,6 +146,23 @@ describe('property stage seed', () => {
   })
 })
 
+describe('classic deal seed', () => {
+  const { listings } = generateDataset()
+
+  it('flags exactly one deal as classic', () => {
+    const classic = listings.filter((l) => l.isClassic)
+    expect(classic).toHaveLength(1)
+  })
+
+  it('puts the classic flag on the first generated deal', () => {
+    expect(listings[0].isClassic).toBe(true)
+    // Every other top-level deal is an ordinary one.
+    for (const l of listings.slice(1).filter((l) => l.parentDealId === null)) {
+      expect(l.isClassic).toBe(false)
+    }
+  })
+})
+
 describe('property units + financial records seed', () => {
   const { properties } = generateDataset()
 
