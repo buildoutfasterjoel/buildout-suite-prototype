@@ -3,17 +3,9 @@ import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass } from "@fortawesome/pro-regular-svg-icons";
-import type { DealType, PropertyStatus, PropertyType } from "#/data/types";
-import {
-  CHART_GRAINS,
-  RECEIVABLE_STATUSES,
-  type ChartGrain,
-  type ReceivableStatus,
-} from "#/data/receivables";
-import type {
-  ReceivableFilterState,
-  ReceivableYear,
-} from "#/data/receivableFilters";
+import type { DealType, PropertyType } from "#/data/types";
+import { CHART_GRAINS, type ChartGrain } from "#/data/receivables";
+import type { DepositFilterState, DepositYear } from "#/data/depositFilters";
 import {
   FacetDropdown,
   type FacetDropdownFacet,
@@ -25,38 +17,34 @@ import {
 } from "#/components/backoffice/filterBarParts";
 import {
   PROPERTY_TYPES,
-  PROPERTY_STATUSES,
-  STATUS_LABELS,
   TYPE_LABELS,
 } from "#/components/properties/propertyDisplay";
 
 const DEAL_TYPES: DealType[] = ["Sale", "Lease"];
 
-/**
- * The facets rendered as checkbox dropdowns. `brokers` is deliberately absent —
- * it is a combobox now, and it writes its Set directly.
- */
-type FacetKey = "statuses" | "stages" | "dealTypes" | "propertyTypes";
+/** The facets rendered as checkbox dropdowns. Brokers is a combobox, not one. */
+type FacetKey = "dealTypes" | "propertyTypes";
 
 /**
- * The receivables index's toolbar.
+ * The deposits index's toolbar.
  *
- * Grain and year sit first, next to the search box, because they are the two
- * controls the chart above reads — the facets after them narrow the table and
- * the chart alike, but only these two change what the chart is a picture OF.
+ * The receivables toolbar minus its two facets that have nothing to say here: a
+ * deposit has no status, and a deal's stage is not a fact about the cash it
+ * received. What is left is the same row in the same order, so moving between
+ * the two pages does not move the controls under the user's cursor.
  */
-export function ReceivableFilterBar({
+export function DepositFilterBar({
   filters,
   brokerNames,
   years,
   onChange,
 }: {
-  filters: ReceivableFilterState;
+  filters: DepositFilterState;
   /** Every internal broker on the current book, sorted — the Brokers options. */
   brokerNames: string[];
-  /** The years any receivable is due in, newest first. */
+  /** The years any deposit landed in, newest first. */
   years: number[];
-  onChange: (next: ReceivableFilterState) => void;
+  onChange: (next: DepositFilterState) => void;
 }) {
   /** Toggle one option inside a facet, returning a fresh Set (never mutating). */
   function toggler<T extends string>(key: FacetKey) {
@@ -73,25 +61,6 @@ export function ReceivableFilterBar({
   }
 
   const facets: (FacetDropdownFacet & { id: string })[] = [
-    {
-      id: "status",
-      title: "Status",
-      options: RECEIVABLE_STATUSES.map((s) => ({ value: s, label: s })),
-      selected: filters.statuses as Set<string>,
-      toggle: toggler<ReceivableStatus>("statuses"),
-      clear: clearer("statuses"),
-    },
-    {
-      id: "stage",
-      title: "Deal Stage",
-      options: PROPERTY_STATUSES.map((s) => ({
-        value: s,
-        label: STATUS_LABELS[s],
-      })),
-      selected: filters.stages as Set<string>,
-      toggle: toggler<PropertyStatus>("stages"),
-      clear: clearer("stages"),
-    },
     {
       id: "dealType",
       title: "Deal Type",
@@ -110,8 +79,7 @@ export function ReceivableFilterBar({
     },
   ];
 
-  const yearLabel = (y: ReceivableYear) =>
-    y === "all" ? "All time" : String(y);
+  const yearLabel = (y: DepositYear) => (y === "all" ? "All time" : String(y));
 
   return (
     <div className="d-flex align-items-center gap-2 flex-wrap">
@@ -120,12 +88,12 @@ export function ReceivableFilterBar({
           <InputGroup.Addon>
             <FontAwesomeIcon icon={faMagnifyingGlass} />
           </InputGroup.Addon>
-          {/* Fully controlled by the parent, like the voucher toolbar's box: a
-              local mirror buys nothing without a debounce and goes stale on
-              reset, leaving a term on screen that is no longer applied. */}
+          {/* Fully controlled by the parent, like the receivables toolbar's
+              box: a local mirror buys nothing without a debounce and goes stale
+              on reset, leaving a term on screen that is no longer applied. */}
           <Input
             type="search"
-            placeholder="Search by payer, voucher, invoice number, amount due"
+            placeholder="Search by amount, reference, payer, or voucher name"
             value={filters.search}
             onChange={(e) => onChange({ ...filters, search: e.target.value })}
           />
@@ -177,17 +145,13 @@ export function ReceivableFilterBar({
                 {String(y)}
               </Select.Item>
             ))}
-            {/* Without this a receivable due outside every offered year would
-                be unreachable — an index whose rows cannot all be found is
-                worse than an extra option. */}
+            {/* Without this a deposit that landed outside every offered year
+                would be unreachable — an index whose rows cannot all be found
+                is worse than an extra option. */}
             <Select.Item value="all">All time</Select.Item>
           </Select.Content>
         </Select>
       </div>
-
-      <FacetDropdown facet={facets[0]} className={SELECT_LOOK} />
-
-      <OfficesDropdown noun="receivable" />
 
       <BrokerCombobox
         brokerNames={brokerNames}
@@ -195,7 +159,9 @@ export function ReceivableFilterBar({
         onChange={(brokers) => onChange({ ...filters, brokers })}
       />
 
-      {facets.slice(1).map((facet) => (
+      <OfficesDropdown noun="deposit" />
+
+      {facets.map((facet) => (
         <FacetDropdown key={facet.id} facet={facet} className={SELECT_LOOK} />
       ))}
     </div>

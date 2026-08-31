@@ -63,6 +63,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: "Vouchers", href: "/backoffice/vouchers" },
       { label: "Receivables", href: "/backoffice/receivables" },
+      { label: "Deposits", href: "/backoffice/deposits" },
     ],
   },
   { label: "Reports", href: "/reports", icon: faSignal },

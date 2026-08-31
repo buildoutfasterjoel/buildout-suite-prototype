@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
@@ -19,7 +18,6 @@ import {
   receivableBuckets,
   receivableTotals,
   receivableYears,
-  type ReceivableBroker,
   type ReceivableRow,
 } from "#/data/receivables";
 import {
@@ -28,6 +26,7 @@ import {
   matchesReceivableFilters,
   type ReceivableFilterState,
 } from "#/data/receivableFilters";
+import { BrokerStack } from "#/components/backoffice/BrokerStack";
 import { ReceivableChart } from "#/components/backoffice/ReceivableChart";
 import { ReceivableFilterBar } from "#/components/backoffice/ReceivableFilterBar";
 import { ReceivableStatusBadge } from "#/components/backoffice/ReceivableStatusBadge";
@@ -39,47 +38,6 @@ export const Route = createFileRoute("/_shell/backoffice/receivables/")({
 });
 
 const PAGE_SIZE = 25;
-
-/** Up to three faces, then a count — a wide column of avatars buys nothing. */
-const AVATARS_SHOWN = 3;
-
-/**
- * The Brokers cell.
- *
- * `Avatar.Group` owns the overlap, the ring and the radius, and `Avatar.More`
- * renders its own `+n` — none of that is reimplemented here.
- *
- * Each avatar IS its tooltip trigger, via `render`, rather than sitting inside
- * a trigger `<span>`. The group overlaps its children with
- * `.avatar .avatar:first-child { margin-left: 0 }`, so a wrapper per avatar
- * would make every one of them a first child and flatten the stack.
- */
-function BrokerStack({ brokers }: { brokers: ReceivableBroker[] }) {
-  if (brokers.length === 0) return <span className="text-muted">--</span>;
-  const shown = brokers.slice(0, AVATARS_SHOWN);
-  const extra = brokers.length - shown.length;
-
-  return (
-    <Avatar.Group>
-      {shown.map((broker, i) => (
-        <Tooltip key={`${broker.name}-${i}`}>
-          <Tooltip.Trigger
-            render={
-              <Avatar>
-                {broker.avatarUrl && (
-                  <Avatar.Image src={broker.avatarUrl} alt="" />
-                )}
-                <Avatar.Fallback>{broker.initials}</Avatar.Fallback>
-              </Avatar>
-            }
-          />
-          <Tooltip.Content>{broker.name}</Tooltip.Content>
-        </Tooltip>
-      ))}
-      {extra > 0 && <Avatar.More count={extra} />}
-    </Avatar.Group>
-  );
-}
 
 /**
  * Every receivable in the book — the Back Office collections index.

@@ -18,6 +18,7 @@ import type {
 } from './types'
 import { getStore, getProperty } from './store'
 import { depositsForReceivable } from './deposits'
+import { MONEY_COLORS } from './moneyColors'
 import { voucherHref, voucherParty, type VoucherTarget } from './vouchers'
 import { CURRENT_USER, TEAMMATES } from './teammates'
 
@@ -45,15 +46,18 @@ export const RECEIVABLE_STATUSES: ReceivableStatus[] = [
  *
  * `Fully Paid` is the chart's Deposits series: money that arrived is the same
  * fact whichever way the page shows it.
+ *
+ * Drawn from {@link MONEY_COLORS} rather than spelled here, so the Deposits
+ * index draws its bands in the same four colours.
  */
 export const RECEIVABLE_STATUS_COLORS: Record<ReceivableStatus, string> = {
-  Overdue: '#d92d20',
-  Open: '#2431a8',
-  'Fully Paid': '#3fa76a',
+  Overdue: MONEY_COLORS.late,
+  Open: MONEY_COLORS.outstanding,
+  'Fully Paid': MONEY_COLORS.settled,
 }
 
 /** Money that credited a receivable but came from no deposit. Always $0 — see below. */
-export const OTHER_CREDITS_COLOR = '#e27400'
+export const OTHER_CREDITS_COLOR = MONEY_COLORS.withheld
 
 /** One broker's face in the Brokers column. */
 export interface ReceivableBroker {
