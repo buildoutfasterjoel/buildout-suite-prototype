@@ -18,6 +18,7 @@ import type { Listing } from "#/data/types";
 import { getProperty, getListing } from "#/data/store";
 import { canAddSpaces } from "#/data/dealShape";
 import { dealBreadcrumbTrail } from "#/components/properties/dealNav";
+import { CLASSIC_BADGE } from "#/components/deals/DealCardBadges";
 import { hash, getRefId, getPhotoUrl } from "./propertyDisplay";
 import { AvatarGroup } from "./AvatarGroup";
 import { SyndicationStatus } from "#/components/listings/SyndicationStatus";
@@ -160,6 +161,25 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
             </h1>
             <div className="text-muted text-truncate">{address}</div>
             <div className="d-flex align-items-center gap-2 mt-2">
+              {/* First in the row, so "this is the classic deal" is read before
+                  the deal's own facts. A Blueprint `Badge` rather than the card
+                  pill from `CLASSIC_BADGE`: that one carries card geometry, and
+                  here the badge has to sit flush with the two beside it. The
+                  glyph and the wording are the shared spec's, so the marker
+                  reads as the same thing it does on the deal's card. */}
+              {listing.isClassic && (
+                <Tooltip>
+                  <Tooltip.Trigger
+                    render={
+                      <Badge variant="secondary" appearance="muted">
+                        <FontAwesomeIcon icon={CLASSIC_BADGE.icon} />
+                        {CLASSIC_BADGE.label}
+                      </Badge>
+                    }
+                  />
+                  <Tooltip.Content>{CLASSIC_BADGE.tooltip}</Tooltip.Content>
+                </Tooltip>
+              )}
               <Badge variant="secondary" appearance="muted">
                 {listing.dealType}
               </Badge>

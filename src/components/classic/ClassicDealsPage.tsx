@@ -90,77 +90,71 @@ export function ClassicDealsPage({ listingId }: { listingId: string }) {
           </Empty.Content>
         </Empty>
       ) : (
-        // The row is wide — eleven columns — so it scrolls inside its own box
-        // rather than pushing the page sideways.
-        <div className="overflow-x-auto">
-          <Table>
-            <Table.Header>
-              <Table.Row>
-                <Table.Head>Deal Title</Table.Head>
-                <Table.Head>Deal ID</Table.Head>
-                <Table.Head>Deal Type</Table.Head>
-                <Table.Head>Deal Stage</Table.Head>
-                <Table.Head>Location</Table.Head>
-                <Table.Head>Property Type</Table.Head>
-                <Table.Head>Brokers</Table.Head>
-                <Table.Head>Transaction Value</Table.Head>
-                <Table.Head>Brokerage Gross</Table.Head>
-                <Table.Head>Open Tasks</Table.Head>
-                <Table.Head>Next Critical Date</Table.Head>
+        // Blueprint's sticky table: eleven columns do not fit the content area,
+        // and `variant="sticky"` is how the design system handles that — the
+        // `.table-container` the Table root already renders is the scroll box
+        // (no wrapper of ours), the table sizes to its content, and the header
+        // row and the Deal Title column pin so neither the column names nor the
+        // deal you are reading scroll away.
+        <Table variant="sticky">
+          <Table.Header sticky>
+            <Table.Row>
+              <Table.Head sticky>Deal Title</Table.Head>
+              <Table.Head>Deal ID</Table.Head>
+              <Table.Head>Deal Type</Table.Head>
+              <Table.Head>Deal Stage</Table.Head>
+              <Table.Head>Location</Table.Head>
+              <Table.Head>Property Type</Table.Head>
+              <Table.Head>Brokers</Table.Head>
+              <Table.Head>Transaction Value</Table.Head>
+              <Table.Head>Brokerage Gross</Table.Head>
+              <Table.Head>Open Tasks</Table.Head>
+              <Table.Head>Next Critical Date</Table.Head>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {rows.map((row) => (
+              <Table.Row key={row.id}>
+                {/* Pinned, so the deal a row is about stays readable while the
+                    other ten columns scroll past it. */}
+                <Table.Cell sticky className="fw-medium">
+                  <TitleCell row={row} />
+                </Table.Cell>
+                <Table.Cell>{row.dealId}</Table.Cell>
+                <Table.Cell>{row.dealType}</Table.Cell>
+                <Table.Cell>
+                  <DealStageBadge stage={row.stage} />
+                </Table.Cell>
+                <Table.Cell>{row.location}</Table.Cell>
+                <Table.Cell>{TYPE_LABELS[row.propertyType]}</Table.Cell>
+                <Table.Cell>
+                  <BrokerAvatars initials={row.brokerInitials} />
+                </Table.Cell>
+                <Table.Cell>{money(row.transactionValue)}</Table.Cell>
+                <Table.Cell>{money(row.brokerageGross)}</Table.Cell>
+                <Table.Cell>
+                  {row.openTasks === 0 ? (
+                    <span className="text-muted">None</span>
+                  ) : (
+                    // Tasks live on the Overview, which is what the classic
+                    // sidebar's Tasks item opens.
+                    <Link
+                      to="/listings/$listingId/overview"
+                      params={{ listingId }}
+                      className="text-decoration-none"
+                    >
+                      {row.openTasks} {row.openTasks === 1 ? "task" : "tasks"}{" "}
+                      open
+                    </Link>
+                  )}
+                </Table.Cell>
+                {/* Blank, not an em-dash: legacy leaves it blank, and a deal
+                    with no next milestone has nothing to say here. */}
+                <Table.Cell>{shortDate(row.nextCriticalDate)}</Table.Cell>
               </Table.Row>
-            </Table.Header>
-            <Table.Body>
-              {rows.map((row) => (
-                <Table.Row key={row.id}>
-                  <Table.Cell className="fw-medium text-nowrap">
-                    <TitleCell row={row} />
-                  </Table.Cell>
-                  <Table.Cell>{row.dealId}</Table.Cell>
-                  <Table.Cell>{row.dealType}</Table.Cell>
-                  <Table.Cell>
-                    <DealStageBadge stage={row.stage} />
-                  </Table.Cell>
-                  <Table.Cell className="text-nowrap">
-                    {row.location}
-                  </Table.Cell>
-                  <Table.Cell className="text-nowrap">
-                    {TYPE_LABELS[row.propertyType]}
-                  </Table.Cell>
-                  <Table.Cell>
-                    <BrokerAvatars initials={row.brokerInitials} />
-                  </Table.Cell>
-                  <Table.Cell className="text-nowrap">
-                    {money(row.transactionValue)}
-                  </Table.Cell>
-                  <Table.Cell className="text-nowrap">
-                    {money(row.brokerageGross)}
-                  </Table.Cell>
-                  <Table.Cell className="text-nowrap">
-                    {row.openTasks === 0 ? (
-                      <span className="text-muted">None</span>
-                    ) : (
-                      // Tasks live on the Overview, which is what the classic
-                      // sidebar's Tasks item opens.
-                      <Link
-                        to="/listings/$listingId/overview"
-                        params={{ listingId }}
-                        className="text-decoration-none"
-                      >
-                        {row.openTasks}{" "}
-                        {row.openTasks === 1 ? "task" : "tasks"} open
-                      </Link>
-                    )}
-                  </Table.Cell>
-                  {/* Blank, not an em-dash: legacy leaves it blank, and a deal
-                      with no next milestone has nothing to say here. */}
-                  <Table.Cell className="text-nowrap">
-                    {shortDate(row.nextCriticalDate)}
-                  </Table.Cell>
-                </Table.Row>
-              ))}
-            </Table.Body>
-          </Table>
-        </div>
+            ))}
+          </Table.Body>
+        </Table>
       )}
     </div>
   );
