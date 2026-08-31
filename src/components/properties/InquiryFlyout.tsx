@@ -165,7 +165,7 @@ export function InquiryFlyout({
                   value={inquiry.referralSource}
                   onValueChange={(v) => v && patch({ referralSource: v })}
                 >
-                  <Select.Trigger size="sm" style={{ minWidth: 160 }}>
+                  <Select.Trigger style={{ minWidth: 160 }}>
                     <Select.Value />
                   </Select.Trigger>
                   <Select.Content>
@@ -192,7 +192,7 @@ export function InquiryFlyout({
                   value={inquiry.accessLevel}
                   onValueChange={(v) => v && patch({ accessLevel: v as AccessLevel })}
                 >
-                  <Select.Trigger size="sm" style={{ minWidth: 160 }}>
+                  <Select.Trigger style={{ minWidth: 160 }}>
                     <Select.Value />
                   </Select.Trigger>
                   <Select.Content>
