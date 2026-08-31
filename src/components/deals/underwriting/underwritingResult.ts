@@ -7,6 +7,7 @@ import type {
   UnderwritingResultRow,
 } from "#/data/types";
 import { checksFor, coerceStrategy } from "./strategies";
+import { TYPE_LABELS } from "#/components/properties/propertyDisplay";
 
 /** The deterministic figure model behind a deal's underwriting. */
 export interface Ctx {
@@ -107,7 +108,8 @@ function keyValue(key: string, name: string, rows: [string, string][]): Underwri
 }
 
 function projectInfo(c: Ctx, p: Property | undefined): UnderwritingResultSection {
-  const type = p?.propertyType ?? "Multifamily";
+  // The label, not the raw union member — "special-purpose" in a BOV reads as a bug.
+  const type = p ? TYPE_LABELS[p.propertyType] : "Multifamily";
   const year = p?.yearBuilt && p.yearBuilt > 0 ? String(p.yearBuilt) : "—";
   const zoning = p?.zoning || "Mixed-use (MU-2)";
   const lot = p?.lotSqFt && p.lotSqFt > 0 ? p.lotSqFt : Math.round(c.sqft * 1.8);

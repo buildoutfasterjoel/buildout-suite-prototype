@@ -2498,6 +2498,261 @@
   }
 }
 
+// The BOV preview document: a stack of sheets in the wizard's step 2. The cover
+// keeps `.bov-cover` above; every other page is a `.bov-page` sheet.
+.bov-doc-scroll {
+  background: var(--color-storm-grey-100, #eceef2);
+}
+
+.bov-doc {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.bov-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 34px 40px 52px;
+  min-height: 520px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow:
+    0 2px 4px -2px rgba(0, 0, 0, 0.12),
+    0 6px 14px -3px rgba(0, 0, 0, 0.14);
+
+  &__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #1d3a5f;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  &__head-name {
+    color: #1d3a5f;
+  }
+  &__head-kicker {
+    color: #b08c4a;
+  }
+  &__eyebrow {
+    margin-bottom: -10px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-storm-grey-500, #62748e);
+  }
+  &__title {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 700;
+    color: #1d3a5f;
+  }
+  &__section-name {
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--color-storm-grey-700, #424e62);
+  }
+  &__prose {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--color-storm-grey-600, #506079);
+  }
+  &__foot {
+    position: absolute;
+    left: 40px;
+    right: 40px;
+    bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding-top: 10px;
+    border-top: 1px solid var(--color-storm-grey-100, #eceef2);
+    font-size: 11px;
+    color: var(--color-storm-grey-500, #62748e);
+  }
+}
+
+// The headline value block — the number the whole document exists to deliver.
+.bov-headline {
+  padding: 20px 24px;
+  border-radius: 8px;
+  background: #1d3a5f;
+  color: #fff;
+
+  &--compact {
+    padding: 16px 20px;
+  }
+  &__label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #d3b475;
+  }
+  &__range {
+    margin-top: 6px;
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1.1;
+  }
+  &__basis {
+    margin-top: 8px;
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.78);
+  }
+}
+
+.bov-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.bov-stat {
+  padding: 12px 14px;
+  border: 1px solid var(--color-storm-grey-100, #eceef2);
+  border-radius: 6px;
+  background: var(--color-storm-grey-50, #f6f7f9);
+
+  &__label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-storm-grey-500, #62748e);
+  }
+  &__value {
+    margin-top: 4px;
+    font-size: 19px;
+    font-weight: 700;
+    color: #1f2a3d;
+  }
+  &__note {
+    margin-top: 2px;
+    font-size: 11.5px;
+    color: var(--color-storm-grey-500, #62748e);
+  }
+}
+
+.bov-callout {
+  padding: 12px 14px;
+  border-left: 3px solid var(--color-warning-500, #d99a24);
+  border-radius: 4px;
+  background: var(--bp-warning-bg-subtle, #fdf6e7);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--color-storm-grey-700, #424e62);
+}
+
+// Label/value pairs, two columns per row on a full-width sheet.
+.bov-facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 32px;
+  margin: 0;
+
+  &__row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--color-storm-grey-100, #eceef2);
+    font-size: 13px;
+
+    dt {
+      font-weight: 500;
+      color: var(--color-storm-grey-600, #506079);
+    }
+    dd {
+      margin: 0;
+      font-weight: 600;
+      color: #1f2a3d;
+      text-align: right;
+    }
+  }
+}
+
+.bov-photostrip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+
+  img {
+    width: 100%;
+    height: 118px;
+    object-fit: cover;
+    border-radius: 6px;
+  }
+}
+
+.bov-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+
+  th {
+    padding: 8px 10px;
+    background: var(--color-storm-grey-50, #f6f7f9);
+    border-bottom: 1px solid var(--color-storm-grey-200, #d5dae2);
+    font-weight: 700;
+    color: var(--color-storm-grey-700, #424e62);
+    white-space: nowrap;
+  }
+  td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--color-storm-grey-100, #eceef2);
+    color: #1f2a3d;
+  }
+  tr.is-total td {
+    font-weight: 700;
+    background: var(--color-storm-grey-50, #f6f7f9);
+  }
+  // The subject row sits under the comps it is being measured against.
+  tr.is-subject td {
+    font-weight: 700;
+    color: #1d3a5f;
+    background: var(--color-buildout-blue-50, #eef3ff);
+  }
+}
+
+.bov-steps {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--color-storm-grey-600, #506079);
+}
+
+.bov-signoff {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-storm-grey-100, #eceef2);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-storm-grey-500, #62748e);
+}
+
+// Named on the cover: who the BOV was assembled for.
+.bov-cover__prepared {
+  margin-top: 12px;
+  font-size: 11.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+
 .bov-ai-banner {
   display: flex;
   align-items: center;
