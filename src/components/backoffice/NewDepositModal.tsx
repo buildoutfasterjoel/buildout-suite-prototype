@@ -390,7 +390,9 @@ export function NewDepositModal({
                   out of the money being placed above. */}
               {deductionLines.length > 0 && (
                 <div className="d-flex flex-column gap-2">
-                  <h6 className="mb-0">Deductions Covered</h6>
+                  <h6 className="mb-0 fs-large fw-semibold">
+                    Deductions Covered
+                  </h6>
                   <Table>
                     <Table.Header>
                       <Table.Row>
