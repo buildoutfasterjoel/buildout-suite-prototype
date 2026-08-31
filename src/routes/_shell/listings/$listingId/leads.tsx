@@ -28,6 +28,7 @@ function LeadsRoute() {
   return (
     <PropertyDetailLeads
       property={property}
+      dealId={listing.id}
       initialSearch={q}
       spaceDealId={spaceDealId}
     />

@@ -1901,3 +1901,40 @@ export function createContact(input: NewContactInput): { contact: Contact } {
   useDataStore.getState().persist()
   return { contact }
 }
+
+/** The broker-editable half of one inquiry — see `Contact.inquiryDetails`. */
+export type InquiryOverride = NonNullable<Contact['inquiryDetails']>[string]
+
+/**
+ * Patch one contact's inquiry on one listing, merging into whatever is already
+ * stored there.
+ *
+ * The Inquiries panel autosaves, so this is called once per control change
+ * rather than once per Save press — hence the merge: a write of `accessLevel`
+ * must not drop the `caFileName` a previous write put beside it.
+ *
+ * Only fields a broker actually touched end up here. Everything the panel shows
+ * that is *not* in the record stays synthesized by `toInquiry`, which is why
+ * this write needs no `SEED_VERSION` move.
+ */
+export function updateInquiry(
+  contactId: string,
+  listingId: string,
+  patch: InquiryOverride,
+): void {
+  const existing = useDataStore.getState().contacts.get(contactId)
+  if (!existing) return
+  const updated: Contact = {
+    ...existing,
+    inquiryDetails: {
+      ...existing.inquiryDetails,
+      [listingId]: { ...existing.inquiryDetails?.[listingId], ...patch },
+    },
+  }
+  useDataStore.setState((s) => {
+    const contacts = new Map(s.contacts)
+    contacts.set(contactId, updated)
+    return { contacts }
+  })
+  useDataStore.getState().persist()
+}

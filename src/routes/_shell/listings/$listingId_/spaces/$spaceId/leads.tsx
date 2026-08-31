@@ -17,6 +17,7 @@ function SpaceLeadsRoute() {
   return (
     <PropertyDetailLeads
       property={record.property}
+      dealId={record.space.id}
       initialSearch={q}
       // Leads are scoped by which listing a contact's `inquiredListingIds`
       // names, and this space deal IS one such listing — so the building's leads

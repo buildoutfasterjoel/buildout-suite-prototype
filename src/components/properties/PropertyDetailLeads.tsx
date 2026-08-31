@@ -31,8 +31,10 @@ import { LEAD_STATUSES } from "#/data/leadFacts";
 import { useDataStore } from "#/data/dataStore";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
 import { startCallSession } from "#/components/call/useCallSession";
+import { updateInquiry } from "#/data/actions";
 import {
   ACCESS_LEVELS,
+  type AccessLevel,
   REFERRAL_SOURCES,
   ROLE_LABELS,
   toInquiry,
@@ -61,10 +63,17 @@ const CHECKBOX_COL_W = 44;
 /** "Inquiries" content for the property detail page — contacts interested in this listing. */
 export function PropertyDetailLeads({
   property,
+  dealId,
   initialSearch,
   spaceDealId,
 }: {
   property: Property;
+  /**
+   * The deal whose page this is. Used to key an inquiry that names no space —
+   * an edit has to be stored against a listing, and a building-level inquiry's
+   * listing is the building's own deal.
+   */
+  dealId: string;
   /** Pre-fill the name search (deep link from a contact's inquiry card). */
   initialSearch?: string;
   /**
@@ -103,16 +112,18 @@ export function PropertyDetailLeads({
     [allLeads, spaceDealId],
   );
 
-  const inquiries = useMemo(
-    () => scopedContacts.map(toInquiry),
-    [scopedContacts],
-  );
-
-  // The suite a contact inquired about, for the building-level table's Space
-  // column. Keyed by contact id because `toInquiry` carries the contact's id
-  // straight through.
-  const spaceLabels = useMemo(() => {
-    const byLead = new Map<string, string>();
+  /**
+   * The suite a contact inquired about, for the building-level table's Space
+   * column — and, from the same walk, the listing that inquiry belongs to.
+   *
+   * The listing id matters because every edit in the panel is stored under it.
+   * A suite's inquiry read from the building's list is still the *suite's*
+   * inquiry: keying it to whichever page you happened to open would write two
+   * records for one inquiry and let the two disagree.
+   */
+  const rowContext = useMemo(() => {
+    const spaceLabelById = new Map<string, string>();
+    const listingIdById = new Map<string, string>();
     for (const contact of scopedContacts) {
       for (const listingId of contact.inquiredListingIds ?? []) {
         const deal = getListing(listingId);
@@ -120,13 +131,29 @@ export function PropertyDetailLeads({
         if (!deal?.parentDealId) continue;
         const unit = property.units.find((u) => u.id === deal.unitId);
         if (unit) {
-          byLead.set(contact.id, unit.label);
+          spaceLabelById.set(contact.id, unit.label);
+          listingIdById.set(contact.id, listingId);
           break;
         }
       }
     }
-    return byLead;
+    return { spaceLabelById, listingIdById };
   }, [scopedContacts, property.units]);
+
+  const spaceLabels = rowContext.spaceLabelById;
+
+  const inquiries = useMemo(
+    () =>
+      scopedContacts.map((contact) =>
+        // On a space page every row is that space's inquiry. On the building's,
+        // fall back to the building's own deal for an inquiry naming no suite.
+        toInquiry(
+          contact,
+          spaceDealId ?? rowContext.listingIdById.get(contact.id) ?? dealId,
+        ),
+      ),
+    [scopedContacts, spaceDealId, rowContext, dealId],
+  );
 
   // Inside the suite panel every row is that same suite, so the column would
   // repeat one value on every line — only the building-level view names it.
@@ -390,7 +417,16 @@ export function PropertyDetailLeads({
                   </Avatar>
                 </Table.Cell>
                 <Table.Cell>
-                  <Select defaultValue={inquiry.accessLevel}>
+                  {/* Controlled and persisted, so it agrees with the panel's
+                      copy of the same field either way you change it. */}
+                  <Select
+                    value={inquiry.accessLevel}
+                    onValueChange={(v) =>
+                      updateInquiry(inquiry.id, inquiry.listingId, {
+                        accessLevel: v as AccessLevel,
+                      })
+                    }
+                  >
                     <Select.Trigger size="sm" style={{ minWidth: 120 }}>
                       <Select.Value />
                     </Select.Trigger>
