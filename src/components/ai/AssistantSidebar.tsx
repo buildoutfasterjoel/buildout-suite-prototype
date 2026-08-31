@@ -841,6 +841,7 @@ function MessageBubble({
   emailFlow,
   repliedPast = false,
   onQuickReply,
+  revealText = false,
 }: {
   /** The conversation's email history — see {@link buildEmailFlow}. */
   emailFlow?: EmailFlow;
@@ -857,6 +858,9 @@ function MessageBubble({
   suppressNarration?: boolean;
   /** A later message in this turn acted — see `splitToolCalls`. */
   suppressLookupCards?: boolean;
+  /** This is the turn currently arriving, so pace its text out — see
+   *  `revealText.ts`. Read once, when the turn mounts. */
+  revealText?: boolean;
 }) {
   const text = messageText(message);
   const toolCalls = messageToolCalls(message);
@@ -891,7 +895,7 @@ function MessageBubble({
   if (!showText && chipCalls.length === 0 && cardCalls.length === 0) return null;
 
   return (
-    <ChatMessage message={message} chipCalls={chipCalls} showText={showText}>
+    <ChatMessage message={message} chipCalls={chipCalls} showText={showText} revealText={revealText}>
       {cardCalls.map((p, i) => (
         <ToolResultCards
           key={i}
@@ -1237,6 +1241,35 @@ export function AssistantSidebar() {
     };
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => el.removeEventListener("scroll", onScroll);
+  }, [view]);
+
+  /**
+   * Follow content that grows without a new message arriving.
+   *
+   * The autoscroll above keys off `messages`, which was enough while the reply
+   * arrived token by token — every token WAS a message update, so the effect
+   * re-ran and kept up. Otto's reveal (see `revealText.ts`) grows the
+   * transcript in between those updates, and a buffered reply is the worst
+   * case: `messages` lands once, the scroll fires against a paragraph that has
+   * not been typed out yet, and the reveal then runs on below the fold.
+   *
+   * Watching the height asks the question that actually matters — did this get
+   * taller — rather than re-deriving it from whatever caused it, so a card that
+   * mounts late is covered by the same rule.
+   *
+   * `atBottomRef` gates it, so scrolling up to re-read history is not yanked
+   * back, exactly as with the message autoscroll.
+   */
+  useEffect(() => {
+    const el = scrollRef.current;
+    const content = el?.firstElementChild;
+    if (!el || !content) return;
+    const ro = new ResizeObserver(() => {
+      if (!atBottomRef.current) return;
+      el.scrollTop = el.scrollHeight;
+    });
+    ro.observe(content);
+    return () => ro.disconnect();
   }, [view]);
 
   /**
@@ -1932,6 +1965,16 @@ export function AssistantSidebar() {
                     (planPending && m.role === "assistant" && i === messages.length - 1)
                   }
                   suppressLookupCards={actionTurns.has(i)}
+                  // The arriving turn, and only it. A spoken reply opts out:
+                  // the TTS reads the whole answer the moment the turn ends,
+                  // and text still typing behind the audio drifts out of step
+                  // with it — there, the voice sets the pace.
+                  revealText={
+                    m.role === "assistant" &&
+                    i === messages.length - 1 &&
+                    isLoading &&
+                    !speakNextReplyRef.current
+                  }
                 />
                 {recapAnchor === m.id && <CallRecapCard />}
                 {/* After the recap, not before it: the recap is the call itself

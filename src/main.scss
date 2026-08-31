@@ -28,6 +28,37 @@
   --channel-info: #{colors.$seagull-600};
 }
 
+// Otto's per-word fade, used while a reply is arriving.
+//
+// The animation is on mount, so it plays once per word and needs no timer: as
+// the reply grows, words already on screen keep their React keys and stay put,
+// and only the newly appended ones animate in. See `MarkdownMessage.tsx`.
+//
+// `--revealed` freezes it once the reply has fully landed, so a later remount
+// of a finished turn does not replay the whole thing.
+@keyframes otto-word-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.otto-word {
+  animation: otto-word-in 260ms ease-out both;
+}
+
+.assistant-markdown--revealed .otto-word {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .otto-word {
+    animation: none;
+  }
+}
+
 // AI assistant markdown: tighten default block spacing so rendered paragraphs,
 // lists, code, and tables sit naturally inside the chat bubble.
 .assistant-markdown {

@@ -288,7 +288,7 @@ export function OttoPanel() {
           </div>
         ) : (
           <div className="d-flex flex-column gap-3">
-            {messages.map((m) => {
+            {messages.map((m, i) => {
               const toolCalls = messageToolCalls(m);
               const text = messageText(m);
               if (!text && toolCalls.length === 0) return null;
@@ -300,6 +300,9 @@ export function OttoPanel() {
                   showText={!!text}
                   labels={EDITOR_TOOL_LABELS}
                   doneLabels={EDITOR_TOOL_LABELS_DONE}
+                  // The arriving turn, and only it — see `revealText.ts`. This
+                  // panel has no voice, so there is no spoken turn to exempt.
+                  revealText={m.role === "assistant" && i === messages.length - 1 && isLoading}
                 />
               );
             })}
