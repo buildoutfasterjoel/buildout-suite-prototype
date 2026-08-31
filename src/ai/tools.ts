@@ -74,6 +74,7 @@ import {
 import { useUnderwritingOffer } from "#/ai/underwritingOffer";
 import { callFlow } from "#/components/call/callFlow";
 import { useComposeFocus } from "#/components/contacts/useComposeFocus";
+import { toISODate } from "#/lib/isoDate";
 import { useAssistant } from "#/ai/useAssistant";
 import {
   requestComposerSend,
@@ -977,17 +978,22 @@ export function createClientTools({
         };
       }
       const name = `${c.firstName} ${c.lastName}`.trim();
-      // A note goes to the contact's own notes field (where the record shows it);
-      // anything else is an interaction, which belongs on the session timeline
-      // alongside logged calls and sent emails.
+      // Everything logged here reaches the timeline, notes included. A note used
+      // to go ONLY to the contact's notes field, which is read by the Edit
+      // Contact form and nothing else — so asking the assistant to log a note
+      // wrote it somewhere the broker would never look, while typing the same
+      // note into the composer three inches away put it on the timeline. Same
+      // action, two destinations, decided by who performed it.
+      useContactSession.getState().addLog(c.id, {
+        kind: LOG_KIND[kind],
+        body,
+        date: toISODate(new Date()),
+      });
       if (kind === "note") {
+        // Still appended to the notes field as well — that is the record's own
+        // running note, and `GlobalLogCallModal` writes both halves too.
         addNote(c.id, body);
       } else {
-        useContactSession.getState().addLog(c.id, {
-          kind: LOG_KIND[kind],
-          body,
-          date: new Date().toISOString().slice(0, 10),
-        });
         // A meeting or a showing is a touch; a note isn't. Only the former moves
         // "last contacted" (see `log_call` for the same rule).
         touchContactActivity(c.id);
