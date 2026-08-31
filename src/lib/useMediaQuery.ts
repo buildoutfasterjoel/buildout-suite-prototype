@@ -31,8 +31,14 @@ export function useMediaQuery(query: string): boolean {
 
 /**
  * How much page width the docked assistant rail takes: its 380px box plus the
- * 8px inset the app shell pads it with. Mirrors `$rail-width + $rail-inset` in
+ * 8px inset the app shell floats it on. Mirrors `$rail-width + $rail-inset` in
  * `main.scss` — keep the two in sync.
+ *
+ * That is the app-mode figure. Classic nav has no inset to float on, so there
+ * the rail costs 380 and this over-counts by 8px. Deliberately the app-mode
+ * number rather than a per-mode pair: over-counting drops to two columns 8px
+ * earlier than it strictly must, which errs toward the readable layout, and one
+ * constant is worth more here than 8px of reach.
  */
 export const RAIL_TOTAL_WIDTH = 388;
 

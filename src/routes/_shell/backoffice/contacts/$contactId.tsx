@@ -161,7 +161,15 @@ function ContactDetailPage() {
           // below this. Fixed-width neighbors (columns, a future panel) must
           // never squish the middle silently — past the floor the row
           // overflows instead, which is visible in development.
-          style={{ minWidth: "24rem" }}
+          //
+          // Three columns only. The row is `overflow-hidden`, so a floor the
+          // width can't meet clips instead of scrolling — and in the narrow
+          // arrangement the width genuinely can't meet it: at 768px the floor
+          // put this column 74px past the row's edge and cut the timeline off,
+          // where without it the column shrinks to 316px and stays whole.
+          // Narrow has one fixed neighbour and no rival to protect against, so
+          // it shrinks — until the sub-1024 tiers get a layout of their own.
+          style={{ minWidth: isNarrow ? undefined : "24rem" }}
         >
           <ContactEngagementPanel
             contact={contact}
