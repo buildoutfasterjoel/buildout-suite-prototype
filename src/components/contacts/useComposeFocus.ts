@@ -1,6 +1,13 @@
 import { create } from "zustand";
 import type { ComposeKind } from "#/components/contacts/contactDisplay";
 
+/** An AI-written note being handed to a contact's composer. */
+export interface ComposeNoteDraft {
+  /** Whose composer this belongs to — a draft must never land on the wrong page. */
+  contactId: string;
+  body: string;
+}
+
 /** An AI-drafted email being handed to a contact's composer. */
 export interface ComposeEmailDraft {
   /** Whose composer this belongs to — a draft must never land on the wrong page. */
@@ -37,13 +44,25 @@ interface ComposeFocus {
    * rewrite the composer they're looking at.
    */
   requestEmailDraft: (draft: ComposeEmailDraft) => void;
+  /**
+   * The note field's counterpart, raised by `stage_field_value`: opens the Note
+   * tab with the assistant's text in it, unsaved. The broker still presses Log
+   * Note — which is why this stages rather than commits, and why nothing here
+   * touches the timeline.
+   */
+  noteDraft: ComposeNoteDraft | null;
+  requestNoteDraft: (draft: ComposeNoteDraft) => void;
 }
 
 export const useComposeFocus = create<ComposeFocus>((set) => ({
   seq: 0,
   kind: null,
   draft: null,
-  request: (kind) => set((s) => ({ seq: s.seq + 1, kind, draft: null })),
+  noteDraft: null,
+  request: (kind) =>
+    set((s) => ({ seq: s.seq + 1, kind, draft: null, noteDraft: null })),
   requestEmailDraft: (draft) =>
-    set((s) => ({ seq: s.seq + 1, kind: "email", draft })),
+    set((s) => ({ seq: s.seq + 1, kind: "email", draft, noteDraft: null })),
+  requestNoteDraft: (noteDraft) =>
+    set((s) => ({ seq: s.seq + 1, kind: "note", noteDraft, draft: null })),
 }));

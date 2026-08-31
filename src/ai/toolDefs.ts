@@ -399,6 +399,28 @@ export const addActivityDef = toolDefinition({
   },
 });
 
+export const stageFieldValueDef = toolDefinition({
+  name: "stage_field_value",
+  description:
+    "Write text INTO the field the broker pinned from the page — the one named in CURRENT CONTEXT under `field`. Use it for anything that produces or changes that field's content: generating it from what they just told you, and every revision after ('shorten it', 'more formal', 'add that he wants comps'). The text lands in the box on screen as an unsaved draft the broker can edit; they are the one who saves it. NEVER use add_activity or log_call to write a pinned field — that puts it on the record behind their back and leaves the box they are looking at empty. Pass the FULL new value, not a diff or a fragment: it replaces what is there. Call it again for each revision. Do NOT restate the text in your reply — the broker is reading it in the field; say in one short clause what you changed and stop.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      text: {
+        type: "string",
+        description: "The complete new value for the field, written out in full.",
+      },
+      changed: {
+        type: "string",
+        description:
+          "One short clause naming what you did, e.g. 'tightened to two sentences'. Shown to the broker.",
+      },
+    },
+    required: ["text"],
+    additionalProperties: false,
+  },
+});
+
 export const logCallDef = toolDefinition({
   name: "log_call",
   description:
@@ -827,6 +849,7 @@ export const TOOL_DEFS = [
   analyzeBookDef,
   navigateToDef,
   addActivityDef,
+  stageFieldValueDef,
   logCallDef,
   createTaskDef,
   findContactDef,

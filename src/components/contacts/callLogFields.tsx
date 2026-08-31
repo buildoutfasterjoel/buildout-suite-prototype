@@ -1,4 +1,5 @@
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faHandshake, faCheck, faSparkle } from "@fortawesome/pro-regular-svg-icons";
 import type { DealSummary } from "#/data/types";
@@ -10,17 +11,51 @@ import type { DealSummary } from "#/data/types";
 
 export const CALL_OUTCOMES = ["Connected", "No Answer", "Left Voicemail", "Bad Number"];
 
-/** An AI ghost button (sparkle) pinned to the top-right of a textarea. */
-export function SparkleButton() {
-  return (
+/**
+ * An AI ghost button (sparkle) pinned to the top-right of a textarea — the one
+ * per-field entrance in the "ask at the rail, review at the field" grammar.
+ *
+ * The label is the whole affordance: an unlabelled sparkle asks the broker to
+ * guess whether clicking it writes something, replaces something, or opens a
+ * menu. Named on hover ("Generate Note" on an empty field, "Revise" once there
+ * is a value) it says what the click does before the click happens.
+ *
+ * Unwired without `onClick` — the sparkle exists on several composer tabs and
+ * only the Note field is hooked up so far, and a tooltip promising "Generate"
+ * over a button that does nothing is worse than a quiet icon.
+ */
+export function SparkleButton({
+  label,
+  onClick,
+}: {
+  /** Hover/focus label. Omit to leave the button unlabelled and inert. */
+  label?: string;
+  onClick?: () => void;
+}) {
+  const button = (
     <button
       type="button"
       className="compose-sparkle"
-      aria-label="Draft with AI"
-      onClick={(e) => e.preventDefault()}
+      aria-label={label ?? "Draft with AI"}
+      onClick={(e) => {
+        // The composer is inside a form on some surfaces; this is never a submit.
+        e.preventDefault();
+        onClick?.();
+      }}
     >
       <FontAwesomeIcon icon={faSparkle} />
     </button>
+  );
+
+  if (!label) return button;
+
+  return (
+    <Tooltip.Provider delay={150}>
+      <Tooltip>
+        <Tooltip.Trigger render={button} />
+        <Tooltip.Content>{label}</Tooltip.Content>
+      </Tooltip>
+    </Tooltip.Provider>
   );
 }
 

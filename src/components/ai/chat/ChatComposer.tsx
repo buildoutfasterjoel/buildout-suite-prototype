@@ -50,6 +50,7 @@ export function ChatComposer({
   listening,
   onMicToggle,
   micLabel,
+  contextChip,
   fieldRef,
   formRef,
 }: {
@@ -65,6 +66,17 @@ export function ChatComposer({
   onMicToggle: () => void;
   /** Accessible name for the mic, which differs while it is live. */
   micLabel?: { idle: string; live: string };
+  /**
+   * A pinned context chip above the value (Figma node 1477:172596) — the field
+   * a broker handed to Otto from the page. It sits in the same row as the
+   * attachment chips because it *is* an attachment in the Shape-of-AI sense:
+   * something clipped to the prompt that narrows what the answer is about.
+   *
+   * Unlike attachments, it is owned by the parent, not the composer: the chip
+   * has to outlive a send (a follow-up stays scoped to the same field) whereas
+   * picked files are cleared by one.
+   */
+  contextChip?: { label: string; onRemove: () => void } | null;
   /** Optional handles, for surfaces that focus the field or submit from elsewhere. */
   fieldRef?: React.RefObject<HTMLTextAreaElement | null>;
   formRef?: React.RefObject<HTMLFormElement | null>;
@@ -103,8 +115,21 @@ export function ChatComposer({
         submit();
       }}
     >
-      {attachments.length > 0 && (
+      {(contextChip || attachments.length > 0) && (
         <div className="otto-composer__files">
+          {contextChip && (
+            <span className="otto-composer__context">
+              <span className="otto-composer__context-label">{contextChip.label}</span>
+              <button
+                type="button"
+                className="otto-composer__context-remove"
+                aria-label={`Stop working on ${contextChip.label}`}
+                onClick={contextChip.onRemove}
+              >
+                <FontAwesomeIcon icon={faXmark} />
+              </button>
+            </span>
+          )}
           {attachments.map((f) => (
             <span key={f.id} className="otto-composer__file">
               <FontAwesomeIcon icon={faPaperclip} className="flex-shrink-0" />
