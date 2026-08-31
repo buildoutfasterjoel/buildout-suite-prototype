@@ -8,6 +8,9 @@ import { Table } from "@buildoutinc/blueprint-react/ui/Table";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMoneyCheckDollar } from "@fortawesome/pro-regular-svg-icons";
 import { useDataStore } from "#/data/dataStore";
+import { applyDeposit } from "#/data/actions";
+import { depositVouchers } from "#/data/depositVouchers";
+import { notify } from "#/lib/notify";
 import {
   allDeposits,
   depositBuckets,
@@ -24,6 +27,10 @@ import {
 import { BrokerStack } from "#/components/backoffice/BrokerStack";
 import { DepositChart } from "#/components/backoffice/DepositChart";
 import { DepositFilterBar } from "#/components/backoffice/DepositFilterBar";
+import {
+  NewDepositModal,
+  type NewDepositInput,
+} from "#/components/backoffice/NewDepositModal";
 import { formatCurrency, formatDate } from "#/components/deals/dealDisplay";
 
 export const Route = createFileRoute("/_shell/backoffice/deposits/")({
@@ -41,11 +48,15 @@ const PAGE_SIZE = 25;
  * question is where all of it went. Four columns divide each deposit up and
  * always foot back to what landed.
  *
- * **No selection and no primary action.** Receivables carries a checkbox column
- * because a set of billed lines makes an invoice. Nothing in the product acts on
- * a set of deposits — a deposit is already a completed fact — so the column and
- * the header button would be furniture. Editing one still happens where it is
- * applied, on the voucher's Financials tab, which the Voucher cell links to.
+ * **No selection.** Receivables carries a checkbox column because a set of
+ * billed lines makes an invoice. Nothing in the product acts on a set of
+ * deposits — a deposit is already a completed fact — so the column would be
+ * furniture. Editing one still happens where it is applied, on the voucher's
+ * Financials tab, which the Voucher cell links to.
+ *
+ * New Deposit is the one thing this page does that Receivables' Create Invoice
+ * does not: it needs no selection, because a deposit is filed against a voucher
+ * the broker names rather than against rows on this table.
  */
 function DepositsPage() {
   // Subscribe to the map: a deposit's figures live on its deal — its payables
@@ -62,6 +73,7 @@ function DepositsPage() {
 
   const [filters, setFilters] = useState(() => emptyDepositFilters(now));
   const [page, setPage] = useState(1);
+  const [depositing, setDepositing] = useState(false);
 
   /**
    * Every filter change returns to page one. Page 4 of a 2-page result is
@@ -105,6 +117,33 @@ function DepositsPage() {
     [filtered, filters.year, filters.grain, now],
   );
 
+  // Recomputed on every render rather than memoised: the balances behind these
+  // options move the moment a deposit is saved, and a stale list would keep
+  // offering a voucher that has just been paid off.
+  const voucherOptions = depositVouchers();
+
+  function saveDeposit(input: NewDepositInput) {
+    const { depositId } = applyDeposit(input.dealId, {
+      date: input.date,
+      amount: input.amount,
+      referenceNumber: input.referenceNumber,
+      receivableAllocations: input.receivableAllocations,
+      deductionAllocations: input.deductionAllocations,
+    });
+    if (!depositId) {
+      notify({
+        title: "Couldn't file the deposit",
+        description: "That voucher wouldn't accept it.",
+        variant: "destructive",
+      });
+      return;
+    }
+    notify({
+      title: "Deposit recorded",
+      description: `${formatCurrency(input.amount)} applied.`,
+    });
+  }
+
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   // Clamped rather than reset in an effect: a filter change that shortens the
   // list would otherwise render one blank frame on a now-nonexistent page.
@@ -127,10 +166,15 @@ function DepositsPage() {
               Track commission payments received
             </div>
           </div>
-          <span className="text-muted">
-            Displaying {filtered.length} of {rows.length}{" "}
-            {rows.length === 1 ? "Deposit" : "Deposits"}
-          </span>
+          <div className="d-flex align-items-center gap-3">
+            <span className="text-muted">
+              Displaying {filtered.length} of {rows.length}{" "}
+              {rows.length === 1 ? "Deposit" : "Deposits"}
+            </span>
+            <Button variant="primary" onClick={() => setDepositing(true)}>
+              New Deposit
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -324,6 +368,13 @@ function DepositsPage() {
           </Card>
         </div>
       </div>
+
+      <NewDepositModal
+        open={depositing}
+        onOpenChange={setDepositing}
+        vouchers={voucherOptions}
+        onSave={saveDeposit}
+      />
     </div>
   );
 }

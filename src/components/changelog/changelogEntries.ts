@@ -118,13 +118,13 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
 export const CHANGELOG: ChangelogEntry[] = [
   {
     pr: 197,
-    title: "Add a Deposits page to Back Office, and stop double-paying a co-broked deal's brokers",
+    title: "Add a Deposits page to Back Office, file deposits from it, and stop double-paying a co-broked deal's brokers",
     mergedAt: "2026-08-31T23:20:00Z",
     day: "2026-08-31",
     author: "buildoutfasterjoel",
     area: "Back Office",
     summary:
-      "Receivables tells you what has been billed and how much is still out. Deposits picks the money up from there: every cash receipt in the book on one page, each one split into what was held back before the split, what reached your brokers, what you still owe them, and what the house kept. Building it turned up a real arithmetic bug underneath — on any deal with an outside broker, the brokers were owed more commission than the deal had billed.",
+      "Receivables tells you what has been billed and how much is still out. Deposits picks the money up from there: every cash receipt in the book on one page, each one split into what was held back before the split, what reached your brokers, what you still owe them, and what the house kept. You can file a new deposit from the page too, picking the voucher and typing how the money splits across its receivables. Building it turned up a real arithmetic bug underneath — on any deal with an outside broker, the brokers were owed more commission than the deal had billed.",
     highlights: [
       {
         kind: "feature",
@@ -149,6 +149,14 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         kind: "refinement",
         text: "Paid To Brokers is the cheque the broker actually received, after their own split and any hold-back. Open Payables is the gross figure the next cheque is written against, which is the number the voucher shows you.",
+      },
+      {
+        kind: "feature",
+        text: "New Deposit files a payment from the Deposits page itself. Search for the voucher, and its open receivables load with their balances so you can type how much of the money goes against each one.",
+      },
+      {
+        kind: "feature",
+        text: "As you fill the lines in, a running total says how much of the deposit is still left to place — and turns red, with Save switched off, if you apply more than actually arrived.",
       },
       {
         kind: "refinement",
