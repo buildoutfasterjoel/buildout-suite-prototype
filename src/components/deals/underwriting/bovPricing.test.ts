@@ -57,4 +57,22 @@ describe("bovRangeText", () => {
   it("reads as a money range", () => {
     expect(bovRangeText(bovPricingFor(prop, result))).toMatch(/^\$\d+\.\dM – \$\d+\.\dM$/);
   });
+
+  /**
+   * A sub-million building has to keep its range. In millions both ends round
+   * to the same "$0.2M" and the BOV quotes a range that isn't one.
+   */
+  it("drops to thousands below a million so the range survives", () => {
+    const small = ({
+      ...result,
+      inputs: { ...result.inputs, askingPrice: 171_000 },
+      metrics: [
+        { key: "netOperatingIncome", value: 11_800, label: "", display: "", format: "money" },
+        { key: "goingInCapRate", value: 0.069, label: "", display: "", format: "percent" },
+      ],
+    } as unknown) as UnderwritingResult;
+    const text = bovRangeText(bovPricingFor(evenProp, small));
+    expect(text).toMatch(/^\$\d+K – \$\d+K$/);
+    expect(text.split(" – ")[0]).not.toBe(text.split(" – ")[1]);
+  });
 });

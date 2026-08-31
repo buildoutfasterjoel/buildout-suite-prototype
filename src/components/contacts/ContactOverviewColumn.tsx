@@ -23,6 +23,7 @@ import {
 import { ContactStageBadge } from "#/components/contacts/ContactStageBadge";
 import { ContactSection } from "#/components/contacts/ContactSection";
 import { ContactChip } from "#/components/contacts/ContactChip";
+import { ContactTagPicker } from "#/components/contacts/ContactTagPicker";
 import { ContactHeroAccessAvatars } from "#/components/contacts/ContactHeroAccessAvatars";
 import { ContactHeroInfo } from "#/components/contacts/ContactHeroInfo";
 import { useComposeFocus } from "#/components/contacts/useComposeFocus";
@@ -47,7 +48,7 @@ import {
 } from "#/components/contacts/contactFilterModel";
 import { callListToContactList } from "#/data/contactLists";
 import { useDataStore } from "#/data/dataStore";
-import { updateContact } from "#/data/actions";
+import { removeContactTags, updateContact } from "#/data/actions";
 
 /** Deal statuses considered "past" (shown behind a toggle). */
 const PAST_STATUSES = new Set<PropertyStatus>(["closed", "inactive"]);
@@ -164,16 +165,19 @@ export function ContactOverviewColumn({
   // Design-comparison switch (see ContactDesignToggles) — flips the deal and
   // property cards between the shipped look and the redesigned deal-tile.
   const newCards = useContactUiPrefs((s) => s.dealCards) === "new";
-  // Tag removal is prototype-local, so the list lives in state — but a call
-  // session walks contact to contact on the *same* route, so this component
-  // doesn't remount. Re-seed from the record whenever the contact underneath it
-  // changes, or the previous person's tags stay on screen.
-  const [tags, setTags] = useState(contact.tags);
+  // Tags render straight off the record, and removing one writes to the store.
+  // They used to live in component state, which had two costs: a removal was
+  // forgotten on reload, and the assistant's `add_contact_tags` /
+  // `remove_contact_tags` changed the record under a panel that kept showing
+  // the stale list. `doNotCall` is still local — nothing writes it yet.
+  const tags = contact.tags;
   const [doNotCall, setDoNotCall] = useState(!!contact.doNotCall);
+  // A call session walks contact to contact on the *same* route, so this
+  // component doesn't remount — re-seed the local switch when the record under
+  // it changes, or the previous person's setting stays on screen.
   const [tagsContactId, setTagsContactId] = useState(contact.id);
   if (tagsContactId !== contact.id) {
     setTagsContactId(contact.id);
-    setTags(contact.tags);
     setDoNotCall(!!contact.doNotCall);
   }
   const [newDealOpen, setNewDealOpen] = useState(false);
@@ -390,26 +394,10 @@ export function ContactOverviewColumn({
                     label={t}
                     appearance="muted"
                     removeLabel={`Remove tag ${t}`}
-                    onRemove={() =>
-                      setTags((prev) => prev.filter((x) => x !== t))
-                    }
+                    onRemove={() => removeContactTags(contact.id, [t])}
                   />
                 ))}
-                <Tooltip>
-                  <Tooltip.Trigger
-                    render={
-                      <Button
-                        variant="ghost"
-                        appearance="muted"
-                        size="icon-sm"
-                        aria-label="Add tags"
-                      >
-                        <FontAwesomeIcon icon={faPlus} />
-                      </Button>
-                    }
-                  />
-                  <Tooltip.Content>Add Tags</Tooltip.Content>
-                </Tooltip>
+                <ContactTagPicker contact={contact} />
               </div>
             </div>
 

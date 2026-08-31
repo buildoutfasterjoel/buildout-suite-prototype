@@ -47,6 +47,14 @@ export const CURRENT_USER: Teammate = {
   avatarUrl: "https://randomuser.me/api/portraits/men/32.jpg",
 };
 
+/**
+ * The signed-in user's first name — how correspondence addresses and signs them.
+ * Story emails and drafted sign-offs used to hardcode "John", which is nobody in
+ * this app: the call script, the timeline actors, and every activity record are
+ * Ethan Thompson.
+ */
+export const CURRENT_USER_FIRST_NAME = CURRENT_USER.name.split(" ")[0];
+
 /** Roster available to share with (excludes the current user). */
 export const TEAMMATES: Teammate[] = [
   { id: "sarah-chen", name: "Sarah Chen", email: "sarah.chen@buildout.com", role: "Broker", initials: "SC", avatarUrl: "https://randomuser.me/api/portraits/women/68.jpg" },

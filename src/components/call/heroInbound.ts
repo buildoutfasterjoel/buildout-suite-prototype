@@ -5,6 +5,7 @@ import { playArrivalChime } from "#/lib/chime";
 import { contactFullName } from "#/components/contacts/contactDisplay";
 import { useContactSession } from "#/components/contacts/useContactSession";
 import { ROSA_FINANCIAL_DOCS } from "./rosaDocs";
+import { CURRENT_USER_FIRST_NAME } from "#/data/teammates";
 
 /** The financials email's timeline-row id. Deterministic so `addSimEvent`
  * dedupes it and R2's replay-reset can clear it by id. */
@@ -47,7 +48,7 @@ function onArrive(contactId: string, mySession: number) {
     seq: 2_000_000,
     subject,
     body:
-      "John — I went through Miguel's cabinet after we spoke. Attached are the full trailing twelve months and the current rent roll, exactly as he kept them. I'm not saying yes to anything yet. But you should see what the building actually does before we talk again. — Rosa",
+      `${CURRENT_USER_FIRST_NAME} — I went through Miguel's cabinet after we spoke. Attached are the full trailing twelve months and the current rent roll, exactly as he kept them. I'm not saying yes to anything yet. But you should see what the building actually does before we talk again. — Rosa`,
     hasAttachment: true,
     attachments: ROSA_FINANCIAL_DOCS.map(({ name, meta }) => ({ name, meta })),
     actionBar: { primary: "Start a Deal", ghosts: ["Reply"] },

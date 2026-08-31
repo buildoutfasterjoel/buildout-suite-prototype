@@ -15,7 +15,7 @@ import {
   faSparkle,
   faXmark,
 } from "@fortawesome/pro-regular-svg-icons";
-import type { Contact, Property } from "#/data/types";
+import type { Contact, Property, UnderwritingResult } from "#/data/types";
 import { useDataStore } from "#/data/dataStore";
 import {
   addDealActivity,
@@ -24,8 +24,6 @@ import {
   updateListingUnderwriting,
 } from "#/data/store";
 import { notify } from "#/lib/notify";
-import { TYPE_LABELS } from "#/components/properties/propertyDisplay";
-import { getPhotoUrl } from "#/components/properties/propertyDisplay";
 import { UnderwritingProgress } from "#/components/deals/underwriting/UnderwritingProgress";
 import { UnderwritingPlacementModal } from "#/components/deals/underwriting/UnderwritingPlacementModal";
 import {
@@ -34,13 +32,14 @@ import {
   type BovPricing,
 } from "#/components/deals/underwriting/bovPricing";
 import { rosaClosing } from "#/components/call/rosaClosing";
-import { CURRENT_USER } from "#/data/teammates";
+import { CURRENT_USER, CURRENT_USER_FIRST_NAME } from "#/data/teammates";
 import { UnderwritingSetupModal } from "#/components/deals/underwriting/UnderwritingSetupModal";
 import { underwritingFromSelection } from "#/components/deals/underwriting/strategies";
 import { useContactSession } from "#/components/contacts/useContactSession";
 import { contactFullName, todayISO } from "#/components/contacts/contactDisplay";
 import type { ComposedDraft } from "#/components/contacts/ContactComposeModule";
 import { useBovFlow } from "#/components/contacts/useBovFlow";
+import { BovPreviewPages } from "#/components/contacts/BovPreviewPages";
 
 /** The BOV wizard's three visible stages (generation runs before them). */
 const FLOW_STEPS = ["Assemble", "Preview", "Email"] as const;
@@ -95,7 +94,7 @@ function draftBovEmail(
       "2. The T12 carries a one-time roof repair; setting it aside lifts the valuation meaningfully.\n" +
       "3. The ground-floor tenants are steady — an operator buyer would see exactly what Miguel built.\n\n" +
       "No decisions needed. Read it when you're ready, and I'm happy to walk through " +
-      "it whenever feels right.\n\nJohn"
+      `it whenever feels right.\n\n${CURRENT_USER_FIRST_NAME}`
     );
   }
   return (
@@ -103,7 +102,7 @@ function draftBovEmail(
     `underwrite. ${headline} on the in-place numbers with ` +
     `conservative assumptions.${occupancy}\n\nHere's the full BOV:\n` +
     `${link}\n\nWorth a quick conversation before you read it — open this week for a ` +
-    "30-minute walk-through? I'd rather get your read before we settle on a price.\n\nJohn"
+    `30-minute walk-through? I'd rather get your read before we settle on a price.\n\n${CURRENT_USER_FIRST_NAME}`
   );
 }
 
@@ -154,15 +153,21 @@ function FlowHeader({
 }
 
 /**
- * Step 2 — the assembled BOV's cover page, previewed in place. "Continue to
- * email" advances the wizard and stays the primary path; "Edit document" is the
- * escape hatch into the doc editor. Editing ends the wizard rather than
- * suspending it — navigating away with the flow still open left the modal
- * stacked over the editor.
+ * Step 2 — the assembled BOV, previewed in place and scrollable end to end.
+ * "Continue to email" advances the wizard and stays the primary path; "Edit
+ * document" is the escape hatch into the doc editor. Editing ends the wizard
+ * rather than suspending it — navigating away with the flow still open left the
+ * modal stacked over the editor.
+ *
+ * The pages themselves live in `BovPreviewPages`, built off the same property
+ * and approved run the cover email quotes.
  */
 function BovPreviewModal({
   open,
   property,
+  contact,
+  pricing,
+  result,
   documentName,
   onEdit,
   onContinue,
@@ -170,6 +175,9 @@ function BovPreviewModal({
 }: {
   open: boolean;
   property: Property;
+  contact: Contact;
+  pricing: BovPricing | null;
+  result: UnderwritingResult | undefined;
   documentName: string;
   onEdit: () => void;
   onContinue: () => void;
@@ -179,32 +187,13 @@ function BovPreviewModal({
     <Modal open={open} onOpenChange={(o) => !o && onClose()}>
       <Modal.Content size="lg" centered scrollable style={{ maxWidth: "56rem" }}>
         <FlowHeader title={documentName} active={1} onClose={onClose} />
-        <Modal.Body style={{ maxHeight: 620 }} className="p-5">
-          <div className="bov-cover position-relative">
-            <img
-              src={getPhotoUrl(property.id, 1200, 640)}
-              alt={property.name}
-              className="bov-cover__photo"
-            />
-            <div className="bov-cover__band">
-              <div className="bov-cover__kicker">Broker Opinion of Value</div>
-              <div className="bov-cover__name">{property.name}</div>
-              <div className="bov-cover__address">
-                {[property.street, property.city, property.state]
-                  .filter(Boolean)
-                  .join(", ")}{" "}
-                {property.zip}
-              </div>
-              <hr className="bov-cover__rule" />
-              <div className="bov-cover__meta">
-                {TYPE_LABELS[property.propertyType]} Property |{" "}
-                {property.buildingSqFt.toLocaleString()} SF
-              </div>
-            </div>
-            <span className="bov-cover__page">
-              <strong>1</strong> of 12
-            </span>
-          </div>
+        <Modal.Body style={{ maxHeight: 620 }} className="p-5 bov-doc-scroll">
+          <BovPreviewPages
+            property={property}
+            contact={contact}
+            pricing={pricing}
+            result={result}
+          />
         </Modal.Body>
         <Modal.Footer className="justify-content-between">
           <Button variant="ghost" appearance="muted" onClick={onClose}>
@@ -592,6 +581,9 @@ export function BovFlow() {
       <BovPreviewModal
         open={flow.step === "preview"}
         property={property}
+        contact={contact}
+        pricing={pricing}
+        result={runResult}
         documentName={flow.documentName ?? "Broker Opinion of Value"}
         onEdit={handleEdit}
         onContinue={flow.toEmail}
