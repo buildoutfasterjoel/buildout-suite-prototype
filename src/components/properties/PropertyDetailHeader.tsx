@@ -36,7 +36,11 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
   const property = getProperty(listing.propertyId);
   const address = `${property?.street}, ${property?.city}, ${property?.state} ${property?.zip}`;
   const { pathname } = useLocation();
-  const { sectionLabel, detailId } = dealBreadcrumbTrail(pathname, listing.id);
+  const { sectionLabel, detailId } = dealBreadcrumbTrail(
+    pathname,
+    listing.id,
+    listing.isClassic,
+  );
   // The detail id is a space deal's id; its human name is the suite's label,
   // which lives on this same property's units. Resolved here because
   // dealBreadcrumbTrail is deliberately store-free.
@@ -197,20 +201,35 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
                       // Tooltip describes a trigger, it does not name it, so an
                       // icon-only pencil reads as an unlabelled button to a
                       // screen reader until hover — which never happens there.
-                      aria-label="Edit deal"
+                      aria-label={
+                        listing.isClassic ? "Edit listing" : "Edit deal"
+                      }
                       nativeButton={false}
                       render={
-                        <Link
-                          to="/listings/$listingId/edit"
-                          params={{ listingId: listing.id }}
-                        />
+                        // A classic deal has no Listing section in its sidebar —
+                        // the listing form is what this button opens instead of
+                        // the deal form. Two `Link`s rather than one with an
+                        // interpolated `to`: `Link` takes a typed route literal.
+                        listing.isClassic ? (
+                          <Link
+                            to="/listings/$listingId/listing"
+                            params={{ listingId: listing.id }}
+                          />
+                        ) : (
+                          <Link
+                            to="/listings/$listingId/edit"
+                            params={{ listingId: listing.id }}
+                          />
+                        )
                       }
                     >
                       <FontAwesomeIcon icon={faPencil} />
                     </Button>
                   }
                 />
-                <Tooltip.Content>Edit Deal</Tooltip.Content>
+                <Tooltip.Content>
+                  {listing.isClassic ? "Edit Listing" : "Edit Deal"}
+                </Tooltip.Content>
               </Tooltip>
             </div>
             <DropdownMenu>

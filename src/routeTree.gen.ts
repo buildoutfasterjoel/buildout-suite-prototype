@@ -58,6 +58,7 @@ import { Route as ShellBackofficeVouchersIndexRouteImport } from './routes/_shel
 import { Route as ShellListingsListingIdIndexRouteImport } from './routes/_shell/listings/$listingId/index'
 import { Route as ShellListingsListingIdActivitiesRouteImport } from './routes/_shell/listings/$listingId/activities'
 import { Route as ShellListingsListingIdClientReportRouteImport } from './routes/_shell/listings/$listingId/client-report'
+import { Route as ShellListingsListingIdDealsRouteImport } from './routes/_shell/listings/$listingId/deals'
 import { Route as ShellListingsListingIdDemographicsRouteImport } from './routes/_shell/listings/$listingId/demographics'
 import { Route as ShellListingsListingIdDocumentsRouteImport } from './routes/_shell/listings/$listingId/documents'
 import { Route as ShellListingsListingIdEditRouteImport } from './routes/_shell/listings/$listingId/edit'
@@ -74,7 +75,9 @@ import { Route as ShellListingsListingIdNotesRouteImport } from './routes/_shell
 import { Route as ShellListingsListingIdOverviewRouteImport } from './routes/_shell/listings/$listingId/overview'
 import { Route as ShellListingsListingIdPlansRouteImport } from './routes/_shell/listings/$listingId/plans'
 import { Route as ShellListingsListingIdSpacesRouteImport } from './routes/_shell/listings/$listingId/spaces'
+import { Route as ShellListingsListingIdSyndicationRouteImport } from './routes/_shell/listings/$listingId/syndication'
 import { Route as ShellListingsListingIdUnderwritingRouteImport } from './routes/_shell/listings/$listingId/underwriting'
+import { Route as ShellListingsListingIdWebActivityRouteImport } from './routes/_shell/listings/$listingId/web-activity'
 import { Route as ShellListingsListingIdWebsiteRouteImport } from './routes/_shell/listings/$listingId/website'
 import { Route as ShellSettingsUsersIndexRouteImport } from './routes/_shell/settings/users/index'
 import { Route as ShellSettingsUsersUserIdRouteImport } from './routes/_shell/settings/users/$userId'
@@ -355,6 +358,12 @@ const ShellListingsListingIdClientReportRoute =
     path: '/client-report',
     getParentRoute: () => ShellListingsListingIdRoute,
   } as any)
+const ShellListingsListingIdDealsRoute =
+  ShellListingsListingIdDealsRouteImport.update({
+    id: '/deals',
+    path: '/deals',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
 const ShellListingsListingIdDemographicsRoute =
   ShellListingsListingIdDemographicsRouteImport.update({
     id: '/demographics',
@@ -451,10 +460,22 @@ const ShellListingsListingIdSpacesRoute =
     path: '/spaces',
     getParentRoute: () => ShellListingsListingIdRoute,
   } as any)
+const ShellListingsListingIdSyndicationRoute =
+  ShellListingsListingIdSyndicationRouteImport.update({
+    id: '/syndication',
+    path: '/syndication',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
 const ShellListingsListingIdUnderwritingRoute =
   ShellListingsListingIdUnderwritingRouteImport.update({
     id: '/underwriting',
     path: '/underwriting',
+    getParentRoute: () => ShellListingsListingIdRoute,
+  } as any)
+const ShellListingsListingIdWebActivityRoute =
+  ShellListingsListingIdWebActivityRouteImport.update({
+    id: '/web-activity',
+    path: '/web-activity',
     getParentRoute: () => ShellListingsListingIdRoute,
   } as any)
 const ShellListingsListingIdWebsiteRoute =
@@ -640,6 +661,7 @@ export interface FileRoutesByFullPath {
   '/backoffice/contacts/$contactId': typeof ShellBackofficeContactsContactIdRoute
   '/listings/$listingId/activities': typeof ShellListingsListingIdActivitiesRoute
   '/listings/$listingId/client-report': typeof ShellListingsListingIdClientReportRoute
+  '/listings/$listingId/deals': typeof ShellListingsListingIdDealsRoute
   '/listings/$listingId/demographics': typeof ShellListingsListingIdDemographicsRoute
   '/listings/$listingId/documents': typeof ShellListingsListingIdDocumentsRoute
   '/listings/$listingId/edit': typeof ShellListingsListingIdEditRoute
@@ -656,7 +678,9 @@ export interface FileRoutesByFullPath {
   '/listings/$listingId/overview': typeof ShellListingsListingIdOverviewRoute
   '/listings/$listingId/plans': typeof ShellListingsListingIdPlansRoute
   '/listings/$listingId/spaces': typeof ShellListingsListingIdSpacesRoute
+  '/listings/$listingId/syndication': typeof ShellListingsListingIdSyndicationRoute
   '/listings/$listingId/underwriting': typeof ShellListingsListingIdUnderwritingRoute
+  '/listings/$listingId/web-activity': typeof ShellListingsListingIdWebActivityRoute
   '/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
   '/settings/users/$userId': typeof ShellSettingsUsersUserIdRouteWithChildren
   '/backoffice/contacts/': typeof ShellBackofficeContactsIndexRoute
@@ -720,6 +744,7 @@ export interface FileRoutesByTo {
   '/backoffice/contacts/$contactId': typeof ShellBackofficeContactsContactIdRoute
   '/listings/$listingId/activities': typeof ShellListingsListingIdActivitiesRoute
   '/listings/$listingId/client-report': typeof ShellListingsListingIdClientReportRoute
+  '/listings/$listingId/deals': typeof ShellListingsListingIdDealsRoute
   '/listings/$listingId/demographics': typeof ShellListingsListingIdDemographicsRoute
   '/listings/$listingId/documents': typeof ShellListingsListingIdDocumentsRoute
   '/listings/$listingId/edit': typeof ShellListingsListingIdEditRoute
@@ -736,7 +761,9 @@ export interface FileRoutesByTo {
   '/listings/$listingId/overview': typeof ShellListingsListingIdOverviewRoute
   '/listings/$listingId/plans': typeof ShellListingsListingIdPlansRoute
   '/listings/$listingId/spaces': typeof ShellListingsListingIdSpacesRoute
+  '/listings/$listingId/syndication': typeof ShellListingsListingIdSyndicationRoute
   '/listings/$listingId/underwriting': typeof ShellListingsListingIdUnderwritingRoute
+  '/listings/$listingId/web-activity': typeof ShellListingsListingIdWebActivityRoute
   '/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
   '/backoffice/contacts': typeof ShellBackofficeContactsIndexRoute
   '/backoffice/receivables': typeof ShellBackofficeReceivablesIndexRoute
@@ -810,6 +837,7 @@ export interface FileRoutesById {
   '/_shell/backoffice/contacts/$contactId': typeof ShellBackofficeContactsContactIdRoute
   '/_shell/listings/$listingId/activities': typeof ShellListingsListingIdActivitiesRoute
   '/_shell/listings/$listingId/client-report': typeof ShellListingsListingIdClientReportRoute
+  '/_shell/listings/$listingId/deals': typeof ShellListingsListingIdDealsRoute
   '/_shell/listings/$listingId/demographics': typeof ShellListingsListingIdDemographicsRoute
   '/_shell/listings/$listingId/documents': typeof ShellListingsListingIdDocumentsRoute
   '/_shell/listings/$listingId/edit': typeof ShellListingsListingIdEditRoute
@@ -826,7 +854,9 @@ export interface FileRoutesById {
   '/_shell/listings/$listingId/overview': typeof ShellListingsListingIdOverviewRoute
   '/_shell/listings/$listingId/plans': typeof ShellListingsListingIdPlansRoute
   '/_shell/listings/$listingId/spaces': typeof ShellListingsListingIdSpacesRoute
+  '/_shell/listings/$listingId/syndication': typeof ShellListingsListingIdSyndicationRoute
   '/_shell/listings/$listingId/underwriting': typeof ShellListingsListingIdUnderwritingRoute
+  '/_shell/listings/$listingId/web-activity': typeof ShellListingsListingIdWebActivityRoute
   '/_shell/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
   '/_shell/settings/users/$userId': typeof ShellSettingsUsersUserIdRouteWithChildren
   '/_shell/backoffice/contacts/': typeof ShellBackofficeContactsIndexRoute
@@ -902,6 +932,7 @@ export interface FileRouteTypes {
     | '/backoffice/contacts/$contactId'
     | '/listings/$listingId/activities'
     | '/listings/$listingId/client-report'
+    | '/listings/$listingId/deals'
     | '/listings/$listingId/demographics'
     | '/listings/$listingId/documents'
     | '/listings/$listingId/edit'
@@ -918,7 +949,9 @@ export interface FileRouteTypes {
     | '/listings/$listingId/overview'
     | '/listings/$listingId/plans'
     | '/listings/$listingId/spaces'
+    | '/listings/$listingId/syndication'
     | '/listings/$listingId/underwriting'
+    | '/listings/$listingId/web-activity'
     | '/listings/$listingId/website'
     | '/settings/users/$userId'
     | '/backoffice/contacts/'
@@ -982,6 +1015,7 @@ export interface FileRouteTypes {
     | '/backoffice/contacts/$contactId'
     | '/listings/$listingId/activities'
     | '/listings/$listingId/client-report'
+    | '/listings/$listingId/deals'
     | '/listings/$listingId/demographics'
     | '/listings/$listingId/documents'
     | '/listings/$listingId/edit'
@@ -998,7 +1032,9 @@ export interface FileRouteTypes {
     | '/listings/$listingId/overview'
     | '/listings/$listingId/plans'
     | '/listings/$listingId/spaces'
+    | '/listings/$listingId/syndication'
     | '/listings/$listingId/underwriting'
+    | '/listings/$listingId/web-activity'
     | '/listings/$listingId/website'
     | '/backoffice/contacts'
     | '/backoffice/receivables'
@@ -1071,6 +1107,7 @@ export interface FileRouteTypes {
     | '/_shell/backoffice/contacts/$contactId'
     | '/_shell/listings/$listingId/activities'
     | '/_shell/listings/$listingId/client-report'
+    | '/_shell/listings/$listingId/deals'
     | '/_shell/listings/$listingId/demographics'
     | '/_shell/listings/$listingId/documents'
     | '/_shell/listings/$listingId/edit'
@@ -1087,7 +1124,9 @@ export interface FileRouteTypes {
     | '/_shell/listings/$listingId/overview'
     | '/_shell/listings/$listingId/plans'
     | '/_shell/listings/$listingId/spaces'
+    | '/_shell/listings/$listingId/syndication'
     | '/_shell/listings/$listingId/underwriting'
+    | '/_shell/listings/$listingId/web-activity'
     | '/_shell/listings/$listingId/website'
     | '/_shell/settings/users/$userId'
     | '/_shell/backoffice/contacts/'
@@ -1468,6 +1507,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellListingsListingIdClientReportRouteImport
       parentRoute: typeof ShellListingsListingIdRoute
     }
+    '/_shell/listings/$listingId/deals': {
+      id: '/_shell/listings/$listingId/deals'
+      path: '/deals'
+      fullPath: '/listings/$listingId/deals'
+      preLoaderRoute: typeof ShellListingsListingIdDealsRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
     '/_shell/listings/$listingId/demographics': {
       id: '/_shell/listings/$listingId/demographics'
       path: '/demographics'
@@ -1580,11 +1626,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellListingsListingIdSpacesRouteImport
       parentRoute: typeof ShellListingsListingIdRoute
     }
+    '/_shell/listings/$listingId/syndication': {
+      id: '/_shell/listings/$listingId/syndication'
+      path: '/syndication'
+      fullPath: '/listings/$listingId/syndication'
+      preLoaderRoute: typeof ShellListingsListingIdSyndicationRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
     '/_shell/listings/$listingId/underwriting': {
       id: '/_shell/listings/$listingId/underwriting'
       path: '/underwriting'
       fullPath: '/listings/$listingId/underwriting'
       preLoaderRoute: typeof ShellListingsListingIdUnderwritingRouteImport
+      parentRoute: typeof ShellListingsListingIdRoute
+    }
+    '/_shell/listings/$listingId/web-activity': {
+      id: '/_shell/listings/$listingId/web-activity'
+      path: '/web-activity'
+      fullPath: '/listings/$listingId/web-activity'
+      preLoaderRoute: typeof ShellListingsListingIdWebActivityRouteImport
       parentRoute: typeof ShellListingsListingIdRoute
     }
     '/_shell/listings/$listingId/website': {
@@ -1810,6 +1870,7 @@ const ShellEmailRouteWithChildren = ShellEmailRoute._addFileChildren(
 interface ShellListingsListingIdRouteChildren {
   ShellListingsListingIdActivitiesRoute: typeof ShellListingsListingIdActivitiesRoute
   ShellListingsListingIdClientReportRoute: typeof ShellListingsListingIdClientReportRoute
+  ShellListingsListingIdDealsRoute: typeof ShellListingsListingIdDealsRoute
   ShellListingsListingIdDemographicsRoute: typeof ShellListingsListingIdDemographicsRoute
   ShellListingsListingIdDocumentsRoute: typeof ShellListingsListingIdDocumentsRoute
   ShellListingsListingIdEditRoute: typeof ShellListingsListingIdEditRoute
@@ -1826,7 +1887,9 @@ interface ShellListingsListingIdRouteChildren {
   ShellListingsListingIdOverviewRoute: typeof ShellListingsListingIdOverviewRoute
   ShellListingsListingIdPlansRoute: typeof ShellListingsListingIdPlansRoute
   ShellListingsListingIdSpacesRoute: typeof ShellListingsListingIdSpacesRoute
+  ShellListingsListingIdSyndicationRoute: typeof ShellListingsListingIdSyndicationRoute
   ShellListingsListingIdUnderwritingRoute: typeof ShellListingsListingIdUnderwritingRoute
+  ShellListingsListingIdWebActivityRoute: typeof ShellListingsListingIdWebActivityRoute
   ShellListingsListingIdWebsiteRoute: typeof ShellListingsListingIdWebsiteRoute
   ShellListingsListingIdIndexRoute: typeof ShellListingsListingIdIndexRoute
   ShellListingsListingIdVouchersIndexRoute: typeof ShellListingsListingIdVouchersIndexRoute
@@ -1838,6 +1901,7 @@ const ShellListingsListingIdRouteChildren: ShellListingsListingIdRouteChildren =
       ShellListingsListingIdActivitiesRoute,
     ShellListingsListingIdClientReportRoute:
       ShellListingsListingIdClientReportRoute,
+    ShellListingsListingIdDealsRoute: ShellListingsListingIdDealsRoute,
     ShellListingsListingIdDemographicsRoute:
       ShellListingsListingIdDemographicsRoute,
     ShellListingsListingIdDocumentsRoute: ShellListingsListingIdDocumentsRoute,
@@ -1857,8 +1921,12 @@ const ShellListingsListingIdRouteChildren: ShellListingsListingIdRouteChildren =
     ShellListingsListingIdOverviewRoute: ShellListingsListingIdOverviewRoute,
     ShellListingsListingIdPlansRoute: ShellListingsListingIdPlansRoute,
     ShellListingsListingIdSpacesRoute: ShellListingsListingIdSpacesRoute,
+    ShellListingsListingIdSyndicationRoute:
+      ShellListingsListingIdSyndicationRoute,
     ShellListingsListingIdUnderwritingRoute:
       ShellListingsListingIdUnderwritingRoute,
+    ShellListingsListingIdWebActivityRoute:
+      ShellListingsListingIdWebActivityRoute,
     ShellListingsListingIdWebsiteRoute: ShellListingsListingIdWebsiteRoute,
     ShellListingsListingIdIndexRoute: ShellListingsListingIdIndexRoute,
     ShellListingsListingIdVouchersIndexRoute:

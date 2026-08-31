@@ -19,6 +19,11 @@ import {
   faReceipt,
   faNoteSticky,
   faSign,
+  faPaperclip,
+  faListCheck,
+  faChartLine,
+  faSatelliteDish,
+  faHandshake,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { DealShape } from "#/data/dealShape";
 
@@ -86,6 +91,67 @@ export const NAV_GROUPS: NavGroup[] = [
 ];
 
 /**
+ * The sidebar of a classic deal — the same deal, laid out the way Buildout
+ * Classic laid it out (see `Listing.isClassic`).
+ *
+ * Three departures from the legacy nav, all deliberate:
+ *
+ * - Legacy's first group is PROJECT. We call the record a deal everywhere else,
+ *   so the group is **Deal**. Renaming the group, not the record, is the whole
+ *   point: classic changes the shape of the page, never the vocabulary.
+ * - Legacy's third group is DEAL and holds a Deals index. That name collides
+ *   with the record itself, so the group takes our **Financials** name (what
+ *   the modern sidebar calls Back Office) and keeps the Deals page inside it.
+ * - **Attachments** is our Files section under legacy's name.
+ *
+ * Two items point at a page that is not theirs alone yet, on purpose — the
+ * sections are meant to stay as they are for now:
+ *
+ * - **Tasks** opens the Overview, where a deal's tasks live in `TodayPlanner`.
+ *   It has no page of its own.
+ * - **Web Activity** opens `web-activity`, which is the Website section's own
+ *   Analytics tab. Website itself opens on Settings for a classic deal, so the
+ *   two items land on different halves of the same page rather than the same one.
+ *
+ * Nothing here filters by deal shape. A classic deal is a plain top-level deal;
+ * the shell / space rules in `visibleNavGroups` do not apply, and a classic
+ * space is not a combination the app makes yet.
+ */
+export const CLASSIC_NAV_GROUPS: NavGroup[] = [
+  {
+    label: "Deal",
+    items: [
+      { label: "Leads", href: "leads", icon: faAddressBook },
+      { label: "Client Report", href: "client-report", icon: faFileChartColumn },
+      { label: "Attachments", href: "files", icon: faPaperclip },
+      { label: "Tasks", href: "overview", icon: faListCheck },
+      { label: "Activities", href: "activities", icon: faBolt },
+    ],
+  },
+  {
+    label: "Listing",
+    items: [
+      { label: "Documents", href: "documents", icon: faFileLines },
+      { label: "Web Activity", href: "web-activity", icon: faChartLine },
+      { label: "Website", href: "website", icon: faGlobe },
+      { label: "Email", href: "email", icon: faEnvelope },
+      { label: "Syndication", href: "syndication", icon: faSatelliteDish },
+      { label: "Grids", href: "grids", icon: faTableCells },
+      { label: "Plans", href: "plans", icon: faRulerCombined },
+      { label: "Media", href: "media", icon: faImage },
+      { label: "Demographics", href: "demographics", icon: faMapLocationDot },
+    ],
+  },
+  {
+    label: "Financials",
+    items: [{ label: "Deals", href: "deals", icon: faHandshake }],
+  },
+];
+
+/** Where a classic deal opens, since its sidebar has no Overview. */
+export const CLASSIC_LANDING_HREF = "leads";
+
+/**
  * Which section — and, on a drill-down, which record — the current URL is on.
  *
  * Returns the section's *label* (from the static NAV_GROUPS) and the detail's
@@ -99,6 +165,13 @@ export const NAV_GROUPS: NavGroup[] = [
 export function dealBreadcrumbTrail(
   pathname: string,
   listingId: string,
+  /**
+   * True on a classic deal, whose sections carry different names — Files is
+   * Attachments, Activity is Activities, and Overview is Tasks. Read from the
+   * classic set rather than NAV_GROUPS, or the crumb names a section the sidebar
+   * beside it does not show.
+   */
+  isClassic = false,
 ): {
   sectionLabel: string | null;
   detailId: string | null;
@@ -114,7 +187,9 @@ export function dealBreadcrumbTrail(
     .split("/");
   if (!section) return none;
 
-  const items = NAV_GROUPS.flatMap((g) => g.items);
+  const items = (isClassic ? CLASSIC_NAV_GROUPS : NAV_GROUPS).flatMap(
+    (g) => g.items,
+  );
   const item = items.find((i) => i.href === section);
   if (!item) return none;
 
@@ -185,8 +260,18 @@ export const BUILDING_OWNED_HREFS: readonly string[] = [
  */
 export function visibleNavGroups(
   shape: DealShape,
-  opts: { leaseParent: boolean; showsUnderwriting: boolean },
+  opts: {
+    leaseParent: boolean;
+    showsUnderwriting: boolean;
+    /**
+     * A classic deal swaps the whole set rather than filtering it — see
+     * CLASSIC_NAV_GROUPS. None of the shape rules below apply, so this returns
+     * before them rather than threading `isClassic` through each one.
+     */
+    isClassic?: boolean;
+  },
 ): NavGroup[] {
+  if (opts.isClassic) return CLASSIC_NAV_GROUPS;
   return NAV_GROUPS.map((group) => ({
     ...group,
     items: group.items.filter((item) => {
