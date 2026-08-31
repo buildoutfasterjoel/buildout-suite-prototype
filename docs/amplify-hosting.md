@@ -32,8 +32,30 @@ This prototype needs a server. Six modules use `createServerFn`:
 ```
 
 That is the layout Amplify's compute platform expects, so we do not hand-write a
-deploy manifest. The manifest asks for the `nodejs20.x` runtime and routes
-`/*.*` to static with a compute fallback, and everything else to compute.
+deploy manifest. It routes `/*.*` to static with a compute fallback, and
+everything else to compute.
+
+## Node runtime: pinned to 22, on purpose
+
+AWS's deployment spec allows exactly three values:
+
+```ts
+type ComputeRuntime = 'nodejs20.x' | 'nodejs22.x' | 'nodejs24.x';
+```
+
+Nitro defaults to `nodejs20.x`, which reached end of life in April 2026 — no
+more security patches. So `vite.config.ts` pins it:
+
+```ts
+nitro({ awsAmplify: { runtime: "nodejs22.x" }, ... })
+```
+
+22 rather than 24 because it is the version we develop on, so what gets verified
+locally is what runs in production. 24 is available and is a one-word change if
+a longer support window matters more later.
+
+The option is read only by the `aws-amplify` preset. The default `bun --bun run
+build` ignores it and still writes `.output/` with no manifest — verified.
 
 The generated server listens on **port 3000**, hardcoded — that is the port
 Amplify Hosting compute expects, so leave it alone.
