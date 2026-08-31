@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { UIMessage } from "@tanstack/ai-react";
 import { MarkdownMessage } from "./MarkdownMessage";
+import { useRevealedText } from "./useRevealedText";
 import { ToolChip } from "./ToolChip";
 
 /** A message's tool-call parts, as `useChat` shapes them. */
@@ -34,11 +35,19 @@ export function ChatMessage({
   showText,
   labels,
   doneLabels,
+  revealText = false,
   children,
 }: {
   message: UIMessage;
   chipCalls: ToolCallPart[];
   showText: boolean;
+  /**
+   * Pace this reply out as it arrives, instead of showing it whole (see
+   * `revealText.ts`). Only the surface knows which turn is the live one, and
+   * it is read once when the turn mounts — so pass it for the assistant turn
+   * of an in-flight request and nothing else.
+   */
+  revealText?: boolean;
   labels?: Record<string, string>;
   /** The same vocabulary in the past tense, for landed calls — see
    *  `toolDoneLabel`. */
@@ -47,6 +56,9 @@ export function ChatMessage({
 }) {
   const isUser = message.role === "user";
   const text = messageText(message);
+  // Hooks cannot be conditional, so this runs for every turn; it is inert
+  // unless `revealText` was set when this one mounted.
+  const reveal = useRevealedText(text, revealText && !isUser);
 
   return (
     // 12px between the pieces of a single reply — the text, its tool chips, and
@@ -68,7 +80,11 @@ export function ChatMessage({
               (isUser ? (
                 <div style={{ whiteSpace: "pre-wrap" }}>{text}</div>
               ) : (
-                <MarkdownMessage content={text} />
+                <MarkdownMessage
+                  content={reveal.text}
+                  revealing={reveal.revealing}
+                  revealDone={reveal.done}
+                />
               ))}
             {chipCalls.length > 0 && (
               // A column, not a wrapping row. Two settled calls are two muted
