@@ -117,6 +117,51 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 196,
+    title:
+      "Rename a deal's Leads to Inquiries, and open each one in a panel the broker can work",
+    mergedAt: "2026-08-31T22:25:24Z",
+    day: "2026-08-31",
+    author: "buildoutfasterjoel",
+    area: "Deals",
+    summary:
+      "A deal's Leads section is now Inquiries, and a row is no longer just a link somewhere else. Clicking one opens a panel over the table where you read the inquiry, change what you need to, attach a signed CA, and delete it if it does not belong there — without losing your search, your filters or your place in the list.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "Clicking an inquiry opens a panel over the list with every column on one screen, so you no longer scroll a seventeen-column table sideways to find the four things you wanted.",
+      },
+      {
+        kind: "feature",
+        text: "Inquiry Status, Referral Source and Sale Doc Access Level can be changed from the panel. Each change saves as you make it, and the row behind the panel updates at the same time.",
+      },
+      {
+        kind: "feature",
+        text: "A progress bar shows how far a lead has got on their own — from viewing public documents through to high document access — with the current and next step named, and the full six steps one click away.",
+      },
+      {
+        kind: "feature",
+        text: "You can attach a signed confidentiality agreement to an inquiry, or tick it as signed if you took the agreement outside the app. The CA Status filter in the toolbar finally has something behind it.",
+      },
+      {
+        kind: "feature",
+        text: "Delete Inquiry removes someone from this deal's list, behind a confirmation. It deletes the lead, not the person: the contact stays in your book of business, and their inquiries on other deals are untouched.",
+      },
+      {
+        kind: "refinement",
+        text: "The section is called Inquiries everywhere inside a deal — the sidebar, the breadcrumb, the heading, the buttons and the columns — matching what the contact side has always called them.",
+      },
+      {
+        kind: "refinement",
+        text: "An edit belongs to the inquiry, not to the page you made it on. Changing a suite's inquiry from the building's list and from the suite's own page now write the same record instead of two that can disagree.",
+      },
+      {
+        kind: "fix",
+        text: "The access level dropdown in the list is saved rather than forgotten on the next page load, and it always agrees with the panel.",
+      },
+    ],
+  },
+  {
     pr: 195,
     title:
       "Pace Otto's replies out with a per-word fade, so a buffered response still reads as live",

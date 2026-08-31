@@ -6311,3 +6311,26 @@ $otto-progress-gutter: 28px;
     }
   }
 }
+
+// Inquiries panel — the lead journey summary. A tinted block so the bar reads
+// as a summary of the record rather than another field group; the rest of the
+// panel is plain rows on the panel's own ground.
+.inquiry-journey {
+  background: var(--color-storm-grey-50, #f6f7f9);
+  border-color: var(--color-storm-grey-200, #d5dae2);
+}
+
+// The "All stages" disclosure. base-ui sets data-panel-open on the trigger.
+.inquiry-journey__toggle .svg-inline--fa {
+  transition: transform 0.15s ease;
+}
+.inquiry-journey__toggle[data-panel-open] .svg-inline--fa {
+  transform: rotate(180deg);
+}
+
+// Inquiries panel — the CA upload target. Dashed, because it is a place to put
+// something rather than a bordered block of content.
+.inquiry-ca__dropzone {
+  border-style: dashed !important;
+  border-color: var(--color-storm-grey-200, #d5dae2);
+}

@@ -1445,6 +1445,31 @@ export interface Contact {
       /** ISO date the inquiry landed. Per-inquiry, so a contact's several
        *  inquiries don't all read as having happened the same day. */
       date?: string
+      /**
+       * Below: what a broker has changed about this inquiry from the Inquiries
+       * panel. Every one is optional because these are *overrides* — the
+       * inquiry's displayed values are synthesized from the contact id (see
+       * `toInquiry`), and only a field someone actually touched is stored.
+       *
+       * That is what keeps `SEED_VERSION` still: the seed writes none of these,
+       * so a snapshot saved before they existed still loads and simply has
+       * none of them.
+       *
+       * They live per listing rather than flat on the contact because a person
+       * who inquired on three deals gets three separate access levels; granting
+       * High on one must not grant it on the others.
+       */
+      accessLevel?: 'Low' | 'Medium' | 'High'
+      referralSource?: string
+      /** Inquiry status — "Lead Status" in the product this mirrors. */
+      status?: string
+      /** Whether the signed confidentiality agreement is on file. */
+      caSigned?: boolean
+      /** Display name of the "uploaded" CA. No bytes exist — see the CA section
+       *  of the Inquiries panel; the upload is a prototype gesture. */
+      caFileName?: string
+      /** ISO date the CA was marked signed. */
+      caSignedAt?: string
     }
   >
   phoneStatus: PhoneStatus

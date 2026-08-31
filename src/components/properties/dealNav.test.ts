@@ -31,7 +31,7 @@ describe("dealBreadcrumbTrail", () => {
 
   it("labels a known single-level section from NAV_GROUPS", () => {
     expect(dealBreadcrumbTrail(`/listings/${ID}/leads`, ID)).toEqual({
-      sectionLabel: "Leads",
+      sectionLabel: "Inquiries",
       detailId: null,
       subsectionLabel: null,
     });
@@ -39,7 +39,7 @@ describe("dealBreadcrumbTrail", () => {
 
   it("reports no detail for a section with a trailing slash", () => {
     expect(dealBreadcrumbTrail(`/listings/${ID}/leads/`, ID)).toEqual({
-      sectionLabel: "Leads",
+      sectionLabel: "Inquiries",
       detailId: null,
       subsectionLabel: null,
     });
@@ -183,7 +183,7 @@ describe("visibleNavGroups", () => {
 
   it("never renders an empty group", () => {
     // Not a test of the `.filter(items.length > 0)` line: every group holds at
-    // least one unconditional item today (Overview, Leads, Notes), so no shape
+    // least one unconditional item today (Overview, Inquiries, Notes), so no shape
     // or option can empty one, and that filter cannot be reached from here.
     // What's asserted is the property the filter exists to guarantee — if a
     // future group is made entirely conditional, this is what catches it.
@@ -240,7 +240,7 @@ describe("dealBreadcrumbTrail — the space page's third level", () => {
     expect(dealBreadcrumbTrail("/listings/L1/spaces/S9/leads", "L1")).toEqual({
       sectionLabel: "Spaces",
       detailId: "S9",
-      subsectionLabel: "Leads",
+      subsectionLabel: "Inquiries",
     });
   });
 
@@ -321,7 +321,7 @@ describe("the building-owned sections", () => {
   });
 
   it("leaves a space exactly the three marketing sections it does own", () => {
-    // Exact contents and order: Details is the space's own form, Leads and Media
+    // Exact contents and order: Details is the space’s own form, Inquiries and Media
     // are filtered views of the building's. Anything else appearing here is a
     // section that escaped the ownership rule.
     const marketing = visibleNavGroups("space", opts).find((g) => g.label === "Marketing");
@@ -379,7 +379,7 @@ describe("classic deal nav", () => {
 
   it("holds exactly the legacy items, in the legacy order", () => {
     expect(CLASSIC_NAV_GROUPS.map((g) => g.items.map((i) => i.label))).toEqual([
-      ["Leads", "Client Report", "Attachments", "Tasks", "Activities"],
+      ["Inquiries", "Client Report", "Attachments", "Tasks", "Activities"],
       [
         "Documents",
         "Web Activity",
@@ -397,7 +397,7 @@ describe("classic deal nav", () => {
 
   it("drops the Suite-only sections", () => {
     // Not in the legacy sidebar, so not on a classic deal. Overview is the one
-    // that matters most: it is why the deal lands on Leads instead.
+    // that matters most: it is why the deal lands on Inquiries instead.
     const hrefs = CLASSIC_NAV_GROUPS.flatMap((g) => g.items.map((i) => i.href));
     for (const gone of [
       "history",

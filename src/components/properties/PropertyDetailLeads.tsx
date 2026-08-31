@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
 import { Table } from "@buildoutinc/blueprint-react/ui/Table";
 import { Alert } from "@buildoutinc/blueprint-react/ui/Alert";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
@@ -25,116 +24,32 @@ import {
   faPhone,
 } from "@fortawesome/pro-regular-svg-icons";
 import { faCircleInfo } from "@fortawesome/pro-duotone-svg-icons";
-import type { Contact, Property } from "#/data/types";
+import type { Property } from "#/data/types";
 import { getLeadsForProperty, getListing } from "#/data/store";
 import { leadsForSpaceDeal } from "#/data/unitScopedMarketing";
-import { LEAD_STATUSES, leadStatusFor } from "#/data/leadFacts";
+import { LEAD_STATUSES } from "#/data/leadFacts";
 import { useDataStore } from "#/data/dataStore";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
 import { startCallSession } from "#/components/call/useCallSession";
-import { oneIn, pickFor } from "./propertyDisplay";
+import { updateInquiry } from "#/data/actions";
+import {
+  ACCESS_LEVELS,
+  type AccessLevel,
+  REFERRAL_SOURCES,
+  ROLE_LABELS,
+  toInquiry,
+} from "./inquiryRow";
+import { InquiryFlyout } from "./InquiryFlyout";
 import { ListingPageHeader } from "../listings/ListingPageHeader";
 
-const ACCESS_LEVELS = ["Low", "Medium", "High"] as const;
-const REFERRAL_SOURCES = [
-  "Website",
-  "Email",
-  "Direct",
-  "Referral",
-  "Syndication",
-];
-const ADDED_BY = ["AE", "MK", "JL", "RS", "TC", "DP"];
-
-const ROLE_LABELS: Record<Contact["role"], string> = {
-  owner: "Owner",
-  broker: "Broker",
-  buyer: "Buyer",
-  tenant: "Tenant",
-  lender: "Lender",
-};
-
-/** Visual-only filter dropdowns from the Leads toolbar. */
+/** Visual-only filter dropdowns from the Inquiries toolbar. */
 const FILTERS: { label: string; options: string[] }[] = [
-  { label: "Lead Status", options: LEAD_STATUSES },
+  { label: "Inquiry Status", options: LEAD_STATUSES },
   { label: "Referral Source", options: REFERRAL_SOURCES },
   { label: "Waitlist Status", options: ["On Waitlist", "Not on Waitlist"] },
   { label: "Role", options: Object.values(ROLE_LABELS) },
   { label: "CA Status", options: ["Signed", "Not Signed"] },
 ];
-
-type Lead = {
-  id: string;
-  name: string;
-  initials: string;
-  email: string;
-  phone: string;
-  addedBy: string;
-  accessLevel: (typeof ACCESS_LEVELS)[number];
-  verified: boolean;
-  leadStatus: string;
-  referralSource: string;
-  company: string;
-  role: string;
-  dateAdded: string;
-  lastUpdated: string;
-  exchange1031: string;
-  expiration1031: string;
-};
-
-function fmtDate(d: Date): string {
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${mm}/${dd}/${d.getFullYear()}`;
-}
-
-/** Two days, in ms — the window in which a lead still reads as brand new. */
-const NEW_LEAD_MS = 2 * 86_400_000;
-
-/**
- * Synthesize the lead-only columns from a contact. The dates and lead status
- * come off the real record — a lead that just landed has to read as new, not as
- * one we've had on file for four months — and the rest of the lead-only columns
- * (access level, referral source, 1031) are deterministic filler off the id.
- *
- * Each filler column gets its own field salt via `pickFor`/`oneIn`: derived off
- * one shared `hash(contact.id)` these columns moved in lockstep, so the table
- * showed Verified on exactly the "Low" access rows and one referral source per
- * lead status.
- */
-function toLead(contact: Contact): Lead {
-  const added = new Date(contact.createdAt);
-  const updated = new Date(
-    contact.lastActivityAt ?? contact.lastContactedAt ?? contact.createdAt,
-  );
-  const has1031 = oneIn(5, contact.id, "1031-exchange");
-  // Never contacted and only just added → New. Otherwise keep the spread of
-  // statuses the table is built to show.
-  const fresh =
-    contact.lastContactedAt == null &&
-    Date.now() - added.getTime() < NEW_LEAD_MS;
-  return {
-    id: contact.id,
-    name: `${contact.firstName} ${contact.lastName}`,
-    initials: `${contact.firstName[0] ?? ""}${contact.lastName[0] ?? ""}`,
-    email: contact.email,
-    phone: contact.phone,
-    addedBy: pickFor(ADDED_BY, contact.id, "added-by"),
-    accessLevel: pickFor(ACCESS_LEVELS, contact.id, "access-level"),
-    verified: oneIn(3, contact.id, "verified"),
-    leadStatus: fresh ? "New" : leadStatusFor(contact.id),
-    referralSource: pickFor(REFERRAL_SOURCES, contact.id, "referral-source"),
-    company: contact.company,
-    role: ROLE_LABELS[contact.role],
-    dateAdded: fmtDate(added),
-    lastUpdated: fmtDate(updated),
-    exchange1031: has1031 ? "Yes" : "--",
-    expiration1031: has1031
-      ? fmtDate(
-          new Date(added.getFullYear() + 1, added.getMonth(), added.getDate()),
-        )
-      : "--",
-  };
-}
 
 const muted = <span className="text-muted">—</span>;
 
@@ -145,55 +60,70 @@ const muted = <span className="text-muted">—</span>;
  */
 const CHECKBOX_COL_W = 44;
 
-/** "Leads" content for the property detail page — contacts interested in this listing. */
+/** "Inquiries" content for the property detail page — contacts interested in this listing. */
 export function PropertyDetailLeads({
   property,
+  dealId,
   initialSearch,
   spaceDealId,
 }: {
   property: Property;
+  /**
+   * The deal whose page this is. Used to key an inquiry that names no space —
+   * an edit has to be stored against a listing, and a building-level inquiry's
+   * listing is the building's own deal.
+   */
+  dealId: string;
   /** Pre-fill the name search (deep link from a contact's inquiry card). */
   initialSearch?: string;
   /**
    * Scope to a single space deal's own inquirers — no fallback to
-   * building-wide leads, unlike media. An inquiry on the building's own
+   * building-wide inquiries, unlike media. An inquiry on the building's own
    * listing is not an inquiry on this space, and showing it as one would
    * misattribute the broker's pipeline. Omitted (or null) shows the
-   * property's whole lead library, unfiltered.
+   * property's whole inquiry library, unfiltered.
    */
   spaceDealId?: string | null;
 }) {
-  const navigate = useNavigate();
   const [search, setSearch] = useState(initialSearch ?? "");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // The row whose detail panel is open. Held as an id, not the row object, so
+  // the panel re-reads the current projection when the store changes under it.
+  const [openId, setOpenId] = useState<string | null>(null);
 
-  // Keyed on the contacts map so a lead that lands while this page is open shows
-  // up without a navigation.
+  // Keyed on the contacts map so an inquiry that lands while this page is open
+  // shows up without a navigation.
   const contacts = useDataStore((s) => s.contacts);
 
-  // The deal's assigned seller is the broker's client, not a lead they worked —
-  // getLeadsForProperty keeps them out of the list.
+  // The deal's assigned seller is the broker's client, not an inquiry they
+  // worked — getLeadsForProperty keeps them out of the list.
   const allLeads = useMemo(
     () => getLeadsForProperty(property.id),
     [property.id, contacts],
   );
 
-  // Leads do NOT fall back to building-wide inquiries the way media does — see
-  // `leadsForSpaceDeal`. Scoping happens on the raw contacts (which carry
-  // `inquiredListingIds`) before the `Lead` projection, since that's where the
-  // per-listing inquiry data actually lives; a contact who is only linked to
-  // the property (not an inquirer on this space) drops out here too.
+  // Inquiries do NOT fall back to building-wide inquiries the way media does —
+  // see `leadsForSpaceDeal`. Scoping happens on the raw contacts (which carry
+  // `inquiredListingIds`) before the `Inquiry` projection, since that's where
+  // the per-listing inquiry data actually lives; a contact who is only linked
+  // to the property (not an inquirer on this space) drops out here too.
   const scopedContacts = useMemo(
     () => leadsForSpaceDeal(allLeads, spaceDealId ?? null),
     [allLeads, spaceDealId],
   );
 
-  const leads = useMemo(() => scopedContacts.map(toLead), [scopedContacts]);
-
-  // The suite a lead inquired about, for the building-level table's Space column.
-  // Keyed by contact id because `toLead` carries the contact's id straight through.
-  const spaceLabels = useMemo(() => {
-    const byLead = new Map<string, string>();
+  /**
+   * The suite a contact inquired about, for the building-level table's Space
+   * column — and, from the same walk, the listing that inquiry belongs to.
+   *
+   * The listing id matters because every edit in the panel is stored under it.
+   * A suite's inquiry read from the building's list is still the *suite's*
+   * inquiry: keying it to whichever page you happened to open would write two
+   * records for one inquiry and let the two disagree.
+   */
+  const rowContext = useMemo(() => {
+    const spaceLabelById = new Map<string, string>();
+    const listingIdById = new Map<string, string>();
     for (const contact of scopedContacts) {
       for (const listingId of contact.inquiredListingIds ?? []) {
         const deal = getListing(listingId);
@@ -201,13 +131,29 @@ export function PropertyDetailLeads({
         if (!deal?.parentDealId) continue;
         const unit = property.units.find((u) => u.id === deal.unitId);
         if (unit) {
-          byLead.set(contact.id, unit.label);
+          spaceLabelById.set(contact.id, unit.label);
+          listingIdById.set(contact.id, listingId);
           break;
         }
       }
     }
-    return byLead;
+    return { spaceLabelById, listingIdById };
   }, [scopedContacts, property.units]);
+
+  const spaceLabels = rowContext.spaceLabelById;
+
+  const inquiries = useMemo(
+    () =>
+      scopedContacts.map((contact) =>
+        // On a space page every row is that space's inquiry. On the building's,
+        // fall back to the building's own deal for an inquiry naming no suite.
+        toInquiry(
+          contact,
+          spaceDealId ?? rowContext.listingIdById.get(contact.id) ?? dealId,
+        ),
+      ),
+    [scopedContacts, spaceDealId, rowContext, dealId],
+  );
 
   // Inside the suite panel every row is that same suite, so the column would
   // repeat one value on every line — only the building-level view names it.
@@ -215,8 +161,15 @@ export function PropertyDetailLeads({
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return q ? leads.filter((l) => l.name.toLowerCase().includes(q)) : leads;
-  }, [leads, search]);
+    return q
+      ? inquiries.filter((l) => l.name.toLowerCase().includes(q))
+      : inquiries;
+  }, [inquiries, search]);
+
+  const openInquiry = useMemo(
+    () => inquiries.find((i) => i.id === openId) ?? null,
+    [inquiries, openId],
+  );
 
   const allSelected =
     filtered.length > 0 && filtered.every((l) => selected.has(l.id));
@@ -243,13 +196,13 @@ export function PropertyDetailLeads({
       {spaceDealId && (
         <Alert severity="info" withIcon>
           <FontAwesomeIcon icon={faCircleInfo} />
-          Showing {leads.length} of {allLeads.length} — filtered to this
+          Showing {inquiries.length} of {allLeads.length} — filtered to this
           space. The full library lives on the building.
         </Alert>
       )}
       {/* Title row */}
       <ListingPageHeader
-        title="Leads"
+        title="Inquiries"
         actions={
           <>
             <DropdownMenu>
@@ -271,7 +224,7 @@ export function PropertyDetailLeads({
             </DropdownMenu>
             <Button variant="primary">
               <FontAwesomeIcon icon={faPlus} />
-              Add Lead
+              Add Inquiry
             </Button>
           </>
         }
@@ -335,12 +288,12 @@ export function PropertyDetailLeads({
                   aria-label="Call this list"
                   onClick={() =>
                     startCallSession(
-                      // Selected leads if any, otherwise everyone listed.
+                      // Selected inquiries if any, otherwise everyone listed.
                       (selected.size > 0
                         ? filtered.filter((l) => selected.has(l.id))
                         : filtered
                       ).map((l) => l.id),
-                      `${property.name} — Leads`,
+                      `${property.name} — Inquiries`,
                     )
                   }
                 >
@@ -357,13 +310,13 @@ export function PropertyDetailLeads({
       {filtered.length === 0 ? (
         <Empty className="py-6">
           <Empty.Media>
-            <FontAwesomeIcon icon={faAddressBook} aria-label="No leads" />
+            <FontAwesomeIcon icon={faAddressBook} aria-label="No inquiries" />
           </Empty.Media>
           <Empty.Content>
-            <Empty.Title>No leads yet</Empty.Title>
+            <Empty.Title>No inquiries yet</Empty.Title>
             {search
-              ? "No leads match your search."
-              : "Leads interested in this deal will appear here."}
+              ? "No inquiries match your search."
+              : "Inquiries on this deal will appear here."}
           </Empty.Content>
         </Empty>
       ) : (
@@ -383,7 +336,7 @@ export function PropertyDetailLeads({
                     checked={allSelected}
                     indeterminate={!allSelected && someSelected}
                     onCheckedChange={(c) => toggleAll(c === true)}
-                    aria-label="Select all leads"
+                    aria-label="Select all inquiries"
                   />
                 </div>
               </Table.Head>
@@ -396,7 +349,7 @@ export function PropertyDetailLeads({
               <Table.Head>Added By</Table.Head>
               <Table.Head>Sale Doc Access Level</Table.Head>
               <Table.Head>Account Status</Table.Head>
-              <Table.Head>Lead Status</Table.Head>
+              <Table.Head>Inquiry Status</Table.Head>
               <Table.Head>Link Sent</Table.Head>
               <Table.Head>Referral Source</Table.Head>
               <Table.Head>Company</Table.Head>
@@ -409,18 +362,15 @@ export function PropertyDetailLeads({
             </Table.Row>
           </Table.Header>
           <Table.Body>
-            {filtered.map((lead) => (
+            {filtered.map((inquiry) => (
               <Table.Row
-                key={lead.id}
+                key={inquiry.id}
                 className={`contacts-row${
-                  selected.has(lead.id) ? " table-active" : ""
+                  selected.has(inquiry.id) ? " table-active" : ""
                 }`}
                 onClick={(e) => {
                   if (shouldIgnoreRowClick(e)) return;
-                  void navigate({
-                    to: "/backoffice/contacts/$contactId",
-                    params: { contactId: lead.id },
-                  });
+                  setOpenId(inquiry.id);
                 }}
               >
                 <Table.Cell
@@ -433,9 +383,9 @@ export function PropertyDetailLeads({
                 >
                   <div className="position-absolute top-0 start-0 d-flex h-100 w-100 align-items-center justify-content-center">
                     <Checkbox
-                      checked={selected.has(lead.id)}
-                      onCheckedChange={(c) => toggleOne(lead.id, c === true)}
-                      aria-label={`Select ${lead.name}`}
+                      checked={selected.has(inquiry.id)}
+                      onCheckedChange={(c) => toggleOne(inquiry.id, c === true)}
+                      aria-label={`Select ${inquiry.name}`}
                     />
                   </div>
                 </Table.Cell>
@@ -443,32 +393,40 @@ export function PropertyDetailLeads({
                   <div className="d-flex align-items-center gap-2">
                     <Avatar size="lg">
                       <Avatar.Fallback className="fw-semibold">
-                        {lead.initials}
+                        {inquiry.initials}
                       </Avatar.Fallback>
                     </Avatar>
-                    <Link
-                      to="/backoffice/contacts/$contactId"
-                      params={{ contactId: lead.id }}
-                      className="row-link fw-semibold text-reset text-decoration-none text-nowrap"
-                    >
-                      {lead.name}
-                    </Link>
+                    {/* Not a link: the name opens the same detail panel the row
+                        does. The contact record is one click further, from the
+                        panel's footer. */}
+                    <span className="row-link fw-semibold text-nowrap">
+                      {inquiry.name}
+                    </span>
                   </div>
                 </Table.Cell>
                 {showSpaceColumn && (
                   <Table.Cell className="text-muted">
-                    {spaceLabels.get(lead.id) ?? "—"}
+                    {spaceLabels.get(inquiry.id) ?? "—"}
                   </Table.Cell>
                 )}
-                <Table.Cell>{lead.email}</Table.Cell>
-                <Table.Cell>{lead.phone || muted}</Table.Cell>
+                <Table.Cell>{inquiry.email}</Table.Cell>
+                <Table.Cell>{inquiry.phone || muted}</Table.Cell>
                 <Table.Cell>
                   <Avatar size="sm">
-                    <Avatar.Fallback>{lead.addedBy}</Avatar.Fallback>
+                    <Avatar.Fallback>{inquiry.addedBy}</Avatar.Fallback>
                   </Avatar>
                 </Table.Cell>
                 <Table.Cell>
-                  <Select defaultValue={lead.accessLevel}>
+                  {/* Controlled and persisted, so it agrees with the panel's
+                      copy of the same field either way you change it. */}
+                  <Select
+                    value={inquiry.accessLevel}
+                    onValueChange={(v) =>
+                      updateInquiry(inquiry.id, inquiry.listingId, {
+                        accessLevel: v as AccessLevel,
+                      })
+                    }
+                  >
                     <Select.Trigger size="sm" style={{ minWidth: 120 }}>
                       <Select.Value />
                     </Select.Trigger>
@@ -482,7 +440,7 @@ export function PropertyDetailLeads({
                   </Select>
                 </Table.Cell>
                 <Table.Cell>
-                  {lead.verified ? (
+                  {inquiry.verified ? (
                     <Badge variant="secondary" appearance="muted">
                       Verified
                     </Badge>
@@ -496,35 +454,37 @@ export function PropertyDetailLeads({
                 <Table.Cell>
                   <span
                     className={
-                      lead.leadStatus === "No Status"
+                      inquiry.status === "No Status"
                         ? "text-muted text-nowrap"
                         : "text-nowrap"
                     }
                   >
-                    {lead.leadStatus}
+                    {inquiry.status}
                   </span>
                 </Table.Cell>
                 <Table.Cell>{muted}</Table.Cell>
                 <Table.Cell className="text-nowrap">
-                  {lead.referralSource}
+                  {inquiry.referralSource}
                 </Table.Cell>
                 <Table.Cell className="text-nowrap">
-                  {lead.company || muted}
+                  {inquiry.company || muted}
                 </Table.Cell>
                 <Table.Cell className="text-nowrap">
-                  {lead.role || muted}
+                  {inquiry.role || muted}
                 </Table.Cell>
                 <Table.Cell className="text-nowrap">
-                  {lead.dateAdded}
+                  {inquiry.dateAdded}
                 </Table.Cell>
                 <Table.Cell className="text-nowrap">
-                  {lead.lastUpdated}
+                  {inquiry.lastUpdated}
                 </Table.Cell>
                 <Table.Cell>
-                  {lead.exchange1031 === "--" ? muted : lead.exchange1031}
+                  {inquiry.exchange1031 === "--" ? muted : inquiry.exchange1031}
                 </Table.Cell>
                 <Table.Cell className="text-nowrap">
-                  {lead.expiration1031 === "--" ? muted : lead.expiration1031}
+                  {inquiry.expiration1031 === "--"
+                    ? muted
+                    : inquiry.expiration1031}
                 </Table.Cell>
                 <Table.Cell sticky="end">
                   <DropdownMenu>
@@ -533,14 +493,16 @@ export function PropertyDetailLeads({
                         <Button
                           variant="ghost"
                           size="icon-sm"
-                          aria-label={`Actions for ${lead.name}`}
+                          aria-label={`Actions for ${inquiry.name}`}
                         >
                           <FontAwesomeIcon icon={faEllipsisVertical} />
                         </Button>
                       }
                     />
                     <DropdownMenu.Content align="end">
-                      <DropdownMenu.Item>View</DropdownMenu.Item>
+                      <DropdownMenu.Item onClick={() => setOpenId(inquiry.id)}>
+                        View
+                      </DropdownMenu.Item>
                       <DropdownMenu.Item>Edit</DropdownMenu.Item>
                       <DropdownMenu.Separator />
                       <DropdownMenu.Item>Remove</DropdownMenu.Item>
@@ -552,6 +514,19 @@ export function PropertyDetailLeads({
           </Table.Body>
         </Table>
       )}
+
+      <InquiryFlyout
+        inquiry={openInquiry}
+        spaceLabel={
+          openInquiry && showSpaceColumn
+            ? spaceLabels.get(openInquiry.id)
+            : undefined
+        }
+        open={openId !== null}
+        onOpenChange={(next) => {
+          if (!next) setOpenId(null);
+        }}
+      />
     </div>
   );
 }
