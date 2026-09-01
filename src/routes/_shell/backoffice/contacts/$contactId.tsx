@@ -20,6 +20,7 @@ import { isContactVisible } from "#/components/contacts/contactRights";
 import { AssignContactModal, type AssignMode } from "#/components/contacts/AssignContactModal";
 import { assignContactTo, transferContactTo } from "#/components/contacts/contactAssignment";
 import { useCan } from "#/components/settings/users/useViewer";
+import { useCurrentUser } from "#/data/currentUser";
 import { setContactPrivate } from "#/data/actions";
 import { notify } from "#/lib/notify";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
@@ -97,9 +98,11 @@ function ContactDetailPage() {
   // What the signed-in user may do here: owner or assignee act freely, a
   // collaborator acts within their tier, anyone else reads and can ask.
   const viewerCanAssign = useCan("assign-contacts");
+  const viewerSeat = useCurrentUser((s) => s.id);
   const rights = useMemo(
     () => resolveViewerRights(ownership, access.shares, viewerCanAssign),
-    [ownership, access.shares, viewerCanAssign],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [ownership, access.shares, viewerCanAssign, viewerSeat],
   );
   // Assign (company-owned) and Transfer (broker-owned) share one picker.
   const [assignMode, setAssignMode] = useState<AssignMode | null>(null);

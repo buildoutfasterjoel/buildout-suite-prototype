@@ -12,7 +12,7 @@
  *   reads as an application rather than a website (Figma node 193:3678).
  *
  * Persisted under `dev_nav_mode` so a reload keeps the chosen shape. Like
- * `viewAsRole`, the read/write pair is kept free of React and of a direct
+ * `currentUser`, the read/write pair is kept free of React and of a direct
  * `window` reference so it stays testable in Vitest's node environment; the
  * zustand store below is the React-facing half.
  */

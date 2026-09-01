@@ -163,7 +163,7 @@ import {
   contactLabel,
 } from './store'
 import { DEFAULT_PERSONAL_SPLIT_PCT, closeProbabilityForStage } from './commission'
-import { CURRENT_USER } from './teammates'
+import { currentUser } from './currentUser'
 
 /**
  * The editable subset of a listing the New Listing modal collects — just the
@@ -323,9 +323,9 @@ const DEFAULT_SUBTYPE: Record<PropertyType, PropertySubtype> = {
 function currentUserBroker(commissionAmount: number): DealBroker {
   return {
     id: crypto.randomUUID(),
-    name: CURRENT_USER.name,
+    name: currentUser().name,
     role: 'Primary Broker - Sell Side',
-    email: CURRENT_USER.email,
+    email: currentUser().email,
     side: 'internal',
     commissionSplitPct: 100,
     grossCommission: commissionAmount,

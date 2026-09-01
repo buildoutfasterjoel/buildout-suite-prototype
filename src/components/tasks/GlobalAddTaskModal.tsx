@@ -1,4 +1,5 @@
 import { AddTaskModal, type NewTaskDraft } from "#/components/tasks/AddTaskModal";
+import { viewerId } from "#/data/currentUser";
 import {
   createTask,
   deleteDealTask,
@@ -16,7 +17,7 @@ import { guardContactRight } from "#/components/contacts/contactRights";
 const ROSTER = [CURRENT_USER, ...TEAMMATES];
 /** Resolve assignee initials → teammate id (falls back to the current user). */
 const idByInitials = (initials: string) =>
-  ROSTER.find((m) => m.initials === initials)?.id ?? CURRENT_USER.id;
+  ROSTER.find((m) => m.initials === initials)?.id ?? viewerId();
 
 /** Format a Date as a local ISO `YYYY-MM-DD` (no UTC shift), matching stored dates. */
 function toISODate(d: Date): string {

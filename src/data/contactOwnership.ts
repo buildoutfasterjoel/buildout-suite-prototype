@@ -14,6 +14,7 @@
  * starting state"); the prototype trades that fidelity for a live demo.
  */
 import type { Contact } from "#/data/types";
+import { viewerId } from "#/data/currentUser";
 import type { RosterUser } from "#/data/roster";
 import { CURRENT_USER } from "#/data/teammates";
 import {
@@ -97,7 +98,7 @@ export function resolveContactOwnership(
 
 /** Whether the signed-in user is this contact's owner — the one who may lock it. */
 export function viewerOwns(ownership: ContactOwnership): boolean {
-  return ownership.owner.kind === "person" && ownership.owner.user.id === CURRENT_USER.id;
+  return ownership.owner.kind === "person" && ownership.owner.user.id === viewerId();
 }
 
 /** Display name for the owner, for tooltips and the share modal. */

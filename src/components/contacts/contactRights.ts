@@ -26,7 +26,7 @@ import {
   type ContactAccessSettings,
 } from "#/data/contactAccess";
 import type { RosterUser } from "#/data/roster";
-import { CURRENT_USER } from "#/data/teammates";
+import { viewerId } from "#/data/currentUser";
 import { DEFAULT_CONTACT_SHARES } from "#/data/teammates";
 import { contactFullName } from "#/components/contacts/contactDisplay";
 import { notify } from "#/lib/notify";
@@ -73,7 +73,7 @@ export function viewerCanAssign(
   roster: RosterUser[] = useRoster.getState().users,
   settings: ContactAccessSettings = useContactAccessSettings.getState().settings,
 ): boolean {
-  const viewer = roster.find((u) => u.id === CURRENT_USER.id);
+  const viewer = roster.find((u) => u.id === viewerId());
   return !!viewer && isEffectivelyOn(viewer.roleIds, viewer.overrides, ASSIGN_CONTACTS, settings);
 }
 
@@ -114,7 +114,7 @@ export function viewerSeesPrivate(
   roster: RosterUser[] = useRoster.getState().users,
   settings: ContactAccessSettings = useContactAccessSettings.getState().settings,
 ): boolean {
-  const viewer = roster.find((u) => u.id === CURRENT_USER.id);
+  const viewer = roster.find((u) => u.id === viewerId());
   return !!viewer && isEffectivelyOn(viewer.roleIds, viewer.overrides, VIEW_PRIVATE_CONTACTS, settings);
 }
 

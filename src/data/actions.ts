@@ -9,6 +9,7 @@ import {
 import { recordEngagement } from '#/components/contacts/useContactSession'
 import type { Contact, ContactRole, ContactSource, DealDocument, DealHistoryEntry, DealIngestion, DealInvoice, DealMarketing, DealPitchFinancials, DealBroker, DealFinancials, DealTask, DealTransaction, DepositAllocation, DocumentGeneration, FinancialDeduction, FinancialReceivable, GeneratedSection, IngestionFieldKey, Listing, PaymentDeduction, PropertyStatus, Task, VoucherDeposit, VoucherPayable, VoucherPayment } from './types'
 import { teammateIdByName, CURRENT_USER, TEAMMATES } from './teammates'
+import { currentUser, viewerId } from './currentUser'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
 import { reconcileContactDealFields } from './contactStage'
 import { grantContactShares, reconcilePropertyStage } from './store'
@@ -670,7 +671,7 @@ export function applyDeposit(
                 ? { checkNumber: input.checkNumber.trim() }
                 : {}),
               createdAt: now,
-              createdById: CURRENT_USER.id,
+              createdById: viewerId(),
               receivableAllocations,
               deductionAllocations,
             },
@@ -985,7 +986,7 @@ export function recordPayment(
       grossAmount,
       deductions,
       createdAt: now,
-      createdById: CURRENT_USER.id,
+      createdById: viewerId(),
     }
     wrote = true
 
@@ -1234,7 +1235,7 @@ export function createInvoiceFromReceivables(
       nextInvoiceOrdinal(deal),
     ),
     createdAt: now,
-    createdById: CURRENT_USER.id,
+    createdById: viewerId(),
     payerContactId: billed[0].payerContactId,
     billToCompany,
     dueDate: invoiceDueDate(lineItems),
@@ -1565,7 +1566,7 @@ export interface NewTaskInput {
 /** Resolve a teammate's two-letter initials from their id (falls back to the current user). */
 function assigneeInitialsFor(assigneeId: string): string {
   const member =
-    [CURRENT_USER, ...TEAMMATES].find((m) => m.id === assigneeId) ?? CURRENT_USER
+    [CURRENT_USER, ...TEAMMATES].find((m) => m.id === assigneeId) ?? currentUser()
   return member.initials
 }
 
@@ -1575,7 +1576,7 @@ function assigneeInitialsFor(assigneeId: string): string {
  * column (see {@link getContactDetailClient}). Persists via the single write path.
  */
 export function createTask(input: NewTaskInput): { task: Task } {
-  const assigneeId = input.assigneeId ?? CURRENT_USER.id
+  const assigneeId = input.assigneeId ?? viewerId()
   const task: Task = {
     id: crypto.randomUUID(),
     name: input.name.trim(),
@@ -2025,7 +2026,8 @@ export function createContact(input: NewContactInput): { contact: Contact } {
     company: input.company ?? '',
     role: input.role ?? 'owner',
     propertyIds: input.propertyIds ?? [],
-    assignedTo: 'You',
+    // Whoever is creating it works it; ownership follows from their grants.
+    assignedTo: currentUser().name,
     source: input.source ?? 'Referral',
     relationship: 'cold',
     side: null,

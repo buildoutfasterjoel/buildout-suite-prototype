@@ -6,6 +6,7 @@ import {
   type ContactOwnership,
 } from "#/data/contactOwnership";
 import { useRoster } from "#/components/settings/users/useRoster";
+import { useCurrentUser } from "#/data/currentUser";
 import { useContactAccessSettings } from "#/components/settings/useContactAccessSettings";
 
 /**
@@ -15,10 +16,11 @@ import { useContactAccessSettings } from "#/components/settings/useContactAccess
  */
 export function useContactOwnership(contact: Contact): ContactOwnership {
   const roster = useRoster((s) => s.users);
+  const viewer = useCurrentUser((s) => s.id);
   const settings = useContactAccessSettings((s) => s.settings);
   return useMemo(
     () =>
       resolveContactOwnership(contact, roster, settings, COMPANY_SETTINGS.name),
-    [contact, roster, settings],
+    [contact, roster, settings, viewer],
   );
 }

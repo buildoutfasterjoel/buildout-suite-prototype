@@ -29,7 +29,7 @@ import {
   faBinoculars,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact, RelationshipStage } from "#/data/types";
-import { CURRENT_USER } from "#/data/teammates";
+import { currentUser, currentUserActor } from "#/data/currentUser";
 import type { ComposedActivity } from "#/components/contacts/contactDisplay";
 import { contactFullName } from "#/components/contacts/contactDisplay";
 
@@ -772,10 +772,8 @@ export function durationLabel(secs: number): string {
 
 // ── Compose / live-call → timeline event ────────────────────────────────────
 
-const owner: TimelineActor = {
-  name: CURRENT_USER.name,
-  avatarUrl: CURRENT_USER.avatarUrl,
-};
+/** Who a logged activity is signed as: its stamped author, else the viewer. */
+const authorOf = (a: ComposedActivity): TimelineActor => a.author ?? currentUserActor();
 
 const COMPOSE_TYPE: Record<ComposedActivity["kind"], TimelineEventType> = {
   note: "note",
@@ -793,7 +791,7 @@ export function composedToEvent(a: ComposedActivity, c: Contact): TimelineEvent 
   return {
     id: a.id,
     type,
-    actor: owner,
+    actor: authorOf(a),
     contact: { name: contactFullName(c), id: c.id },
     direction: "out",
     // The chosen activity date + the (fixed) time-of-day it was logged. Using
@@ -847,7 +845,7 @@ export function canBePrivate(event: TimelineEvent): boolean {
     PRIVATABLE_TYPES.has(event.type) &&
     event.source === "user" &&
     event.direction !== "in" &&
-    event.actor.name === CURRENT_USER.name
+    event.actor.name === currentUser().name
   );
 }
 
@@ -862,5 +860,5 @@ export function isPrivateEvent(event: TimelineEvent): boolean {
  * relationship, never a colleague's candid note.
  */
 export function hiddenFromViewer(event: TimelineEvent): boolean {
-  return isPrivateEvent(event) && event.actor.name !== CURRENT_USER.name;
+  return isPrivateEvent(event) && event.actor.name !== currentUser().name;
 }

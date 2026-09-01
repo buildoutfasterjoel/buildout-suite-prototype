@@ -14,7 +14,7 @@ import {
  * rows under a closed ceiling, and `useCan` refuses to grant past one.
  *
  * Persisted to localStorage under `contact_access_settings`, the same way the
- * "Viewing as" seat is (`dev_role`): a demo flips the company setting, then
+ * "Viewing as" seat is (`dev_viewer`): a demo flips the company setting, then
  * walks to a broker's permissions page and the contact hero to watch it land,
  * and a full reload on the way must not quietly put the company back on Model
  * B. Restored in an effect (`useHydrateContactAccessSettings`) rather than at

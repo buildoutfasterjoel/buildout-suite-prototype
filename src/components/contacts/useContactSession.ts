@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { ComposedActivity } from "#/components/contacts/contactDisplay";
+import { currentUserActor } from "#/data/currentUser";
 import { contactFullName } from "#/components/contacts/contactDisplay";
 import type { ComposedDraft } from "#/components/contacts/ContactComposeModule";
 import type { TimelineEvent } from "#/components/contacts/timeline";
@@ -52,6 +53,8 @@ export const useContactSession = create<ContactSessionState>((set) => ({
       id: `logged-${seq}`,
       seq,
       createdAt: new Date().toISOString(),
+      // Signed by whoever is logging it, now — not by whoever looks later.
+      author: draft.author ?? currentUserActor(),
     };
     set((s) => ({
       logged: {

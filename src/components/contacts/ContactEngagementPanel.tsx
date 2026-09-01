@@ -16,7 +16,8 @@ import {
   type ComposedActivity,
 } from "#/components/contacts/contactDisplay";
 import { notify } from "#/lib/notify";
-import { CURRENT_USER, DEFAULT_CONTACT_SHARES } from "#/data/teammates";
+import { DEFAULT_CONTACT_SHARES } from "#/data/teammates";
+import { currentUser } from "#/data/currentUser";
 import { useDataStore } from "#/data/dataStore";
 import {
   composedToEvent,
@@ -374,7 +375,7 @@ export function ContactEngagementPanel({
       ...prev,
       [key]: [
         ...(prev[key] ?? []),
-        { id: `${key}-reply-${(prev[key]?.length ?? 0) + 1}`, body: text, timestamp: now, sender: CURRENT_USER.name },
+        { id: `${key}-reply-${(prev[key]?.length ?? 0) + 1}`, body: text, timestamp: now, sender: currentUser().name },
       ],
     }));
     setReplyOpenId(null);

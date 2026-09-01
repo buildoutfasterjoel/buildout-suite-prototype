@@ -8,13 +8,13 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperPlaneTop, faComments } from "@fortawesome/pro-regular-svg-icons";
 import { useDataStore } from "#/data/dataStore";
 import { addDealMessage } from "#/data/store";
-import { CURRENT_USER } from "#/data/teammates";
+import { currentUser } from "#/data/currentUser";
 import { initials, formatDateTime } from "./dealDisplay";
 import type { DealMessage } from "#/data/types";
 
 /** One chat row — current user's own messages align right in a tinted bubble. */
 function MessageRow({ message }: { message: DealMessage }) {
-  const mine = message.author === CURRENT_USER.name;
+  const mine = message.author === currentUser().name;
   if (mine) {
     return (
       <div className="d-flex flex-column align-items-end">
@@ -72,7 +72,7 @@ export function DealMessagesRail({ listingId }: { listingId: string }) {
   const send = () => {
     const text = draft.trim();
     if (!text) return;
-    addDealMessage(listingId, { author: CURRENT_USER.name, text });
+    addDealMessage(listingId, { author: currentUser().name, text });
     setDraft("");
   };
 

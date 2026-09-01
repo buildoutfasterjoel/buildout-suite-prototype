@@ -12,12 +12,12 @@
  */
 import {
   ACCESS_TIERS,
-  CURRENT_USER,
   accessTierLabel,
   type AccessTier,
   type ContactShare,
 } from "#/data/teammates";
 import { viewerOwns, type ContactOwnership } from "#/data/contactOwnership";
+import { viewerId } from "#/data/currentUser";
 
 export type ContactRelationship = "owner" | "assignee" | "collaborator" | "none";
 
@@ -74,16 +74,16 @@ export function resolveViewerRights(
   const companyOwned = ownership.owner.kind === "company";
   // Assign exists only where the company owns; transfer only where a person does.
   const canAssign =
-    companyOwned && (viewerCanAssign || ownership.assignee?.id === CURRENT_USER.id);
+    companyOwned && (viewerCanAssign || ownership.assignee?.id === viewerId());
   if (viewerOwns(ownership)) {
     return { relationship: "owner", label: "Owner", ...FULL, canAssign: false, canTransfer: true };
   }
   // Company-owned and assigned to the viewer: the full working set, minus
   // ownership itself (they can't transfer it or take it with them).
-  if (companyOwned && ownership.assignee?.id === CURRENT_USER.id) {
+  if (companyOwned && ownership.assignee?.id === viewerId()) {
     return { relationship: "assignee", label: "Assigned", ...FULL, canAssign, canTransfer: false };
   }
-  const share = shares.find((s) => s.member.id === CURRENT_USER.id);
+  const share = shares.find((s) => s.member.id === viewerId());
   if (share) {
     const caps = ACCESS_TIERS.find((t) => t.value === share.tier)?.capabilities;
     return {
@@ -115,7 +115,7 @@ export function canSeeContact(
 ): boolean {
   if (!ownership.isPrivate) return true;
   if (seesPrivate || viewerOwns(ownership)) return true;
-  return shares.some((s) => s.member.id === CURRENT_USER.id);
+  return shares.some((s) => s.member.id === viewerId());
 }
 
 /**

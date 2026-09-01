@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
+import { viewerId } from "#/data/currentUser";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
@@ -14,7 +15,6 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import {
   ACCESS_TIERS,
-  CURRENT_USER,
   TEAMMATES,
   type AccessTier,
   type ContactShare,
@@ -184,14 +184,14 @@ export function ShareContactModal({
   const excludeIds = useMemo(
     () =>
       new Set<string>([
-        CURRENT_USER.id,
+        viewerId(),
         ...accountableIds,
         ...sharedIds,
         ...pendingIds,
       ]),
     [accountableIds, sharedIds, pendingIds],
   );
-  const youSuffix = (id: string) => (id === CURRENT_USER.id ? " (you)" : "");
+  const youSuffix = (id: string) => (id === viewerId() ? " (you)" : "");
 
   const openPicker = () => {
     if (blurTimer.current) clearTimeout(blurTimer.current);

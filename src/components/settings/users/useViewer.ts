@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { CURRENT_USER } from "#/data/teammates";
+import { useCurrentUser } from "#/data/currentUser";
 import { isPermissionOn, type RoleId } from "#/data/permissions";
 import type { RosterUser } from "#/data/roster";
 import { useRoster } from "./useRoster";
@@ -23,7 +23,8 @@ const EMPTY_ROLES: RoleId[] = [];
  * parallel notion of a pretend identity that could drift from the data.
  */
 export function useViewer(): RosterUser | undefined {
-  return useRoster((s) => s.users.find((u) => u.id === CURRENT_USER.id));
+  const id = useCurrentUser((s) => s.id);
+  return useRoster((s) => s.users.find((u) => u.id === id));
 }
 
 /**

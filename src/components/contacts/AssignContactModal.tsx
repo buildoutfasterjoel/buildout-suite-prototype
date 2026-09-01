@@ -7,7 +7,7 @@ import { Field } from "@buildoutinc/blueprint-react/ui/Field";
 import { RadioGroup } from "@buildoutinc/blueprint-react/ui/RadioGroup";
 import { useRoster } from "#/components/settings/users/useRoster";
 import { RoleBadge } from "#/components/settings/users/roleDisplay";
-import { CURRENT_USER } from "#/data/teammates";
+import { useCurrentUser } from "#/data/currentUser";
 import type { RosterUser } from "#/data/roster";
 
 export type AssignMode = "assign" | "transfer";
@@ -40,6 +40,7 @@ export function AssignContactModal({
   onUnassign?: () => void;
 }) {
   const users = useRoster((s) => s.users);
+  const me = useCurrentUser((s) => s.id);
   const [pick, setPick] = useState<string>("");
   const [keep, setKeep] = useState(true);
 
@@ -56,7 +57,7 @@ export function AssignContactModal({
         (u) =>
           u.status === "active" &&
           u.name !== currentAssignee &&
-          (mode === "assign" || u.id !== CURRENT_USER.id),
+          (mode === "assign" || u.id !== me),
       ),
     [users, currentAssignee, mode],
   );
@@ -99,7 +100,7 @@ export function AssignContactModal({
                 <span className="d-flex flex-column lh-sm flex-grow-1 min-w-0">
                   <span className="fw-semibold text-truncate">
                     {u.name}
-                    {u.id === CURRENT_USER.id ? " (you)" : ""}
+                    {u.id === me ? " (you)" : ""}
                   </span>
                   <span className="fs-small text-muted text-truncate">{u.title}</span>
                 </span>

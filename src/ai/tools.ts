@@ -61,7 +61,7 @@ import {
   removeContactTags,
   touchContactActivity,
 } from "#/data/actions";
-import { CURRENT_USER } from "#/data/teammates";
+import { currentUser } from "#/data/currentUser";
 import { buildDayPlan, emptyDayPlanHeadline } from "#/ai/dayPlan";
 import { parseDueDate } from "#/ai/dueDate";
 import { buildAssistantContext } from "#/ai/context";
@@ -991,7 +991,7 @@ export function createClientTools({
       };
       const kind = type ?? "note";
       if (dealId) {
-        const deal = addDealActivity(dealId, { type: kind, note: body, actor: CURRENT_USER.name });
+        const deal = addDealActivity(dealId, { type: kind, note: body, actor: currentUser().name });
         return deal
           ? { logged: true, type: kind, dealId, dealName: deal.name }
           : { error: "Deal not found" };
@@ -1100,7 +1100,7 @@ export function createClientTools({
       };
       const note = duration_minutes ? `${outcome} (${duration_minutes} min)` : outcome;
       if (dealId) {
-        const deal = addDealActivity(dealId, { type: "call", note, actor: CURRENT_USER.name });
+        const deal = addDealActivity(dealId, { type: "call", note, actor: currentUser().name });
         return deal
           ? { logged: true, dealId, dealName: deal.name }
           : { error: "Deal not found" };

@@ -13,7 +13,7 @@
  */
 import { assignContact, transferContact } from "#/data/actions";
 import { getContact } from "#/data/store";
-import { CURRENT_USER } from "#/data/teammates";
+import { currentUser, currentUserActor } from "#/data/currentUser";
 import { contactFullName } from "#/components/contacts/contactDisplay";
 import { useContactSession } from "#/components/contacts/useContactSession";
 import type { TimelineEvent } from "#/components/contacts/timeline";
@@ -30,7 +30,7 @@ function record(
   const event: TimelineEvent = {
     id: `assign-${contactId}-${Date.now()}-${seq}`,
     type: "assignment",
-    actor: { name: CURRENT_USER.name, avatarUrl: CURRENT_USER.avatarUrl },
+    actor: currentUserActor(),
     contact: { name: contactFullName(c), id: c.id },
     timestamp: new Date().toISOString(),
     // Above every logged activity, so it sorts as the newest thing that happened.
@@ -45,7 +45,7 @@ function record(
 /** Route a company-owned record to a person (or nobody). Returns the new assignee name. */
 export function assignContactTo(contactId: string, assigneeName: string | null): string | null {
   const before = getContact(contactId)?.assignedTo || null;
-  const { contact } = assignContact(contactId, assigneeName, CURRENT_USER.name);
+  const { contact } = assignContact(contactId, assigneeName, currentUser().name);
   if (!contact) return null;
   if (assigneeName) {
     record(

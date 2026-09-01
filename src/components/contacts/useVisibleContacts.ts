@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { Contact } from "#/data/types";
 import { useDataStore } from "#/data/dataStore";
 import { useRoster } from "#/components/settings/users/useRoster";
+import { useCurrentUser } from "#/data/currentUser";
 import { useContactAccessSettings } from "#/components/settings/useContactAccessSettings";
 import {
   describeVisibility,
@@ -22,13 +23,14 @@ export function useVisibleContacts(): { contacts: Contact[]; privateIds: Set<str
   const contacts = useDataStore((s) => s.contacts);
   const shares = useDataStore((s) => s.contactShares);
   const roster = useRoster((s) => s.users);
+  const viewer = useCurrentUser((s) => s.id);
   const settings = useContactAccessSettings((s) => s.settings);
   return useMemo(
     () => describeVisibility([...contacts.values()]),
     // `shares`, `roster` and `settings` are read inside `describeVisibility`
     // from the stores; they're here so the memo tracks them.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [contacts, shares, roster, settings],
+    [contacts, shares, roster, settings, viewer],
   );
 }
 
@@ -41,11 +43,12 @@ export function useVisibleContacts(): { contacts: Contact[]; privateIds: Set<str
 export function useContactView(contact: Contact): ContactView {
   const shares = useDataStore((s) => s.contactShares);
   const roster = useRoster((s) => s.users);
+  const viewer = useCurrentUser((s) => s.id);
   const settings = useContactAccessSettings((s) => s.settings);
   return useMemo(
     () => viewContact(contact),
     // Read inside `viewContact` from the stores; listed so the memo tracks them.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [contact, shares, roster, settings],
+    [contact, shares, roster, settings, viewer],
   );
 }

@@ -1,5 +1,5 @@
 import { useDataStore } from "#/data/dataStore";
-import { CURRENT_USER } from "#/data/teammates";
+import { currentUser } from "#/data/currentUser";
 import { visibleContacts } from "#/components/contacts/contactRights";
 import { useAssistant } from "#/ai/useAssistant";
 
@@ -54,7 +54,7 @@ export function buildAssistantContext(): AssistantContext {
   const ask = useAssistant.getState().fieldAsk;
 
   return {
-    broker: { name: CURRENT_USER.name, role: "Broker" },
+    broker: { name: currentUser().name, role: currentUser().role },
     tasks: { overdue, dueToday },
     pipeline: { openDeals: openDeals.length, totalValue },
     contacts,

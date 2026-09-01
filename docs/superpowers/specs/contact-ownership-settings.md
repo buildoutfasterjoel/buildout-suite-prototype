@@ -268,6 +268,27 @@ picker, two faces (`AssignContactModal`), decided by the same resolver as everyt
 - **Debt named**: the assignee is still a display name matched to the roster by string.
   Assignment by id is the right shape; `assignedAt` / `assignedBy` sit beside it for now.
 
+## Viewing as a person (built on this branch)
+
+The account menu's "Viewing as" now switches *who is looking*, not which role Ethan wears. The
+role lens (`viewAsRole.ts`, `dev_role`) is gone — every role has a real person on the roster, so
+"view as Sarah" is Broker, "view as Riley" is Office Admin, "view as Ethan" is the Managing
+Director who sees through.
+
+- `src/data/currentUser.ts`: `useCurrentUser` (seat id, persisted as `dev_viewer`), `currentUser()`,
+  `viewerId()`, `currentUserActor()`, `VIEWABLE_PEOPLE`, hydrated in `AppShell`, which also moves the
+  roster's YOU badge (`useRoster.setViewer`).
+- **Viewer vs. protagonist.** `CURRENT_USER` (Ethan) remains the demo's protagonist: the seed, the
+  hero arcs, the Rosa story, BOV sign-offs and the dashboard's recent activity are authored as him
+  on purpose. Everything that means "whoever is looking" — owner checks, share matching, rights,
+  visibility, see-through, assign rights, "(you)" suffixes, the YOU badge, task defaults, deal
+  messages, created contacts, the assistant's actor and context — reads the seat.
+- **Authorship is stamped at log time.** `ComposedActivity.author` is set by `addLog`; the timeline
+  used to sign a logged note as the viewer at *render*, so switching seats would have re-attributed
+  everything logged this session.
+- Pending access requests clear on a switch (they were the old seat's). Task filter options drop
+  the "(you)" suffix rather than mislabel someone.
+
 ## Held
 
 6. **Grants to teams / roles / offices / company** — the share modal's picker already says
