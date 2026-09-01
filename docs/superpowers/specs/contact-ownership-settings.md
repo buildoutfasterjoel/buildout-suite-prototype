@@ -138,6 +138,34 @@ assignee. `buildContactTimeline(contact, deals, shares)`; the panel passes the s
 Hero arcs still write as Ethan — they're hand-authored and seeded onto his contacts.
 `SEED_VERSION` 63 → 64.
 
+## Phase 3a — rights on the contact page (built on this branch)
+
+Visibility and rights are separate. Under an open-book firm anyone can open a record and read
+its history; acting on it needs a relationship. `src/data/contactViewerAccess.ts` resolves the
+viewer's standing from ownership + shares:
+
+| Relationship | Log activity | Edit fields, tasks, deals, lists, tags | Call / email | Share |
+|---|---|---|---|---|
+| Owner, or assignee of a company-owned record | yes | yes | yes | yes |
+| Collaborator · Outreach | yes | yes | yes | no* |
+| Collaborator · Contributor | yes | yes | no | no |
+| Collaborator · View | no | no | no | no |
+| None ("View only") | no | no | no | no |
+
+\* Resharing stays with the accountable person — still open with George (his doc lets anyone
+with access share) and DJ (no tier reshares).
+
+What it gates: the hero pencil, tags, Do Not Call, the Deals / Properties / Lists "+" actions,
+the Tasks "+" and completion, timeline FAB / action bars / reply, the composer's Call and Email
+tabs (Contributor keeps Note / Meeting / Tour), and the share modal (read-only list for
+non-sharers). Without `canLog` the composer card is replaced by **Request access**: one
+sentence on why, the tier picker (same three tiers the grant uses), a request to the
+accountable person. Requests are session-scoped (`useAccessRequests`) and stay pending —
+nobody answers in the prototype.
+
+Seed: every other shared record that isn't Ethan's is shared *with* Ethan, stepping through
+View → Contributor → Outreach, so each seat exists to demo. `SEED_VERSION` 64 → 67.
+
 ## Next phases (not on this branch)
 
 3. **Index visibility** — hide private records the viewer has no grant on; MD with View Private
