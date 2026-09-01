@@ -1344,14 +1344,17 @@
   }
 }
 
-// The hero's "Details" expander: a compact 28px outline pill that floats to the
-// right of the stage badge + access avatars. Matches the Figma spec (purple
-// ghost label, storm-grey border) and sits between Blueprint's sm/default sizes.
+// The hero's "Show / Hide Contact Details" expander: a full-width outline
+// button on its own row under the stage + access line (Figma 3262:115907 —
+// purple ghost label, storm-grey border), held to the 28px the badge row's
+// controls use rather than the Figma's 36px. It used to be a
+// compact pill floating right of the badges; that row kept growing (privacy
+// badge, assignee avatar) and the pill was the first thing to get squeezed.
 .contact-details-toggle.contact-details-toggle {
   height: 28px;
-  padding: 8px 8px 8px 12px;
-  gap: 4px;
+  padding: 0 16px;
   font-size: 14px;
+  line-height: 19px;
   color: var(--color-purple-heart-950, #360764);
   border-color: var(--color-storm-grey-200, #d5dae2);
 }

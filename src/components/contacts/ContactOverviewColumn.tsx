@@ -7,12 +7,7 @@ import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Switch } from "@buildoutinc/blueprint-react/ui/Switch";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faPlus,
-  faChevronDown,
-  faChevronRight,
-  faPencil,
-} from "@fortawesome/pro-regular-svg-icons";
+import { faPlus, faPencil } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact, DealSummary, PropertyStatus } from "#/data/types";
 import {
   buildLastTouch,
@@ -24,11 +19,15 @@ import { ContactStageBadge } from "#/components/contacts/ContactStageBadge";
 import { ContactSection } from "#/components/contacts/ContactSection";
 import { ContactChip } from "#/components/contacts/ContactChip";
 import { ContactTagPicker } from "#/components/contacts/ContactTagPicker";
-import { ContactHeroAccessAvatars } from "#/components/contacts/ContactHeroAccessAvatars";
+import {
+  ContactHeroAccessAvatars,
+  ContactPrivacyBadge,
+} from "#/components/contacts/ContactHeroAccessAvatars";
 import { ContactHeroInfo } from "#/components/contacts/ContactHeroInfo";
 import { useComposeFocus } from "#/components/contacts/useComposeFocus";
 import { callFlow } from "#/components/call/callFlow";
 import type { ContactShare } from "#/data/teammates";
+import { viewerOwns, type ContactOwnership } from "#/data/contactOwnership";
 import { ContactDealCard } from "#/components/contacts/ContactDealCard";
 import { ContactInquiryCard } from "#/components/contacts/ContactInquiryCard";
 import { NewContactInquiryCard } from "#/components/contacts/NewContactInquiryCard";
@@ -116,7 +115,9 @@ export function ContactOverviewColumn({
   deals,
   leadDeals,
   shares,
+  ownership,
   onOpenShare,
+  onTogglePrivate,
 }: {
   contact: Contact;
   /** Deals the contact is a named party to. */
@@ -124,7 +125,10 @@ export function ContactOverviewColumn({
   /** Deals they only appear on as a lead — listed alongside, but not "theirs". */
   leadDeals: DealSummary[];
   shares: ContactShare[];
+  /** Who owns and works the record, and whether it's hidden — see `useContactOwnership`. */
+  ownership: ContactOwnership;
   onOpenShare: () => void;
+  onTogglePrivate: (next: boolean) => void;
 }) {
   const navigate = useNavigate();
   // Lists this contact belongs to — static (membership snapshot) or dynamic
@@ -338,31 +342,36 @@ export function ContactOverviewColumn({
           </div>
         </div>
 
-        <div className="d-flex align-items-center justify-content-between gap-2">
-          <div className="d-flex align-items-center flex-wrap gap-2">
-            {/* The compact People-table badge, unscaled — the hero used to size
-                it up to match the deal cards, but at 28px it read as the loudest
-                thing on the card, ahead of the name. */}
-            <ContactStageBadge
-              relationship={contact.relationship}
-              className="d-inline-flex align-items-center"
-            />
-            <ContactHeroAccessAvatars shares={shares} onOpenShare={onOpenShare} />
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="contact-details-toggle flex-shrink-0"
-            style={{ padding: "8px 12px 8px 8px" }}
-            aria-expanded={showDetails}
-            onClick={() => setShowDetails(!showDetails)}
-          >
-            <FontAwesomeIcon
-              icon={showDetails ? faChevronDown : faChevronRight}
-            />
-            Details
-          </Button>
+        {/* Stage · Public/Private · who has access. This row keeps growing
+            (the privacy badge and the assignee avatar both landed here), so the
+            details toggle moved off it to a row of its own — see Figma
+            3262:115240. */}
+        <div className="d-flex align-items-center flex-wrap gap-2">
+          {/* The compact People-table badge, unscaled — the hero used to size
+              it up to match the deal cards, but at 28px it read as the loudest
+              thing on the card, ahead of the name. */}
+          <ContactStageBadge
+            relationship={contact.relationship}
+            className="d-inline-flex align-items-center"
+          />
+          {ownership.canMarkPrivate && (
+            <ContactPrivacyBadge isPrivate={ownership.isPrivate} />
+          )}
+          <ContactHeroAccessAvatars
+            ownership={ownership}
+            shares={shares}
+            onOpenShare={onOpenShare}
+          />
         </div>
+
+        <Button
+          variant="outline"
+          className="contact-details-toggle w-100 justify-content-center"
+          aria-expanded={showDetails}
+          onClick={() => setShowDetails(!showDetails)}
+        >
+          {showDetails ? "Hide Contact Details" : "Show Contact Details"}
+        </Button>
 
         {showDetails && (
           <div className="contact-details-panel d-flex flex-column gap-3">
@@ -400,6 +409,25 @@ export function ContactOverviewColumn({
                 <ContactTagPicker contact={contact} />
               </div>
             </div>
+
+            {/* Privacy is the owner's act, so the switch appears only for the
+                signed-in owner, and only when the company lets them mark
+                contacts private. The state itself shows on the hero badge. */}
+            {ownership.canMarkPrivate && viewerOwns(ownership) && (
+              <label
+                className="d-flex align-items-center gap-2 mb-0 align-self-start"
+                style={{ cursor: "pointer" }}
+              >
+                {/* A state label, like Do Not Call below it — "Make Private"
+                    read as a verb once the switch was on. */}
+                <Switch
+                  checked={ownership.isPrivate}
+                  onCheckedChange={onTogglePrivate}
+                  aria-label="Private Contact"
+                />
+                <span>Private Contact</span>
+              </label>
+            )}
 
             {/* A switch, not a button: do-not-call is a state the record is in,
                 and the control should show which way it's currently set.

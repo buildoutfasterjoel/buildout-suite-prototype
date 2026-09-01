@@ -4,6 +4,7 @@ import {
   createCallList,
   commitStageTransition,
   createContact,
+  setContactPrivate,
   addContactTags,
   removeContactTags,
   createDeal,
@@ -116,6 +117,17 @@ describe('actions', () => {
     expect(stored?.company).toBe('Reed Holdings')
     expect(stored?.role).toBe('owner') // default role
     expect(stored?.propertyIds).toEqual([])
+  })
+
+  it('setContactPrivate stores the flag and drops it again when cleared', () => {
+    const { contact } = createContact({ firstName: 'Priv', lastName: 'Ate' })
+    expect(useDataStore.getState().contacts.get(contact.id)?.isPrivate).toBeUndefined()
+    setContactPrivate(contact.id, true)
+    expect(useDataStore.getState().contacts.get(contact.id)?.isPrivate).toBe(true)
+    // Cleared means absent, not `false` — the seed never writes the field, and
+    // "absent means visible" is the contract the type documents.
+    setContactPrivate(contact.id, false)
+    expect(useDataStore.getState().contacts.get(contact.id)?.isPrivate).toBeUndefined()
   })
 
   it('createDeal starts in Pitching, unpublished, with the default suggested documents', () => {

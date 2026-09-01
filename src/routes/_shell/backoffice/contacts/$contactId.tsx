@@ -14,6 +14,9 @@ import { ContactBriefingSection } from "#/components/contacts/ContactBriefingSec
 import { ContactDesignToggles } from "#/components/contacts/ContactDesignToggles";
 import { ShareContactModal } from "#/components/contacts/ShareContactModal";
 import { useContactShares } from "#/components/contacts/useContactShares";
+import { useContactOwnership } from "#/components/contacts/useContactOwnership";
+import { setContactPrivate } from "#/data/actions";
+import { notify } from "#/lib/notify";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
 import { useContactNarrow } from "#/lib/useMediaQuery";
 import { useAssistant } from "#/ai/useAssistant";
@@ -61,6 +64,13 @@ function ContactNotFound() {
   );
 }
 
+/**
+ * Stand-in for the ownership hook while the contact is still unresolved (or
+ * missing). Only `assignedTo` and `isPrivate` are read, so nothing else needs
+ * to be real.
+ */
+const MISSING_CONTACT = { assignedTo: "", isPrivate: false } as never;
+
 function ContactDetailPage() {
   const { contactId } = Route.useParams();
   // Subscribe to the contacts + tasks maps so edits (e.g. the hero's Edit Contact
@@ -74,6 +84,20 @@ function ContactDetailPage() {
   // modal is owned here so both the top-bar Share button and the hero avatars
   // can open it.
   const access = useContactShares(contactId);
+  // Owner / assignee / private, resolved from the record, the roster and the
+  // company's contact-ownership settings. Read here because the hero and the
+  // share modal both show it. Falls back to an empty stand-in before the
+  // not-found return so the hook order holds.
+  const ownership = useContactOwnership(detail?.contact ?? MISSING_CONTACT);
+  const togglePrivate = (next: boolean) => {
+    setContactPrivate(contactId, next);
+    notify({
+      title: next ? "Marked private" : "Visible to the firm",
+      description: next
+        ? "Hidden from everyone — search included — until you share it."
+        : "Everyone at the company can find this contact again.",
+    });
+  };
   const [shareOpen, setShareOpen] = useState(false);
   // Briefing collapse persists across contacts (a viewing preference).
   const briefingOpen = useContactUiPrefs((s) => s.briefingOpen);
@@ -152,7 +176,9 @@ function ContactDetailPage() {
             deals={deals}
             leadDeals={leadDeals}
             shares={access.shares}
+            ownership={ownership}
             onOpenShare={() => setShareOpen(true)}
+            onTogglePrivate={togglePrivate}
           />
         </div>
         <div
@@ -229,6 +255,7 @@ function ContactDetailPage() {
         open={shareOpen}
         onOpenChange={setShareOpen}
         contactName={contactFullName(contact)}
+        ownership={ownership}
         shares={access.shares}
         onShare={access.grant}
         onChangeTier={access.changeTier}

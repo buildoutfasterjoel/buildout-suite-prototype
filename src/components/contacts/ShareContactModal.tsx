@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
@@ -6,7 +6,12 @@ import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
 import { RadioGroup } from "@buildoutinc/blueprint-react/ui/RadioGroup";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faXmark } from "@fortawesome/pro-regular-svg-icons";
+import {
+  faArrowLeft,
+  faBuilding,
+  faLock,
+  faXmark,
+} from "@fortawesome/pro-regular-svg-icons";
 import {
   ACCESS_TIERS,
   CURRENT_USER,
@@ -15,11 +20,14 @@ import {
   type ContactShare,
   type Teammate,
 } from "#/data/teammates";
+import type { ContactOwnership } from "#/data/contactOwnership";
 
 interface ShareContactModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   contactName: string;
+  /** Who owns and works the record — the first rows of the access list. */
+  ownership: ContactOwnership;
   shares: ContactShare[];
   /** Grant access to the given members at a tier. */
   onShare: (memberIds: string[], tier: AccessTier) => void;
@@ -34,7 +42,7 @@ function MemberAvatar({
   member,
   size,
 }: {
-  member: Teammate;
+  member: Pick<Teammate, "name" | "initials" | "avatarUrl">;
   size?: "sm" | "lg";
 }) {
   return (
@@ -43,6 +51,47 @@ function MemberAvatar({
       <Avatar.Fallback className="fw-semibold">{member.initials}</Avatar.Fallback>
     </Avatar>
   );
+}
+
+/** One row of the access list: avatar, name + sub-line, and a trailing control. */
+function AccessRow({
+  avatar,
+  name,
+  sub,
+  trailing,
+}: {
+  avatar: ReactNode;
+  name: ReactNode;
+  sub?: string;
+  trailing: ReactNode;
+}) {
+  return (
+    <div className="d-flex align-items-center gap-2 py-2">
+      {avatar}
+      <span className="d-flex flex-column lh-sm flex-grow-1 min-w-0">
+        <span className="fw-semibold text-truncate">{name}</span>
+        {sub && <span className="fs-small text-muted text-truncate">{sub}</span>}
+      </span>
+      {trailing}
+    </div>
+  );
+}
+
+/**
+ * What sharing does to this record right now. Sharing is the same act in every
+ * configuration; what changes is what the record looked like before it — hidden,
+ * or already visible with sharing only adding the right to act.
+ */
+function visibilityLine(ownership: ContactOwnership): string {
+  const company =
+    ownership.owner.kind === "company" ? ownership.owner.name : "the company";
+  if (ownership.isPrivate) {
+    return "Private. Only the people below can see this contact — search included. Sharing opens it to someone.";
+  }
+  if (ownership.owner.kind === "company") {
+    return `Owned by ${company} and visible to everyone there. Sharing grants the right to act on it — log activity, edit, or reach out.`;
+  }
+  return "Visible to everyone at the company. Sharing grants the right to act on it — log activity, edit, or reach out.";
 }
 
 /**
@@ -95,6 +144,7 @@ export function ShareContactModal({
   open,
   onOpenChange,
   contactName,
+  ownership,
   shares,
   onShare,
   onChangeTier,
@@ -120,10 +170,25 @@ export function ShareContactModal({
 
   const sharedIds = useMemo(() => new Set(shares.map((s) => s.member.id)), [shares]);
   const pendingIds = useMemo(() => new Set(pending.map((m) => m.id)), [pending]);
+  // Nobody who's already on the record can be added to it: the current user,
+  // the owner, the assignee, anyone shared in, and anyone staged to be.
+  const accountableIds = useMemo(() => {
+    const ids: string[] = [];
+    if (ownership.owner.kind === "person") ids.push(ownership.owner.user.id);
+    if (ownership.assignee) ids.push(ownership.assignee.id);
+    return ids;
+  }, [ownership]);
   const excludeIds = useMemo(
-    () => new Set<string>([CURRENT_USER.id, ...sharedIds, ...pendingIds]),
-    [sharedIds, pendingIds],
+    () =>
+      new Set<string>([
+        CURRENT_USER.id,
+        ...accountableIds,
+        ...sharedIds,
+        ...pendingIds,
+      ]),
+    [accountableIds, sharedIds, pendingIds],
   );
+  const youSuffix = (id: string) => (id === CURRENT_USER.id ? " (you)" : "");
 
   const openPicker = () => {
     if (blurTimer.current) clearTimeout(blurTimer.current);
@@ -198,22 +263,49 @@ export function ShareContactModal({
                 )}
               </div>
 
+              <p className="fs-small text-muted mb-0 d-flex gap-2 align-items-start">
+                {ownership.isPrivate && (
+                  <FontAwesomeIcon icon={faLock} className="mt-1 flex-shrink-0" />
+                )}
+                <span>{visibilityLine(ownership)}</span>
+              </p>
+
               <div className="d-flex flex-column gap-1">
                 <span className="fw-semibold">People with access</span>
 
-                {/* Owner */}
-                <div className="d-flex align-items-center gap-2 py-2">
-                  <MemberAvatar member={CURRENT_USER} size="lg" />
-                  <span className="d-flex flex-column lh-sm flex-grow-1 min-w-0">
-                    <span className="fw-semibold text-truncate">
-                      {CURRENT_USER.name} (you)
-                    </span>
-                    <span className="fs-small text-muted text-truncate">
-                      {CURRENT_USER.email}
-                    </span>
-                  </span>
-                  <span className="text-muted flex-shrink-0">Owner</span>
-                </div>
+                {/* Owner — the company, or the person whose book this is. */}
+                {ownership.owner.kind === "company" ? (
+                  <AccessRow
+                    avatar={
+                      <Avatar size="lg" className="flex-shrink-0">
+                        <Avatar.Fallback className="bg-storm-grey-100 text-storm-grey-700">
+                          <FontAwesomeIcon icon={faBuilding} />
+                        </Avatar.Fallback>
+                      </Avatar>
+                    }
+                    name={ownership.owner.name}
+                    sub="Everyone at the company can see this contact"
+                    trailing={<span className="text-muted flex-shrink-0">Owner</span>}
+                  />
+                ) : (
+                  <AccessRow
+                    avatar={<MemberAvatar member={ownership.owner.user} size="lg" />}
+                    name={`${ownership.owner.user.name}${youSuffix(ownership.owner.user.id)}`}
+                    sub={ownership.owner.user.email}
+                    trailing={<span className="text-muted flex-shrink-0">Owner</span>}
+                  />
+                )}
+
+                {/* Assignee — only when they aren't also the owner. Assignment
+                    is accountability, not a share, so it carries no tier. */}
+                {ownership.owner.kind === "company" && ownership.assignee && (
+                  <AccessRow
+                    avatar={<MemberAvatar member={ownership.assignee} size="lg" />}
+                    name={`${ownership.assignee.name}${youSuffix(ownership.assignee.id)}`}
+                    sub={ownership.assignee.email}
+                    trailing={<span className="text-muted flex-shrink-0">Assigned</span>}
+                  />
+                )}
 
                 {/* Shared members */}
                 {shares.map((s) => (

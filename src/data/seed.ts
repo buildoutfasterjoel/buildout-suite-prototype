@@ -932,8 +932,26 @@ function generateComp(propertyId: string, buildingSqFt: number, propertyType: Pr
 
 // ── Contact generator ─────────────────────────────────────────────────────────
 
-/** Team members a contact can be assigned to — weighted to a single lead broker. */
-const ASSIGNEES = ['E. Thompson', 'A. Mendez', 'R. Patel', 'S. Kim']
+/**
+ * Team members a contact can be assigned to — weighted to a single lead broker.
+ * Full roster names (see `roster.ts`), so `contactOwnership.ts` can resolve the
+ * assignee to a real person with roles and permissions. They used to be
+ * abbreviations of people who existed nowhere else in the app.
+ *
+ * Riley Park is the Office Admin: a sharing-only role with no book, so the few
+ * contacts routed to Riley are the seed's standing company-owned examples — an
+ * admin working records on the company's behalf, which is the admins-on-behalf
+ * case Mandy raised. Without them, every seeded contact would be broker-owned
+ * under the default settings and the company-as-owner state would exist only
+ * after flipping the Company settings card.
+ */
+const ASSIGNEES = [
+  'Ethan Thompson',
+  'Sarah Chen',
+  'Marcus Patel',
+  'Nina Alvarez',
+  'Riley Park',
+]
 
 /** CRE-flavored job titles for the contact's position line. */
 const TITLE_POOL = [
@@ -1161,10 +1179,11 @@ function generateContact(allPropertyIds: string[]): Contact {
     role,
     propertyIds,
     assignedTo: faker.helpers.weightedArrayElement([
-      { weight: 70, value: ASSIGNEES[0] },
-      { weight: 12, value: ASSIGNEES[1] },
-      { weight: 10, value: ASSIGNEES[2] },
-      { weight: 8, value: ASSIGNEES[3] },
+      { weight: 68, value: ASSIGNEES[0] },
+      { weight: 11, value: ASSIGNEES[1] },
+      { weight: 9, value: ASSIGNEES[2] },
+      { weight: 7, value: ASSIGNEES[3] },
+      { weight: 5, value: ASSIGNEES[4] },
     ]),
     source,
     relationship,

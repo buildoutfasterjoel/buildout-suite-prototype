@@ -1871,9 +1871,28 @@ export function removeContactTags(
 }
 
 /**
- * Append a timestamped note line to a contact's freeform `notes` and persist.
- * Used by the AI `add_note` tool and any manual note affordance.
+ * Mark a contact private (hidden from the firm until shared) or visible again.
+ * The owner's action; whether it has any effect is resolved at read time from
+ * the company's contact-ownership settings (see `contactOwnership.ts`), so the
+ * flag is stored as-is and simply goes quiet when privacy isn't allowed.
  */
+export function setContactPrivate(
+  id: string,
+  isPrivate: boolean,
+): { contact: Contact | null } {
+  const existing = useDataStore.getState().contacts.get(id)
+  if (!existing) return { contact: null }
+  if ((existing.isPrivate ?? false) === isPrivate) return { contact: existing }
+  const contact: Contact = { ...existing, isPrivate: isPrivate || undefined }
+  useDataStore.setState((s) => {
+    const contacts = new Map(s.contacts)
+    contacts.set(id, contact)
+    return { contacts }
+  })
+  useDataStore.getState().persist()
+  return { contact }
+}
+
 /**
  * Stamp a contact's most recent activity — anything that happens on the record,
  * inbound or outbound (a logged call, an email that arrives). Keeps the Last

@@ -1428,8 +1428,21 @@ export interface Contact {
    * links them (deal-linked properties surface there on their own).
    */
   ownedPropertyIds?: string[]
-  /** Team member who owns this relationship, e.g. "E. Thompson". */
+  /**
+   * The person accountable for this relationship — a roster member's full name,
+   * or "You" for a contact made in-app. Whether they *own* it or work it on the
+   * company's behalf is resolved from the company's contact-ownership settings
+   * (see `contactOwnership.ts`); this field is the assignee either way.
+   */
   assignedTo: string
+  /**
+   * The owner has marked this contact private — hidden from the firm, search
+   * included, until shared. Only meaningful when the owner may mark contacts
+   * private; kept when they can't, so re-opening the ceiling restores it.
+   * Absent means visible, so the seed writing none of these keeps snapshots
+   * loading.
+   */
+  isPrivate?: boolean
   source: ContactSource
   relationship: RelationshipStage
   /** Deal side, or null when the contact isn't on an active deal. */
