@@ -585,6 +585,8 @@ export function applyDeposit(
     date: string
     amount: number
     referenceNumber: string
+    /** The cheque's own number, when the money came as one. Blank for a wire. */
+    checkNumber?: string
     receivableAllocations: DepositAllocation[]
     deductionAllocations: DepositAllocation[]
   },
@@ -659,6 +661,13 @@ export function applyDeposit(
                   depositId,
                   (back.deposits ?? []).map((d) => d.referenceNumber),
                 ),
+              // Spread rather than set, so a wire carries no `checkNumber` key
+              // at all. An empty string there would claim a cheque number was
+              // recorded and left blank, which is a different fact from the
+              // money never having arrived as a cheque.
+              ...(input.checkNumber?.trim()
+                ? { checkNumber: input.checkNumber.trim() }
+                : {}),
               createdAt: now,
               createdById: CURRENT_USER.id,
               receivableAllocations,
@@ -693,6 +702,51 @@ export function applyDeposit(
  *
  * Refuses on a Pending voucher, like every other receivable write.
  */
+/**
+ * Correct a deposit's cheque number, or clear it.
+ *
+ * The mirror of {@link updateDepositReference} with one rule reversed: an empty
+ * value is ACCEPTED here and stored as no cheque number at all. A reference is
+ * required because every deposit must be matchable against a bank statement, so
+ * clearing one is a mistake worth refusing. A cheque number is a fact about how
+ * the money arrived, and "this was a wire, not a cheque" is a correction the
+ * broker is entitled to make.
+ *
+ * The key is deleted rather than set to `''`, so a corrected row is
+ * indistinguishable from one that never claimed a cheque.
+ *
+ * Refuses on a Pending voucher, like every other receivable write.
+ */
+export function updateDepositCheckNumber(
+  dealId: string,
+  depositId: string,
+  checkNumber: string,
+): { deal: Listing | null } {
+  const next = checkNumber.trim()
+
+  return {
+    deal: patchListing(dealId, (l) => {
+      const back = l.transaction.backOffice
+      if (back.status === 'Pending') return l
+      return {
+        ...l,
+        transaction: {
+          ...l.transaction,
+          backOffice: {
+            ...back,
+            deposits: (back.deposits ?? []).map((d) => {
+              if (d.id !== depositId) return d
+              const { checkNumber: _dropped, ...rest } = d
+              return next ? { ...rest, checkNumber: next } : rest
+            }),
+          },
+        },
+        updatedAt: new Date().toISOString(),
+      }
+    }),
+  }
+}
+
 export function updateDepositReference(
   dealId: string,
   depositId: string,
@@ -1900,4 +1954,95 @@ export function createContact(input: NewContactInput): { contact: Contact } {
   })
   useDataStore.getState().persist()
   return { contact }
+}
+
+/** The broker-editable half of one inquiry — see `Contact.inquiryDetails`. */
+export type InquiryOverride = NonNullable<Contact['inquiryDetails']>[string]
+
+/**
+ * Patch one contact's inquiry on one listing, merging into whatever is already
+ * stored there.
+ *
+ * The Inquiries panel autosaves, so this is called once per control change
+ * rather than once per Save press — hence the merge: a write of `accessLevel`
+ * must not drop the `caFileName` a previous write put beside it.
+ *
+ * Only fields a broker actually touched end up here. Everything the panel shows
+ * that is *not* in the record stays synthesized by `toInquiry`, which is why
+ * this write needs no `SEED_VERSION` move.
+ */
+export function updateInquiry(
+  contactId: string,
+  listingId: string,
+  patch: InquiryOverride,
+): void {
+  const existing = useDataStore.getState().contacts.get(contactId)
+  if (!existing) return
+  const updated: Contact = {
+    ...existing,
+    inquiryDetails: {
+      ...existing.inquiryDetails,
+      [listingId]: { ...existing.inquiryDetails?.[listingId], ...patch },
+    },
+  }
+  useDataStore.setState((s) => {
+    const contacts = new Map(s.contacts)
+    contacts.set(contactId, updated)
+    return { contacts }
+  })
+  useDataStore.getState().persist()
+}
+
+/**
+ * Delete one contact's inquiry on one deal — the panel's Delete Inquiry.
+ *
+ * This deletes the *lead*, not the person: the contact stays in the CRM and the
+ * panel's View Contact still reaches them. What goes is their place on this
+ * deal's inquiry roster.
+ *
+ * That roster has two doors (see `getLeadsForProperty`): a contact is on it if
+ * they inquired on one of the property's listings, *or* if they are linked to
+ * the property at all. Dropping only the inquiry would therefore leave a
+ * property-linked contact sitting in the list after the broker deleted them,
+ * which reads as a delete that did not work.
+ *
+ * So the property link goes too — but only once no inquiry on that property
+ * remains. Someone who inquired on two suites and lost one is still a lead on
+ * the building, and must not be swept out of the other suite's roster.
+ */
+export function deleteInquiry(contactId: string, listingId: string): void {
+  const existing = useDataStore.getState().contacts.get(contactId)
+  if (!existing) return
+
+  const remainingInquiries = (existing.inquiredListingIds ?? []).filter(
+    (id) => id !== listingId,
+  )
+
+  const inquiryDetails = { ...existing.inquiryDetails }
+  delete inquiryDetails[listingId]
+
+  const listings = useDataStore.getState().listings
+  const propertyId = listings.get(listingId)?.propertyId
+  const stillInquiringHere =
+    propertyId != null &&
+    remainingInquiries.some((id) => listings.get(id)?.propertyId === propertyId)
+
+  const updated: Contact = {
+    ...existing,
+    inquiredListingIds: remainingInquiries,
+    inquiries: remainingInquiries.length,
+    inquiryDetails:
+      Object.keys(inquiryDetails).length > 0 ? inquiryDetails : undefined,
+    propertyIds:
+      propertyId != null && !stillInquiringHere
+        ? existing.propertyIds.filter((id) => id !== propertyId)
+        : existing.propertyIds,
+  }
+
+  useDataStore.setState((s) => {
+    const contacts = new Map(s.contacts)
+    contacts.set(contactId, updated)
+    return { contacts }
+  })
+  useDataStore.getState().persist()
 }

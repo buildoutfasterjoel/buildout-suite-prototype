@@ -1,0 +1,61 @@
+# AWS Amplify Hosting build spec.
+#
+# Amplify's build image ships Node and npm, but not Bun — so preBuild installs
+# Bun before anything else. Everything after that matches the local commands in
+# CLAUDE.md.
+#
+# The app is SSR: six modules use createServerFn (the password gate, the Otto
+# relay, TTS, the generators, comps, properties), so the Amplify app must be set
+# to the WEB_COMPUTE platform. NITRO_PRESET=aws_amplify makes Nitro emit
+# .amplify-hosting/ — deploy-manifest.json, compute/default/, static/ — which is
+# the layout that platform reads. See docs/amplify-hosting.md for the console
+# settings this file cannot set.
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - curl -fsSL https://bun.sh/install | bash
+        - export PATH="$HOME/.bun/bin:$PATH"
+        - bun --version
+        # bunfig.toml reads $BLUEPRINT_GH_TOKEN and $FONTAWESOME_PRO_TOKEN from
+        # the environment, so the private registries authenticate as long as
+        # both are set as Amplify environment variables.
+        - bun install --frozen-lockfile
+    build:
+      commands:
+        - export PATH="$HOME/.bun/bin:$PATH"
+        - NITRO_PRESET=aws_amplify bun --bun run build
+        # Console environment variables reach this build container but NOT the
+        # running server — AWS does that deliberately, so build-time secrets
+        # cannot leak into a live runtime. Everything the app reads through
+        # process.env at request time therefore has to be handed across on
+        # purpose. Skip this and the build still succeeds, the site still
+        # loads, and two things fail quietly: the password gate reads no
+        # password and admits everyone, and Otto reports itself unconfigured.
+        # https://docs.aws.amazon.com/amplify/latest/userguide/ssr-environment-variables.html
+        #
+        # The list is an allowlist, never a blanket `env` dump: the registry
+        # tokens above are build-only, and copying them into the bundle would
+        # ship credentials the server has no use for. compute/ is not web
+        # served (only static/ is), so this file is readable by anyone with
+        # access to the deployment artifacts, and by nobody else.
+        - >-
+          env | grep -E '^(ANTHROPIC_API_KEY|ELEVENLABS_API_KEY|ELEVENLABS_AL_VOICE_ID|ELEVENLABS_MODEL|PROTOTYPE_PASSWORD)='
+          > .amplify-hosting/compute/default/.env || true
+        # Names only, never values — so a missing variable is visible in the
+        # build log instead of being discovered later as broken behaviour.
+        - >-
+          cut -d= -f1 .amplify-hosting/compute/default/.env
+          | sed 's/^/[amplify] runtime env carried: /'
+        # Nitro's preset writes a server.js that starts the app with no
+        # environment. Ours loads the file above first. See the comments in it.
+        - cp deploy/amplify-server.js .amplify-hosting/compute/default/server.js
+  artifacts:
+    baseDirectory: .amplify-hosting
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+      - $HOME/.bun/install/cache/**/*

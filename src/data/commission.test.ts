@@ -8,6 +8,7 @@ import {
   nextCloseProbability,
   DEFAULT_PERSONAL_SPLIT_PCT,
   STAGE_CLOSE_PROBABILITY,
+  splitNetCommission,
 } from "./commission";
 
 describe("commissionAmountFromPct", () => {
@@ -175,5 +176,77 @@ describe("nextCloseProbability", () => {
     expect(closed).toBeGreaterThan(underContract);
     // A closed deal contributes its commission in full.
     expect(closed).toBe(commissionAmount);
+  });
+});
+
+describe("splitNetCommission", () => {
+  const broker = (commissionSplitPct: number) => ({
+    commissionSplitPct,
+    grossCommission: 0,
+  });
+
+  it("gives a lone internal broker the whole net commission", () => {
+    const { internal } = splitNetCommission({
+      internal: [broker(100)],
+      outside: [],
+      netCommission: 100_000,
+    });
+    expect(internal[0].grossCommission).toBe(100_000);
+  });
+
+  it("settles the co-broke off the top and leaves the rest to the house", () => {
+    const { outside, internal } = splitNetCommission({
+      internal: [broker(40)],
+      outside: [broker(60)],
+      netCommission: 100_000,
+    });
+    expect(outside[0].grossCommission).toBe(60_000);
+    expect(internal[0].grossCommission).toBe(40_000);
+  });
+
+  // The bug this function exists to prevent: both sides taking their own slice
+  // of the same net paid a co-broked deal's brokers 160% of what it billed.
+  it("never pays out more than the net commission, whatever the co-broke", () => {
+    for (const coBroke of [40, 50, 60]) {
+      const { outside, internal } = splitNetCommission({
+        internal: [broker(100 - coBroke)],
+        outside: [broker(coBroke)],
+        netCommission: 1_763_867,
+      });
+      const paid = [...outside, ...internal].reduce(
+        (total, b) => total + b.grossCommission,
+        0,
+      );
+      expect(paid).toBe(1_763_867);
+    }
+  });
+
+  it("hands the odd cent to the house rather than rounding it away", () => {
+    // 33% of 100 rounds to 33 three times over, leaving 1 unaccounted.
+    const { outside, internal } = splitNetCommission({
+      internal: [broker(1)],
+      outside: [broker(33), broker(33), broker(33)],
+      netCommission: 100,
+    });
+    expect(outside.map((b) => b.grossCommission)).toEqual([33, 33, 33]);
+    expect(internal[0].grossCommission).toBe(1);
+  });
+
+  it("divides the remainder between two internal brokers by their own shares", () => {
+    const { internal } = splitNetCommission({
+      internal: [broker(30), broker(10)],
+      outside: [broker(60)],
+      netCommission: 100_000,
+    });
+    expect(internal.map((b) => b.grossCommission)).toEqual([30_000, 10_000]);
+  });
+
+  it("pays nothing to internal brokers who carry no split at all", () => {
+    const { internal } = splitNetCommission({
+      internal: [broker(0)],
+      outside: [broker(100)],
+      netCommission: 100_000,
+    });
+    expect(internal[0].grossCommission).toBe(0);
   });
 });

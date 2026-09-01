@@ -24,6 +24,8 @@ export interface ApplyDepositInput {
   date: string;
   amount: number;
   referenceNumber: string;
+  /** Blank when the money did not arrive as a cheque. */
+  checkNumber: string;
   receivableAllocations: DepositAllocation[];
   deductionAllocations: DepositAllocation[];
 }
@@ -175,6 +177,7 @@ export function ApplyDepositModal({
   const [date, setDate] = useState("");
   const [amount, setAmount] = useState("");
   const [reference, setReference] = useState("");
+  const [checkNumber, setCheckNumber] = useState("");
   const [overriding, setOverriding] = useState(false);
   const [overrides, setOverrides] = useState<Record<string, number>>({});
 
@@ -188,6 +191,7 @@ export function ApplyDepositModal({
     setDate(toISODate(new Date()));
     setAmount("");
     setReference("");
+    setCheckNumber("");
     setOverriding(false);
     setOverrides({});
   }, [open]);
@@ -242,6 +246,7 @@ export function ApplyDepositModal({
       date,
       amount: parsedAmount,
       referenceNumber: reference.trim(),
+      checkNumber: checkNumber.trim(),
       receivableAllocations: allocationsFor(preview.receivables),
       deductionAllocations: allocationsFor(preview.deductions),
     });
@@ -285,23 +290,43 @@ export function ApplyDepositModal({
             </InputGroup>
           </Field>
 
-          <Field>
-            <Field.Label>Reference Number</Field.Label>
-            {/* Free text, not a number input: a wire reference is as often
-                "WT-4471-A" as it is digits, and a number field would refuse it.
+          {/* Reference and Cheque Number side by side, because they are two
+              readings of the same arrival and are copied off the same piece of
+              paper. They are NOT the same field: every deposit carries a
+              reference, and only a cheque carries a cheque number. */}
+          <div className="d-flex gap-3 flex-wrap">
+            <Field style={{ flex: "1 1 14rem" }}>
+              <Field.Label>Reference Number</Field.Label>
+              {/* Free text, not a number input: a wire reference is as often
+                  "WT-4471-A" as it is digits, and a number field would refuse
+                  it.
 
-                Optional, and the placeholder says what happens if it stays that
-                way. Money often lands before its paperwork does, so requiring
-                one would push the broker into typing a placeholder that then
-                reads as the payer's real reference — while a deposit with an
-                empty reference is a row nobody can match to a bank statement.
-                Generating one at save is the way out of both. */}
-            <Input
-              value={reference}
-              placeholder="Generated if left blank"
-              onChange={(e) => setReference(e.target.value)}
-            />
-          </Field>
+                  Optional, and the placeholder says what happens if it stays
+                  that way. Money often lands before its paperwork does, so
+                  requiring one would push the broker into typing a placeholder
+                  that then reads as the payer's real reference — while a deposit
+                  with an empty reference is a row nobody can match to a bank
+                  statement. Generating one at save is the way out of both. */}
+              <Input
+                value={reference}
+                placeholder="Generated if left blank"
+                onChange={(e) => setReference(e.target.value)}
+              />
+            </Field>
+
+            <Field style={{ flex: "1 1 12rem" }}>
+              <Field.Label>Check Number</Field.Label>
+              {/* Genuinely optional, and nothing is generated for it. Most
+                  money arrives by wire or ACH and has no cheque behind it, so
+                  the placeholder says what leaving it empty MEANS rather than
+                  what will be filled in. */}
+              <Input
+                value={checkNumber}
+                placeholder="If paid by check"
+                onChange={(e) => setCheckNumber(e.target.value)}
+              />
+            </Field>
+          </div>
 
           {/* What lands beyond the receivable itself. The payables line is
               conditional because the rule is: money arriving on a voucher nobody

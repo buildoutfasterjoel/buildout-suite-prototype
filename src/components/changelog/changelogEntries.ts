@@ -170,6 +170,157 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
+    pr: 197,
+    title: "Add a Deposits page to Back Office, file deposits from it, and stop double-paying a co-broked deal's brokers",
+    mergedAt: "2026-08-31T23:20:00Z",
+    day: "2026-08-31",
+    author: "buildoutfasterjoel",
+    area: "Back Office",
+    summary:
+      "Receivables tells you what has been billed and how much is still out. Deposits picks the money up from there: every cash receipt in the book on one page, each one split into what was held back before the split, what reached your brokers, what you still owe them, and what the house kept. You can file a new deposit from the page too, picking the voucher and typing how the money splits across its receivables. Building it turned up a real arithmetic bug underneath — on any deal with an outside broker, the brokers were owed more commission than the deal had billed.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "Back Office now has a Deposits page listing every payment received, with the voucher, the brokers on it, the reference number, who paid and when.",
+      },
+      {
+        kind: "feature",
+        text: "Four columns say where each deposit went — Deducted Pre-Split, Paid To Brokers, Open Payables and Collected House Split — and they always add back up to the amount that landed.",
+      },
+      {
+        kind: "feature",
+        text: "A chart across the year shows the same split month by month, or by quarter, so you can see at a glance which months brought money in and how much of it is still owed out to brokers.",
+      },
+      {
+        kind: "feature",
+        text: "Search finds a deposit by amount, reference number, payer or voucher name, and you can narrow the page by year, broker, deal type or property type.",
+      },
+      {
+        kind: "fix",
+        text: "On a deal with an outside broker, the house broker kept the whole commission and the outside broker's share was added on top — so the two of them were owed up to 160% of what the deal had billed. The co-broke now comes off the top and the house splits what is left, which is how the money actually moves.",
+      },
+      {
+        kind: "refinement",
+        text: "Paid To Brokers is the cheque the broker actually received, after their own split and any hold-back. Open Payables is the gross figure the next cheque is written against, which is the number the voucher shows you.",
+      },
+      {
+        kind: "feature",
+        text: "New Deposit files a payment from the Deposits page itself. Search for the voucher, and its open receivables load with their balances so you can type how much of the money goes against each one.",
+      },
+      {
+        kind: "feature",
+        text: "As you fill the lines in, a running total says how much of the deposit is still left to place — and turns red, with Save switched off, if you apply more than actually arrived.",
+      },
+      {
+        kind: "feature",
+        text: "A deposit now records the check number as well as the reference number — two different facts that were being collapsed into one. Both modals ask for it, the Deposits page has a Check # column, and you can correct it on the voucher afterwards.",
+      },
+      {
+        kind: "feature",
+        text: "The voucher picker in New Deposit shows each voucher's status beside its name, so you can see whether it is a Draft or Approved before you file money against it.",
+      },
+      {
+        kind: "refinement",
+        text: "When one deposit paid two different parties, the Payer cell reads Multiple rather than naming one of them over the other. Search still finds the row under either name.",
+      },
+    ],
+  },
+  {
+    pr: 196,
+    title:
+      "Rename a deal's Leads to Inquiries, and open each one in a panel the broker can work",
+    mergedAt: "2026-08-31T22:25:24Z",
+    day: "2026-08-31",
+    author: "buildoutfasterjoel",
+    area: "Deals",
+    summary:
+      "A deal's Leads section is now Inquiries, and a row is no longer just a link somewhere else. Clicking one opens a panel over the table where you read the inquiry, change what you need to, attach a signed CA, and delete it if it does not belong there — without losing your search, your filters or your place in the list.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "Clicking an inquiry opens a panel over the list with every column on one screen, so you no longer scroll a seventeen-column table sideways to find the four things you wanted.",
+      },
+      {
+        kind: "feature",
+        text: "Inquiry Status, Referral Source and Sale Doc Access Level can be changed from the panel. Each change saves as you make it, and the row behind the panel updates at the same time.",
+      },
+      {
+        kind: "feature",
+        text: "A progress bar shows how far a lead has got on their own — from viewing public documents through to high document access — with the current and next step named, and the full six steps one click away.",
+      },
+      {
+        kind: "feature",
+        text: "You can attach a signed confidentiality agreement to an inquiry, or tick it as signed if you took the agreement outside the app. The CA Status filter in the toolbar finally has something behind it.",
+      },
+      {
+        kind: "feature",
+        text: "Delete Inquiry removes someone from this deal's list, behind a confirmation. It deletes the lead, not the person: the contact stays in your book of business, and their inquiries on other deals are untouched.",
+      },
+      {
+        kind: "refinement",
+        text: "The section is called Inquiries everywhere inside a deal — the sidebar, the breadcrumb, the heading, the buttons and the columns — matching what the contact side has always called them.",
+      },
+      {
+        kind: "refinement",
+        text: "An edit belongs to the inquiry, not to the page you made it on. Changing a suite's inquiry from the building's list and from the suite's own page now write the same record instead of two that can disagree.",
+      },
+      {
+        kind: "fix",
+        text: "The access level dropdown in the list is saved rather than forgotten on the next page load, and it always agrees with the panel.",
+      },
+    ],
+  },
+  {
+    pr: 195,
+    title:
+      "Pace Otto's replies out with a per-word fade, so a buffered response still reads as live",
+    mergedAt: "2026-08-31T20:25:19Z",
+    day: "2026-08-31",
+    author: "buildoutfasterjoel",
+    area: "Otto",
+    summary:
+      "On the hosted prototype Otto went quiet for several seconds and then dropped a finished paragraph in one go, because AWS Amplify holds a reply back until it is complete. His answers now arrive a word at a time, each fading in, at the pace they used to arrive at.",
+    highlights: [
+      {
+        kind: "refinement",
+        text: "Otto's replies appear a word at a time, each one fading in, instead of landing as a finished block of text after a silence.",
+      },
+      {
+        kind: "refinement",
+        text: "A reply Otto speaks aloud still appears all at once, so the words on screen cannot drift out of step with his voice. Asking for reduced motion turns the effect off too.",
+      },
+      {
+        kind: "fix",
+        text: "The conversation keeps pace with a reply as it appears, rather than letting the newest lines run on below the bottom of the panel. Scrolling up to re-read something earlier still holds your place.",
+      },
+    ],
+  },
+  {
+    pr: 194,
+    title:
+      "Carry runtime environment variables into the Amplify compute bundle, so the gate and Otto work when deployed",
+    mergedAt: "2026-08-31T19:17:04Z",
+    day: "2026-08-31",
+    author: "buildoutfasterjoel",
+    area: "Platform",
+    summary:
+      "On the AWS Amplify deployment, Otto said it had no API key and the password gate let everyone straight in. Amplify hands environment variables to the build but not to the running server, so the two of them were reading settings that were never there. The build now passes them across on purpose.",
+    highlights: [
+      {
+        kind: "fix",
+        text: "Otto answers on the hosted prototype instead of reporting that the assistant is not configured.",
+      },
+      {
+        kind: "fix",
+        text: "The password gate protects the hosted prototype again. It had been letting everyone through, because a password it cannot read looks the same to it as no password being set.",
+      },
+      {
+        kind: "fix",
+        text: "Otto's voice works on the hosted prototype, rather than falling back to the browser's own speech.",
+      },
+    ],
+  },
+  {
     pr: 192,
     title:
       "Let a wide monitor keep the contact page's three columns with the assistant rail open",

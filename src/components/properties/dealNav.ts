@@ -66,7 +66,7 @@ export const NAV_GROUPS: NavGroup[] = [
       // of `/edit`. It is the content every other Marketing section (Website,
       // Documents, syndication) reads from.
       { label: "Listing", href: "listing", icon: faSign },
-      { label: "Leads", href: "leads", icon: faAddressBook },
+      { label: "Inquiries", href: "leads", icon: faAddressBook },
       { label: "Documents", href: "documents", icon: faFileLines },
       { label: "Website", href: "website", icon: faGlobe },
       { label: "Email", href: "email", icon: faEnvelope },
@@ -121,7 +121,7 @@ export const CLASSIC_NAV_GROUPS: NavGroup[] = [
   {
     label: "Deal",
     items: [
-      { label: "Leads", href: "leads", icon: faAddressBook },
+      { label: "Inquiries", href: "leads", icon: faAddressBook },
       { label: "Client Report", href: "client-report", icon: faFileChartColumn },
       { label: "Attachments", href: "files", icon: faPaperclip },
       { label: "Tasks", href: "overview", icon: faListCheck },
