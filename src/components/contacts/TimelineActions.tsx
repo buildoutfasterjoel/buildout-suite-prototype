@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
@@ -13,6 +14,8 @@ import {
   faPencil,
   faTrash,
   faEllipsisVertical,
+  faLock,
+  faLockOpen,
 } from "@fortawesome/pro-regular-svg-icons";
 import {
   OVERFLOW_ITEMS,
@@ -137,10 +140,13 @@ function FabButton({
 export function TimelineFab({
   type,
   pinned,
+  privacy,
   onAction,
 }: {
   type: TimelineEventType;
   pinned: boolean;
+  /** Current privacy of a row the viewer authored; absent when they can't set it. */
+  privacy?: RowPrivacy;
   onAction: ActionDispatch;
 }) {
   const channel = TYPE_CONFIG[type].fab ?? "none";
@@ -160,10 +166,13 @@ export function TimelineFab({
           onClick={() => onAction(b.id)}
         />
       ))}
-      <TimelineOverflowMenu pinned={pinned} onAction={onAction} />
+      <TimelineOverflowMenu pinned={pinned} privacy={privacy} onAction={onAction} />
     </div>
   );
 }
+
+/** What the overflow's privacy row should offer to flip *to*. */
+export type RowPrivacy = "private" | "visible";
 
 /** Glyphs for the three overflow items. */
 const OVERFLOW_ICONS: Record<string, IconDefinition> = {
@@ -173,14 +182,17 @@ const OVERFLOW_ICONS: Record<string, IconDefinition> = {
 };
 
 /**
- * The overflow menu — Pin / Edit / Delete on every row. Delete is destructive
- * and reads that way.
+ * The overflow menu — Pin / Edit / Delete on every row, plus Make private /
+ * Make visible on rows the viewer authored (`privacy` set). Delete is
+ * destructive and reads that way.
  */
 export function TimelineOverflowMenu({
   pinned,
+  privacy,
   onAction,
 }: {
   pinned: boolean;
+  privacy?: RowPrivacy;
   onAction: ActionDispatch;
 }) {
   return (
@@ -194,16 +206,32 @@ export function TimelineOverflowMenu({
       />
       <DropdownMenu.Content align="end" className="tl-menu">
         {OVERFLOW_ITEMS.map((item) => (
-          <DropdownMenu.Item
-            key={item}
-            // The menu's pin row mirrors the FAB's pin button, so it has to say
-            // which way it will go — otherwise a pinned row offers "Pin to Top".
-            onClick={() => onAction(item === "Pin to Top" ? "Pin to top" : item)}
-            className={item === "Delete" ? "tl-menu__danger" : undefined}
-          >
-            <FontAwesomeIcon icon={OVERFLOW_ICONS[item]} className="tl-menu__icon" />
-            {item === "Pin to Top" && pinned ? "Unpin" : item}
-          </DropdownMenu.Item>
+          <Fragment key={item}>
+            {/* Privacy sits with the other edits, ahead of the destructive
+                row. Like the pin it names the direction it will go. */}
+            {item === "Delete" && privacy && (
+              <DropdownMenu.Item
+                onClick={() =>
+                  onAction(privacy === "private" ? "Make visible" : "Make private")
+                }
+              >
+                <FontAwesomeIcon
+                  icon={privacy === "private" ? faLockOpen : faLock}
+                  className="tl-menu__icon"
+                />
+                {privacy === "private" ? "Make visible" : "Make private"}
+              </DropdownMenu.Item>
+            )}
+            <DropdownMenu.Item
+              // The menu's pin row mirrors the FAB's pin button, so it has to say
+              // which way it will go — otherwise a pinned row offers "Pin to Top".
+              onClick={() => onAction(item === "Pin to Top" ? "Pin to top" : item)}
+              className={item === "Delete" ? "tl-menu__danger" : undefined}
+            >
+              <FontAwesomeIcon icon={OVERFLOW_ICONS[item]} className="tl-menu__icon" />
+              {item === "Pin to Top" && pinned ? "Unpin" : item}
+            </DropdownMenu.Item>
+          </Fragment>
         ))}
       </DropdownMenu.Content>
     </DropdownMenu>

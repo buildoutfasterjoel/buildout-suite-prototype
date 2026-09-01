@@ -227,6 +227,12 @@ export interface ComposedActivity {
    * (e.g. the BOV that was sent).
    */
   attachments?: { name: string; meta?: string; dealId?: string }[];
+  /**
+   * Marked private by its author: nobody else sees it — not the contact's
+   * owner, not anyone the record is shared with, not a Managing Director with
+   * View Private Contacts. Authorship, not ownership, governs artifacts.
+   */
+  isPrivate?: boolean;
 }
 
 /** Timeline headline per logged activity kind. */

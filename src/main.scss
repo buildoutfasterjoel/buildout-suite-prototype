@@ -2959,6 +2959,13 @@
   }
 }
 
+// The composer's Private toggle: a date-button twin that turns purple when on,
+// so a private draft is visibly different before it's logged.
+.compose-private-btn--on,
+.compose-private-btn--on .compose-date-btn__icon {
+  color: var(--color-purple-heart-700, #7422ce);
+}
+
 // "Select a related Deal" trigger — leading handshake icon + value + caret.
 // Hugs its label rather than spanning the footer width.
 .compose-deal-select {
@@ -3692,6 +3699,16 @@
   &__duration,
   &__flag {
     color: var(--bp-secondary-color, #506079);
+  }
+  // "Private" beside the pin: a fact about the row, kept as quiet as the time.
+  &__private {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--bp-secondary-color, #506079);
+    white-space: nowrap;
+    cursor: default;
+    outline: none;
   }
 
   // Subject and its associations on one line, the rule between them. Deliberately

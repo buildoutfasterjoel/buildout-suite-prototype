@@ -820,5 +820,47 @@ export function composedToEvent(a: ComposedActivity, c: Contact): TimelineEvent 
     attachments: a.attachments,
     hasAttachment: (a.attachments?.length ?? 0) > 0,
     source: "user",
+    visibility: a.isPrivate ? "private" : undefined,
   };
+}
+
+// ── Artifact privacy ─────────────────────────────────────────────────────────
+//
+// Any user can mark an artifact they authored private, on any contact — even a
+// company-owned one. System rows are the exception: Contact Created, stage
+// changes, change-log entries, assignment, automated marketing, and task
+// notifications are the record's history, not one person's note. Inbound rows
+// (a call or email *from* the contact) aren't authored by the broker either.
+
+/** Types a person writes themselves. */
+const PRIVATABLE_TYPES: ReadonlySet<TimelineEventType> = new Set([
+  "note",
+  "call",
+  "email",
+  "meeting",
+  "tour",
+]);
+
+/** Whether the signed-in user may mark this row private (or visible again). */
+export function canBePrivate(event: TimelineEvent): boolean {
+  return (
+    PRIVATABLE_TYPES.has(event.type) &&
+    event.source === "user" &&
+    event.direction !== "in" &&
+    event.actor.name === CURRENT_USER.name
+  );
+}
+
+export function isPrivateEvent(event: TimelineEvent): boolean {
+  return event.visibility === "private";
+}
+
+/**
+ * Authorship governs: a private artifact is visible to its author and nobody
+ * else. Not the record's owner, not a teammate it's shared with, and not a
+ * Managing Director with View Private Contacts — that permission opens the
+ * relationship, never a colleague's candid note.
+ */
+export function hiddenFromViewer(event: TimelineEvent): boolean {
+  return isPrivateEvent(event) && event.actor.name !== CURRENT_USER.name;
 }

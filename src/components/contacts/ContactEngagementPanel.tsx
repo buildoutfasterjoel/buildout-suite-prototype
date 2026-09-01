@@ -26,6 +26,8 @@ import {
   type FilterKey,
   type SessionReply,
   type TimelineEvent as TimelineEventData,
+  hiddenFromViewer,
+  type TimelineVisibility,
 } from "#/components/contacts/timeline";
 import { buildContactTimeline } from "#/components/contacts/timelineArcs";
 import { TimelineEvent } from "#/components/contacts/TimelineEvent";
@@ -92,7 +94,7 @@ export function ContactEngagementPanel({
   const [needsReply, setNeedsReply] = useState(false);
   // Ephemeral per-event UI state (prototype — resets on reload).
   const [overrides, setOverrides] = useState<
-    Record<string, { pinned?: boolean }>
+    Record<string, { pinned?: boolean; visibility?: TimelineVisibility }>
   >({});
   const [deleted, setDeleted] = useState<Set<string>>(new Set());
   // Replies the broker sent from the timeline this session, keyed by the event
@@ -208,7 +210,12 @@ export function ContactEngagementPanel({
       .map((e) => ({
         ...e,
         pinned: overrides[e.id]?.pinned ?? e.pinned,
-      }));
+        visibility: overrides[e.id]?.visibility ?? e.visibility,
+      }))
+      // Someone else's private note never reaches this feed — see
+      // `hiddenFromViewer`. Applied after overrides so a row the viewer just
+      // made private (their own) stays put.
+      .filter((e) => !hiddenFromViewer(e));
   }, [logged, simEvents, contact, deals, overrides, deleted, threadReplies]);
 
   // Every reply from this record goes to the contact — the timeline is theirs.
@@ -286,6 +293,17 @@ export function ContactEngagementPanel({
       if (deal) requestStageChange(deal.id, "active");
     } else if (id === "View full thread") {
       setThreadOpenId((cur) => (cur === event.id ? null : event.id));
+    } else if (id === "Make private" || id === "Make visible") {
+      // Same shape as the pin: a per-row override this session. "team" is the
+      // non-private value the seed uses, so a row made visible again reads like
+      // one that never was private.
+      setOverrides((o) => ({
+        ...o,
+        [event.id]: {
+          ...o[event.id],
+          visibility: id === "Make private" ? "private" : "team",
+        },
+      }));
     } else if (id === "Delete") {
       // eslint-disable-next-line no-alert
       if (window.confirm("Delete this event from the timeline?")) {

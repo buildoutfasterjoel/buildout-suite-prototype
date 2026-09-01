@@ -7,6 +7,7 @@ import {
   faPaperclip,
   faChevronDown,
   faChevronRight,
+  faLock,
 } from "@fortawesome/pro-regular-svg-icons";
 import { AttachmentChip } from "#/components/contacts/AttachmentChip";
 import { getListing } from "#/data/store";
@@ -26,6 +27,8 @@ import {
 } from "#/components/contacts/TimelineActions";
 import {
   TYPE_CONFIG,
+  canBePrivate,
+  isPrivateEvent,
   relativeTime,
   exactTime,
   durationLabel,
@@ -196,6 +199,24 @@ export function TimelineEvent({
                   title="Pinned"
                 />
               )}
+              {/* Rides in the meta line with the pin — it's a fact about the
+                  row, not part of what the row says. */}
+              {isPrivateEvent(event) && (
+                <Tooltip>
+                  <Tooltip.Trigger
+                    render={
+                      <span className="tl-row__private" tabIndex={0}>
+                        <FontAwesomeIcon icon={faLock} />
+                        Private
+                      </span>
+                    }
+                  />
+                  <Tooltip.Content style={{ maxWidth: 260 }}>
+                    Only you can see this. Not the contact&apos;s owner, not
+                    anyone the record is shared with.
+                  </Tooltip.Content>
+                </Tooltip>
+              )}
             </span>
           </div>
 
@@ -363,7 +384,18 @@ export function TimelineEvent({
         )}
       </div>
 
-      <TimelineFab type={event.type} pinned={pinned} onAction={onAction} />
+      <TimelineFab
+        type={event.type}
+        pinned={pinned}
+        privacy={
+          canBePrivate(event)
+            ? isPrivateEvent(event)
+              ? "private"
+              : "visible"
+            : undefined
+        }
+        onAction={onAction}
+      />
     </article>
   );
 }
