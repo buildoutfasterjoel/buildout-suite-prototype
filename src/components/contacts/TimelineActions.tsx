@@ -141,15 +141,18 @@ export function TimelineFab({
   type,
   pinned,
   privacy,
+  canReachOut = true,
   onAction,
 }: {
   type: TimelineEventType;
   pinned: boolean;
+  /** Without Outreach the call/email buttons drop out; pin and overflow remain. */
+  canReachOut?: boolean;
   /** Current privacy of a row the viewer authored; absent when they can't set it. */
   privacy?: RowPrivacy;
   onAction: ActionDispatch;
 }) {
-  const channel = TYPE_CONFIG[type].fab ?? "none";
+  const channel = canReachOut ? (TYPE_CONFIG[type].fab ?? "none") : "none";
   return (
     <div className="tl-fab">
       <FabButton

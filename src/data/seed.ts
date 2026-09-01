@@ -2934,17 +2934,29 @@ export function seedContactShares(
 ): Map<string, ContactShare[]> {
   const tiers: AccessTier[] = ['view', 'contributor', 'outreach']
   const map = new Map<string, ContactShare[]>()
+  // The signed-in user is a teammate like any other here, so some of Sarah's
+  // and Marcus's records arrive shared with Ethan at each tier — the demo needs
+  // a View seat, a Contributor seat and an Outreach seat to stand in.
+  const pool = [CURRENT_USER, ...TEAMMATES]
+  let ethanSeats = 0
   // A teammate can't be shared into a record they already work — step past
   // the assignee to the next person on the roster.
   const memberAt = (i: number, c: Contact) => {
-    let m = TEAMMATES[i % TEAMMATES.length]
-    if (m.name === c.assignedTo) m = TEAMMATES[(i + 1) % TEAMMATES.length]
+    let m = pool[i % pool.length]
+    if (m.name === c.assignedTo) m = pool[(i + 1) % pool.length]
     return m
   }
   contacts.forEach((c, i) => {
     // ~1 in 4 contacts is shared; the rest stay owner-only.
     if (i % 4 !== 1) return
-    const shares: ContactShare[] = [{ member: memberAt(i, c), tier: tiers[i % tiers.length] }]
+    // Every other shared record that isn't Ethan's is shared *with* Ethan, so
+    // the demo can stand in a View, a Contributor and an Outreach seat without
+    // hunting — left to the round-robin alone he'd land on almost none.
+    const ethanSeat = c.assignedTo !== CURRENT_USER.name && i % 8 === 5
+    // Ethan's seats step through the tiers in order — View, then Contributor,
+    // then Outreach — so the first three are guaranteed to differ.
+    const tier = ethanSeat ? tiers[ethanSeats++ % tiers.length] : tiers[i % tiers.length]
+    const shares: ContactShare[] = [{ member: ethanSeat ? CURRENT_USER : memberAt(i, c), tier }]
     // A minority also carry a second collaborator.
     if (i % 12 === 1) {
       const second = memberAt(i + 3, c)

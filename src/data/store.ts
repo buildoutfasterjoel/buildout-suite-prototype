@@ -19,7 +19,7 @@ import { matchRecipient } from './recipientMatch'
 import { propertyStageFromDeals } from './propertyStage'
 import {
   DEFAULT_CONTACT_SHARES,
-  TEAMMATES,
+  findTeammate,
   type AccessTier,
   type ContactShare,
 } from './teammates'
@@ -439,7 +439,7 @@ export function grantContactShares(
 ): void {
   const next = [...getContactShares(contactId)]
   for (const id of memberIds) {
-    const member = TEAMMATES.find((m) => m.id === id)
+    const member = findTeammate(id)
     if (!member || next.some((s) => s.member.id === id)) continue
     next.push({ member, tier })
   }

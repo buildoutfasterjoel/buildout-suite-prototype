@@ -28,6 +28,8 @@ interface ShareContactModalProps {
   contactName: string;
   /** Who owns and works the record — the first rows of the access list. */
   ownership: ContactOwnership;
+  /** The viewer can see who has access but can't change it. */
+  readOnly?: boolean;
   shares: ContactShare[];
   /** Grant access to the given members at a tier. */
   onShare: (memberIds: string[], tier: AccessTier) => void;
@@ -145,6 +147,7 @@ export function ShareContactModal({
   onOpenChange,
   contactName,
   ownership,
+  readOnly = false,
   shares,
   onShare,
   onChangeTier,
@@ -246,6 +249,7 @@ export function ShareContactModal({
         {step === "browse" ? (
           <>
             <Modal.Body className="d-flex flex-column gap-3">
+              {!readOnly && (
               <div className="position-relative">
                 <Input
                   placeholder="Add people, groups, spaces"
@@ -262,6 +266,7 @@ export function ShareContactModal({
                   />
                 )}
               </div>
+              )}
 
               <p className="fs-small text-muted mb-0 d-flex gap-2 align-items-start">
                 {ownership.isPrivate && (
@@ -317,6 +322,11 @@ export function ShareContactModal({
                         {s.member.email}
                       </span>
                     </span>
+                    {readOnly ? (
+                      <span className="text-muted flex-shrink-0">
+                        {ACCESS_TIERS.find((t) => t.value === s.tier)?.label}
+                      </span>
+                    ) : (
                     <Select
                       value={s.tier}
                       onValueChange={(value) => {
@@ -338,6 +348,7 @@ export function ShareContactModal({
                         <Select.Item value="__remove">Remove access</Select.Item>
                       </Select.Content>
                     </Select>
+                    )}
                   </div>
                 ))}
               </div>

@@ -238,6 +238,7 @@ export function ContactComposeModule({
   deals,
   onSubmit,
   onStartCall,
+  canReachOut = true,
   headerStart,
 }: {
   contact: Contact;
@@ -245,9 +246,17 @@ export function ContactComposeModule({
   onSubmit: (draft: ComposedDraft) => void;
   /** Kicks off the simulated live call to the chosen number (Call tab's "Call Now"). */
   onStartCall: (phone: string) => void;
+  /**
+   * Whether the viewer may call or email from this record. A Contributor can
+   * log a note, meeting or tour but not reach out — the Call and Email tabs go.
+   */
+  canReachOut?: boolean;
   /** Rendered at the start of the tab row — e.g. the "Activity" section title. */
   headerStart?: ReactNode;
 }) {
+  const tabs = canReachOut
+    ? TABS
+    : TABS.filter((t) => t.key !== "call" && t.key !== "email");
   const [tab, setTab] = useState<ComposeKind>("note");
   const [body, setBody] = useState<Record<ComposeKind, string>>({ ...EMPTY });
   const [dates, setDates] = useState<Record<ComposeKind, string>>(() => {
@@ -709,7 +718,7 @@ export function ContactComposeModule({
           <Tooltip.Provider delay={150}>
             <Tabs value={tab} onValueChange={(v) => v && setTab(v as ComposeKind)}>
               <Tabs.List variant="pills">
-                {TABS.map((t) => (
+                {tabs.map((t) => (
                   <Tooltip key={t.key}>
                     <Tooltip.Trigger
                       render={

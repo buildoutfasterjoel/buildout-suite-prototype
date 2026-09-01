@@ -28,6 +28,7 @@ import { useComposeFocus } from "#/components/contacts/useComposeFocus";
 import { callFlow } from "#/components/call/callFlow";
 import type { ContactShare } from "#/data/teammates";
 import { viewerOwns, type ContactOwnership } from "#/data/contactOwnership";
+import type { ContactRights } from "#/data/contactViewerAccess";
 import { ContactDealCard } from "#/components/contacts/ContactDealCard";
 import { ContactInquiryCard } from "#/components/contacts/ContactInquiryCard";
 import { NewContactInquiryCard } from "#/components/contacts/NewContactInquiryCard";
@@ -116,6 +117,7 @@ export function ContactOverviewColumn({
   leadDeals,
   shares,
   ownership,
+  rights,
   onOpenShare,
   onTogglePrivate,
 }: {
@@ -127,6 +129,8 @@ export function ContactOverviewColumn({
   shares: ContactShare[];
   /** Who owns and works the record, and whether it's hidden — see `useContactOwnership`. */
   ownership: ContactOwnership;
+  /** What the viewer may do here — gates every write affordance on the card. */
+  rights: ContactRights;
   onOpenShare: () => void;
   onTogglePrivate: (next: boolean) => void;
 }) {
@@ -271,23 +275,27 @@ export function ContactOverviewColumn({
 
       {/* Contact hero */}
       <div className="p-4 d-flex flex-column gap-3 position-relative">
-        <Tooltip>
-          <Tooltip.Trigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Edit contact details"
-                className="position-absolute"
-                style={{ top: 8, right: 8 }}
-                onClick={() => setEditOpen(true)}
-              >
-                <FontAwesomeIcon icon={faPencil} />
-              </Button>
-            }
-          />
-          <Tooltip.Content>Edit Contact Details</Tooltip.Content>
-        </Tooltip>
+        {/* Every write affordance on this card is gated on `rights.canEdit`:
+            a reader sees the record, not the pencil. */}
+        {rights.canEdit && (
+          <Tooltip>
+            <Tooltip.Trigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Edit contact details"
+                  className="position-absolute"
+                  style={{ top: 8, right: 8 }}
+                  onClick={() => setEditOpen(true)}
+                >
+                  <FontAwesomeIcon icon={faPencil} />
+                </Button>
+              }
+            />
+            <Tooltip.Content>Edit Contact Details</Tooltip.Content>
+          </Tooltip>
+        )}
 
         <EditContactModal
           open={editOpen}
@@ -397,16 +405,20 @@ export function ContactOverviewColumn({
               <FieldRow label="Created" value={medDate(contact.createdAt)} />
               <div className="d-flex flex-wrap align-items-center gap-2">
                 <span className="fw-semibold">Tags</span>
-                {tags.map((t) => (
-                  <ContactChip
-                    key={t}
-                    label={t}
-                    appearance="muted"
-                    removeLabel={`Remove tag ${t}`}
-                    onRemove={() => removeContactTags(contact.id, [t])}
-                  />
-                ))}
-                <ContactTagPicker contact={contact} />
+                {tags.map((t) =>
+                  rights.canEdit ? (
+                    <ContactChip
+                      key={t}
+                      label={t}
+                      appearance="muted"
+                      removeLabel={`Remove tag ${t}`}
+                      onRemove={() => removeContactTags(contact.id, [t])}
+                    />
+                  ) : (
+                    <ContactChip key={t} label={t} appearance="muted" />
+                  ),
+                )}
+                {rights.canEdit && <ContactTagPicker contact={contact} />}
               </div>
             </div>
 
@@ -438,8 +450,12 @@ export function ContactOverviewColumn({
               style={{ cursor: "pointer" }}
             >
               {/* Blueprint's Switch ships only md and lg — md is the small one. */}
-              <Switch checked={doNotCall} onCheckedChange={setDoNotCall} />
-              <span>Do Not Call</span>
+              <Switch
+                checked={doNotCall}
+                onCheckedChange={setDoNotCall}
+                disabled={!rights.canEdit}
+              />
+              <span className={rights.canEdit ? "" : "text-muted"}>Do Not Call</span>
             </label>
           </div>
         )}
@@ -459,10 +475,12 @@ export function ContactOverviewColumn({
           label="Deals"
           count={activeDeals.length}
           action={
-            <SectionAction
-              label="Create New Deal"
-              onClick={() => setNewDealOpen(true)}
-            />
+            rights.canEdit ? (
+              <SectionAction
+                label="Create New Deal"
+                onClick={() => setNewDealOpen(true)}
+              />
+            ) : undefined
           }
         >
           <div className="d-flex flex-column gap-2">
@@ -553,7 +571,7 @@ export function ContactOverviewColumn({
           value="properties"
           label="Properties"
           count={propertyGroups.length}
-          action={<SectionAction label="Create New Property" />}
+          action={rights.canEdit ? <SectionAction label="Create New Property" /> : undefined}
         >
           <div className="d-flex flex-column gap-2">
             {propertyGroups.length === 0 ? (
@@ -583,7 +601,7 @@ export function ContactOverviewColumn({
           value="lists"
           label="Lists"
           count={memberLists.length}
-          action={<SectionAction label="Add to List" />}
+          action={rights.canEdit ? <SectionAction label="Add to List" /> : undefined}
         >
           {memberLists.length === 0 ? (
             <span className="text-muted fs-small">

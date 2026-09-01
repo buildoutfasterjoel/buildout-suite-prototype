@@ -95,6 +95,8 @@ export function TimelineEvent({
   threadOpen,
   replyTo,
   arriving = false,
+  readOnly = false,
+  canReachOut = true,
   onAction,
   onReplySend,
   onReplyCancel,
@@ -111,6 +113,10 @@ export function TimelineEvent({
   replyTo: { name: string; email?: string; initials: string };
   /** Just landed (simulated inbound) — plays a one-shot entrance highlight. */
   arriving?: boolean;
+  /** The viewer can read this record but not act on it: no FAB, no action bar, no reply. */
+  readOnly?: boolean;
+  /** Without Outreach the channel actions (call back, reply, email) go; pin and overflow stay. */
+  canReachOut?: boolean;
   onAction: ActionDispatch;
   /** `subject` is set only by an inquiry's editor, which owns an editable one. */
   onReplySend: (text: string, subject?: string) => void;
@@ -124,7 +130,10 @@ export function TimelineEvent({
   // reply/call-back options. Read-only system rows never get one. An event can
   // carry its own bar (e.g. "Start a Deal") over the type default.
   const actionBar = event.actionBar ?? config.actionBar;
-  const isActionable = !config.readOnly && !!actionBar?.primary && attention;
+  // The action bars are all channel actions (Call back / Reply / Email), so
+  // they need the viewer to be able to reach out, not just log.
+  const isActionable =
+    !config.readOnly && !!actionBar?.primary && attention && !readOnly && canReachOut;
 
   const isThread = event.type === "conversation" && !!event.thread;
   const latestMessage = event.thread?.messages.at(-1);
@@ -366,7 +375,7 @@ export function TimelineEvent({
             row's FAB — sits at the end of the row, which puts it below the thread
             when that's expanded. Keying this on `threadOpen` instead made the
             editor vanish the moment you opened the thread you were replying to. */}
-        {replyOpen && !replyMessageId && (
+        {replyOpen && !replyMessageId && !readOnly && (
           <ReplyComposer
             // An inquiry is not a message to reply into — it arrived through a
             // form, and answering it means writing a new email about the listing.
@@ -384,9 +393,11 @@ export function TimelineEvent({
         )}
       </div>
 
+      {!readOnly && (
       <TimelineFab
         type={event.type}
         pinned={pinned}
+        canReachOut={canReachOut}
         privacy={
           canBePrivate(event)
             ? isPrivateEvent(event)
@@ -396,6 +407,7 @@ export function TimelineEvent({
         }
         onAction={onAction}
       />
+      )}
     </article>
   );
 }

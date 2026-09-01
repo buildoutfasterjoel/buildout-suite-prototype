@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
@@ -15,6 +15,7 @@ import { ContactDesignToggles } from "#/components/contacts/ContactDesignToggles
 import { ShareContactModal } from "#/components/contacts/ShareContactModal";
 import { useContactShares } from "#/components/contacts/useContactShares";
 import { useContactOwnership } from "#/components/contacts/useContactOwnership";
+import { resolveViewerRights } from "#/data/contactViewerAccess";
 import { setContactPrivate } from "#/data/actions";
 import { notify } from "#/lib/notify";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
@@ -89,6 +90,12 @@ function ContactDetailPage() {
   // share modal both show it. Falls back to an empty stand-in before the
   // not-found return so the hook order holds.
   const ownership = useContactOwnership(detail?.contact ?? MISSING_CONTACT);
+  // What the signed-in user may do here: owner or assignee act freely, a
+  // collaborator acts within their tier, anyone else reads and can ask.
+  const rights = useMemo(
+    () => resolveViewerRights(ownership, access.shares),
+    [ownership, access.shares],
+  );
   const togglePrivate = (next: boolean) => {
     setContactPrivate(contactId, next);
     notify({
@@ -147,6 +154,7 @@ function ContactDetailPage() {
       tasks={tasks}
       completedTasks={completedTasks}
       onLog={addLog}
+      readOnly={!rights.canEdit}
     />
   );
 
@@ -177,6 +185,7 @@ function ContactDetailPage() {
             leadDeals={leadDeals}
             shares={access.shares}
             ownership={ownership}
+            rights={rights}
             onOpenShare={() => setShareOpen(true)}
             onTogglePrivate={togglePrivate}
           />
@@ -199,6 +208,8 @@ function ContactDetailPage() {
         >
           <ContactEngagementPanel
             contact={contact}
+            ownership={ownership}
+            rights={rights}
             deals={deals}
             logged={logged}
             onLog={addLog}
@@ -256,6 +267,7 @@ function ContactDetailPage() {
         onOpenChange={setShareOpen}
         contactName={contactFullName(contact)}
         ownership={ownership}
+        readOnly={!rights.canShare}
         shares={access.shares}
         onShare={access.grant}
         onChangeTier={access.changeTier}

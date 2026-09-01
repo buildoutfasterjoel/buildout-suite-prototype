@@ -31,6 +31,9 @@ import {
   type TimelineVisibility,
 } from "#/components/contacts/timeline";
 import { buildContactTimeline } from "#/components/contacts/timelineArcs";
+import { ContactRequestAccessCard } from "#/components/contacts/ContactRequestAccessCard";
+import type { ContactOwnership } from "#/data/contactOwnership";
+import type { ContactRights } from "#/data/contactViewerAccess";
 import { TimelineEvent } from "#/components/contacts/TimelineEvent";
 import { TimelineFilterBar } from "#/components/contacts/TimelineFilterBar";
 import { TimelineFilterDropdown } from "#/components/contacts/TimelineFilterDropdown";
@@ -56,6 +59,8 @@ type PaneKey = "timeline" | "tasks";
 export function ContactEngagementPanel({
   contact,
   deals,
+  ownership,
+  rights,
   logged,
   onLog,
   onStartCall,
@@ -64,6 +69,13 @@ export function ContactEngagementPanel({
 }: {
   contact: Contact;
   deals: DealSummary[];
+  ownership: ContactOwnership;
+  /**
+   * What the viewer may do here. Without `canLog` the composer gives way to a
+   * request-access card and the rows lose their actions; without `canReachOut`
+   * the Call and Email tabs and the channel actions go.
+   */
+  rights: ContactRights;
   /** Activities logged this session (owned by the page), newest first. */
   logged: ComposedActivity[];
   onLog: (draft: ComposedDraft) => void;
@@ -409,6 +421,8 @@ export function ContactEngagementPanel({
                     replyMessageId={replyMessageId}
                     threadOpen={threadOpenId === event.id}
                     replyTo={replyTo}
+                    readOnly={!rights.canLog}
+                    canReachOut={rights.canReachOut}
                     onAction={(id, messageId) =>
                       handleAction(event, id, messageId)
                     }
@@ -433,22 +447,31 @@ export function ContactEngagementPanel({
     <div className={`d-flex flex-column gap-4 tabtrack tabtrack--${tabTrack}`}>
       {/* Composer card — the "Log Activity" title shares the header row with
           the compose tabs. */}
-      <Card className="panel-card overflow-hidden">
-        <ContactComposeModule
+      {rights.canLog ? (
+        <Card className="panel-card overflow-hidden">
+          <ContactComposeModule
+            contact={contact}
+            deals={deals}
+            onSubmit={onLog}
+            onStartCall={onStartCall}
+            canReachOut={rights.canReachOut}
+            headerStart={
+              <span
+                className="fw-semibold"
+                style={{ fontSize: 20, lineHeight: "26px" }}
+              >
+                Log Activity
+              </span>
+            }
+          />
+        </Card>
+      ) : (
+        <ContactRequestAccessCard
           contact={contact}
-          deals={deals}
-          onSubmit={onLog}
-          onStartCall={onStartCall}
-          headerStart={
-            <span
-              className="fw-semibold"
-              style={{ fontSize: 20, lineHeight: "26px" }}
-            >
-              Log Activity
-            </span>
-          }
+          ownership={ownership}
+          rights={rights}
         />
-      </Card>
+      )}
 
       {/* "Stacked" narrow layout: the right column's cards land here, between the
           composer and the feed. */}
@@ -496,7 +519,9 @@ export function ContactEngagementPanel({
             {/* Contextual to the pane: the feed's filters, or the Add action. */}
             <div className="contact-pane-tabs__actions">
               {pane === "timeline" && filterControl}
-              {pane === "tasks" && <AddTaskAction contactId={contact.id} />}
+              {pane === "tasks" && rights.canEdit && (
+                <AddTaskAction contactId={contact.id} />
+              )}
             </div>
           </div>
 
