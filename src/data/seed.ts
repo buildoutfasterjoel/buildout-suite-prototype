@@ -2934,18 +2934,23 @@ export function seedContactShares(
 ): Map<string, ContactShare[]> {
   const tiers: AccessTier[] = ['view', 'contributor', 'outreach']
   const map = new Map<string, ContactShare[]>()
+  // A teammate can't be shared into a record they already work — step past
+  // the assignee to the next person on the roster.
+  const memberAt = (i: number, c: Contact) => {
+    let m = TEAMMATES[i % TEAMMATES.length]
+    if (m.name === c.assignedTo) m = TEAMMATES[(i + 1) % TEAMMATES.length]
+    return m
+  }
   contacts.forEach((c, i) => {
     // ~1 in 4 contacts is shared; the rest stay owner-only.
     if (i % 4 !== 1) return
-    const shares: ContactShare[] = [
-      { member: TEAMMATES[i % TEAMMATES.length], tier: tiers[i % tiers.length] },
-    ]
+    const shares: ContactShare[] = [{ member: memberAt(i, c), tier: tiers[i % tiers.length] }]
     // A minority also carry a second collaborator.
     if (i % 12 === 1) {
-      shares.push({
-        member: TEAMMATES[(i + 3) % TEAMMATES.length],
-        tier: tiers[(i + 2) % tiers.length],
-      })
+      const second = memberAt(i + 3, c)
+      if (second.id !== shares[0].member.id) {
+        shares.push({ member: second, tier: tiers[(i + 2) % tiers.length] })
+      }
     }
     map.set(c.id, shares)
   })

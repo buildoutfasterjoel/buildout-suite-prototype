@@ -1,3 +1,4 @@
+import type { ContactShare } from "#/data/teammates";
 import type { Contact, DealSummary } from "#/data/types";
 import { getListing } from "#/data/store";
 import type { TimelineEvent } from "#/components/contacts/timeline";
@@ -7,7 +8,6 @@ import {
   daysSince,
   makeCtx,
   mk,
-  OWNER,
   pick,
   stageChanged,
   type ArcCtx,
@@ -15,7 +15,8 @@ import {
 import { heroTimeline } from "#/components/contacts/timelineHeroes";
 
 /** The broker's first name, for email sign-offs. */
-const OWNER_FIRST = OWNER.name.split(" ")[0];
+/** How the accountable broker signs an email to this contact. */
+const signOff = (ctx: ArcCtx) => ctx.me.name.split(" ")[0];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Stage-aware activity arcs.
@@ -46,8 +47,10 @@ const OWNER_FIRST = OWNER.name.split(" ")[0];
 export function buildContactTimeline(
   c: Contact,
   deals: DealSummary[],
+  /** Who the record is shared with — collaborators author a share of the beats. */
+  shares: ContactShare[] = [],
 ): TimelineEvent[] {
-  const ctx = makeCtx(c, deals);
+  const ctx = makeCtx(c, deals, shares);
   // Hero arcs are hand-authored end to end — they carry their own inquiry beats
   // when the story calls for one.
   const hero = heroTimeline(ctx);
@@ -457,8 +460,8 @@ function pitchingArc(ctx: ArcCtx): TimelineEvent[] {
         ? `${dealName}: pricing analysis (BOV)`
         : `${first} — first candidate set (${ctx.deals.length || 3} properties)`,
       body: seller
-        ? `${first},\n\nAttached is the ${term} analysis for ${dealName}, anchored to the three most recent trades nearby. Happy to walk through the assumptions whenever suits.\n\n${OWNER_FIRST}`
-        : `${first},\n\nHere's the opening set matched to your criteria. Two are on-market, one is a quiet opportunity I can get us into early. My notes on each are attached.\n\n${OWNER_FIRST}`,
+        ? `${first},\n\nAttached is the ${term} analysis for ${dealName}, anchored to the three most recent trades nearby. Happy to walk through the assumptions whenever suits.\n\n${signOff(ctx)}`
+        : `${first},\n\nHere's the opening set matched to your criteria. Two are on-market, one is a quiet opportunity I can get us into early. My notes on each are attached.\n\n${signOff(ctx)}`,
       reply: {
         replier: ctx.ref.name,
         delay: "1d after send",
@@ -570,8 +573,8 @@ function activeClientArc(ctx: ArcCtx): TimelineEvent[] {
         ? `${dealName}: signed agreement + launch plan`
         : `Representation confirmed — search plan for ${first}`,
       body: seller
-        ? `${first},\n\nCountersigned agreement attached. Launch plan: quiet pre-market to the vetted list first, broad only if we need it. Weekly status every Friday.\n\n${OWNER_FIRST}`
-        : `${first},\n\nGreat to be officially on your side of the table. Search plan attached — targets, outreach order, and the weekly cadence.\n\n${OWNER_FIRST}`,
+        ? `${first},\n\nCountersigned agreement attached. Launch plan: quiet pre-market to the vetted list first, broad only if we need it. Weekly status every Friday.\n\n${signOff(ctx)}`
+        : `${first},\n\nGreat to be officially on your side of the table. Search plan attached — targets, outreach order, and the weekly cadence.\n\n${signOff(ctx)}`,
       hasAttachment: true,
       associations: assoc(deal),
     }),
@@ -632,7 +635,7 @@ function activeClientArc(ctx: ArcCtx): TimelineEvent[] {
       mk(ctx, "email", back(0.6), {
         direction: "out",
         subject: "This week's candidates — my notes attached",
-        body: `${first},\n\nFour new candidates this week; two clear your criteria on the first pass. Notes and numbers attached — let's tour the top two.\n\n${OWNER_FIRST}`,
+        body: `${first},\n\nFour new candidates this week; two clear your criteria on the first pass. Notes and numbers attached — let's tour the top two.\n\n${signOff(ctx)}`,
         hasAttachment: true,
       }),
       mk(ctx, "tour", back(0.45), {
@@ -650,7 +653,7 @@ function activeClientArc(ctx: ArcCtx): TimelineEvent[] {
       mk(ctx, "email", back(0.35), {
         direction: "out",
         subject: "Side-by-side: the two front-runners",
-        body: `${first},\n\nSide-by-side attached — in-place income, basis, and my read on each seller's flexibility. Both pencil; one is the safer hold, the other has the upside.\n\n${OWNER_FIRST}`,
+        body: `${first},\n\nSide-by-side attached — in-place income, basis, and my read on each seller's flexibility. Both pencil; one is the safer hold, the other has the upside.\n\n${signOff(ctx)}`,
         hasAttachment: true,
         associations: assoc(deal),
       }),
@@ -675,7 +678,7 @@ function activeClientArc(ctx: ArcCtx): TimelineEvent[] {
           {
             id: `${threadId}-m1`,
             direction: "out",
-            sender: OWNER.name,
+            sender: ctx.me.name,
             timestamp: ctx.at(back(0.15)),
             body: outMsg,
           },
@@ -763,8 +766,8 @@ function underContractArc(ctx: ArcCtx): TimelineEvent[] {
       direction: "out",
       subject: seller ? `${dealName}: launch recap` : `${dealName}: our offer is in`,
       body: seller
-        ? `${first},\n\nPre-market recap attached: strong early interest, tours starting this week. Weekly status every Friday, as promised.\n\n${OWNER_FIRST}`
-        : `${first},\n\nOffer submitted as discussed. I'll press for an answer inside 48 hours and keep the backup candidate warm in the meantime.\n\n${OWNER_FIRST}`,
+        ? `${first},\n\nPre-market recap attached: strong early interest, tours starting this week. Weekly status every Friday, as promised.\n\n${signOff(ctx)}`
+        : `${first},\n\nOffer submitted as discussed. I'll press for an answer inside 48 hours and keep the backup candidate warm in the meantime.\n\n${signOff(ctx)}`,
       hasAttachment: true,
       associations: assoc(deal),
     }),
@@ -865,7 +868,7 @@ function pastClientArc(ctx: ArcCtx): TimelineEvent[] {
     mk(ctx, "email", back(0.75), {
       direction: "out",
       subject: `${dealName}: proposal + process plan`,
-      body: `${first},\n\nProposal attached — pricing case, buyer pool, and the week-by-week plan.\n\n${OWNER_FIRST}`,
+      body: `${first},\n\nProposal attached — pricing case, buyer pool, and the week-by-week plan.\n\n${signOff(ctx)}`,
       hasAttachment: true,
       associations: assoc(deal),
     }),
@@ -897,7 +900,7 @@ function pastClientArc(ctx: ArcCtx): TimelineEvent[] {
     mk(ctx, "email", back(0.28), {
       direction: "out",
       subject: `Closed — ${dealName} recap`,
-      body: `${first},\n\nClosed and funded. Full recap attached, including what this sets as the comp for the rest of your holdings.\n\nA genuinely well-run process on your side. Whenever the next one is ready, I'd be glad to do it again.\n\n${OWNER_FIRST}`,
+      body: `${first},\n\nClosed and funded. Full recap attached, including what this sets as the comp for the rest of your holdings.\n\nA genuinely well-run process on your side. Whenever the next one is ready, I'd be glad to do it again.\n\n${signOff(ctx)}`,
       reply: {
         replier: ctx.ref.name,
         delay: "3h after send",

@@ -16,7 +16,8 @@ import {
   type ComposedActivity,
 } from "#/components/contacts/contactDisplay";
 import { notify } from "#/lib/notify";
-import { CURRENT_USER } from "#/data/teammates";
+import { CURRENT_USER, DEFAULT_CONTACT_SHARES } from "#/data/teammates";
+import { useDataStore } from "#/data/dataStore";
 import {
   composedToEvent,
   foldThreads,
@@ -196,6 +197,12 @@ export function ContactEngagementPanel({
     revealDeal(deal.id);
   };
 
+  // Who the record is shared with: collaborators author a share of the seeded
+  // history, so the feed reads as written by the people who actually work it.
+  const shares = useDataStore(
+    (s) => s.contactShares.get(contact.id) ?? DEFAULT_CONTACT_SHARES,
+  );
+
   // The feed = session-logged compose/call events + simulated inbound events +
   // the synthesized history, with per-event pin overrides applied and deleted
   // rows removed.
@@ -203,7 +210,7 @@ export function ContactEngagementPanel({
     const base = [
       ...logged.map((l) => composedToEvent(l, contact)),
       ...simEvents,
-      ...buildContactTimeline(contact, deals),
+      ...buildContactTimeline(contact, deals, shares),
     ];
     return foldThreads(base, threadReplies)
       .filter((e) => !deleted.has(e.id))
@@ -216,7 +223,7 @@ export function ContactEngagementPanel({
       // `hiddenFromViewer`. Applied after overrides so a row the viewer just
       // made private (their own) stays put.
       .filter((e) => !hiddenFromViewer(e));
-  }, [logged, simEvents, contact, deals, overrides, deleted, threadReplies]);
+  }, [logged, simEvents, contact, deals, shares, overrides, deleted, threadReplies]);
 
   // Every reply from this record goes to the contact — the timeline is theirs.
   const replyTo = useMemo(
