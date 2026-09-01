@@ -201,9 +201,25 @@ is shared into is a private record he can see beside ones he can't. `SEED_VERSIO
 Demo: the default MD seat sees everything (locked rows); switch "Viewing as" to Broker and the
 count drops, the search stops finding them, and their URLs 404.
 
+## Phase 4 — placeholders on deals (built on this branch)
+
+Deals are never invisible; what privacy protects is the relationship attached to them. Where a
+deal shows one of its people and the viewer may not know who that is, the person renders as a
+**"Private Contact #CODE"** — a lock for a face, a six-hex code (a hash, not the id) so two on one
+deal can be told apart, who holds the record, and a Request access knock (a Contributor request
+keyed by the real id, so a grant opens the same record). No link, no name, no company, no email.
+
+`viewContact` / `maskContactForText` in `contactRights.ts` produce the masked view; applied on the
+deal rail's party sections, the deal card's attached person, the Leads table (`toInquiry` masks
+at the source, so filters and counts still include the lead), the client report's leads, and the
+assistant's deal-party summaries, record dump, and day-plan contact pick. `getContactsForProperty`
+and deal parties stay unfiltered on purpose — that's what makes the placeholder possible.
+
+Seed: the first deal whose seller belongs to another broker gets a private seller.
+`SEED_VERSION` 68 → 69. Demo: Broker seat → open that deal; MD seat → same row shows the name.
+
 ## Next phases (not on this branch)
 
-4. **Placeholders on deals** — "Private Contact" on a deal's party list; request-access knock.
 5. **Person/Relationship** (moves `SEED_VERSION`) — `personId`, same-person hint, link action.
 6. **Grants to teams / roles / offices / company** — the share modal's picker already says
    "people, groups, spaces".
