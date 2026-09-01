@@ -278,7 +278,7 @@ export function buildActivity(
   }));
   entries.push({
     kind: "created",
-    label: `Contact created by ${c.assignedTo}`,
+    label: c.assignedTo ? `Contact created by ${c.assignedTo}` : "Contact created",
     date: c.createdAt,
   });
   return entries;

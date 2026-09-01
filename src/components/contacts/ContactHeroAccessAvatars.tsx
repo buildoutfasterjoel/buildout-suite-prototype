@@ -5,10 +5,12 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faArrowRightArrowLeft,
   faBuilding,
   faLock,
   faLockOpen,
   faUserGear,
+  faUserPlus,
 } from "@fortawesome/pro-regular-svg-icons";
 import { accessTierLabel, type ContactShare } from "#/data/teammates";
 import type { ContactOwnership } from "#/data/contactOwnership";
@@ -129,7 +131,11 @@ export function ContactHeroAccessAvatars({
   ownership,
   shares,
   canShare,
+  canAssign = false,
+  canTransfer = false,
   onOpenShare,
+  onAssign,
+  onTransfer,
 }: {
   ownership: ContactOwnership;
   shares: ContactShare[];
@@ -139,7 +145,13 @@ export function ContactHeroAccessAvatars({
    * not a Manage sharing button.
    */
   canShare: boolean;
+  /** Company-owned only: the viewer may route this record to someone. */
+  canAssign?: boolean;
+  /** Broker-owned only: the viewer owns it and may move it to another book. */
+  canTransfer?: boolean;
   onOpenShare: () => void;
+  onAssign?: () => void;
+  onTransfer?: () => void;
 }) {
   const { owner, assignee } = ownership;
   const companyOwned = owner.kind === "company";
@@ -169,15 +181,50 @@ export function ContactHeroAccessAvatars({
 
       {/* Company-owned: the assignee is the accountable person, working it on
           the company's behalf. Shown apart from the shared-in group because
-          assignment isn't a share — it carries no tier. */}
+          assignment isn't a share — it carries no tier. Where the viewer may
+          assign, the avatar is the way to reassign; otherwise it just says who. */}
       {companyOwned && assignee && (
-        <AccessAvatar
-          fallback={assignee.initials}
-          name={assignee.name}
-          access="Assigned"
-          avatarUrl={assignee.avatarUrl}
-          onOpenShare={open}
-        />
+        <Tooltip>
+          <Tooltip.Trigger
+            render={
+              <Avatar
+                role={canAssign ? "button" : undefined}
+                tabIndex={0}
+                aria-label={`${assignee.name} · Assigned${canAssign ? " — reassign" : ""}`}
+                className={canAssign ? "contact-hero__access" : ""}
+                onClick={canAssign ? onAssign : undefined}
+                onKeyDown={(e: KeyboardEvent) => {
+                  if (canAssign && (e.key === "Enter" || e.key === " ")) {
+                    e.preventDefault();
+                    onAssign?.();
+                  }
+                }}
+              >
+                {assignee.avatarUrl && <Avatar.Image src={assignee.avatarUrl} alt={assignee.name} />}
+                <Avatar.Fallback className="fw-semibold">{assignee.initials}</Avatar.Fallback>
+              </Avatar>
+            }
+          />
+          <Tooltip.Content>
+            {assignee.name} · Assigned{canAssign ? " — click to reassign" : ""}
+          </Tooltip.Content>
+        </Tooltip>
+      )}
+
+      {/* Company-owned and nobody works it yet: say so, and offer the verb to
+          anyone who holds it. An unassigned record is visible to the firm under
+          the open-book reading — it just has no accountable person. */}
+      {companyOwned && !assignee && (
+        canAssign ? (
+          <Button variant="outline" size="sm" onClick={onAssign} className="text-nowrap">
+            <FontAwesomeIcon icon={faUserPlus} />
+            Assign
+          </Button>
+        ) : (
+          <Badge variant="secondary" appearance="muted" className="fw-semibold text-nowrap">
+            Unassigned
+          </Badge>
+        )
       )}
 
       {shares.length > 0 && (
@@ -212,6 +259,28 @@ export function ContactHeroAccessAvatars({
             }
           />
           <Tooltip.Content>Manage sharing</Tooltip.Content>
+        </Tooltip>
+      )}
+
+      {/* Broker-owned and the viewer owns it: the record can change books.
+          Assign has no meaning here — ownership already did the routing. */}
+      {canTransfer && (
+        <Tooltip>
+          <Tooltip.Trigger
+            render={
+              <Button
+                variant="ghost"
+                appearance="muted"
+                size="icon-sm"
+                aria-label="Transfer ownership"
+                onClick={onTransfer}
+                className="contact-hero__share-btn"
+              >
+                <FontAwesomeIcon icon={faArrowRightArrowLeft} />
+              </Button>
+            }
+          />
+          <Tooltip.Content>Transfer ownership to another broker</Tooltip.Content>
         </Tooltip>
       )}
     </div>

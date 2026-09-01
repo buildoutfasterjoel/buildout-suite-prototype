@@ -24,7 +24,9 @@ import {
   faUsers,
 } from "@fortawesome/pro-regular-svg-icons";
 import { useDataStore } from "#/data/dataStore";
-import { editableContactIds } from "#/components/contacts/contactRights";
+import { checkContactRight, editableContactIds } from "#/components/contacts/contactRights";
+import { assignContactTo } from "#/components/contacts/contactAssignment";
+import { AssignContactModal } from "#/components/contacts/AssignContactModal";
 import { notify } from "#/lib/notify";
 import { useCallListView } from "./-useCallListView";
 import { useContactsFilter } from "./-useContactsFilter";
@@ -142,7 +144,10 @@ function PeoplePage() {
 
   // Assignee + tag options come from the data so the filters match reality.
   const assignees = useMemo(
-    () => Array.from(new Set(contacts.map((c) => c.assignedTo))).sort(),
+    () =>
+      Array.from(new Set(contacts.map((c) => c.assignedTo)))
+        .filter(Boolean)
+        .sort(),
     [contacts],
   );
   const allTags = useMemo(
@@ -309,6 +314,25 @@ function PeoplePage() {
       });
     }
     return allowed;
+  };
+  // Bulk assign: only company-owned records the viewer may route go; the rest
+  // (someone's own book, or no right to assign) are counted in the toast.
+  const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
+  const handleBulkAssign = (assigneeName: string) => {
+    const ids = [...selected];
+    const allowed = ids.filter((id) => checkContactRight(id, "canAssign").ok);
+    for (const id of allowed) assignContactTo(id, assigneeName);
+    const skipped = ids.length - allowed.length;
+    notify({
+      title: allowed.length
+        ? `Assigned ${allowed.length} contact${allowed.length === 1 ? "" : "s"} to ${assigneeName}`
+        : "Nothing to assign",
+      description:
+        skipped > 0
+          ? `${skipped} skipped — someone's own book, or not yours to assign.`
+          : undefined,
+    });
+    clearSelection();
   };
   const handleAddToList = (listId: string) => {
     addContactsToCallList(listId, editable([...selected]));
@@ -721,6 +745,7 @@ function PeoplePage() {
                     onSelectAll={selectAllFiltered}
                     onClear={clearSelection}
                     onNewList={() => setShowCreateStaticList(true)}
+                    onAssign={() => setBulkAssignOpen(true)}
                     onAddToList={() => setShowAddToList(true)}
                     onCall={() =>
                       startCallSession(
@@ -771,6 +796,20 @@ function PeoplePage() {
                 onOpenChange={setShowCreateStaticList}
                 contactCount={selected.size}
                 onCreate={handleCreateStaticList}
+              />
+
+              <AssignContactModal
+
+                open={bulkAssignOpen}
+
+                onOpenChange={setBulkAssignOpen}
+
+                mode="assign"
+
+                subject={`${selected.size} contact${selected.size === 1 ? "" : "s"}`}
+
+                onConfirm={(user) => handleBulkAssign(user.name)}
+
               />
 
               <AddToListModal

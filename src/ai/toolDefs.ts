@@ -829,6 +829,25 @@ export const navigateToDef = toolDefinition({
 });
 
 /** Every tool definition — passed to `chat({ tools })` on the server relay. */
+export const assignContactDef = toolDefinition({
+  name: "assign_contact",
+  description:
+    "Route a company-owned contact to the teammate who will work it (\"assign Jayce to Sarah\"), or take it back to unassigned. Only company-owned records can be assigned — a broker-owned record is its owner's to transfer, and the tool says so. Needs the Assign Contacts permission, or being the current assignee.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      contactId: { type: "string" },
+      contact_name: { type: "string", description: "The contact, when you have no id." },
+      assignee_name: {
+        type: "string",
+        description: "Teammate's full name from the roster, e.g. \"Sarah Chen\". Omit to unassign.",
+      },
+    },
+    required: [],
+    additionalProperties: false,
+  },
+});
+
 export const TOOL_DEFS = [
   searchAllDef,
   listDealsDef,
@@ -877,6 +896,7 @@ export const TOOL_DEFS = [
   contactTagsDef,
   addContactTagsDef,
   removeContactTagsDef,
+  assignContactDef,
   briefDef,
   supportDef,
 ];

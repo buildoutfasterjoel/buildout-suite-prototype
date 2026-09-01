@@ -8,10 +8,10 @@ import {
 } from '#/components/contacts/contactFilterModel'
 import { recordEngagement } from '#/components/contacts/useContactSession'
 import type { Contact, ContactRole, ContactSource, DealDocument, DealHistoryEntry, DealIngestion, DealInvoice, DealMarketing, DealPitchFinancials, DealBroker, DealFinancials, DealTask, DealTransaction, DepositAllocation, DocumentGeneration, FinancialDeduction, FinancialReceivable, GeneratedSection, IngestionFieldKey, Listing, PaymentDeduction, PropertyStatus, Task, VoucherDeposit, VoucherPayable, VoucherPayment } from './types'
-import { CURRENT_USER, TEAMMATES } from './teammates'
+import { teammateIdByName, CURRENT_USER, TEAMMATES } from './teammates'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
 import { reconcileContactDealFields } from './contactStage'
-import { reconcilePropertyStage } from './store'
+import { grantContactShares, reconcilePropertyStage } from './store'
 import { generateTasks } from './seed'
 import { nextCloseProbability } from './commission'
 import { notify } from '#/lib/notify'
@@ -1891,6 +1891,56 @@ export function setContactPrivate(
   })
   useDataStore.getState().persist()
   return { contact }
+}
+
+/**
+ * Route a company-owned contact to the person who'll work it — or to nobody.
+ * The owner is derived from the assignee (see `contactOwnership.ts`), so this
+ * is also what a transfer writes; `transferContact` adds the optional share.
+ */
+export function assignContact(
+  id: string,
+  assigneeName: string | null,
+  by: string,
+): { contact: Contact | null } {
+  const existing = useDataStore.getState().contacts.get(id)
+  if (!existing) return { contact: null }
+  const contact: Contact = {
+    ...existing,
+    assignedTo: assigneeName ?? '',
+    assignedAt: new Date().toISOString(),
+    assignedBy: by,
+    // The past stays with whoever lived it — see the field's doc.
+    historyAuthoredBy: existing.historyAuthoredBy ?? (existing.assignedTo || undefined),
+  }
+  useDataStore.setState((s) => {
+    const contacts = new Map(s.contacts)
+    contacts.set(id, contact)
+    return { contacts }
+  })
+  useDataStore.getState().persist()
+  return { contact }
+}
+
+/**
+ * Move a broker-owned contact into another broker's book. Private stays set —
+ * the new owner inherits a private record. `keepPreviousAsContributor` shares it
+ * back to the old owner at Contributor in the same motion.
+ */
+export function transferContact(
+  id: string,
+  newOwnerName: string,
+  keepPreviousAsContributor: boolean,
+): { contact: Contact | null } {
+  const existing = useDataStore.getState().contacts.get(id)
+  if (!existing) return { contact: null }
+  const previous = existing.assignedTo
+  const result = assignContact(id, newOwnerName, previous || newOwnerName)
+  if (result.contact && keepPreviousAsContributor && previous) {
+    const prevId = teammateIdByName(previous)
+    if (prevId) grantContactShares(id, [prevId], 'contributor')
+  }
+  return result
 }
 
 /**

@@ -39,16 +39,26 @@ export interface ContactRights {
   canShare: boolean;
   /** Short label for the viewer's standing, e.g. "Owner", "Contributor", "View only". */
   label: string;
+  /**
+   * Route a company-owned record to someone (or nobody). The Managing
+   * Director's verb — Assign Contacts — plus the current assignee handing off
+   * their own. Never true on a broker-owned record: there it's a transfer.
+   */
+  canAssign: boolean;
+  /** Move a broker-owned record into another book. The owner's alone. */
+  canTransfer: boolean;
 }
 
-const FULL: Omit<ContactRights, "relationship" | "label"> = {
+type Working = Omit<ContactRights, "relationship" | "label" | "canAssign" | "canTransfer">;
+
+const FULL: Working = {
   canLog: true,
   canEdit: true,
   canReachOut: true,
   canShare: true,
 };
 
-const NONE: Omit<ContactRights, "relationship" | "label"> = {
+const NONE: Working = {
   canLog: false,
   canEdit: false,
   canReachOut: false,
@@ -58,14 +68,20 @@ const NONE: Omit<ContactRights, "relationship" | "label"> = {
 export function resolveViewerRights(
   ownership: ContactOwnership,
   shares: ContactShare[],
+  /** Whether the viewer holds Assign Contacts. */
+  viewerCanAssign = false,
 ): ContactRights {
+  const companyOwned = ownership.owner.kind === "company";
+  // Assign exists only where the company owns; transfer only where a person does.
+  const canAssign =
+    companyOwned && (viewerCanAssign || ownership.assignee?.id === CURRENT_USER.id);
   if (viewerOwns(ownership)) {
-    return { relationship: "owner", label: "Owner", ...FULL };
+    return { relationship: "owner", label: "Owner", ...FULL, canAssign: false, canTransfer: true };
   }
   // Company-owned and assigned to the viewer: the full working set, minus
   // ownership itself (they can't transfer it or take it with them).
-  if (ownership.owner.kind === "company" && ownership.assignee?.id === CURRENT_USER.id) {
-    return { relationship: "assignee", label: "Assigned", ...FULL };
+  if (companyOwned && ownership.assignee?.id === CURRENT_USER.id) {
+    return { relationship: "assignee", label: "Assigned", ...FULL, canAssign, canTransfer: false };
   }
   const share = shares.find((s) => s.member.id === CURRENT_USER.id);
   if (share) {
@@ -78,9 +94,11 @@ export function resolveViewerRights(
       canEdit: caps?.editFields ?? false,
       canReachOut: caps?.sendEmail ?? false,
       canShare: caps?.reshare ?? false,
+      canAssign,
+      canTransfer: false,
     };
   }
-  return { relationship: "none", label: "View only", ...NONE };
+  return { relationship: "none", label: "View only", ...NONE, canAssign, canTransfer: false };
 }
 
 /**

@@ -20,6 +20,7 @@ import {
   type ContactRights,
 } from "#/data/contactViewerAccess";
 import {
+  ASSIGN_CONTACTS,
   VIEW_PRIVATE_CONTACTS,
   isEffectivelyOn,
   type ContactAccessSettings,
@@ -31,13 +32,21 @@ import { contactFullName } from "#/components/contacts/contactDisplay";
 import { notify } from "#/lib/notify";
 import type { Contact } from "#/data/types";
 
-export type ContactRight = "canLog" | "canEdit" | "canReachOut" | "canShare";
+export type ContactRight =
+  | "canLog"
+  | "canEdit"
+  | "canReachOut"
+  | "canShare"
+  | "canAssign"
+  | "canTransfer";
 
 const VERB: Record<ContactRight, string> = {
   canLog: "log activity on",
   canEdit: "make changes to",
   canReachOut: "call or email",
   canShare: "share",
+  canAssign: "assign",
+  canTransfer: "transfer",
 };
 
 export function rightsForContactId(
@@ -52,7 +61,20 @@ export function rightsForContactId(
     useContactAccessSettings.getState().settings,
     COMPANY_SETTINGS.name,
   );
-  return { contact, ownership, rights: resolveViewerRights(ownership, shares) };
+  return {
+    contact,
+    ownership,
+    rights: resolveViewerRights(ownership, shares, viewerCanAssign()),
+  };
+}
+
+/** Whether the signed-in user holds Assign Contacts right now. */
+export function viewerCanAssign(
+  roster: RosterUser[] = useRoster.getState().users,
+  settings: ContactAccessSettings = useContactAccessSettings.getState().settings,
+): boolean {
+  const viewer = roster.find((u) => u.id === CURRENT_USER.id);
+  return !!viewer && isEffectivelyOn(viewer.roleIds, viewer.overrides, ASSIGN_CONTACTS, settings);
 }
 
 /** Whether the viewer holds a right on a contact, with the sentence to show if not. */
@@ -65,9 +87,15 @@ export function checkContactRight(
   const who = accountableName(r.ownership);
   const holds =
     r.ownership.owner.kind === "company" ? "is assigned to this contact" : "owns this contact";
+  const tail =
+    right === "canTransfer"
+      ? `Only ${who} can move it to another book.`
+      : right === "canAssign" && r.ownership.owner.kind === "person"
+        ? `${who} owns it — it's theirs to transfer, not the company's to assign.`
+        : `${who} ${holds} — request access from the contact's page.`;
   return {
     ok: false,
-    message: `You can't ${VERB[right]} ${contactFullName(r.contact)}. ${who} ${holds} — request access from the contact's page.`,
+    message: `You can't ${VERB[right]} ${contactFullName(r.contact)}. ${tail}`,
   };
 }
 

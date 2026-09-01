@@ -80,6 +80,12 @@ export const VOUCHER_APPROVER_IDS = [
   "riley-park",
 ] as const;
 
+/** A roster member's id by full name — the current user included. Names are unique on this roster. */
+export function teammateIdByName(name: string): string | undefined {
+  if (name === CURRENT_USER.name || name === "You") return CURRENT_USER.id;
+  return TEAMMATES.find((t) => t.name === name)?.id;
+}
+
 /** A roster member by id — the current user included. Undefined if the id is unknown. */
 export function findTeammate(id: string): Teammate | undefined {
   return id === CURRENT_USER.id

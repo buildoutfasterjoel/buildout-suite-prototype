@@ -11,6 +11,7 @@ import {
   faPhone,
   faChevronDown,
   faXmark,
+  faUserPlus,
 } from "@fortawesome/pro-regular-svg-icons";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
@@ -25,6 +26,8 @@ interface ContactSelectionBarProps {
   onAddToList: () => void;
   /** Start a call session down the selected contacts, in table order. */
   onCall: () => void;
+  /** Route the selected company-owned contacts to one person. */
+  onAssign: () => void;
   /** Only shown while viewing a static list (removes from that list). */
   canRemoveFromList: boolean;
   onRemoveFromList: () => void;
@@ -44,6 +47,7 @@ export function ContactSelectionBar({
   onNewList,
   onAddToList,
   onCall,
+  onAssign,
   canRemoveFromList,
   onRemoveFromList,
 }: ContactSelectionBarProps) {
@@ -87,6 +91,10 @@ export function ContactSelectionBar({
             <DropdownMenu.Item>
               <FontAwesomeIcon icon={faTag} className="me-2" />
               Add Tags
+            </DropdownMenu.Item>
+            <DropdownMenu.Item onClick={onAssign}>
+              <FontAwesomeIcon icon={faUserPlus} className="me-2" />
+              Assign to…
             </DropdownMenu.Item>
             <DropdownMenu.Item onClick={onNewList}>
               <FontAwesomeIcon icon={faListUl} className="me-2" />

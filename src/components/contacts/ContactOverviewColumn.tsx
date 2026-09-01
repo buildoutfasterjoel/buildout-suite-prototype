@@ -121,6 +121,8 @@ export function ContactOverviewColumn({
   rights,
   onOpenShare,
   onTogglePrivate,
+  onAssign,
+  onTransfer,
 }: {
   contact: Contact;
   /** Deals the contact is a named party to. */
@@ -134,6 +136,8 @@ export function ContactOverviewColumn({
   rights: ContactRights;
   onOpenShare: () => void;
   onTogglePrivate: (next: boolean) => void;
+  onAssign: () => void;
+  onTransfer: () => void;
 }) {
   const navigate = useNavigate();
   // Lists this contact belongs to — static (membership snapshot) or dynamic
@@ -373,7 +377,11 @@ export function ContactOverviewColumn({
             ownership={ownership}
             shares={shares}
             canShare={rights.canShare}
+            canAssign={rights.canAssign}
+            canTransfer={rights.canTransfer}
             onOpenShare={onOpenShare}
+            onAssign={onAssign}
+            onTransfer={onTransfer}
           />
         </div>
 

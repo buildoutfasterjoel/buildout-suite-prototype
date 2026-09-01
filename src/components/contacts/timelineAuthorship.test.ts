@@ -132,3 +132,13 @@ describe("timeline authorship follows who works the record", () => {
     expect(new Set(rows.map((r) => r.actor.name))).toEqual(new Set(["Ethan Thompson"]));
   });
 });
+
+describe("history survives a hand-off", () => {
+  it("stays authored by whoever worked the record before it changed hands", () => {
+    const rows = authored(
+      contactFor("Marcus Patel", { historyAuthoredBy: "Sarah Chen" }),
+    );
+    expect(rows.length).toBeGreaterThan(0);
+    expect(new Set(rows.map((r) => r.actor.name))).toEqual(new Set(["Sarah Chen"]));
+  });
+});

@@ -1436,6 +1436,17 @@ export interface Contact {
    */
   assignedTo: string
   /**
+   * Who worked this record before the first in-app assignment or transfer.
+   * The seeded history is authored from the assignee at read time, so without
+   * this a transfer would rewrite who made every past call. Frozen once, on the
+   * first hand-off; absent means the current assignee has always had it.
+   */
+  historyAuthoredBy?: string
+  /** ISO moment of the last assignment or transfer, when one has happened in-app. */
+  assignedAt?: string
+  /** Who did it — for the timeline row. */
+  assignedBy?: string
+  /**
    * The owner has marked this contact private — hidden from the firm, search
    * included, until shared. Only meaningful when the owner may mark contacts
    * private; kept when they can't, so re-opening the ceiling restores it.

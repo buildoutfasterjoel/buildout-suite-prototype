@@ -12,11 +12,11 @@ import { OFFICES, SEED_ROSTER } from "#/data/roster";
 const BROKER_ONLY = "delete-listings";
 
 describe("permission registry", () => {
-  it("carries the mocks' 20 plus the three contact permissions, split 18 / 5", () => {
+  it("carries the mocks' 20 plus the four contact permissions, split 19 / 5", () => {
     // 15 record-scoped from the mocks + Own Contacts, Mark Contacts Private,
-    // View Private Contacts.
-    expect(PERMISSIONS).toHaveLength(23);
-    expect(PERMISSIONS.filter((p) => p.scope === "record")).toHaveLength(18);
+    // View Private Contacts, Assign Contacts.
+    expect(PERMISSIONS).toHaveLength(24);
+    expect(PERMISSIONS.filter((p) => p.scope === "record")).toHaveLength(19);
     expect(PERMISSIONS.filter((p) => p.scope === "account")).toHaveLength(5);
   });
 
@@ -35,20 +35,20 @@ describe("permission registry", () => {
 });
 
 describe("role defaults match the mocks", () => {
-  it("gives a Broker-only user 13 of 23", () => {
+  it("gives a Broker-only user 13 of 24", () => {
     // The mocks' 11, plus the two contact-ownership grants Broker carries.
     const resolved = resolvePermissions(["broker"], {});
     expect(summarize(resolved)).toMatchObject({
       onCount: 13,
-      total: 23,
+      total: 24,
       customCount: 0,
     });
   });
 
-  it("unions Broker + Managing Director to 19", () => {
-    // The mocks' 16, plus the three contact permissions (both roles carry the
-    // two grants; only MD adds see-through).
-    expect(roleUnionCount(["broker", "managing-director"])).toBe(19);
+  it("unions Broker + Managing Director to 20", () => {
+    // The mocks' 16, plus the four contact permissions (both roles carry the
+    // two grants; only MD adds see-through and assignment).
+    expect(roleUnionCount(["broker", "managing-director"])).toBe(20);
   });
 
   it("grants nothing without a role", () => {
@@ -107,9 +107,9 @@ describe("seed roster", () => {
     const summary = summarize(
       resolvePermissions(diana!.roleIds, diana!.overrides),
     );
-    // 9 from Managing Director (the mocks' 6 + the three contact permissions),
+    // 10 from Managing Director (the mocks' 6 + the four contact permissions),
     // minus one removed, plus two granted.
-    expect(summary).toMatchObject({ onCount: 10, customCount: 3 });
+    expect(summary).toMatchObject({ onCount: 11, customCount: 3 });
   });
 
   it("gives every person exactly one real role", () => {

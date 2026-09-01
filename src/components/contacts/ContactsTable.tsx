@@ -145,7 +145,11 @@ const CONTACT_COLUMNS: ContactColumn[] = [
     id: "assignedTo",
     label: "Assigned To",
     defaultVisible: true,
-    render: (c) => <span className="text-nowrap">{c.assignedTo}</span>,
+    render: (c) => (
+      <span className={`text-nowrap${c.assignedTo ? "" : " text-muted"}`}>
+        {c.assignedTo || "Unassigned"}
+      </span>
+    ),
   },
   {
     id: "contactStage",

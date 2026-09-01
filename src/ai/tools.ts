@@ -83,6 +83,8 @@ import {
 } from "#/components/contacts/composerSend";
 import { withPhase } from "#/ai/toolPhase";
 import { useContactSession } from "#/components/contacts/useContactSession";
+import { assignContactTo } from "#/components/contacts/contactAssignment";
+import { useRoster } from "#/components/settings/users/useRoster";
 import {
   checkContactRight,
   isContactVisible,
@@ -145,6 +147,7 @@ import {
   contactTagsDef,
   addContactTagsDef,
   removeContactTagsDef,
+  assignContactDef,
   briefDef,
   supportDef,
 } from "./toolDefs";
@@ -1524,6 +1527,37 @@ export function createClientTools({
         contactId: contact.id,
         contactName: `${contact.firstName} ${contact.lastName}`.trim(),
         contacts: [contactSummary(contact)],
+      };
+    }),
+
+    assignContactDef.client(async (args) => {
+      const { contactId, contact_name, assignee_name } = args as {
+        contactId?: string;
+        contact_name?: string;
+        assignee_name?: string;
+      };
+      const c = resolveActivityContact({ contactId, contact_name });
+      if (!c) {
+        return {
+          error: contact_name ? `No contact named "${contact_name}".` : "Tell me which contact.",
+        };
+      }
+      const blocked = denied(c.id, "canAssign");
+      if (blocked) return blocked;
+      let assignee: string | null = null;
+      if (assignee_name) {
+        const q = assignee_name.trim().toLowerCase();
+        const user = useRoster
+          .getState()
+          .users.find((u) => u.status === "active" && u.name.toLowerCase() === q);
+        if (!user) return { error: `No active teammate named "${assignee_name}".` };
+        assignee = user.name;
+      }
+      assignContactTo(c.id, assignee);
+      const updated = getContact(c.id);
+      return {
+        contacts: updated ? [contactSummary(updated)] : [],
+        assignedTo: assignee,
       };
     }),
 

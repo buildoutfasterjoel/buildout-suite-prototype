@@ -180,6 +180,13 @@ export const PERMISSIONS: Permission[] = [
     gate: "contact-privacy",
   },
   {
+    id: "assign-contacts",
+    label: "Assign Contacts",
+    detail:
+      "Route a company-owned contact to the person who'll work it, or re-route it. The current assignee can hand off their own without this.",
+    scope: "record",
+  },
+  {
     id: "manage-company",
     label: "Manage Company",
     detail: "Company info, users, permissions, and settings — including this page.",
@@ -315,6 +322,8 @@ export const ROLES: Role[] = [
       "own-contacts",
       "private-contacts",
       "view-private-contacts",
+      // Assignment is the Managing Director's verb under company ownership.
+      "assign-contacts",
       "manage-company",
       "edit-profile-photo",
       "access-other-saved-pages",

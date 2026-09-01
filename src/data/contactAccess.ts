@@ -70,6 +70,8 @@ export const DEFAULT_CONTACT_ACCESS_SETTINGS: ContactAccessSettings = {
 export const OWN_CONTACTS = "own-contacts";
 export const PRIVATE_CONTACTS = "private-contacts";
 export const VIEW_PRIVATE_CONTACTS = "view-private-contacts";
+/** Ungated: it only applies where the company owns the record. */
+export const ASSIGN_CONTACTS = "assign-contacts";
 
 export const GRANT_DEFAULT_LABELS: Record<GrantDefault, string> = {
   brokers: "Every Broker, by default",

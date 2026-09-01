@@ -107,3 +107,33 @@ describe("canSeeContact", () => {
     expect(canSeeContact(transparent, [], false)).toBe(true);
   });
 });
+
+describe("assign and transfer", () => {
+  it("the owner may transfer, never assign", () => {
+    const r = resolveViewerRights(own("Ethan Thompson"), [], true);
+    expect(r).toMatchObject({ canTransfer: true, canAssign: false });
+  });
+
+  it("a company-owned record is assignable by an Assign Contacts holder", () => {
+    // Riley's records are company-owned (sharing-only role).
+    const riley = own("Riley Park");
+    expect(resolveViewerRights(riley, [], true)).toMatchObject({
+      canAssign: true,
+      canTransfer: false,
+    });
+    expect(resolveViewerRights(riley, [], false).canAssign).toBe(false);
+  });
+
+  it("the current assignee may hand off without the permission", () => {
+    const mine = own("Ethan Thompson", MODEL_A);
+    expect(resolveViewerRights(mine, [], false)).toMatchObject({
+      relationship: "assignee",
+      canAssign: true,
+      canTransfer: false,
+    });
+  });
+
+  it("a broker-owned record is never assignable, even with the permission", () => {
+    expect(resolveViewerRights(own("Sarah Chen"), [], true).canAssign).toBe(false);
+  });
+});

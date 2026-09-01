@@ -17,6 +17,9 @@ import { useContactShares } from "#/components/contacts/useContactShares";
 import { useContactOwnership } from "#/components/contacts/useContactOwnership";
 import { resolveViewerRights } from "#/data/contactViewerAccess";
 import { isContactVisible } from "#/components/contacts/contactRights";
+import { AssignContactModal, type AssignMode } from "#/components/contacts/AssignContactModal";
+import { assignContactTo, transferContactTo } from "#/components/contacts/contactAssignment";
+import { useCan } from "#/components/settings/users/useViewer";
 import { setContactPrivate } from "#/data/actions";
 import { notify } from "#/lib/notify";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
@@ -93,10 +96,13 @@ function ContactDetailPage() {
   const ownership = useContactOwnership(detail?.contact ?? MISSING_CONTACT);
   // What the signed-in user may do here: owner or assignee act freely, a
   // collaborator acts within their tier, anyone else reads and can ask.
+  const viewerCanAssign = useCan("assign-contacts");
   const rights = useMemo(
-    () => resolveViewerRights(ownership, access.shares),
-    [ownership, access.shares],
+    () => resolveViewerRights(ownership, access.shares, viewerCanAssign),
+    [ownership, access.shares, viewerCanAssign],
   );
+  // Assign (company-owned) and Transfer (broker-owned) share one picker.
+  const [assignMode, setAssignMode] = useState<AssignMode | null>(null);
   const togglePrivate = (next: boolean) => {
     setContactPrivate(contactId, next);
     notify({
@@ -192,6 +198,8 @@ function ContactDetailPage() {
             rights={rights}
             onOpenShare={() => setShareOpen(true)}
             onTogglePrivate={togglePrivate}
+            onAssign={() => setAssignMode("assign")}
+            onTransfer={() => setAssignMode("transfer")}
           />
         </div>
         <div
@@ -276,6 +284,40 @@ function ContactDetailPage() {
         onShare={access.grant}
         onChangeTier={access.changeTier}
         onRemove={access.revoke}
+      />
+
+      <AssignContactModal
+        open={assignMode !== null}
+        onOpenChange={(o) => {
+          if (!o) setAssignMode(null);
+        }}
+        mode={assignMode ?? "assign"}
+        subject={contactFullName(contact)}
+        currentAssignee={contact.assignedTo || undefined}
+        onConfirm={(user, keep) => {
+          if (assignMode === "transfer") {
+            transferContactTo(contact.id, user.name, keep);
+            notify({
+              title: `Transferred to ${user.name}`,
+              description: keep
+                ? "It's their relationship now. You stay on as a Contributor."
+                : "It's their relationship now. You no longer have access unless they share it.",
+            });
+          } else {
+            assignContactTo(contact.id, user.name);
+            notify({
+              title: `Assigned to ${user.name}`,
+              description: `${user.name.split(" ")[0]} now works ${contact.firstName}'s record for the company.`,
+            });
+          }
+        }}
+        onUnassign={() => {
+          assignContactTo(contact.id, null);
+          notify({
+            title: "Unassigned",
+            description: `Nobody works ${contact.firstName}'s record yet. It stays visible to the firm.`,
+          });
+        }}
       />
 
       {/* Floating design-comparison menu (prototype-only). */}

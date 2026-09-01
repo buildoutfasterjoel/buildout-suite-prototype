@@ -46,6 +46,8 @@ export interface WorkingSet {
 
 /** Roster row → timeline actor, so authored rows carry the right face. */
 function actorFor(name: string): TimelineActor {
+  // Nobody works an unassigned record yet; the firm does, as far as history goes.
+  if (!name.trim()) return { name: "Buildout" };
   if (name === "You") return OWNER;
   const user = SEED_ROSTER.find((u) => u.name === name);
   return user ? { name: user.name, avatarUrl: user.avatarUrl } : { name };
@@ -59,7 +61,9 @@ function actorFor(name: string): TimelineActor {
  * nothing.
  */
 export function workingSetFor(c: Contact, shares: ContactShare[]): WorkingSet {
-  const primary = actorFor(c.assignedTo);
+  // A record that changed hands in-app keeps its history with the person who
+  // made it; the new assignee's work starts with the hand-off row.
+  const primary = actorFor(c.historyAuthoredBy ?? c.assignedTo);
   const collaborators = shares
     .filter((s) => s.tier !== "view" && s.member.name !== primary.name)
     .map((s) => ({
