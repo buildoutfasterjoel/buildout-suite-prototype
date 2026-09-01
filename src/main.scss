@@ -4187,6 +4187,16 @@
     font-size: 12px;
   }
 
+  // The editable Subject line an inquiry's editor carries (see ReplyComposer).
+  // Same rhythm as the To row above it — one field per banded row.
+  &__subject {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--color-storm-grey-200, #d5dae2);
+  }
+
   // The toolbar borrows the composer's own styles; only its edges differ here.
   &__toolbar {
     border-bottom: 1px solid var(--color-storm-grey-200, #d5dae2);

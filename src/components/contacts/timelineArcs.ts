@@ -156,16 +156,20 @@ function inquiryBeats(ctx: ArcCtx, alreadyAuthored: TimelineEvent[]): TimelineEv
       ],
       source: "api" as const,
     };
-    out.push(
-      mk(
-        ctx,
-        "inquiry",
-        days,
-        // Same-day: land it on the record's own timestamp rather than the
-        // arc's bucketed hour, which could otherwise read as pre-creation.
-        days === 0 ? { ...over, timestamp: ctx.c.createdAt } : over,
-      ),
+    const row = mk(
+      ctx,
+      "inquiry",
+      days,
+      // Same-day: land it on the record's own timestamp rather than the
+      // arc's bucketed hour, which could otherwise read as pre-creation.
+      days === 0 ? { ...over, timestamp: ctx.c.createdAt } : over,
     );
+    // Keyed on the listing rather than the arc's running ordinal. Answering an
+    // inquiry promotes the contact out of Inquired, which swaps the arc for a
+    // different one and renumbers every beat — and a row whose id moved loses
+    // what the broker did to it (followed up, dismissed, pinned), so the bar
+    // came back on an inquiry that had just been answered.
+    out.push({ ...row, id: `${ctx.c.id}-inquiry-${listingId}` });
   });
   return out;
 }

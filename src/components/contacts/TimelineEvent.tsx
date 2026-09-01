@@ -34,6 +34,18 @@ import {
 } from "#/components/contacts/timeline";
 
 /**
+ * What an inquiry's reply is *about*: the listing it came in on. The row's own
+ * headline ("Inquired about Apex Commons via Brochure link") is how the inquiry
+ * announces itself, not a subject line anyone would send — so the editor seeds
+ * "Re: Apex Commons" from the associated deal, falling back to the headline only
+ * if a row somehow carries no association.
+ */
+function inquirySubject(event: TimelineEventData): string {
+  const deal = (event.associations ?? []).find((a) => a.type === "deal");
+  return deal?.label ?? event.subject ?? event.title ?? TYPE_CONFIG[event.type].defaultTitle;
+}
+
+/**
  * A stage-change reason names the deal that caused it ("The associated deal
  * Sunridge Plaza has been updated to Active…"). Link that name in place rather
  * than repeating it as a separate association chip — the sentence is where it
@@ -97,7 +109,8 @@ export function TimelineEvent({
   /** Just landed (simulated inbound) — plays a one-shot entrance highlight. */
   arriving?: boolean;
   onAction: ActionDispatch;
-  onReplySend: (text: string) => void;
+  /** `subject` is set only by an inquiry's editor, which owns an editable one. */
+  onReplySend: (text: string, subject?: string) => void;
   onReplyCancel: () => void;
 }) {
   const config = TYPE_CONFIG[event.type];
@@ -334,7 +347,13 @@ export function TimelineEvent({
             editor vanish the moment you opened the thread you were replying to. */}
         {replyOpen && !replyMessageId && (
           <ReplyComposer
-            subject={event.subject ?? event.title}
+            // An inquiry is not a message to reply into — it arrived through a
+            // form, and answering it means writing a new email about the listing.
+            // So its editor gets an editable subject naming that listing, rather
+            // than quoting a thread it doesn't belong to.
+            {...(event.type === "inquiry"
+              ? { defaultSubject: `Re: ${inquirySubject(event)}` }
+              : { subject: event.subject ?? event.title })}
             recipientName={replyTo.name}
             recipientEmail={replyTo.email}
             recipientInitials={replyTo.initials}
