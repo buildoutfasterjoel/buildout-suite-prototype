@@ -1,5 +1,6 @@
 import { listAllTasks, listContactsForDeal } from "#/data/selectors";
 import { useDataStore } from "#/data/dataStore";
+import { isContactVisible } from "#/components/contacts/contactRights";
 import { getOvernightSignalContact, signalText } from "#/data/signal";
 import type { Contact, PropertyStatus, TaskView } from "#/data/types";
 
@@ -73,7 +74,9 @@ function resolveContact(task: TaskView): Contact | undefined {
     const own = contacts.get(task.contactId);
     if (own) return own;
   }
-  if (task.dealId) return listContactsForDeal(task.dealId)[0];
+  // A deal's first party may be someone the viewer can't see; the plan then
+  // shouldn't name them — fall through to the first visible party, or nobody.
+  if (task.dealId) return listContactsForDeal(task.dealId).find((c) => isContactVisible(c.id));
   return undefined;
 }
 

@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Accordion } from "@buildoutinc/blueprint-react/ui/Accordion";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
+import { useContactView } from "#/components/contacts/useVisibleContacts";
+import { PrivateContactPlaceholder } from "#/components/contacts/PrivateContactPlaceholder";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
@@ -152,6 +154,14 @@ function LinkedParentDeal({ parent }: { parent: Listing }) {
 }
 
 function ContactRow({ contact }: { contact: Contact }) {
+  // A private party the viewer has no relationship with shows as a placeholder:
+  // the deal is the firm's business even when the relationship isn't.
+  const view = useContactView(contact);
+  if (view.kind === "private") {
+    return (
+      <PrivateContactPlaceholder contactId={view.contactId} askName={view.askName} />
+    );
+  }
   const name = `${contact.firstName} ${contact.lastName}`;
   return (
     <Link

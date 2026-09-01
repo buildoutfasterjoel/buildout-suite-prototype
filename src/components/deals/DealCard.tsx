@@ -14,6 +14,8 @@ import {
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { Listing, Contact, DealSide } from "#/data/types";
 import { getContact, getListing, getProperty } from "#/data/store";
+import { useContactView } from "#/components/contacts/useVisibleContacts";
+import { PrivateContactPlaceholder } from "#/components/contacts/PrivateContactPlaceholder";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
 import { NewDealCard } from "./NewDealCard";
 import { isUmbrella, spacesStageBreakdown } from "#/data/leaseSpaces";
@@ -75,6 +77,37 @@ export function getPrimaryContact(listing: Listing): Contact | undefined {
 function initials(c: Contact): string {
   return `${c.firstName[0] ?? ""}${c.lastName[0] ?? ""}`.toUpperCase();
 }
+
+/** The card's person line: name and initials, "Unassigned", or a placeholder. */
+function AttachedPerson({ contact }: { contact: Contact | undefined }) {
+  // Hooks run unconditionally; a card with nobody attached still resolves a
+  // stand-in and ignores it.
+  const view = useContactView(contact ?? NOBODY);
+  if (contact && view.kind === "private") {
+    return (
+      <PrivateContactPlaceholder
+        contactId={view.contactId}
+        askName={view.askName}
+        variant="inline"
+      />
+    );
+  }
+  return (
+    <div className="d-flex align-items-center gap-2 text-truncate">
+      <Avatar size="sm" className="flex-shrink-0">
+        <Avatar.Fallback className="fw-semibold">
+          {contact ? initials(contact) : <FontAwesomeIcon icon={faUser} />}
+        </Avatar.Fallback>
+      </Avatar>
+      <span className="text-truncate">
+        {contact ? `${contact.firstName} ${contact.lastName}` : "Unassigned"}
+      </span>
+    </div>
+  );
+}
+
+/** Stand-in for the hook when a card has no contact; never rendered. */
+const NOBODY = { id: "", assignedTo: "" } as unknown as Contact;
 
 function formatCriticalDate(date: string | null): string | null {
   if (!date) return null;
@@ -225,17 +258,9 @@ export function DealCardView({
         <div className="text-muted text-truncate fs-small">{cardSubtitle}</div>
       </div>
 
-      {/* Attached person */}
-      <div className="d-flex align-items-center gap-2 text-truncate">
-        <Avatar size="sm" className="flex-shrink-0">
-          <Avatar.Fallback className="fw-semibold">
-            {contact ? initials(contact) : <FontAwesomeIcon icon={faUser} />}
-          </Avatar.Fallback>
-        </Avatar>
-        <span className="text-truncate">
-          {contact ? `${contact.firstName} ${contact.lastName}` : "Unassigned"}
-        </span>
-      </div>
+      {/* Attached person. A private one the viewer can't see is still here —
+          the card is about the deal — but as a lock and "Private Contact". */}
+      <AttachedPerson contact={contact} />
 
       {/* Footer: price + next critical date */}
       <div

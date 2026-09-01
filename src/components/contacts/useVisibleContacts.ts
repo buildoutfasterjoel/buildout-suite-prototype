@@ -3,7 +3,11 @@ import type { Contact } from "#/data/types";
 import { useDataStore } from "#/data/dataStore";
 import { useRoster } from "#/components/settings/users/useRoster";
 import { useContactAccessSettings } from "#/components/settings/useContactAccessSettings";
-import { describeVisibility } from "#/components/contacts/contactRights";
+import {
+  describeVisibility,
+  viewContact,
+  type ContactView,
+} from "#/components/contacts/contactRights";
 
 /**
  * The contacts the signed-in user may know exist, reactive to everything that
@@ -25,5 +29,23 @@ export function useVisibleContacts(): { contacts: Contact[]; privateIds: Set<str
     // from the stores; they're here so the memo tracks them.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [contacts, shares, roster, settings],
+  );
+}
+
+/**
+ * A contact as the viewer may see it on a shared object — whole, or masked as a
+ * "Private Contact" — reactive to the seat, the settings and the shares. Deal
+ * surfaces read the store without subscribing, so without this a row rendered
+ * before the "Viewing as" seat hydrated would keep the name it shouldn't show.
+ */
+export function useContactView(contact: Contact): ContactView {
+  const shares = useDataStore((s) => s.contactShares);
+  const roster = useRoster((s) => s.users);
+  const settings = useContactAccessSettings((s) => s.settings);
+  return useMemo(
+    () => viewContact(contact),
+    // Read inside `viewContact` from the stores; listed so the memo tracks them.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [contact, shares, roster, settings],
   );
 }

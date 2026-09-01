@@ -86,6 +86,7 @@ import { useContactSession } from "#/components/contacts/useContactSession";
 import {
   checkContactRight,
   isContactVisible,
+  maskContactForText,
   visibleContacts,
   type ContactRight,
 } from "#/components/contacts/contactRights";
@@ -150,15 +151,20 @@ import {
 
 // ── Compact summaries — keep tool results small for the model ────────────────
 
-const contactSummary = (c: Contact) => ({
-  id: c.id,
-  name: `${c.firstName} ${c.lastName}`.trim(),
-  company: c.company,
-  relationship: c.relationship,
-  role: c.role,
-  email: c.email,
-  phone: c.phone,
-});
+const contactSummary = (c: Contact) => {
+  // A private party on a deal the viewer can see: existence and role, never who.
+  const m = maskContactForText(c);
+  return {
+    id: c.id,
+    name: m.name,
+    company: m.company,
+    relationship: c.relationship,
+    role: c.role,
+    email: m.email,
+    phone: m.phone,
+    ...(m.private ? { private: true } : {}),
+  };
+};
 
 /**
  * Resolve the contact a tag tool is talking about, by id or by name. Returns the

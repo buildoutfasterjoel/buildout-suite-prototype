@@ -2737,6 +2737,18 @@ export function generateDataset() {
   // Turn two seeded lease deals into umbrella shells with child space deals.
   // After applyHeroes so the heroes have already claimed their listings; before
   // reconciliation so the children's tenants get their contact fields resolved.
+  // Phase 4 needs a private contact who is a party on a deal the firm can see —
+  // the "Private Contact" placeholder case. Take the first deal whose seller
+  // belongs to another broker and mark that seller private (if the seller isn't
+  // already). One is enough to demo; the deal itself stays visible to everyone.
+  {
+    const byId = new Map(contacts.map((c) => [c.id, c]))
+    const candidate = listings
+      .flatMap((l) => l.sellerContactIds.map((id) => byId.get(id)))
+      .find((c) => c && c.assignedTo !== CURRENT_USER.name && !c.isPrivate)
+    if (candidate) candidate.isPrivate = true
+  }
+
   applyLeaseSpaces(listings, properties, contacts, dealIdRef)
 
   // Reconcile each contact's deal-derived fields with the deals they're actually

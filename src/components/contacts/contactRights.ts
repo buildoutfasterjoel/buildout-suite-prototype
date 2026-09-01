@@ -131,6 +131,82 @@ export function isContactVisible(contactId: string): boolean {
   return describeVisibility([c]).contacts.length === 1;
 }
 
+// ── Placeholders ─────────────────────────────────────────────────────────────
+
+export const PRIVATE_CONTACT_LABEL = "Private Contact";
+
+/**
+ * A short, stable code for a placeholder so two on one deal can be told apart.
+ * Derived from the id but not the id: six hex digits of a small hash, so it
+ * can't be pasted into a URL to reach the record.
+ */
+export function placeholderCode(contactId: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < contactId.length; i++) {
+    h ^= contactId.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16).padStart(8, "0").slice(0, 6).toUpperCase();
+}
+
+/**
+ * A contact as the viewer is allowed to see it on a shared object. Visible
+ * records come back whole; a private one the viewer has no relationship with
+ * comes back masked — existence and role only, plus who to ask.
+ */
+export type ContactView =
+  | { kind: "contact"; contact: Contact }
+  | { kind: "private"; contactId: string; code: string; askName: string };
+
+export function viewContact(contact: Contact): ContactView {
+  const r = rightsForContactId(contact.id);
+  if (!r) return { kind: "contact", contact };
+  const shares = useDataStore.getState().contactShares?.get(contact.id) ?? DEFAULT_CONTACT_SHARES;
+  if (canSeeContact(r.ownership, shares, viewerSeesPrivate())) {
+    return { kind: "contact", contact };
+  }
+  return {
+    kind: "private",
+    contactId: contact.id,
+    code: placeholderCode(contact.id),
+    askName: accountableName(r.ownership),
+  };
+}
+
+/**
+ * The same, for text surfaces (reports, the assistant): a masked record keeps
+ * its id so links still resolve for those who may follow them, and loses
+ * everything that identifies the person.
+ */
+export function maskContactForText(contact: Contact): {
+  id: string;
+  name: string;
+  company: string;
+  email: string;
+  phone: string;
+  private: boolean;
+} {
+  const v = viewContact(contact);
+  if (v.kind === "contact") {
+    return {
+      id: contact.id,
+      name: contactFullName(contact),
+      company: contact.company,
+      email: contact.email,
+      phone: contact.phone,
+      private: false,
+    };
+  }
+  return {
+    id: contact.id,
+    name: `${PRIVATE_CONTACT_LABEL} #${v.code}`,
+    company: "—",
+    email: "",
+    phone: "",
+    private: true,
+  };
+}
+
 /** The subset of contacts the viewer may change — for bulk actions. */
 export function editableContactIds(ids: string[]): { allowed: string[]; skipped: number } {
   const allowed = ids.filter((id) => checkContactRight(id, "canEdit").ok);
