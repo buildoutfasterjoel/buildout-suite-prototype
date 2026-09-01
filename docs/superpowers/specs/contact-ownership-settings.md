@@ -218,9 +218,33 @@ and deal parties stay unfiltered on purpose — that's what makes the placeholde
 Seed: the first deal whose seller belongs to another broker gets a private seller.
 `SEED_VERSION` 68 → 69. Demo: Broker seat → open that deal; MD seat → same row shows the name.
 
+## Phase 5 — one Person, many Relationships (built on this branch, middle depth)
+
+A Contact is one broker's relationship with a human; two brokers can each hold one, and under a
+private book that is the intended outcome. `Contact.personId?` says two records are the same
+person. No Person table, no merge, no unlink, no cross-record timeline — those are where the
+effort and the arguments live, and none is needed to make George's point.
+
+`src/data/contactRelationships.ts` resolves siblings at read time **over the visible book only**
+(the load-bearing rule: a private, unshared twin never announces itself): `linked` share a
+`personId`; `suspected` match on normalized email or phone and aren't linked. Surfaces:
+- **Hero** (`ContactSiblings`): "Also known to Sarah Chen as a separate relationship · View" for
+  linked; "May be the same person as *Name* in Sarah Chen's book" + **Link** for suspected. Link
+  (`linkContactsAsPerson`) is offered only when the viewer may edit both records; otherwise it
+  says to ask the holder.
+- **Create Contact**: a duplicate hint against the visible book by email/phone, pointing at the
+  existing record; a hidden match stays silent and the new record is created.
+- **People table**: a "2 relationships" chip on linked records (over the visible book). The
+  planned "more than one relationship" filter was skipped — the filter model is serialized and
+  tested in five places, and the chip carries the point.
+
+Seed (`PERSON_PAIR_IDS`): Jim Halvorsen twice — Sarah's private, unshared fifteen-year record and
+Ethan's three-day-old one (Broker seat: nothing; MD see-through: hint, "ask Sarah to link") — and
+Dana Whitfield twice, Sarah's shared with Ethan at Contributor beside Ethan's own (hint + Link in
+every seat). 80 → 84 contacts. `SEED_VERSION` 69 → 70.
+
 ## Next phases (not on this branch)
 
-5. **Person/Relationship** (moves `SEED_VERSION`) — `personId`, same-person hint, link action.
 6. **Grants to teams / roles / offices / company** — the share modal's picker already says
    "people, groups, spaces".
 7. **Assign / re-assign as an action** — today `assignedTo` is seed data; an MD-gated Assign
