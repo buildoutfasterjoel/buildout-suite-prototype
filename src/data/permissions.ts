@@ -21,6 +21,15 @@
  */
 export type PermissionScope = "record" | "account";
 
+/**
+ * A company-level toggle that caps a permission. The account setting is the
+ * ceiling, the permission is the grant: while the gate is closed the permission
+ * is off for everyone and locked on the permissions page, with the role
+ * defaults and overrides left intact underneath. Resolution lives in
+ * `contactAccess.ts`, which also holds the settings themselves.
+ */
+export type CompanyGateId = "contact-ownership" | "contact-privacy";
+
 export interface Permission {
   id: string;
   /**
@@ -48,10 +57,14 @@ export interface Permission {
    * they go away entirely.
    */
   blanket?: boolean;
+  /** Company setting that caps this permission — see `CompanyGateId`. */
+  gate?: CompanyGateId;
 }
 
 /**
- * The 20 customer-facing permissions, in the order the mocks list them.
+ * The 20 customer-facing permissions from the mocks, in the order they list
+ * them, plus the three contact-ownership permissions at the end of the record
+ * group.
  * Record-scoped first, then account-wide.
  */
 export const PERMISSIONS: Permission[] = [
@@ -141,6 +154,30 @@ export const PERMISSIONS: Permission[] = [
     label: "Make Non-Branded Changes In Documents",
     detail: "Use colors and fonts that depart from the company brand.",
     scope: "record",
+  },
+  {
+    id: "own-contacts",
+    label: "Own Contacts",
+    detail:
+      "Contacts they create or import belong to them rather than the company. The contacts analog of Own Listings.",
+    scope: "record",
+    gate: "contact-ownership",
+  },
+  {
+    id: "private-contacts",
+    label: "Mark Contacts Private",
+    detail:
+      "Hide a contact they own from the rest of the firm — search included — until they share it.",
+    scope: "record",
+    gate: "contact-privacy",
+  },
+  {
+    id: "view-private-contacts",
+    label: "View Private Contacts",
+    detail:
+      "See the contact behind a \u201cPrivate Contact\u201d placeholder. Never includes notes a teammate marked private — authorship governs those.",
+    scope: "record",
+    gate: "contact-privacy",
   },
   {
     id: "manage-company",
@@ -250,6 +287,12 @@ export const ROLES: Role[] = [
       "send-emails",
       "edit-listing-website",
       "add-custom-content",
+      // The two contact-ownership grants. On by default for the role that
+      // brings its own book; the company ceilings in `contactAccess.ts` decide
+      // whether the grant means anything, and the company's grant default can
+      // suppress this so the grant is handed out per person instead.
+      "own-contacts",
+      "private-contacts",
       "edit-profile-photo",
       "company-credentials",
     ],
@@ -263,6 +306,15 @@ export const ROLES: Role[] = [
       "access-other-listings",
       "access-other-comps",
       "view-other-documents",
+      // Contacts differ from listings here: a Managing Director can own and
+      // protect a book of their own (a producing MD is a normal person in
+      // brokerage), and by default sees through "Private Contact" placeholders.
+      // George's model lists all three as permissions an MD configures, with
+      // nothing withholding ownership from the role itself; the earlier
+      // Broker-only default was borrowed from Own Listings, not from the docs.
+      "own-contacts",
+      "private-contacts",
+      "view-private-contacts",
       "manage-company",
       "edit-profile-photo",
       "access-other-saved-pages",

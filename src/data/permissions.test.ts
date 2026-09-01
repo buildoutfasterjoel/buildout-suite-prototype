@@ -12,9 +12,11 @@ import { OFFICES, SEED_ROSTER } from "#/data/roster";
 const BROKER_ONLY = "delete-listings";
 
 describe("permission registry", () => {
-  it("carries the 20 permissions from the mocks, split 15 / 5", () => {
-    expect(PERMISSIONS).toHaveLength(20);
-    expect(PERMISSIONS.filter((p) => p.scope === "record")).toHaveLength(15);
+  it("carries the mocks' 20 plus the three contact permissions, split 18 / 5", () => {
+    // 15 record-scoped from the mocks + Own Contacts, Mark Contacts Private,
+    // View Private Contacts.
+    expect(PERMISSIONS).toHaveLength(23);
+    expect(PERMISSIONS.filter((p) => p.scope === "record")).toHaveLength(18);
     expect(PERMISSIONS.filter((p) => p.scope === "account")).toHaveLength(5);
   });
 
@@ -33,17 +35,20 @@ describe("permission registry", () => {
 });
 
 describe("role defaults match the mocks", () => {
-  it("gives a Broker-only user 11 of 20", () => {
+  it("gives a Broker-only user 13 of 23", () => {
+    // The mocks' 11, plus the two contact-ownership grants Broker carries.
     const resolved = resolvePermissions(["broker"], {});
     expect(summarize(resolved)).toMatchObject({
-      onCount: 11,
-      total: 20,
+      onCount: 13,
+      total: 23,
       customCount: 0,
     });
   });
 
-  it("unions Broker + Managing Director to 16", () => {
-    expect(roleUnionCount(["broker", "managing-director"])).toBe(16);
+  it("unions Broker + Managing Director to 19", () => {
+    // The mocks' 16, plus the three contact permissions (both roles carry the
+    // two grants; only MD adds see-through).
+    expect(roleUnionCount(["broker", "managing-director"])).toBe(19);
   });
 
   it("grants nothing without a role", () => {
@@ -56,7 +61,7 @@ describe("resolvePermissions", () => {
     const off = resolvePermissions(["broker"], { [BROKER_ONLY]: false });
     const row = off.find((r) => r.permission.id === BROKER_ONLY);
     expect(row).toMatchObject({ on: false, custom: true, roleDefault: true });
-    expect(summarize(off)).toMatchObject({ onCount: 10, customCount: 1 });
+    expect(summarize(off)).toMatchObject({ onCount: 12, customCount: 1 });
   });
 
   it("can grant a permission no assigned role allows", () => {
@@ -70,7 +75,7 @@ describe("resolvePermissions", () => {
 
   it("does not count an override that agrees with the role as custom", () => {
     const redundant = resolvePermissions(["broker"], { [BROKER_ONLY]: true });
-    expect(summarize(redundant)).toMatchObject({ onCount: 11, customCount: 0 });
+    expect(summarize(redundant)).toMatchObject({ onCount: 13, customCount: 0 });
   });
 
   it("attributes a permission to every role granting it", () => {
@@ -102,8 +107,9 @@ describe("seed roster", () => {
     const summary = summarize(
       resolvePermissions(diana!.roleIds, diana!.overrides),
     );
-    // 6 from Managing Director, minus one removed, plus two granted.
-    expect(summary).toMatchObject({ onCount: 7, customCount: 3 });
+    // 9 from Managing Director (the mocks' 6 + the three contact permissions),
+    // minus one removed, plus two granted.
+    expect(summary).toMatchObject({ onCount: 10, customCount: 3 });
   });
 
   it("gives every person exactly one real role", () => {

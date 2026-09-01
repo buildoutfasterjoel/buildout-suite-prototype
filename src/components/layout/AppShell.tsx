@@ -28,6 +28,7 @@ import { BovFlow } from "#/components/contacts/BovFlow";
 import { RosaLeadsWatcher } from "#/components/call/RosaLeadsWatcher";
 import { IngestionWatcher } from "#/components/deals/IngestionWatcher";
 import { useDataStore } from "#/data/dataStore";
+import { useHydrateContactAccessSettings } from "#/components/settings/useContactAccessSettings";
 
 export function AppShell() {
   const hydrated = useDataStore((s) => s.hydrated);
@@ -63,6 +64,9 @@ export function AppShell() {
   // `useMediaQuery` does it.
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+  // The company's contact-ownership ceilings, restored from localStorage the
+  // same way the "Viewing as" seat is — see the store for why.
+  useHydrateContactAccessSettings();
 
   // The same one-render hold pays for the nav mode too. The store can't read
   // localStorage in its initializer without disagreeing with the server, so the
