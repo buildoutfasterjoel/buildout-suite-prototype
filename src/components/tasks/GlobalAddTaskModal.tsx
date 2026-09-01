@@ -11,6 +11,7 @@ import { CURRENT_USER, TEAMMATES } from "#/data/teammates";
 import type { Task } from "#/data/types";
 import { useAddTask } from "#/data/useAddTask";
 import { notify } from "#/lib/notify";
+import { guardContactRight } from "#/components/contacts/contactRights";
 
 const ROSTER = [CURRENT_USER, ...TEAMMATES];
 /** Resolve assignee initials → teammate id (falls back to the current user). */
@@ -92,10 +93,15 @@ export function GlobalAddTaskModal() {
         if (!o) close();
       }}
       onSave={(draft) => {
+        // The picker can name any contact in the book; the right to add work
+        // to one is the record's to give, not the modal's.
+        if (draft.contactId && !guardContactRight(draft.contactId, "canEdit")) return;
         createTask(toInput(draft));
         notify({ title: "Task added", description: draft.name });
       }}
       onUpdate={(draft) => {
+        const target = task?.contactId ?? draft.contactId;
+        if (target && !guardContactRight(target, "canEdit")) return;
         if (isDealEdit && dealId && taskId) {
           // Deal tasks only carry a subset of fields; persist what maps back.
           // Assignee is preserved as-is — deal tasks use their own initials

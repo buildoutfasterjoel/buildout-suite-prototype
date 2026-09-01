@@ -25,6 +25,8 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import { getStore } from "#/data/store";
 import { useDataStore } from "#/data/dataStore";
+import { editableContactIds } from "#/components/contacts/contactRights";
+import { notify } from "#/lib/notify";
 import { useCallListView } from "./-useCallListView";
 import { useContactsFilter } from "./-useContactsFilter";
 import type { RelationshipStage } from "#/data/types";
@@ -278,7 +280,7 @@ function PeoplePage() {
   }) => {
     const { callList } = createCallList({
       ...input,
-      contactIds: [...selected],
+      contactIds: editable([...selected]),
     });
     setView("contacts");
     setActiveListId(callList.id);
@@ -290,8 +292,21 @@ function PeoplePage() {
     () => userLists.filter((l) => l.type !== "dynamic"),
     [userLists],
   );
+  // Adding to a list is a change to the record, so only the contacts the
+  // viewer may change go; the rest are counted and named in the toast.
+  const editable = (ids: string[]) => {
+    const { allowed, skipped } = editableContactIds(ids);
+    if (skipped > 0) {
+      notify({
+        title: `${skipped} contact${skipped === 1 ? "" : "s"} skipped`,
+        description:
+          "You don't have access to make changes to them — request access from their records.",
+      });
+    }
+    return allowed;
+  };
   const handleAddToList = (listId: string) => {
-    addContactsToCallList(listId, [...selected]);
+    addContactsToCallList(listId, editable([...selected]));
     clearSelection();
   };
   const handleRemoveFromList = () => {
@@ -299,7 +314,7 @@ function PeoplePage() {
     clearSelection();
   };
   const handleAddContactsToActiveList = (ids: string[]) =>
-    addContactsToCallList(activeListId, ids);
+    addContactsToCallList(activeListId, editable(ids));
 
   // A manual name-sort request always wins over an AI rank order.
   const toggleSort = () => {

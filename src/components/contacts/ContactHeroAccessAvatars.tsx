@@ -67,6 +67,8 @@ function AccessAvatar({
   fallbackClassName,
   onOpenShare,
 }: {
+  /** Undefined when the viewer can't manage sharing — the avatar just identifies. */
+  onOpenShare?: () => void;
   /** Initials, or an icon for the company. */
   fallback: ReactNode;
   name: string;
@@ -75,22 +77,22 @@ function AccessAvatar({
   /** The owner leads the cluster with an offset ring, outside the group. */
   isOwner?: boolean;
   fallbackClassName?: string;
-  onOpenShare: () => void;
 }) {
+  const interactive = !!onOpenShare;
   return (
     <Tooltip>
       <Tooltip.Trigger
         render={
           <Avatar
-            role="button"
+            role={interactive ? "button" : undefined}
             tabIndex={0}
-            aria-label={`${name} · ${access} — manage sharing`}
-            className={`contact-hero__access${
+            aria-label={`${name} · ${access}${interactive ? " — manage sharing" : ""}`}
+            className={`${interactive ? "contact-hero__access" : ""}${
               isOwner ? " contact-hero__owner-avatar" : ""
             }`}
             onClick={onOpenShare}
             onKeyDown={(e: KeyboardEvent) => {
-              if (e.key === "Enter" || e.key === " ") {
+              if (interactive && (e.key === "Enter" || e.key === " ")) {
                 e.preventDefault();
                 onOpenShare();
               }
@@ -126,14 +128,22 @@ function AccessAvatar({
 export function ContactHeroAccessAvatars({
   ownership,
   shares,
+  canShare,
   onOpenShare,
 }: {
   ownership: ContactOwnership;
   shares: ContactShare[];
+  /**
+   * Whether the viewer may manage sharing. Without it the avatars still say who
+   * has access on hover, but nothing opens the share modal — not the avatars,
+   * not a Manage sharing button.
+   */
+  canShare: boolean;
   onOpenShare: () => void;
 }) {
   const { owner, assignee } = ownership;
   const companyOwned = owner.kind === "company";
+  const open = canShare ? onOpenShare : undefined;
 
   return (
     <div className="d-flex align-items-center" style={{ gap: 4 }}>
@@ -144,7 +154,7 @@ export function ContactHeroAccessAvatars({
           name={owner.name}
           access="Owner"
           isOwner
-          onOpenShare={onOpenShare}
+          onOpenShare={open}
         />
       ) : (
         <AccessAvatar
@@ -153,7 +163,7 @@ export function ContactHeroAccessAvatars({
           access="Owner"
           avatarUrl={owner.user.avatarUrl}
           isOwner
-          onOpenShare={onOpenShare}
+          onOpenShare={open}
         />
       )}
 
@@ -166,7 +176,7 @@ export function ContactHeroAccessAvatars({
           name={assignee.name}
           access="Assigned"
           avatarUrl={assignee.avatarUrl}
-          onOpenShare={onOpenShare}
+          onOpenShare={open}
         />
       )}
 
@@ -179,29 +189,31 @@ export function ContactHeroAccessAvatars({
               name={s.member.name}
               access={accessTierLabel(s.tier)}
               avatarUrl={s.member.avatarUrl}
-              onOpenShare={onOpenShare}
+              onOpenShare={open}
             />
           ))}
         </Avatar.Group>
       )}
 
-      <Tooltip>
-        <Tooltip.Trigger
-          render={
-            <Button
-              variant="ghost"
-              appearance="muted"
-              size="icon-sm"
-              aria-label="Manage sharing"
-              onClick={onOpenShare}
-              className="contact-hero__share-btn"
-            >
-              <FontAwesomeIcon icon={faUserGear} />
-            </Button>
-          }
-        />
-        <Tooltip.Content>Manage sharing</Tooltip.Content>
-      </Tooltip>
+      {canShare && (
+        <Tooltip>
+          <Tooltip.Trigger
+            render={
+              <Button
+                variant="ghost"
+                appearance="muted"
+                size="icon-sm"
+                aria-label="Manage sharing"
+                onClick={onOpenShare}
+                className="contact-hero__share-btn"
+              >
+                <FontAwesomeIcon icon={faUserGear} />
+              </Button>
+            }
+          />
+          <Tooltip.Content>Manage sharing</Tooltip.Content>
+        </Tooltip>
+      )}
     </div>
   );
 }

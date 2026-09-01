@@ -1,3 +1,4 @@
+import { guardContactRight } from "#/components/contacts/contactRights";
 import type { Contact } from "#/data/types";
 import { useCallStore } from "./useCallStore";
 import { playOneRing, playAnsweredCue } from "./ringtone";
@@ -129,7 +130,13 @@ function toRinging() {
 }
 
 export const callFlow = {
-  open(contact: Contact, phone?: string) {
+  /**
+   * Start a call. Every "call this person" in the app funnels through here —
+   * the hero, the day plan, the assistant, the session runner — so the right to
+   * reach out is checked once. Returns false (with a toast) when it isn't held.
+   */
+  open(contact: Contact, phone?: string): boolean {
+    if (!guardContactRight(contact.id, "canReachOut")) return false;
     clearAll();
     session += 1;
     voiceEngine.cancel(); // Otto goes quiet
@@ -156,6 +163,7 @@ export const callFlow = {
       }
     };
     later(step, 900);
+    return true;
   },
 
   /** Skip the remaining pre-dial countdown and start ringing immediately. */

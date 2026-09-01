@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { getContact } from "#/data/store";
 import { notify } from "#/lib/notify";
+import { checkContactRight } from "#/components/contacts/contactRights";
 
 /**
  * A run of calls down a list — a contact list, a deal's leads, or a hand-picked
@@ -57,8 +58,9 @@ export function currentSessionContactId(
 
 /**
  * Which of these contacts can actually be dialed: they exist, they have a
- * number, and they aren't marked Do Not Call. Order is preserved so a list's
- * sort (or an AI ranking) carries into the run.
+ * number, they aren't marked Do Not Call, and the viewer may reach out to them
+ * (the record's owner or assignee, or shared in at Outreach). Order is
+ * preserved so a list's sort (or an AI ranking) carries into the run.
  */
 export function callableContactIds(contactIds: string[]): string[] {
   const seen = new Set<string>();
@@ -66,6 +68,7 @@ export function callableContactIds(contactIds: string[]): string[] {
     if (seen.has(id)) return false;
     const c = getContact(id);
     if (!c || c.doNotCall || !c.phone.trim()) return false;
+    if (!checkContactRight(id, "canReachOut").ok) return false;
     seen.add(id);
     return true;
   });
@@ -81,7 +84,8 @@ export function startCallSession(contactIds: string[], label: string): void {
   if (callable.length === 0) {
     notify({
       title: "Nothing to call",
-      description: "No contacts here have a number we can dial.",
+      description:
+        "No contacts here have a number we can dial and that you have access to call.",
     });
     return;
   }
@@ -89,6 +93,9 @@ export function startCallSession(contactIds: string[], label: string): void {
   useCallSession.getState().start(callable, label);
   notify({
     title: `Calling ${callable.length} contact${callable.length === 1 ? "" : "s"}`,
-    description: skipped > 0 ? `${skipped} skipped (no number or Do Not Call).` : label,
+    description:
+      skipped > 0
+        ? `${skipped} skipped (no number, Do Not Call, or no access to call them).`
+        : label,
   });
 }

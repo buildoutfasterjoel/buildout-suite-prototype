@@ -6455,3 +6455,19 @@ $otto-progress-gutter: 28px;
   border-style: dashed !important;
   border-color: var(--color-storm-grey-200, #d5dae2);
 }
+
+// Read-only records (the viewer can't verify or reach out): the same glyph and
+// text, none of the affordance — no hand cursor, no hover fill, no lift.
+.contact-info__verify--static,
+.contact-info__value--static {
+  cursor: default;
+  background: transparent;
+
+  &:hover,
+  &:focus-visible {
+    background: transparent;
+    color: inherit;
+    transform: none;
+    filter: none;
+  }
+}

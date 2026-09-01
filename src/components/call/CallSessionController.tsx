@@ -56,11 +56,16 @@ export function CallSessionController() {
       return;
     }
     dialedRef.current = index;
+    // The queue was filtered for reach-out rights when it was built, but a
+    // grant can be revoked mid-run — a refused dial skips rather than stalling.
+    if (!callFlow.open(contact)) {
+      useCallSession.getState().skip();
+      return;
+    }
     void navigate({
       to: "/backoffice/contacts/$contactId",
       params: { contactId: contact.id },
     });
-    callFlow.open(contact);
     // `logged` is read only for the completion toast; it must not retrigger.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, index, queue, navigate]);

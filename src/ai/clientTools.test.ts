@@ -214,7 +214,14 @@ describe("contact tag tools", () => {
     const execute = (tool as { execute?: (a: unknown) => Promise<unknown> }).execute;
     return execute!(args) as Promise<Record<string, unknown>>;
   };
-  const someone = () => [...useDataStore.getState().contacts.values()][0];
+  // A contact the signed-in user may act on. The writing tools refuse a record
+  // the viewer has no relationship with, and the first seeded contact is as
+  // likely to be Sarah's as Ethan's.
+  const someone = () =>
+    [...useDataStore.getState().contacts.values()].find(
+      (c) => c.assignedTo === "Ethan Thompson",
+    )!;
+
   const tagsOf = (id: string) => useDataStore.getState().contacts.get(id)!.tags;
 
   it("reads a contact's tags and the tags in use across the book", async () => {
@@ -344,5 +351,48 @@ describe("add_activity reaches the timeline", () => {
     const c = someone();
     await run("add_activity", { type: "showing", body: "Walked 400 W Monroe.", contactId: c.id });
     expect(timelineFor(c.id)[0]?.kind).toBe("tour");
+  });
+});
+
+describe("writing tools respect the viewer's rights on the contact", () => {
+  const tools = createClientTools({ navigate: () => {} });
+  const run = async (name: string, args: unknown) => {
+    const tool = tools.find((t) => t.name === name);
+    expect(tool, `no tool named ${name}`).toBeDefined();
+    const execute = (tool as { execute?: (a: unknown) => Promise<unknown> }).execute;
+    expect(execute, `${name} has no execute`).toBeTypeOf("function");
+    return execute!(args);
+  };
+  const other = () =>
+    [...useDataStore.getState().contacts.values()].find(
+      (c) =>
+        c.assignedTo !== "Ethan Thompson" &&
+        !(useDataStore.getState().contactShares.get(c.id) ?? []).some((s) => s.member.id === "you"),
+    )!;
+
+  it("refuses to log, tag, edit or task a contact the viewer can only read", async () => {
+    const c = other();
+    const before = useContactSession.getState().logged[c.id]?.length ?? 0;
+    for (const [name, args] of [
+      ["add_activity", { type: "note", body: "x", contactId: c.id }],
+      ["log_call", { note: "x", contactId: c.id }],
+      ["add_contact_tags", { contactId: c.id, tags: ["VIP"] }],
+      ["create_task", { task_title: "Follow up", contact_name: `${c.firstName} ${c.lastName}` }],
+    ] as const) {
+      const out = (await run(name, args)) as { error?: string };
+      expect(String(out.error), name).toMatch(/You can't/);
+    }
+    expect(useContactSession.getState().logged[c.id]?.length ?? 0).toBe(before);
+    expect(useDataStore.getState().contacts.get(c.id)!.tags).not.toContain("VIP");
+  });
+
+  it("still lets the viewer act on their own contact", async () => {
+    const c = [...useDataStore.getState().contacts.values()].find(
+      (x) => x.assignedTo === "Ethan Thompson",
+    )!;
+    const out = (await run("add_activity", { type: "note", body: "mine", contactId: c.id })) as {
+      error?: string;
+    };
+    expect(out.error).toBeUndefined();
   });
 });

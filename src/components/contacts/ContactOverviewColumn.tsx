@@ -368,6 +368,7 @@ export function ContactOverviewColumn({
           <ContactHeroAccessAvatars
             ownership={ownership}
             shares={shares}
+            canShare={rights.canShare}
             onOpenShare={onOpenShare}
           />
         </div>
@@ -393,6 +394,8 @@ export function ContactOverviewColumn({
               emails={allEmails}
               addressLine={addressLine}
               phoneInvalid={phoneInvalid}
+              canEdit={rights.canEdit}
+              canReachOut={rights.canReachOut}
               onDial={(phone) => callFlow.open(contact, phone)}
               onEmail={() => useComposeFocus.getState().request("email")}
             />

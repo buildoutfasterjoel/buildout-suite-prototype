@@ -83,6 +83,7 @@ import {
 } from "#/components/contacts/composerSend";
 import { withPhase } from "#/ai/toolPhase";
 import { useContactSession } from "#/components/contacts/useContactSession";
+import { checkContactRight, type ContactRight } from "#/components/contacts/contactRights";
 import { useDayPlanQueue } from "#/components/ai/useDayPlanQueue";
 import {
   getClientReportKpis,
@@ -386,6 +387,12 @@ function withJsonSafeOutput(tool: AnyClientTool): AnyClientTool {
  * definitions in `toolDefs.ts`. `navigate` is injected from the sidebar (which
  * holds the router). Each `execute` runs against the live Zustand store.
  */
+/** A tool's answer when the viewer lacks a right on the contact it targets. */
+function denied(contactId: string, right: ContactRight): { error: string } | null {
+  const r = checkContactRight(contactId, right);
+  return r.ok ? null : { error: r.message };
+}
+
 export function createClientTools({
   navigate,
 }: {
@@ -637,6 +644,8 @@ export function createClientTools({
         contactId: string;
         role: "seller" | "buyer" | "other";
       };
+      const blocked = denied(contactId, "canEdit");
+      if (blocked) return blocked;
       const { deal } = linkContactToDeal(dealId, contactId, role);
       return deal
         ? { deals: [dealSummary(deal)], linked: contactId, role }
@@ -837,6 +846,8 @@ export function createClientTools({
               : "There's no draft to send — ask me to write one first.",
         };
       }
+      const cannotSend = denied(pending.contactId, "canReachOut");
+      if (cannotSend) return cannotSend;
       useContactSession.getState().addLog(pending.contactId, {
         kind: "email",
         body: pending.body,
@@ -977,6 +988,8 @@ export function createClientTools({
             : "Tell me who or which deal to log this against.",
         };
       }
+      const blocked = denied(c.id, "canLog");
+      if (blocked) return blocked;
       const name = `${c.firstName} ${c.lastName}`.trim();
       // Everything logged here reaches the timeline, notes included. A note used
       // to go ONLY to the contact's notes field, which is read by the Edit
@@ -1084,6 +1097,8 @@ export function createClientTools({
             : "Tell me who the call was with.",
         };
       }
+      const blocked = denied(c.id, "canLog");
+      if (blocked) return blocked;
       useContactSession.getState().addLog(c.id, {
         kind: "call",
         body: note,
@@ -1111,6 +1126,10 @@ export function createClientTools({
         due?: string;
       };
       const c = contact_name ? resolveContactByName(contact_name) : null;
+      if (c) {
+        const blocked = denied(c.id, "canEdit");
+        if (blocked) return blocked;
+      }
       const deal = dealId ? getListing(dealId) : undefined;
       const { task } = createTask({
         name: task_title,
@@ -1216,6 +1235,8 @@ export function createClientTools({
       const { contact_name } = args as { contact_name: string };
       const c = resolveContactByName(contact_name);
       if (!c) return { started: false, error: `No contact named "${contact_name}".` };
+      const blocked = denied(c.id, "canReachOut");
+      if (blocked) return { started: false, ...blocked };
       callFlow.open(c);
       // Land the broker on the contact's page so the call bar + arc play out
       // over their record (mirrors the homepage "Call Rosa" CTA).
@@ -1408,6 +1429,8 @@ export function createClientTools({
       // form, so every field the model left out has to be filled back in from the
       // record. Passing a bare patch would blank a name, an email, a phone —
       // whatever wasn't mentioned — which is how an update quietly becomes a wipe.
+      const blocked = denied(target.id, "canEdit");
+      if (blocked) return blocked;
       const sent = { first_name, last_name, email, phone, company, title, notes };
       const changed = Object.entries(sent)
         .filter(([, v]) => v !== undefined)
@@ -1472,6 +1495,8 @@ export function createClientTools({
       };
       const target = resolveTagTarget(contactId, contact_name);
       if ("error" in target) return target;
+      const blocked = denied(target.contact.id, "canEdit");
+      if (blocked) return blocked;
       const { contact, added } = addContactTags(target.contact.id, tags ?? []);
       if (!contact) return { error: "Contact not found" };
       return {
@@ -1497,6 +1522,8 @@ export function createClientTools({
       };
       const target = resolveTagTarget(contactId, contact_name);
       if ("error" in target) return target;
+      const blocked = denied(target.contact.id, "canEdit");
+      if (blocked) return blocked;
       const { contact, removed } = removeContactTags(target.contact.id, tags ?? []);
       if (!contact) return { error: "Contact not found" };
       return {
