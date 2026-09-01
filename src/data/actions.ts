@@ -1894,6 +1894,31 @@ export function setContactPrivate(
 }
 
 /**
+ * Mark two contact records as relationships with the same person. Reuses a
+ * `personId` either already carries, so linking a third record joins the
+ * group. Nothing else changes: each record keeps its owner, history and
+ * privacy — this is the "link" of keep / link / merge, and merge isn't built.
+ */
+export function linkContactsAsPerson(
+  idA: string,
+  idB: string,
+): { personId: string | null } {
+  const { contacts } = useDataStore.getState()
+  const a = contacts.get(idA)
+  const b = contacts.get(idB)
+  if (!a || !b || idA === idB) return { personId: null }
+  const personId = a.personId ?? b.personId ?? crypto.randomUUID()
+  useDataStore.setState((s) => {
+    const next = new Map(s.contacts)
+    next.set(idA, { ...a, personId })
+    next.set(idB, { ...b, personId })
+    return { contacts: next }
+  })
+  useDataStore.getState().persist()
+  return { personId }
+}
+
+/**
  * Stamp a contact's most recent activity — anything that happens on the record,
  * inbound or outbound (a logged call, an email that arrives). Keeps the Last
  * Activity filter and column true as the session goes on, without touching

@@ -1443,6 +1443,13 @@ export interface Contact {
    * loading.
    */
   isPrivate?: boolean
+  /**
+   * One Person, many Relationships: records that share a `personId` are two
+   * brokers' relationships with the same human. Absent means the only one we
+   * know of. Set by linking (see `linkContactsAsPerson`) or by the seed; never
+   * inferred silently, and nothing merges — see `contactRelationships.ts`.
+   */
+  personId?: string
   source: ContactSource
   relationship: RelationshipStage
   /** Deal side, or null when the contact isn't on an active deal. */

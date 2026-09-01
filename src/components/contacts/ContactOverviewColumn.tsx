@@ -24,6 +24,7 @@ import {
   ContactPrivacyBadge,
 } from "#/components/contacts/ContactHeroAccessAvatars";
 import { ContactHeroInfo } from "#/components/contacts/ContactHeroInfo";
+import { ContactSiblings } from "#/components/contacts/ContactSiblings";
 import { useComposeFocus } from "#/components/contacts/useComposeFocus";
 import { callFlow } from "#/components/call/callFlow";
 import type { ContactShare } from "#/data/teammates";
@@ -346,6 +347,9 @@ export function ContactOverviewColumn({
                 Last touch:{" "}
                 <span className="fw-semibold">{buildLastTouch(contact)}</span>
               </span>
+              {/* One person, many relationships: other brokers' records for
+                  this same human, among what the viewer may see. */}
+              <ContactSiblings contact={contact} rights={rights} />
             </div>
           </div>
         </div>

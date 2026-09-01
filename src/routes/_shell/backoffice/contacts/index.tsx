@@ -41,6 +41,7 @@ import {
 import { useNewContact } from "#/data/useNewContact";
 import { ContactsTable } from "#/components/contacts/ContactsTable";
 import { useVisibleContacts } from "#/components/contacts/useVisibleContacts";
+import { relationshipCounts } from "#/data/contactRelationships";
 import { ContactSelectionBar } from "#/components/contacts/ContactSelectionBar";
 import { CreateStaticListModal } from "#/components/contacts/CreateStaticListModal";
 import { AddToListModal } from "#/components/contacts/AddToListModal";
@@ -90,6 +91,9 @@ function PeoplePage() {
   // with aren't here at all — not in the rows, the counts, or the filter facets.
   // Reactive to the store, the roster seat and the company settings.
   const { contacts, privateIds } = useVisibleContacts();
+  // "2 relationships" chips — computed over the visible book, so a private
+  // twin in someone else's book doesn't show up as a count either.
+  const relCounts = useMemo(() => relationshipCounts(contacts), [contacts]);
 
   // User/AI-created call lists (reactive) — shown alongside the built-in lists.
   const callListsMap = useDataStore((s) => s.callLists);
@@ -852,6 +856,7 @@ function PeoplePage() {
                   {/* Table */}
                   <ContactsTable
                     privateIds={privateIds}
+                    relationshipCounts={relCounts}
                     contacts={paged}
                     filtersActive={filtersActive}
                     sortDir={sortDir}

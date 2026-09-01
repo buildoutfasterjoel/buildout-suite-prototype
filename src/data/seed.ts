@@ -933,6 +933,18 @@ function generateComp(propertyId: string, buildingSqFt: number, propertyType: Pr
 // ── Contact generator ─────────────────────────────────────────────────────────
 
 /**
+ * Fixed ids for the two "one person, many relationships" pairs the seed plants
+ * (see generateDataset), so the share seed can grant Ethan his Contributor seat
+ * on Dana by id.
+ */
+export const PERSON_PAIR_IDS = {
+  jimSarah: 'person-jim-sarah',
+  jimEthan: 'person-jim-ethan',
+  danaSarah: 'person-dana-sarah',
+  danaEthan: 'person-dana-ethan',
+} as const
+
+/**
  * Team members a contact can be assigned to — weighted to a single lead broker.
  * Full roster names (see `roster.ts`), so `contactOwnership.ts` can resolve the
  * assignee to a real person with roles and permissions. They used to be
@@ -2737,6 +2749,111 @@ export function generateDataset() {
   // Turn two seeded lease deals into umbrella shells with child space deals.
   // After applyHeroes so the heroes have already claimed their listings; before
   // reconciliation so the children's tenants get their contact fields resolved.
+  // One Person, many Relationships — two seeded pairs so both readings can be
+  // shown without anyone granting anything live:
+  //   Jim Halvorsen: Sarah's private, unshared record (fifteen years of history)
+  //     and Ethan's brand-new one. In the Broker seat Ethan's Jim shows nothing;
+  //     see-through (or a share from Sarah) surfaces the hint. Link isn't offered
+  //     because Ethan can't edit Sarah's record — it says to ask her.
+  //   Dana Whitfield: Sarah's record shared with Ethan at Contributor beside
+  //     Ethan's own, so the hint shows in every seat and Link is available.
+  // Fixed ids so `seedContactShares` can grant the one share explicitly.
+  {
+    const pair = (id: string, over: Partial<Contact>): Contact =>
+      Object.assign(generateContact(allPropertyIds), {
+        id,
+        // Derived from the fixed id, like every other contact's — the seed test
+        // pins that no flag is drawn from the faker stream.
+        quickbooksSynced: isQuickbooksSynced(id),
+        propertyIds: [],
+        ownedPropertyIds: undefined,
+        inquiries: 0,
+        inquiredListingIds: undefined,
+        inquiryDetails: undefined,
+        heroKey: undefined,
+        side: null,
+        dealStage: null,
+        ...over,
+      })
+    const ago = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString()
+    const jimEmail = 'jim@halvorsenholdings.com'
+    const jimPhone = '(206) 555-0142'
+    contacts.push(
+      pair(PERSON_PAIR_IDS.jimSarah, {
+        firstName: 'Jim',
+        lastName: 'Halvorsen',
+        company: 'Halvorsen Holdings',
+        title: 'Principal',
+        role: 'owner',
+        email: jimEmail,
+        phone: jimPhone,
+        assignedTo: 'Sarah Chen',
+        isPrivate: true,
+        relationship: 'client',
+        source: 'Referral',
+        createdAt: ago(15 * 365),
+        lastContactedAt: ago(12),
+        lastActivityAt: ago(12),
+        lastTouch: 'Coffee with Jim',
+        tags: ['Repeat Client'],
+      }),
+      pair(PERSON_PAIR_IDS.jimEthan, {
+        firstName: 'Jim',
+        lastName: 'Halvorsen',
+        company: 'Halvorsen Holdings',
+        title: 'Principal',
+        role: 'owner',
+        email: jimEmail,
+        phone: jimPhone,
+        assignedTo: 'Ethan Thompson',
+        relationship: 'cold',
+        source: 'Cold outreach',
+        createdAt: ago(3),
+        lastContactedAt: null,
+        lastActivityAt: null,
+        lastTouch: 'Added manually',
+        tags: [],
+      }),
+    )
+    const danaEmail = 'dana@whitfieldcapital.com'
+    contacts.push(
+      pair(PERSON_PAIR_IDS.danaSarah, {
+        firstName: 'Dana',
+        lastName: 'Whitfield',
+        company: 'Whitfield Capital',
+        title: 'Managing Partner',
+        role: 'buyer',
+        email: danaEmail,
+        phone: '(312) 555-0187',
+        assignedTo: 'Sarah Chen',
+        relationship: 'nurturing',
+        source: 'Referral',
+        createdAt: ago(400),
+        lastContactedAt: ago(30),
+        lastActivityAt: ago(30),
+        lastTouch: 'Emailed an introduction',
+        tags: ['Investor'],
+      }),
+      pair(PERSON_PAIR_IDS.danaEthan, {
+        firstName: 'Dana',
+        lastName: 'Whitfield',
+        company: 'Whitfield Capital',
+        title: 'Managing Partner',
+        role: 'buyer',
+        email: danaEmail,
+        phone: '(312) 555-0187',
+        assignedTo: 'Ethan Thompson',
+        relationship: 'cold',
+        source: 'Cold outreach',
+        createdAt: ago(9),
+        lastContactedAt: null,
+        lastActivityAt: null,
+        lastTouch: 'Added manually',
+        tags: [],
+      }),
+    )
+  }
+
   // Phase 4 needs a private contact who is a party on a deal the firm can see —
   // the "Private Contact" placeholder case. Take the first deal whose seller
   // belongs to another broker and mark that seller private (if the seller isn't
@@ -2989,5 +3106,8 @@ export function seedContactShares(
     }
     map.set(c.id, shares)
   })
+  // The one hand-placed share: Sarah's Dana Whitfield, shared with Ethan at
+  // Contributor, so the Link action on the person pair has a seat to run from.
+  map.set(PERSON_PAIR_IDS.danaSarah, [{ member: CURRENT_USER, tier: 'contributor' }])
   return map
 }

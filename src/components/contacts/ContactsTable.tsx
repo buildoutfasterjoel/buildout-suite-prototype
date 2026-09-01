@@ -278,8 +278,11 @@ export function ContactsTable({
   onToggleOne,
   onToggleAll,
   privateIds,
+  relationshipCounts,
 }: {
   contacts: Contact[];
+  /** contact id → how many visible records share its person (2+). */
+  relationshipCounts?: Map<string, number>;
   /**
    * Private records the viewer can see anyway (their own, shared in, or a
    * Managing Director with View Private Contacts). They get a lock by the name
@@ -463,6 +466,16 @@ export function ContactsTable({
                       >
                         {fullName}
                       </Link>
+                      {(relationshipCounts?.get(contact.id) ?? 0) > 1 && (
+                        <Badge
+                          variant="secondary"
+                          appearance="muted"
+                          className="fs-xs"
+                          title="Another broker holds a separate relationship with this person"
+                        >
+                          {relationshipCounts!.get(contact.id)} relationships
+                        </Badge>
+                      )}
                       {privateIds?.has(contact.id) && (
                         <FontAwesomeIcon
                           icon={faLock}
