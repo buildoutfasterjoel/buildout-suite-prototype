@@ -21,9 +21,19 @@ import {
  *
  * Send stays secondary until there's something to send; Cancel collapses with no
  * side-effect, and the caller restores whatever the editor displaced.
+ *
+ * Two modes, and the difference is whether there's a message to reply *into*:
+ *
+ * - `subject` — replying to an email or a thread. The row quotes what's being
+ *   answered and the new message inherits its subject; there's nothing to edit.
+ * - `defaultSubject` — writing about something that isn't an email at all (a
+ *   listing inquiry). The editor carries its own editable Subject line seeded
+ *   with "Re: …", because the email is a new one rather than a reply, and
+ *   `onSend` hands the subject back with the body.
  */
 export function ReplyComposer({
   subject,
+  defaultSubject,
   recipientName,
   recipientEmail,
   recipientInitials,
@@ -31,18 +41,22 @@ export function ReplyComposer({
   onCancel,
 }: {
   subject?: string;
+  defaultSubject?: string;
   recipientName: string;
   recipientEmail?: string;
   recipientInitials: string;
-  onSend: (text: string) => void;
+  onSend: (text: string, subject?: string) => void;
   onCancel: () => void;
 }) {
   const [text, setText] = useState("");
+  const [subjectDraft, setSubjectDraft] = useState(defaultSubject ?? "");
   const canSend = text.trim().length > 0;
 
   return (
     <div className="tl-reply">
-      {subject && (
+      {/* Only one of the two ever shows: an editable subject makes the quote
+          redundant, since the "Re: …" it starts from says the same thing. */}
+      {subject && defaultSubject === undefined && (
         <div className="tl-reply__quote">
           Replying to <span className="fw-semibold">{subject}</span>
         </div>
@@ -72,6 +86,18 @@ export function ReplyComposer({
             </Button>
           </div>
         </div>
+
+        {defaultSubject !== undefined && (
+          <div className="tl-reply__subject">
+            <span className="tl-reply__to-label">Subject:</span>
+            <input
+              className="compose-subject-input"
+              placeholder="Enter subject here..."
+              value={subjectDraft}
+              onChange={(e) => setSubjectDraft(e.target.value)}
+            />
+          </div>
+        )}
 
         <div className="compose-toolbar tl-reply__toolbar">
           {[faBold, faItalic, faUnderline, faLink, faListUl, faListOl].map(
@@ -110,7 +136,13 @@ export function ReplyComposer({
           <Button
             variant={canSend ? "primary" : "secondary"}
             size="sm"
-            onClick={() => canSend && onSend(text.trim())}
+            onClick={() =>
+              canSend &&
+              onSend(
+                text.trim(),
+                defaultSubject === undefined ? undefined : subjectDraft.trim(),
+              )
+            }
           >
             Send Email
             <FontAwesomeIcon icon={faPaperPlane} />

@@ -34,6 +34,7 @@ import { TimelineFilterDropdown } from "#/components/contacts/TimelineFilterDrop
 import { AddTaskAction } from "#/components/contacts/ContactTasksPanel";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
 import {
+  recordEngagement,
   selectResolved,
   selectSimEvents,
   useContactSession,
@@ -252,7 +253,11 @@ export function ContactEngagementPanel({
         ...o,
         [event.id]: { ...o[event.id], pinned: !(o[event.id]?.pinned ?? event.pinned) },
       }));
-    } else if (/^(Reply|Reply all|Forward|Respond)$/.test(id)) {
+    } else if (/^(Reply|Reply all|Forward|Respond|Email)$/.test(id)) {
+      // "Email" is the inquiry row's primary action and its FAB's first button.
+      // It opens the same inline editor a reply does — the broker answers where
+      // they're reading, not in the composer three inches above — and the send
+      // handler below is what makes it a new email rather than a threaded reply.
       const sameTarget =
         replyOpenId === event.id && (replyMessageId ?? null) === (messageId ?? null);
       setReplyOpenId(sameTarget ? null : event.id);
@@ -291,7 +296,36 @@ export function ContactEngagementPanel({
     // still dispatch through here so wiring stays centralized.
   }
 
-  function handleReplySend(event: TimelineEventData, text: string) {
+  function handleReplySend(
+    event: TimelineEventData,
+    text: string,
+    subject?: string,
+  ) {
+    if (event.type === "inquiry") {
+      // An inquiry isn't an exchange to advance — it's a form submission, and the
+      // email answering it is the first message of a new conversation. So this one
+      // goes through onLog and lands as its own row above the inquiry, rather than
+      // folding into it as a reply to something that was never an email. Logging
+      // it is also what moves an Inquired lead to Nurturing (see
+      // `recordEngagement`) and what puts it in the Emails filter.
+      onLog({
+        kind: "email",
+        body: text,
+        subject,
+        to: contact.email,
+        date: new Date().toISOString().slice(0, 10),
+        // The listing they inquired about, so the sent email carries the same
+        // deal chip the inquiry does.
+        relatedDeal: event.associations?.find((a) => a.type === "deal")?.label,
+      });
+      setReplyOpenId(null);
+      setReplyMessageId(null);
+      // Emailing them *is* the follow-up the inquiry was waiting for, so the row
+      // stops asking for attention.
+      resolve(event.id);
+      return;
+    }
+
     // A reply advances an exchange; it isn't a separate thing that happened. So
     // it attaches to the event it answers (see foldThreads) rather than going
     // through onLog, which would leave a second row saying the same thing.
@@ -310,6 +344,9 @@ export function ContactEngagementPanel({
     setReplyMessageId(null);
     // Replying handles the inbound email/thread — drop its attention state.
     resolve(event.id);
+    // A reply is an email sent, so it starts the relationship like any other.
+    // It doesn't go through `addLog` (see above), so the rule is applied here.
+    recordEngagement(contact.id, "email");
   }
 
   const filterControl =
@@ -350,7 +387,9 @@ export function ContactEngagementPanel({
                     onAction={(id, messageId) =>
                       handleAction(event, id, messageId)
                     }
-                    onReplySend={(text) => handleReplySend(event, text)}
+                    onReplySend={(text, subject) =>
+                      handleReplySend(event, text, subject)
+                    }
                     onReplyCancel={() => {
                       setReplyOpenId(null);
                       setReplyMessageId(null);

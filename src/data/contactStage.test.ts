@@ -4,6 +4,7 @@ import {
   deriveRelationship,
   furthestDealStage,
   isEngaged,
+  nurtureOnEngagement,
   reconcileContactDealFields,
 } from './contactStage'
 import type { Contact, Listing } from './types'
@@ -165,5 +166,26 @@ describe('reconcileContactDealFields', () => {
       relationship: 'nurturing',
       side: null,
     })
+  })
+})
+
+describe('nurtureOnEngagement', () => {
+  it('starts the relationship with a cold contact, whatever the move was', () => {
+    expect(nurtureOnEngagement('cold', 'task')).toBe(true)
+    expect(nurtureOnEngagement('cold', 'email')).toBe(true)
+    expect(nurtureOnEngagement('cold', 'call')).toBe(true)
+  })
+
+  it('takes a real touch to graduate an inquiry-sourced lead', () => {
+    expect(nurtureOnEngagement('inquired', 'email')).toBe(true)
+    expect(nurtureOnEngagement('inquired', 'call')).toBe(true)
+    // A task is a note-to-self — the lead is still unworked.
+    expect(nurtureOnEngagement('inquired', 'task')).toBe(false)
+  })
+
+  it('leaves nurturing and every deal-derived stage alone', () => {
+    for (const stage of ['nurturing', 'pitching', 'client', 'past_client'] as const) {
+      expect(nurtureOnEngagement(stage, 'email')).toBe(false)
+    }
   })
 })

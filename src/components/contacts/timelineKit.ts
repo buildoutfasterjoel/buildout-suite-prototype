@@ -1,4 +1,5 @@
 import type { Contact, DealSummary, RelationshipStage } from "#/data/types";
+import type { EngagementTrigger } from "#/data/contactStage";
 import { CURRENT_USER } from "#/data/teammates";
 import { contactFullName } from "#/components/contacts/contactDisplay";
 import type {
@@ -100,6 +101,13 @@ type EventOverrides = Partial<Omit<TimelineEvent, "id" | "type" | "seq">>;
  * Build one event with the boilerplate filled in. Outbound rows are authored
  * by the broker; pass `direction: "in"` for rows the contact authored (actor
  * and counterpart flip automatically unless explicitly provided).
+ *
+ * `daysAgo` is clamped so no beat can land before the record existed — nothing
+ * happened to a contact before we had one. Beats are placed from three different
+ * directions (the arc clock, absolute offsets like "18 days into the pitch", and
+ * a spread floor that needs two days of room), so the guarantee that
+ * {@link createdEvent} is the oldest row is enforced here, once, rather than in
+ * every beat that does its own date math.
  */
 export function mk(
   ctx: ArcCtx,
@@ -109,12 +117,19 @@ export function mk(
 ): TimelineEvent {
   const n = ctx.next();
   const inbound = over.direction === "in";
+  const at = ctx.at(daysAgo, 9 + (n % 8), (n * 17) % 60);
+  const created = Date.parse(ctx.c.createdAt);
   return {
     id: `${ctx.c.id}-${type}-${n}`,
     type,
     actor: inbound ? { name: ctx.ref.name } : OWNER,
     contact: inbound ? { name: OWNER.name, id: "me" } : ctx.ref,
-    timestamp: ctx.at(daysAgo, 9 + (n % 8), (n * 17) % 60),
+    // Pushed to just after creation rather than onto it, a minute per ordinal, so
+    // several clamped beats keep their order instead of stacking on one instant.
+    timestamp:
+      Date.parse(at) < created
+        ? new Date(created + (n + 1) * 60_000).toISOString()
+        : at,
     seq: n,
     source: "user",
     ...over,
@@ -171,6 +186,49 @@ export function stageChanged(
     associations: assoc(ctx.deal),
     source: "system",
   });
+}
+
+/**
+ * Why a stage moved when the broker's own action caused it, rather than a deal
+ * (see `stageReason` above for that half). Phrased around what they just did,
+ * because "Cold → Nurturing" with no cause reads as the record changing itself.
+ */
+const ENGAGEMENT_REASON: Record<EngagementTrigger, string> = {
+  task: "A task was created for this contact, moving them to Nurturing.",
+  email: "An email was sent to this contact, moving them to Nurturing.",
+  call: "A call was logged with this contact, moving them to Nurturing.",
+};
+
+/**
+ * Sorts a live stage change above the session-logged (1M) and simulated (2M)
+ * rows it shares a timestamp with — the promotion is *caused* by one of them, so
+ * it has to read as having happened after it.
+ */
+const ENGAGEMENT_STAGE_SEQ = 3_000_000;
+
+/**
+ * The row for a promotion to Nurturing that the broker's own action triggered —
+ * a task created, an email sent, a call logged (see `nurtureOnEngagement`). Same
+ * shape and System attribution as the arc's {@link stageChanged}, but stamped
+ * now and with a deterministic id so the session store dedupes it.
+ */
+export function nurtureStageRow(
+  c: Contact,
+  from: RelationshipStage,
+  trigger: EngagementTrigger,
+): TimelineEvent {
+  return {
+    id: `stage-nurturing-${trigger}-${c.id}`,
+    type: "stage-change",
+    actor: { name: "System" },
+    contact: { name: contactFullName(c), id: c.id },
+    timestamp: new Date().toISOString(),
+    seq: ENGAGEMENT_STAGE_SEQ,
+    title: "Updated contact stage:",
+    stageChange: { from, to: "nurturing" },
+    body: ENGAGEMENT_REASON[trigger],
+    source: "system",
+  };
 }
 
 /** The system "Contact created" row every arc ends with. */
