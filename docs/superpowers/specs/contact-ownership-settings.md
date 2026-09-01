@@ -110,11 +110,24 @@ chip. Role defaults and overrides are untouched underneath, so re-opening restor
   sharing-only role — the company owns those and Riley works them), turn the company switch off,
   or set the grant default to "only people you grant it to".
 
+## Phase 2 — private timeline artifacts (built on this branch)
+
+- **Rule, in code:** `canBePrivate(event)` in `timeline.ts` — note, call, email, meeting, tour;
+  user-sourced; outbound; authored by the viewer. System rows (created, stage-change, change-log,
+  assignment, marketing, task) and inbound rows are never privatable. `hiddenFromViewer(event)`
+  drops a colleague's private artifact from the feed; the viewer's own stays. Authorship governs —
+  View Private Contacts never reaches a private note.
+- **Composer:** a "Private" ghost toggle (lock-open → lock, purple when on) in every tab's footer,
+  per-tab state, reset on log. Carried as `ComposedActivity.isPrivate` →
+  `TimelineEvent.visibility: "private"`.
+- **Row:** a "Private" chip with a lock in the meta line beside the pin, with a tooltip saying who
+  can't see it. Overflow menu gains Make private / Make visible on rows the viewer authored,
+  stored as a per-row session override like the pin.
+- The ~9 seeded private notes (Rosa, Earl, Margaret arcs) now render the chip; all are authored
+  by Ethan so none hide.
+
 ## Next phases (not on this branch)
 
-2. **Private artifacts** — lock on the composer for every non-system kind, "Private · only you"
-   on the row, hidden in any view-as-teammate state. `TimelineEvent.visibility` already exists
-   and is set on ~9 seeded events; this is rendering plus a composer control.
 3. **Index visibility** — hide private records the viewer has no grant on; MD with View Private
    Contacts sees placeholders, not names, in lists and reports.
 4. **Placeholders on deals** — "Private Contact" on a deal's party list; request-access knock.
