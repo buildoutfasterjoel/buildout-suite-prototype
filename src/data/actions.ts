@@ -6,6 +6,7 @@ import {
   serializeContactFilters,
   type ContactFilterState,
 } from '#/components/contacts/contactFilterModel'
+import { recordEngagement } from '#/components/contacts/useContactSession'
 import type { Contact, ContactRole, ContactSource, DealDocument, DealHistoryEntry, DealIngestion, DealInvoice, DealMarketing, DealPitchFinancials, DealBroker, DealFinancials, DealTask, DealTransaction, DepositAllocation, DocumentGeneration, FinancialDeduction, FinancialReceivable, GeneratedSection, IngestionFieldKey, Listing, PaymentDeduction, PropertyStatus, Task, VoucherDeposit, VoucherPayable, VoucherPayment } from './types'
 import { CURRENT_USER, TEAMMATES } from './teammates'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
@@ -1599,6 +1600,11 @@ export function createTask(input: NewTaskInput): { task: Task } {
     return { tasks }
   })
   useDataStore.getState().persist()
+  // Creating a task against a contact is the broker committing to work the
+  // record, which is enough to start the relationship — see `recordEngagement`.
+  // It sits on this write path so every task surface (the Add Task modal, a
+  // call recap, the assistant's `create_task`) gets the promotion for free.
+  recordEngagement(task.contactId, 'task')
   return { task }
 }
 

@@ -34,6 +34,7 @@ import { TimelineFilterDropdown } from "#/components/contacts/TimelineFilterDrop
 import { AddTaskAction } from "#/components/contacts/ContactTasksPanel";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
 import {
+  recordEngagement,
   selectResolved,
   selectSimEvents,
   useContactSession,
@@ -310,6 +311,9 @@ export function ContactEngagementPanel({
     setReplyMessageId(null);
     // Replying handles the inbound email/thread — drop its attention state.
     resolve(event.id);
+    // A reply is an email sent, so it starts the relationship like any other.
+    // It doesn't go through `addLog` (see above), so the rule is applied here.
+    recordEngagement(contact.id, "email");
   }
 
   const filterControl =

@@ -1,7 +1,12 @@
 import { create } from "zustand";
 import type { ComposedActivity } from "#/components/contacts/contactDisplay";
+import { contactFullName } from "#/components/contacts/contactDisplay";
 import type { ComposedDraft } from "#/components/contacts/ContactComposeModule";
 import type { TimelineEvent } from "#/components/contacts/timeline";
+import { nurtureStageRow } from "#/components/contacts/timelineKit";
+import { promoteOnEngagement } from "#/data/contactEngagement";
+import type { EngagementTrigger } from "#/data/contactStage";
+import { notify } from "#/lib/notify";
 
 /**
  * Per-contact session state for the activity timeline: activities logged this
@@ -54,6 +59,14 @@ export const useContactSession = create<ContactSessionState>((set) => ({
         [contactId]: [activity, ...(s.logged[contactId] ?? [])],
       },
     }));
+    // Every surface that logs an activity funnels through here — the composer,
+    // the global call log, the BOV flow, the assistant's tools — so the stage
+    // automation hangs off this one write path rather than each of them.
+    // A note, meeting or tour isn't the outreach the rule is about, and a
+    // completed task is the tail of work that already promoted the contact.
+    if (draft.kind === "email" || draft.kind === "call") {
+      recordEngagement(contactId, draft.kind);
+    }
     return activity.id;
   },
 
@@ -100,6 +113,35 @@ export const useContactSession = create<ContactSessionState>((set) => ({
       },
     })),
 }));
+
+/**
+ * Contact-stage automation, visible half: the broker worked the record, so the
+ * stage keeps up and the timeline says why.
+ *
+ * Called by `addLog` above for a sent email or a logged call, and by
+ * `createTask` for a task created against a contact. A no-op when the stage
+ * doesn't move, so call sites fire it unconditionally.
+ *
+ * The stage itself is persisted; the row explaining it is session state, which is
+ * the same pairing the activity that triggered it already has (a logged call is
+ * gone on refresh, its `lastActivityAt` isn't).
+ */
+export function recordEngagement(
+  contactId: string | null | undefined,
+  trigger: EngagementTrigger,
+): void {
+  if (!contactId) return;
+  const moved = promoteOnEngagement(contactId, trigger);
+  if (!moved) return;
+  const row = nurtureStageRow(moved.contact, moved.from, trigger);
+  useContactSession.getState().addSimEvent(contactId, row);
+  // Nobody asked for this change, so it announces itself — once per contact,
+  // since the rule only fires on the way out of cold/inquired.
+  notify({
+    title: `${contactFullName(moved.contact)} moved to Nurturing`,
+    description: row.body,
+  });
+}
 
 const EMPTY: never[] = [];
 

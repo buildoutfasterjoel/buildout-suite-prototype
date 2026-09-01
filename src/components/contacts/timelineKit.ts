@@ -1,4 +1,5 @@
 import type { Contact, DealSummary, RelationshipStage } from "#/data/types";
+import type { EngagementTrigger } from "#/data/contactStage";
 import { CURRENT_USER } from "#/data/teammates";
 import { contactFullName } from "#/components/contacts/contactDisplay";
 import type {
@@ -185,6 +186,49 @@ export function stageChanged(
     associations: assoc(ctx.deal),
     source: "system",
   });
+}
+
+/**
+ * Why a stage moved when the broker's own action caused it, rather than a deal
+ * (see `stageReason` above for that half). Phrased around what they just did,
+ * because "Cold → Nurturing" with no cause reads as the record changing itself.
+ */
+const ENGAGEMENT_REASON: Record<EngagementTrigger, string> = {
+  task: "A task was created for this contact, moving them to Nurturing.",
+  email: "An email was sent to this contact, moving them to Nurturing.",
+  call: "A call was logged with this contact, moving them to Nurturing.",
+};
+
+/**
+ * Sorts a live stage change above the session-logged (1M) and simulated (2M)
+ * rows it shares a timestamp with — the promotion is *caused* by one of them, so
+ * it has to read as having happened after it.
+ */
+const ENGAGEMENT_STAGE_SEQ = 3_000_000;
+
+/**
+ * The row for a promotion to Nurturing that the broker's own action triggered —
+ * a task created, an email sent, a call logged (see `nurtureOnEngagement`). Same
+ * shape and System attribution as the arc's {@link stageChanged}, but stamped
+ * now and with a deterministic id so the session store dedupes it.
+ */
+export function nurtureStageRow(
+  c: Contact,
+  from: RelationshipStage,
+  trigger: EngagementTrigger,
+): TimelineEvent {
+  return {
+    id: `stage-nurturing-${trigger}-${c.id}`,
+    type: "stage-change",
+    actor: { name: "System" },
+    contact: { name: contactFullName(c), id: c.id },
+    timestamp: new Date().toISOString(),
+    seq: ENGAGEMENT_STAGE_SEQ,
+    title: "Updated contact stage:",
+    stageChange: { from, to: "nurturing" },
+    body: ENGAGEMENT_REASON[trigger],
+    source: "system",
+  };
 }
 
 /** The system "Contact created" row every arc ends with. */

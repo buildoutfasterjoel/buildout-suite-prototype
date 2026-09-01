@@ -175,3 +175,35 @@ export function reconcileContactDealFields(
   }
   return changed
 }
+
+/**
+ * Something the broker just did on a contact's record that can start a
+ * relationship: a task they created against it, an email they sent, or a call
+ * they made/logged. (`task` covers only creation — completing a task is the
+ * tail of work that already promoted the contact.)
+ */
+export type EngagementTrigger = 'task' | 'email' | 'call'
+
+/**
+ * Whether `trigger` promotes a temperature-only contact to Nurturing.
+ *
+ * `cold` means nobody has worked this record, so the first move of any kind
+ * starts the relationship — including one that merely schedules the work, since
+ * a task is a commitment to follow up and the record is no longer untouched.
+ *
+ * `inquired` already carries a move by *them*; it takes a real touch back — an
+ * email or a call — to graduate. A task is a note-to-self, and a lead we have
+ * only promised ourselves to call is still an unworked lead, which is exactly
+ * what the Inquired page is for.
+ *
+ * Every other stage is deal-derived (see {@link deriveRelationship}) and
+ * outranks a touch, so nothing moves.
+ */
+export function nurtureOnEngagement(
+  relationship: RelationshipStage,
+  trigger: EngagementTrigger,
+): boolean {
+  if (relationship === 'cold') return true
+  if (relationship === 'inquired') return trigger !== 'task'
+  return false
+}
