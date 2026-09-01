@@ -9,6 +9,7 @@ const ctx = (over = 0, today = 0): AssistantContext => ({
   tasks: { overdue: over, dueToday: today },
   pipeline: { openDeals: 0, totalValue: 0 },
   contacts: [],
+  field: null,
 });
 
 describe("composeGreeting", () => {

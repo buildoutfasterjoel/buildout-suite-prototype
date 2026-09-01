@@ -399,6 +399,34 @@ export const addActivityDef = toolDefinition({
   },
 });
 
+export const stageFieldValueDef = toolDefinition({
+  name: "stage_field_value",
+  description:
+    "Write text INTO the field the broker pinned from the page — the one named in CURRENT CONTEXT under `field`. Use it for anything that produces or changes that field's content: writing it from what they just told you, and every revision after ('shorten it', 'more formal', 'warmer', 'add that he wants comps'). The text lands in the box on screen as an unsaved draft the broker can edit; they are the one who saves or sends it. NEVER use add_activity, log_call or draft_email to write a pinned field — those put it on the record or into a rival draft card, and leave the box the broker is looking at empty. Pass the FULL new value, not a diff or a fragment: it replaces what is there. Call it again for each revision. Do NOT restate the text in your reply — the broker is reading it in the field; say in one short clause what you changed and stop.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      text: {
+        type: "string",
+        description:
+          "The complete new value for the field, written out in full. Send it even when you are only changing an email's subject — it replaces the whole field.",
+      },
+      subject: {
+        type: "string",
+        description:
+          "Email fields only: the subject line. Omit to leave whatever subject the broker already typed alone.",
+      },
+      changed: {
+        type: "string",
+        description:
+          "One short clause naming what you did, e.g. 'tightened to two sentences'. Shown to the broker.",
+      },
+    },
+    required: ["text"],
+    additionalProperties: false,
+  },
+});
+
 export const logCallDef = toolDefinition({
   name: "log_call",
   description:
@@ -827,6 +855,7 @@ export const TOOL_DEFS = [
   analyzeBookDef,
   navigateToDef,
   addActivityDef,
+  stageFieldValueDef,
   logCallDef,
   createTaskDef,
   findContactDef,

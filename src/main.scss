@@ -2298,6 +2298,40 @@
   textarea {
     padding-right: 2.5rem;
   }
+
+  // The field the assistant is holding (Figma node 1483:172765).
+  //
+  // The rail's chip names the field; this says the same thing where the
+  // broker's eyes already are, so the answer arriving in the box is expected
+  // rather than startling. Purple border and a 3px halo — the same focus
+  // grammar Blueprint already uses, in the AI colour — over the interactive
+  // gradient washed out to 25% by a white overlay, which keeps 14px body text
+  // readable on it.
+  //
+  // On the wrapper, not the textarea, because the sparkle sits in the same box
+  // and has to read as part of the tinted field rather than a control floating
+  // on top of it.
+  &--ai textarea {
+    border-color: colors.$purple-heart-400;
+    box-shadow: 0 0 0 3px colors.$purple-heart-100;
+    background-image:
+      linear-gradient(rgb(255 255 255 / 75%), rgb(255 255 255 / 75%)),
+      linear-gradient(
+        90deg,
+        colors.$purple-heart-100 0%,
+        colors.$buildout-blue-50 50%,
+        colors.$buildout-blue-100 100%
+      );
+
+    // Focus is already the resting state here, so the theme's blue focus ring
+    // would fight the purple one and read as the tint switching off the moment
+    // the broker clicks in to edit.
+    &:focus,
+    &:focus-visible {
+      border-color: colors.$purple-heart-400;
+      box-shadow: 0 0 0 3px colors.$purple-heart-100;
+    }
+  }
 }
 .compose-sparkle {
   position: absolute;
@@ -6154,6 +6188,63 @@ $otto-progress-gutter: 28px;
     &:hover,
     &:focus-visible {
       color: colors.$storm-grey-900;
+    }
+  }
+
+  // Pinned field context (Figma node 1477:172596) — "Rosa Delgado: Note".
+  //
+  // It shares the attachment row but not the attachment *look*: the AI
+  // interactive-decorative gradient, purple → blue, is what separates "Otto is
+  // scoped to this" from "you clipped a file on". Deliberately the only tinted
+  // thing in the composer, and 20px tall against the file chip's 32 — it is a
+  // label on the conversation, not a control the broker is meant to fiddle
+  // with.
+  &__context {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 20px;
+    max-width: 100%;
+    padding: 4px;
+    border: 1px solid colors.$purple-heart-200;
+    border-radius: 6px;
+    background-image: linear-gradient(
+      90deg,
+      colors.$purple-heart-200 0%,
+      colors.$buildout-blue-100 50%,
+      colors.$buildout-blue-200 100%
+    );
+    color: colors.$purple-heart-950;
+  }
+
+  &__context-label {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 12px;
+    line-height: 13px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__context-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 12px;
+    height: 12px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background-color: transparent;
+    color: colors.$purple-heart-950;
+    font-size: 12px;
+    line-height: 12px;
+
+    &:hover,
+    &:focus-visible {
+      // No fill to darken against, so the affordance is the glyph itself.
+      opacity: 0.65;
     }
   }
 }

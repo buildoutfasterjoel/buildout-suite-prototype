@@ -117,6 +117,59 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 198,
+    title:
+      "Ask Otto to write any field in a contact's Log Activity block, and review it in the field itself",
+    mergedAt: "2026-09-01T00:16:24Z",
+    day: "2026-08-31",
+    author: "ZS-buildout",
+    area: "Otto",
+    summary:
+      "Every field in a contact's Log Activity block can now be handed to Otto from the field itself. You ask in the rail and read the answer where the text actually goes, rather than copying it back out of a conversation. Two things Otto did to a record — logging a note and completing a task — also stopped going missing from the timeline.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "The sparkle on a Log Activity field hands it to Otto. Hovering says what the click will do — Generate Note, Generate Call Summary, Draft Email, Generate Meeting Note, Generate Tour Note — and reads Revise once the field has something in it.",
+      },
+      {
+        kind: "feature",
+        text: "Clicking it opens Otto with the field pinned above the message box, so the conversation is scoped to that one field. Dismiss the chip to go back to talking about anything.",
+      },
+      {
+        kind: "feature",
+        text: "Otto writes into the field itself, not into the chat. The text lands in the box as an unsaved draft you can edit — you still press Log Note or Send Email, so nothing reaches the record until you say so.",
+      },
+      {
+        kind: "feature",
+        text: "A field Otto is holding is tinted, so you can see what it is scoped to without looking at the rail. The tint follows the pin to whichever tab it belongs to.",
+      },
+      {
+        kind: "feature",
+        text: "One-tap revisions sit above the message box: Shorten, More formal and Clean up the wording on a note, call, meeting or tour, and Shorten, Warmer and More direct on an email. Revising an email leaves the subject line you wrote alone.",
+      },
+      {
+        kind: "feature",
+        text: "An empty field with nothing to go on gets a question instead of a guess — what should this note cover, what did you and Earl talk about, what should this email say. Tell Otto the gist and it writes it up.",
+      },
+      {
+        kind: "refinement",
+        text: "The field grows to fit what Otto wrote, so a long note can be read in one pass instead of through a three-line window, and it snaps back to its normal size once the note is logged. Logging also clears the chip.",
+      },
+      {
+        kind: "fix",
+        text: "A note Otto logs now appears on the contact's timeline straight away. It used to go only to the notes field behind the Edit Contact form, so asking Otto to log a note put it somewhere you would never look — while typing the same note into the composer put it on the timeline.",
+      },
+      {
+        kind: "fix",
+        text: "Completing a task writes a Task completed row on the person it belongs to, wherever you check it off — the Tasks page, the dashboard, or Otto's day plan. Only the contact page's own Tasks panel used to do this, so everywhere else the task just disappeared. Undo takes the row back with the checkbox.",
+      },
+      {
+        kind: "fix",
+        text: "Otto no longer flashes a record card and takes it away again while it is writing to a field. Looking something up on the way to an answer is a step, not the answer.",
+      },
+    ],
+  },
+  {
     pr: 197,
     title: "Add a Deposits page to Back Office, file deposits from it, and stop double-paying a co-broked deal's brokers",
     mergedAt: "2026-08-31T23:20:00Z",

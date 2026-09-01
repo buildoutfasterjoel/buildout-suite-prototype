@@ -1,6 +1,17 @@
 import { create } from "zustand";
 import type { ComposeKind } from "#/components/contacts/contactDisplay";
 
+/** An AI-written activity being handed to a contact's composer. */
+export interface ComposeActivityDraft {
+  /** Whose composer this belongs to — a draft must never land on the wrong page. */
+  contactId: string;
+  /** Which tab the text belongs to. */
+  kind: ComposeKind;
+  body: string;
+  /** Email only; left alone when absent, so a body revision keeps the subject. */
+  subject?: string;
+}
+
 /** An AI-drafted email being handed to a contact's composer. */
 export interface ComposeEmailDraft {
   /** Whose composer this belongs to — a draft must never land on the wrong page. */
@@ -37,13 +48,30 @@ interface ComposeFocus {
    * rewrite the composer they're looking at.
    */
   requestEmailDraft: (draft: ComposeEmailDraft) => void;
+  /**
+   * Raised by `stage_field_value`: opens the tab the text belongs to with the
+   * assistant's value in it, unsaved. The broker still presses Log Note / Send
+   * Email — which is why this stages rather than commits, and why nothing here
+   * touches the timeline.
+   *
+   * Separate from `draft` above even for email: that one is `draft_email`'s
+   * path, which owns a subject AND a body and renders a card in the rail. This
+   * one writes only what it was given, so "make it warmer" leaves the subject
+   * the broker typed alone.
+   */
+  activityDraft: ComposeActivityDraft | null;
+  requestActivityDraft: (draft: ComposeActivityDraft) => void;
 }
 
 export const useComposeFocus = create<ComposeFocus>((set) => ({
   seq: 0,
   kind: null,
   draft: null,
-  request: (kind) => set((s) => ({ seq: s.seq + 1, kind, draft: null })),
+  activityDraft: null,
+  request: (kind) =>
+    set((s) => ({ seq: s.seq + 1, kind, draft: null, activityDraft: null })),
   requestEmailDraft: (draft) =>
-    set((s) => ({ seq: s.seq + 1, kind: "email", draft })),
+    set((s) => ({ seq: s.seq + 1, kind: "email", draft, activityDraft: null })),
+  requestActivityDraft: (activityDraft) =>
+    set((s) => ({ seq: s.seq + 1, kind: activityDraft.kind, activityDraft, draft: null })),
 }));

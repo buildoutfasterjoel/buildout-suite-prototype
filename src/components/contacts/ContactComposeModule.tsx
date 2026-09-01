@@ -35,6 +35,8 @@ import {
   SparkleButton,
 } from "#/components/contacts/callLogFields";
 import { useComposeFocus } from "#/components/contacts/useComposeFocus";
+import { useAssistant } from "#/ai/useAssistant";
+import { activityFieldAsk, fieldAskLabel } from "#/ai/fieldAsk";
 import { registerComposerSend, setPendingEmail } from "#/components/contacts/composerSend";
 
 /** The payload emitted on submit — the panel stamps `id`/`seq`. */
@@ -84,6 +86,40 @@ const EMPTY: Record<ComposeKind, string> = {
   meeting: "",
   tour: "",
 };
+
+/**
+ * Auto-grow ceiling, roughly 25 lines. Past that the field scrolls rather than
+ * growing: a note long enough to need more has already pushed the timeline —
+ * the thing the broker is writing *about* — off the bottom of the screen.
+ */
+const MAX_BODY_HEIGHT = 480;
+
+/**
+ * Grow the message field to fit its value, so a staged note can be read in one
+ * pass instead of through a three-line window.
+ *
+ * Never shrinks below the tab's own `rows`, and an empty value drops the inline
+ * height entirely so `rows` governs again — which is what returns the field to
+ * its default size the moment the note is logged.
+ */
+function autosize(el: HTMLTextAreaElement | null, value: string) {
+  if (!el) return;
+  if (!value) {
+    el.style.height = "";
+    return;
+  }
+  // Measure the resting height first: it differs per tab (Call asks for 5 rows,
+  // the rest for 3), and the same element is reused across all of them.
+  el.style.height = "";
+  const base = el.offsetHeight;
+  el.style.height = "auto";
+  // `scrollHeight` covers content + padding but not border, while `offsetHeight`
+  // includes it — so a field sized to scrollHeight alone loses its border and
+  // scrolls by 2px forever.
+  const border = el.offsetHeight - el.clientHeight;
+  const fit = el.scrollHeight + border;
+  el.style.height = `${Math.min(Math.max(fit, base), MAX_BODY_HEIGHT)}px`;
+}
 
 /** Local `yyyy-mm-dd` for today. */
 function todayISO(): string {
@@ -195,6 +231,17 @@ export function ContactComposeModule({
       setSubject(draft.subject);
       setBody((b) => ({ ...b, email: draft.body }));
     }
+    // A value staged by `stage_field_value`, for whichever tab it belongs to.
+    // Same overwrite semantics for the same reason: a revision is an
+    // instruction to replace what's there, and the broker asked for it.
+    const { activityDraft } = useComposeFocus.getState();
+    if (activityDraft && activityDraft.contactId === contact.id) {
+      setBody((b) => ({ ...b, [activityDraft.kind]: activityDraft.body }));
+      // Absent means "leave the subject alone" — a body revision must not wipe
+      // a subject line the broker wrote themselves.
+      if (activityDraft.subject !== undefined) setSubject(activityDraft.subject);
+      readFromTopRef.current = true;
+    }
   }, [focusSeq, contact.id]);
   // Publish this composer's send so the assistant can hit it on an explicit
   // "send it" (see `composerSend.ts`). Registered every render because the
@@ -232,6 +279,58 @@ export function ContactComposeModule({
     bodyRef.current?.focus();
   }, [pendingFocus, tab]);
 
+  /**
+   * Which of this contact's activity fields the rail is holding, or null. Two
+   * jobs: it tints that field so the broker can see what the assistant is
+   * scoped to, and its value is what the model reads to know what it is
+   * revising.
+   *
+   * Pinned to one TAB rather than to the composer, because the five tabs are
+   * five fields — carrying the tint across a tab switch would claim Otto was
+   * holding a field it has never been handed.
+   */
+  const fieldAsk = useAssistant((s) => s.fieldAsk);
+  const pinnedKind =
+    fieldAsk?.target.kind === "contact-activity" && fieldAsk.target.contactId === contact.id
+      ? fieldAsk.target.activity
+      : null;
+
+  // Keep the pinned value following the broker's own edits. Without this, text
+  // typed after the sparkle was clicked is invisible to the assistant, and
+  // "shorten it" shortens the version from the moment of the click.
+  const pinnedValue = pinnedKind ? body[pinnedKind] : "";
+  useEffect(() => {
+    if (!pinnedKind) return;
+    useAssistant.getState().updateFieldAskValue(pinnedValue.trim());
+  }, [pinnedKind, pinnedValue]);
+
+  /**
+   * A value that arrived from the assistant rather than from typing, and so
+   * should be read from the first word.
+   *
+   * Handing the composer text focuses it, and focusing a textarea whose caret
+   * sits at the end scrolls that end into view — so a note long enough to hit
+   * the cap opened on its last paragraph, with the beginning above the fold of
+   * a field the broker had never scrolled.
+   */
+  const readFromTopRef = useRef(false);
+
+  // Fit the field to its value. Runs on `tab` as well as the value because the
+  // same textarea serves every tab: switching from a long note to an empty call
+  // log has to bring the height back with it.
+  //
+  // After the focus effect above, deliberately: it is the focus that moves the
+  // caret, so the reset has to come once the field is both sized and focused.
+  useEffect(() => {
+    const el = bodyRef.current;
+    autosize(el, body[tab]);
+    if (el && readFromTopRef.current) {
+      readFromTopRef.current = false;
+      el.setSelectionRange(0, 0);
+      el.scrollTop = 0;
+    }
+  }, [body, tab]);
+
   // A contact can carry more than one number; the dropdown only appears when
   // there's a choice to make. With a single number we fold it into the button.
   // `contact.phone` is the primary and leads the list, followed by any extras.
@@ -252,6 +351,29 @@ export function ContactComposeModule({
     body[tab].trim() !== "" ||
     (tab === "email" && subject.trim() !== "");
 
+  /**
+   * A field's sparkle: hand it to Otto (§"Ask at the rail, review at the
+   * field"). The rail opens with that field pinned as a context chip, and
+   * either asks what it should say or offers the revise presets —
+   * `activityFieldAsk` decides which from the current value.
+   *
+   * Takes the kind rather than reading `tab`, so the email tab's own sparkle
+   * cannot pin the wrong field if the two ever drift apart.
+   */
+  function askOttoAbout(kind: ComposeKind) {
+    useAssistant.getState().askAtField(
+      activityFieldAsk({
+        activity: kind,
+        contactId: contact.id,
+        fullName: contactFullName(contact),
+        firstName: contact.firstName,
+        // An email's value is its message body; the subject rides alongside as
+        // something Otto may set, not as the field being revised.
+        value: body[kind],
+      }),
+    );
+  }
+
   function setTabBody(kind: ComposeKind, v: string) {
     setBody((b) => ({ ...b, [kind]: v }));
   }
@@ -269,6 +391,11 @@ export function ContactComposeModule({
     });
     // Reset the just-submitted tab back to a clean slate.
     setTabBody(tab, "");
+    // The note is on the record, so the field the chip was scoped to no longer
+    // holds anything — and a chip still reading "Earl Pettigrew: Note" over an
+    // empty box would scope the next question to a draft that has been filed.
+    // Logging is the end of that conversation.
+    if (pinnedKind === tab) useAssistant.getState().clearFieldAsk();
     if (tab === "email") {
       setSubject("");
       // Whatever the assistant was holding as sendable has now gone out by hand;
@@ -317,7 +444,12 @@ export function ContactComposeModule({
       <div className="d-flex flex-column gap-4 p-4">
         {tab === "call" && renderCallControls()}
 
-        <div className="compose-textarea">
+        {/* Tinted while the assistant holds this field (Figma node 1483:172765):
+            the chip in the rail says *what* Otto is scoped to, and this says it
+            again where the broker's eyes already are. Only the Note tab — the
+            pin is on the note, and carrying the tint across a tab switch would
+            claim Otto was holding a field it has never been handed. */}
+        <div className={`compose-textarea${pinnedKind === tab ? " compose-textarea--ai" : ""}`}>
           <Textarea
             ref={bodyRef}
             value={body[tab]}
@@ -325,7 +457,10 @@ export function ContactComposeModule({
             placeholder={PLACEHOLDER[tab](composeName)}
             rows={tab === "call" ? 5 : 3}
           />
-          <SparkleButton />
+          <SparkleButton
+            label={fieldAskLabel(tab, hasValue)}
+            onClick={() => askOttoAbout(tab)}
+          />
         </div>
 
         {tab === "call" && (
@@ -445,7 +580,11 @@ export function ContactComposeModule({
                 ),
               )}
             </div>
-            <div className="compose-textarea">
+            <div
+              className={`compose-textarea${
+                pinnedKind === "email" ? " compose-textarea--ai" : ""
+              }`}
+            >
               <Textarea
                 ref={bodyRef}
                 value={body.email}
@@ -453,7 +592,10 @@ export function ContactComposeModule({
                 placeholder={PLACEHOLDER.email(composeName)}
                 rows={5}
               />
-              <SparkleButton />
+              <SparkleButton
+                label={fieldAskLabel("email", hasValue)}
+                onClick={() => askOttoAbout("email")}
+              />
             </div>
           </div>
 

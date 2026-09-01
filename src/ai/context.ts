@@ -1,5 +1,6 @@
 import { useDataStore } from "#/data/dataStore";
 import { CURRENT_USER } from "#/data/teammates";
+import { useAssistant } from "#/ai/useAssistant";
 
 export interface AssistantContext {
   broker: { name: string; role: string };
@@ -9,6 +10,16 @@ export interface AssistantContext {
     id: string; name: string; role: string; company: string;
     relationship: string; lastTouch: string;
   }>;
+  /**
+   * The field the broker handed to the assistant from the page, or null.
+   *
+   * This is what makes the rail's context chip mean something. Without it the
+   * model can see the broker asking to "shorten this note" and has no way to
+   * know there is a box on screen waiting for the result — so it does the next
+   * most sensible thing and logs a note to the record, which is the one outcome
+   * nobody asked for.
+   */
+  field: { label: string; description: string; current: string } | null;
 }
 
 const OPEN_STATUSES = new Set(["proposal", "active", "under-contract"]);
@@ -37,11 +48,18 @@ export function buildAssistantContext(): AssistantContext {
     lastTouch: c.lastTouch,
   }));
 
+  // Read live rather than passed in: every surface that builds this context
+  // wants the same answer, and the pinned field is global rail state.
+  const ask = useAssistant.getState().fieldAsk;
+
   return {
     broker: { name: CURRENT_USER.name, role: "Broker" },
     tasks: { overdue, dueToday },
     pipeline: { openDeals: openDeals.length, totalValue },
     contacts,
+    field: ask
+      ? { label: ask.label, description: ask.description, current: ask.value }
+      : null,
   };
 }
 

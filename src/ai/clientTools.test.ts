@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { useDataStore, seedSlice } from "#/data/dataStore";
 import { createProposalListing, emptyDraft } from "#/data/createListing";
 import { addPropertyUnit, addSpaceToDeal } from "#/data/leaseSpaces";
+import { useContactSession } from "#/components/contacts/useContactSession";
 import { createClientTools, jsonSafeResult, resolveContactByName, rewriteSpaceDealPath } from "./tools";
 
 beforeEach(() => { useDataStore.setState(seedSlice()); });
@@ -294,5 +295,54 @@ describe("contact tag tools", () => {
     expect(byId.error).toContain("no-such-id");
     const missing = await run("contact_tags", {});
     expect(missing.error).not.toContain("no-such-id");
+  });
+});
+
+/**
+ * Anything the assistant logs on a person has to reach the timeline, because
+ * that is where the broker watches the record. A note used to go only to the
+ * contact's notes field — read by the Edit Contact form and nothing else — so
+ * "log a note that he wants comps" landed somewhere they would never look,
+ * while typing the same note into the composer put it on the timeline.
+ */
+describe("add_activity reaches the timeline", () => {
+  const tools = createClientTools({ navigate: () => {} });
+  const run = async (name: string, args: unknown) => {
+    const tool = tools.find((t) => t.name === name);
+    const execute = (tool as { execute?: (a: unknown) => Promise<unknown> }).execute;
+    return execute!(args) as Promise<Record<string, unknown>>;
+  };
+  const someone = () => [...useDataStore.getState().contacts.values()][0];
+  const timelineFor = (id: string) => useContactSession.getState().logged[id] ?? [];
+
+  beforeEach(() => { useContactSession.setState({ logged: {} }); });
+
+  it("puts a logged note on the contact's timeline", async () => {
+    const c = someone();
+    const out = await run("add_activity", {
+      type: "note",
+      body: "Wants comps before Friday.",
+      contactId: c.id,
+    });
+
+    expect(out.error).toBeUndefined();
+    const rows = timelineFor(c.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.kind).toBe("note");
+    expect(rows[0]?.body).toBe("Wants comps before Friday.");
+  });
+
+  // The notes field is the record's own running note and keeps its copy —
+  // the timeline row is an addition, not a redirection.
+  it("still appends the note to the contact's notes field", async () => {
+    const c = someone();
+    await run("add_activity", { type: "note", body: "Prefers email.", contactId: c.id });
+    expect(useDataStore.getState().contacts.get(c.id)?.notes).toContain("Prefers email.");
+  });
+
+  it("maps a showing onto the timeline's tour kind", async () => {
+    const c = someone();
+    await run("add_activity", { type: "showing", body: "Walked 400 W Monroe.", contactId: c.id });
+    expect(timelineFor(c.id)[0]?.kind).toBe("tour");
   });
 });
