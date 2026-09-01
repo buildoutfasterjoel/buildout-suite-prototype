@@ -1175,6 +1175,8 @@ function generateContact(allPropertyIds: string[]): Contact {
     doNotCall: faker.datatype.boolean(0.04),
     quickbooksSynced: isQuickbooksSynced(id),
     title: faker.helpers.arrayElement(TITLE_POOL),
+    // Drawn here, but repaired in `generateDataset` — a record can't predate its
+    // own history, and this draw knows nothing about `lastContactedAt`.
     createdAt: faker.date.past({ years: 1 }).toISOString(),
     lastTouch: LAST_TOUCH_BY_SOURCE[source],
     lastContactedAt,
@@ -2741,6 +2743,23 @@ export function generateDataset() {
     .filter((l) => l.status === 'active')
     .map((l) => l.id)
   for (const c of finalContacts) {
+    // A record cannot predate its own history. `createdAt` is drawn from the
+    // last year while the contacted buckets reach back two, so drawing them
+    // independently produced contacts created months *after* the last time we
+    // spoke to them — and since the arc is anchored on that touch, every beat
+    // ran before the record existed and "Contact created" sorted to the TOP of
+    // the timeline as the newest thing that had happened (16 of 80 contacts).
+    //
+    // The touch keeps its bucket, because the pre-defined lists are built on it;
+    // creation is what moves back behind it. The gap is derived from the drawn
+    // date rather than redrawn, so repairing this leaves every other seeded
+    // value — names, companies, comps — exactly where it was.
+    if (c.lastContactedAt && c.createdAt > c.lastContactedAt) {
+      const gap = 30 + (Date.parse(c.createdAt) % 150)
+      c.createdAt = new Date(
+        Date.parse(c.lastContactedAt) - gap * 86_400_000,
+      ).toISOString()
+    }
     if (c.inquiries > 0 && marketedListingIds.length > 0) {
       c.inquiredListingIds = faker.helpers.arrayElements(
         marketedListingIds,
@@ -2774,13 +2793,13 @@ export function generateDataset() {
       // The newest inquiry is also genuine inbound activity, so it feeds
       // `lastActivityAt` the way Rosa's voicemail does: the Last Active column
       // shows the inquiry even though we've never contacted them back.
+      const dates = Object.values(details)
+        .map((d) => d.date)
+        .filter((d): d is string => !!d)
+        .sort()
+      const first = dates[0]
+      const newest = dates[dates.length - 1]
       if (c.source === 'Listing inquiry') {
-        const dates = Object.values(details)
-          .map((d) => d.date)
-          .filter((d): d is string => !!d)
-          .sort()
-        const first = dates[0]
-        const newest = dates[dates.length - 1]
         if (first) {
           c.createdAt =
             c.lastContactedAt && c.lastContactedAt < first
@@ -2789,6 +2808,13 @@ export function generateDataset() {
         }
         const current = c.lastActivityAt ?? c.lastContactedAt
         if (newest && (!current || newest > current)) c.lastActivityAt = newest
+      } else if (first && first < c.createdAt) {
+        // An owner we already knew who has since inquired keeps their older
+        // creation date — but if the inquiry landed first, the inquiry is when
+        // the record began, whatever the source says. An inquiry attached to a
+        // contact who didn't exist yet is the same contradiction the arc clock
+        // has to clamp away downstream.
+        c.createdAt = first
       }
     }
   }

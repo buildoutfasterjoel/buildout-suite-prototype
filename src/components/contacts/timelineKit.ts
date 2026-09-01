@@ -100,6 +100,13 @@ type EventOverrides = Partial<Omit<TimelineEvent, "id" | "type" | "seq">>;
  * Build one event with the boilerplate filled in. Outbound rows are authored
  * by the broker; pass `direction: "in"` for rows the contact authored (actor
  * and counterpart flip automatically unless explicitly provided).
+ *
+ * `daysAgo` is clamped so no beat can land before the record existed — nothing
+ * happened to a contact before we had one. Beats are placed from three different
+ * directions (the arc clock, absolute offsets like "18 days into the pitch", and
+ * a spread floor that needs two days of room), so the guarantee that
+ * {@link createdEvent} is the oldest row is enforced here, once, rather than in
+ * every beat that does its own date math.
  */
 export function mk(
   ctx: ArcCtx,
@@ -109,12 +116,19 @@ export function mk(
 ): TimelineEvent {
   const n = ctx.next();
   const inbound = over.direction === "in";
+  const at = ctx.at(daysAgo, 9 + (n % 8), (n * 17) % 60);
+  const created = Date.parse(ctx.c.createdAt);
   return {
     id: `${ctx.c.id}-${type}-${n}`,
     type,
     actor: inbound ? { name: ctx.ref.name } : OWNER,
     contact: inbound ? { name: OWNER.name, id: "me" } : ctx.ref,
-    timestamp: ctx.at(daysAgo, 9 + (n % 8), (n * 17) % 60),
+    // Pushed to just after creation rather than onto it, a minute per ordinal, so
+    // several clamped beats keep their order instead of stacking on one instant.
+    timestamp:
+      Date.parse(at) < created
+        ? new Date(created + (n + 1) * 60_000).toISOString()
+        : at,
     seq: n,
     source: "user",
     ...over,

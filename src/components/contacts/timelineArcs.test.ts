@@ -552,3 +552,67 @@ describe("hero personas in the seed", () => {
     }
   });
 });
+
+describe("the record's own beginning", () => {
+  /**
+   * Whole-dataset scan: "Contact created" must be the oldest row on every
+   * contact's feed. It stopped being that for 16 of the 80 seeded contacts —
+   * `createdAt` was drawn from the last year while `lastContactedAt` reached back
+   * two, so the arc (anchored on the touch) ran entirely before the record
+   * existed and "Contact created" sorted to the top of the feed as the newest
+   * thing that had happened. Both halves are guarded here rather than only the
+   * seed, because a beat's date can also come from an absolute offset or the
+   * clock's minimum-spread floor.
+   */
+  it("is the oldest row on every seeded contact's timeline", () => {
+    const ds = generateDataset();
+    useDataStore.setState({
+      properties: new Map(ds.properties.map((p) => [p.id, p])),
+      listings: new Map(ds.listings.map((l) => [l.id, l])),
+      contacts: new Map(ds.contacts.map((c) => [c.id, c])),
+    } as never);
+
+    const offenders: string[] = [];
+    for (const c of ds.contacts) {
+      const deals = ds.listings.filter(
+        (l) =>
+          l.sellerContactIds.includes(c.id) ||
+          l.buyerContactIds.includes(c.id) ||
+          l.otherContactIds.includes(c.id),
+      );
+      const events = buildContactTimeline(c, deals as never);
+      const created = events.find((e) => e.type === "created");
+      expect(created, `${c.firstName} ${c.lastName} has no created row`).toBeDefined();
+      const earlier = events.filter(
+        (e) =>
+          e !== created &&
+          Date.parse(e.timestamp) < Date.parse(created!.timestamp),
+      );
+      if (earlier.length > 0) {
+        offenders.push(
+          `${c.firstName} ${c.lastName} (${c.relationship}): ${earlier.length} rows before creation, oldest ${earlier[0].type}`,
+        );
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("never predates the last touch or an inquiry the seed recorded", () => {
+    const { contacts } = generateDataset();
+    for (const c of contacts) {
+      if (c.lastContactedAt) {
+        expect(
+          c.createdAt <= c.lastContactedAt,
+          `${c.firstName} ${c.lastName} was created after we last spoke to them`,
+        ).toBe(true);
+      }
+      for (const [listingId, d] of Object.entries(c.inquiryDetails ?? {})) {
+        if (!d.date) continue;
+        expect(
+          c.createdAt <= d.date,
+          `${c.firstName} ${c.lastName} inquired on ${listingId} before the record existed`,
+        ).toBe(true);
+      }
+    }
+  });
+});
