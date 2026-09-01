@@ -243,12 +243,35 @@ Ethan's three-day-old one (Broker seat: nothing; MD see-through: hint, "ask Sara
 Dana Whitfield twice, Sarah's shared with Ethan at Contributor beside Ethan's own (hint + Link in
 every seat). 80 → 84 contacts. `SEED_VERSION` 69 → 70.
 
-## Next phases (not on this branch)
+## Phase 7 — Assign and Transfer (built on this branch; teams/offices held)
+
+Assign is the runtime verb that produces the accountable person when the company owns a record;
+under broker ownership it dissolves into **transfer** (the record changes books) or a share. One
+picker, two faces (`AssignContactModal`), decided by the same resolver as everything else.
+
+- **Rights** (`resolveViewerRights(ownership, shares, viewerCanAssign)`): `canAssign` — company-
+  owned and (holds **Assign Contacts** or is the current assignee); `canTransfer` — owner only.
+  Assign Contacts is the fourth contact permission (record-scoped, MD default on, no ceiling).
+  Registry 23 → 24; MD 9 → 10; Broker+MD 19 → 20.
+- **Writes** (`assignContact`, `transferContact` in actions; `contactAssignment.ts` wraps them and
+  lands an `assignment` timeline row: "Assigned to …", "Reassigned to …", "Unassigned",
+  "Ownership transferred to …"). Transfer's "Keep me as a Contributor" is a share made in the same
+  motion. Private stays set on transfer; the new owner inherits it.
+- **Surfaces**: hero — the assignee avatar reassigns when the viewer may; an unassigned company
+  record shows "Unassigned" or an **Assign** button; owners get a **Transfer ownership** icon
+  button. People page — "Assign to…" in the selection bar (skips broker-owned or not-yours,
+  counted in the toast); the Assigned To column reads "Unassigned" for an empty assignee.
+  Assistant — `assign_contact` (all four registries), refusing broker-owned records with the
+  transfer explanation.
+- **Unassigned state**: `assignedTo` may be `""`. Resolves company-owned with no assignee; seeded
+  arcs author as "Buildout"; Create row reads "Contact created". No triage pool — open-book.
+- **Debt named**: the assignee is still a display name matched to the roster by string.
+  Assignment by id is the right shape; `assignedAt` / `assignedBy` sit beside it for now.
+
+## Held
 
 6. **Grants to teams / roles / offices / company** — the share modal's picker already says
    "people, groups, spaces".
-7. **Assign / re-assign as an action** — today `assignedTo` is seed data; an MD-gated Assign
-   action distinct from Share is the missing verb under company ownership.
 
 ## Still open with George
 
