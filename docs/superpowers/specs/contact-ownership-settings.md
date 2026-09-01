@@ -166,6 +166,19 @@ nobody answers in the prototype.
 Seed: every other shared record that isn't Ethan's is shared *with* Ethan, stepping through
 View → Contributor → Outreach, so each seat exists to demo. `SEED_VERSION` 64 → 67.
 
+### Global entry points enforce the same rights
+
+`src/components/contacts/contactRights.ts` answers the rights question outside React and outside
+the record (`checkContactRight` / `guardContactRight` / `editableContactIds`), reading the stores
+directly. Guarded: `callFlow.open` (every "call this person" in the app), the global task modal's
+save and update, the People page's add-to-list and create-list bulk actions (skipped contacts are
+counted in a toast), and the assistant's writing tools — `add_activity`, `log_call`,
+`send_email`, `create_task`, `start_call`, `update_contact`, `add_contact_tags`,
+`remove_contact_tags`, `link_contact_to_deal` — which return an error the model can relay. On
+the hero, a viewer who can't share gets inert avatars (name on hover, nothing opens) and no
+Manage sharing button; without edit rights the verify toggles report state only; without
+Outreach the phone and email values are plain text.
+
 ## Next phases (not on this branch)
 
 3. **Index visibility** — hide private records the viewer has no grant on; MD with View Private
