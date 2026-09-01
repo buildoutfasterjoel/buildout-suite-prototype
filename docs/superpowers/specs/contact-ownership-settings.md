@@ -270,10 +270,11 @@ picker, two faces (`AssignContactModal`), decided by the same resolver as everyt
 
 ## Viewing as a person (built on this branch)
 
-The account menu's "Viewing as" now switches *who is looking*, not which role Ethan wears. The
-role lens (`viewAsRole.ts`, `dev_role`) is gone — every role has a real person on the roster, so
-"view as Sarah" is Broker, "view as Riley" is Office Admin, "view as Ethan" is the Managing
-Director who sees through.
+The account menu's "Viewing as" switches *who is looking*. A second **Role** submenu keeps the
+old lens on top of it (`viewAsRole.ts`, `dev_role`): it overrides the *current seat's* role on the
+roster row — "Ethan as a Broker" — and clears when the seat changes, so Sarah shows up as herself.
+Nothing stored means no override. (Zach asked to keep the role swap after the person switch
+landed.)
 
 - `src/data/currentUser.ts`: `useCurrentUser` (seat id, persisted as `dev_viewer`), `currentUser()`,
   `viewerId()`, `currentUserActor()`, `VIEWABLE_PEOPLE`, hydrated in `AppShell`, which also moves the

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Navbar, useNavbar } from "@buildoutinc/blueprint-react/ui/Navbar";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
@@ -15,6 +16,15 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import { useDataStore } from "#/data/dataStore";
 import { VIEWABLE_PEOPLE, useCurrentUser } from "#/data/currentUser";
+import { SEED_ROSTER } from "#/data/roster";
+import type { RoleId } from "#/data/permissions";
+import {
+  VIEW_AS_ORDER,
+  clearViewAsRole,
+  readViewAsRole,
+  viewAsLabel,
+  writeViewAsRole,
+} from "./viewAsRole";
 import { useAccessRequests } from "#/components/contacts/useAccessRequests";
 import { useRoster } from "#/components/settings/users/useRoster";
 import { useDesignToggles } from "./useDesignToggles";
@@ -49,10 +59,36 @@ export function AccountMenu() {
   const setSeat = useCurrentUser((s) => s.setId);
   const me = VIEWABLE_PEOPLE.find((p) => p.id === seatId) ?? VIEWABLE_PEOPLE[0];
   const rosterRow = useRoster((s) => s.users.find((u) => u.id === seatId));
+  const setRoles = useRoster((s) => s.setRoles);
+  const realRoles = (id: string): RoleId[] =>
+    SEED_ROSTER.find((u) => u.id === id)?.roleIds ?? [];
+  const activeRole: RoleId | undefined = rosterRow?.roleIds[0];
+  const roleOverridden = !!activeRole && realRoles(seatId)[0] !== activeRole;
+
+  // Re-apply a stored role override to the seat once the client is up — the
+  // roster seed can't read localStorage itself (built at module load, SSR-safe).
+  useEffect(() => {
+    const stored = readViewAsRole();
+    if (stored && rosterRow && rosterRow.roleIds[0] !== stored) setRoles(seatId, [stored]);
+    // Only on mount / seat change; a live role change writes the store itself.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seatId]);
+
   function changeSeat(next: string) {
     if (next === seatId) return;
+    // The old seat gets its real role back and the override is dropped, so the
+    // new person shows up as themselves, not as what the last seat was trying.
+    if (roleOverridden) setRoles(seatId, realRoles(seatId));
+    clearViewAsRole();
     setSeat(next);
     useAccessRequests.setState({ requests: {} });
+  }
+
+  /** Try this seat's screens as another role. Same person, different permissions. */
+  function changeRole(next: RoleId) {
+    if (next === realRoles(seatId)[0]) clearViewAsRole();
+    else writeViewAsRole(next);
+    setRoles(seatId, [next]);
   }
 
   // Wipe the demo world back to the deterministic clean state, then reload so
@@ -121,15 +157,26 @@ export function AccountMenu() {
           {isMobile ? (
             // Base UI's submenu and radio parts have no Menu.Root in Navbar's
             // collapsible branch, so mobile gets flat rows instead.
-            VIEWABLE_PEOPLE.map((p) => (
-              <Navbar.GroupMenuItem
-                key={p.id}
-                onClick={() => changeSeat(p.id)}
-                className={p.id === seatId ? "active" : undefined}
-              >
-                {p.name}
-              </Navbar.GroupMenuItem>
-            ))
+            <>
+              {VIEWABLE_PEOPLE.map((p) => (
+                <Navbar.GroupMenuItem
+                  key={p.id}
+                  onClick={() => changeSeat(p.id)}
+                  className={p.id === seatId ? "active" : undefined}
+                >
+                  {p.name}
+                </Navbar.GroupMenuItem>
+              ))}
+              {VIEW_AS_ORDER.map((roleId) => (
+                <Navbar.GroupMenuItem
+                  key={roleId}
+                  onClick={() => changeRole(roleId)}
+                  className={roleId === activeRole ? "active" : undefined}
+                >
+                  as {viewAsLabel(roleId)}
+                </Navbar.GroupMenuItem>
+              ))}
+            </>
           ) : (
             <DropdownMenu.Sub>
               <DropdownMenu.SubTrigger className="d-flex align-items-center gap-2">
@@ -145,6 +192,32 @@ export function AccountMenu() {
                     <DropdownMenu.RadioItem key={p.id} value={p.id}>
                       {p.name}
                       <span className="text-muted ms-2 small">{p.role}</span>
+                    </DropdownMenu.RadioItem>
+                  ))}
+                </DropdownMenu.RadioGroup>
+              </DropdownMenu.SubContent>
+            </DropdownMenu.Sub>
+          )}
+          {!isMobile && (
+            // The role lens: the same person, wearing a different role for the
+            // demo. Reads "Custom" when it differs from their seeded role.
+            <DropdownMenu.Sub>
+              <DropdownMenu.SubTrigger className="d-flex align-items-center gap-2">
+                <FontAwesomeIcon icon={faUserGear} />
+                Role: {activeRole ? viewAsLabel(activeRole) : "—"}
+                {roleOverridden && <span className="text-muted small">(override)</span>}
+              </DropdownMenu.SubTrigger>
+              <DropdownMenu.SubContent className="navbar-dropdown">
+                <DropdownMenu.RadioGroup
+                  value={activeRole ?? ""}
+                  onValueChange={(value) => changeRole(value as RoleId)}
+                >
+                  {VIEW_AS_ORDER.map((roleId) => (
+                    <DropdownMenu.RadioItem key={roleId} value={roleId}>
+                      {viewAsLabel(roleId)}
+                      {roleId === realRoles(seatId)[0] && (
+                        <span className="text-muted ms-2 small">real</span>
+                      )}
                     </DropdownMenu.RadioItem>
                   ))}
                 </DropdownMenu.RadioGroup>
