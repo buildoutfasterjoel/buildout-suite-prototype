@@ -179,10 +179,30 @@ the hero, a viewer who can't share gets inert avatars (name on hover, nothing op
 Manage sharing button; without edit rights the verify toggles report state only; without
 Outreach the phone and email values are plain text.
 
+## Phase 3 — visibility (built on this branch)
+
+Privacy includes existence. `canSeeContact` (`contactViewerAccess.ts`): a private record is
+known only to its owner, anyone it's shared with at any tier, and a viewer holding View Private
+Contacts. Everything that enumerates the book goes through `visibleContacts` /
+`describeVisibility` / `isContactVisible` in `contactRights.ts`: the People table (rows, counts,
+facets), the omnisearch bar and `searchAll`, the contact pickers (`getContactOptions`,
+`findContactForRecipient`, the deal form's buyer section), the assistant (name resolution,
+`listContacts`, the call-list pool, tag vocabulary, the context summary, and id-based targets),
+and the contact URL itself, which reads as not-found rather than "private" so it doesn't confirm a
+record exists. Data relationships (`getContactsForProperty`, deal parties) stay unfiltered —
+those feed phase 4's placeholders, not a viewer's list.
+
+A see-through viewer (Managing Director by default) sees private records in the table with a lock
+by the name. Correction to the earlier plan: placeholders belong on deals (phase 4); a list either
+shows the record or nothing.
+
+Seed: other brokers' records at `i % 5 === 2` or `i % 8 === 5` are private, so every seat Ethan
+is shared into is a private record he can see beside ones he can't. `SEED_VERSION` 67 → 68.
+Demo: the default MD seat sees everything (locked rows); switch "Viewing as" to Broker and the
+count drops, the search stops finding them, and their URLs 404.
+
 ## Next phases (not on this branch)
 
-3. **Index visibility** — hide private records the viewer has no grant on; MD with View Private
-   Contacts sees placeholders, not names, in lists and reports.
 4. **Placeholders on deals** — "Private Contact" on a deal's party list; request-access knock.
 5. **Person/Relationship** (moves `SEED_VERSION`) — `personId`, same-person hint, link action.
 6. **Grants to teams / roles / offices / company** — the share modal's picker already says
