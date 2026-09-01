@@ -16,6 +16,7 @@ import type {
 import type { Email } from './emails'
 import { useDataStore } from './dataStore'
 import { matchRecipient } from './recipientMatch'
+import { visibleContacts } from '#/components/contacts/contactRights'
 import { propertyStageFromDeals } from './propertyStage'
 import {
   DEFAULT_CONTACT_SHARES,
@@ -268,7 +269,7 @@ export function getContact(contactId: string): Contact | undefined {
  * that contact's composer instead of the campaign module.
  */
 export function findContactForRecipient(raw: string): Contact | undefined {
-  return matchRecipient(raw, [...getStore().contacts.values()])
+  return matchRecipient(raw, visibleContacts())
 }
 
 /** The (single) hero-persona contact for a given key — e.g. Rosa for 'rosa'. */
@@ -360,7 +361,7 @@ function toContactOption(c: Contact): ContactOption {
 
 /** Rich options over all contacts, for a contact picker. */
 export function getContactOptions(): ContactOption[] {
-  return [...getStore().contacts.values()]
+  return visibleContacts()
     .map(toContactOption)
     .sort((a, b) => a.name.localeCompare(b.name))
 }

@@ -3,7 +3,7 @@ import {
 	SelectField,
 	TextField,
 } from "#/components/common/recordForm/fieldWidgets";
-import { getStore } from "#/data/store";
+import { visibleContacts } from "#/components/contacts/contactRights";
 import type { DealMarketing, DealType, PropertyStatus } from "#/data/types";
 
 /**
@@ -22,7 +22,7 @@ export function BuyerSection({
 	marketing: DealMarketing;
 	patchMarketing: (p: Partial<DealMarketing>) => void;
 }) {
-	const contacts = [...getStore().contacts.values()];
+	const contacts = visibleContacts();
 	const contactIds = contacts.map((c) => c.id);
 	const contactLabels = Object.fromEntries(
 		contacts.map((c) => [c.id, `${c.firstName} ${c.lastName}`.trim()]),

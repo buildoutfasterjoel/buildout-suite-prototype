@@ -56,7 +56,9 @@ export function assigneeFor(
   contact: Pick<Contact, "assignedTo">,
   roster: RosterUser[],
 ): RosterUser | undefined {
-  const name = contact.assignedTo.trim();
+  // Tolerates a partial record (test fixtures, ad-hoc objects): no assignee is
+  // simply nobody, and the contact reads as company-owned.
+  const name = (contact.assignedTo ?? "").trim();
   if (name === "You") return roster.find((u) => u.id === CURRENT_USER.id);
   return roster.find((u) => u.name === name);
 }

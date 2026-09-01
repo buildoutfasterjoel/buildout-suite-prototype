@@ -23,7 +23,6 @@ import {
   faTrash,
   faUsers,
 } from "@fortawesome/pro-regular-svg-icons";
-import { getStore } from "#/data/store";
 import { useDataStore } from "#/data/dataStore";
 import { editableContactIds } from "#/components/contacts/contactRights";
 import { notify } from "#/lib/notify";
@@ -41,6 +40,7 @@ import {
 } from "#/data/actions";
 import { useNewContact } from "#/data/useNewContact";
 import { ContactsTable } from "#/components/contacts/ContactsTable";
+import { useVisibleContacts } from "#/components/contacts/useVisibleContacts";
 import { ContactSelectionBar } from "#/components/contacts/ContactSelectionBar";
 import { CreateStaticListModal } from "#/components/contacts/CreateStaticListModal";
 import { AddToListModal } from "#/components/contacts/AddToListModal";
@@ -86,9 +86,10 @@ export const Route = createFileRoute("/_shell/backoffice/contacts/")({
 const PAGE_SIZE = 25;
 
 function PeoplePage() {
-  // Read the full contact list directly from the live client store so mutations
-  // reflect (no server round-trip, no role/propertyId filters needed here).
-  const contacts = Array.from(getStore().contacts.values());
+  // The book as the viewer may see it: private records they have no relationship
+  // with aren't here at all — not in the rows, the counts, or the filter facets.
+  // Reactive to the store, the roster seat and the company settings.
+  const { contacts, privateIds } = useVisibleContacts();
 
   // User/AI-created call lists (reactive) — shown alongside the built-in lists.
   const callListsMap = useDataStore((s) => s.callLists);
@@ -850,6 +851,7 @@ function PeoplePage() {
                 <>
                   {/* Table */}
                   <ContactsTable
+                    privateIds={privateIds}
                     contacts={paged}
                     filtersActive={filtersActive}
                     sortDir={sortDir}

@@ -83,7 +83,12 @@ import {
 } from "#/components/contacts/composerSend";
 import { withPhase } from "#/ai/toolPhase";
 import { useContactSession } from "#/components/contacts/useContactSession";
-import { checkContactRight, type ContactRight } from "#/components/contacts/contactRights";
+import {
+  checkContactRight,
+  isContactVisible,
+  visibleContacts,
+  type ContactRight,
+} from "#/components/contacts/contactRights";
 import { useDayPlanQueue } from "#/components/ai/useDayPlanQueue";
 import {
   getClientReportKpis,
@@ -227,7 +232,9 @@ export const propertySummary = (p: Property) => ({
 export function resolveContactByName(name: string): Contact | null {
   const q = name.trim().toLowerCase();
   if (!q) return null;
-  const contacts = [...useDataStore.getState().contacts.values()];
+  // Only the book as the viewer may see it — a private contact the viewer has
+  // no relationship with can't be found by name, not even to say it exists.
+  const contacts = visibleContacts();
   return (
     contacts.find((c) => `${c.firstName} ${c.lastName}`.trim().toLowerCase() === q) ??
     contacts.find((c) => `${c.firstName} ${c.lastName}`.toLowerCase().includes(q)) ??
@@ -253,7 +260,7 @@ function resolveActivityContact({
 }): Contact | null {
   if (contactId) {
     const byId = getContact(contactId);
-    if (byId) return byId;
+    if (byId && isContactVisible(contactId)) return byId;
   }
   if (contact_name) return resolveContactByName(contact_name);
   const onContact = window.location.pathname.match(/^\/backoffice\/contacts\/([^/]+)/);
@@ -469,7 +476,7 @@ export function createClientTools({
         tag?: string;
         limit?: number;
       };
-      let rows = [...useDataStore.getState().contacts.values()];
+      let rows = visibleContacts();
       if (relationship) rows = rows.filter((c) => c.relationship === relationship);
       if (role) rows = rows.filter((c) => c.role === role);
       if (tag) rows = rows.filter((c) => c.tags.includes(tag));
@@ -871,7 +878,7 @@ export function createClientTools({
 
     buildCallListDef.client(async (args) => {
       const { intent } = args as { intent?: string };
-      const pool = contactCallPool([...useDataStore.getState().contacts.values()]);
+      const pool = contactCallPool(visibleContacts());
       const ranked = await withPhase("build_call_list", "Ranking by stage and last touch", () =>
         generateCallList({ data: { intent, contacts: pool } }),
       );
@@ -1476,7 +1483,7 @@ export function createClientTools({
       // of coining a near-duplicate that segments half the same people.
       const inUse = [
         ...new Set(
-          [...useDataStore.getState().contacts.values()].flatMap((c) => c.tags),
+          visibleContacts().flatMap((c) => c.tags),
         ),
       ].sort();
       return {

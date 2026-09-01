@@ -4,6 +4,7 @@ import { getContactsForProperty, getContactShares, getLeadsForProperty, getOwner
 import { dealStageFromStatus } from './contactStage'
 import { CURRENT_USER, TEAMMATES, type Teammate } from './teammates'
 import { deriveTaskType } from '#/components/contacts/taskDisplay'
+import { visibleContacts } from '#/components/contacts/contactRights'
 import { hash, spread } from '#/components/properties/propertyDisplay'
 
 /** All contacts attached to a deal (seller + buyer + other), deduped. */
@@ -237,7 +238,9 @@ export function searchAll(query: string): {
       const p = properties.get(l.propertyId)
       return matches(l.name, p?.city, p?.state, l.dealType)
     }),
-    contacts: [...contacts.values()].filter((c) =>
+    // Privacy includes existence: a private contact the viewer has no
+    // relationship with never comes back from search.
+    contacts: visibleContacts([...contacts.values()]).filter((c) =>
       matches(c.firstName, c.lastName, c.company, c.email, c.title, c.phone),
     ),
   }

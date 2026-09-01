@@ -2671,6 +2671,17 @@ export function generateDataset() {
 
   const contacts = Array.from({ length: CONTACT_COUNT }, () => generateContact(allPropertyIds))
 
+  // Some of the other brokers' records are private — hidden from the firm until
+  // shared. Every seat Ethan is shared into (i % 8 === 5, see seedContactShares)
+  // is one of them, so the demo has private records he can see beside ones he
+  // can't. Ethan's own stay visible: the signed-in user's book is the one being
+  // browsed, and a private record of his own shows nothing new.
+  contacts.forEach((c, i) => {
+    if (c.assignedTo !== CURRENT_USER.name && (i % 5 === 2 || i % 8 === 5)) {
+      c.isPrivate = true
+    }
+  })
+
   // Reconcile the Contact↔Property graph so every property has associated
   // contacts, then draw each deal's parties from its own property's contacts.
   // This keeps the graph reciprocal: a contact's deals are deals they're a

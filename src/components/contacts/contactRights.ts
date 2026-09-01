@@ -15,9 +15,17 @@ import { COMPANY_SETTINGS } from "#/data/companySettings";
 import { resolveContactOwnership, type ContactOwnership } from "#/data/contactOwnership";
 import {
   accountableName,
+  canSeeContact,
   resolveViewerRights,
   type ContactRights,
 } from "#/data/contactViewerAccess";
+import {
+  VIEW_PRIVATE_CONTACTS,
+  isEffectivelyOn,
+  type ContactAccessSettings,
+} from "#/data/contactAccess";
+import type { RosterUser } from "#/data/roster";
+import { CURRENT_USER } from "#/data/teammates";
 import { DEFAULT_CONTACT_SHARES } from "#/data/teammates";
 import { contactFullName } from "#/components/contacts/contactDisplay";
 import { notify } from "#/lib/notify";
@@ -69,6 +77,58 @@ export function guardContactRight(contactId: string, right: ContactRight): boole
   if (r.ok) return true;
   notify({ title: "You don't have access", description: r.message });
   return false;
+}
+
+// ── Visibility ───────────────────────────────────────────────────────────────
+
+/** Whether the signed-in user holds View Private Contacts right now. */
+export function viewerSeesPrivate(
+  roster: RosterUser[] = useRoster.getState().users,
+  settings: ContactAccessSettings = useContactAccessSettings.getState().settings,
+): boolean {
+  const viewer = roster.find((u) => u.id === CURRENT_USER.id);
+  return !!viewer && isEffectivelyOn(viewer.roleIds, viewer.overrides, VIEW_PRIVATE_CONTACTS, settings);
+}
+
+/**
+ * Split a contact list into what the viewer may see, plus which of those are
+ * private (so a list can mark them). Resolves the roster and settings once.
+ */
+export function describeVisibility(contacts: Contact[]): {
+  contacts: Contact[];
+  privateIds: Set<string>;
+} {
+  const roster = useRoster.getState().users;
+  const settings = useContactAccessSettings.getState().settings;
+  const seesPrivate = viewerSeesPrivate(roster, settings);
+  // A store slice built by hand may carry contacts without a shares map.
+  const allShares = useDataStore.getState().contactShares ?? new Map();
+  const visible: Contact[] = [];
+  const privateIds = new Set<string>();
+  for (const c of contacts) {
+    const ownership = resolveContactOwnership(c, roster, settings, COMPANY_SETTINGS.name);
+    if (!ownership.isPrivate) {
+      visible.push(c);
+      continue;
+    }
+    if (canSeeContact(ownership, allShares.get(c.id) ?? DEFAULT_CONTACT_SHARES, seesPrivate)) {
+      visible.push(c);
+      privateIds.add(c.id);
+    }
+  }
+  return { contacts: visible, privateIds };
+}
+
+/** The contacts the viewer may know exist. Every enumeration of the book goes through here. */
+export function visibleContacts(contacts: Contact[] = [...useDataStore.getState().contacts.values()]): Contact[] {
+  return describeVisibility(contacts).contacts;
+}
+
+/** Whether one contact exists, as far as the viewer is concerned. Unknown ids do. */
+export function isContactVisible(contactId: string): boolean {
+  const c = useDataStore.getState().contacts.get(contactId);
+  if (!c) return true;
+  return describeVisibility([c]).contacts.length === 1;
 }
 
 /** The subset of contacts the viewer may change — for bulk actions. */

@@ -1,5 +1,6 @@
 import { useDataStore } from "#/data/dataStore";
 import { CURRENT_USER } from "#/data/teammates";
+import { visibleContacts } from "#/components/contacts/contactRights";
 import { useAssistant } from "#/ai/useAssistant";
 
 export interface AssistantContext {
@@ -39,7 +40,7 @@ export function buildAssistantContext(): AssistantContext {
   const openDeals = [...s.listings.values()].filter((l) => OPEN_STATUSES.has(l.status));
   const totalValue = openDeals.reduce((sum, l) => sum + (l.financials.askingPrice ?? 0), 0);
 
-  const contacts = [...s.contacts.values()].slice(0, 30).map((c) => ({
+  const contacts = visibleContacts([...s.contacts.values()]).slice(0, 30).map((c) => ({
     id: c.id,
     name: `${c.firstName} ${c.lastName}`.trim(),
     role: c.role,

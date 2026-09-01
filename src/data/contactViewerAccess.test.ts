@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accountableName, resolveViewerRights } from "#/data/contactViewerAccess";
+import { accountableName, canSeeContact, resolveViewerRights } from "#/data/contactViewerAccess";
 import { resolveContactOwnership } from "#/data/contactOwnership";
 import { SEED_ROSTER } from "#/data/roster";
 import { DEFAULT_CONTACT_ACCESS_SETTINGS } from "#/data/contactAccess";
@@ -58,5 +58,52 @@ describe("resolveViewerRights", () => {
     expect(accountableName(own("Sarah Chen"))).toBe("Sarah Chen");
     expect(accountableName(own("Sarah Chen", MODEL_A))).toBe("Sarah Chen");
     expect(accountableName(own("J. Whitfield", MODEL_A))).toBe("a Managing Director");
+  });
+});
+
+describe("canSeeContact", () => {
+  const sarahsPrivate = resolveContactOwnership(
+    { assignedTo: "Sarah Chen", isPrivate: true },
+    SEED_ROSTER,
+    DEFAULT_CONTACT_ACCESS_SETTINGS,
+    COMPANY,
+  );
+
+  it("a visible record is visible to everyone", () => {
+    expect(canSeeContact(own("Sarah Chen"), [], false)).toBe(true);
+  });
+
+  it("a private record hides from a viewer with no relationship", () => {
+    expect(canSeeContact(sarahsPrivate, [], false)).toBe(false);
+    // Someone else's share doesn't help.
+    expect(canSeeContact(sarahsPrivate, [{ member: marcus, tier: "outreach" }], false)).toBe(false);
+  });
+
+  it("any share tier reveals it — View included", () => {
+    expect(canSeeContact(sarahsPrivate, [me("view")], false)).toBe(true);
+  });
+
+  it("View Private Contacts sees through", () => {
+    expect(canSeeContact(sarahsPrivate, [], true)).toBe(true);
+  });
+
+  it("the owner always sees their own", () => {
+    const mine = resolveContactOwnership(
+      { assignedTo: "Ethan Thompson", isPrivate: true },
+      SEED_ROSTER,
+      DEFAULT_CONTACT_ACCESS_SETTINGS,
+      COMPANY,
+    );
+    expect(canSeeContact(mine, [], false)).toBe(true);
+  });
+
+  it("a private flag under a closed ceiling is no privacy at all", () => {
+    const transparent = resolveContactOwnership(
+      { assignedTo: "Sarah Chen", isPrivate: true },
+      SEED_ROSTER,
+      { ...DEFAULT_CONTACT_ACCESS_SETTINGS, ownedContactsCanBePrivate: false },
+      COMPANY,
+    );
+    expect(canSeeContact(transparent, [], false)).toBe(true);
   });
 });

@@ -16,6 +16,7 @@ import { ShareContactModal } from "#/components/contacts/ShareContactModal";
 import { useContactShares } from "#/components/contacts/useContactShares";
 import { useContactOwnership } from "#/components/contacts/useContactOwnership";
 import { resolveViewerRights } from "#/data/contactViewerAccess";
+import { isContactVisible } from "#/components/contacts/contactRights";
 import { setContactPrivate } from "#/data/actions";
 import { notify } from "#/lib/notify";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
@@ -135,7 +136,10 @@ function ContactDetailPage() {
   // time, so the rail forces them; the preference governs again once it closes.
   const narrowLayout = assistantOpen ? "tabs" : narrowLayoutPref;
 
-  if (!detail) return <ContactNotFound />;
+  // Privacy includes existence: a private contact the viewer has no
+  // relationship with reads as missing, not as locked — a "private" state would
+  // confirm there's a record here.
+  if (!detail || !isContactVisible(contactId)) return <ContactNotFound />;
 
   const { contact, deals, leadDeals, tasks, completedTasks } = detail;
 

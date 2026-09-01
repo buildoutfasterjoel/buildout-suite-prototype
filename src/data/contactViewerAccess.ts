@@ -84,6 +84,23 @@ export function resolveViewerRights(
 }
 
 /**
+ * Whether the viewer may know this record exists. Privacy includes existence:
+ * a private contact is invisible — search, lists, duplicate checks, the
+ * assistant — to everyone but its owner, the people it's shared with (any
+ * tier), and a viewer holding View Private Contacts. A visible record is
+ * visible to the whole firm; rights decide what they can do with it.
+ */
+export function canSeeContact(
+  ownership: ContactOwnership,
+  shares: ContactShare[],
+  seesPrivate: boolean,
+): boolean {
+  if (!ownership.isPrivate) return true;
+  if (seesPrivate || viewerOwns(ownership)) return true;
+  return shares.some((s) => s.member.id === CURRENT_USER.id);
+}
+
+/**
  * Who a reader asks for access: the owner when a person owns it, the assignee
  * when the company does, and leadership when nobody's been assigned yet.
  */

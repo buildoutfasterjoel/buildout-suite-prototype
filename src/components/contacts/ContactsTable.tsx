@@ -16,6 +16,7 @@ import {
   faArrowUp,
   faArrowDown,
   faTableColumns,
+  faLock,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact } from "#/data/types";
 import {
@@ -276,8 +277,15 @@ export function ContactsTable({
   selected,
   onToggleOne,
   onToggleAll,
+  privateIds,
 }: {
   contacts: Contact[];
+  /**
+   * Private records the viewer can see anyway (their own, shared in, or a
+   * Managing Director with View Private Contacts). They get a lock by the name
+   * so a see-through viewer knows the record isn't the firm's to find.
+   */
+  privateIds?: Set<string>;
   filtersActive: boolean;
   sortDir: SortDir;
   onToggleSort: () => void;
@@ -455,6 +463,13 @@ export function ContactsTable({
                       >
                         {fullName}
                       </Link>
+                      {privateIds?.has(contact.id) && (
+                        <FontAwesomeIcon
+                          icon={faLock}
+                          className="fs-xs text-muted"
+                          title="Private — hidden from the firm"
+                        />
+                      )}
                       {contact.doNotCall && (
                         <span className="fs-xs text-destructive">
                           do not call
