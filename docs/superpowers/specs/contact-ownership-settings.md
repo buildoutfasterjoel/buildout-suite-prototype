@@ -126,6 +126,18 @@ chip. Role defaults and overrides are untouched underneath, so re-opening restor
 - The ~9 seeded private notes (Rosa, Earl, Margaret arcs) now render the chip; all are authored
   by Ethan so none hide.
 
+### Seeded authorship follows the working set
+
+The parameterized arcs used to stamp Ethan as the author of every outbound beat, so a contact
+assigned to Sarah Chen with no collaborators read as Ethan's work. `makeCtx` now takes the
+contact's shares and builds a `WorkingSet`: the assignee is `ctx.me` (authors most beats, signs
+the emails, receives inbound rows); Contributor/Outreach collaborators author every third eligible
+beat (notes, meetings, tours; calls only at Outreach; never emails — their bodies sign off in the
+primary's name); View shares never write. The seed also stops sharing a record with its own
+assignee. `buildContactTimeline(contact, deals, shares)`; the panel passes the store's shares.
+Hero arcs still write as Ethan — they're hand-authored and seeded onto his contacts.
+`SEED_VERSION` 63 → 64.
+
 ## Next phases (not on this branch)
 
 3. **Index visibility** — hide private records the viewer has no grant on; MD with View Private
