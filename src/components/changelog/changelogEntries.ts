@@ -117,6 +117,47 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 199,
+    title:
+      "Move cold and inquiry-sourced leads to Nurturing when the broker works them, and answer an inquiry from an inline email editor",
+    mergedAt: "2026-09-01T16:04:43Z",
+    day: "2026-09-01",
+    author: "ZS-buildout",
+    area: "Contacts",
+    summary:
+      "A contact's stage now keeps up with the work by itself, so a lead you have started calling stops sitting on the Cold or Inquired page waiting for someone to change a dropdown. Answering a listing inquiry also became a real thing you can do from the timeline rather than a button that did nothing.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "A cold contact moves to Nurturing the moment you work the record — create a task for them, send them an email, or log a call. Even a task counts: the record is no longer untouched once you have committed to following up.",
+      },
+      {
+        kind: "feature",
+        text: "A contact who came in through a listing inquiry moves to Nurturing when you email or call them, but not when you only create a task. A lead you have merely promised yourself to call is still an unworked lead, which is what the Inquired page is for.",
+      },
+      {
+        kind: "feature",
+        text: "Every automatic move leaves a row on the timeline saying what caused it — \"An email was sent to this contact, moving them to Nurturing\" — plus a toast, so a stage you did not change yourself explains itself.",
+      },
+      {
+        kind: "feature",
+        text: "The Email button on a listing inquiry now opens an inline editor under the row, so you answer the inquiry while still reading it. The subject starts as \"Re:\" and the listing's name, and you can edit it before sending.",
+      },
+      {
+        kind: "refinement",
+        text: "An email answering an inquiry lands as its own timeline row above it, carrying the listing it is about — an inquiry is a form submission, not an email thread, so nothing folds into it. Sending also clears the inquiry's follow-up bar, since emailing them is the follow-up.",
+      },
+      {
+        kind: "fix",
+        text: "\"Contact created\" no longer shows as a contact's most recent activity. Sixteen contacts had a creation date that fell after their own history, so their whole timeline read as having happened before the record existed.",
+      },
+      {
+        kind: "fix",
+        text: "A followed-up inquiry stays followed up. Answering one changes the contact's stage, which used to rebuild the timeline and bring the inquiry's action bar back as though nobody had replied.",
+      },
+    ],
+  },
+  {
     pr: 198,
     title:
       "Ask Otto to write any field in a contact's Log Activity block, and review it in the field itself",
