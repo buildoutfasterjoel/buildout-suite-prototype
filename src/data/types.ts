@@ -452,6 +452,15 @@ export interface Listing {
   // ── Deal data (1:1) ──────────────────────────────────────────────
   dealId: string
 
+  /**
+   * Who opened this deal, as a `TEAMMATES` id (see teammates.ts).
+   *
+   * The deal header shows them as the ringed avatar leading the access cluster.
+   * Stored rather than derived: the internal broker on a deal can change hands,
+   * and the person who created it does not.
+   */
+  createdById: string
+
   internalBrokers: DealBroker[]
   outsideBrokers: DealBroker[]
 

@@ -8,7 +8,6 @@ import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPencil,
-  faUserGear,
   faEllipsisVertical,
   faHandshake,
   faSquareDashedCirclePlus,
@@ -19,10 +18,10 @@ import { getProperty, getListing } from "#/data/store";
 import { canAddSpaces } from "#/data/dealShape";
 import { dealBreadcrumbTrail } from "#/components/properties/dealNav";
 import { CLASSIC_BADGE } from "#/components/deals/DealCardBadges";
-import { hash, getRefId, getPhotoUrl } from "./propertyDisplay";
-import { AvatarGroup } from "./AvatarGroup";
+import { getRefId, getPhotoUrl } from "./propertyDisplay";
 import { SyndicationStatus } from "#/components/listings/SyndicationStatus";
 import { DealStageSelect } from "#/components/deals/DealStageSelect";
+import { DealHeroAccessAvatars } from "#/components/deals/DealHeroAccessAvatars";
 import { AddSpaceModal } from "#/components/deals/AddSpaceModal";
 
 /**
@@ -32,7 +31,6 @@ import { AddSpaceModal } from "#/components/deals/AddSpaceModal";
  * gate auto-reverts.
  */
 export function PropertyDetailHeader({ listing }: { listing: Listing }) {
-  const seed = hash(listing.id);
   const refId = getRefId(listing.id);
   const property = getProperty(listing.propertyId);
   const address = `${property?.street}, ${property?.city}, ${property?.state} ${property?.zip}`;
@@ -61,9 +59,10 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
     <div className="bg-card border-bottom">
       <div className="container p-4">
         <div className="d-flex align-items-center gap-3">
-          {/* Thumbnail with the access avatars overlaid in the corner */}
+          {/* Thumbnail. The access avatars used to sit overlaid in its corner;
+              they are real people now, and live with the deal's identity. */}
           <div
-            className="flex-shrink-0 d-none d-sm-block align-self-stretch position-relative"
+            className="flex-shrink-0 d-none d-sm-block align-self-stretch"
             style={{ width: 164 }}
           >
             <img
@@ -77,12 +76,6 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
                 display: "block",
               }}
             />
-            <div
-              className="position-absolute"
-              style={{ right: 6, bottom: 6 }}
-            >
-              <AvatarGroup seed={seed} size="default" />
-            </div>
           </div>
 
           {/* Identity */}
@@ -194,8 +187,11 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
             </div>
           </div>
 
-          {/* Stage + access block · actions · options on its own */}
+          {/* Who has this deal · stage · actions · options on its own. The
+              people lead the row: the controls act on the deal, and the
+              avatars say whose it is before you touch any of them. */}
           <div className="d-flex align-items-center gap-3 flex-shrink-0">
+            <DealHeroAccessAvatars listing={listing} />
             <div className="d-flex align-items-center gap-2">
               <DealStageSelect listing={listing} />
             </div>
@@ -261,10 +257,6 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
                 }
               />
               <DropdownMenu.Content align="end">
-                <DropdownMenu.Item>
-                  <FontAwesomeIcon icon={faUserGear} />
-                  Manage Access
-                </DropdownMenu.Item>
                 <DropdownMenu.Item>
                   <FontAwesomeIcon icon={faTrashAlt} />
                   Delete Deal

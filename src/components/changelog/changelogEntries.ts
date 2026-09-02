@@ -117,6 +117,34 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 202,
+    title: "Show who created a deal and who can open it, in the deal header",
+    mergedAt: "2026-09-02T16:50:04Z",
+    day: "2026-09-02",
+    author: "buildoutfasterjoel",
+    area: "Deals",
+    summary:
+      "A deal header used to show made-up avatars on its photo and a Manage Access item that did nothing. It now shows the real people: whoever opened the deal, everyone else who can work it, and a button that opens the list and lets you add someone.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "The deal header carries an access cluster, the same one a contact has: the person who created the deal wears the ring, everyone else who can open it stacks beside them, and hovering any face says who they are and what they are to the deal.",
+      },
+      {
+        kind: "feature",
+        text: "The user-gear button beside them opens Manage Access — the creator, the deal team, and a search that puts a teammate on the deal. Whoever you add arrives with no commission split, ready to set on the Financials tab.",
+      },
+      {
+        kind: "refinement",
+        text: "Manage Access left the overflow menu, where it never did anything, and the invented avatars came off the deal photo's corner.",
+      },
+      {
+        kind: "fix",
+        text: "Deals are worked by people who actually work at the firm. Every seeded deal used to name a broker who was nobody, so their name linked nowhere and their avatar had no photo; on the Financials tab an internal broker now links to their real contact record.",
+      },
+    ],
+  },
+  {
     pr: 201,
     title:
       "A Managing Director previews a private contact instead of opening it, and read-only records stop inviting interaction",

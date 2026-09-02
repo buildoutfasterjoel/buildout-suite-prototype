@@ -68,6 +68,19 @@ export const TEAMMATES: Teammate[] = [
 ];
 
 /**
+ * Everyone who can carry a deal: the protagonist plus the roster's brokers.
+ *
+ * A deal's internal broker and its creator are drawn from here, not from the
+ * whole roster — an Assistant or an Analyst works deals, they don't hold them.
+ * The protagonist leads the list so a hash over it lands on him as often as on
+ * anyone else, which is what puts "you" on a share of the seeded deals.
+ */
+export const BROKER_TEAMMATES: Teammate[] = [
+  CURRENT_USER,
+  ...TEAMMATES.filter((t) => t.role === "Broker"),
+];
+
+/**
  * Who can sign off a commission voucher, as `TEAMMATES` ids.
  *
  * The back-office roles only — a voucher is the brokerage paying itself, so the
