@@ -40,7 +40,15 @@ export function ContactRequestAccessCard({
   const [tier, setTier] = useState<AccessTier>(
     rights.tier === "view" ? "contributor" : "contributor",
   );
-  const askable = ACCESS_TIERS.filter((t) => t.value !== rights.tier);
+  // On a company-owned record everyone at the firm can already read it — View
+  // is what the viewer has, not something to ask for. So the card says so, and
+  // offers only the tiers that would change anything.
+  const alreadyReadable =
+    ownership.owner.kind === "company" && rights.relationship === "none" && !rights.preview;
+  const askable = ACCESS_TIERS.filter(
+    (t) => t.value !== rights.tier && !(alreadyReadable && t.value === "view"),
+  );
+  const title = alreadyReadable ? "You have read-only access" : rights.label;
 
   const reason = rights.preview
     ? `You can see that this contact exists — the name, the stage and that ${who} owns it — because you hold View Private Contacts. Everything else stays hidden until ${whoFirst} shares it with you. To brokers without that permission, this contact doesn't exist at all.`
@@ -56,7 +64,7 @@ export function ContactRequestAccessCard({
         <div className="d-flex align-items-center gap-2">
           <FontAwesomeIcon icon={faLockKeyhole} className="text-muted" />
           <span className="fw-semibold" style={{ fontSize: 20, lineHeight: "26px" }}>
-            {rights.label}
+            {title}
           </span>
         </div>
         <p className="mb-0 text-muted">{reason}</p>

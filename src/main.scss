@@ -3615,6 +3615,11 @@
   &:hover {
     background: var(--color-storm-grey-50, #f6f7f9);
   }
+  // Read-only for this viewer: nothing on the row can be acted on, so the hover
+  // fill that promises actions comes off too.
+  &--static:hover {
+    background: transparent;
+  }
 
   &__rail {
     display: flex;

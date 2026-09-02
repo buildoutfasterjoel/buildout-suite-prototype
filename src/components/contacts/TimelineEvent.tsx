@@ -166,7 +166,9 @@ export function TimelineEvent({
 
   return (
     <article
-      className={`tl-row${arriving ? " tl-row--arriving" : ""}`}
+      className={`tl-row${arriving ? " tl-row--arriving" : ""}${
+        readOnly ? " tl-row--static" : ""
+      }`}
       data-type={event.type}
       data-pinned={pinned || undefined}
     >
