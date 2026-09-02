@@ -10,6 +10,9 @@ import {
   faFileInvoiceDollar,
 } from "@fortawesome/pro-regular-svg-icons";
 import { useDataStore } from "#/data/dataStore";
+import { useCurrentUser } from "#/data/currentUser";
+import { useCan } from "#/components/settings/users/useViewer";
+import { canSeeVoucher, VIEW_OTHER_VOUCHERS } from "#/data/voucherRights";
 import {
   allVouchers,
   voucherTotals,
@@ -91,7 +94,16 @@ function VouchersPage() {
   // Subscribe to the map: a voucher's figures live on its deal, so this must
   // re-render when any deal changes, not merely when one is added or removed.
   void useDataStore((s) => s.listings);
-  const rows = allVouchers();
+  // Scoped before anything else touches it, so one filter carries the whole
+  // page: the commission tiles foot this set, and so do "Displaying x of y",
+  // the Brokers options and the pagination.
+  const viewerSeat = useCurrentUser((s) => s.id);
+  const canViewOthers = useCan(VIEW_OTHER_VOUCHERS);
+  const all = allVouchers();
+  const rows = useMemo(
+    () => all.filter((r) => canSeeVoucher(r.teamIds, viewerSeat, canViewOthers)),
+    [all, viewerSeat, canViewOthers],
+  );
 
   const [filters, setFilters] = useState(emptyVoucherFilters);
   const [page, setPage] = useState(1);
@@ -198,7 +210,12 @@ function VouchersPage() {
                   <Empty.Title>No vouchers match</Empty.Title>
                   {activeFilterCount > 0
                     ? "Widen the date window or clear a filter."
-                    : "No vouchers have been created yet."}
+                    : canViewOthers
+                      ? "No vouchers have been created yet."
+                      : /* The list is scoped to this viewer, so an empty page
+                           usually means none of the firm's vouchers are theirs
+                           — not that the firm has none. */
+                        "None of your deals have a voucher yet. You only see vouchers for deals you are on."}
                 </Empty.Content>
                 {activeFilterCount > 0 && (
                   <Empty.Actions>

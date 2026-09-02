@@ -1,7 +1,7 @@
 /**
  * The roles & permissions model.
  *
- * Replaces a flat list of per-user booleans with five system roles plus
+ * Replaces a flat list of per-user booleans with six system roles plus
  * per-user overrides. Two rules govern everything below:
  *
  *   1. Effective permission = union of the assigned roles' defaults, with the
@@ -63,8 +63,8 @@ export interface Permission {
 
 /**
  * The 20 customer-facing permissions from the mocks, in the order they list
- * them, plus the three contact-ownership permissions at the end of the record
- * group.
+ * them, plus the four contact permissions at the end of the record group and the
+ * three voucher permissions after Change Deal Statuses.
  * Record-scoped first, then account-wide.
  */
 export const PERMISSIONS: Permission[] = [
@@ -94,6 +94,32 @@ export const PERMISSIONS: Permission[] = [
     id: "change-deal-statuses",
     label: "Change Deal Statuses",
     detail: "Proposal and deal statuses, which feed vouchers and commissions.",
+    scope: "record",
+  },
+  // The three voucher permissions sit together, and here rather than beside the
+  // other "other users'" toggles, because they are one job: a voucher is the
+  // brokerage paying itself, and the back office reads, corrects and signs off
+  // work that is never its own. Splitting them across the list would ask an
+  // admin to assemble the role from three distant rows.
+  {
+    id: "view-other-vouchers",
+    label: "View Other Users' Vouchers",
+    detail: "See every voucher on the book, not only the deals they are on.",
+    scope: "record",
+    blanket: true,
+  },
+  {
+    id: "edit-other-vouchers",
+    label: "Edit Other Users' Vouchers",
+    detail:
+      "Correct a voucher that belongs to someone else, including while it sits Pending and the broker who submitted it is locked out.",
+    scope: "record",
+    blanket: true,
+  },
+  {
+    id: "approve-vouchers",
+    label: "Approve Vouchers",
+    detail: "Sign off a Pending voucher. A broker cannot approve their own deal.",
     scope: "record",
   },
   {
@@ -221,6 +247,7 @@ export const PERMISSION_BY_ID = new Map(PERMISSIONS.map((p) => [p.id, p]));
 
 export type RoleId =
   | "broker"
+  | "back-office-manager"
   | "marketing-assistant"
   | "transaction-coordinator"
   | "office-admin"
@@ -264,7 +291,7 @@ export interface Role {
 }
 
 /**
- * The five system roles.
+ * The six system roles.
  *
  * Broker and Managing Director are derived from the mocks, which are internally
  * consistent: a Broker-only user shows 11 of 20 on, and Broker + Managing
@@ -273,9 +300,11 @@ export interface Role {
  * withhold `non-branded-changes`, the plan says the reverse. The mocks win here
  * because their counts reconcile.
  *
- * Marketing Assistant, Transaction Coordinator and Office Admin defaults are
- * inferred from the plan's per-permission notes rather than taken from a settled
- * spec. That used to be flagged in the UI; it now lives here and in the PR,
+ * Back Office Manager is newer than the mocks: it exists because the voucher
+ * approval flow needed an actor, and its defaults are the three voucher
+ * permissions plus what signing off actually requires. Marketing Assistant,
+ * Transaction Coordinator and Office Admin defaults are inferred from the plan's
+ * per-permission notes rather than taken from a settled spec. That used to be flagged in the UI; it now lives here and in the PR,
  * since the assign-role panel lists each role's exact defaults for review.
  */
 export const ROLES: Role[] = [
@@ -324,9 +353,31 @@ export const ROLES: Role[] = [
       "view-private-contacts",
       // Assignment is the Managing Director's verb under company ownership.
       "assign-contacts",
+      // Vouchers: an MD sees the whole book and signs off, but does not do the
+      // typing. Edit Other Users' Vouchers is the Back Office Manager's, so a
+      // Pending voucher stays frozen under an MD's eyes while they approve it.
+      "view-other-vouchers",
+      "approve-vouchers",
       "manage-company",
       "edit-profile-photo",
       "access-other-saved-pages",
+    ],
+  },
+  {
+    id: "back-office-manager",
+    name: "Back Office Manager",
+    description: "Approves vouchers and runs the back office.",
+    accessKind: "firm-wide",
+    defaults: [
+      // The voucher trio, which is the whole reason the role exists: read the
+      // firm's book, correct what a broker submitted, and sign it off.
+      "view-other-vouchers",
+      "edit-other-vouchers",
+      "approve-vouchers",
+      // Closing a deal is what raises the voucher, and the back office is who
+      // finds out the stage was never moved.
+      "change-deal-statuses",
+      "edit-profile-photo",
     ],
   },
   {

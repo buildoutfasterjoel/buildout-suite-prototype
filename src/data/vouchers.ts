@@ -8,6 +8,7 @@ import type {
 } from './types'
 import { getStore, getProperty, getContact } from './store'
 import { dealShape } from './dealShape'
+import { voucherTeamIds } from './voucherRights'
 
 /** The three states a voucher moves through. Mirrors `DealFinancials['status']`. */
 export type VoucherStatus = 'Draft' | 'Pending' | 'Approved'
@@ -299,6 +300,13 @@ export interface VoucherRow {
   propertyAddress: string
   /** The deal's primary internal broker, or null when it has none. */
   brokerName: string | null
+  /**
+   * The deal team, as teammate ids — whose voucher this is.
+   *
+   * Carried on the row so the list can scope itself without reaching back for
+   * the deal: see `canSeeVoucher` in `voucherRights.ts`.
+   */
+  teamIds: string[]
   relatedContactsLabel: string
   transactionValue: number
   grossCommission: number
@@ -373,6 +381,7 @@ export function allVouchers(): VoucherRow[] {
         dealType: deal.dealType,
         dealStage: deal.status,
         propertyType: property?.propertyType ?? null,
+        teamIds: voucherTeamIds(deal),
         // Assembled the way the deal header shows it, so a broker searching the
         // address they see on the deal page finds the voucher here.
         propertyAddress: property

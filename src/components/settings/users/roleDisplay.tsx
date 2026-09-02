@@ -12,15 +12,19 @@ import type { UserStatus } from "#/data/roster";
 /**
  * Role badge colors, from the Figma spec (My Sandbox → 1310-80954).
  *
- * All five are tints on Blueprint's `secondary` badge — no solid fill, so no one
- * role shouts over the others. Each pairs a Buildout token with its own family's
- * 950 for text, resolving to the spec's hex within rounding:
+ * All of them are tints on Blueprint's `secondary` badge — no solid fill, so no
+ * one role shouts over the others. Each pairs a Buildout token with its own
+ * family's 950 for text, resolving to the spec's hex within rounding:
  *
  *   Broker                  #dcebfd / #182753  (badge/accent/secondary)
  *   Managing Director       #f2e8ff / #360764  (badge/default/secondary)
  *   Marketing Assistant     #ffe785 / #481800
  *   Transaction Coordinator #a0fad1 / #003024
  *   Office Admin            #eceef2 / #22262f  (badge/muted/secondary)
+ *
+ * Back Office Manager is not in that spec — the role postdates it. It takes
+ * `seagull`, the one palette family no other badge on these screens uses, at the
+ * same 200/950 weight as the other back-office role beside it.
  *
  * Palette tokens rather than the matching `appearance` props because the
  * installed blueprint-theme resolves those semantic backgrounds differently from
@@ -33,6 +37,7 @@ const ROLE_PILL: Record<RoleId, string> = {
   "marketing-assistant": "bg-harvest-gold-200 text-harvest-gold-950",
   "transaction-coordinator": "bg-mountain-meadow-200 text-mountain-meadow-950",
   "office-admin": "bg-storm-grey-100 text-storm-grey-950",
+  "back-office-manager": "bg-seagull-200 text-seagull-950",
 };
 
 /** The neutral pair, for badges that carry no state of their own. */

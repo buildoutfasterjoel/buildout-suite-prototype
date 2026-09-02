@@ -1,30 +1,33 @@
-import { useState } from "react";
 import { Alert } from "@buildoutinc/blueprint-react/ui/Alert";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Field } from "@buildoutinc/blueprint-react/ui/Field";
 import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
-import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleInfo } from "@fortawesome/pro-duotone-svg-icons";
-import { findTeammate, VOUCHER_APPROVER_IDS } from "#/data/teammates";
+import { findTeammate } from "#/data/teammates";
+import { useCurrentUser } from "#/data/currentUser";
+import { useViewer } from "#/components/settings/users/useViewer";
+import { MemberAvatar } from "#/components/common/TeammatePicker";
 
 /**
  * Sign a Pending voucher off.
  *
- * **Why a dialog and not a one-click button.** Approving needs a reviewer, and
- * the signed-in user cannot be one: `CURRENT_USER` is a Broker, and
- * `VOUCHER_APPROVER_IDS` is explicit that the broker who closed the deal is the
- * one person who must not approve it. So the approver is chosen rather than
- * assumed, from the back-office roster that list names.
+ * **Why a dialog and not a one-click button.** Not to pick an approver — you
+ * are the approver. The button behind this only renders for a holder of Approve
+ * Vouchers, so by the time the dialog opens the signature is settled and the
+ * field below states it rather than asking.
  *
- * The dialog is also where approving says what it does. It is the only way a
+ * The dialog earns its place by saying what approving does. It is the only way a
  * voucher becomes Approved, it cannot be undone from this page, and it raises
  * payables for every deposit already filed — none of which a bare button in the
  * header could state.
  *
- * This is the smallest honest version of an approver action, not the approver
- * experience: an approval inbox, a rejection path, and `reopenVoucher` finally
- * wired up are their own pass.
+ * It used to ask *who is signing*, from a hardcoded list, because the signed-in
+ * user could never be one of them. The Back Office Manager role fixed that: the
+ * approver is whoever is looking.
+ *
+ * Still not the full approver experience — an approval inbox, a rejection path,
+ * and `reopenVoucher` finally wired up are their own pass.
  */
 export function ApproveVoucherModal({
   open,
@@ -38,7 +41,12 @@ export function ApproveVoucherModal({
   depositCount: number;
   onApprove: (reviewerId: string) => void;
 }) {
-  const [reviewerId, setReviewerId] = useState<string>(VOUCHER_APPROVER_IDS[0]);
+  // The seat, not the roster row, is what gets stamped on the voucher: the
+  // roster row carries the title to show beside the name, and its id is the
+  // same seat.
+  const reviewerId = useCurrentUser((s) => s.id);
+  const viewer = useViewer();
+  const person = findTeammate(reviewerId);
 
   const approve = () => {
     onApprove(reviewerId);
@@ -55,34 +63,19 @@ export function ApproveVoucherModal({
         <Modal.Body className="d-flex flex-column gap-4">
           <Field>
             <Field.Label>Approver</Field.Label>
-            <Select
-              value={reviewerId}
-              onValueChange={(v) => setReviewerId((v as string) ?? reviewerId)}
-            >
-              <Select.Trigger aria-label="Approver">
-                {/* The name, passed as children. `Select.Value` renders the raw
-                    value, which here is a teammate id. */}
-                <Select.Value>
-                  {findTeammate(reviewerId)?.name ?? reviewerId}
-                </Select.Value>
-              </Select.Trigger>
-              <Select.Content>
-                {VOUCHER_APPROVER_IDS.map((id) => {
-                  const person = findTeammate(id);
-                  return (
-                    <Select.Item key={id} value={id}>
-                      {person?.name ?? id}
-                      {person && (
-                        <span className="text-muted ms-2">{person.role}</span>
-                      )}
-                    </Select.Item>
-                  );
-                })}
-              </Select.Content>
-            </Select>
+            {/* Read-only by design — see the note above. A control here would
+                imply the signature is a choice. */}
+            <div className="d-flex align-items-center gap-2 border rounded p-2 bg-card">
+              {person && <MemberAvatar member={person} />}
+              <span className="d-flex flex-column lh-sm">
+                <span className="fw-semibold">{person?.name ?? "You"}</span>
+                {viewer?.title && (
+                  <span className="fs-small text-muted">{viewer.title}</span>
+                )}
+              </span>
+            </div>
             <Field.Description>
-              The back-office roles only — a broker cannot sign off their own
-              deal.
+              Your sign-off is recorded against this voucher.
             </Field.Description>
           </Field>
 
