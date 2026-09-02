@@ -54,6 +54,7 @@ import { Route as ShellTasksIndexRouteImport } from './routes/_shell/tasks/index
 import { Route as ShellBackofficeContactsIndexRouteImport } from './routes/_shell/backoffice/contacts/index'
 import { Route as ShellBackofficeContactsContactIdRouteImport } from './routes/_shell/backoffice/contacts/$contactId'
 import { Route as ShellBackofficeDepositsIndexRouteImport } from './routes/_shell/backoffice/deposits/index'
+import { Route as ShellBackofficePayablesIndexRouteImport } from './routes/_shell/backoffice/payables/index'
 import { Route as ShellBackofficeReceivablesIndexRouteImport } from './routes/_shell/backoffice/receivables/index'
 import { Route as ShellBackofficeVouchersIndexRouteImport } from './routes/_shell/backoffice/vouchers/index'
 import { Route as ShellListingsListingIdIndexRouteImport } from './routes/_shell/listings/$listingId/index'
@@ -333,6 +334,12 @@ const ShellBackofficeDepositsIndexRoute =
   ShellBackofficeDepositsIndexRouteImport.update({
     id: '/deposits/',
     path: '/deposits/',
+    getParentRoute: () => ShellBackofficeRoute,
+  } as any)
+const ShellBackofficePayablesIndexRoute =
+  ShellBackofficePayablesIndexRouteImport.update({
+    id: '/payables/',
+    path: '/payables/',
     getParentRoute: () => ShellBackofficeRoute,
   } as any)
 const ShellBackofficeReceivablesIndexRoute =
@@ -692,6 +699,7 @@ export interface FileRoutesByFullPath {
   '/settings/users/$userId': typeof ShellSettingsUsersUserIdRouteWithChildren
   '/backoffice/contacts/': typeof ShellBackofficeContactsIndexRoute
   '/backoffice/deposits/': typeof ShellBackofficeDepositsIndexRoute
+  '/backoffice/payables/': typeof ShellBackofficePayablesIndexRoute
   '/backoffice/receivables/': typeof ShellBackofficeReceivablesIndexRoute
   '/backoffice/vouchers/': typeof ShellBackofficeVouchersIndexRoute
   '/listings/$listingId/': typeof ShellListingsListingIdIndexRoute
@@ -775,6 +783,7 @@ export interface FileRoutesByTo {
   '/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
   '/backoffice/contacts': typeof ShellBackofficeContactsIndexRoute
   '/backoffice/deposits': typeof ShellBackofficeDepositsIndexRoute
+  '/backoffice/payables': typeof ShellBackofficePayablesIndexRoute
   '/backoffice/receivables': typeof ShellBackofficeReceivablesIndexRoute
   '/backoffice/vouchers': typeof ShellBackofficeVouchersIndexRoute
   '/listings/$listingId': typeof ShellListingsListingIdIndexRoute
@@ -870,6 +879,7 @@ export interface FileRoutesById {
   '/_shell/settings/users/$userId': typeof ShellSettingsUsersUserIdRouteWithChildren
   '/_shell/backoffice/contacts/': typeof ShellBackofficeContactsIndexRoute
   '/_shell/backoffice/deposits/': typeof ShellBackofficeDepositsIndexRoute
+  '/_shell/backoffice/payables/': typeof ShellBackofficePayablesIndexRoute
   '/_shell/backoffice/receivables/': typeof ShellBackofficeReceivablesIndexRoute
   '/_shell/backoffice/vouchers/': typeof ShellBackofficeVouchersIndexRoute
   '/_shell/listings/$listingId/': typeof ShellListingsListingIdIndexRoute
@@ -966,6 +976,7 @@ export interface FileRouteTypes {
     | '/settings/users/$userId'
     | '/backoffice/contacts/'
     | '/backoffice/deposits/'
+    | '/backoffice/payables/'
     | '/backoffice/receivables/'
     | '/backoffice/vouchers/'
     | '/listings/$listingId/'
@@ -1049,6 +1060,7 @@ export interface FileRouteTypes {
     | '/listings/$listingId/website'
     | '/backoffice/contacts'
     | '/backoffice/deposits'
+    | '/backoffice/payables'
     | '/backoffice/receivables'
     | '/backoffice/vouchers'
     | '/listings/$listingId'
@@ -1143,6 +1155,7 @@ export interface FileRouteTypes {
     | '/_shell/settings/users/$userId'
     | '/_shell/backoffice/contacts/'
     | '/_shell/backoffice/deposits/'
+    | '/_shell/backoffice/payables/'
     | '/_shell/backoffice/receivables/'
     | '/_shell/backoffice/vouchers/'
     | '/_shell/listings/$listingId/'
@@ -1490,6 +1503,13 @@ declare module '@tanstack/react-router' {
       path: '/deposits'
       fullPath: '/backoffice/deposits/'
       preLoaderRoute: typeof ShellBackofficeDepositsIndexRouteImport
+      parentRoute: typeof ShellBackofficeRoute
+    }
+    '/_shell/backoffice/payables/': {
+      id: '/_shell/backoffice/payables/'
+      path: '/payables'
+      fullPath: '/backoffice/payables/'
+      preLoaderRoute: typeof ShellBackofficePayablesIndexRouteImport
       parentRoute: typeof ShellBackofficeRoute
     }
     '/_shell/backoffice/receivables/': {
@@ -1847,6 +1867,7 @@ interface ShellBackofficeRouteChildren {
   ShellBackofficeContactsContactIdRoute: typeof ShellBackofficeContactsContactIdRoute
   ShellBackofficeContactsIndexRoute: typeof ShellBackofficeContactsIndexRoute
   ShellBackofficeDepositsIndexRoute: typeof ShellBackofficeDepositsIndexRoute
+  ShellBackofficePayablesIndexRoute: typeof ShellBackofficePayablesIndexRoute
   ShellBackofficeReceivablesIndexRoute: typeof ShellBackofficeReceivablesIndexRoute
   ShellBackofficeVouchersIndexRoute: typeof ShellBackofficeVouchersIndexRoute
 }
@@ -1855,6 +1876,7 @@ const ShellBackofficeRouteChildren: ShellBackofficeRouteChildren = {
   ShellBackofficeContactsContactIdRoute: ShellBackofficeContactsContactIdRoute,
   ShellBackofficeContactsIndexRoute: ShellBackofficeContactsIndexRoute,
   ShellBackofficeDepositsIndexRoute: ShellBackofficeDepositsIndexRoute,
+  ShellBackofficePayablesIndexRoute: ShellBackofficePayablesIndexRoute,
   ShellBackofficeReceivablesIndexRoute: ShellBackofficeReceivablesIndexRoute,
   ShellBackofficeVouchersIndexRoute: ShellBackofficeVouchersIndexRoute,
 }

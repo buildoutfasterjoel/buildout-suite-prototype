@@ -117,6 +117,26 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 203,
+    title: "A Payables page in Back Office, and a way to pay a broker off it",
+    mergedAt: "2026-09-02T19:30:00Z",
+    day: "2026-09-02",
+    author: "buildoutfasterjoel",
+    area: "Back Office",
+    summary:
+      "What the brokerage owes its brokers was only visible one voucher at a time. Back Office now has a Payables page that gathers every payable under the broker it is owed to, so you can see what one person is due across every deal and pay it in one go.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "Back Office → Payables lists every payable in the book, grouped by broker, with each broker's total due at the head of their own rows. A payable links back to the voucher that raised it.",
+      },
+      {
+        kind: "feature",
+        text: "Tick a broker's heading to take everything they are owed, or single rows to take part of it, then Pay Selected writes a payment against each one for its full balance. The page opens on Outstanding, so it reads as the queue of what still needs paying.",
+      },
+    ],
+  },
+  {
     pr: 202,
     title: "Show who created a deal and who can open it, in the deal header",
     mergedAt: "2026-09-02T16:50:04Z",
