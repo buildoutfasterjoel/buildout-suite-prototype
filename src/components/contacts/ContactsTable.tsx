@@ -507,7 +507,7 @@ export function ContactsTable({
                       )}
                     </span>
                     <span className="fs-small text-muted text-nowrap">
-                      {previewIds?.has(contact.id) ? <HiddenValue width={150} height={12} /> : contact.email}
+                      {previewIds?.has(contact.id) ? <HiddenValue width={150} height={9} /> : contact.email}
                     </span>
                   </div>
                 </div>

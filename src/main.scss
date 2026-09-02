@@ -6471,3 +6471,11 @@ $otto-progress-gutter: 28px;
     filter: none;
   }
 }
+
+// A withheld value on a private contact the viewer may only preview. Solid and
+// still: darker than a loading placeholder so it reads against white, and with
+// no shimmer, because nothing is on its way.
+.hidden-value {
+  background: var(--color-storm-grey-200, #d5dae2);
+  animation: none;
+}

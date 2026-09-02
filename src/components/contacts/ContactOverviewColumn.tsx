@@ -422,7 +422,7 @@ export function ContactOverviewColumn({
               <HiddenValue width={160} />
               <div className="d-flex align-items-center gap-2">
                 <span className="fw-semibold">Tags</span>
-                <HiddenValue width={70} height={22} className="rounded-pill" />
+                <HiddenValue width={70} height={18} className="rounded-pill" />
               </div>
             </div>
           </div>

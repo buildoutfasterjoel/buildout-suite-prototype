@@ -1,5 +1,4 @@
 import type { CSSProperties } from "react";
-import { Placeholder } from "@buildoutinc/blueprint-react/ui/Placeholder";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLock } from "@fortawesome/pro-regular-svg-icons";
 
@@ -8,15 +7,16 @@ import { faLock } from "@fortawesome/pro-regular-svg-icons";
  * can see the record exists but hasn't been granted access.
  *
  * `HiddenValue` stands where a single value would be — an email, a phone, a
- * field, a table cell — as a muted rectangle of roughly the value's width. It
- * borrows the skeleton-loader shape on purpose: the reader already knows that
- * shape means "there's something here you're not seeing yet".
+ * field, a table cell — as a muted rectangle of roughly the value's width. A
+ * plain block on purpose, not the design system's Placeholder: that one
+ * shimmers, and a shimmer says "loading". Nothing here is loading; it's
+ * withheld. Styles live in `.hidden-value` (main.scss).
  *
  * `HiddenBlock` stands where a list or a feed would be, and says why.
  */
 export function HiddenValue({
   width = "60%",
-  height = 14,
+  height = 10,
   className = "",
   style,
 }: {
@@ -26,9 +26,10 @@ export function HiddenValue({
   style?: CSSProperties;
 }) {
   return (
-    <Placeholder
-      className={`rounded d-inline-block align-middle ${className}`}
-      style={{ width, height, opacity: 0.35, ...style }}
+    <span
+      className={`hidden-value rounded d-inline-block align-middle ${className}`}
+      style={{ width, height, ...style }}
+      role="img"
       aria-label="Hidden — private contact"
     />
   );
