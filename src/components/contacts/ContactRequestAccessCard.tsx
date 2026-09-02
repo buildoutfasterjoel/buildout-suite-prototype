@@ -48,7 +48,13 @@ export function ContactRequestAccessCard({
   const askable = ACCESS_TIERS.filter(
     (t) => t.value !== rights.tier && !(alreadyReadable && t.value === "view"),
   );
-  const title = alreadyReadable ? "You have read-only access" : rights.label;
+  // One line does both jobs: what you have, and what the card is for.
+  const standing = rights.preview
+    ? "Previewing private contact"
+    : rights.relationship === "collaborator"
+      ? `You have ${rights.label} access`
+      : "You have read-only access";
+  const title = `${standing}. Ask to collaborate.`;
 
   const reason = rights.preview
     ? `You can see that this contact exists — the name, the stage and that ${who} owns it — because you have View Private Contacts permission turned on. Everything else stays hidden until ${whoFirst} shares it with you. To brokers without that permission, this contact doesn't exist at all.`
@@ -90,9 +96,6 @@ export function ContactRequestAccessCard({
           </div>
         ) : (
           <>
-            {/* The ask, named. Every variant of this card — read-only, previewing,
-                shared-to-read — leads into the same three tiers. */}
-            <h3 className="fs-6 fw-semibold mb-0">Ask to collaborate</h3>
             <RadioGroup
               value={tier}
               onValueChange={(v) => setTier(v as AccessTier)}
