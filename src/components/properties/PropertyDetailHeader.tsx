@@ -187,85 +187,82 @@ export function PropertyDetailHeader({ listing }: { listing: Listing }) {
             </div>
           </div>
 
-          {/* Who has this deal, then what you can do to it — stacked, so the
-              people read as a line of their own above the controls rather
-              than as one more control in the row. */}
-          <div className="d-flex flex-column align-items-end gap-2 flex-shrink-0">
+          {/* Who has this deal · stage · actions · options on its own. The
+              people lead the row: the controls act on the deal, and the
+              avatars say whose it is before you touch any of them. */}
+          <div className="d-flex align-items-center gap-3 flex-shrink-0">
             <DealHeroAccessAvatars listing={listing} />
-
-            <div className="d-flex align-items-center gap-3">
-              <div className="d-flex align-items-center gap-2">
-                <DealStageSelect listing={listing} />
-              </div>
-              <div className="d-flex align-items-center gap-2">
-                {canAddSpaces(listing) && (
-                  <Button
-                    variant="secondary"
-                    aria-label="Add space"
-                    className="flex-shrink-0"
-                    onClick={() => setAddSpaceOpen(true)}
-                  >
-                    <FontAwesomeIcon icon={faSquareDashedCirclePlus} />
-                    Add Space
-                  </Button>
-                )}
-                <Tooltip>
-                  <Tooltip.Trigger
-                    render={
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        // Named on the button, not left to the tooltip: Blueprint's
-                        // Tooltip describes a trigger, it does not name it, so an
-                        // icon-only pencil reads as an unlabelled button to a
-                        // screen reader until hover — which never happens there.
-                        aria-label={
-                          listing.isClassic ? "Edit listing" : "Edit deal"
-                        }
-                        nativeButton={false}
-                        render={
-                          // A classic deal has no Listing section in its sidebar —
-                          // the listing form is what this button opens instead of
-                          // the deal form. Two `Link`s rather than one with an
-                          // interpolated `to`: `Link` takes a typed route literal.
-                          listing.isClassic ? (
-                            <Link
-                              to="/listings/$listingId/listing"
-                              params={{ listingId: listing.id }}
-                            />
-                          ) : (
-                            <Link
-                              to="/listings/$listingId/edit"
-                              params={{ listingId: listing.id }}
-                            />
-                          )
-                        }
-                      >
-                        <FontAwesomeIcon icon={faPencil} />
-                      </Button>
-                    }
-                  />
-                  <Tooltip.Content>
-                    {listing.isClassic ? "Edit Listing" : "Edit Deal"}
-                  </Tooltip.Content>
-                </Tooltip>
-              </div>
-              <DropdownMenu>
-                <DropdownMenu.Trigger
+            <div className="d-flex align-items-center gap-2">
+              <DealStageSelect listing={listing} />
+            </div>
+            <div className="d-flex align-items-center gap-2">
+              {canAddSpaces(listing) && (
+                <Button
+                  variant="secondary"
+                  aria-label="Add space"
+                  className="flex-shrink-0"
+                  onClick={() => setAddSpaceOpen(true)}
+                >
+                  <FontAwesomeIcon icon={faSquareDashedCirclePlus} />
+                  Add Space
+                </Button>
+              )}
+              <Tooltip>
+                <Tooltip.Trigger
                   render={
-                    <Button variant="ghost" size="icon" aria-label="More options">
-                      <FontAwesomeIcon icon={faEllipsisVertical} />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      // Named on the button, not left to the tooltip: Blueprint's
+                      // Tooltip describes a trigger, it does not name it, so an
+                      // icon-only pencil reads as an unlabelled button to a
+                      // screen reader until hover — which never happens there.
+                      aria-label={
+                        listing.isClassic ? "Edit listing" : "Edit deal"
+                      }
+                      nativeButton={false}
+                      render={
+                        // A classic deal has no Listing section in its sidebar —
+                        // the listing form is what this button opens instead of
+                        // the deal form. Two `Link`s rather than one with an
+                        // interpolated `to`: `Link` takes a typed route literal.
+                        listing.isClassic ? (
+                          <Link
+                            to="/listings/$listingId/listing"
+                            params={{ listingId: listing.id }}
+                          />
+                        ) : (
+                          <Link
+                            to="/listings/$listingId/edit"
+                            params={{ listingId: listing.id }}
+                          />
+                        )
+                      }
+                    >
+                      <FontAwesomeIcon icon={faPencil} />
                     </Button>
                   }
                 />
-                <DropdownMenu.Content align="end">
-                  <DropdownMenu.Item>
-                    <FontAwesomeIcon icon={faTrashAlt} />
-                    Delete Deal
-                  </DropdownMenu.Item>
-                </DropdownMenu.Content>
-              </DropdownMenu>
+                <Tooltip.Content>
+                  {listing.isClassic ? "Edit Listing" : "Edit Deal"}
+                </Tooltip.Content>
+              </Tooltip>
             </div>
+            <DropdownMenu>
+              <DropdownMenu.Trigger
+                render={
+                  <Button variant="ghost" size="icon" aria-label="More options">
+                    <FontAwesomeIcon icon={faEllipsisVertical} />
+                  </Button>
+                }
+              />
+              <DropdownMenu.Content align="end">
+                <DropdownMenu.Item>
+                  <FontAwesomeIcon icon={faTrashAlt} />
+                  Delete Deal
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu>
           </div>
         </div>
       </div>
