@@ -1428,8 +1428,39 @@ export interface Contact {
    * links them (deal-linked properties surface there on their own).
    */
   ownedPropertyIds?: string[]
-  /** Team member who owns this relationship, e.g. "E. Thompson". */
+  /**
+   * The person accountable for this relationship — a roster member's full name,
+   * or "You" for a contact made in-app. Whether they *own* it or work it on the
+   * company's behalf is resolved from the company's contact-ownership settings
+   * (see `contactOwnership.ts`); this field is the assignee either way.
+   */
   assignedTo: string
+  /**
+   * Who worked this record before the first in-app assignment or transfer.
+   * The seeded history is authored from the assignee at read time, so without
+   * this a transfer would rewrite who made every past call. Frozen once, on the
+   * first hand-off; absent means the current assignee has always had it.
+   */
+  historyAuthoredBy?: string
+  /** ISO moment of the last assignment or transfer, when one has happened in-app. */
+  assignedAt?: string
+  /** Who did it — for the timeline row. */
+  assignedBy?: string
+  /**
+   * The owner has marked this contact private — hidden from the firm, search
+   * included, until shared. Only meaningful when the owner may mark contacts
+   * private; kept when they can't, so re-opening the ceiling restores it.
+   * Absent means visible, so the seed writing none of these keeps snapshots
+   * loading.
+   */
+  isPrivate?: boolean
+  /**
+   * One Person, many Relationships: records that share a `personId` are two
+   * brokers' relationships with the same human. Absent means the only one we
+   * know of. Set by linking (see `linkContactsAsPerson`) or by the seed; never
+   * inferred silently, and nothing merges — see `contactRelationships.ts`.
+   */
+  personId?: string
   source: ContactSource
   relationship: RelationshipStage
   /** Deal side, or null when the contact isn't on an active deal. */

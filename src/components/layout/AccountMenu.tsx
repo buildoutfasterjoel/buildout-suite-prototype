@@ -15,19 +15,20 @@ import {
   faUserGear,
 } from "@fortawesome/pro-regular-svg-icons";
 import { useDataStore } from "#/data/dataStore";
-import { CURRENT_USER } from "#/data/teammates";
+import { VIEWABLE_PEOPLE, useCurrentUser } from "#/data/currentUser";
+import { SEED_ROSTER } from "#/data/roster";
 import type { RoleId } from "#/data/permissions";
-import { useRoster } from "#/components/settings/users/useRoster";
-import { useViewerRoles } from "#/components/settings/users/useViewer";
-import { useDesignToggles } from "./useDesignToggles";
-import { navModeLabel, useNavMode } from "./useNavMode";
 import {
   VIEW_AS_ORDER,
-  identityLine,
+  clearViewAsRole,
   readViewAsRole,
   viewAsLabel,
   writeViewAsRole,
 } from "./viewAsRole";
+import { useAccessRequests } from "#/components/contacts/useAccessRequests";
+import { useRoster } from "#/components/settings/users/useRoster";
+import { useDesignToggles } from "./useDesignToggles";
+import { navModeLabel, useNavMode } from "./useNavMode";
 
 /**
  * The account dropdown in the navbar footer.
@@ -45,31 +46,49 @@ export function AccountMenu() {
   const toggleNavMode = useNavMode((s) => s.toggle);
   const designTogglesShown = useDesignToggles((s) => s.shown);
   const toggleDesignToggles = useDesignToggles((s) => s.toggle);
-  const setRoles = useRoster((s) => s.setRoles);
 
   // The chosen role lives on the signed-in user's roster row, so the menu reads
   // it back from there rather than keeping its own copy — editing Ethan's roles
   // on his own permissions page moves this checkmark too.
-  const viewerRoles = useViewerRoles();
-  const activeRole = viewerRoles[0] ?? "broker";
 
-  // Restore the persisted seat on mount. The roster seed can't read
-  // localStorage itself (it's built at module load, and has to be SSR-safe), so
-  // the stored choice is applied here once the client is up. Skipped when it
-  // already matches, so this never writes a fresh users array for no reason.
+  // The seat: who's looking. Switching it is the demo's way to see the same
+  // screens as Sarah (a Broker with a private book), Riley (an Office Admin
+  // with no book) or Ethan (a Managing Director who sees through). Pending
+  // access requests are the old seat's, so they're cleared on the way out.
+  const seatId = useCurrentUser((s) => s.id);
+  const setSeat = useCurrentUser((s) => s.setId);
+  const me = VIEWABLE_PEOPLE.find((p) => p.id === seatId) ?? VIEWABLE_PEOPLE[0];
+  const rosterRow = useRoster((s) => s.users.find((u) => u.id === seatId));
+  const setRoles = useRoster((s) => s.setRoles);
+  const realRoles = (id: string): RoleId[] =>
+    SEED_ROSTER.find((u) => u.id === id)?.roleIds ?? [];
+  const activeRole: RoleId | undefined = rosterRow?.roleIds[0];
+  const roleOverridden = !!activeRole && realRoles(seatId)[0] !== activeRole;
+
+  // Re-apply a stored role override to the seat once the client is up — the
+  // roster seed can't read localStorage itself (built at module load, SSR-safe).
   useEffect(() => {
     const stored = readViewAsRole();
-    const current = useRoster.getState().users.find(
-      (u) => u.id === CURRENT_USER.id,
-    );
-    if (current && (current.roleIds.length !== 1 || current.roleIds[0] !== stored)) {
-      setRoles(CURRENT_USER.id, [stored]);
-    }
-  }, [setRoles]);
+    if (stored && rosterRow && rosterRow.roleIds[0] !== stored) setRoles(seatId, [stored]);
+    // Only on mount / seat change; a live role change writes the store itself.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seatId]);
 
+  function changeSeat(next: string) {
+    if (next === seatId) return;
+    // The old seat gets its real role back and the override is dropped, so the
+    // new person shows up as themselves, not as what the last seat was trying.
+    if (roleOverridden) setRoles(seatId, realRoles(seatId));
+    clearViewAsRole();
+    setSeat(next);
+    useAccessRequests.setState({ requests: {} });
+  }
+
+  /** Try this seat's screens as another role. Same person, different permissions. */
   function changeRole(next: RoleId) {
-    writeViewAsRole(next);
-    setRoles(CURRENT_USER.id, [next]);
+    if (next === realRoles(seatId)[0]) clearViewAsRole();
+    else writeViewAsRole(next);
+    setRoles(seatId, [next]);
   }
 
   // Wipe the demo world back to the deterministic clean state, then reload so
@@ -87,15 +106,12 @@ export function AccountMenu() {
       <Navbar.Group>
         <Navbar.GroupTrigger
           className="navbar-user-trigger"
-          aria-label={`Account: ${CURRENT_USER.name}`}
+          aria-label={`Account: ${me.name}`}
         >
           <Navbar.ItemLinkIcon>
             <Avatar style={{ width: 28, height: 28 }}>
-              <Avatar.Image
-                src={CURRENT_USER.avatarUrl}
-                alt={CURRENT_USER.name}
-              />
-              <Avatar.Fallback>{CURRENT_USER.initials}</Avatar.Fallback>
+              {me.avatarUrl && <Avatar.Image src={me.avatarUrl} alt={me.name} />}
+              <Avatar.Fallback>{me.initials}</Avatar.Fallback>
             </Avatar>
           </Navbar.ItemLinkIcon>
         </Navbar.GroupTrigger>
@@ -105,18 +121,18 @@ export function AccountMenu() {
               are, so it must not compete with Profile settings right below. */}
           <div className="account-menu__card d-flex align-items-center gap-3">
             <Avatar style={{ width: 40, height: 40 }}>
-              <Avatar.Image src={CURRENT_USER.avatarUrl} alt="" />
-              <Avatar.Fallback>{CURRENT_USER.initials}</Avatar.Fallback>
+              {me.avatarUrl && <Avatar.Image src={me.avatarUrl} alt="" />}
+              <Avatar.Fallback>{me.initials}</Avatar.Fallback>
             </Avatar>
             <div className="account-menu__identity">
               <div className="fw-semibold text-truncate">
-                {CURRENT_USER.name}
+                {me.name}
               </div>
               <div className="small text-truncate text-buildout-blue-200">
-                {CURRENT_USER.email}
+                {me.email}
               </div>
               <div className="small text-truncate text-buildout-blue-200">
-                {identityLine(activeRole, CURRENT_USER.company)}
+                {[rosterRow?.title ?? me.role, me.company ?? "Buildout"].join(" · ")}
               </div>
             </div>
           </div>
@@ -141,29 +157,67 @@ export function AccountMenu() {
           {isMobile ? (
             // Base UI's submenu and radio parts have no Menu.Root in Navbar's
             // collapsible branch, so mobile gets flat rows instead.
-            VIEW_AS_ORDER.map((roleId) => (
-              <Navbar.GroupMenuItem
-                key={roleId}
-                onClick={() => changeRole(roleId)}
-                className={roleId === activeRole ? "active" : undefined}
-              >
-                {viewAsLabel(roleId)}
-              </Navbar.GroupMenuItem>
-            ))
+            <>
+              {VIEWABLE_PEOPLE.map((p) => (
+                <Navbar.GroupMenuItem
+                  key={p.id}
+                  onClick={() => changeSeat(p.id)}
+                  className={p.id === seatId ? "active" : undefined}
+                >
+                  {p.name}
+                </Navbar.GroupMenuItem>
+              ))}
+              {VIEW_AS_ORDER.map((roleId) => (
+                <Navbar.GroupMenuItem
+                  key={roleId}
+                  onClick={() => changeRole(roleId)}
+                  className={roleId === activeRole ? "active" : undefined}
+                >
+                  as {viewAsLabel(roleId)}
+                </Navbar.GroupMenuItem>
+              ))}
+            </>
           ) : (
             <DropdownMenu.Sub>
               <DropdownMenu.SubTrigger className="d-flex align-items-center gap-2">
                 <FontAwesomeIcon icon={faUser} />
-                Viewing as: {viewAsLabel(activeRole)}
+                Viewing as: {me.name}
               </DropdownMenu.SubTrigger>
               <DropdownMenu.SubContent className="navbar-dropdown">
                 <DropdownMenu.RadioGroup
-                  value={activeRole}
+                  value={seatId}
+                  onValueChange={(value) => changeSeat(String(value))}
+                >
+                  {VIEWABLE_PEOPLE.map((p) => (
+                    <DropdownMenu.RadioItem key={p.id} value={p.id}>
+                      {p.name}
+                      <span className="text-muted ms-2 small">{p.role}</span>
+                    </DropdownMenu.RadioItem>
+                  ))}
+                </DropdownMenu.RadioGroup>
+              </DropdownMenu.SubContent>
+            </DropdownMenu.Sub>
+          )}
+          {!isMobile && (
+            // The role lens: the same person, wearing a different role for the
+            // demo. Reads "Custom" when it differs from their seeded role.
+            <DropdownMenu.Sub>
+              <DropdownMenu.SubTrigger className="d-flex align-items-center gap-2">
+                <FontAwesomeIcon icon={faUserGear} />
+                Role: {activeRole ? viewAsLabel(activeRole) : "—"}
+                {roleOverridden && <span className="text-muted small">(override)</span>}
+              </DropdownMenu.SubTrigger>
+              <DropdownMenu.SubContent className="navbar-dropdown">
+                <DropdownMenu.RadioGroup
+                  value={activeRole ?? ""}
                   onValueChange={(value) => changeRole(value as RoleId)}
                 >
                   {VIEW_AS_ORDER.map((roleId) => (
                     <DropdownMenu.RadioItem key={roleId} value={roleId}>
                       {viewAsLabel(roleId)}
+                      {roleId === realRoles(seatId)[0] && (
+                        <span className="text-muted ms-2 small">real</span>
+                      )}
                     </DropdownMenu.RadioItem>
                   ))}
                 </DropdownMenu.RadioGroup>

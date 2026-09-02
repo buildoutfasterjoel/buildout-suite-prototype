@@ -8,10 +8,11 @@ import {
 } from '#/components/contacts/contactFilterModel'
 import { recordEngagement } from '#/components/contacts/useContactSession'
 import type { Contact, ContactRole, ContactSource, DealDocument, DealHistoryEntry, DealIngestion, DealInvoice, DealMarketing, DealPitchFinancials, DealBroker, DealFinancials, DealTask, DealTransaction, DepositAllocation, DocumentGeneration, FinancialDeduction, FinancialReceivable, GeneratedSection, IngestionFieldKey, Listing, PaymentDeduction, PropertyStatus, Task, VoucherDeposit, VoucherPayable, VoucherPayment } from './types'
-import { CURRENT_USER, TEAMMATES } from './teammates'
+import { teammateIdByName, CURRENT_USER, TEAMMATES } from './teammates'
+import { currentUser, viewerId } from './currentUser'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
 import { reconcileContactDealFields } from './contactStage'
-import { reconcilePropertyStage } from './store'
+import { grantContactShares, reconcilePropertyStage } from './store'
 import { generateTasks } from './seed'
 import { nextCloseProbability } from './commission'
 import { notify } from '#/lib/notify'
@@ -670,7 +671,7 @@ export function applyDeposit(
                 ? { checkNumber: input.checkNumber.trim() }
                 : {}),
               createdAt: now,
-              createdById: CURRENT_USER.id,
+              createdById: viewerId(),
               receivableAllocations,
               deductionAllocations,
             },
@@ -985,7 +986,7 @@ export function recordPayment(
       grossAmount,
       deductions,
       createdAt: now,
-      createdById: CURRENT_USER.id,
+      createdById: viewerId(),
     }
     wrote = true
 
@@ -1234,7 +1235,7 @@ export function createInvoiceFromReceivables(
       nextInvoiceOrdinal(deal),
     ),
     createdAt: now,
-    createdById: CURRENT_USER.id,
+    createdById: viewerId(),
     payerContactId: billed[0].payerContactId,
     billToCompany,
     dueDate: invoiceDueDate(lineItems),
@@ -1565,7 +1566,7 @@ export interface NewTaskInput {
 /** Resolve a teammate's two-letter initials from their id (falls back to the current user). */
 function assigneeInitialsFor(assigneeId: string): string {
   const member =
-    [CURRENT_USER, ...TEAMMATES].find((m) => m.id === assigneeId) ?? CURRENT_USER
+    [CURRENT_USER, ...TEAMMATES].find((m) => m.id === assigneeId) ?? currentUser()
   return member.initials
 }
 
@@ -1575,7 +1576,7 @@ function assigneeInitialsFor(assigneeId: string): string {
  * column (see {@link getContactDetailClient}). Persists via the single write path.
  */
 export function createTask(input: NewTaskInput): { task: Task } {
-  const assigneeId = input.assigneeId ?? CURRENT_USER.id
+  const assigneeId = input.assigneeId ?? viewerId()
   const task: Task = {
     id: crypto.randomUUID(),
     name: input.name.trim(),
@@ -1871,9 +1872,103 @@ export function removeContactTags(
 }
 
 /**
- * Append a timestamped note line to a contact's freeform `notes` and persist.
- * Used by the AI `add_note` tool and any manual note affordance.
+ * Mark a contact private (hidden from the firm until shared) or visible again.
+ * The owner's action; whether it has any effect is resolved at read time from
+ * the company's contact-ownership settings (see `contactOwnership.ts`), so the
+ * flag is stored as-is and simply goes quiet when privacy isn't allowed.
  */
+export function setContactPrivate(
+  id: string,
+  isPrivate: boolean,
+): { contact: Contact | null } {
+  const existing = useDataStore.getState().contacts.get(id)
+  if (!existing) return { contact: null }
+  if ((existing.isPrivate ?? false) === isPrivate) return { contact: existing }
+  const contact: Contact = { ...existing, isPrivate: isPrivate || undefined }
+  useDataStore.setState((s) => {
+    const contacts = new Map(s.contacts)
+    contacts.set(id, contact)
+    return { contacts }
+  })
+  useDataStore.getState().persist()
+  return { contact }
+}
+
+/**
+ * Route a company-owned contact to the person who'll work it — or to nobody.
+ * The owner is derived from the assignee (see `contactOwnership.ts`), so this
+ * is also what a transfer writes; `transferContact` adds the optional share.
+ */
+export function assignContact(
+  id: string,
+  assigneeName: string | null,
+  by: string,
+): { contact: Contact | null } {
+  const existing = useDataStore.getState().contacts.get(id)
+  if (!existing) return { contact: null }
+  const contact: Contact = {
+    ...existing,
+    assignedTo: assigneeName ?? '',
+    assignedAt: new Date().toISOString(),
+    assignedBy: by,
+    // The past stays with whoever lived it — see the field's doc.
+    historyAuthoredBy: existing.historyAuthoredBy ?? (existing.assignedTo || undefined),
+  }
+  useDataStore.setState((s) => {
+    const contacts = new Map(s.contacts)
+    contacts.set(id, contact)
+    return { contacts }
+  })
+  useDataStore.getState().persist()
+  return { contact }
+}
+
+/**
+ * Move a broker-owned contact into another broker's book. Private stays set —
+ * the new owner inherits a private record. `keepPreviousAsContributor` shares it
+ * back to the old owner at Contributor in the same motion.
+ */
+export function transferContact(
+  id: string,
+  newOwnerName: string,
+  keepPreviousAsContributor: boolean,
+): { contact: Contact | null } {
+  const existing = useDataStore.getState().contacts.get(id)
+  if (!existing) return { contact: null }
+  const previous = existing.assignedTo
+  const result = assignContact(id, newOwnerName, previous || newOwnerName)
+  if (result.contact && keepPreviousAsContributor && previous) {
+    const prevId = teammateIdByName(previous)
+    if (prevId) grantContactShares(id, [prevId], 'contributor')
+  }
+  return result
+}
+
+/**
+ * Mark two contact records as relationships with the same person. Reuses a
+ * `personId` either already carries, so linking a third record joins the
+ * group. Nothing else changes: each record keeps its owner, history and
+ * privacy — this is the "link" of keep / link / merge, and merge isn't built.
+ */
+export function linkContactsAsPerson(
+  idA: string,
+  idB: string,
+): { personId: string | null } {
+  const { contacts } = useDataStore.getState()
+  const a = contacts.get(idA)
+  const b = contacts.get(idB)
+  if (!a || !b || idA === idB) return { personId: null }
+  const personId = a.personId ?? b.personId ?? crypto.randomUUID()
+  useDataStore.setState((s) => {
+    const next = new Map(s.contacts)
+    next.set(idA, { ...a, personId })
+    next.set(idB, { ...b, personId })
+    return { contacts: next }
+  })
+  useDataStore.getState().persist()
+  return { personId }
+}
+
 /**
  * Stamp a contact's most recent activity — anything that happens on the record,
  * inbound or outbound (a logged call, an email that arrives). Keeps the Last
@@ -1931,7 +2026,8 @@ export function createContact(input: NewContactInput): { contact: Contact } {
     company: input.company ?? '',
     role: input.role ?? 'owner',
     propertyIds: input.propertyIds ?? [],
-    assignedTo: 'You',
+    // Whoever is creating it works it; ownership follows from their grants.
+    assignedTo: currentUser().name,
     source: input.source ?? 'Referral',
     relationship: 'cold',
     side: null,

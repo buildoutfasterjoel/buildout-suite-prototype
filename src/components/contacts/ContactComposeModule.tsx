@@ -22,6 +22,8 @@ import {
   faListUl,
   faListOl,
   faAlignLeft,
+  faLock,
+  faLockOpen,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact, DealSummary } from "#/data/types";
 import type { ComposeKind, ComposedActivity } from "#/components/contacts/contactDisplay";
@@ -143,6 +145,60 @@ function parseLocalDate(value: string): Date {
  * The editable activity date shown once a draft has content. Reads as clickable
  * and opens a single-date Calendar popover.
  */
+/** What the lock hides, per tab — the noun the tooltip needs. */
+const PRIVATE_NOUN: Record<ComposeKind, string> = {
+  note: "note",
+  call: "call log",
+  email: "email",
+  meeting: "meeting note",
+  tour: "tour notes",
+};
+
+/**
+ * Marks the draft private before it's logged. Authorship governs: only the
+ * author sees a private artifact, on any contact — company-owned included.
+ * A pressed ghost button rather than a switch: it sits in a row of ghost
+ * controls (date, related deal) and reads as a property of this draft.
+ */
+function PrivateToggle({
+  kind,
+  on,
+  onChange,
+}: {
+  kind: ComposeKind;
+  on: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <Tooltip>
+      <Tooltip.Trigger
+        render={
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-pressed={on}
+            className={`compose-date-btn compose-private-btn${
+              on ? " compose-private-btn--on" : ""
+            }`}
+            onClick={() => onChange(!on)}
+          >
+            <FontAwesomeIcon
+              icon={on ? faLock : faLockOpen}
+              className="compose-date-btn__icon"
+            />
+            Private
+          </Button>
+        }
+      />
+      <Tooltip.Content style={{ maxWidth: 260 }}>
+        {on
+          ? `Only you will see this ${PRIVATE_NOUN[kind]}. Click to log it for everyone with access.`
+          : `Log this ${PRIVATE_NOUN[kind]} for your eyes only — not the contact's owner, not anyone the record is shared with.`}
+      </Tooltip.Content>
+    </Tooltip>
+  );
+}
+
 function DateButton({
   value,
   onChange,
@@ -182,6 +238,7 @@ export function ContactComposeModule({
   deals,
   onSubmit,
   onStartCall,
+  canReachOut = true,
   headerStart,
 }: {
   contact: Contact;
@@ -189,9 +246,17 @@ export function ContactComposeModule({
   onSubmit: (draft: ComposedDraft) => void;
   /** Kicks off the simulated live call to the chosen number (Call tab's "Call Now"). */
   onStartCall: (phone: string) => void;
+  /**
+   * Whether the viewer may call or email from this record. A Contributor can
+   * log a note, meeting or tour but not reach out — the Call and Email tabs go.
+   */
+  canReachOut?: boolean;
   /** Rendered at the start of the tab row — e.g. the "Activity" section title. */
   headerStart?: ReactNode;
 }) {
+  const tabs = canReachOut
+    ? TABS
+    : TABS.filter((t) => t.key !== "call" && t.key !== "email");
   const [tab, setTab] = useState<ComposeKind>("note");
   const [body, setBody] = useState<Record<ComposeKind, string>>({ ...EMPTY });
   const [dates, setDates] = useState<Record<ComposeKind, string>>(() => {
@@ -203,6 +268,15 @@ export function ContactComposeModule({
   });
   const [subject, setSubject] = useState("");
   const [outcome, setOutcome] = useState("Connected");
+  // Per tab, like the body: a note drafted as private shouldn't make the next
+  // call log private too.
+  const [privateByTab, setPrivateByTab] = useState<Record<ComposeKind, boolean>>({
+    note: false,
+    call: false,
+    email: false,
+    meeting: false,
+    tour: false,
+  });
   // Reset the outcome only lazily; keep it simple with a stable default.
   const composeName = contact.firstName;
 
@@ -388,9 +462,11 @@ export function ContactComposeModule({
       subject: tab === "email" ? subject.trim() : undefined,
       to: tab === "email" ? contact.email : undefined,
       relatedDeal: relatedDeal[tab] || undefined,
+      isPrivate: privateByTab[tab] || undefined,
     });
     // Reset the just-submitted tab back to a clean slate.
     setTabBody(tab, "");
+    setPrivateByTab((p) => ({ ...p, [tab]: false }));
     // The note is on the record, so the field the chip was scoped to no longer
     // holds anything — and a chip still reading "Earl Pettigrew: Note" over an
     // empty box would scope the next question to a draft that has been filed.
@@ -417,6 +493,11 @@ export function ContactComposeModule({
           {leading}
         </div>
         <div className="d-flex align-items-center gap-2 flex-shrink-0">
+          <PrivateToggle
+            kind={tab}
+            on={privateByTab[tab]}
+            onChange={(v) => setPrivateByTab((p) => ({ ...p, [tab]: v }))}
+          />
           {hasValue && DATED.includes(tab) && (
             <DateButton
               value={dates[tab]}
@@ -610,6 +691,11 @@ export function ContactComposeModule({
                 <FontAwesomeIcon icon={faPaperclip} />
                 Attachments
               </button>
+              <PrivateToggle
+                kind="email"
+                on={privateByTab.email}
+                onChange={(v) => setPrivateByTab((p) => ({ ...p, email: v }))}
+              />
             </div>
             <Button
               variant={hasValue ? "primary" : "secondary"}
@@ -632,7 +718,7 @@ export function ContactComposeModule({
           <Tooltip.Provider delay={150}>
             <Tabs value={tab} onValueChange={(v) => v && setTab(v as ComposeKind)}>
               <Tabs.List variant="pills">
-                {TABS.map((t) => (
+                {tabs.map((t) => (
                   <Tooltip key={t.key}>
                     <Tooltip.Trigger
                       render={

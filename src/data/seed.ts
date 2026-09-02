@@ -932,8 +932,38 @@ function generateComp(propertyId: string, buildingSqFt: number, propertyType: Pr
 
 // ── Contact generator ─────────────────────────────────────────────────────────
 
-/** Team members a contact can be assigned to — weighted to a single lead broker. */
-const ASSIGNEES = ['E. Thompson', 'A. Mendez', 'R. Patel', 'S. Kim']
+/**
+ * Fixed ids for the two "one person, many relationships" pairs the seed plants
+ * (see generateDataset), so the share seed can grant Ethan his Contributor seat
+ * on Dana by id.
+ */
+export const PERSON_PAIR_IDS = {
+  jimSarah: 'person-jim-sarah',
+  jimEthan: 'person-jim-ethan',
+  danaSarah: 'person-dana-sarah',
+  danaEthan: 'person-dana-ethan',
+} as const
+
+/**
+ * Team members a contact can be assigned to — weighted to a single lead broker.
+ * Full roster names (see `roster.ts`), so `contactOwnership.ts` can resolve the
+ * assignee to a real person with roles and permissions. They used to be
+ * abbreviations of people who existed nowhere else in the app.
+ *
+ * Riley Park is the Office Admin: a sharing-only role with no book, so the few
+ * contacts routed to Riley are the seed's standing company-owned examples — an
+ * admin working records on the company's behalf, which is the admins-on-behalf
+ * case Mandy raised. Without them, every seeded contact would be broker-owned
+ * under the default settings and the company-as-owner state would exist only
+ * after flipping the Company settings card.
+ */
+const ASSIGNEES = [
+  'Ethan Thompson',
+  'Sarah Chen',
+  'Marcus Patel',
+  'Nina Alvarez',
+  'Riley Park',
+]
 
 /** CRE-flavored job titles for the contact's position line. */
 const TITLE_POOL = [
@@ -1161,10 +1191,11 @@ function generateContact(allPropertyIds: string[]): Contact {
     role,
     propertyIds,
     assignedTo: faker.helpers.weightedArrayElement([
-      { weight: 70, value: ASSIGNEES[0] },
-      { weight: 12, value: ASSIGNEES[1] },
-      { weight: 10, value: ASSIGNEES[2] },
-      { weight: 8, value: ASSIGNEES[3] },
+      { weight: 68, value: ASSIGNEES[0] },
+      { weight: 11, value: ASSIGNEES[1] },
+      { weight: 9, value: ASSIGNEES[2] },
+      { weight: 7, value: ASSIGNEES[3] },
+      { weight: 5, value: ASSIGNEES[4] },
     ]),
     source,
     relationship,
@@ -2652,6 +2683,17 @@ export function generateDataset() {
 
   const contacts = Array.from({ length: CONTACT_COUNT }, () => generateContact(allPropertyIds))
 
+  // Some of the other brokers' records are private — hidden from the firm until
+  // shared. Every seat Ethan is shared into (i % 8 === 5, see seedContactShares)
+  // is one of them, so the demo has private records he can see beside ones he
+  // can't. Ethan's own stay visible: the signed-in user's book is the one being
+  // browsed, and a private record of his own shows nothing new.
+  contacts.forEach((c, i) => {
+    if (c.assignedTo !== CURRENT_USER.name && (i % 5 === 2 || i % 8 === 5)) {
+      c.isPrivate = true
+    }
+  })
+
   // Reconcile the Contact↔Property graph so every property has associated
   // contacts, then draw each deal's parties from its own property's contacts.
   // This keeps the graph reciprocal: a contact's deals are deals they're a
@@ -2707,6 +2749,123 @@ export function generateDataset() {
   // Turn two seeded lease deals into umbrella shells with child space deals.
   // After applyHeroes so the heroes have already claimed their listings; before
   // reconciliation so the children's tenants get their contact fields resolved.
+  // One Person, many Relationships — two seeded pairs so both readings can be
+  // shown without anyone granting anything live:
+  //   Jim Halvorsen: Sarah's private, unshared record (fifteen years of history)
+  //     and Ethan's brand-new one. In the Broker seat Ethan's Jim shows nothing;
+  //     see-through (or a share from Sarah) surfaces the hint. Link isn't offered
+  //     because Ethan can't edit Sarah's record — it says to ask her.
+  //   Dana Whitfield: Sarah's record shared with Ethan at Contributor beside
+  //     Ethan's own, so the hint shows in every seat and Link is available.
+  // Fixed ids so `seedContactShares` can grant the one share explicitly.
+  {
+    const pair = (id: string, over: Partial<Contact>): Contact =>
+      Object.assign(generateContact(allPropertyIds), {
+        id,
+        // Derived from the fixed id, like every other contact's — the seed test
+        // pins that no flag is drawn from the faker stream.
+        quickbooksSynced: isQuickbooksSynced(id),
+        propertyIds: [],
+        ownedPropertyIds: undefined,
+        inquiries: 0,
+        inquiredListingIds: undefined,
+        inquiryDetails: undefined,
+        heroKey: undefined,
+        side: null,
+        dealStage: null,
+        ...over,
+      })
+    const ago = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString()
+    const jimEmail = 'jim@halvorsenholdings.com'
+    const jimPhone = '(206) 555-0142'
+    contacts.push(
+      pair(PERSON_PAIR_IDS.jimSarah, {
+        firstName: 'Jim',
+        lastName: 'Halvorsen',
+        company: 'Halvorsen Holdings',
+        title: 'Principal',
+        role: 'owner',
+        email: jimEmail,
+        phone: jimPhone,
+        assignedTo: 'Sarah Chen',
+        isPrivate: true,
+        relationship: 'client',
+        source: 'Referral',
+        createdAt: ago(15 * 365),
+        lastContactedAt: ago(12),
+        lastActivityAt: ago(12),
+        lastTouch: 'Coffee with Jim',
+        tags: ['Repeat Client'],
+      }),
+      pair(PERSON_PAIR_IDS.jimEthan, {
+        firstName: 'Jim',
+        lastName: 'Halvorsen',
+        company: 'Halvorsen Holdings',
+        title: 'Principal',
+        role: 'owner',
+        email: jimEmail,
+        phone: jimPhone,
+        assignedTo: 'Ethan Thompson',
+        relationship: 'cold',
+        source: 'Cold outreach',
+        createdAt: ago(3),
+        lastContactedAt: null,
+        lastActivityAt: null,
+        lastTouch: 'Added manually',
+        tags: [],
+      }),
+    )
+    const danaEmail = 'dana@whitfieldcapital.com'
+    contacts.push(
+      pair(PERSON_PAIR_IDS.danaSarah, {
+        firstName: 'Dana',
+        lastName: 'Whitfield',
+        company: 'Whitfield Capital',
+        title: 'Managing Partner',
+        role: 'buyer',
+        email: danaEmail,
+        phone: '(312) 555-0187',
+        assignedTo: 'Sarah Chen',
+        relationship: 'nurturing',
+        source: 'Referral',
+        createdAt: ago(400),
+        lastContactedAt: ago(30),
+        lastActivityAt: ago(30),
+        lastTouch: 'Emailed an introduction',
+        tags: ['Investor'],
+      }),
+      pair(PERSON_PAIR_IDS.danaEthan, {
+        firstName: 'Dana',
+        lastName: 'Whitfield',
+        company: 'Whitfield Capital',
+        title: 'Managing Partner',
+        role: 'buyer',
+        email: danaEmail,
+        phone: '(312) 555-0187',
+        assignedTo: 'Ethan Thompson',
+        relationship: 'cold',
+        source: 'Cold outreach',
+        createdAt: ago(9),
+        lastContactedAt: null,
+        lastActivityAt: null,
+        lastTouch: 'Added manually',
+        tags: [],
+      }),
+    )
+  }
+
+  // Phase 4 needs a private contact who is a party on a deal the firm can see —
+  // the "Private Contact" placeholder case. Take the first deal whose seller
+  // belongs to another broker and mark that seller private (if the seller isn't
+  // already). One is enough to demo; the deal itself stays visible to everyone.
+  {
+    const byId = new Map(contacts.map((c) => [c.id, c]))
+    const candidate = listings
+      .flatMap((l) => l.sellerContactIds.map((id) => byId.get(id)))
+      .find((c) => c && c.assignedTo !== CURRENT_USER.name && !c.isPrivate)
+    if (candidate) candidate.isPrivate = true
+  }
+
   applyLeaseSpaces(listings, properties, contacts, dealIdRef)
 
   // Reconcile each contact's deal-derived fields with the deals they're actually
@@ -2915,20 +3074,40 @@ export function seedContactShares(
 ): Map<string, ContactShare[]> {
   const tiers: AccessTier[] = ['view', 'contributor', 'outreach']
   const map = new Map<string, ContactShare[]>()
+  // The signed-in user is a teammate like any other here, so some of Sarah's
+  // and Marcus's records arrive shared with Ethan at each tier — the demo needs
+  // a View seat, a Contributor seat and an Outreach seat to stand in.
+  const pool = [CURRENT_USER, ...TEAMMATES]
+  let ethanSeats = 0
+  // A teammate can't be shared into a record they already work — step past
+  // the assignee to the next person on the roster.
+  const memberAt = (i: number, c: Contact) => {
+    let m = pool[i % pool.length]
+    if (m.name === c.assignedTo) m = pool[(i + 1) % pool.length]
+    return m
+  }
   contacts.forEach((c, i) => {
     // ~1 in 4 contacts is shared; the rest stay owner-only.
     if (i % 4 !== 1) return
-    const shares: ContactShare[] = [
-      { member: TEAMMATES[i % TEAMMATES.length], tier: tiers[i % tiers.length] },
-    ]
+    // Every other shared record that isn't Ethan's is shared *with* Ethan, so
+    // the demo can stand in a View, a Contributor and an Outreach seat without
+    // hunting — left to the round-robin alone he'd land on almost none.
+    const ethanSeat = c.assignedTo !== CURRENT_USER.name && i % 8 === 5
+    // Ethan's seats step through the tiers in order — View, then Contributor,
+    // then Outreach — so the first three are guaranteed to differ.
+    const tier = ethanSeat ? tiers[ethanSeats++ % tiers.length] : tiers[i % tiers.length]
+    const shares: ContactShare[] = [{ member: ethanSeat ? CURRENT_USER : memberAt(i, c), tier }]
     // A minority also carry a second collaborator.
     if (i % 12 === 1) {
-      shares.push({
-        member: TEAMMATES[(i + 3) % TEAMMATES.length],
-        tier: tiers[(i + 2) % tiers.length],
-      })
+      const second = memberAt(i + 3, c)
+      if (second.id !== shares[0].member.id) {
+        shares.push({ member: second, tier: tiers[(i + 2) % tiers.length] })
+      }
     }
     map.set(c.id, shares)
   })
+  // The one hand-placed share: Sarah's Dana Whitfield, shared with Ethan at
+  // Contributor, so the Link action on the person pair has a seat to run from.
+  map.set(PERSON_PAIR_IDS.danaSarah, [{ member: CURRENT_USER, tier: 'contributor' }])
   return map
 }

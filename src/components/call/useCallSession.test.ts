@@ -13,7 +13,11 @@ import { useDataStore } from "#/data/dataStore";
 import { generateDataset } from "#/data/seed";
 import type { Contact } from "#/data/types";
 
-/** Seed the store with a handful of hand-built contacts. */
+/**
+ * Seed the store with a handful of hand-built contacts. They're the signed-in
+ * user's unless a case says otherwise — a run only dials contacts the viewer
+ * has the right to reach out to, and these tests are about the other filters.
+ */
 function seedContacts(contacts: Partial<Contact>[]) {
   const full = contacts.map((c, i) => ({
     id: c.id ?? `c${i}`,
@@ -21,6 +25,7 @@ function seedContacts(contacts: Partial<Contact>[]) {
     lastName: "B",
     phone: "843-555-0100",
     doNotCall: false,
+    assignedTo: "Ethan Thompson",
     ...c,
   })) as Contact[];
   useDataStore.setState({
@@ -127,5 +132,16 @@ describe("startCallSession", () => {
     expect(s.active).toBe(true);
     expect(s.queue.length).toBeGreaterThan(0);
     expect(s.queue.every((id) => ids.includes(id))).toBe(true);
+  });
+});
+
+describe("callableContactIds respects reach-out rights", () => {
+  it("drops a contact the viewer can only read, keeps their own", () => {
+    seedContacts([
+      { id: "mine" },
+      // Sarah's, not shared with the viewer: visible, but not theirs to call.
+      { id: "sarahs", assignedTo: "Sarah Chen" },
+    ]);
+    expect(callableContactIds(["mine", "sarahs"])).toEqual(["mine"]);
   });
 });

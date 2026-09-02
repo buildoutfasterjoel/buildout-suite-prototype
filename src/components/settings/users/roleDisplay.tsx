@@ -129,7 +129,7 @@ export const SCOPE_META: Record<
   { heading: string; tooltip: string }
 > = {
   record: {
-    heading: "On specific listings & deals",
+    heading: "On specific listings, deals & contacts",
     tooltip:
       "Applies to records they own or that have been shared with them",
   },

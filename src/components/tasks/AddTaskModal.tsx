@@ -1,5 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { useCurrentUser } from "#/data/currentUser";
+import { accessRosterFor } from "#/data/contactAccessRoster";
 import { Calendar } from "@buildoutinc/blueprint-react/ui/Calendar";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
 import { Combobox } from "@buildoutinc/blueprint-react/ui/Combobox";
@@ -23,7 +25,6 @@ import {
 import { CURRENT_USER, TEAMMATES, type Teammate } from "#/data/teammates";
 import {
   getContactOptions,
-  getContactShares,
   getDealOptions,
 } from "#/data/store";
 import type { Task } from "#/data/types";
@@ -346,7 +347,8 @@ export function AddTaskModal({
   const dealOptions = useMemo(() => getDealOptions(), []);
 
   const [name, setName] = useState("");
-  const [assigneeId, setAssigneeId] = useState<string>(CURRENT_USER.id);
+  const me = useCurrentUser((s) => s.id);
+  const [assigneeId, setAssigneeId] = useState<string>(me);
   const [dueDate, setDueDate] = useState<Date | null>(null);
   const [type, setType] = useState<string>("none");
   const [source, setSource] = useState<string>("contact");
@@ -362,20 +364,7 @@ export function AddTaskModal({
   // owner plus anyone it's shared with. Deal-sourced or unlinked tasks fall
   // back to the full roster.
   const assignees = useMemo<Teammate[]>(() => {
-    if (source === "contact" && contactId) {
-      const seen = new Set<string>();
-      const roster: Teammate[] = [];
-      for (const m of [
-        CURRENT_USER,
-        ...getContactShares(contactId).map((s) => s.member),
-      ]) {
-        if (!seen.has(m.id)) {
-          seen.add(m.id);
-          roster.push(m);
-        }
-      }
-      return roster;
-    }
+    if (source === "contact" && contactId) return accessRosterFor(contactId);
     return [CURRENT_USER, ...TEAMMATES];
   }, [source, contactId]);
   // An owner-only contact has exactly one possible assignee — lock the field.
@@ -383,12 +372,12 @@ export function AddTaskModal({
     source === "contact" && contactId != null && assignees.length === 1;
 
   // If the linked contact changes to one the picked assignee can't access,
-  // fall back to the owner (always first in the roster).
+  // fall back to the viewer when they have access, else the accountable person.
   useEffect(() => {
     if (!assignees.some((m) => m.id === assigneeId)) {
-      setAssigneeId(CURRENT_USER.id);
+      setAssigneeId(assignees.some((m) => m.id === me) ? me : (assignees[0]?.id ?? me));
     }
-  }, [assignees, assigneeId]);
+  }, [assignees, assigneeId, me]);
 
   // The modal is mounted once globally, so its state survives across opens.
   // On each open, prefill from the task being edited, or reset to create
@@ -419,7 +408,7 @@ export function AddTaskModal({
 
   const reset = () => {
     setName("");
-    setAssigneeId(CURRENT_USER.id);
+    setAssigneeId(me);
     setDueDate(null);
     setType("none");
     setSource("contact");
@@ -578,7 +567,7 @@ export function AddTaskModal({
                         label={
                           assignees.find((m) => m.id === assigneeId)
                             ? `${assignees.find((m) => m.id === assigneeId)!.name}${
-                                assigneeId === CURRENT_USER.id ? " (you)" : ""
+                                assigneeId === me ? " (you)" : ""
                               }`
                             : null
                         }
@@ -588,7 +577,7 @@ export function AddTaskModal({
                       {assignees.map((m) => (
                         <Select.Item key={m.id} value={m.id}>
                           {m.name}
-                          {m.id === CURRENT_USER.id ? " (you)" : ""}
+                          {m.id === me ? " (you)" : ""}
                         </Select.Item>
                       ))}
                     </Select.Content>

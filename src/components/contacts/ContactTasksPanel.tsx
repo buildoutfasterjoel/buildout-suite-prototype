@@ -65,6 +65,7 @@ export function ContactTasksPanel({
   completedTasks,
   onLog,
   bare = false,
+  readOnly = false,
 }: {
   contact: Contact;
   tasks: ContactTask[];
@@ -76,6 +77,8 @@ export function ContactTasksPanel({
   onLog?: (draft: ComposedDraft) => string | void;
   /** Drop the card + collapsible header — used as the body of a tab. */
   bare?: boolean;
+  /** The viewer can read the tasks but not add, open, or complete them. */
+  readOnly?: boolean;
 }) {
   // Section collapse + completed-reveal persist across contacts (useContactUiPrefs).
   const tasksOpen = useContactUiPrefs((s) => s.tasksOpen);
@@ -176,8 +179,8 @@ export function ContactTasksPanel({
             key={r.task.id}
             task={r.task}
             done={false}
-            onToggle={() => toggle(r.task, false)}
-            onOpen={openTask(r.task)}
+            onToggle={readOnly ? () => {} : () => toggle(r.task, false)}
+            onOpen={readOnly ? undefined : openTask(r.task)}
           />
         ))
       )}
@@ -202,8 +205,8 @@ export function ContactTasksPanel({
             key={r.task.id}
             task={r.task}
             done
-            onToggle={() => toggle(r.task, true)}
-            onOpen={openTask(r.task)}
+            onToggle={readOnly ? () => {} : () => toggle(r.task, true)}
+            onOpen={readOnly ? undefined : openTask(r.task)}
           />
         ))}
     </div>
@@ -230,7 +233,7 @@ export function ContactTasksPanel({
           label="Tasks"
           count={active.length}
           primaryCount
-          action={<AddTaskAction contactId={contact.id} />}
+          action={readOnly ? undefined : <AddTaskAction contactId={contact.id} />}
         >
           {body}
         </ContactSection>

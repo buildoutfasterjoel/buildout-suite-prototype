@@ -5,6 +5,7 @@ import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { visibleContacts } from "#/components/contacts/contactRights";
 import {
   faBuilding,
   faUser,
@@ -174,7 +175,7 @@ export function OmniSearch() {
       : {
           properties: [...properties.values()] as Property[],
           deals: [...listings.values()] as Listing[],
-          contacts: [...contacts.values()] as Contact[],
+          contacts: visibleContacts([...contacts.values()] as Contact[]),
         };
 
     const showGroup = (g: GroupName) =>

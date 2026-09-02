@@ -16,6 +16,7 @@ import {
   faArrowUp,
   faArrowDown,
   faTableColumns,
+  faLock,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Contact } from "#/data/types";
 import {
@@ -144,7 +145,11 @@ const CONTACT_COLUMNS: ContactColumn[] = [
     id: "assignedTo",
     label: "Assigned To",
     defaultVisible: true,
-    render: (c) => <span className="text-nowrap">{c.assignedTo}</span>,
+    render: (c) => (
+      <span className={`text-nowrap${c.assignedTo ? "" : " text-muted"}`}>
+        {c.assignedTo || "Unassigned"}
+      </span>
+    ),
   },
   {
     id: "contactStage",
@@ -276,8 +281,18 @@ export function ContactsTable({
   selected,
   onToggleOne,
   onToggleAll,
+  privateIds,
+  relationshipCounts,
 }: {
   contacts: Contact[];
+  /** contact id → how many visible records share its person (2+). */
+  relationshipCounts?: Map<string, number>;
+  /**
+   * Private records the viewer can see anyway (their own, shared in, or a
+   * Managing Director with View Private Contacts). They get a lock by the name
+   * so a see-through viewer knows the record isn't the firm's to find.
+   */
+  privateIds?: Set<string>;
   filtersActive: boolean;
   sortDir: SortDir;
   onToggleSort: () => void;
@@ -455,6 +470,23 @@ export function ContactsTable({
                       >
                         {fullName}
                       </Link>
+                      {(relationshipCounts?.get(contact.id) ?? 0) > 1 && (
+                        <Badge
+                          variant="secondary"
+                          appearance="muted"
+                          className="fs-xs"
+                          title="Another broker holds a separate relationship with this person"
+                        >
+                          {relationshipCounts!.get(contact.id)} relationships
+                        </Badge>
+                      )}
+                      {privateIds?.has(contact.id) && (
+                        <FontAwesomeIcon
+                          icon={faLock}
+                          className="fs-xs text-muted"
+                          title="Private — hidden from the firm"
+                        />
+                      )}
                       {contact.doNotCall && (
                         <span className="fs-xs text-destructive">
                           do not call

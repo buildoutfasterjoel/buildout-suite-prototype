@@ -34,7 +34,9 @@ export const ASSIGNEE_OPTIONS = [
   ...TEAMMATES.filter((t) => t.id !== CURRENT_USER.id),
 ].map((m) => ({
   value: m.id,
-  label: m.id === CURRENT_USER.id ? `${m.name} (you)` : m.name,
+  // No "(you)" here: this list is built once at module load and the viewer can
+  // change seats; a stale "(you)" on the wrong person is worse than none.
+  label: m.name,
 }));
 
 const ASSIGNEE_NAME = new Map(ASSIGNEE_OPTIONS.map((o) => [o.value, o.label]));

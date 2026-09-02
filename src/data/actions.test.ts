@@ -4,6 +4,9 @@ import {
   createCallList,
   commitStageTransition,
   createContact,
+  setContactPrivate,
+  assignContact,
+  transferContact,
   addContactTags,
   removeContactTags,
   createDeal,
@@ -116,6 +119,35 @@ describe('actions', () => {
     expect(stored?.company).toBe('Reed Holdings')
     expect(stored?.role).toBe('owner') // default role
     expect(stored?.propertyIds).toEqual([])
+  })
+
+  it('setContactPrivate stores the flag and drops it again when cleared', () => {
+    const { contact } = createContact({ firstName: 'Priv', lastName: 'Ate' })
+    expect(useDataStore.getState().contacts.get(contact.id)?.isPrivate).toBeUndefined()
+    setContactPrivate(contact.id, true)
+    expect(useDataStore.getState().contacts.get(contact.id)?.isPrivate).toBe(true)
+    // Cleared means absent, not `false` — the seed never writes the field, and
+    // "absent means visible" is the contract the type documents.
+    setContactPrivate(contact.id, false)
+    expect(useDataStore.getState().contacts.get(contact.id)?.isPrivate).toBeUndefined()
+  })
+
+  it('assignContact routes the record; transferContact can leave the old owner a seat', () => {
+    const { contact } = createContact({ firstName: 'Route', lastName: 'Me' })
+    assignContact(contact.id, 'Sarah Chen', 'Ethan Thompson')
+    let stored = useDataStore.getState().contacts.get(contact.id)!
+    expect(stored.assignedTo).toBe('Sarah Chen')
+    expect(stored.assignedBy).toBe('Ethan Thompson')
+    assignContact(contact.id, null, 'Ethan Thompson')
+    expect(useDataStore.getState().contacts.get(contact.id)!.assignedTo).toBe('')
+
+    // Transfer from Ethan's book to Marcus's, keeping Ethan as a Contributor.
+    assignContact(contact.id, 'Ethan Thompson', 'Ethan Thompson')
+    transferContact(contact.id, 'Marcus Patel', true)
+    stored = useDataStore.getState().contacts.get(contact.id)!
+    expect(stored.assignedTo).toBe('Marcus Patel')
+    const shares = useDataStore.getState().contactShares.get(contact.id) ?? []
+    expect(shares.some((s) => s.member.id === 'you' && s.tier === 'contributor')).toBe(true)
   })
 
   it('createDeal starts in Pitching, unpublished, with the default suggested documents', () => {

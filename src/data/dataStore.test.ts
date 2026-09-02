@@ -10,7 +10,8 @@ describe('useDataStore', () => {
     // 24 pipeline properties + 8 tracked (no-deal) properties + Rosa's
     // story-owned building (see applyHeroes).
     expect(s.properties.size).toBe(33)
-    expect(s.contacts.size).toBe(80)
+    // 80 generated + the two "one person, many relationships" pairs.
+    expect(s.contacts.size).toBe(84)
     // One deal per pipeline property (see DEAL_PIPELINE), plus the 7 child space
     // deals the two lease shells are split into (see leaseSpaceFixtures.ts).
     expect(s.listings.size).toBe(31)

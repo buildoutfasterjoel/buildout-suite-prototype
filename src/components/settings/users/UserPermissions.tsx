@@ -3,17 +3,21 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Switch } from "@buildoutinc/blueprint-react/ui/Switch";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPencil, faRotateLeft } from "@fortawesome/pro-regular-svg-icons";
+import { faLock, faPencil, faRotateLeft } from "@fortawesome/pro-regular-svg-icons";
 import { faCircleInfo } from "@fortawesome/pro-duotone-svg-icons";
 import {
   resolvePermissions,
   roleName,
   summarize,
   type PermissionScope,
-  type ResolvedPermission,
 } from "#/data/permissions";
 import type { RosterUser } from "#/data/roster";
+import {
+  applyCompanyCeilings,
+  type EffectivePermission,
+} from "#/data/contactAccess";
 import { useRoster } from "./useRoster";
+import { useContactAccessSettings } from "#/components/settings/useContactAccessSettings";
 import { notify } from "#/lib/notify";
 import { AssignRolesPanel } from "./AssignRolesPanel";
 import { ManageCompanyNotice } from "./ManageCompanyNotice";
@@ -21,6 +25,7 @@ import { useCan } from "./useViewer";
 import {
   CUSTOM_TEXT,
   CustomChip,
+  NeutralBadge,
   SCOPE_META,
   StatePill,
 } from "./roleDisplay";
@@ -66,9 +71,20 @@ export function UserPermissions({ user }: { user: RosterUser }) {
   }, [canManage]);
 
   const firstName = firstNameOf(user);
+  // Roles and overrides first, then the company's contact-ownership ceilings on
+  // top: a row under a closed ceiling reads Off and locks, and a grant the
+  // company hands out per person reads Off until someone grants it. Both leave
+  // the role default and override untouched underneath, so the count reflects
+  // what the person can actually do today.
+  const accessSettings = useContactAccessSettings((s) => s.settings);
   const resolved = useMemo(
-    () => resolvePermissions(user.roleIds, user.overrides),
-    [user.roleIds, user.overrides],
+    () =>
+      applyCompanyCeilings(
+        resolvePermissions(user.roleIds, user.overrides),
+        user.overrides,
+        accessSettings,
+      ),
+    [user.roleIds, user.overrides, accessSettings],
   );
   const summary = summarize(resolved);
   const byScope = useMemo(
@@ -78,7 +94,7 @@ export function UserPermissions({ user }: { user: RosterUser }) {
           scope,
           resolved.filter((r) => r.permission.scope === scope),
         ]),
-      ) as Record<PermissionScope, ResolvedPermission[]>,
+      ) as Record<PermissionScope, EffectivePermission[]>,
     [resolved],
   );
 
@@ -87,7 +103,7 @@ export function UserPermissions({ user }: { user: RosterUser }) {
    * rather than storing a redundant one, so the row resumes tracking the role
    * and stops counting as a customization.
    */
-  function toggle(row: ResolvedPermission, next: boolean) {
+  function toggle(row: EffectivePermission, next: boolean) {
     setOverride(
       user.id,
       row.permission.id,
@@ -300,12 +316,12 @@ function PermissionRow({
   editing,
   onToggle,
 }: {
-  row: ResolvedPermission;
+  row: EffectivePermission;
   firstName: string;
   editing: boolean;
   onToggle: (next: boolean) => void;
 }) {
-  const { permission, custom, on } = row;
+  const { permission, custom, on, locked, perPerson, gate } = row;
 
   return (
     // A left rule plus the Custom chip carry the whole signal — no fill behind
@@ -347,6 +363,40 @@ function PermissionRow({
           </Tooltip>
         )}
         <CustomChip custom={custom} />
+        {/* Under a closed ceiling the row is Off no matter what the roles say,
+            and the Custom chip goes quiet: the override is preserved but isn't
+            deciding anything. */}
+        {locked && gate && (
+          <Tooltip>
+            <Tooltip.Trigger
+              render={<NeutralBadge tabIndex={0} style={{ cursor: "help" }} />}
+            >
+              <FontAwesomeIcon icon={faLock} className="me-1" />
+              Off for the company
+            </Tooltip.Trigger>
+            <Tooltip.Content side="top" style={{ maxWidth: 300 }}>
+              Turned off by &ldquo;{gate.settingLabel}&rdquo; in Company
+              settings. {firstName}&apos;s own setting is kept and comes back
+              when the company turns it on.
+            </Tooltip.Content>
+          </Tooltip>
+        )}
+        {/* The company hands this one out one person at a time, so a Broker
+            reads Off here without anything being wrong — this says why. */}
+        {perPerson && !on && (
+          <Tooltip>
+            <Tooltip.Trigger
+              render={<NeutralBadge tabIndex={0} style={{ cursor: "help" }} />}
+            >
+              Granted per person
+            </Tooltip.Trigger>
+            <Tooltip.Content side="top" style={{ maxWidth: 300 }}>
+              The company hands this out to specific people rather than every
+              Broker — see Contact Ownership in Company settings. Turn it on
+              here to grant it to {firstName}.
+            </Tooltip.Content>
+          </Tooltip>
+        )}
       </div>
 
       {/* Controls. A muted status badge while reading, a live switch while
@@ -358,7 +408,7 @@ function PermissionRow({
           clears the override, so a second control for the same move was noise.
           "Reset all to role defaults" above still clears the page at once. */}
       <div className="flex-shrink-0 d-flex align-items-center gap-2">
-        {editing ? (
+        {editing && !locked ? (
           <Switch
             checked={on}
             onCheckedChange={onToggle}

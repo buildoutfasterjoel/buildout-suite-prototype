@@ -23,8 +23,11 @@ import {
   faTrash,
   faUsers,
 } from "@fortawesome/pro-regular-svg-icons";
-import { getStore } from "#/data/store";
 import { useDataStore } from "#/data/dataStore";
+import { checkContactRight, editableContactIds } from "#/components/contacts/contactRights";
+import { assignContactTo } from "#/components/contacts/contactAssignment";
+import { AssignContactModal } from "#/components/contacts/AssignContactModal";
+import { notify } from "#/lib/notify";
 import { useCallListView } from "./-useCallListView";
 import { useContactsFilter } from "./-useContactsFilter";
 import type { RelationshipStage } from "#/data/types";
@@ -39,6 +42,8 @@ import {
 } from "#/data/actions";
 import { useNewContact } from "#/data/useNewContact";
 import { ContactsTable } from "#/components/contacts/ContactsTable";
+import { useVisibleContacts } from "#/components/contacts/useVisibleContacts";
+import { relationshipCounts } from "#/data/contactRelationships";
 import { ContactSelectionBar } from "#/components/contacts/ContactSelectionBar";
 import { CreateStaticListModal } from "#/components/contacts/CreateStaticListModal";
 import { AddToListModal } from "#/components/contacts/AddToListModal";
@@ -84,9 +89,13 @@ export const Route = createFileRoute("/_shell/backoffice/contacts/")({
 const PAGE_SIZE = 25;
 
 function PeoplePage() {
-  // Read the full contact list directly from the live client store so mutations
-  // reflect (no server round-trip, no role/propertyId filters needed here).
-  const contacts = Array.from(getStore().contacts.values());
+  // The book as the viewer may see it: private records they have no relationship
+  // with aren't here at all — not in the rows, the counts, or the filter facets.
+  // Reactive to the store, the roster seat and the company settings.
+  const { contacts, privateIds } = useVisibleContacts();
+  // "2 relationships" chips — computed over the visible book, so a private
+  // twin in someone else's book doesn't show up as a count either.
+  const relCounts = useMemo(() => relationshipCounts(contacts), [contacts]);
 
   // User/AI-created call lists (reactive) — shown alongside the built-in lists.
   const callListsMap = useDataStore((s) => s.callLists);
@@ -135,7 +144,10 @@ function PeoplePage() {
 
   // Assignee + tag options come from the data so the filters match reality.
   const assignees = useMemo(
-    () => Array.from(new Set(contacts.map((c) => c.assignedTo))).sort(),
+    () =>
+      Array.from(new Set(contacts.map((c) => c.assignedTo)))
+        .filter(Boolean)
+        .sort(),
     [contacts],
   );
   const allTags = useMemo(
@@ -278,7 +290,7 @@ function PeoplePage() {
   }) => {
     const { callList } = createCallList({
       ...input,
-      contactIds: [...selected],
+      contactIds: editable([...selected]),
     });
     setView("contacts");
     setActiveListId(callList.id);
@@ -290,8 +302,40 @@ function PeoplePage() {
     () => userLists.filter((l) => l.type !== "dynamic"),
     [userLists],
   );
+  // Adding to a list is a change to the record, so only the contacts the
+  // viewer may change go; the rest are counted and named in the toast.
+  const editable = (ids: string[]) => {
+    const { allowed, skipped } = editableContactIds(ids);
+    if (skipped > 0) {
+      notify({
+        title: `${skipped} contact${skipped === 1 ? "" : "s"} skipped`,
+        description:
+          "You don't have access to make changes to them — request access from their records.",
+      });
+    }
+    return allowed;
+  };
+  // Bulk assign: only company-owned records the viewer may route go; the rest
+  // (someone's own book, or no right to assign) are counted in the toast.
+  const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
+  const handleBulkAssign = (assigneeName: string) => {
+    const ids = [...selected];
+    const allowed = ids.filter((id) => checkContactRight(id, "canAssign").ok);
+    for (const id of allowed) assignContactTo(id, assigneeName);
+    const skipped = ids.length - allowed.length;
+    notify({
+      title: allowed.length
+        ? `Assigned ${allowed.length} contact${allowed.length === 1 ? "" : "s"} to ${assigneeName}`
+        : "Nothing to assign",
+      description:
+        skipped > 0
+          ? `${skipped} skipped — someone's own book, or not yours to assign.`
+          : undefined,
+    });
+    clearSelection();
+  };
   const handleAddToList = (listId: string) => {
-    addContactsToCallList(listId, [...selected]);
+    addContactsToCallList(listId, editable([...selected]));
     clearSelection();
   };
   const handleRemoveFromList = () => {
@@ -299,7 +343,7 @@ function PeoplePage() {
     clearSelection();
   };
   const handleAddContactsToActiveList = (ids: string[]) =>
-    addContactsToCallList(activeListId, ids);
+    addContactsToCallList(activeListId, editable(ids));
 
   // A manual name-sort request always wins over an AI rank order.
   const toggleSort = () => {
@@ -701,6 +745,7 @@ function PeoplePage() {
                     onSelectAll={selectAllFiltered}
                     onClear={clearSelection}
                     onNewList={() => setShowCreateStaticList(true)}
+                    onAssign={() => setBulkAssignOpen(true)}
                     onAddToList={() => setShowAddToList(true)}
                     onCall={() =>
                       startCallSession(
@@ -751,6 +796,20 @@ function PeoplePage() {
                 onOpenChange={setShowCreateStaticList}
                 contactCount={selected.size}
                 onCreate={handleCreateStaticList}
+              />
+
+              <AssignContactModal
+
+                open={bulkAssignOpen}
+
+                onOpenChange={setBulkAssignOpen}
+
+                mode="assign"
+
+                subject={`${selected.size} contact${selected.size === 1 ? "" : "s"}`}
+
+                onConfirm={(user) => handleBulkAssign(user.name)}
+
               />
 
               <AddToListModal
@@ -835,6 +894,8 @@ function PeoplePage() {
                 <>
                   {/* Table */}
                   <ContactsTable
+                    privateIds={privateIds}
+                    relationshipCounts={relCounts}
                     contacts={paged}
                     filtersActive={filtersActive}
                     sortDir={sortDir}

@@ -1,5 +1,6 @@
 import type { Contact } from "#/data/types";
 import { leadStatusFor } from "#/data/leadFacts";
+import { maskContactForText } from "#/components/contacts/contactRights";
 import { oneIn, pickFor } from "./propertyDisplay";
 
 export const ACCESS_LEVELS = ["Low", "Medium", "High"] as const;
@@ -39,6 +40,8 @@ export type Inquiry = {
   listingId: string;
   name: string;
   initials: string;
+  /** The viewer may not know who this is — identity fields are masked. */
+  private?: boolean;
   email: string;
   phone: string;
   addedBy: string;
@@ -93,6 +96,9 @@ export function caFileNameFor(name: string): string {
  * these fields existed still loads, and simply has none of them.
  */
 export function toInquiry(contact: Contact, listingId: string): Inquiry {
+  // A lead the viewer isn't allowed to know: the inquiry still counts and still
+  // sits in the funnel, but everything that identifies the person is masked.
+  const masked = maskContactForText(contact);
   const added = new Date(contact.createdAt);
   const updated = new Date(
     contact.lastActivityAt ?? contact.lastContactedAt ?? contact.createdAt,
@@ -103,7 +109,7 @@ export function toInquiry(contact: Contact, listingId: string): Inquiry {
   const fresh =
     contact.lastContactedAt == null &&
     Date.now() - added.getTime() < NEW_INQUIRY_MS;
-  const name = `${contact.firstName} ${contact.lastName}`;
+  const name = masked.private ? masked.name : `${contact.firstName} ${contact.lastName}`;
   const edited = contact.inquiryDetails?.[listingId];
 
   const verified = oneIn(3, contact.id, "verified");
@@ -129,9 +135,10 @@ export function toInquiry(contact: Contact, listingId: string): Inquiry {
     id: contact.id,
     listingId,
     name,
-    initials: `${contact.firstName[0] ?? ""}${contact.lastName[0] ?? ""}`,
-    email: contact.email,
-    phone: contact.phone,
+    initials: masked.private ? "🔒" : `${contact.firstName[0] ?? ""}${contact.lastName[0] ?? ""}`,
+    email: masked.private ? "—" : contact.email,
+    phone: masked.private ? "—" : contact.phone,
+    private: masked.private,
     addedBy: pickFor(ADDED_BY, contact.id, "added-by"),
     accessLevel:
       edited?.accessLevel ?? pickFor(ACCESS_LEVELS, contact.id, "access-level"),

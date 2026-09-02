@@ -227,6 +227,18 @@ export interface ComposedActivity {
    * (e.g. the BOV that was sent).
    */
   attachments?: { name: string; meta?: string; dealId?: string }[];
+  /**
+   * Who logged it — stamped by `addLog` at the moment of logging, so a later
+   * change of seat doesn't re-attribute the note. Absent on older activities;
+   * the timeline then falls back to whoever is looking.
+   */
+  author?: { name: string; avatarUrl?: string };
+  /**
+   * Marked private by its author: nobody else sees it — not the contact's
+   * owner, not anyone the record is shared with, not a Managing Director with
+   * View Private Contacts. Authorship, not ownership, governs artifacts.
+   */
+  isPrivate?: boolean;
 }
 
 /** Timeline headline per logged activity kind. */
@@ -272,7 +284,7 @@ export function buildActivity(
   }));
   entries.push({
     kind: "created",
-    label: `Contact created by ${c.assignedTo}`,
+    label: c.assignedTo ? `Contact created by ${c.assignedTo}` : "Contact created",
     date: c.createdAt,
   });
   return entries;

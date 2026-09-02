@@ -319,7 +319,7 @@ function victor(ctx: ArcCtx): TimelineEvent[] {
   const messages = VICTOR_THREAD.map((m, i) => ({
     id: `${threadId}-m${i + 1}`,
     direction: m.direction,
-    sender: m.direction === "out" ? OWNER.name : ctx.ref.name,
+    sender: m.direction === "out" ? ctx.me.name : ctx.ref.name,
     timestamp: ctx.at(m.day, m.hour, m.min),
     body: m.body,
   }));

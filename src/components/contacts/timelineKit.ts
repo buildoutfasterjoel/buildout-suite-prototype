@@ -1,6 +1,7 @@
 import type { Contact, DealSummary, RelationshipStage } from "#/data/types";
 import type { EngagementTrigger } from "#/data/contactStage";
-import { CURRENT_USER } from "#/data/teammates";
+import { CURRENT_USER, type ContactShare } from "#/data/teammates";
+import { SEED_ROSTER } from "#/data/roster";
 import { contactFullName } from "#/components/contacts/contactDisplay";
 import type {
   TimelineActor,
@@ -19,10 +20,70 @@ import type {
 
 const DAY_MS = 86_400_000;
 
+/**
+ * The signed-in user as an actor. Only the hero arcs use this directly — they
+ * are hand-written for Ethan and seeded onto contacts assigned to him. Every
+ * parameterized arc authors through `ctx.me` / `ctx.author` instead, so the
+ * feed is written by whoever actually works the record.
+ */
 export const OWNER: TimelineActor = {
   name: CURRENT_USER.name,
   avatarUrl: CURRENT_USER.avatarUrl,
 };
+
+/** A collaborator who may author beats, and how far their tier lets them go. */
+interface Collaborator {
+  actor: TimelineActor;
+  /** Outreach tier: may log calls too, not just notes and meetings. */
+  canReachOut: boolean;
+}
+
+/** Who writes a contact's history: the assignee, plus anyone shared in with rights to act. */
+export interface WorkingSet {
+  primary: TimelineActor;
+  collaborators: Collaborator[];
+}
+
+/** Roster row → timeline actor, so authored rows carry the right face. */
+function actorFor(name: string): TimelineActor {
+  // Nobody works an unassigned record yet; the firm does, as far as history goes.
+  if (!name.trim()) return { name: "Buildout" };
+  if (name === "You") return OWNER;
+  const user = SEED_ROSTER.find((u) => u.name === name);
+  return user ? { name: user.name, avatarUrl: user.avatarUrl } : { name };
+}
+
+/**
+ * The people who plausibly wrote this contact's history. The assignee is the
+ * accountable person and writes most of it; a teammate shared in at Contributor
+ * or Outreach can log activity too and gets a share of the beats. A View-only
+ * share reads but never writes, and someone shared into their own record adds
+ * nothing.
+ */
+export function workingSetFor(c: Contact, shares: ContactShare[]): WorkingSet {
+  // A record that changed hands in-app keeps its history with the person who
+  // made it; the new assignee's work starts with the hand-off row.
+  const primary = actorFor(c.historyAuthoredBy ?? c.assignedTo);
+  const collaborators = shares
+    .filter((s) => s.tier !== "view" && s.member.name !== primary.name)
+    .map((s) => ({
+      actor: { name: s.member.name, avatarUrl: s.member.avatarUrl },
+      canReachOut: s.tier === "outreach",
+    }));
+  return { primary, collaborators };
+}
+
+/**
+ * Beats a collaborator may author. Emails stay with the primary: their bodies
+ * sign off in the primary's name, and a thread with two brokers writing to the
+ * client is a different story than "a teammate helped". Calls need Outreach.
+ */
+const COLLABORATOR_TYPES: ReadonlySet<TimelineEventType> = new Set([
+  "note",
+  "call",
+  "meeting",
+  "tour",
+]);
 
 /** ISO for `days` ago at `hour`:`minute` local time. */
 export function daysAgoISO(days: number, hour = 10, minute = 15): string {
@@ -75,10 +136,21 @@ export interface ArcCtx {
   next: () => number;
   /** ISO for `days` ago (arc-local shorthand for daysAgoISO). */
   at: (days: number, hour?: number, minute?: number) => string;
+  /** The accountable person — signs the emails, receives the inbound rows. */
+  me: TimelineActor;
+  team: WorkingSet;
+  /** Who authored the next outbound beat of this `type`. */
+  author: (type: TimelineEventType) => TimelineActor;
 }
 
-export function makeCtx(c: Contact, deals: DealSummary[]): ArcCtx {
+export function makeCtx(
+  c: Contact,
+  deals: DealSummary[],
+  shares: ContactShare[] = [],
+): ArcCtx {
   let seq = 0;
+  let eligible = 0;
+  const team = workingSetFor(c, shares);
   return {
     c,
     ref: { name: contactFullName(c), id: c.id },
@@ -88,6 +160,25 @@ export function makeCtx(c: Contact, deals: DealSummary[]): ArcCtx {
     rng: rngFor(c.id),
     next: () => seq++,
     at: daysAgoISO,
+    me: team.primary,
+    team,
+    author: (type) => {
+      if (team.collaborators.length === 0 || !COLLABORATOR_TYPES.has(type)) {
+        return team.primary;
+      }
+      // Every third eligible beat goes to a collaborator, round-robin, starting
+      // with the second so even a short arc shows a teammate's hand. Counted
+      // over eligible beats rather than the raw ordinal, which most arcs spend
+      // on emails and inbound rows. Deterministic per contact because the arc
+      // itself is. A call falls back to the primary when the chosen
+      // collaborator can't reach out.
+      eligible += 1;
+      if (eligible % 3 !== 2) return team.primary;
+      const collab =
+        team.collaborators[Math.floor(eligible / 3) % team.collaborators.length];
+      if (type === "call" && !collab.canReachOut) return team.primary;
+      return collab.actor;
+    },
   };
 }
 
@@ -99,8 +190,9 @@ type EventOverrides = Partial<Omit<TimelineEvent, "id" | "type" | "seq">>;
 
 /**
  * Build one event with the boilerplate filled in. Outbound rows are authored
- * by the broker; pass `direction: "in"` for rows the contact authored (actor
- * and counterpart flip automatically unless explicitly provided).
+ * by whoever works the record (`ctx.author`); pass `direction: "in"` for rows
+ * the contact authored (actor and counterpart flip automatically unless
+ * explicitly provided).
  *
  * `daysAgo` is clamped so no beat can land before the record existed — nothing
  * happened to a contact before we had one. Beats are placed from three different
@@ -122,8 +214,8 @@ export function mk(
   return {
     id: `${ctx.c.id}-${type}-${n}`,
     type,
-    actor: inbound ? { name: ctx.ref.name } : OWNER,
-    contact: inbound ? { name: OWNER.name, id: "me" } : ctx.ref,
+    actor: inbound ? { name: ctx.ref.name } : ctx.author(type),
+    contact: inbound ? { name: ctx.me.name, id: "me" } : ctx.ref,
     // Pushed to just after creation rather than onto it, a minute per ordinal, so
     // several clamped beats keep their order instead of stacking on one instant.
     timestamp:

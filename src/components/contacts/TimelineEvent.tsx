@@ -7,6 +7,7 @@ import {
   faPaperclip,
   faChevronDown,
   faChevronRight,
+  faLock,
 } from "@fortawesome/pro-regular-svg-icons";
 import { AttachmentChip } from "#/components/contacts/AttachmentChip";
 import { getListing } from "#/data/store";
@@ -26,6 +27,8 @@ import {
 } from "#/components/contacts/TimelineActions";
 import {
   TYPE_CONFIG,
+  canBePrivate,
+  isPrivateEvent,
   relativeTime,
   exactTime,
   durationLabel,
@@ -92,6 +95,8 @@ export function TimelineEvent({
   threadOpen,
   replyTo,
   arriving = false,
+  readOnly = false,
+  canReachOut = true,
   onAction,
   onReplySend,
   onReplyCancel,
@@ -108,6 +113,10 @@ export function TimelineEvent({
   replyTo: { name: string; email?: string; initials: string };
   /** Just landed (simulated inbound) — plays a one-shot entrance highlight. */
   arriving?: boolean;
+  /** The viewer can read this record but not act on it: no FAB, no action bar, no reply. */
+  readOnly?: boolean;
+  /** Without Outreach the channel actions (call back, reply, email) go; pin and overflow stay. */
+  canReachOut?: boolean;
   onAction: ActionDispatch;
   /** `subject` is set only by an inquiry's editor, which owns an editable one. */
   onReplySend: (text: string, subject?: string) => void;
@@ -121,7 +130,10 @@ export function TimelineEvent({
   // reply/call-back options. Read-only system rows never get one. An event can
   // carry its own bar (e.g. "Start a Deal") over the type default.
   const actionBar = event.actionBar ?? config.actionBar;
-  const isActionable = !config.readOnly && !!actionBar?.primary && attention;
+  // The action bars are all channel actions (Call back / Reply / Email), so
+  // they need the viewer to be able to reach out, not just log.
+  const isActionable =
+    !config.readOnly && !!actionBar?.primary && attention && !readOnly && canReachOut;
 
   const isThread = event.type === "conversation" && !!event.thread;
   const latestMessage = event.thread?.messages.at(-1);
@@ -195,6 +207,24 @@ export function TimelineEvent({
                   className="tl-row__flag"
                   title="Pinned"
                 />
+              )}
+              {/* Rides in the meta line with the pin — it's a fact about the
+                  row, not part of what the row says. */}
+              {isPrivateEvent(event) && (
+                <Tooltip>
+                  <Tooltip.Trigger
+                    render={
+                      <span className="tl-row__private" tabIndex={0}>
+                        <FontAwesomeIcon icon={faLock} />
+                        Private
+                      </span>
+                    }
+                  />
+                  <Tooltip.Content style={{ maxWidth: 260 }}>
+                    Only you can see this. Not the contact&apos;s owner, not
+                    anyone the record is shared with.
+                  </Tooltip.Content>
+                </Tooltip>
               )}
             </span>
           </div>
@@ -345,7 +375,7 @@ export function TimelineEvent({
             row's FAB — sits at the end of the row, which puts it below the thread
             when that's expanded. Keying this on `threadOpen` instead made the
             editor vanish the moment you opened the thread you were replying to. */}
-        {replyOpen && !replyMessageId && (
+        {replyOpen && !replyMessageId && !readOnly && (
           <ReplyComposer
             // An inquiry is not a message to reply into — it arrived through a
             // form, and answering it means writing a new email about the listing.
@@ -363,7 +393,21 @@ export function TimelineEvent({
         )}
       </div>
 
-      <TimelineFab type={event.type} pinned={pinned} onAction={onAction} />
+      {!readOnly && (
+      <TimelineFab
+        type={event.type}
+        pinned={pinned}
+        canReachOut={canReachOut}
+        privacy={
+          canBePrivate(event)
+            ? isPrivateEvent(event)
+              ? "private"
+              : "visible"
+            : undefined
+        }
+        onAction={onAction}
+      />
+      )}
     </article>
   );
 }

@@ -117,6 +117,66 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 200,
+    title: "Contact ownership, privacy, sharing, and viewing as anyone",
+    mergedAt: "2026-09-02T00:19:55Z",
+    day: "2026-09-01",
+    author: "ZS-buildout",
+    area: "Contacts",
+    summary:
+      "A firm can now decide who owns its contacts and whether a broker may keep one private, and every screen honors the answer — what you can see, what you can do, and who has to grant you more. Two company switches and four permissions cover the open-book shop, the traditional broker-book shop, and the company that protects one rainmaker's book, on the same underlying system.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "Company settings gains a Contact Ownership card: whether brokers can own the contacts they bring in, whether owned contacts can be private, and — for each — whether every Broker gets that by default or only the people you grant it to. Turn a switch off and the matching permission locks on every person's page until you turn it back on.",
+      },
+      {
+        kind: "feature",
+        text: "Four contact permissions on a person's Roles & Permissions page: Own Contacts, Mark Contacts Private, View Private Contacts, and Assign Contacts. Managing Directors get all four by default; Brokers get the first two.",
+      },
+      {
+        kind: "feature",
+        text: "A contact's hero says whose it is: the owner wears the ring (a building when the company owns it), the assignee sits beside it when the company does, and a Visible or Private badge shows whenever the record could be hidden. The owner locks it with a Private Contact switch above Do Not Call.",
+      },
+      {
+        kind: "feature",
+        text: "Mark a note, call, email, meeting or tour private from the composer, or afterwards from the row's menu. Only you see it — not the contact's owner, not anyone the record is shared with, not a Managing Director who can see private contacts.",
+      },
+      {
+        kind: "feature",
+        text: "What you can do on a contact follows your relationship with it. Owners and assignees act freely; someone shared in acts within their tier; everyone else reads and can request access from a card that replaces the composer. Calling, tasks, list actions, and the assistant all refuse the same way.",
+      },
+      {
+        kind: "feature",
+        text: "A private contact you have no relationship with does not exist for you: not in the People table or its counts, not in search, not in pickers, not through the assistant, and its link lands on Contact not found. Managing Directors with View Private Contacts see them, marked with a lock.",
+      },
+      {
+        kind: "feature",
+        text: "On a deal, a private party you cannot see appears as \"Private Contact\" with a short code and who holds the record, plus a Request access button — so the pipeline still adds up without giving away who the client is.",
+      },
+      {
+        kind: "feature",
+        text: "Two brokers can each hold their own record for the same person. When both are visible to you, the hero says so and offers to link them as one person without merging anything; Create Contact warns about a duplicate you can see and stays quiet about one you cannot.",
+      },
+      {
+        kind: "feature",
+        text: "Assign a company-owned contact to the person who will work it — from the hero, in bulk from the People page, or by asking Otto — and transfer a contact you own to another broker's book, keeping a Contributor seat if you like. Each hand-off lands on the timeline, and the history stays with whoever made it.",
+      },
+      {
+        kind: "feature",
+        text: "The account menu's Viewing as now switches which person you are, so the demo can walk the same screens as Sarah, Riley or Ethan. A Role submenu still lets you try the current seat as a different role, and clears when you change seats.",
+      },
+      {
+        kind: "refinement",
+        text: "Seeded timeline history is written by whoever actually works each contact, with collaborators taking a share of the notes and meetings, instead of every record reading as Ethan's. Contacts are assigned to real roster members by full name, and a few belong to the Office Admin so company ownership has standing examples.",
+      },
+      {
+        kind: "refinement",
+        text: "The hero's Show / Hide Contact Details button moved to its own row under the badges, so the stage, privacy badge and access avatars no longer crowd it out.",
+      },
+    ],
+  },
+  {
     pr: 199,
     title:
       "Move cold and inquiry-sourced leads to Nurturing when the broker works them, and answer an inquiry from an inline email editor",

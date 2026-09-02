@@ -1,5 +1,6 @@
 import { getListing, getProperty } from "#/data/store";
 import { listContactsForDeal } from "#/data/selectors";
+import { maskContactForText } from "#/components/contacts/contactRights";
 import { dealActivity, loadTask, listAttachments } from "#/ai/recordQueries";
 
 /**
@@ -51,7 +52,13 @@ export function composeDealData(dealId: string): RecordDump | null {
 
   lines.push(
     parties.length
-      ? `PARTIES:\n${parties.map((c) => `- ${`${c.firstName} ${c.lastName}`.trim()} | ${c.role} | ${c.company || "—"}`).join("\n")}`
+      ? `PARTIES:\n${parties
+          .map((c) => {
+            // A private party the viewer can't see is listed by role, never by name.
+            const m = maskContactForText(c);
+            return `- ${m.name} | ${c.role} | ${m.company}`;
+          })
+          .join("\n")}`
       : "PARTIES: none named",
   );
   lines.push(

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
@@ -14,6 +14,15 @@ import { ContactBriefingSection } from "#/components/contacts/ContactBriefingSec
 import { ContactDesignToggles } from "#/components/contacts/ContactDesignToggles";
 import { ShareContactModal } from "#/components/contacts/ShareContactModal";
 import { useContactShares } from "#/components/contacts/useContactShares";
+import { useContactOwnership } from "#/components/contacts/useContactOwnership";
+import { resolveViewerRights } from "#/data/contactViewerAccess";
+import { isContactVisible } from "#/components/contacts/contactRights";
+import { AssignContactModal, type AssignMode } from "#/components/contacts/AssignContactModal";
+import { assignContactTo, transferContactTo } from "#/components/contacts/contactAssignment";
+import { useCan } from "#/components/settings/users/useViewer";
+import { useCurrentUser } from "#/data/currentUser";
+import { setContactPrivate } from "#/data/actions";
+import { notify } from "#/lib/notify";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
 import { useContactNarrow } from "#/lib/useMediaQuery";
 import { useAssistant } from "#/ai/useAssistant";
@@ -61,6 +70,13 @@ function ContactNotFound() {
   );
 }
 
+/**
+ * Stand-in for the ownership hook while the contact is still unresolved (or
+ * missing). Only `assignedTo` and `isPrivate` are read, so nothing else needs
+ * to be real.
+ */
+const MISSING_CONTACT = { assignedTo: "", isPrivate: false } as never;
+
 function ContactDetailPage() {
   const { contactId } = Route.useParams();
   // Subscribe to the contacts + tasks maps so edits (e.g. the hero's Edit Contact
@@ -74,6 +90,31 @@ function ContactDetailPage() {
   // modal is owned here so both the top-bar Share button and the hero avatars
   // can open it.
   const access = useContactShares(contactId);
+  // Owner / assignee / private, resolved from the record, the roster and the
+  // company's contact-ownership settings. Read here because the hero and the
+  // share modal both show it. Falls back to an empty stand-in before the
+  // not-found return so the hook order holds.
+  const ownership = useContactOwnership(detail?.contact ?? MISSING_CONTACT);
+  // What the signed-in user may do here: owner or assignee act freely, a
+  // collaborator acts within their tier, anyone else reads and can ask.
+  const viewerCanAssign = useCan("assign-contacts");
+  const viewerSeat = useCurrentUser((s) => s.id);
+  const rights = useMemo(
+    () => resolveViewerRights(ownership, access.shares, viewerCanAssign),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [ownership, access.shares, viewerCanAssign, viewerSeat],
+  );
+  // Assign (company-owned) and Transfer (broker-owned) share one picker.
+  const [assignMode, setAssignMode] = useState<AssignMode | null>(null);
+  const togglePrivate = (next: boolean) => {
+    setContactPrivate(contactId, next);
+    notify({
+      title: next ? "Marked private" : "Visible to the firm",
+      description: next
+        ? "Hidden from everyone — search included — until you share it."
+        : "Everyone at the company can find this contact again.",
+    });
+  };
   const [shareOpen, setShareOpen] = useState(false);
   // Briefing collapse persists across contacts (a viewing preference).
   const briefingOpen = useContactUiPrefs((s) => s.briefingOpen);
@@ -104,7 +145,10 @@ function ContactDetailPage() {
   // time, so the rail forces them; the preference governs again once it closes.
   const narrowLayout = assistantOpen ? "tabs" : narrowLayoutPref;
 
-  if (!detail) return <ContactNotFound />;
+  // Privacy includes existence: a private contact the viewer has no
+  // relationship with reads as missing, not as locked — a "private" state would
+  // confirm there's a record here.
+  if (!detail || !isContactVisible(contactId)) return <ContactNotFound />;
 
   const { contact, deals, leadDeals, tasks, completedTasks } = detail;
 
@@ -123,6 +167,7 @@ function ContactDetailPage() {
       tasks={tasks}
       completedTasks={completedTasks}
       onLog={addLog}
+      readOnly={!rights.canEdit}
     />
   );
 
@@ -152,7 +197,12 @@ function ContactDetailPage() {
             deals={deals}
             leadDeals={leadDeals}
             shares={access.shares}
+            ownership={ownership}
+            rights={rights}
             onOpenShare={() => setShareOpen(true)}
+            onTogglePrivate={togglePrivate}
+            onAssign={() => setAssignMode("assign")}
+            onTransfer={() => setAssignMode("transfer")}
           />
         </div>
         <div
@@ -173,6 +223,8 @@ function ContactDetailPage() {
         >
           <ContactEngagementPanel
             contact={contact}
+            ownership={ownership}
+            rights={rights}
             deals={deals}
             logged={logged}
             onLog={addLog}
@@ -229,10 +281,46 @@ function ContactDetailPage() {
         open={shareOpen}
         onOpenChange={setShareOpen}
         contactName={contactFullName(contact)}
+        ownership={ownership}
+        readOnly={!rights.canShare}
         shares={access.shares}
         onShare={access.grant}
         onChangeTier={access.changeTier}
         onRemove={access.revoke}
+      />
+
+      <AssignContactModal
+        open={assignMode !== null}
+        onOpenChange={(o) => {
+          if (!o) setAssignMode(null);
+        }}
+        mode={assignMode ?? "assign"}
+        subject={contactFullName(contact)}
+        currentAssignee={contact.assignedTo || undefined}
+        onConfirm={(user, keep) => {
+          if (assignMode === "transfer") {
+            transferContactTo(contact.id, user.name, keep);
+            notify({
+              title: `Transferred to ${user.name}`,
+              description: keep
+                ? "It's their relationship now. You stay on as a Contributor."
+                : "It's their relationship now. You no longer have access unless they share it.",
+            });
+          } else {
+            assignContactTo(contact.id, user.name);
+            notify({
+              title: `Assigned to ${user.name}`,
+              description: `${user.name.split(" ")[0]} now works ${contact.firstName}'s record for the company.`,
+            });
+          }
+        }}
+        onUnassign={() => {
+          assignContactTo(contact.id, null);
+          notify({
+            title: "Unassigned",
+            description: `Nobody works ${contact.firstName}'s record yet. It stays visible to the firm.`,
+          });
+        }}
       />
 
       {/* Floating design-comparison menu (prototype-only). */}

@@ -1,9 +1,11 @@
 import { useDataStore } from './dataStore'
 import type { Comp, Contact, ContactDetail, ContactTask, DealSummary, Listing, Property, PropertyDetail, PropertyFinancialRecord, PropertyUnit, Task, TaskView } from './types'
-import { getContactsForProperty, getContactShares, getLeadsForProperty, getOwnersForProperty } from './store'
+import { accessRosterFor } from './contactAccessRoster'
+import { getContactsForProperty, getLeadsForProperty, getOwnersForProperty } from './store'
 import { dealStageFromStatus } from './contactStage'
 import { CURRENT_USER, TEAMMATES, type Teammate } from './teammates'
 import { deriveTaskType } from '#/components/contacts/taskDisplay'
+import { visibleContacts } from '#/components/contacts/contactRights'
 import { hash, spread } from '#/components/properties/propertyDisplay'
 
 /** All contacts attached to a deal (seller + buyer + other), deduped. */
@@ -125,17 +127,7 @@ export function getContactDetailClient(id: string): ContactDetail | null {
   // The people who can be assigned a task on this contact = whoever has access
   // (owner + anyone it's shared with). Task assignees are drawn from here so the
   // avatars stay realistic for the contact's sharing.
-  const accessRoster: Teammate[] = (() => {
-    const seen = new Set<string>()
-    const roster: Teammate[] = []
-    for (const m of [CURRENT_USER, ...getContactShares(id).map((s) => s.member)]) {
-      if (!seen.has(m.id)) {
-        seen.add(m.id)
-        roster.push(m)
-      }
-    }
-    return roster
-  })()
+  const accessRoster: Teammate[] = accessRosterFor(id)
   // Only surface an assignee avatar when the contact is shared with others —
   // for an owner-only contact there's just one possible assignee, so it's noise.
   const isShared = accessRoster.length > 1
@@ -237,7 +229,9 @@ export function searchAll(query: string): {
       const p = properties.get(l.propertyId)
       return matches(l.name, p?.city, p?.state, l.dealType)
     }),
-    contacts: [...contacts.values()].filter((c) =>
+    // Privacy includes existence: a private contact the viewer has no
+    // relationship with never comes back from search.
+    contacts: visibleContacts([...contacts.values()]).filter((c) =>
       matches(c.firstName, c.lastName, c.company, c.email, c.title, c.phone),
     ),
   }

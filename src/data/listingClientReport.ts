@@ -5,6 +5,7 @@ import {
   spread,
 } from "#/components/properties/propertyDisplay";
 import { getLeadsForProperty } from "#/data/store";
+import { maskContactForText } from "#/components/contacts/contactRights";
 import { leadStatusFor } from "#/data/leadFacts";
 import type { Property } from "#/data/types";
 
@@ -49,10 +50,11 @@ export function getClientReportLeads(property: Property): ClientReportLead[] {
       // One salt per column. Taken off a single `h = hash(contact.id)` these
       // moved together — `h % 8` fixes `h % 4`, so CA Signed landed on exactly
       // the "Emails Sent" and "Viewed CA" rows.
+      const masked = maskContactForText(contact);
       return {
         id: contact.id,
-        company: contact.company || "—",
-        name: `${contact.firstName} ${contact.lastName}`,
+        company: masked.private ? "—" : contact.company || "—",
+        name: masked.name,
         leadStatus: leadStatusFor(contact.id),
         pageViews: 1 + spread(hash(`${contact.id}#page-views`), 60),
         lastAction: pickFor(FUNNEL_STAGES, contact.id, "last-action"),

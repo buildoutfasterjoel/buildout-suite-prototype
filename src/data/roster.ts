@@ -12,6 +12,7 @@
  * environment.
  */
 import { CURRENT_USER, TEAMMATES, type Teammate } from "#/data/teammates";
+import { readStoredViewer } from "#/data/currentUser";
 import type { PermissionOverrides, RoleId } from "#/data/permissions";
 
 export type UserStatus = "active" | "deactivated";
@@ -147,7 +148,7 @@ export const SEED_ROSTER: RosterUser[] = PEOPLE.map((person) => {
     roleIds: assignment.roleIds,
     overrides: assignment.overrides ?? {},
     status: assignment.status ?? "active",
-    isYou: person.id === CURRENT_USER.id,
+    isYou: person.id === readStoredViewer(),
   };
 });
 
@@ -166,6 +167,11 @@ export function withIdentity(
   patch: IdentityPatch,
 ): RosterUser[] {
   return users.map((u) => (u.id === userId ? { ...u, ...patch } : u));
+}
+
+/** Re-point the YOU badge when the viewer changes seats. */
+export function withViewer(users: RosterUser[], viewerId: string): RosterUser[] {
+  return users.map((u) => (u.isYou === (u.id === viewerId) ? u : { ...u, isYou: u.id === viewerId }));
 }
 
 /** Apply one role change to a roster list. */

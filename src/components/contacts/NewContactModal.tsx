@@ -10,12 +10,17 @@ import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
 import { RadioGroup } from "@buildoutinc/blueprint-react/ui/RadioGroup";
 import { Textarea } from "@buildoutinc/blueprint-react/ui/Textarea";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { Link } from "@tanstack/react-router";
+import { duplicateOf } from "#/data/contactRelationships";
+import { contactFullName } from "#/components/contacts/contactDisplay";
+import { visibleContacts } from "#/components/contacts/contactRights";
 import {
   faPlus,
   faXmark,
   faTrash,
   faBuilding,
   faMagnifyingGlass,
+  faUserGroup,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { ContactSource } from "#/data/types";
 import type { NewContactInput } from "#/data/actions";
@@ -296,6 +301,15 @@ export function NewContactModal({
       return next;
     });
 
+  // Already in the book? Only the book as the viewer may see it — a private
+  // match in someone else's book stays silent, and the new record is created.
+  // That is the intentional duplicate: two relationships with one person.
+  const duplicate = useMemo(() => {
+    const email = emails.map((e) => e.value.trim()).find(Boolean);
+    const phone = phones.map((p) => p.value.trim()).find(Boolean);
+    return duplicateOf({ email, phone }, visibleContacts());
+  }, [emails, phones]);
+
   const handleSave = () => {
     const trimmed = name.trim();
     if (!trimmed) {
@@ -357,6 +371,23 @@ export function NewContactModal({
           <Modal.Description>
             Name + at least one of phone or email. Everything else is optional.
           </Modal.Description>
+          {duplicate && (
+            <div className="d-flex align-items-center gap-2 rounded bg-storm-grey-50 px-3 py-2 fs-small">
+              <FontAwesomeIcon icon={faUserGroup} className="text-muted" />
+              <span>
+                Looks like{" "}
+                <Link
+                  to="/backoffice/contacts/$contactId"
+                  params={{ contactId: duplicate.id }}
+                  className="fw-semibold"
+                  onClick={() => onOpenChange(false)}
+                >
+                  {contactFullName(duplicate)}
+                </Link>{" "}
+                is already in the book. Saving anyway makes a second relationship with the same person.
+              </span>
+            </div>
+          )}
         </Modal.Header>
 
         <Modal.Body

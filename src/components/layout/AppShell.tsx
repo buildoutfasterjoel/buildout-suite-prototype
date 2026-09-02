@@ -28,6 +28,9 @@ import { BovFlow } from "#/components/contacts/BovFlow";
 import { RosaLeadsWatcher } from "#/components/call/RosaLeadsWatcher";
 import { IngestionWatcher } from "#/components/deals/IngestionWatcher";
 import { useDataStore } from "#/data/dataStore";
+import { useHydrateContactAccessSettings } from "#/components/settings/useContactAccessSettings";
+import { useCurrentUser, useHydrateCurrentUser } from "#/data/currentUser";
+import { useRoster } from "#/components/settings/users/useRoster";
 
 export function AppShell() {
   const hydrated = useDataStore((s) => s.hydrated);
@@ -63,6 +66,15 @@ export function AppShell() {
   // `useMediaQuery` does it.
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+  // The company's contact-ownership ceilings, restored from localStorage the
+  // same way the "Viewing as" seat is — see the store for why.
+  useHydrateContactAccessSettings();
+  useHydrateCurrentUser();
+  // The YOU badge on the roster follows the seat.
+  const seat = useCurrentUser((s) => s.id);
+  useEffect(() => {
+    useRoster.getState().setViewer(seat);
+  }, [seat]);
 
   // The same one-render hold pays for the nav mode too. The store can't read
   // localStorage in its initializer without disagreeing with the server, so the

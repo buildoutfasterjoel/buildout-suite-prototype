@@ -685,6 +685,7 @@ const ACTION_TOOLS = new Set([
   "update_contact",
   "add_contact_tags",
   "remove_contact_tags",
+  "assign_contact",
   "create_task",
   "add_activity",
   "stage_field_value",

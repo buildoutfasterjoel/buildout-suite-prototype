@@ -1,8 +1,10 @@
 import { useMemo } from "react";
-import { CURRENT_USER } from "#/data/teammates";
+import { useCurrentUser } from "#/data/currentUser";
 import { isPermissionOn, type RoleId } from "#/data/permissions";
 import type { RosterUser } from "#/data/roster";
 import { useRoster } from "./useRoster";
+import { isEffectivelyOn } from "#/data/contactAccess";
+import { useContactAccessSettings } from "#/components/settings/useContactAccessSettings";
 
 /**
  * Zustand compares selector results with `Object.is`, so a selector that builds
@@ -21,7 +23,8 @@ const EMPTY_ROLES: RoleId[] = [];
  * parallel notion of a pretend identity that could drift from the data.
  */
 export function useViewer(): RosterUser | undefined {
-  return useRoster((s) => s.users.find((u) => u.id === CURRENT_USER.id));
+  const id = useCurrentUser((s) => s.id);
+  return useRoster((s) => s.users.find((u) => u.id === id));
 }
 
 /**
@@ -32,8 +35,11 @@ export function useViewer(): RosterUser | undefined {
  */
 export function useCan(permissionId: string): boolean {
   const viewer = useViewer();
+  const settings = useContactAccessSettings((s) => s.settings);
   if (!viewer) return false;
-  return isPermissionOn(viewer.roleIds, viewer.overrides, permissionId);
+  // Company ceilings and grant defaults applied — see `contactAccess.ts`.
+  // Most permissions have no gate and fall straight through to the roles.
+  return isEffectivelyOn(viewer.roleIds, viewer.overrides, permissionId, settings);
 }
 
 /** The viewer's current role(s), for the account menu's checkmark. */
