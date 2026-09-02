@@ -129,6 +129,14 @@ const ASSIGNMENTS: Record<string, Assignment> = {
     office: "Atlanta",
     roleIds: ["managing-director"],
   },
+  // The only Back Office Manager, and the seat the voucher approval flow is
+  // demoed from: switch to her in the account menu to see the whole firm's
+  // vouchers and sign a Pending one off.
+  "tessa-nakamura": {
+    title: "Back Office Manager",
+    office: "Chicago — West Loop",
+    roleIds: ["back-office-manager"],
+  },
 };
 
 export const SEED_ROSTER: RosterUser[] = PEOPLE.map((person) => {

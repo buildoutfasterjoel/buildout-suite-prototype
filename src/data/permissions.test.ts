@@ -12,11 +12,12 @@ import { OFFICES, SEED_ROSTER } from "#/data/roster";
 const BROKER_ONLY = "delete-listings";
 
 describe("permission registry", () => {
-  it("carries the mocks' 20 plus the four contact permissions, split 19 / 5", () => {
+  it("carries the mocks' 20 plus the contact and voucher permissions, split 22 / 5", () => {
     // 15 record-scoped from the mocks + Own Contacts, Mark Contacts Private,
-    // View Private Contacts, Assign Contacts.
-    expect(PERMISSIONS).toHaveLength(24);
-    expect(PERMISSIONS.filter((p) => p.scope === "record")).toHaveLength(19);
+    // View Private Contacts, Assign Contacts + View / Edit Other Users'
+    // Vouchers and Approve Vouchers.
+    expect(PERMISSIONS).toHaveLength(27);
+    expect(PERMISSIONS.filter((p) => p.scope === "record")).toHaveLength(22);
     expect(PERMISSIONS.filter((p) => p.scope === "account")).toHaveLength(5);
   });
 
@@ -35,20 +36,23 @@ describe("permission registry", () => {
 });
 
 describe("role defaults match the mocks", () => {
-  it("gives a Broker-only user 13 of 24", () => {
-    // The mocks' 11, plus the two contact-ownership grants Broker carries.
+  it("gives a Broker-only user 13 of 27", () => {
+    // The mocks' 11, plus the two contact-ownership grants Broker carries. The
+    // three voucher permissions are none of a broker's business: they see their
+    // own vouchers by being on the deal, not by holding anything.
     const resolved = resolvePermissions(["broker"], {});
     expect(summarize(resolved)).toMatchObject({
       onCount: 13,
-      total: 24,
+      total: 27,
       customCount: 0,
     });
   });
 
-  it("unions Broker + Managing Director to 20", () => {
+  it("unions Broker + Managing Director to 22", () => {
     // The mocks' 16, plus the four contact permissions (both roles carry the
-    // two grants; only MD adds see-through and assignment).
-    expect(roleUnionCount(["broker", "managing-director"])).toBe(20);
+    // two grants; only MD adds see-through and assignment), plus the two
+    // voucher permissions an MD holds — see the whole book, and sign off.
+    expect(roleUnionCount(["broker", "managing-director"])).toBe(22);
   });
 
   it("grants nothing without a role", () => {
@@ -107,9 +111,10 @@ describe("seed roster", () => {
     const summary = summarize(
       resolvePermissions(diana!.roleIds, diana!.overrides),
     );
-    // 10 from Managing Director (the mocks' 6 + the four contact permissions),
-    // minus one removed, plus two granted.
-    expect(summary).toMatchObject({ onCount: 11, customCount: 3 });
+    // 12 from Managing Director (the mocks' 6 + the four contact permissions +
+    // View Other Users' Vouchers and Approve Vouchers), minus one removed, plus
+    // two granted.
+    expect(summary).toMatchObject({ onCount: 13, customCount: 3 });
   });
 
   it("gives every person exactly one real role", () => {

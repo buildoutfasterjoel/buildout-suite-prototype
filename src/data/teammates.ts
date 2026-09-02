@@ -6,7 +6,7 @@
  * a session.
  *
  * The roster started out serving contact-sharing alone. It is now also where a
- * voucher's approver comes from (see `VOUCHER_APPROVER_IDS`), because a second
+ * voucher's approver comes from (see `SEED_VOUCHER_APPROVER_IDS`), because a second
  * roster of internal names would let the same company have two sets of staff.
  */
 
@@ -65,6 +65,7 @@ export const TEAMMATES: Teammate[] = [
   { id: "omar-haddad", name: "Omar Haddad", email: "omar.haddad@buildout.com", role: "Transaction Coordinator", initials: "OH", avatarUrl: "https://randomuser.me/api/portraits/men/76.jpg" },
   { id: "nina-alvarez", name: "Nina Alvarez", email: "nina.alvarez@buildout.com", role: "Broker", initials: "NA", avatarUrl: "https://randomuser.me/api/portraits/women/12.jpg" },
   { id: "priya-nair", name: "Priya Nair", email: "priya.nair@buildout.com", role: "Analyst", initials: "PN" },
+  { id: "tessa-nakamura", name: "Tessa Nakamura", email: "tessa.nakamura@buildout.com", role: "Back Office Manager", initials: "TN", avatarUrl: "https://randomuser.me/api/portraits/women/44.jpg" },
 ];
 
 /**
@@ -81,16 +82,24 @@ export const BROKER_TEAMMATES: Teammate[] = [
 ];
 
 /**
- * Who can sign off a commission voucher, as `TEAMMATES` ids.
+ * Who signed off the vouchers the seed hands you already Approved.
  *
- * The back-office roles only — a voucher is the brokerage paying itself, so the
- * broker who closed the deal is the one person who should not be approving it.
- * That leaves the Transaction Coordinator, the Analyst, and the Assistant.
+ * **Not the live rule.** Who may approve *now* is the Approve Vouchers
+ * permission, resolved against the roster by `voucherApproverIds`
+ * (`voucherRights.ts`). This list is history: a voucher approved months before
+ * the role existed was signed by whoever was in the back office then, and a
+ * seeded fact does not get to move when an admin edits a permission.
+ *
+ * Its members are people who hold the permission today all the same, so the two
+ * never look like they disagree. Kept as a literal for two reasons the seed
+ * cares about: it must not import the roster (see `seed.ts`'s import rules), and
+ * `seed.ts` draws from it with one `faker.helpers.arrayElement` call whose
+ * position in the stream every downstream fixture depends on.
  */
-export const VOUCHER_APPROVER_IDS = [
-  "omar-haddad",
+export const SEED_VOUCHER_APPROVER_IDS = [
+  "tessa-nakamura",
   "priya-nair",
-  "riley-park",
+  "diana-reyes",
 ] as const;
 
 /** A roster member's id by full name — the current user included. Names are unique on this roster. */

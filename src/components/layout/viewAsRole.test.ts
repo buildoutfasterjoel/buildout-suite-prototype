@@ -23,6 +23,7 @@ describe("view-as roles", () => {
     expect(VIEW_AS_ORDER.map(viewAsLabel)).toEqual([
       "Broker",
       "Managing Director",
+      "Back Office Manager",
       "Marketing Assistant",
       "Transaction Coordinator",
       "Office Admin",

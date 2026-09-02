@@ -551,9 +551,11 @@ function applyStageDetail(
     identifier: child.dealId,
     status: 'Approved',
     // Two days after the "Submit commission voucher" task above completed.
-    // Named outright rather than drawn from `VOUCHER_APPROVER_IDS`: this module
-    // must stay faker-free, and the seed tests pin it that way.
-    approval: { reviewerId: 'omar-haddad', approvedOn: isoDate(-6) },
+    // Named outright rather than drawn from `SEED_VOUCHER_APPROVER_IDS`: this
+    // module must stay faker-free, and the seed tests pin it that way. Tessa
+    // because she is the Back Office Manager — Omar was named here back when the
+    // approver list was hardcoded and he was on it.
+    approval: { reviewerId: 'tessa-nakamura', approvedOn: isoDate(-6) },
     closeDate: child.transaction.closeDate,
     payerContactIds: [tenantContactId],
     receivables: [

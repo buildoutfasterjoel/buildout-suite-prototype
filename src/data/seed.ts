@@ -49,7 +49,7 @@ import {
   BROKER_TEAMMATES,
   CURRENT_USER,
   TEAMMATES,
-  VOUCHER_APPROVER_IDS,
+  SEED_VOUCHER_APPROVER_IDS,
   type AccessTier,
   type ContactShare,
   type Teammate,
@@ -1678,7 +1678,7 @@ function generateListings(
     const voucherApproval: VoucherApproval | null =
       voucherStatus === 'Approved' && voucherCloseDate
         ? {
-            reviewerId: faker.helpers.arrayElement(VOUCHER_APPROVER_IDS),
+            reviewerId: faker.helpers.arrayElement(SEED_VOUCHER_APPROVER_IDS),
             approvedOn: new Date(
               Date.parse(`${voucherCloseDate}T00:00:00`) +
                 faker.number.int({ min: 1, max: 10 }) * 86_400_000,

@@ -117,6 +117,38 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 204,
+    title: "A Back Office Manager who can approve vouchers, and vouchers scoped to whose they are",
+    mergedAt: "2026-09-02T23:10:00Z",
+    day: "2026-09-02",
+    author: "buildoutfasterjoel",
+    area: "Back Office",
+    summary:
+      "Approving a voucher used to mean picking an approver from a fixed list of three, because nobody you could sign in as was allowed to sign one off. There is now a Back Office Manager role, a person holding it, and three permissions behind the whole flow \u2014 so you approve a voucher as yourself, and the Vouchers page shows you the ones that are actually yours.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "A new Back Office Manager role, held by Tessa Nakamura. Switch to her seat in the account menu to work the approval flow: she sees every voucher in the book, can correct one a broker has already submitted, and signs it off.",
+      },
+      {
+        kind: "feature",
+        text: "Three permissions carry it \u2014 View Other Users\u2019 Vouchers, Edit Other Users\u2019 Vouchers and Approve Vouchers \u2014 and they are enforced, not decorative. A Managing Director gets the first and the last: they see the whole book and sign off, but the typing stays with the back office.",
+      },
+      {
+        kind: "feature",
+        text: "The Approve Voucher dialog names you instead of asking who is signing, and who may approve now comes from the permission rather than a list in the code. Two people who used to be on that list, the Transaction Coordinator and the Office Admin, are no longer approvers.",
+      },
+      {
+        kind: "refinement",
+        text: "Back Office \u2192 Vouchers is scoped to the person looking. A broker sees vouchers for deals they are on, and the commission tiles, the count and the pagination all follow. Without the permission, the empty state says why the page is empty rather than claiming the firm has no vouchers.",
+      },
+      {
+        kind: "refinement",
+        text: "A Pending voucher still freezes for the broker who submitted it \u2014 sending it is the decision, and it cannot be taken back \u2014 but it no longer freezes for the back office, whose work starts there.",
+      },
+    ],
+  },
+  {
     pr: 203,
     title:
       "A Payables page in Back Office, grouped by the broker who is owed, and a way to pay them off it",

@@ -876,7 +876,7 @@ export function deleteDeposit(
  * referentially unchanged the way `submitVoucher` does.
  *
  * The reviewer is passed in rather than taken from `CURRENT_USER`.
- * `VOUCHER_APPROVER_IDS` is explicit that the broker who closed the deal is the
+ * the Approve Vouchers permission is explicit that the broker who closed the deal is the
  * one person who must not approve it, and the signed-in user is a Broker — so a
  * voucher signed off by `CURRENT_USER` would break the rule the roster exists to
  * state. The caller picks from that list.

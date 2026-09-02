@@ -99,6 +99,13 @@ import { QuickbooksSyncBadge } from "#/components/common/QuickbooksSyncBadge";
 import { Section } from "./VoucherSection";
 import { PayablesSection } from "./VoucherPayables";
 import { ApproveVoucherModal } from "./ApproveVoucherModal";
+import { useCurrentUser } from "#/data/currentUser";
+import { useCan } from "#/components/settings/users/useViewer";
+import {
+  APPROVE_VOUCHERS,
+  EDIT_OTHER_VOUCHERS,
+  voucherTeamIds,
+} from "#/data/voucherRights";
 import "./DealFinancials.scss";
 import {
   buildRentSchedule,
@@ -2677,16 +2684,30 @@ export function DealFinancials({
 }) {
   const voucher = listing.transaction.backOffice;
   const isDraft = voucher.status === "Draft";
-  // A Pending voucher is on an approver's desk, so the page freezes whole: no
-  // edits, no adds, no row actions anywhere below, and no way back. Submitting
-  // is one-way for the broker — sending it is the decision, and what an approver
-  // is holding cannot be changed underneath them. Only an approver moves it now.
+  // Pending does two separate jobs, and they must stay separate: it freezes the
+  // page, and it is the one state that can be approved. Folding them into one
+  // flag hid the Approve button from the only people who have it.
+  const isPending = voucher.status === "Pending";
+
+  // A Pending voucher is on an approver's desk, so it freezes for the broker:
+  // no edits, no adds, no row actions anywhere below, and no way back.
+  // Submitting is one-way — sending it is the decision, and what an approver is
+  // holding cannot be changed underneath them.
+  //
+  // It does not freeze for the back office, whose work starts here: correcting
+  // what a broker submitted and issuing invoices against it. "Other users'" in
+  // the permission is literal, so `isMine` still holds a broker to the one-way
+  // rule even if someone grants them the permission.
   //
   // Approved is deliberately *not* frozen the same way here. What it will
   // eventually accept is additions (receivables, invoices, credits against what
   // was approved) rather than a blanket lock, which needs the data reworked
   // first. Until that pass lands it keeps the controls it has today.
-  const isPending = voucher.status === "Pending";
+  const viewerSeat = useCurrentUser((s) => s.id);
+  const isMine = voucherTeamIds(listing).includes(viewerSeat);
+  const canEditOthers = useCan(EDIT_OTHER_VOUCHERS);
+  const canApprove = useCan(APPROVE_VOUCHERS);
+  const frozen = isPending && !(canEditOthers && !isMine);
   // The broker's attestation, which gates both Submit buttons. Page state, not
   // stored: it is a confirmation of *this* reading of the voucher, so it should
   // not survive a reload and come back pre-ticked.
@@ -2800,10 +2821,11 @@ export function DealFinancials({
           /* Draft is the only state with an action. Submitting hands the voucher
              over, and a broker cannot take it back: an approver reading a set of
              figures must be reading the same ones the broker attested to, which
-             an Edit that un-submits cannot promise. So Pending offers nothing,
-             and neither does Approved — there the banner below states who signed
-             it off, and what stays open on a settled voucher is additions to it,
-             receivables and invoices, not an edit of the approved figures. */
+             an Edit that un-submits cannot promise. So Pending offers the broker
+             nothing, and neither does Approved — there the banner below states
+             who signed it off, and what stays open on a settled voucher is
+             additions to it, receivables and invoices, not an edit of the
+             approved figures. */
           isDraft ? (
             <AttestationSubmit
               attested={attested}
@@ -2812,10 +2834,12 @@ export function DealFinancials({
               dirty={dirty}
               onSave={save}
             />
-          ) : isPending ? (
+          ) : isPending && canApprove ? (
             /* The approver's side of the one-way submit. A broker cannot take a
                Pending voucher back, so this is the only thing that moves it —
-               and the only way a voucher reaches Approved outside the seed. */
+               and the only way a voucher reaches Approved outside the seed. It
+               shows only to a holder of Approve Vouchers: to everyone else a
+               Pending voucher is a page with no action at all. */
             <Button variant="primary" onClick={() => setApproving(true)}>
               Approve Voucher
             </Button>
@@ -2842,7 +2866,7 @@ export function DealFinancials({
 
       <OutsideCommissionsSection
         brokers={listing.outsideBrokers}
-        editable={!isPending}
+        editable={!frozen}
       />
       <PreSplitDeductionsSection
         deductions={deductions}
@@ -2886,9 +2910,9 @@ export function DealFinancials({
 
       <Separator />
 
-      <RentScheduleSection listing={listing} editable={!isPending} />
+      <RentScheduleSection listing={listing} editable={!frozen} />
 
-      <ReceivablesSection listing={listing} editable={!isPending} />
+      <ReceivablesSection listing={listing} editable={!frozen} />
 
       <PayablesSection listing={listing} />
 
