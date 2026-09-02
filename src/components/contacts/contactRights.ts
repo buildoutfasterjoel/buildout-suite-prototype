@@ -64,7 +64,7 @@ export function rightsForContactId(
   return {
     contact,
     ownership,
-    rights: resolveViewerRights(ownership, shares, viewerCanAssign()),
+    rights: resolveViewerRights(ownership, shares, viewerCanAssign(), viewerSeesPrivate()),
   };
 }
 
@@ -125,6 +125,8 @@ export function viewerSeesPrivate(
 export function describeVisibility(contacts: Contact[]): {
   contacts: Contact[];
   privateIds: Set<string>;
+  /** Private records the viewer sees only through View Private Contacts — details masked. */
+  previewIds: Set<string>;
 } {
   const roster = useRoster.getState().users;
   const settings = useContactAccessSettings.getState().settings;
@@ -133,18 +135,21 @@ export function describeVisibility(contacts: Contact[]): {
   const allShares = useDataStore.getState().contactShares ?? new Map();
   const visible: Contact[] = [];
   const privateIds = new Set<string>();
+  const previewIds = new Set<string>();
   for (const c of contacts) {
     const ownership = resolveContactOwnership(c, roster, settings, COMPANY_SETTINGS.name);
     if (!ownership.isPrivate) {
       visible.push(c);
       continue;
     }
-    if (canSeeContact(ownership, allShares.get(c.id) ?? DEFAULT_CONTACT_SHARES, seesPrivate)) {
+    const shares = allShares.get(c.id) ?? DEFAULT_CONTACT_SHARES;
+    if (canSeeContact(ownership, shares, seesPrivate)) {
       visible.push(c);
       privateIds.add(c.id);
+      if (resolveViewerRights(ownership, shares, false, seesPrivate).preview) previewIds.add(c.id);
     }
   }
-  return { contacts: visible, privateIds };
+  return { contacts: visible, privateIds, previewIds };
 }
 
 /** The contacts the viewer may know exist. Every enumeration of the book goes through here. */

@@ -1,5 +1,6 @@
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { HiddenLines } from "#/components/contacts/HiddenBlock";
 import { faChevronDown, faChevronUp } from "@fortawesome/pro-regular-svg-icons";
 import { faSparkles } from "@fortawesome/pro-solid-svg-icons";
 import { useContactUiPrefs } from "#/components/contacts/useContactUiPrefs";
@@ -16,8 +17,11 @@ export function ContactBriefingSection({
   open,
   onToggle,
   bare = false,
+  hidden = false,
 }: {
   briefing: string;
+  /** A previewed private contact: the card stays, the words don't. */
+  hidden?: boolean;
   open: boolean;
   onToggle: () => void;
   /**
@@ -33,7 +37,7 @@ export function ContactBriefingSection({
     return (
       <div className="contact-briefing contact-briefing--bare">
         <div className="contact-briefing__body">
-          <p className="mb-0">{briefing}</p>
+          {hidden ? <HiddenLines widths={["92%", "78%", "85%", "40%"]} /> : <p className="mb-0">{briefing}</p>}
         </div>
       </div>
     );
@@ -88,7 +92,7 @@ export function ContactBriefingSection({
 
       {open && (
         <div className="contact-briefing__body">
-          <p className="mb-0">{briefing}</p>
+          {hidden ? <HiddenLines widths={["92%", "78%", "85%", "40%"]} /> : <p className="mb-0">{briefing}</p>}
         </div>
       )}
     </Card>

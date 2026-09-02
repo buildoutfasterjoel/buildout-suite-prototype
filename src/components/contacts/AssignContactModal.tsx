@@ -63,7 +63,7 @@ export function AssignContactModal({
   );
   const chosen = candidates.find((u) => u.id === pick);
 
-  const title = mode === "assign" ? `Assign ${subject}` : `Transfer ${subject}`;
+  const title = mode === "assign" ? `Assign ${subject}` : `Transfer ownership of ${subject}`;
   const lede =
     mode === "assign"
       ? "The company owns this contact. Assigning picks who works it — they get the full working set, and whoever had it before keeps only what's been shared with them."

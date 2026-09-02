@@ -98,11 +98,12 @@ function ContactDetailPage() {
   // What the signed-in user may do here: owner or assignee act freely, a
   // collaborator acts within their tier, anyone else reads and can ask.
   const viewerCanAssign = useCan("assign-contacts");
+  const viewerSeesPrivate = useCan("view-private-contacts");
   const viewerSeat = useCurrentUser((s) => s.id);
   const rights = useMemo(
-    () => resolveViewerRights(ownership, access.shares, viewerCanAssign),
+    () => resolveViewerRights(ownership, access.shares, viewerCanAssign, viewerSeesPrivate),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [ownership, access.shares, viewerCanAssign, viewerSeat],
+    [ownership, access.shares, viewerCanAssign, viewerSeesPrivate, viewerSeat],
   );
   // Assign (company-owned) and Transfer (broker-owned) share one picker.
   const [assignMode, setAssignMode] = useState<AssignMode | null>(null);
@@ -157,6 +158,7 @@ function ContactDetailPage() {
   const briefingCard = (
     <ContactBriefingSection
       briefing={buildBriefing(contact, deals)}
+      hidden={rights.preview}
       open={briefingOpen}
       onToggle={() => setBriefingOpen(!briefingOpen)}
     />
@@ -168,6 +170,7 @@ function ContactDetailPage() {
       completedTasks={completedTasks}
       onLog={addLog}
       readOnly={!rights.canEdit}
+      hidden={rights.preview}
     />
   );
 
@@ -255,6 +258,7 @@ function ContactDetailPage() {
                         completedTasks={completedTasks}
                         onLog={addLog}
                         bare
+                        hidden={rights.preview}
                       />
                     ),
                     taskCount: tasks.length,
