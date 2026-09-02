@@ -51,7 +51,7 @@ export function ContactRequestAccessCard({
   const title = alreadyReadable ? "You have read-only access" : rights.label;
 
   const reason = rights.preview
-    ? `You can see that this contact exists — the name, the stage and that ${who} owns it — because you hold View Private Contacts. Everything else stays hidden until ${whoFirst} shares it with you. To brokers without that permission, this contact doesn't exist at all.`
+    ? `You can see that this contact exists — the name, the stage and that ${who} owns it — because you have View Private Contacts permission turned on. Everything else stays hidden until ${whoFirst} shares it with you. To brokers without that permission, this contact doesn't exist at all.`
     : rights.relationship === "collaborator"
       ? `${who} shared this contact with you to read. Logging activity or making changes needs a higher tier.`
       : ownership.owner.kind === "company"
@@ -90,11 +90,14 @@ export function ContactRequestAccessCard({
           </div>
         ) : (
           <>
+            {/* The ask, named. Every variant of this card — read-only, previewing,
+                shared-to-read — leads into the same three tiers. */}
+            <h3 className="fs-6 fw-semibold mb-0">Ask to collaborate</h3>
             <RadioGroup
               value={tier}
               onValueChange={(v) => setTier(v as AccessTier)}
               className="d-flex flex-column gap-1"
-              aria-label="Access level to request"
+              aria-label="Ask to collaborate — access level to request"
             >
               {askable.map((t) => (
                 // Blueprint's radio isn't a labelable element, so the label
