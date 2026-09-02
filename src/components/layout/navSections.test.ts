@@ -72,7 +72,7 @@ describe("NAV_SECTIONS", () => {
     ]);
   });
 
-  it("puts Vouchers, Receivables and Deposits in the Back Office dropdown", () => {
+  it("puts Vouchers, Receivables, Deposits and Payables in the Back Office dropdown", () => {
     const backOffice = NAV_SECTIONS.find((s) => s.label === "Back Office");
     expect(
       backOffice && "items" in backOffice && backOffice.items.map((i) => i.href),
@@ -80,6 +80,7 @@ describe("NAV_SECTIONS", () => {
       "/backoffice/vouchers",
       "/backoffice/receivables",
       "/backoffice/deposits",
+      "/backoffice/payables",
     ]);
   });
 
