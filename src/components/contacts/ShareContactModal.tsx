@@ -15,12 +15,12 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import {
   ACCESS_TIERS,
-  TEAMMATES,
   type AccessTier,
   type ContactShare,
   type Teammate,
 } from "#/data/teammates";
 import type { ContactOwnership } from "#/data/contactOwnership";
+import { MemberAvatar, TeammatePicker } from "#/components/common/TeammatePicker";
 
 interface ShareContactModalProps {
   open: boolean;
@@ -37,22 +37,6 @@ interface ShareContactModalProps {
   onChangeTier: (memberId: string, tier: AccessTier) => void;
   /** Revoke a member's access. */
   onRemove: (memberId: string) => void;
-}
-
-/** A circular avatar: photo (when available) falling back to initials. */
-function MemberAvatar({
-  member,
-  size,
-}: {
-  member: Pick<Teammate, "name" | "initials" | "avatarUrl">;
-  size?: "sm" | "lg";
-}) {
-  return (
-    <Avatar size={size} className="flex-shrink-0">
-      {member.avatarUrl && <Avatar.Image src={member.avatarUrl} alt={member.name} />}
-      <Avatar.Fallback className="fw-semibold">{member.initials}</Avatar.Fallback>
-    </Avatar>
-  );
 }
 
 /** One row of the access list: avatar, name + sub-line, and a trailing control. */
@@ -94,52 +78,6 @@ function visibilityLine(ownership: ContactOwnership): string {
     return `Owned by ${company} and visible to everyone there. Sharing grants the right to act on it — log activity, edit, or reach out.`;
   }
   return "Visible to everyone at the company. Sharing grants the right to act on it — log activity, edit, or reach out.";
-}
-
-/**
- * Dropdown list of teammates that can be added, shown below the add-people input.
- * Excludes anyone already selected or already granted access.
- */
-function MemberPicker({
-  query,
-  excludeIds,
-  onPick,
-}: {
-  query: string;
-  excludeIds: Set<string>;
-  onPick: (member: Teammate) => void;
-}) {
-  const matches = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return TEAMMATES.filter((m) => !excludeIds.has(m.id)).filter((m) =>
-      q ? `${m.name} ${m.email} ${m.role}`.toLowerCase().includes(q) : true,
-    );
-  }, [query, excludeIds]);
-
-  return (
-    <div className="share-modal__picker shadow-sm">
-      {matches.length === 0 ? (
-        <div className="px-3 py-3 text-muted fs-small">No people match.</div>
-      ) : (
-        matches.map((m) => (
-          <button
-            key={m.id}
-            type="button"
-            className="share-modal__picker-row d-flex align-items-center gap-2 w-100 text-start border-0 bg-transparent px-3 py-2"
-            // onMouseDown fires before the input's blur, so the click lands.
-            onMouseDown={(e) => {
-              e.preventDefault();
-              onPick(m);
-            }}
-          >
-            <MemberAvatar member={m} size="lg" />
-            <span className="fw-semibold flex-grow-1 text-truncate">{m.name}</span>
-            <span className="text-muted fs-small flex-shrink-0">{m.role}</span>
-          </button>
-        ))
-      )}
-    </div>
-  );
 }
 
 export function ShareContactModal({
@@ -259,7 +197,7 @@ export function ShareContactModal({
                   onBlur={scheduleClosePicker}
                 />
                 {pickerOpen && (
-                  <MemberPicker
+                  <TeammatePicker
                     query={query}
                     excludeIds={excludeIds}
                     onPick={pickMember}
@@ -393,7 +331,7 @@ export function ShareContactModal({
                   />
                 </div>
                 {pickerOpen && (
-                  <MemberPicker
+                  <TeammatePicker
                     query={query}
                     excludeIds={excludeIds}
                     onPick={(m) => {

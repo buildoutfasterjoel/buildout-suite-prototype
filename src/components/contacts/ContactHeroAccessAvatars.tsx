@@ -1,8 +1,9 @@
-import type { KeyboardEvent, ReactNode } from "react";
+import type { KeyboardEvent } from "react";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
+import { HeroAccessAvatar } from "#/components/common/HeroAccessAvatar";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowRightArrowLeft,
@@ -57,64 +58,6 @@ export function ContactPrivacyBadge({ isPrivate }: { isPrivate: boolean }) {
 }
 
 /**
- * A single hover-tooltip avatar: photo (or a fallback) + "Name · Access"
- * tooltip. Clicking opens the sharing modal.
- */
-function AccessAvatar({
-  fallback,
-  name,
-  access,
-  avatarUrl,
-  isOwner,
-  fallbackClassName,
-  onOpenShare,
-}: {
-  /** Undefined when the viewer can't manage sharing — the avatar just identifies. */
-  onOpenShare?: () => void;
-  /** Initials, or an icon for the company. */
-  fallback: ReactNode;
-  name: string;
-  access: string;
-  avatarUrl?: string;
-  /** The owner leads the cluster with an offset ring, outside the group. */
-  isOwner?: boolean;
-  fallbackClassName?: string;
-}) {
-  const interactive = !!onOpenShare;
-  return (
-    <Tooltip>
-      <Tooltip.Trigger
-        render={
-          <Avatar
-            role={interactive ? "button" : undefined}
-            tabIndex={0}
-            aria-label={`${name} · ${access}${interactive ? " — manage sharing" : ""}`}
-            className={`${interactive ? "contact-hero__access" : ""}${
-              isOwner ? " contact-hero__owner-avatar" : ""
-            }`}
-            onClick={onOpenShare}
-            onKeyDown={(e: KeyboardEvent) => {
-              if (interactive && (e.key === "Enter" || e.key === " ")) {
-                e.preventDefault();
-                onOpenShare();
-              }
-            }}
-          >
-            {avatarUrl && <Avatar.Image src={avatarUrl} alt={name} />}
-            <Avatar.Fallback className={`fw-semibold ${fallbackClassName ?? ""}`}>
-              {fallback}
-            </Avatar.Fallback>
-          </Avatar>
-        }
-      />
-      <Tooltip.Content>
-        {name} · {access}
-      </Tooltip.Content>
-    </Tooltip>
-  );
-}
-
-/**
  * The contact hero's access cluster, sitting next to the stage badge.
  *
  * The owner stands alone with an offset ring — they're the one accountable for
@@ -160,7 +103,7 @@ export function ContactHeroAccessAvatars({
   return (
     <div className="d-flex align-items-center" style={{ gap: 4 }}>
       {companyOwned ? (
-        <AccessAvatar
+        <HeroAccessAvatar
           fallback={<FontAwesomeIcon icon={faBuilding} />}
           fallbackClassName="bg-storm-grey-100 text-storm-grey-700"
           name={owner.name}
@@ -169,7 +112,7 @@ export function ContactHeroAccessAvatars({
           onOpenShare={open}
         />
       ) : (
-        <AccessAvatar
+        <HeroAccessAvatar
           fallback={owner.user.initials}
           name={owner.user.name}
           access="Owner"
@@ -191,7 +134,7 @@ export function ContactHeroAccessAvatars({
                 role={canAssign ? "button" : undefined}
                 tabIndex={0}
                 aria-label={`${assignee.name} · Assigned${canAssign ? " — reassign" : ""}`}
-                className={canAssign ? "contact-hero__access" : ""}
+                className={canAssign ? "hero-access__avatar" : ""}
                 onClick={canAssign ? onAssign : undefined}
                 onKeyDown={(e: KeyboardEvent) => {
                   if (canAssign && (e.key === "Enter" || e.key === " ")) {
@@ -228,9 +171,9 @@ export function ContactHeroAccessAvatars({
       )}
 
       {shares.length > 0 && (
-        <Avatar.Group className="contact-hero__access-group">
+        <Avatar.Group className="hero-access__group">
           {shares.map((s) => (
-            <AccessAvatar
+            <HeroAccessAvatar
               key={s.member.id}
               fallback={s.member.initials}
               name={s.member.name}
@@ -252,7 +195,7 @@ export function ContactHeroAccessAvatars({
                 size="icon-sm"
                 aria-label="Manage sharing"
                 onClick={onOpenShare}
-                className="contact-hero__share-btn"
+                className="hero-access__btn"
               >
                 <FontAwesomeIcon icon={faUserGear} />
               </Button>
@@ -274,7 +217,7 @@ export function ContactHeroAccessAvatars({
                 size="icon-sm"
                 aria-label="Transfer ownership"
                 onClick={onTransfer}
-                className="contact-hero__share-btn"
+                className="hero-access__btn"
               >
                 <FontAwesomeIcon icon={faArrowRightArrowLeft} />
               </Button>

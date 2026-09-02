@@ -1372,7 +1372,7 @@
 
 // Owner avatar in the shared-access clusters: an offset outline. Uses the
 // darkest storm-grey (not blue — a blue ring reads as a browser focus state).
-.contact-hero__owner-avatar {
+.hero-access__owner {
   position: relative;
   z-index: 1;
   box-shadow:
@@ -1384,7 +1384,7 @@
 // Blueprint's `.avatar-group` already supplies the white pill + base shadow;
 // tighten its inset to the designed 2px and paint the child avatars' rings the
 // card color so the overlap reads as separation rather than a grey outline.
-.contact-hero__access-group {
+.hero-access__group {
   padding: 2px;
 
   .avatar {
@@ -1394,7 +1394,11 @@
 
 // Hero access avatars double as a way into the sharing modal — signal that
 // they're clickable and lift slightly on hover/focus.
-.contact-hero__access {
+//
+// This block (owner, group, avatar, button) is shared by the contact hero and
+// the deal header, which is why it is named for the cluster rather than for
+// either page.
+.hero-access__avatar {
   cursor: pointer;
   transition:
     transform 0.12s ease-in-out,
@@ -1410,7 +1414,7 @@
 
 // Manage-sharing icon button: icon-sm pins the glyph to 12px, so restore the
 // default 14px icon size while keeping the compact 28px button footprint.
-.contact-hero__share-btn .svg-inline--fa {
+.hero-access__btn .svg-inline--fa {
   width: 14px;
   height: 14px;
   font-size: 14px;
