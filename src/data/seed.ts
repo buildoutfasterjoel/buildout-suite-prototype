@@ -46,11 +46,13 @@ import type { CallList } from './contactLists'
 import type { SerializedContactFilters } from '#/components/contacts/contactFilterModel'
 import { reconcileContactDealFields } from './contactStage'
 import {
+  BROKER_TEAMMATES,
   CURRENT_USER,
   TEAMMATES,
   VOUCHER_APPROVER_IDS,
   type AccessTier,
   type ContactShare,
+  type Teammate,
 } from './teammates'
 import {
   DEFAULT_PERSONAL_SPLIT_PCT,
@@ -1279,6 +1281,18 @@ function hashCode(value: string): number {
 }
 
 /**
+ * A stable roster broker for an id the seed has already drawn.
+ *
+ * Used for both the internal broker on a deal and the person who created it.
+ * The two hash different ids, so they land on the same person about a fifth of
+ * the time — a deal the broker working it also opened — and on two people the
+ * rest of the time. Hashed rather than drawn, for the reason `hashCode` gives.
+ */
+function brokerTeammateFor(seed: string): Teammate {
+  return BROKER_TEAMMATES[hashCode(seed) % BROKER_TEAMMATES.length]!
+}
+
+/**
  * One broker and their share.
  *
  * `commissionAmount` is the pool this broker is drawn from, which for both
@@ -1293,11 +1307,22 @@ function hashCode(value: string): number {
 function generateBroker(side: 'internal' | 'outside', commissionAmount: number): DealBroker {
   const splitPct = side === 'internal' ? 100 : faker.helpers.arrayElement([40, 50, 60])
   const id = faker.string.uuid()
+  // Drawn for both sides even though an internal broker's identity is replaced
+  // below. Skipping the two draws would shift every property, contact and deal
+  // generated after this one, and the hand-written stories are pinned to
+  // positions in that stream.
+  const drawnName = `${faker.person.firstName()} ${faker.person.lastName()}`
+  const drawnEmail = faker.internet.email().toLowerCase()
+  // An internal broker is one of the firm's own — `AddBrokerModal` allows
+  // nobody else — so a drawn stranger left the seed disagreeing with the write
+  // path, and left the deal header's access avatars with no photo to show.
+  // An outside broker really is a stranger, and keeps the drawn name.
+  const member = side === 'internal' ? brokerTeammateFor(id) : undefined
   return {
     id,
-    name: `${faker.person.firstName()} ${faker.person.lastName()}`,
+    name: member?.name ?? drawnName,
     role: side === 'internal' ? 'Primary Broker - Sell Side' : 'Outside Broker',
-    email: faker.internet.email().toLowerCase(),
+    email: member?.email ?? drawnEmail,
     side,
     commissionSplitPct: splitPct,
     grossCommission: Math.round(commissionAmount * (splitPct / 100)),
@@ -2048,6 +2073,7 @@ function generateListings(
 
       // Deal (1:1)
       dealId,
+      createdById: brokerTeammateFor(id).id,
       internalBrokers: brokersWithSide,
       outsideBrokers,
       sellerContactIds: sellerContacts.map((c) => c.id),

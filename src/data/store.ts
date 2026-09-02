@@ -11,6 +11,7 @@ import type {
   DealDocument,
   DealMessage,
   DealActivity,
+  DealBroker,
   HeroKey,
 } from './types'
 import type { Email } from './emails'
@@ -23,6 +24,7 @@ import {
   findTeammate,
   type AccessTier,
   type ContactShare,
+  type Teammate,
 } from './teammates'
 import { DEFAULT_STRATEGY, strategyLabel } from '#/components/deals/underwriting/strategies'
 import { buildUnderwritingResult } from '#/components/deals/underwriting/underwritingResult'
@@ -214,6 +216,41 @@ export function generateUnderwritingResult(listingId: string): Listing | undefin
   return updateListingUnderwriting(listingId, {
     result,
     generatedAt: new Date().toISOString(),
+  })
+}
+
+/**
+ * Put a teammate on the deal team as an internal broker.
+ *
+ * This is the grant path behind the deal header's Manage Access modal: a
+ * deal's access follows its team, so granting someone access *is* adding them
+ * as a broker. They arrive with their identity and nothing else — no gross, no
+ * split, "No Plan" — which is exactly what the voucher's Add Broker modal
+ * writes, so a person added from either place is the same row.
+ *
+ * Anyone already on the team is ignored rather than duplicated; the picker
+ * filters them out, and this is the guard for a stale one.
+ */
+export function addDealInternalBroker(
+  listingId: string,
+  member: Teammate,
+): Listing | undefined {
+  const existing = useDataStore.getState().listings.get(listingId)
+  if (!existing) return undefined
+  if (existing.internalBrokers.some((b) => b.name === member.name)) return existing
+  const broker: DealBroker = {
+    id: crypto.randomUUID(),
+    name: member.name,
+    role: member.role,
+    email: member.email,
+    side: 'internal',
+    commissionSplitPct: 0,
+    grossCommission: 0,
+    commissionPlan: 'No Plan',
+    personalSplitPct: 0,
+  }
+  return patchListing(listingId, {
+    internalBrokers: [...existing.internalBrokers, broker],
   })
 }
 

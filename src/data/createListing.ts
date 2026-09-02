@@ -619,6 +619,9 @@ export function createProposalListing(draft: NewListingDraft): Listing {
 
     // Deal (1:1) — empty/zeroed for a brand-new proposal
     dealId,
+    // Whoever is looking created it — the same person `currentUserBroker` puts
+    // on the deal as its internal broker.
+    createdById: currentUser().id,
     internalBrokers: [currentUserBroker(commissionAmount)],
     outsideBrokers: [],
     sellerContactIds: seller ? [seller.id] : [],
