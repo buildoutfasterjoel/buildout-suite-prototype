@@ -118,8 +118,9 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
 export const CHANGELOG: ChangelogEntry[] = [
   {
     pr: 203,
-    title: "A Payables page in Back Office, and a way to pay a broker off it",
-    mergedAt: "2026-09-02T19:30:00Z",
+    title:
+      "A Payables page in Back Office, grouped by the broker who is owed, and a way to pay them off it",
+    mergedAt: "2026-09-02T19:14:04Z",
     day: "2026-09-02",
     author: "buildoutfasterjoel",
     area: "Back Office",
