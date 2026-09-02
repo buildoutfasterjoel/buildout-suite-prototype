@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Table } from "@buildoutinc/blueprint-react/ui/Table";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { HiddenValue } from "#/components/contacts/HiddenBlock";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
@@ -494,11 +495,20 @@ export function ContactsTable({
                         </Badge>
                       )}
                       {privateIds?.has(contact.id) && (
-                        <FontAwesomeIcon
-                          icon={faLock}
-                          className="fs-xs text-muted"
-                          title="Private — hidden from the firm"
-                        />
+                        <Tooltip>
+                          <Tooltip.Trigger
+                            render={
+                              <span
+                                className="d-inline-flex align-items-center"
+                                tabIndex={0}
+                                aria-label="Private Contact"
+                              />
+                            }
+                          >
+                            <FontAwesomeIcon icon={faLock} className="fs-xs text-muted" />
+                          </Tooltip.Trigger>
+                          <Tooltip.Content>Private Contact</Tooltip.Content>
+                        </Tooltip>
                       )}
                       {contact.doNotCall && (
                         <span className="fs-xs text-destructive">
