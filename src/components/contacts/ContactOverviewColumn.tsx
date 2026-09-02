@@ -25,6 +25,7 @@ import {
 } from "#/components/contacts/ContactHeroAccessAvatars";
 import { ContactHeroInfo } from "#/components/contacts/ContactHeroInfo";
 import { ContactSiblings } from "#/components/contacts/ContactSiblings";
+import { HiddenBlock, HiddenLines, HiddenValue } from "#/components/contacts/HiddenBlock";
 import { useComposeFocus } from "#/components/contacts/useComposeFocus";
 import { callFlow } from "#/components/call/callFlow";
 import type { ContactShare } from "#/data/teammates";
@@ -342,18 +343,29 @@ export function ContactOverviewColumn({
               className="text-muted d-flex flex-column"
               style={{ fontSize: 14, lineHeight: "19px" }}
             >
-              {(contact.title || contact.company) && (
-                <span>
-                  {[contact.title, contact.company].filter(Boolean).join(" · ")}
-                </span>
+              {rights.preview ? (
+                // Previewing a private contact: the name and stage are theirs
+                // to know; the title, company and last touch are not.
+                <>
+                  <HiddenValue width="65%" />
+                  <HiddenValue width="45%" className="mt-1" />
+                </>
+              ) : (
+                <>
+                  {(contact.title || contact.company) && (
+                    <span>
+                      {[contact.title, contact.company].filter(Boolean).join(" · ")}
+                    </span>
+                  )}
+                  <span>
+                    Last touch:{" "}
+                    <span className="fw-semibold">{buildLastTouch(contact)}</span>
+                  </span>
+                  {/* One person, many relationships: other brokers' records for
+                      this same human, among what the viewer may see. */}
+                  <ContactSiblings contact={contact} rights={rights} />
+                </>
               )}
-              <span>
-                Last touch:{" "}
-                <span className="fw-semibold">{buildLastTouch(contact)}</span>
-              </span>
-              {/* One person, many relationships: other brokers' records for
-                  this same human, among what the viewer may see. */}
-              <ContactSiblings contact={contact} rights={rights} />
             </div>
           </div>
         </div>
@@ -375,7 +387,7 @@ export function ContactOverviewColumn({
           )}
           <ContactHeroAccessAvatars
             ownership={ownership}
-            shares={shares}
+            shares={rights.preview ? [] : shares}
             canShare={rights.canShare}
             canAssign={rights.canAssign}
             canTransfer={rights.canTransfer}
@@ -394,7 +406,28 @@ export function ContactOverviewColumn({
           {showDetails ? "Hide Contact Details" : "Show Contact Details"}
         </Button>
 
-        {showDetails && (
+        {showDetails && rights.preview && (
+          // Every detail masked: reach-out records, fields, tags. The shapes
+          // say there is something here; the permission says not for you.
+          <div className="contact-details-panel d-flex flex-column gap-3">
+            <div className="d-flex flex-column gap-2 border-bottom pb-3">
+              <HiddenValue width={150} />
+              <HiddenValue width={200} />
+              <HiddenValue width="85%" />
+            </div>
+            <div className="d-flex flex-column gap-3 border-bottom pb-3">
+              <HiddenValue width={140} />
+              <HiddenValue width={170} />
+              <HiddenValue width={120} />
+              <HiddenValue width={160} />
+              <div className="d-flex align-items-center gap-2">
+                <span className="fw-semibold">Tags</span>
+                <HiddenValue width={70} height={22} className="rounded-pill" />
+              </div>
+            </div>
+          </div>
+        )}
+        {showDetails && !rights.preview && (
           <div className="contact-details-panel d-flex flex-column gap-3">
             {/* Reach-out records. Keyed by contact so the per-type Show/Hide
                 state resets when a call session steps to the next person —
@@ -498,6 +531,10 @@ export function ContactOverviewColumn({
             ) : undefined
           }
         >
+          {rights.preview && deals.length > 0 ? (
+            <HiddenBlock what="Deals" />
+          ) : (
+          <>
           <div className="d-flex flex-column gap-2">
             {deals.length === 0 ? (
               <span className="text-muted fs-small">
@@ -550,6 +587,8 @@ export function ContactOverviewColumn({
               </>
             )}
           </div>
+          </>
+          )}
         </ContactSection>
 
         <ContactSection
@@ -557,6 +596,10 @@ export function ContactOverviewColumn({
           label="Listing Inquiries"
           count={inquiryListingIds.length}
         >
+          {rights.preview && inquiryListingIds.length > 0 ? (
+            <HiddenBlock what="Listing Inquiries" />
+          ) : (
+          <>
           <div className="d-flex flex-column gap-2">
             {inquiryListingIds.length === 0 ? (
               <span className="text-muted fs-small">
@@ -580,6 +623,8 @@ export function ContactOverviewColumn({
               )
             )}
           </div>
+          </>
+          )}
         </ContactSection>
 
         <ContactSection
@@ -588,6 +633,10 @@ export function ContactOverviewColumn({
           count={propertyGroups.length}
           action={rights.canEdit ? <SectionAction label="Create New Property" /> : undefined}
         >
+          {rights.preview && propertyGroups.length > 0 ? (
+            <HiddenBlock what="Properties" />
+          ) : (
+          <>
           <div className="d-flex flex-column gap-2">
             {propertyGroups.length === 0 ? (
               <span className="text-muted fs-small">None on file.</span>
@@ -610,6 +659,8 @@ export function ContactOverviewColumn({
               )
             )}
           </div>
+          </>
+          )}
         </ContactSection>
 
         <ContactSection
@@ -618,6 +669,10 @@ export function ContactOverviewColumn({
           count={memberLists.length}
           action={rights.canEdit ? <SectionAction label="Add to List" /> : undefined}
         >
+          {rights.preview && memberLists.length > 0 ? (
+            <HiddenBlock what="Lists" />
+          ) : (
+          <>
           {memberLists.length === 0 ? (
             <span className="text-muted fs-small">
               Lists this contact belongs to will appear here.
@@ -636,15 +691,21 @@ export function ContactOverviewColumn({
               ))}
             </div>
           )}
+          </>
+          )}
         </ContactSection>
 
         <ContactSection
           value="customFields"
           label="Custom Fields"
         >
-          <div className="text-muted fs-small">
-            Org-level custom fields will appear here.
-          </div>
+          {rights.preview ? (
+            <HiddenLines widths={["55%", "70%", "45%"]} />
+          ) : (
+            <div className="text-muted fs-small">
+              Org-level custom fields will appear here.
+            </div>
+          )}
         </ContactSection>
       </Accordion>
     </Card>

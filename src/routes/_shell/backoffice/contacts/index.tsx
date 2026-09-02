@@ -92,7 +92,7 @@ function PeoplePage() {
   // The book as the viewer may see it: private records they have no relationship
   // with aren't here at all — not in the rows, the counts, or the filter facets.
   // Reactive to the store, the roster seat and the company settings.
-  const { contacts, privateIds } = useVisibleContacts();
+  const { contacts, privateIds, previewIds } = useVisibleContacts();
   // "2 relationships" chips — computed over the visible book, so a private
   // twin in someone else's book doesn't show up as a count either.
   const relCounts = useMemo(() => relationshipCounts(contacts), [contacts]);
@@ -895,6 +895,7 @@ function PeoplePage() {
                   {/* Table */}
                   <ContactsTable
                     privateIds={privateIds}
+                    previewIds={previewIds}
                     relationshipCounts={relCounts}
                     contacts={paged}
                     filtersActive={filtersActive}

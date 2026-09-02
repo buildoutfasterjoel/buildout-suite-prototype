@@ -42,8 +42,9 @@ export function ContactRequestAccessCard({
   );
   const askable = ACCESS_TIERS.filter((t) => t.value !== rights.tier);
 
-  const reason =
-    rights.relationship === "collaborator"
+  const reason = rights.preview
+    ? `You can see that this contact exists — the name, the stage and that ${who} owns it — because you hold View Private Contacts. Everything else stays hidden until ${whoFirst} shares it with you. To brokers without that permission, this contact doesn't exist at all.`
+    : rights.relationship === "collaborator"
       ? `${who} shared this contact with you to read. Logging activity or making changes needs a higher tier.`
       : ownership.owner.kind === "company"
         ? `This contact belongs to the company and is visible to everyone here. Only ${who}, who's assigned to it, and the people they've shared it with can act on it.`

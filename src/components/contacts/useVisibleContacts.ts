@@ -19,7 +19,11 @@ import {
  * with View Private Contacts, or a collaborator shared into a private record —
  * so a list can mark them without re-resolving per row.
  */
-export function useVisibleContacts(): { contacts: Contact[]; privateIds: Set<string> } {
+export function useVisibleContacts(): {
+  contacts: Contact[];
+  privateIds: Set<string>;
+  previewIds: Set<string>;
+} {
   const contacts = useDataStore((s) => s.contacts);
   const shares = useDataStore((s) => s.contactShares);
   const roster = useRoster((s) => s.users);

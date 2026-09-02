@@ -47,9 +47,19 @@ export interface ContactRights {
   canAssign: boolean;
   /** Move a broker-owned record into another book. The owner's alone. */
   canTransfer: boolean;
+  /**
+   * Seeing a private record only through View Private Contacts, with no
+   * relationship to it. The viewer may know it exists — name, stage, owner —
+   * and nothing else until the owner shares it. To anyone without that
+   * permission the record doesn't exist at all.
+   */
+  preview: boolean;
 }
 
-type Working = Omit<ContactRights, "relationship" | "label" | "canAssign" | "canTransfer">;
+type Working = Omit<
+  ContactRights,
+  "relationship" | "label" | "canAssign" | "canTransfer" | "preview"
+>;
 
 const FULL: Working = {
   canLog: true,
@@ -70,18 +80,34 @@ export function resolveViewerRights(
   shares: ContactShare[],
   /** Whether the viewer holds Assign Contacts. */
   viewerCanAssign = false,
+  /** Whether the viewer holds View Private Contacts — decides `preview`. */
+  viewerSeesPrivate = false,
 ): ContactRights {
   const companyOwned = ownership.owner.kind === "company";
   // Assign exists only where the company owns; transfer only where a person does.
   const canAssign =
     companyOwned && (viewerCanAssign || ownership.assignee?.id === viewerId());
   if (viewerOwns(ownership)) {
-    return { relationship: "owner", label: "Owner", ...FULL, canAssign: false, canTransfer: true };
+    return {
+      relationship: "owner",
+      label: "Owner",
+      ...FULL,
+      canAssign: false,
+      canTransfer: true,
+      preview: false,
+    };
   }
   // Company-owned and assigned to the viewer: the full working set, minus
   // ownership itself (they can't transfer it or take it with them).
   if (companyOwned && ownership.assignee?.id === viewerId()) {
-    return { relationship: "assignee", label: "Assigned", ...FULL, canAssign, canTransfer: false };
+    return {
+      relationship: "assignee",
+      label: "Assigned",
+      ...FULL,
+      canAssign,
+      canTransfer: false,
+      preview: false,
+    };
   }
   const share = shares.find((s) => s.member.id === viewerId());
   if (share) {
@@ -96,9 +122,20 @@ export function resolveViewerRights(
       canShare: caps?.reshare ?? false,
       canAssign,
       canTransfer: false,
+      preview: false,
     };
   }
-  return { relationship: "none", label: "View only", ...NONE, canAssign, canTransfer: false };
+  // No relationship. A private record reached only through see-through is a
+  // preview: existence, name, stage and owner — nothing else.
+  const preview = ownership.isPrivate && viewerSeesPrivate;
+  return {
+    relationship: "none",
+    label: preview ? "Previewing Private Contact" : "View only",
+    ...NONE,
+    canAssign,
+    canTransfer: false,
+    preview,
+  };
 }
 
 /**

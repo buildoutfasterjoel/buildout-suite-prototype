@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Table } from "@buildoutinc/blueprint-react/ui/Table";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
+import { HiddenValue } from "#/components/contacts/HiddenBlock";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
@@ -120,6 +121,12 @@ interface ContactColumn {
   defaultVisible: boolean;
   render: (c: Contact, ctx: ColumnContext) => ReactNode;
 }
+
+/**
+ * What a previewed private contact still shows in the table: who owns it and
+ * where the relationship stands. Everything else masks.
+ */
+const PREVIEW_VISIBLE_COLUMNS = new Set(["assignedTo", "contactStage"]);
 
 const CONTACT_COLUMNS: ContactColumn[] = [
   {
@@ -282,9 +289,15 @@ export function ContactsTable({
   onToggleOne,
   onToggleAll,
   privateIds,
+  previewIds,
   relationshipCounts,
 }: {
   contacts: Contact[];
+  /**
+   * Private records the viewer sees only through View Private Contacts. Name,
+   * stage and owner stay; every other cell is a hidden rectangle.
+   */
+  previewIds?: Set<string>;
   /** contact id → how many visible records share its person (2+). */
   relationshipCounts?: Map<string, number>;
   /**
@@ -494,7 +507,7 @@ export function ContactsTable({
                       )}
                     </span>
                     <span className="fs-small text-muted text-nowrap">
-                      {contact.email}
+                      {previewIds?.has(contact.id) ? <HiddenValue width={150} height={12} /> : contact.email}
                     </span>
                   </div>
                 </div>
@@ -502,9 +515,13 @@ export function ContactsTable({
 
               {shownColumns.map((col) => (
                 <Table.Cell key={col.id}>
-                  {col.render(contact, {
-                    dealCount: dealCounts.get(contact.id) ?? 0,
-                  })}
+                  {previewIds?.has(contact.id) && !PREVIEW_VISIBLE_COLUMNS.has(col.id) ? (
+                    <HiddenValue width={col.id === "phone" ? 110 : "70%"} />
+                  ) : (
+                    col.render(contact, {
+                      dealCount: dealCounts.get(contact.id) ?? 0,
+                    })
+                  )}
                 </Table.Cell>
               ))}
 
