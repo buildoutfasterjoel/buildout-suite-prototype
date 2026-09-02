@@ -40,10 +40,25 @@ export function ContactRequestAccessCard({
   const [tier, setTier] = useState<AccessTier>(
     rights.tier === "view" ? "contributor" : "contributor",
   );
-  const askable = ACCESS_TIERS.filter((t) => t.value !== rights.tier);
+  // On a company-owned record everyone at the firm can already read it — View
+  // is what the viewer has, not something to ask for. So the card says so, and
+  // offers only the tiers that would change anything.
+  const alreadyReadable =
+    ownership.owner.kind === "company" && rights.relationship === "none" && !rights.preview;
+  const askable = ACCESS_TIERS.filter(
+    (t) => t.value !== rights.tier && !(alreadyReadable && t.value === "view"),
+  );
+  // One line does both jobs: what you have, and what the card is for.
+  const standing = rights.preview
+    ? "Previewing private contact"
+    : rights.relationship === "collaborator"
+      ? `You have ${rights.label} access`
+      : "You have read-only access";
+  const title = `${standing}. Ask to collaborate.`;
 
-  const reason =
-    rights.relationship === "collaborator"
+  const reason = rights.preview
+    ? `You can see that this contact exists — the name, the stage and that ${who} owns it — because you have View Private Contacts permission turned on. Everything else stays hidden until ${whoFirst} shares it with you. To brokers without that permission, this contact doesn't exist at all.`
+    : rights.relationship === "collaborator"
       ? `${who} shared this contact with you to read. Logging activity or making changes needs a higher tier.`
       : ownership.owner.kind === "company"
         ? `This contact belongs to the company and is visible to everyone here. Only ${who}, who's assigned to it, and the people they've shared it with can act on it.`
@@ -55,7 +70,7 @@ export function ContactRequestAccessCard({
         <div className="d-flex align-items-center gap-2">
           <FontAwesomeIcon icon={faLockKeyhole} className="text-muted" />
           <span className="fw-semibold" style={{ fontSize: 20, lineHeight: "26px" }}>
-            {rights.label}
+            {title}
           </span>
         </div>
         <p className="mb-0 text-muted">{reason}</p>
@@ -85,7 +100,7 @@ export function ContactRequestAccessCard({
               value={tier}
               onValueChange={(v) => setTier(v as AccessTier)}
               className="d-flex flex-column gap-1"
-              aria-label="Access level to request"
+              aria-label="Ask to collaborate — access level to request"
             >
               {askable.map((t) => (
                 // Blueprint's radio isn't a labelable element, so the label

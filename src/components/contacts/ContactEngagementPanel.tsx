@@ -33,6 +33,7 @@ import {
 } from "#/components/contacts/timeline";
 import { buildContactTimeline } from "#/components/contacts/timelineArcs";
 import { ContactRequestAccessCard } from "#/components/contacts/ContactRequestAccessCard";
+import { HiddenBlock } from "#/components/contacts/HiddenBlock";
 import type { ContactOwnership } from "#/data/contactOwnership";
 import type { ContactRights } from "#/data/contactViewerAccess";
 import { TimelineEvent } from "#/components/contacts/TimelineEvent";
@@ -387,7 +388,9 @@ export function ContactEngagementPanel({
     recordEngagement(contact.id, "email");
   }
 
-  const filterControl =
+  // Nothing to filter on a hidden feed — and "Needs Reply 1" over a lock
+  // would be a detail the viewer isn't meant to have.
+  const filterControl = rights.preview ? null :
     timelineFilter === "dropdown" ? (
       <TimelineFilterDropdown
         events={events}
@@ -400,6 +403,13 @@ export function ContactEngagementPanel({
     ) : (
       <TimelineFilterBar events={events} value={filter} onChange={setFilter} />
     );
+
+  // A previewed private contact: the feed exists, and isn't the viewer's to read.
+  const hiddenFeed = (
+    <div className="p-4">
+      <HiddenBlock what="Timeline" plural={false} />
+    </div>
+  );
 
   const feed = (
     <div className="d-flex flex-column gap-3 p-4">
@@ -526,7 +536,7 @@ export function ContactEngagementPanel({
             </div>
           </div>
 
-          {pane === "timeline" && feed}
+          {pane === "timeline" && (rights.preview ? hiddenFeed : feed)}
           {pane === "tasks" && <div className="p-4">{sideTabs.tasks}</div>}
         </Card>
       ) : (
@@ -542,7 +552,7 @@ export function ContactEngagementPanel({
             </span>
             {filterControl}
           </div>
-          {feed}
+          {rights.preview ? hiddenFeed : feed}
         </Card>
       )}
 

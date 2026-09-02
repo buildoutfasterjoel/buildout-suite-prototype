@@ -137,3 +137,24 @@ describe("assign and transfer", () => {
     expect(resolveViewerRights(own("Sarah Chen"), [], true).canAssign).toBe(false);
   });
 });
+
+describe("preview — seeing a private record only through View Private Contacts", () => {
+  const sarahsPrivate = resolveContactOwnership(
+    { assignedTo: "Sarah Chen", isPrivate: true },
+    SEED_ROSTER,
+    DEFAULT_CONTACT_ACCESS_SETTINGS,
+    COMPANY,
+  );
+
+  it("is a preview for a stranger with the permission", () => {
+    const r = resolveViewerRights(sarahsPrivate, [], false, true);
+    expect(r).toMatchObject({ relationship: "none", preview: true, canLog: false, canEdit: false });
+    expect(r.label).toBe("Previewing Private Contact");
+  });
+
+  it("is not a preview without the permission, for a share, or on a visible record", () => {
+    expect(resolveViewerRights(sarahsPrivate, [], false, false).preview).toBe(false);
+    expect(resolveViewerRights(sarahsPrivate, [me("view")], false, true).preview).toBe(false);
+    expect(resolveViewerRights(own("Sarah Chen"), [], false, true).preview).toBe(false);
+  });
+});

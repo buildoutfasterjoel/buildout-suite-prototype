@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { Accordion } from "@buildoutinc/blueprint-react/ui/Accordion";
+import { HiddenBlock } from "#/components/contacts/HiddenBlock";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
@@ -66,6 +67,7 @@ export function ContactTasksPanel({
   onLog,
   bare = false,
   readOnly = false,
+  hidden = false,
 }: {
   contact: Contact;
   tasks: ContactTask[];
@@ -79,6 +81,8 @@ export function ContactTasksPanel({
   bare?: boolean;
   /** The viewer can read the tasks but not add, open, or complete them. */
   readOnly?: boolean;
+  /** A previewed private contact: tasks exist but aren't the viewer's to see. */
+  hidden?: boolean;
 }) {
   // Section collapse + completed-reveal persist across contacts (useContactUiPrefs).
   const tasksOpen = useContactUiPrefs((s) => s.tasksOpen);
@@ -167,7 +171,9 @@ export function ContactTasksPanel({
     return undefined;
   };
 
-  const body = (
+  const body = hidden && active.length + completed.length > 0 ? (
+    <HiddenBlock what="Tasks" />
+  ) : (
     <div className="d-flex flex-column">
       {active.length === 0 ? (
         <span className="text-muted fs-small">

@@ -145,6 +145,47 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
+    pr: 201,
+    title:
+      "A Managing Director previews a private contact instead of opening it, and read-only records stop inviting interaction",
+    mergedAt: "2026-09-02T16:45:15Z",
+    day: "2026-09-02",
+    author: "ZS-buildout",
+    area: "Contacts",
+    summary:
+      "Seeing that a private contact exists is not the same as being let in. A Managing Director with View Private Contacts now sees the name, the stage and who owns a private record, with everything else withheld until the owner shares it — and every read-only record stops looking like something you can act on.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "On a private contact you haven't been shared into, a Managing Director sees the name, the stage and the owner. Every other detail — in the People table, the hero, the details, custom fields and briefing — shows as a muted rectangle, and the Timeline, Deals, Listing Inquiries, Properties, Lists and Tasks say they're hidden because the contact is private.",
+      },
+      {
+        kind: "feature",
+        text: "The request card on such a record reads \"Previewing private contact. Ask to collaborate.\" and explains that the preview comes from the View Private Contacts permission, that the rest stays hidden until the owner shares it, and that other brokers can't see the record at all.",
+      },
+      {
+        kind: "refinement",
+        text: "On a company-owned contact you aren't assigned to, the card reads \"You have read-only access. Ask to collaborate.\" and offers Contributor and Outreach only — everyone at the firm can already view it, so View isn't something to ask for.",
+      },
+      {
+        kind: "refinement",
+        text: "Timeline rows you can't act on no longer highlight on hover, so a read-only feed doesn't feel interactive.",
+      },
+      {
+        kind: "refinement",
+        text: "Hidden values on a previewed contact are still, darker and shorter: no loading shimmer, because nothing is loading.",
+      },
+      {
+        kind: "refinement",
+        text: "Hovering the lock beside a private contact's name in the People table says \"Private Contact\".",
+      },
+      {
+        kind: "refinement",
+        text: "The transfer dialog is titled \"Transfer ownership of\" the contact's name.",
+      },
+    ],
+  },
+  {
     pr: 200,
     title: "Contact ownership, privacy, sharing, and viewing as anyone",
     mergedAt: "2026-09-02T00:19:55Z",
