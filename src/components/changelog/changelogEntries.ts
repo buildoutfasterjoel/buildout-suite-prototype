@@ -117,6 +117,35 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 209,
+    title:
+      "A receivable can only be billed to a listed payer, and the commission breakdown names each internal broker",
+    mergedAt: "2026-09-03T22:10:18Z",
+    day: "2026-09-03",
+    author: "buildoutfasterjoel",
+    area: "Back Office",
+    summary:
+      "Two things on the voucher were answering a question with the wrong list. A new receivable could be billed to someone the Billing section did not name, and the commission breakdown drew every one of the house\u2019s brokers as a single anonymous slice \u2014 so a broker could not see their own share on the voucher they were signing.",
+    highlights: [
+      {
+        kind: "refinement",
+        text: "A new receivable is billed to the voucher\u2019s payers and nobody else. The deal\u2019s buyer used to be offered as a shortcut, which quietly added them to Billing as a side effect of creating the line.",
+      },
+      {
+        kind: "refinement",
+        text: "Add Receivable is disabled until Billing names a payer, since there is nothing to bill to until then.",
+      },
+      {
+        kind: "feature",
+        text: "The Gross Commission Breakdown gives each internal broker their own slice and their own legend row, named, in the order the Internal Commissions table lists them. Outside brokers stay one row, grouped with the deductions as the money that leaves before the house splits anything.",
+      },
+      {
+        kind: "refinement",
+        text: "A fourth broker folds into one \u201cOther Brokers\u201d row rather than repeating a colour already used, so no two slices can be mistaken for each other.",
+      },
+    ],
+  },
+  {
     pr: 208,
     title:
       "A voucher cannot be submitted with commission nobody has been assigned, and a broker\u2019s Gross $ now follows the deal",
