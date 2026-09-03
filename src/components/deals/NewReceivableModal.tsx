@@ -93,8 +93,7 @@ export interface NewReceivableInput {
  * someone this voucher already names as a payer; anyone else is a contact with
  * no part in it. Which is also why there is no first-receivable shortcut here:
  * a voucher with no payers cannot bill at all, and the Add Receivable button is
- * disabled until one is added, rather than letting this modal quietly create
- * one as a side effect.
+ * disabled until one is added.
  *
  * One entry per person, not two. Whether the invoice carries their name or
  * their company is the row's own dropdown once the line exists — see

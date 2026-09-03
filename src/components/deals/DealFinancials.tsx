@@ -1796,37 +1796,16 @@ function ReceivablesSection({
               Set Sales Tax
             </Button>
             {/* Nothing to bill to until the Billing section names a payer, and
-                the picker inside would open empty. Disabled with the reason on a
-                wrapper, since a disabled button fires no pointer events — the
-                same trick `RemovePartyButton` uses. */}
-            <Tooltip>
-              <Tooltip.Trigger
-                render={
-                  payerIds.length === 0 ? (
-                    <span className="d-inline-flex">
-                      <Button variant="ghost" size="sm" disabled>
-                        <FontAwesomeIcon icon={faPlus} />
-                        Add Receivable
-                      </Button>
-                    </span>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setAddOpen(true)}
-                    >
-                      <FontAwesomeIcon icon={faPlus} />
-                      Add Receivable
-                    </Button>
-                  )
-                }
-              />
-              <Tooltip.Content>
-                {payerIds.length === 0
-                  ? "Add a payer to the Billing section first."
-                  : "Bill a new line on this voucher"}
-              </Tooltip.Content>
-            </Tooltip>
+                the picker inside would open empty. */}
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={payerIds.length === 0}
+              onClick={() => setAddOpen(true)}
+            >
+              <FontAwesomeIcon icon={faPlus} />
+              Add Receivable
+            </Button>
             <DropdownMenu>
               <DropdownMenu.Trigger
                 render={
