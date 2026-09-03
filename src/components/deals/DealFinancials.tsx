@@ -114,6 +114,12 @@ import {
 } from "#/data/voucherRights";
 import "./DealFinancials.scss";
 import {
+  DEDUCTIONS_COLOR,
+  internalBrokerSegments,
+  OUTSIDE_COLOR,
+  UNALLOCATED_COLOR,
+} from "./commissionSegments";
+import {
   buildRentSchedule,
   computeTotal,
   formatScheduleDate,
@@ -127,12 +133,6 @@ function plural(count: number, noun: string): string {
   return count === 1 ? noun : `${noun}s`;
 }
 
-/** Chart colors — same brand hues already used for the app's other recharts series. */
-const DEDUCTIONS_COLOR = "#8833ea";
-const BROKER_COLOR = "#2968e7";
-/** Outside commission — the lighter step of the same blue, since a co-broke is a broker payout too. */
-const OUTSIDE_COLOR = "#3f86f2";
-const UNALLOCATED_COLOR = "#e27400";
 
 function sum(values: number[]): number {
   return values.reduce((total, v) => total + v, 0);
@@ -216,17 +216,21 @@ function BreakdownSection({ listing }: { listing: Listing }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  const { deductions, outside, internal, allocated, unallocated } =
+  const { deductions, outside, allocated, unallocated } =
     commissionAllocation(listing);
 
+  // Everything taken off the gross, in the order it comes off it: the two
+  // amounts that leave before the house splits anything, then the house's own
+  // brokers one by one. `internal` is still the sum of those broker slices —
+  // see `internalBrokerSegments` for why it is no longer drawn as one.
   const segments = [
     {
       label: "Pre-Split Deductions",
       value: deductions,
       color: DEDUCTIONS_COLOR,
     },
-    { label: "Outside Commission", value: outside, color: OUTSIDE_COLOR },
-    { label: "Broker Commission", value: internal, color: BROKER_COLOR },
+    { label: "Outside Brokers", value: outside, color: OUTSIDE_COLOR },
+    ...internalBrokerSegments(listing.internalBrokers),
     // The donut cannot draw a negative slice. An over-allocated voucher has no
     // remainder to show, and the row below is where that is stated in words.
     {
@@ -236,22 +240,17 @@ function BreakdownSection({ listing }: { listing: Listing }) {
     },
   ];
 
+  // The list is the donut's legend, so it is built from the same array rather
+  // than written out again — the two disagreeing about a broker's colour is the
+  // one bug a legend can have. Only the trailing Unallocated slice is restated
+  // below, because the list says "Over-Allocated" where the donut can draw
+  // nothing at all.
   const rows: BreakdownRow[] = [
-    {
-      label: "Pre-Split Deductions",
-      value: formatCurrency(deductions),
-      color: DEDUCTIONS_COLOR,
-    },
-    {
-      label: "Outside Commission",
-      value: formatCurrency(outside),
-      color: OUTSIDE_COLOR,
-    },
-    {
-      label: "Broker Commission",
-      value: formatCurrency(internal),
-      color: BROKER_COLOR,
-    },
+    ...segments.slice(0, -1).map((s) => ({
+      label: s.label,
+      value: formatCurrency(s.value),
+      color: s.color,
+    })),
     { label: "Allocated", value: formatCurrency(allocated), emphasis: true },
     {
       label: unallocated < 0 ? "Over-Allocated" : "Unallocated",
@@ -267,7 +266,9 @@ function BreakdownSection({ listing }: { listing: Listing }) {
         <div className="col-md-7">
           {rows.map((row, i) => (
             <BreakdownListRow
-              key={row.label}
+              // Index, not label: two brokers on one deal can share a name.
+              // biome-ignore lint/suspicious/noArrayIndexKey: derived list, never reordered in place
+              key={i}
               row={row}
               isLast={i === rows.length - 1}
             />
@@ -290,8 +291,9 @@ function BreakdownSection({ listing }: { listing: Listing }) {
                     paddingAngle={2}
                     strokeWidth={0}
                   >
-                    {segments.map((s) => (
-                      <Cell key={s.label} fill={s.color} />
+                    {segments.map((s, i) => (
+                      // biome-ignore lint/suspicious/noArrayIndexKey: see the legend list above
+                      <Cell key={i} fill={s.color} />
                     ))}
                   </Pie>
                 </PieChart>
