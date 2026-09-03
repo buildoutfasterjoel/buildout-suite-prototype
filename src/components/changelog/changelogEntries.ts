@@ -117,6 +117,47 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 208,
+    title:
+      "A voucher cannot be submitted with commission nobody has been assigned, and a broker\u2019s Gross $ now follows the deal",
+    mergedAt: "2026-09-03T21:33:40Z",
+    day: "2026-09-03",
+    author: "buildoutfasterjoel",
+    area: "Back Office",
+    summary:
+      "A voucher could be sent to an approver with commission that had been given to nobody, and the breakdown that was supposed to show it counted the co-broke as leftover money. Submitting now waits until every dollar is accounted for \u2014 and because that only works if the figures can be corrected, a broker\u2019s Gross $ now follows their split and the deal\u2019s commission.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "Submitting is held until the gross commission is fully allocated, and the button says which way it is out \u2014 the shortfall to allocate, or the amount paid out beyond what the deal earned.",
+      },
+      {
+        kind: "fix",
+        text: "The Gross Commission Breakdown counts the co-broke. An outside broker\u2019s share was reported as unallocated money on 9 of the 31 seeded vouchers, with no Outside Commission slice on the donut to explain the orange.",
+      },
+      {
+        kind: "fix",
+        text: "A voucher that pays out more than the deal earned reads \u201cOver-Allocated\u201d instead of a settled-looking $0.00. The figure used to be clamped at zero, which hid it.",
+      },
+      {
+        kind: "fix",
+        text: "Entering a commission on a deal carries the brokers\u2019 Gross $ with it. A deal created before its commission was known kept its broker on $0 at a 100% split, so the voucher drew the whole commission as unallocated and could never be sent.",
+      },
+      {
+        kind: "fix",
+        text: "Gross % and Gross $ are two views of one figure and each now writes the other, against the net as it stands on screen \u2014 so an unsaved deduction moves the math with it.",
+      },
+      {
+        kind: "fix",
+        text: "A number on the voucher can be cleared to retype it. Clearing one used to put a 0 back in the box, so the next keystroke read \u201c05\u201d.",
+      },
+      {
+        kind: "refinement",
+        text: "Approve on a pending voucher is now a Review menu, holding Approve and Request Changes. Request Changes is a placeholder \u2014 sending a voucher back to the broker is not built yet.",
+      },
+    ],
+  },
+  {
     pr: 207,
     title:
       "Payer pickers on the voucher offer the deal\u2019s own people first, and a receivable can only be billed to one of them",
