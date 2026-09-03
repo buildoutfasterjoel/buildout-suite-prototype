@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   Cell,
@@ -40,6 +40,7 @@ import {
   faTrashCan,
   faCaretDown,
   faCircleInfo,
+  faStamp,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type {
@@ -79,6 +80,11 @@ import {
   type VoucherPayerRow,
 } from "#/data/vouchers";
 import { depositsForReceivable } from "#/data/deposits";
+import {
+  commissionAllocation,
+  commissionAmountFromPct,
+  commissionPctFromAmount,
+} from "#/data/commission";
 import { AddBrokerModal } from "./AddBrokerModal";
 import { ApplyDepositModal, type ApplyDepositInput } from "./ApplyDepositModal";
 import { AddContactModal } from "./AddContactModal";
@@ -124,6 +130,8 @@ function plural(count: number, noun: string): string {
 /** Chart colors — same brand hues already used for the app's other recharts series. */
 const DEDUCTIONS_COLOR = "#8833ea";
 const BROKER_COLOR = "#2968e7";
+/** Outside commission — the lighter step of the same blue, since a co-broke is a broker payout too. */
+const OUTSIDE_COLOR = "#3f86f2";
 const UNALLOCATED_COLOR = "#e27400";
 
 function sum(values: number[]): number {
@@ -205,45 +213,51 @@ function BreakdownListRow({
 
 /** Gross Commission Breakdown: a list (doubling as the donut's legend) with the chart alongside it. */
 function BreakdownSection({ listing }: { listing: Listing }) {
-  const { transaction } = listing;
-  const { backOffice: financials, commissionAmount } = transaction;
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  const preSplitTotal = sum(financials.preSplitDeductions.map((d) => d.amount));
-  const brokerTotal = sum(
-    listing.internalBrokers.map((b) => b.grossCommission),
-  );
-  const allocated = preSplitTotal + brokerTotal;
-  const unallocated = Math.max(0, commissionAmount - allocated);
+  const { deductions, outside, internal, allocated, unallocated } =
+    commissionAllocation(listing);
 
   const segments = [
     {
       label: "Pre-Split Deductions",
-      value: preSplitTotal,
+      value: deductions,
       color: DEDUCTIONS_COLOR,
     },
-    { label: "Broker Commission", value: brokerTotal, color: BROKER_COLOR },
-    { label: "Unallocated", value: unallocated, color: UNALLOCATED_COLOR },
+    { label: "Outside Commission", value: outside, color: OUTSIDE_COLOR },
+    { label: "Broker Commission", value: internal, color: BROKER_COLOR },
+    // The donut cannot draw a negative slice. An over-allocated voucher has no
+    // remainder to show, and the row below is where that is stated in words.
+    {
+      label: "Unallocated",
+      value: Math.max(0, unallocated),
+      color: UNALLOCATED_COLOR,
+    },
   ];
 
   const rows: BreakdownRow[] = [
     {
       label: "Pre-Split Deductions",
-      value: formatCurrency(preSplitTotal),
+      value: formatCurrency(deductions),
       color: DEDUCTIONS_COLOR,
     },
     {
+      label: "Outside Commission",
+      value: formatCurrency(outside),
+      color: OUTSIDE_COLOR,
+    },
+    {
       label: "Broker Commission",
-      value: formatCurrency(brokerTotal),
+      value: formatCurrency(internal),
       color: BROKER_COLOR,
     },
     { label: "Allocated", value: formatCurrency(allocated), emphasis: true },
     {
-      label: "Unallocated",
-      value: formatCurrency(unallocated),
+      label: unallocated < 0 ? "Over-Allocated" : "Unallocated",
+      value: formatCurrency(Math.abs(unallocated)),
       color: UNALLOCATED_COLOR,
-      accent: unallocated > 0,
+      accent: unallocated !== 0,
     },
   ];
 
@@ -385,10 +399,17 @@ function RemoveBrokerButton({
  */
 function InternalCommissionsSection({
   brokers,
+  netCommission,
   editable,
   onChange,
 }: {
   brokers: DealBroker[];
+  /**
+   * The pool the Gross % is a percentage *of* — gross commission less the
+   * deductions currently on screen, so an unsaved deduction moves this table's
+   * math with it rather than after the next Save.
+   */
+  netCommission: number;
   /** Draft only — a submitted voucher's splits are what an approver is reading. */
   editable: boolean;
   onChange: (next: DealBroker[]) => void;
@@ -460,6 +481,11 @@ function InternalCommissionsSection({
                       }
                     />
                   </Table.Cell>
+                  {/* Two views of one figure, so each writes both: a broker
+                      who types 100% and watches Gross $ stay at $0 has been
+                      told the split is worth nothing, and the voucher's
+                      unallocated gate then blocks a Submit for a shortfall
+                      that only exists because the two columns disagreed. */}
                   <Table.Cell>
                     <MoneyCell
                       label="Gross %"
@@ -467,7 +493,13 @@ function InternalCommissionsSection({
                       value={b.commissionSplitPct}
                       step="0.1"
                       onChange={(v) =>
-                        patch(b.id, { commissionSplitPct: v ?? 0 })
+                        patch(b.id, {
+                          commissionSplitPct: v ?? 0,
+                          grossCommission: commissionAmountFromPct(
+                            netCommission,
+                            v ?? 0,
+                          ),
+                        })
                       }
                     />
                   </Table.Cell>
@@ -477,7 +509,15 @@ function InternalCommissionsSection({
                       unit={faDollarSign}
                       value={b.grossCommission}
                       step="0.01"
-                      onChange={(v) => patch(b.id, { grossCommission: v ?? 0 })}
+                      onChange={(v) =>
+                        patch(b.id, {
+                          grossCommission: v ?? 0,
+                          commissionSplitPct: commissionPctFromAmount(
+                            netCommission,
+                            v ?? 0,
+                          ),
+                        })
+                      }
                     />
                   </Table.Cell>
                   <Table.Cell className="text-end">
@@ -698,7 +738,10 @@ function PartyCard({
                 it (`bottom-0 end-0`) a 16px chip covered a third of the
                 initials — the ring is what separates the two, so it needs to
                 straddle the edge rather than sit within it. */}
-            <span className="position-absolute" style={{ bottom: -3, right: -3 }}>
+            <span
+              className="position-absolute"
+              style={{ bottom: -3, right: -3 }}
+            >
               <QuickbooksSyncBadge synced={party.quickbooksSynced} />
             </span>
           </span>
@@ -949,6 +992,15 @@ function emptyDeduction(): FinancialDeduction {
  * it: a `$` or `%` addon over a right-aligned number, so the unit is on the
  * field rather than only in the header two rows up. Empty-as-null on Covered $,
  * so an amount that has not been decided stays `null` rather than a typed zero.
+ *
+ * The box keeps its own text while someone is typing in it, on the same terms
+ * as `CurrencyInput`. Two reasons, and the first is what makes it
+ * necessary: a cell whose value cannot be null has to send 0 for an empty box,
+ * and rendering straight off the model then put that 0 back on screen — so
+ * clearing a figure to retype it left a 0 sitting there and the next keystroke
+ * read "05". Re-syncing only while unfocused also keeps a figure this cell's
+ * own edit recomputes elsewhere (Gross % writing Gross $, and back) from
+ * overwriting what is being typed here mid-keystroke.
  */
 function MoneyCell({
   label,
@@ -966,6 +1018,13 @@ function MoneyCell({
   nullable?: boolean;
   onChange: (next: number | null) => void;
 }) {
+  const [text, setText] = useState(() => value?.toString() ?? "");
+  const focused = useRef(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on `value` alone by design
+  useEffect(() => {
+    if (!focused.current) setText(value?.toString() ?? "");
+  }, [value]);
+
   return (
     <InputGroup>
       <InputGroup.Addon>
@@ -977,9 +1036,20 @@ function MoneyCell({
         min={0}
         aria-label={label}
         className="text-end"
-        value={value ?? ""}
+        value={text}
+        onFocus={() => {
+          focused.current = true;
+        }}
+        // Whatever survived typing — a lone "-", a clamped negative — is
+        // replaced by the figure actually stored, so the box never keeps
+        // showing something the deal does not hold.
+        onBlur={() => {
+          focused.current = false;
+          setText(value?.toString() ?? "");
+        }}
         onChange={(e) => {
           const raw = e.target.value;
+          setText(raw);
           if (raw === "") {
             onChange(nullable ? null : 0);
             return;
@@ -1492,7 +1562,7 @@ function DepositRow({
           the field is typed `string` and a deposit stored before that could
           still be empty. */}
       {/* Spans Billing Description AND Receivable Amount.
-          
+
           The amount cell on a deposit row is deliberately empty — a deposit has
           no billed figure — so the two controls take room that was already
           blank rather than squeezing into the description column alone, where
@@ -1597,8 +1667,6 @@ function ReceivablesSection({
   const patch = (id: string, next: Partial<FinancialReceivable>) =>
     updateReceivable(listing.id, id, next);
 
-
-
   // Which rows the bulk actions apply to. Local state — nothing here persists,
   // and every read below goes through `selectedRows` rather than the set itself,
   // so an id left behind by a previous deal is ignored rather than miscounted.
@@ -1628,7 +1696,8 @@ function ReceivablesSection({
   // One invoice bills one payer. Compared by contact id, not by name: two
   // different contacts who happen to share a name are two payers.
   const canCreateInvoice =
-    someSelected && new Set(selectedRows.map((r) => r.payerContactId)).size === 1;
+    someSelected &&
+    new Set(selectedRows.map((r) => r.payerContactId)).size === 1;
 
   /**
    * Bill the given receivables on one invoice, filed against the deal.
@@ -1888,57 +1957,62 @@ function ReceivablesSection({
           </Table.Header>
           <Table.Body>
             {receivables.map((r) => {
-              const label = receivablePayerLabel(r.payerContactId, r.billToCompany);
+              const label = receivablePayerLabel(
+                r.payerContactId,
+                r.billToCompany,
+              );
               const paidBy = depositsForReceivable(
                 listing.transaction.backOffice.deposits,
                 r.id,
               );
               return (
                 <Fragment key={r.id}>
-                <Table.Row
-                  className={
-                    editable && selectedIds.has(r.id) ? "table-active" : undefined
-                  }
-                >
-                  {editable && (
-                    <Table.Cell
-                      style={{
-                        width: RECEIVABLE_CHECKBOX_W,
-                        minWidth: RECEIVABLE_CHECKBOX_W,
-                      }}
-                    >
-                      <Checkbox
-                        checked={selectedIds.has(r.id)}
-                        onCheckedChange={(c) => toggleOne(r.id, c === true)}
-                        aria-label={`Select receivable for ${label}`}
-                      />
-                    </Table.Cell>
-                  )}
-                  <Table.Cell style={{ width: RECEIVABLE_COL.payer }}>
-                    {editable ? (
-                      /* Two options, both naming this row's own payer: the
+                  <Table.Row
+                    className={
+                      editable && selectedIds.has(r.id)
+                        ? "table-active"
+                        : undefined
+                    }
+                  >
+                    {editable && (
+                      <Table.Cell
+                        style={{
+                          width: RECEIVABLE_CHECKBOX_W,
+                          minWidth: RECEIVABLE_CHECKBOX_W,
+                        }}
+                      >
+                        <Checkbox
+                          checked={selectedIds.has(r.id)}
+                          onCheckedChange={(c) => toggleOne(r.id, c === true)}
+                          aria-label={`Select receivable for ${label}`}
+                        />
+                      </Table.Cell>
+                    )}
+                    <Table.Cell style={{ width: RECEIVABLE_COL.payer }}>
+                      {editable ? (
+                        /* Two options, both naming this row's own payer: the
                          person, or the company they belong to. Deliberately NOT
                          the contact book — who a receivable bills is settled
                          when it is created, and re-offering every contact here
                          would let "how is this addressed" quietly become "who
                          is this billed to". */
-                      <Select
-                        value={r.billToCompany ? "company" : "person"}
-                        onValueChange={(v) =>
-                          patch(r.id, { billToCompany: v === "company" })
-                        }
-                      >
-                        <Select.Trigger
-                          className="bg-card"
-                          aria-label="Payer"
-                          title={label}
-                          // `min-width: 0` is what lets the label inside shrink:
-                          // a flex item refuses to go below its content width
-                          // without it, so the trigger would push the column
-                          // wider instead of the text truncating.
-                          style={{ minWidth: 0 }}
+                        <Select
+                          value={r.billToCompany ? "company" : "person"}
+                          onValueChange={(v) =>
+                            patch(r.id, { billToCompany: v === "company" })
+                          }
                         >
-                          {/* The label is passed as children, not left to
+                          <Select.Trigger
+                            className="bg-card"
+                            aria-label="Payer"
+                            title={label}
+                            // `min-width: 0` is what lets the label inside shrink:
+                            // a flex item refuses to go below its content width
+                            // without it, so the trigger would push the column
+                            // wider instead of the text truncating.
+                            style={{ minWidth: 0 }}
+                          >
+                            {/* The label is passed as children, not left to
                               `Select.Value` to derive. Blueprint's Select.Value
                               renders the raw VALUE when given none — here that
                               is the literal string "person" — and this is the
@@ -1946,112 +2020,115 @@ function ReceivablesSection({
                               a browser rather than by the type checker. If you
                               add a Select whose value is not also its label,
                               pass the label. */}
-                          <Select.Value>
-                            <span className="d-block text-truncate">
-                              {label}
-                            </span>
-                          </Select.Value>
-                        </Select.Trigger>
-                        <Select.Content>
-                          {payerFormOptions(r.payerContactId).map((o) => (
-                            <Select.Item key={o.value} value={o.value}>
-                              {o.label}
-                            </Select.Item>
-                          ))}
-                        </Select.Content>
-                      </Select>
-                    ) : (
-                      <span className="d-block text-truncate" title={label}>
-                        {label}
-                      </span>
-                    )}
-                  </Table.Cell>
-                  <Table.Cell style={{ width: RECEIVABLE_COL.dueDate }}>
-                    {editable ? (
-                      /* The same `DueDatePicker` the New Receivable modal uses,
+                            <Select.Value>
+                              <span className="d-block text-truncate">
+                                {label}
+                              </span>
+                            </Select.Value>
+                          </Select.Trigger>
+                          <Select.Content>
+                            {payerFormOptions(r.payerContactId).map((o) => (
+                              <Select.Item key={o.value} value={o.value}>
+                                {o.label}
+                              </Select.Item>
+                            ))}
+                          </Select.Content>
+                        </Select>
+                      ) : (
+                        <span className="d-block text-truncate" title={label}>
+                          {label}
+                        </span>
+                      )}
+                    </Table.Cell>
+                    <Table.Cell style={{ width: RECEIVABLE_COL.dueDate }}>
+                      {editable ? (
+                        /* The same `DueDatePicker` the New Receivable modal uses,
                          so one page does not offer two different date controls
                          for the same field. A native `<input type="date">` was
                          here first and rendered its own `mm/dd/yyyy` chrome,
                          which belongs to the browser rather than to Blueprint. */
-                      <DueDatePicker
-                        className="bg-card"
-                        value={r.dueDate}
-                        onChange={(next) => patch(r.id, { dueDate: next })}
-                      />
-                    ) : (
-                      formatDate(r.dueDate)
-                    )}
-                  </Table.Cell>
-                  <Table.Cell>
-                    {editable ? (
-                      <ReceivableTextCell
-                        value={r.billingDescription}
-                        placeholder="Billing description"
-                        ariaLabel="Billing description"
-                        className="w-100"
-                        onCommit={(next) =>
-                          patch(r.id, { billingDescription: next })
-                        }
-                      />
-                    ) : (
-                      r.billingDescription
-                    )}
-                  </Table.Cell>
-                  <Table.Cell
-                    className="text-end"
-                    style={{ width: RECEIVABLE_COL.amount }}
-                  >
-                    {editable ? (
-                      <MoneyCell
-                        label="Receivable amount"
-                        unit={faDollarSign}
-                        value={r.amount}
-                        step="0.01"
-                        onChange={(v) => patch(r.id, { amount: v ?? 0 })}
-                      />
-                    ) : (
-                      formatCurrency(r.amount)
-                    )}
-                  </Table.Cell>
-                  {/* Credited stays read-only at every status: it is what has
+                        <DueDatePicker
+                          className="bg-card"
+                          value={r.dueDate}
+                          onChange={(next) => patch(r.id, { dueDate: next })}
+                        />
+                      ) : (
+                        formatDate(r.dueDate)
+                      )}
+                    </Table.Cell>
+                    <Table.Cell>
+                      {editable ? (
+                        <ReceivableTextCell
+                          value={r.billingDescription}
+                          placeholder="Billing description"
+                          ariaLabel="Billing description"
+                          className="w-100"
+                          onCommit={(next) =>
+                            patch(r.id, { billingDescription: next })
+                          }
+                        />
+                      ) : (
+                        r.billingDescription
+                      )}
+                    </Table.Cell>
+                    <Table.Cell
+                      className="text-end"
+                      style={{ width: RECEIVABLE_COL.amount }}
+                    >
+                      {editable ? (
+                        <MoneyCell
+                          label="Receivable amount"
+                          unit={faDollarSign}
+                          value={r.amount}
+                          step="0.01"
+                          onChange={(v) => patch(r.id, { amount: v ?? 0 })}
+                        />
+                      ) : (
+                        formatCurrency(r.amount)
+                      )}
+                    </Table.Cell>
+                    {/* Credited stays read-only at every status: it is what has
                       been paid against this line, which is the deposit and
                       credit actions' business, not something to type over. */}
-                  <Table.Cell
-                    className="text-end"
-                    style={{ width: RECEIVABLE_COL.credited }}
-                  >
-                    {r.credited > 0 ? formatCurrency(r.credited) : "None"}
-                  </Table.Cell>
-                  <Table.Cell style={{ width: RECEIVABLE_COL.sync }}>
-                    <QuickbooksSyncBadge synced={r.quickbooksSynced} size={18} />
-                  </Table.Cell>
-                  {editable && (
-                    <Table.Cell style={{ width: RECEIVABLE_COL.actions }}>
-                      <ReceivableRowMenu
-                        label={label}
-                        settled={r.credited >= r.amount}
-                        onApplyDeposit={() => openDeposit([r])}
-                        onCreateInvoice={() => createInvoice([r.id])}
-                        onDelete={() => deleteReceivable(listing.id, r.id)}
+                    <Table.Cell
+                      className="text-end"
+                      style={{ width: RECEIVABLE_COL.credited }}
+                    >
+                      {r.credited > 0 ? formatCurrency(r.credited) : "None"}
+                    </Table.Cell>
+                    <Table.Cell style={{ width: RECEIVABLE_COL.sync }}>
+                      <QuickbooksSyncBadge
+                        synced={r.quickbooksSynced}
+                        size={18}
                       />
                     </Table.Cell>
-                  )}
-                </Table.Row>
-                {paidBy.map(({ deposit, amount }) => (
-                  <DepositRow
-                    key={deposit.id}
-                    deposit={deposit}
-                    amount={amount}
-                    editable={editable}
-                    onRenameReference={(next) =>
-                      updateDepositReference(listing.id, deposit.id, next)
-                    }
-                    onRenameCheckNumber={(next) =>
-                      updateDepositCheckNumber(listing.id, deposit.id, next)
-                    }
-                    onDelete={() => removeDeposit(deposit.id)}
-                  />
-                ))}
+                    {editable && (
+                      <Table.Cell style={{ width: RECEIVABLE_COL.actions }}>
+                        <ReceivableRowMenu
+                          label={label}
+                          settled={r.credited >= r.amount}
+                          onApplyDeposit={() => openDeposit([r])}
+                          onCreateInvoice={() => createInvoice([r.id])}
+                          onDelete={() => deleteReceivable(listing.id, r.id)}
+                        />
+                      </Table.Cell>
+                    )}
+                  </Table.Row>
+                  {paidBy.map(({ deposit, amount }) => (
+                    <DepositRow
+                      key={deposit.id}
+                      deposit={deposit}
+                      amount={amount}
+                      editable={editable}
+                      onRenameReference={(next) =>
+                        updateDepositReference(listing.id, deposit.id, next)
+                      }
+                      onRenameCheckNumber={(next) =>
+                        updateDepositCheckNumber(listing.id, deposit.id, next)
+                      }
+                      onDelete={() => removeDeposit(deposit.id)}
+                    />
+                  ))}
                 </Fragment>
               );
             })}
@@ -2600,6 +2677,7 @@ function AttestationSubmit({
   onSubmit,
   dirty,
   onSave,
+  unallocated,
 }: {
   attested: boolean;
   onChange: (checked: boolean) => void;
@@ -2607,6 +2685,8 @@ function AttestationSubmit({
   /** There are unsaved voucher edits the store has not seen yet. */
   dirty: boolean;
   onSave: () => void;
+  /** Gross commission not yet accounted for — see {@link SubmitVoucherButton}. */
+  unallocated: number;
 }) {
   return (
     <div className="d-flex align-items-stretch gap-2">
@@ -2635,6 +2715,7 @@ function AttestationSubmit({
       <SubmitVoucherButton
         attested={attested}
         unsaved={dirty}
+        unallocated={unallocated}
         onSubmit={onSubmit}
       />
     </div>
@@ -2656,21 +2737,36 @@ function AttestationSubmit({
 function SubmitVoucherButton({
   attested,
   unsaved,
+  unallocated,
   onSubmit,
 }: {
   attested: boolean;
   /** Unsaved voucher edits — submitting would send the stored figures, not these. */
   unsaved: boolean;
+  /**
+   * Gross commission the voucher has not accounted for, from
+   * {@link commissionAllocation}. Zero is the only submittable figure: a
+   * positive one is money nobody has been assigned, a negative one pays out
+   * more than the deal earned, and an approver cannot sign off on either.
+   */
+  unallocated: number;
   onSubmit: () => void;
 }) {
-  // Unsaved edits outrank a missing tick: what an approver would receive is the
+  // Unsaved edits outrank the rest: what an approver would receive is the
   // stored voucher, so the fix is Save, and saying "confirm you checked it"
   // while the numbers on screen are not the numbers being sent would be a lie.
+  // The allocation check reads the STORED figures too, which is the same
+  // reason it has to come second — quoting a shortfall from figures the broker
+  // has already edited on screen would name the wrong number.
   const blockedReason = unsaved
     ? "Save your changes before submitting."
-    : attested
-      ? null
-      : "Confirm you have checked this voucher first.";
+    : unallocated > 0
+      ? `${formatCurrency(unallocated)} of the gross commission is unallocated. Allocate it before submitting.`
+      : unallocated < 0
+        ? `${formatCurrency(-unallocated)} more is allocated than the deal earned. Correct the split before submitting.`
+        : attested
+          ? null
+          : "Confirm you have checked this voucher first.";
 
   if (!blockedReason) {
     return (
@@ -2707,6 +2803,9 @@ export function DealFinancials({
 }) {
   const voucher = listing.transaction.backOffice;
   const isDraft = voucher.status === "Draft";
+  // What the Breakdown section draws, read again here for the Submit gate — the
+  // figure a broker is blocked on has to be the figure on their screen.
+  const { unallocated } = commissionAllocation(listing);
   // Pending does two separate jobs, and they must stay separate: it freezes the
   // page, and it is the one state that can be approved. Folding them into one
   // flag hid the Approve button from the only people who have it.
@@ -2774,6 +2873,12 @@ export function DealFinancials({
     ids: parties,
   };
 
+  // The pool the broker splits divide, from the working copies rather than the
+  // record: the deduction table above and the commission table below are edited
+  // in the same Save, so a deduction typed now has to move the Gross % math now.
+  const draftNetCommission =
+    listing.transaction.commissionAmount - sum(deductions.map((d) => d.amount));
+
   const dirty =
     deductions !== stored ||
     brokers !== storedBrokers ||
@@ -2791,12 +2896,15 @@ export function DealFinancials({
   useEffect(() => setBrokers(storedBrokers), [storedBrokers]);
 
   // Both Submit buttons commit through the same action, so the two can never
-  // disagree about what submitting means. `submitVoucher` re-checks Draft itself;
-  // the attestation is re-checked here for the same reason — a guard at the one
-  // write path holds even if a button forgets to disable itself.
+  // disagree about what submitting means. `submitVoucher` re-checks Draft and
+  // the allocation itself; the attestation is re-checked here for the same
+  // reason — a guard at the one write path holds even if a button forgets to
+  // disable itself. The toast waits on what the action actually did, so a
+  // refused submit cannot announce itself as a successful one.
   const submit = () => {
     if (!attested) return;
-    submitVoucher(listing.id);
+    const { deal } = submitVoucher(listing.id);
+    if (deal?.transaction.backOffice.status !== "Pending") return;
     setAttested(false);
     notify({
       // Says the irreversible part out loud. Submitting is the last thing a
@@ -2864,6 +2972,7 @@ export function DealFinancials({
               onSubmit={submit}
               dirty={dirty}
               onSave={save}
+              unallocated={unallocated}
             />
           ) : isPending && canApprove ? (
             /* The approver's side of the one-way submit. A broker cannot take a
@@ -2871,9 +2980,25 @@ export function DealFinancials({
                and the only way a voucher reaches Approved outside the seed. It
                shows only to a holder of Approve Vouchers: to everyone else a
                Pending voucher is a page with no action at all. */
-            <Button variant="primary" onClick={() => setApproving(true)}>
-              Approve Voucher
-            </Button>
+            <div>
+              <DropdownMenu>
+                <DropdownMenu.Trigger
+                  render={
+                    <Button variant="secondary">
+                      <FontAwesomeIcon icon={faStamp} />
+                      Review
+                      <FontAwesomeIcon icon={faCaretDown} />
+                    </Button>
+                  }
+                />
+                <DropdownMenu.Content>
+                  <DropdownMenu.Item onClick={() => setApproving(true)}>
+                    Approve
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item>Request Changes</DropdownMenu.Item>
+                </DropdownMenu.Content>
+              </DropdownMenu>
+            </div>
           ) : undefined
         }
       />
@@ -2906,6 +3031,7 @@ export function DealFinancials({
       />
       <InternalCommissionsSection
         brokers={brokers}
+        netCommission={draftNetCommission}
         editable={isDraft}
         onChange={setBrokers}
       />
@@ -2972,6 +3098,7 @@ export function DealFinancials({
             onSubmit={submit}
             dirty={dirty}
             onSave={save}
+            unallocated={unallocated}
           />
         </div>
       )}
