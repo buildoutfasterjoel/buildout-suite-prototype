@@ -14,7 +14,7 @@ import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
 import { reconcileContactDealFields } from './contactStage'
 import { grantContactShares, reconcilePropertyStage } from './store'
 import { generateTasks } from './seed'
-import { nextCloseProbability } from './commission'
+import { commissionAllocation, nextCloseProbability } from './commission'
 import { notify } from '#/lib/notify'
 import {
   advanceStage,
@@ -286,6 +286,12 @@ export function updateDealTransaction(
  * voucher backwards. Returning the listing untouched keeps it referentially
  * equal, so a no-op submit doesn't re-render the page either.
  *
+ * **A voucher whose gross commission is not fully allocated cannot be sent.**
+ * Money that is neither deducted nor paid to a broker is money the approver
+ * would be signing off on without knowing whose it is, and a voucher that
+ * allocates more than the deal earned is worse. The Submit button says so in
+ * its tooltip; the rule lives here so it holds however the write is reached.
+ *
  * No history entry. `DealHistoryEntry` records stage moves — its `fromStage` and
  * `toStage` are `PropertyStatus` — and a voucher's status is a separate axis
  * from the deal's stage, so it has nowhere to go in that shape.
@@ -293,7 +299,8 @@ export function updateDealTransaction(
 export function submitVoucher(dealId: string): { deal: Listing | null } {
   return {
     deal: patchListing(dealId, (l) =>
-      l.transaction.backOffice.status !== 'Draft'
+      l.transaction.backOffice.status !== 'Draft' ||
+      commissionAllocation(l).unallocated !== 0
         ? l
         : {
             ...l,

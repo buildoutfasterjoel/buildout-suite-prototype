@@ -9,6 +9,7 @@ import {
   DEFAULT_PERSONAL_SPLIT_PCT,
   STAGE_CLOSE_PROBABILITY,
   splitNetCommission,
+  commissionAllocation,
 } from "./commission";
 
 describe("commissionAmountFromPct", () => {
@@ -248,5 +249,62 @@ describe("splitNetCommission", () => {
       netCommission: 100_000,
     });
     expect(internal[0].grossCommission).toBe(0);
+  });
+});
+
+/** A deal carrying only the four figures `commissionAllocation` reads. */
+function allocationStub({
+  commissionAmount,
+  deductions = [],
+  outside = [],
+  internal = [],
+}: {
+  commissionAmount: number;
+  deductions?: number[];
+  outside?: number[];
+  internal?: number[];
+}): Listing {
+  return {
+    transaction: {
+      commissionAmount,
+      backOffice: { preSplitDeductions: deductions.map((amount) => ({ amount })) },
+    },
+    outsideBrokers: outside.map((grossCommission) => ({ grossCommission })),
+    internalBrokers: internal.map((grossCommission) => ({ grossCommission })),
+  } as unknown as Listing;
+}
+
+describe("commissionAllocation", () => {
+  it("counts the co-broke as allocated, not as leftover money", () => {
+    // The bug this function exists to fix: the breakdown summed deductions and
+    // internal brokers only, so a co-broked deal reported the outside broker's
+    // share as unallocated.
+    const deal = allocationStub({
+      commissionAmount: 100_000,
+      deductions: [10_000],
+      outside: [40_000],
+      internal: [50_000],
+    });
+    expect(commissionAllocation(deal)).toEqual({
+      deductions: 10_000,
+      outside: 40_000,
+      internal: 50_000,
+      allocated: 100_000,
+      unallocated: 0,
+    });
+  });
+
+  it("reports what nobody has been assigned", () => {
+    const deal = allocationStub({ commissionAmount: 100_000, internal: [75_000] });
+    expect(commissionAllocation(deal).unallocated).toBe(25_000);
+  });
+
+  it("goes negative when more is paid out than the deal earned", () => {
+    const deal = allocationStub({
+      commissionAmount: 100_000,
+      deductions: [10_000],
+      internal: [95_000],
+    });
+    expect(commissionAllocation(deal).unallocated).toBe(-5_000);
   });
 });

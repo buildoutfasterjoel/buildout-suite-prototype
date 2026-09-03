@@ -36,7 +36,11 @@ import {
 } from './actions'
 import { payableBalance, payableGrossPaid, payableNetPaid } from './payables'
 import { emptyDraft } from './createListing'
-import { closeProbabilityForStage, commissionForecast } from './commission'
+import {
+  closeProbabilityForStage,
+  commissionAllocation,
+  commissionForecast,
+} from './commission'
 import { publishReadiness } from './stageGates'
 import { getContactDetailClient, listContactsForDeal } from './selectors'
 import { getListing } from './store'
@@ -329,6 +333,12 @@ describe('actions', () => {
     expect(updated?.transaction.commissionAmount).toBe(60_000)
     // Sibling fields survive the merge.
     expect(updated?.transaction.pricePerSqFt).toBe(originalPricePerSqFt)
+
+    // Put the transaction back. The suite shares one store and the voucher
+    // tests below reach for this same first deal — leaving a commission the
+    // deal's brokers and deductions no longer add up to makes its voucher
+    // unsubmittable, which is `submitVoucher`'s allocation guard doing its job.
+    updateDealTransaction(deal.id, deal.transaction)
   })
 
   it('createTask inserts an open task and surfaces it on the linked contact', () => {
@@ -404,6 +414,24 @@ describe('actions', () => {
       // Referentially equal, so a no-op submit cannot re-render the page.
       expect(updated).toBe(seeded)
     }
+  })
+
+  it('submitVoucher holds a voucher whose commission is not fully allocated', () => {
+    const deal = [...useDataStore.getState().listings.values()][0]
+    const { commissionAmount } = deal.transaction
+    updateDealTransaction(deal.id, {
+      // A dollar more commission than the brokers and deductions account for.
+      commissionAmount: commissionAmount + 1,
+      backOffice: { ...deal.transaction.backOffice, status: 'Draft' },
+    })
+    expect(submitVoucher(deal.id).deal?.transaction.backOffice.status).toBe('Draft')
+    // Put it back: the suite shares one store, and every other voucher test
+    // reaches for this same first deal.
+    updateDealTransaction(deal.id, { commissionAmount })
+    expect(submitVoucher(deal.id).deal?.transaction.backOffice.status).toBe('Pending')
+    updateDealTransaction(deal.id, {
+      backOffice: { ...deal.transaction.backOffice, status: 'Draft' },
+    })
   })
 
   it('submitVoucher returns null for an unknown deal', () => {
@@ -612,6 +640,10 @@ describe('actions', () => {
   it('a voucher can go Draft → Pending → Draft → Pending', () => {
     const deal = [...useDataStore.getState().listings.values()][0]
     updateDealTransaction(deal.id, {
+      // Earlier tests in this file have edited this shared deal's deductions
+      // and brokers, so the commission is restated to whatever they now add up
+      // to: `submitVoucher` sends a fully allocated voucher and nothing else.
+      commissionAmount: commissionAllocation(getListing(deal.id)!).allocated,
       backOffice: { ...deal.transaction.backOffice, status: 'Draft' },
     })
     const status = () =>
@@ -1234,6 +1266,9 @@ describe('payables', () => {
       ],
     })
     updateDealTransaction(deal.id, {
+      // 6,000 internal + 4,000 outside, no deductions — a fully allocated
+      // $10,000 voucher, which is the only kind `submitVoucher` will send.
+      commissionAmount: 10_000,
       backOffice: {
         ...getListing(deal.id)!.transaction.backOffice,
         status: 'Draft',

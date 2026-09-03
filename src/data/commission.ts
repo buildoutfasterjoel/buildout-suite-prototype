@@ -168,3 +168,48 @@ export function splitNetCommission<
 
   return { outside: paidOutside, internal: paidInternal };
 }
+
+/** How a deal's gross commission divides, and what is left over. */
+export interface CommissionAllocation {
+  /** Taken off the top, before anyone is paid. */
+  deductions: number;
+  /** The co-broke's share of the net. */
+  outside: number;
+  /** The house's own brokers' share of the net. */
+  internal: number;
+  /** deductions + outside + internal. */
+  allocated: number;
+  /**
+   * Gross commission minus everything allocated. Negative when the voucher
+   * pays out more than the deal earned — not clamped, because a voucher that
+   * over-allocates is as wrong as one that under-allocates, and clamping was
+   * exactly what let it read as "Unallocated $0.00" and look settled.
+   */
+  unallocated: number;
+}
+
+/**
+ * Where a deal's gross commission has gone — what the voucher's Gross
+ * Commission Breakdown draws, and what its Submit gate reads.
+ *
+ * **Outside brokers count.** The breakdown left them out and reported their
+ * co-broke as unallocated money: 9 of the 31 seeded vouchers showed an orange
+ * slice for commission that was already paid to a co-broker. Both readers go
+ * through here so the figure the broker is blocked on is the figure on screen.
+ */
+export function commissionAllocation(deal: Listing): CommissionAllocation {
+  const total = (amounts: number[]) => amounts.reduce((sum, n) => sum + n, 0);
+  const deductions = total(
+    deal.transaction.backOffice.preSplitDeductions.map((d) => d.amount),
+  );
+  const outside = total(deal.outsideBrokers.map((b) => b.grossCommission));
+  const internal = total(deal.internalBrokers.map((b) => b.grossCommission));
+  const allocated = deductions + outside + internal;
+  return {
+    deductions,
+    outside,
+    internal,
+    allocated,
+    unallocated: deal.transaction.commissionAmount - allocated,
+  };
+}
