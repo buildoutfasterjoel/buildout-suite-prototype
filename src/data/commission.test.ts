@@ -10,6 +10,7 @@ import {
   STAGE_CLOSE_PROBABILITY,
   splitNetCommission,
   commissionAllocation,
+  reconcileBrokerGross,
 } from "./commission";
 
 describe("commissionAmountFromPct", () => {
@@ -273,6 +274,72 @@ function allocationStub({
     internalBrokers: internal.map((grossCommission) => ({ grossCommission })),
   } as unknown as Listing;
 }
+
+describe("reconcileBrokerGross", () => {
+  const withSplits = (internal: number[], outside: number[] = []) =>
+    ({
+      transaction: {
+        commissionAmount: 36_000,
+        backOffice: { preSplitDeductions: [] },
+      },
+      internalBrokers: internal.map((commissionSplitPct) => ({
+        commissionSplitPct,
+        grossCommission: 0,
+      })),
+      outsideBrokers: outside.map((commissionSplitPct) => ({
+        commissionSplitPct,
+        grossCommission: 0,
+      })),
+    }) as unknown as Listing;
+
+  it("pays a sole 100% broker the whole net", () => {
+    // The reported bug: a deal created before its commission was known, then
+    // given 3% of $1.2M, left its 100% broker on a $0 gross.
+    const deal = reconcileBrokerGross(withSplits([100]));
+    expect(deal.internalBrokers[0].grossCommission).toBe(36_000);
+    expect(commissionAllocation(deal).unallocated).toBe(0);
+  });
+
+  it("leaves an unaccounted share unallocated rather than absorbing it", () => {
+    const deal = reconcileBrokerGross(withSplits([60]));
+    expect(deal.internalBrokers[0].grossCommission).toBe(21_600);
+    expect(commissionAllocation(deal).unallocated).toBe(14_400);
+  });
+
+  it("takes both lists off the same net", () => {
+    const deal = reconcileBrokerGross(withSplits([70], [30]));
+    expect(deal.internalBrokers[0].grossCommission).toBe(25_200);
+    expect(deal.outsideBrokers[0].grossCommission).toBe(10_800);
+    expect(commissionAllocation(deal).unallocated).toBe(0);
+  });
+
+  it("does not leave a rounding cent over-allocated", () => {
+    // Two 50% brokers on an odd net each round up: the voucher read $1
+    // over-allocated and no percentage could clear it.
+    const deal = reconcileBrokerGross({
+      ...withSplits([50], [50]),
+      transaction: {
+        commissionAmount: 36_001,
+        backOffice: { preSplitDeductions: [] },
+      },
+    } as unknown as Listing);
+    expect(deal.outsideBrokers[0].grossCommission).toBe(18_001);
+    expect(deal.internalBrokers[0].grossCommission).toBe(18_000);
+    expect(commissionAllocation(deal).unallocated).toBe(0);
+  });
+
+  it("splits what the deductions leave, not the gross", () => {
+    const deal = reconcileBrokerGross({
+      ...withSplits([100]),
+      transaction: {
+        commissionAmount: 36_000,
+        backOffice: { preSplitDeductions: [{ amount: 6_000 }] },
+      },
+    } as unknown as Listing);
+    expect(deal.internalBrokers[0].grossCommission).toBe(30_000);
+    expect(commissionAllocation(deal).unallocated).toBe(0);
+  });
+});
 
 describe("commissionAllocation", () => {
   it("counts the co-broke as allocated, not as leftover money", () => {

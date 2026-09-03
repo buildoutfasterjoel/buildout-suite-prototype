@@ -14,7 +14,11 @@ import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
 import { reconcileContactDealFields } from './contactStage'
 import { grantContactShares, reconcilePropertyStage } from './store'
 import { generateTasks } from './seed'
-import { commissionAllocation, nextCloseProbability } from './commission'
+import {
+  commissionAllocation,
+  nextCloseProbability,
+  reconcileBrokerGrossIfMoved,
+} from './commission'
 import { notify } from '#/lib/notify'
 import {
   advanceStage,
@@ -198,7 +202,13 @@ export function commitStageTransition(input: StageTransitionInput): { deal: List
         ? (tasks.find((t) => t.status !== 'complete' && t.date)?.date ?? null)
         : l.transaction.nextCriticalDate
 
-      return {
+      // Wrapped because a gate is where a deal's commission is usually first
+      // entered — Under Contract and Closed both ask for it — and a broker's
+      // Gross $ is a percentage of it. Without this, entering 3% on a deal
+      // created with no commission leaves its 100% broker on a $0 gross, and
+      // the voucher then draws the whole commission as unallocated and refuses
+      // to submit.
+      return reconcileBrokerGrossIfMoved(l, {
         ...l,
         status: input.targetStage,
         dealSide: input.dealSide ?? l.dealSide,
@@ -226,7 +236,7 @@ export function commitStageTransition(input: StageTransitionInput): { deal: List
         financials: input.financials ? { ...l.financials, ...input.financials } : l.financials,
         history: [...l.history, historyEntry],
         updatedAt: now,
-      }
+      })
     })
 
   // Feedback on every successful stage move (both gated and direct paths).
@@ -246,7 +256,19 @@ export function commitStageTransition(input: StageTransitionInput): { deal: List
  * transaction). The single-page deal editor commits its working copy through this.
  */
 export function updateDeal(dealId: string, patch: Partial<Listing>): { deal: Listing | null } {
-  return { deal: patchListing(dealId, (l) => ({ ...l, ...patch, updatedAt: new Date().toISOString() })) }
+  return {
+    deal: patchListing(dealId, (l) =>
+      // A save that moved the commission carries the brokers' Gross $ with it,
+      // since their split is a percentage of it — see
+      // `reconcileBrokerGrossIfMoved`. The Listing page saves through here too
+      // and never touches the transaction, where this is a no-op.
+      reconcileBrokerGrossIfMoved(l, {
+        ...l,
+        ...patch,
+        updatedAt: new Date().toISOString(),
+      }),
+    ),
+  }
 }
 
 /** Merge-patch the deal's marketing content (copy, terms, channel/visibility, lease terms). */

@@ -18,7 +18,7 @@ export function commissionPctFromAmount(salePrice: number, amount: number): numb
   return Math.round((amount / salePrice) * 10000) / 100;
 }
 
-import type { Listing, PropertyStatus } from "./types";
+import type { DealBroker, Listing, PropertyStatus } from "./types";
 
 /**
  * The broker/brokerage split applied when a deal doesn't carry its own
@@ -167,6 +167,84 @@ export function splitNetCommission<
   }));
 
   return { outside: paidOutside, internal: paidInternal };
+}
+
+/**
+ * The pool both broker lists split: gross commission less every pre-split
+ * deduction. `commissionSplitPct` is a share of *this*, on both sides — see
+ * {@link splitNetCommission}.
+ */
+export function dealNetCommission(deal: Listing): number {
+  return (
+    deal.transaction.commissionAmount - commissionAllocation(deal).deductions
+  );
+}
+
+/**
+ * Re-derive every broker's `grossCommission` from their split % and the deal's
+ * current net.
+ *
+ * Gross $ is derived data that happens to be *stored* on the broker, and until
+ * this existed nothing put it back in agreement with the deal. A deal created
+ * before its commission was known kept a $0 gross at a 100% split, so entering
+ * 3% on the deal later left the voucher drawing the whole gross as unallocated
+ * — with a $0 broker split beside it — and the voucher could never be
+ * submitted.
+ *
+ * Percent-of-net for both lists, deliberately NOT
+ * {@link splitNetCommission}'s outside-first remainder: the remainder rule
+ * always consumes the whole net, which would make `unallocated` structurally
+ * zero and the voucher's submit gate meaningless. Here a deal whose brokers
+ * account for 60% still reports the other 40% as unallocated, which is the
+ * truth the gate exists to state.
+ */
+export function reconcileBrokerGross(deal: Listing): Listing {
+  const net = dealNetCommission(deal);
+  const pay = (b: DealBroker): DealBroker => ({
+    ...b,
+    grossCommission: commissionAmountFromPct(net, b.commissionSplitPct),
+  });
+  const outsideBrokers = deal.outsideBrokers.map(pay);
+  const internalBrokers = deal.internalBrokers.map(pay);
+
+  // A split that accounts for the whole net pays the last internal broker the
+  // exact remainder rather than their own rounded percentage. Two brokers on
+  // 50% of an odd net each round up, which left the voucher reporting a $1
+  // over-allocation that no percentage could clear. The house absorbs the cent
+  // for the same reason `splitNetCommission` gives it the remainder: a
+  // co-broke's figure is owed to somebody outside the firm.
+  //
+  // A split that does NOT sum to 100 keeps its shortfall or its excess. That is
+  // the truth the voucher's submit gate exists to state, and rounding it into
+  // the last broker is what would hide it.
+  const totalPct = [...outsideBrokers, ...internalBrokers].reduce(
+    (t, b) => t + b.commissionSplitPct,
+    0,
+  );
+  const last = internalBrokers.length - 1;
+  if (totalPct === 100 && last >= 0) {
+    const others = [...outsideBrokers, ...internalBrokers.slice(0, last)].reduce(
+      (t, b) => t + b.grossCommission,
+      0,
+    );
+    internalBrokers[last] = { ...internalBrokers[last], grossCommission: net - others };
+  }
+
+  return { ...deal, internalBrokers, outsideBrokers };
+}
+
+/**
+ * `next`, with every broker's Gross $ re-derived when the deal's net commission
+ * moved — the guard {@link reconcileBrokerGross} is always called behind.
+ *
+ * Only writes that move the net re-derive: typing a broker's Gross $ on the
+ * voucher is a legitimate write of its own, and re-deriving on every patch
+ * would snap it back to a whole multiple of their percentage.
+ */
+export function reconcileBrokerGrossIfMoved(prev: Listing, next: Listing): Listing {
+  return dealNetCommission(next) === dealNetCommission(prev)
+    ? next
+    : reconcileBrokerGross(next);
 }
 
 /** How a deal's gross commission divides, and what is left over. */

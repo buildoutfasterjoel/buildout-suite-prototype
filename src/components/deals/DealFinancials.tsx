@@ -80,7 +80,11 @@ import {
   type VoucherPayerRow,
 } from "#/data/vouchers";
 import { depositsForReceivable } from "#/data/deposits";
-import { commissionAllocation } from "#/data/commission";
+import {
+  commissionAllocation,
+  commissionAmountFromPct,
+  commissionPctFromAmount,
+} from "#/data/commission";
 import { AddBrokerModal } from "./AddBrokerModal";
 import { ApplyDepositModal, type ApplyDepositInput } from "./ApplyDepositModal";
 import { AddContactModal } from "./AddContactModal";
@@ -395,10 +399,17 @@ function RemoveBrokerButton({
  */
 function InternalCommissionsSection({
   brokers,
+  netCommission,
   editable,
   onChange,
 }: {
   brokers: DealBroker[];
+  /**
+   * The pool the Gross % is a percentage *of* — gross commission less the
+   * deductions currently on screen, so an unsaved deduction moves this table's
+   * math with it rather than after the next Save.
+   */
+  netCommission: number;
   /** Draft only — a submitted voucher's splits are what an approver is reading. */
   editable: boolean;
   onChange: (next: DealBroker[]) => void;
@@ -470,6 +481,11 @@ function InternalCommissionsSection({
                       }
                     />
                   </Table.Cell>
+                  {/* Two views of one figure, so each writes both: a broker
+                      who types 100% and watches Gross $ stay at $0 has been
+                      told the split is worth nothing, and the voucher's
+                      unallocated gate then blocks a Submit for a shortfall
+                      that only exists because the two columns disagreed. */}
                   <Table.Cell>
                     <MoneyCell
                       label="Gross %"
@@ -477,7 +493,13 @@ function InternalCommissionsSection({
                       value={b.commissionSplitPct}
                       step="0.1"
                       onChange={(v) =>
-                        patch(b.id, { commissionSplitPct: v ?? 0 })
+                        patch(b.id, {
+                          commissionSplitPct: v ?? 0,
+                          grossCommission: commissionAmountFromPct(
+                            netCommission,
+                            v ?? 0,
+                          ),
+                        })
                       }
                     />
                   </Table.Cell>
@@ -487,7 +509,15 @@ function InternalCommissionsSection({
                       unit={faDollarSign}
                       value={b.grossCommission}
                       step="0.01"
-                      onChange={(v) => patch(b.id, { grossCommission: v ?? 0 })}
+                      onChange={(v) =>
+                        patch(b.id, {
+                          grossCommission: v ?? 0,
+                          commissionSplitPct: commissionPctFromAmount(
+                            netCommission,
+                            v ?? 0,
+                          ),
+                        })
+                      }
                     />
                   </Table.Cell>
                   <Table.Cell className="text-end">
@@ -2816,6 +2846,12 @@ export function DealFinancials({
     ids: parties,
   };
 
+  // The pool the broker splits divide, from the working copies rather than the
+  // record: the deduction table above and the commission table below are edited
+  // in the same Save, so a deduction typed now has to move the Gross % math now.
+  const draftNetCommission =
+    listing.transaction.commissionAmount - sum(deductions.map((d) => d.amount));
+
   const dirty =
     deductions !== stored ||
     brokers !== storedBrokers ||
@@ -2968,6 +3004,7 @@ export function DealFinancials({
       />
       <InternalCommissionsSection
         brokers={brokers}
+        netCommission={draftNetCommission}
         editable={isDraft}
         onChange={setBrokers}
       />
