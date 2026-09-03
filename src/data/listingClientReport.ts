@@ -7,7 +7,7 @@ import {
 import { getLeadsForProperty } from "#/data/store";
 import { maskContactForText } from "#/components/contacts/contactRights";
 import { leadStatusFor } from "#/data/leadFacts";
-import { DELGADO_DAYS_ON_MARKET, isDelgadoBuilding } from "#/data/rosaDemoStats";
+import { delgadoDaysOnMarket, isDelgadoBuilding } from "#/data/rosaDemoStats";
 import type { Property } from "#/data/types";
 
 /** Ordered stages shown in the Activity Funnel, top (widest) to bottom (narrowest). */
@@ -72,11 +72,11 @@ export interface ClientReportKpis {
 
 /**
  * Total days on market for a property. Hash-derived for the pool, pinned for
- * The Delgado Building (see {@link DELGADO_DAYS_ON_MARKET}). Shared by the
+ * The Delgado Building (see {@link delgadoDaysOnMarket}). Shared by the
  * Client Report KPI and the property Dashboard tile so the two pages agree.
  */
 export function getDaysOnMarket(propertyId: string): number {
-  if (isDelgadoBuilding(propertyId)) return DELGADO_DAYS_ON_MARKET;
+  if (isDelgadoBuilding(propertyId)) return delgadoDaysOnMarket(propertyId);
   return 100 + (hash(propertyId) % 900);
 }
 
