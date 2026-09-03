@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
-import { Combobox } from "@buildoutinc/blueprint-react/ui/Combobox";
 import { Field } from "@buildoutinc/blueprint-react/ui/Field";
-import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMagnifyingGlass } from "@fortawesome/pro-regular-svg-icons";
-import { getContactOptions, type ContactOption } from "#/data/store";
+import {
+	contactOptionsFor,
+	getContactOptions,
+	type ContactOption,
+	type ContactOptionGroup,
+} from "#/data/store";
+import { ContactPicker } from "./ContactPicker";
 
 /**
  * Pick one contact — the Add behind the voucher's Buyer/Tenant and Payers
@@ -28,6 +30,7 @@ export function AddContactModal({
 	onOpenChange,
 	takenIds,
 	title,
+	priority,
 	onAdd,
 }: {
 	open: boolean;
@@ -36,6 +39,16 @@ export function AddContactModal({
 	takenIds: string[];
 	/** "Buyer", "Tenant" or "Payer" — names the modal and its confirm button. */
 	title: string;
+	/**
+	 * A handful of contacts to float to the top under their own heading, for the
+	 * section that has a likely answer before the search starts: a payer is
+	 * usually the deal's buyer or tenant, so Add Payer opens with those named
+	 * rather than buried alphabetically among every contact in the book.
+	 *
+	 * Omitted by the Buyer/Tenant section, which has no such shortlist — the
+	 * people it would promote are the ones already on it.
+	 */
+	priority?: { label: string; ids: string[] };
 	onAdd: (contactId: string) => void;
 }) {
 	const [selected, setSelected] = useState<ContactOption | null>(null);
@@ -51,7 +64,20 @@ export function AddContactModal({
 	}, [open]);
 
 	const taken = new Set(takenIds);
-	const options = getContactOptions().filter((o) => !taken.has(o.value));
+	const promoted = contactOptionsFor(priority?.ids ?? []).filter(
+		(o) => !taken.has(o.value),
+	);
+	// The promoted contacts are lifted OUT of the main list rather than repeated
+	// in it: one contact appearing twice in one dropdown reads as two people.
+	const promotedIds = new Set(promoted.map((o) => o.value));
+	const rest = getContactOptions().filter(
+		(o) => !taken.has(o.value) && !promotedIds.has(o.value),
+	);
+	const groups: ContactOptionGroup[] = [];
+	if (promoted.length > 0 && priority)
+		groups.push({ value: "priority", label: priority.label, items: promoted });
+	if (rest.length > 0)
+		groups.push({ value: "all", label: "All Contacts", items: rest });
 
 	const add = () => {
 		if (!selected) return;
@@ -69,45 +95,18 @@ export function AddContactModal({
 				<Modal.Body>
 					<Field>
 						<Field.Label>{title}</Field.Label>
-						<Combobox
-							items={options}
+						<ContactPicker
+							groups={groups}
 							value={selected}
-							inputValue={inputValue}
-							onInputValueChange={(v: string) => setInputValue(v)}
-							onValueChange={(v) => {
-								const opt = v as ContactOption | null;
-								setSelected(opt);
-								setInputValue(opt?.label ?? "");
-							}}
-						>
-							<Combobox.InputGroup>
-								<InputGroup.Addon>
-									<FontAwesomeIcon icon={faMagnifyingGlass} />
-								</InputGroup.Addon>
-								<Combobox.Input placeholder="Search contacts..." />
-							</Combobox.InputGroup>
-							<Combobox.Content>
-								<Combobox.Empty className="text-muted">
-									{options.length === 0
-										? "Every contact is already on this voucher"
-										: "No matching contacts"}
-								</Combobox.Empty>
-								<Combobox.List>
-									{(item: ContactOption) => (
-										<Combobox.Item key={item.value} value={item}>
-											<div className="d-flex flex-column">
-												<span>{item.name}</span>
-												<span className="text-muted fs-small">
-													{[item.title, item.company]
-														.filter(Boolean)
-														.join(" · ")}
-												</span>
-											</div>
-										</Combobox.Item>
-									)}
-								</Combobox.List>
-							</Combobox.Content>
-						</Combobox>
+							onChange={setSelected}
+							query={inputValue}
+							onQueryChange={setInputValue}
+							emptyMessage={
+								groups.length === 0
+									? "Every contact is already on this voucher"
+									: "No matching contacts"
+							}
+						/>
 					</Field>
 				</Modal.Body>
 

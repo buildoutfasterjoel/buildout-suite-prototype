@@ -149,6 +149,105 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
+    pr: 209,
+    title:
+      "A receivable can only be billed to a listed payer, and the commission breakdown names each internal broker",
+    mergedAt: "2026-09-03T22:10:18Z",
+    day: "2026-09-03",
+    author: "buildoutfasterjoel",
+    area: "Back Office",
+    summary:
+      "Two things on the voucher were answering a question with the wrong list. A new receivable could be billed to someone the Billing section did not name, and the commission breakdown drew every one of the house\u2019s brokers as a single anonymous slice \u2014 so a broker could not see their own share on the voucher they were signing.",
+    highlights: [
+      {
+        kind: "refinement",
+        text: "A new receivable is billed to the voucher\u2019s payers and nobody else. The deal\u2019s buyer used to be offered as a shortcut, which quietly added them to Billing as a side effect of creating the line.",
+      },
+      {
+        kind: "refinement",
+        text: "Add Receivable is disabled until Billing names a payer, since there is nothing to bill to until then.",
+      },
+      {
+        kind: "feature",
+        text: "The Gross Commission Breakdown gives each internal broker their own slice and their own legend row, named, in the order the Internal Commissions table lists them. Outside brokers stay one row, grouped with the deductions as the money that leaves before the house splits anything.",
+      },
+      {
+        kind: "refinement",
+        text: "A fourth broker folds into one \u201cOther Brokers\u201d row rather than repeating a colour already used, so no two slices can be mistaken for each other.",
+      },
+    ],
+  },
+  {
+    pr: 208,
+    title:
+      "A voucher cannot be submitted with commission nobody has been assigned, and a broker\u2019s Gross $ now follows the deal",
+    mergedAt: "2026-09-03T21:33:40Z",
+    day: "2026-09-03",
+    author: "buildoutfasterjoel",
+    area: "Back Office",
+    summary:
+      "A voucher could be sent to an approver with commission that had been given to nobody, and the breakdown that was supposed to show it counted the co-broke as leftover money. Submitting now waits until every dollar is accounted for \u2014 and because that only works if the figures can be corrected, a broker\u2019s Gross $ now follows their split and the deal\u2019s commission.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "Submitting is held until the gross commission is fully allocated, and the button says which way it is out \u2014 the shortfall to allocate, or the amount paid out beyond what the deal earned.",
+      },
+      {
+        kind: "fix",
+        text: "The Gross Commission Breakdown counts the co-broke. An outside broker\u2019s share was reported as unallocated money on 9 of the 31 seeded vouchers, with no Outside Commission slice on the donut to explain the orange.",
+      },
+      {
+        kind: "fix",
+        text: "A voucher that pays out more than the deal earned reads \u201cOver-Allocated\u201d instead of a settled-looking $0.00. The figure used to be clamped at zero, which hid it.",
+      },
+      {
+        kind: "fix",
+        text: "Entering a commission on a deal carries the brokers\u2019 Gross $ with it. A deal created before its commission was known kept its broker on $0 at a 100% split, so the voucher drew the whole commission as unallocated and could never be sent.",
+      },
+      {
+        kind: "fix",
+        text: "Gross % and Gross $ are two views of one figure and each now writes the other, against the net as it stands on screen \u2014 so an unsaved deduction moves the math with it.",
+      },
+      {
+        kind: "fix",
+        text: "A number on the voucher can be cleared to retype it. Clearing one used to put a 0 back in the box, so the next keystroke read \u201c05\u201d.",
+      },
+      {
+        kind: "refinement",
+        text: "Approve on a pending voucher is now a Review menu, holding Approve and Request Changes. Request Changes is a placeholder \u2014 sending a voucher back to the broker is not built yet.",
+      },
+    ],
+  },
+  {
+    pr: 207,
+    title:
+      "Payer pickers on the voucher offer the deal\u2019s own people first, and a receivable can only be billed to one of them",
+    mergedAt: "2026-09-03T18:45:00Z",
+    day: "2026-09-03",
+    author: "buildoutfasterjoel",
+    area: "Back Office",
+    summary:
+      "Adding a payer, or billing a receivable, meant searching the whole contact book for a question with two or three real answers \u2014 the buyer is usually the payer, and a receivable is billed to someone already on the deal. Both pickers now put those people first, and the receivable picker offers nobody else.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "Add Payer opens with the deal\u2019s buyers \u2014 tenants on a lease \u2014 in their own group at the top, with the rest of the contact book underneath. Confirming the name you already know, instead of finding it alphabetically among four hundred.",
+      },
+      {
+        kind: "feature",
+        text: "A new receivable can only be billed to the voucher\u2019s payers or the deal\u2019s buyer, grouped under headings that say which is which. Everyone else has no part in the transaction.",
+      },
+      {
+        kind: "refinement",
+        text: "Billing the buyer on a receivable adds them to the Billing section, so the first receivable on a new voucher no longer needs a trip through Add Payer first.",
+      },
+      {
+        kind: "refinement",
+        text: "A buyer you have added but not yet Saved is already available to bill, and a voucher with neither a buyer nor a payer says so \u2014 \u201cAdd a buyer or a payer to this voucher first\u201d \u2014 rather than dropping an empty menu.",
+      },
+    ],
+  },
+  {
     pr: 206,
     title: "The Delgado Building\u2019s marketing stats follow the deal\u2019s stage, reading as pre-market until it goes Active",
     mergedAt: "2026-09-03T15:35:47Z",

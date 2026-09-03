@@ -4,18 +4,18 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Field } from "@buildoutinc/blueprint-react/ui/Field";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
-import { Combobox } from "@buildoutinc/blueprint-react/ui/Combobox";
 import { Textarea } from "@buildoutinc/blueprint-react/ui/Textarea";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Calendar } from "@buildoutinc/blueprint-react/ui/Calendar";
 import { Popover } from "@buildoutinc/blueprint-react/ui/Popover";
-import {
-	faCalendar,
-	faDollarSign,
-	faMagnifyingGlass,
-} from "@fortawesome/pro-regular-svg-icons";
+import { faCalendar, faDollarSign } from "@fortawesome/pro-regular-svg-icons";
 import { DATE_FORMAT, parseDate, toISODate } from "#/lib/isoDate";
-import { getContactOptions, type ContactOption } from "#/data/store";
+import {
+	contactOptionsFor,
+	type ContactOption,
+	type ContactOptionGroup,
+} from "#/data/store";
+import { ContactPicker } from "./ContactPicker";
 
 /**
  * A due date, picked from a Blueprint Calendar.
@@ -89,21 +89,26 @@ export interface NewReceivableInput {
  * numbers that then read as real ones. Amount defaults to $0.00, which the
  * Receivables table already renders honestly.
  *
- * The payer list is every contact in TWO forms — the person, and the company
- * they belong to — because a commission is as often invoiced to an entity as to
- * a person. Both forms name the same contact; see `billToCompany`.
+ * The payer list is the Billing section, and nothing else. A receivable bills
+ * someone this voucher already names as a payer; anyone else is a contact with
+ * no part in it. Which is also why there is no first-receivable shortcut here:
+ * a voucher with no payers cannot bill at all, and the Add Receivable button is
+ * disabled until one is added.
  *
- * Not filtered to the voucher's existing payers. Creating a receivable is how a
- * payer joins the Billing section, so filtering to what is already there would
- * make the first receivable on a voucher impossible to create.
+ * One entry per person, not two. Whether the invoice carries their name or
+ * their company is the row's own dropdown once the line exists — see
+ * `billToCompany` — not a second thing to answer while creating it.
  */
 export function NewReceivableModal({
 	open,
 	onOpenChange,
+	payerIds,
 	onAdd,
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	/** The voucher's payers — the only contacts a receivable can be billed to. */
+	payerIds: string[];
 	onAdd: (input: NewReceivableInput) => void;
 }) {
 	const [payer, setPayer] = useState<ContactOption | null>(null);
@@ -125,9 +130,12 @@ export function NewReceivableModal({
 	}, [open]);
 
 	// Read in the render body, not memoized, so reopening the modal picks up a
-	// contact added since — the same reason `AddContactModal` calls its source
+	// payer added since — the same reason `AddContactModal` calls its source
 	// directly.
-	const options = getContactOptions();
+	const payers = contactOptionsFor(payerIds);
+	const groups: ContactOptionGroup[] = payers.length
+		? [{ value: "payers", label: "Payers on this voucher", items: payers }]
+		: [];
 
 	const add = () => {
 		if (!payer) return;
@@ -157,47 +165,21 @@ export function NewReceivableModal({
 				<Modal.Body className="d-flex flex-column gap-4">
 					<Field>
 						<Field.Label>Payer</Field.Label>
-						{/* The same contact picker the party sections use — one entry per
-						    person. A receivable belongs to one person; whether their name
-						    or their company goes on the invoice is the row's question, not
-						    this one. */}
-						<Combobox
-							items={options}
+						{/* The same picker the party sections use, over the voucher's
+						    payers. */}
+						<ContactPicker
+							groups={groups}
 							value={payer}
-							inputValue={payerQuery}
-							onInputValueChange={(v: string) => setPayerQuery(v)}
-							onValueChange={(v) => {
-								const opt = v as ContactOption | null;
-								setPayer(opt);
-								setPayerQuery(opt?.label ?? "");
-							}}
-						>
-							<Combobox.InputGroup>
-								<InputGroup.Addon>
-									<FontAwesomeIcon icon={faMagnifyingGlass} />
-								</InputGroup.Addon>
-								<Combobox.Input placeholder="Search contacts..." />
-							</Combobox.InputGroup>
-							<Combobox.Content>
-								<Combobox.Empty className="text-muted">
-									No matching contacts
-								</Combobox.Empty>
-								<Combobox.List>
-									{(item: ContactOption) => (
-										<Combobox.Item key={item.value} value={item}>
-											<div className="d-flex flex-column">
-												<span>{item.name}</span>
-												<span className="text-muted fs-small">
-													{[item.title, item.company]
-														.filter(Boolean)
-														.join(" · ")}
-												</span>
-											</div>
-										</Combobox.Item>
-									)}
-								</Combobox.List>
-							</Combobox.Content>
-						</Combobox>
+							onChange={setPayer}
+							query={payerQuery}
+							onQueryChange={setPayerQuery}
+							labelSingleGroup
+							emptyMessage={
+								groups.length === 0
+									? "Add a payer to the Billing section first."
+									: "No matching payers"
+							}
+						/>
 					</Field>
 
 					<Field>
