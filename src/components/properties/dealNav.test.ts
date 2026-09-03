@@ -8,6 +8,7 @@ import {
   dealBreadcrumbTrail,
   NAV_GROUPS,
   visibleNavGroups,
+  BACK_OFFICE_HREFS,
 } from "./dealNav";
 
 const ID = "deal-1";
@@ -113,7 +114,7 @@ describe("NAV_GROUPS", () => {
 
 function hrefs(
   shape: Parameters<typeof visibleNavGroups>[0],
-  opts = {
+  opts: Parameters<typeof visibleNavGroups>[1] = {
     leaseParent: false,
     showsUnderwriting: false,
   },
@@ -462,5 +463,62 @@ describe("classic deal nav", () => {
         dealBreadcrumbTrail(`/listings/${ID}/${href}`, ID).sectionLabel,
       ).toBeNull();
     }
+  });
+});
+
+describe("visibleNavGroups and the back-office wall", () => {
+  it("drops the whole Back Office group, and Underwriting with it", () => {
+    const shown = hrefs("sale", {
+      leaseParent: false,
+      showsUnderwriting: true,
+      showsBackOffice: false,
+    });
+    for (const href of ["financials", "financial-documents", "notes", "underwriting"]) {
+      expect(shown).not.toContain(href);
+    }
+    // Marketing and the Deal group are untouched.
+    expect(shown).toContain("listing");
+    expect(shown).toContain("overview");
+  });
+
+  it("drops a shell's Vouchers index too", () => {
+    const shown = hrefs("shell", {
+      leaseParent: true,
+      showsUnderwriting: false,
+      showsBackOffice: false,
+    });
+    expect(shown).not.toContain("vouchers");
+  });
+
+  it("applies to a classic deal's Financials group", () => {
+    const shown = hrefs("sale", {
+      leaseParent: false,
+      showsUnderwriting: false,
+      isClassic: true,
+      showsBackOffice: false,
+    });
+    expect(shown).not.toContain("deals");
+    expect(shown).toContain("website");
+  });
+
+  it("shows everything when access is not given an opinion", () => {
+    const shown = hrefs("sale", { leaseParent: false, showsUnderwriting: true });
+    expect(shown).toContain("financials");
+    expect(shown).toContain("underwriting");
+  });
+
+  it("BACK_OFFICE_HREFS covers every section the guard must block", () => {
+    for (const href of [
+      "financials",
+      "financial-documents",
+      "notes",
+      "vouchers",
+      "underwriting",
+      "deals",
+    ]) {
+      expect(BACK_OFFICE_HREFS).toContain(href);
+    }
+    expect(BACK_OFFICE_HREFS).not.toContain("overview");
+    expect(BACK_OFFICE_HREFS).not.toContain("listing");
   });
 });

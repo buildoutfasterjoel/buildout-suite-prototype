@@ -11,7 +11,7 @@ const slice = (): DataSlice => ({
   dealFiles: new Map(),
   emails: new Map(),
   callLists: new Map(),
-  contactShares: new Map(),
+  contactShares: new Map(), dealShares: new Map(),
   tasks: new Map(),
 })
 

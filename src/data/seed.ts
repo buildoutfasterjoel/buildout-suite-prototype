@@ -54,6 +54,7 @@ import {
   type ContactShare,
   type Teammate,
 } from './teammates'
+import type { DealShare } from './dealShares'
 import {
   DEFAULT_PERSONAL_SPLIT_PCT,
   STAGE_CLOSE_PROBABILITY,
@@ -3135,5 +3136,42 @@ export function seedContactShares(
   // The one hand-placed share: Sarah's Dana Whitfield, shared with Ethan at
   // Contributor, so the Link action on the person pair has a seat to run from.
   map.set(PERSON_PAIR_IDS.danaSarah, [{ member: CURRENT_USER, tier: 'contributor' }])
+  return map
+}
+
+/**
+ * Seed deal sharing so the marketing / back-office split has something to show
+ * without anyone sharing a deal by hand first.
+ *
+ * The three people used here are the roster's `sharing`-kind roles — the ones
+ * that own no records and see only what is shared with them (see
+ * `ROLE_ACCESS_DETAIL` in `permissions.ts`). That is what makes them the demo
+ * seats: switch to Maya and a shared deal opens with no Back Office group at
+ * all, while an unshared one does not open.
+ *
+ * Riley is seeded at `view` on purpose. Their Office Admin role holds none of
+ * the marketing edit permissions, so a `contribute` share would resolve down to
+ * `view` anyway — and a stored share that lies about what someone gets is worth
+ * avoiding. The capped case is demonstrated live instead: the modal disables
+ * "Can edit" for Riley and says why.
+ *
+ * Keyed off the listing's index, so the assignment is deterministic and stable
+ * across runs. No faker — the seed tests pin that nothing here draws from the
+ * shared stream.
+ */
+export function seedDealShares(listings: Listing[]): Map<string, DealShare[]> {
+  const map = new Map<string, DealShare[]>()
+  const member = (id: string) => TEAMMATES.find((t) => t.id === id)
+  const maya = member('maya-brooks')
+  const omar = member('omar-haddad')
+  const riley = member('riley-park')
+  listings.forEach((l, i) => {
+    const shares: DealShare[] = []
+    if (maya && i % 3 === 0) shares.push({ member: maya, scope: 'marketing', level: 'contribute' })
+    if (omar && i % 3 === 1)
+      shares.push({ member: omar, scope: 'back-office', level: 'contribute' })
+    if (riley && i % 6 === 2) shares.push({ member: riley, scope: 'marketing', level: 'view' })
+    if (shares.length > 0) map.set(l.id, shares)
+  })
   return map
 }

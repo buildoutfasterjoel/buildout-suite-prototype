@@ -152,6 +152,32 @@ export const CLASSIC_NAV_GROUPS: NavGroup[] = [
 export const CLASSIC_LANDING_HREF = "leads";
 
 /**
+ * The nav group holding a deal's money, under each set's own name for it. A
+ * viewer shared into marketing only never sees it — not the group, and not the
+ * routes behind it (see the guard in `$listingId.tsx`).
+ */
+const BACK_OFFICE_GROUP_LABELS = ["Back Office", "Financials"];
+
+function withoutBackOffice(groups: NavGroup[], shows: boolean): NavGroup[] {
+  if (shows) return groups;
+  return groups.filter(
+    (g) => !g.label || !BACK_OFFICE_GROUP_LABELS.includes(g.label),
+  );
+}
+
+/**
+ * Every section behind the back-office wall, by href — the group's own items
+ * plus Underwriting, which lives in the Deal group but is money all the same.
+ * The route guard reads this; the sidebar filters by group label above.
+ */
+export const BACK_OFFICE_HREFS: readonly string[] = [
+  ...NAV_GROUPS.concat(CLASSIC_NAV_GROUPS)
+    .filter((g) => g.label && BACK_OFFICE_GROUP_LABELS.includes(g.label))
+    .flatMap((g) => g.items.map((i) => i.href)),
+  "underwriting",
+];
+
+/**
  * Which section — and, on a drill-down, which record — the current URL is on.
  *
  * Returns the section's *label* (from the static NAV_GROUPS) and the detail's
@@ -267,12 +293,22 @@ export function visibleNavGroups(
      * A classic deal swaps the whole set rather than filtering it — see
      * CLASSIC_NAV_GROUPS. None of the shape rules below apply, so this returns
      * before them rather than threading `isClassic` through each one.
+     *
+     * The back-office rule is the one exception: it is about who is looking, not
+     * what shape the deal is, so it applies to the classic set too.
      */
     isClassic?: boolean;
+    /**
+     * Whether the viewer may see the money at all — false for someone shared
+     * into marketing only. Defaults to true, so every caller that has no opinion
+     * about access keeps today's sidebar. Resolved by `dealAccessFor`.
+     */
+    showsBackOffice?: boolean;
   },
 ): NavGroup[] {
-  if (opts.isClassic) return CLASSIC_NAV_GROUPS;
-  return NAV_GROUPS.map((group) => ({
+  const showsBackOffice = opts.showsBackOffice ?? true;
+  if (opts.isClassic) return withoutBackOffice(CLASSIC_NAV_GROUPS, showsBackOffice);
+  return withoutBackOffice(NAV_GROUPS, showsBackOffice).map((group) => ({
     ...group,
     items: group.items.filter((item) => {
       // A space's own marketing form is Details; every other shape's is Listing.
@@ -301,7 +337,9 @@ export function visibleNavGroups(
       // once the property qualifies. The `shape === "space"` exclusion is
       // covered by the BUILDING_OWNED_HREFS branch above; this branch only adds
       // the qualification gate for every other shape.
-      if (item.href === "underwriting") return opts.showsUnderwriting;
+      // Underwriting is a Deal-group item but it is money, so it rides with the
+      // back office rather than with the sections around it.
+      if (item.href === "underwriting") return opts.showsUnderwriting && showsBackOffice;
       return true;
     }),
   })).filter((group) => group.items.length > 0);

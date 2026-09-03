@@ -14,6 +14,7 @@ import { useDataStore } from "#/data/dataStore";
 import { PropertyDetailHeader } from "#/components/properties/PropertyDetailHeader";
 import { PropertyDetailSidebar } from "#/components/properties/PropertyDetailSidebar";
 import { dealBreadcrumbTrail } from "#/components/properties/dealNav";
+import { DealAccessGate } from "#/components/deals/DealAccessGate";
 
 export const Route = createFileRoute("/_shell/listings/$listingId")({
   component: PropertyDetail,
@@ -78,28 +79,30 @@ function PropertyDetail() {
   );
 
   return (
-    <div className="h-100 overflow-y-auto overflow-x-hidden">
-      <PropertyDetailHeader listing={listing} />
+    <DealAccessGate listing={listing} basePath={`/listings/${listingId}`}>
+      <div className="h-100 overflow-y-auto overflow-x-hidden">
+        <PropertyDetailHeader listing={listing} />
 
-      <div className="container d-flex align-items-start gap-4 py-4">
-        {/* Section nav — its own card */}
-        <Card
-          className="shadow flex-shrink-0 position-sticky"
-          style={{ width: 180, top: 0 }}
-        >
-          <PropertyDetailSidebar
-            listing={listing}
-            basePath={`/listings/${listingId}`}
-            activeLabel={sectionLabel}
-          />
-        </Card>
+        <div className="container d-flex align-items-start gap-4 py-4">
+          {/* Section nav — its own card */}
+          <Card
+            className="shadow flex-shrink-0 position-sticky"
+            style={{ width: 180, top: 0 }}
+          >
+            <PropertyDetailSidebar
+              listing={listing}
+              basePath={`/listings/${listingId}`}
+              activeLabel={sectionLabel}
+            />
+          </Card>
 
-        {/* Detail content — each tab renders its own layout, including
-            the deal context rail where applicable (e.g. Overview). */}
-        <Card className="flex-grow-1 shadow" style={{ minWidth: 0 }}>
-          <Outlet />
-        </Card>
+          {/* Detail content — each tab renders its own layout, including
+              the deal context rail where applicable (e.g. Overview). */}
+          <Card className="flex-grow-1 shadow" style={{ minWidth: 0 }}>
+            <Outlet />
+          </Card>
+        </div>
       </div>
-    </div>
+    </DealAccessGate>
   );
 }

@@ -28,7 +28,7 @@ describe('useDataStore', () => {
       dealFiles: new Map(),
       emails: new Map(),
       callLists: new Map(),
-      contactShares: new Map(),
+      contactShares: new Map(), dealShares: new Map(),
       tasks: new Map(),
     })
     const after = useDataStore.getState().properties
@@ -42,7 +42,7 @@ describe('hydrate / reset', () => {
     await clearSnapshot()
     useDataStore.getState()._replaceAll({
       properties: new Map(), listings: new Map(), comps: new Map(), contacts: new Map(),
-      dealFiles: new Map(), emails: new Map(), callLists: new Map(), contactShares: new Map(),
+      dealFiles: new Map(), emails: new Map(), callLists: new Map(), contactShares: new Map(), dealShares: new Map(),
       tasks: new Map(),
     })
     await useDataStore.getState().reset()
@@ -56,7 +56,7 @@ describe('hydrate / reset', () => {
     await saveSnapshot({
       properties: new Map([['only', { id: 'only' } as any]]),
       listings: new Map(), comps: new Map(), contacts: new Map(),
-      dealFiles: new Map(), emails: new Map(), callLists: new Map(), contactShares: new Map(),
+      dealFiles: new Map(), emails: new Map(), callLists: new Map(), contactShares: new Map(), dealShares: new Map(),
       tasks: new Map(),
     })
     await useDataStore.getState().hydrate()
@@ -89,7 +89,7 @@ describe('Rosa demo reset on hydrate', () => {
     await saveSnapshot({
       properties: seed.properties, listings, comps: seed.comps, contacts,
       dealFiles: seed.dealFiles, emails: seed.emails, callLists: seed.callLists,
-      contactShares: seed.contactShares, tasks,
+      contactShares: seed.contactShares, dealShares: seed.dealShares, tasks,
     })
 
     await useDataStore.getState().hydrate()
@@ -124,7 +124,7 @@ describe('Rosa demo reset on hydrate', () => {
     await saveSnapshot({
       properties, listings: seed.listings, comps: seed.comps, contacts,
       dealFiles: seed.dealFiles, emails: seed.emails, callLists: seed.callLists,
-      contactShares: seed.contactShares, tasks: seed.tasks,
+      contactShares: seed.contactShares, dealShares: seed.dealShares, tasks: seed.tasks,
     })
 
     await useDataStore.getState().hydrate()

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useDealAccess } from "./useDealAccess";
 import { Link } from "@tanstack/react-router";
 import { Accordion } from "@buildoutinc/blueprint-react/ui/Accordion";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
@@ -214,8 +215,14 @@ function ContactSection({
   );
 }
 
-/** A broker row in the rail — mirrors ContactRow, with the gross commission % on the right. */
-function BrokerRow({ broker }: { broker: DealBroker }) {
+/**
+ * A broker row in the rail — mirrors ContactRow, with the gross commission % on
+ * the right. The split is the only money on the Overview, so it is what a
+ * marketing-only share hides: the row still names the broker (knowing who works
+ * the deal is not a financial fact), and the figure reads as withheld rather
+ * than as missing.
+ */
+function BrokerRow({ broker, showsMoney }: { broker: DealBroker; showsMoney: boolean }) {
   return (
     <div className="d-flex align-items-center gap-2 py-2">
       <Avatar size="lg">
@@ -228,8 +235,14 @@ function BrokerRow({ broker }: { broker: DealBroker }) {
         )}
       </div>
       <div className="text-end flex-shrink-0">
-        <div className="fw-semibold">{broker.commissionSplitPct}%</div>
-        <div className="text-muted fs-small">Gross comm.</div>
+        {showsMoney ? (
+          <>
+            <div className="fw-semibold">{broker.commissionSplitPct}%</div>
+            <div className="text-muted fs-small">Gross comm.</div>
+          </>
+        ) : (
+          <div className="text-muted fs-small">Hidden</div>
+        )}
       </div>
     </div>
   );
@@ -239,10 +252,12 @@ function BrokerSection({
   value,
   label,
   brokers,
+  showsMoney,
 }: {
   value: string;
   label: string;
   brokers: DealBroker[];
+  showsMoney: boolean;
 }) {
   return (
     <Accordion.Item value={value}>
@@ -258,7 +273,9 @@ function BrokerSection({
         {brokers.length === 0 ? (
           <div className="text-muted fs-small py-2">No brokers added.</div>
         ) : (
-          brokers.map((b) => <BrokerRow key={b.id} broker={b} />)
+          brokers.map((b) => (
+            <BrokerRow key={b.id} broker={b} showsMoney={showsMoney} />
+          ))
         )}
       </Accordion.Content>
     </Accordion.Item>
@@ -292,6 +309,10 @@ export function DealContextRail({ listing }: { listing: Listing }) {
   const [open, setOpen] = useState<string[]>(["seller"]);
   const addTo = (section: string) =>
     setOpen((prev) => (prev.includes(section) ? prev : [...prev, section]));
+
+  // Commission splits are back-office data sitting on an otherwise-marketing
+  // page. Everyone but a marketing-only share resolves to full access here.
+  const showsMoney = useDealAccess(listing).backOffice !== "none";
 
   const [brokersOpen, setBrokersOpen] = useState<string[]>(["internal"]);
   const addBroker = (section: string) =>
@@ -382,8 +403,18 @@ export function DealContextRail({ listing }: { listing: Listing }) {
         </DropdownMenu>
       </div>
       <Accordion multiple value={brokersOpen} onValueChange={setBrokersOpen}>
-        <BrokerSection value="internal" label="Internal" brokers={listing.internalBrokers} />
-        <BrokerSection value="outside" label="Outside" brokers={listing.outsideBrokers} />
+        <BrokerSection
+          value="internal"
+          label="Internal"
+          brokers={listing.internalBrokers}
+          showsMoney={showsMoney}
+        />
+        <BrokerSection
+          value="outside"
+          label="Outside"
+          brokers={listing.outsideBrokers}
+          showsMoney={showsMoney}
+        />
       </Accordion>
     </div>
   );

@@ -10,6 +10,7 @@ import { notify } from "#/lib/notify";
 import { ListingFormEditor } from "#/components/listings/edit/ListingFormEditor";
 import { ListingPageHeader } from "#/components/listings/ListingPageHeader";
 import { listingSavePatch, propertySavePatch } from "#/components/deals/edit/savePatches";
+import { useDealAccess } from "#/components/deals/useDealAccess";
 import { reseedDraft } from "#/components/deals/edit/reseedDraft";
 import { PendingPublishBanner } from "#/components/deals/edit/PendingPublishBanner";
 import {
@@ -125,6 +126,8 @@ export function ListingEditor({
 			?.scrollIntoView({ behavior: "smooth", block: "center" });
 	}, []);
 
+	const access = useDealAccess(listing);
+
 	const save = () => {
 		// `listing` and `property` are the route's reactive store records, not draft
 		// snapshots — so the patches keep the gate-owned marketing keys, the
@@ -136,7 +139,19 @@ export function ListingEditor({
 		notify({ title: "Listing saved" });
 	};
 
-	const saveButton = (
+	// A marketing share at View only reads the form but cannot write it. Disabling
+	// Save rather than rendering every field read-only is deliberate: the form is
+	// twenty-plus inputs across five groups, and a disabled Save with a reason
+	// beside it says the same thing in one place instead of two hundred.
+	const readOnly = access.marketing === "view";
+	const saveButton = readOnly ? (
+		<span className="d-flex align-items-center gap-2">
+			<span className="fs-small text-muted">Shared with you as view only</span>
+			<Button variant="primary" disabled>
+				Save
+			</Button>
+		</span>
+	) : (
 		<Button variant="primary" disabled={!dirty} onClick={save}>
 			Save
 		</Button>

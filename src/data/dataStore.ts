@@ -1,9 +1,10 @@
 import { create } from 'zustand'
 import type { Comp, Contact, DealFileItem, Listing, Property, Task } from './types'
-import { generateDataset, seedCallLists, seedContactShares } from './seed'
+import { generateDataset, seedCallLists, seedContactShares, seedDealShares } from './seed'
 import { getEmails, type Email } from './emails'
 import type { CallList } from './contactLists'
 import type { ContactShare } from './teammates'
+import type { DealShare } from './dealShares'
 import { clearSnapshot, loadSnapshot, saveSnapshot } from './persistence'
 import { registerPinnedPhotoResolver } from '#/components/properties/propertyDisplay'
 
@@ -20,6 +21,8 @@ export interface DataSlice {
   callLists: Map<string, CallList>
   /** Contact sharing: teammates granted access per contact id. Absent id ⇒ the default seed. */
   contactShares: Map<string, ContactShare[]>
+  /** Deal sharing: teammates shared into a deal, per listing id. Absent id ⇒ nobody. */
+  dealShares: Map<string, DealShare[]>
   /** Standalone tasks created via the Add Task modal, keyed by id. Seeded empty. */
   tasks: Map<string, Task>
 }
@@ -50,6 +53,7 @@ export function seedSlice(): DataSlice {
     emails: new Map(getEmails().map((e) => [e.id, e])),
     callLists: new Map(seedCallLists().map((l) => [l.id, l])),
     contactShares: seedContactShares(contacts),
+    dealShares: seedDealShares(listings),
     tasks: new Map(),
   }
 }
@@ -161,6 +165,7 @@ export const useDataStore = create<DataState>((set) => ({
         emails: slice.emails ?? new Map(getEmails().map((e) => [e.id, e])),
         callLists: slice.callLists ?? new Map(),
         contactShares: slice.contactShares ?? new Map(),
+        dealShares: slice.dealShares ?? new Map(),
         tasks: slice.tasks ?? new Map(),
       }
       // Rosa's demo arc resets on every hard refresh — the pre-hydrate state
@@ -169,9 +174,9 @@ export const useDataStore = create<DataState>((set) => ({
       set({ ...resetRosaDemoState(normalized, fresh), hydrated: true })
     } else {
       // First visit: persist the seed so the world is stable from here on.
-      const { properties, listings, comps, contacts, dealFiles, emails, callLists, contactShares, tasks } =
+      const { properties, listings, comps, contacts, dealFiles, emails, callLists, contactShares, dealShares, tasks } =
         useDataStore.getState()
-      await saveSnapshot({ properties, listings, comps, contacts, dealFiles, emails, callLists, contactShares, tasks })
+      await saveSnapshot({ properties, listings, comps, contacts, dealFiles, emails, callLists, contactShares, dealShares, tasks })
       set({ hydrated: true })
     }
   },
@@ -187,9 +192,9 @@ export const useDataStore = create<DataState>((set) => ({
     if (typeof indexedDB === 'undefined') return
     if (_persistTimer) clearTimeout(_persistTimer)
     _persistTimer = setTimeout(() => {
-      const { properties, listings, comps, contacts, dealFiles, emails, callLists, contactShares, tasks } =
+      const { properties, listings, comps, contacts, dealFiles, emails, callLists, contactShares, dealShares, tasks } =
         useDataStore.getState()
-      void saveSnapshot({ properties, listings, comps, contacts, dealFiles, emails, callLists, contactShares, tasks })
+      void saveSnapshot({ properties, listings, comps, contacts, dealFiles, emails, callLists, contactShares, dealShares, tasks })
     }, 300)
   },
 

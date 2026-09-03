@@ -26,6 +26,12 @@ import {
   type ContactShare,
   type Teammate,
 } from './teammates'
+import {
+  DEFAULT_DEAL_SHARES,
+  type DealShare,
+  type ShareLevel,
+  type ShareScope,
+} from './dealShares'
 import { DEFAULT_STRATEGY, strategyLabel } from '#/components/deals/underwriting/strategies'
 import { buildUnderwritingResult } from '#/components/deals/underwriting/underwritingResult'
 
@@ -520,6 +526,64 @@ export function revokeContactShare(contactId: string, memberId: string): void {
   setContactShares(
     contactId,
     getContactShares(contactId).filter((s) => s.member.id !== memberId),
+  )
+}
+
+// ── Deal sharing ───────────────────────────────────────────────────────
+
+/**
+ * Who has been shared into a deal. The default is a single stable reference, so
+ * an unshared deal reads the same value across renders.
+ */
+export function getDealShares(listingId: string): DealShare[] {
+  return useDataStore.getState().dealShares.get(listingId) ?? DEFAULT_DEAL_SHARES
+}
+
+function setDealShares(listingId: string, shares: DealShare[]): void {
+  useDataStore.setState((s) => {
+    const dealShares = new Map(s.dealShares)
+    dealShares.set(listingId, shares)
+    return { dealShares }
+  })
+  useDataStore.getState().persist()
+}
+
+/** Share a deal with the given members at one scope and level (skips duplicates). */
+export function grantDealShares(
+  listingId: string,
+  memberIds: string[],
+  scope: ShareScope,
+  level: ShareLevel,
+): void {
+  const next = [...getDealShares(listingId)]
+  for (const id of memberIds) {
+    const member = findTeammate(id)
+    if (!member || next.some((s) => s.member.id === id)) continue
+    next.push({ member, scope, level })
+  }
+  setDealShares(listingId, next)
+}
+
+/** Move an existing share to another scope or level. */
+export function changeDealShare(
+  listingId: string,
+  memberId: string,
+  scope: ShareScope,
+  level: ShareLevel,
+): void {
+  setDealShares(
+    listingId,
+    getDealShares(listingId).map((s) =>
+      s.member.id === memberId ? { ...s, scope, level } : s,
+    ),
+  )
+}
+
+/** Revoke a member's access to a deal. */
+export function revokeDealShare(listingId: string, memberId: string): void {
+  setDealShares(
+    listingId,
+    getDealShares(listingId).filter((s) => s.member.id !== memberId),
   )
 }
 
