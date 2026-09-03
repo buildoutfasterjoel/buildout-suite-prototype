@@ -117,6 +117,38 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 210,
+    title: "Log Activity fields take AI instructions inline, right under the field, instead of through the Otto rail",
+    mergedAt: "2026-09-03T22:50:11Z",
+    day: "2026-09-03",
+    author: "ZS-buildout",
+    area: "Otto",
+    summary:
+      "Asking Otto to write a note meant opening the rail, typing there, and watching the answer land somewhere else on the page \u2014 and every field edit piled into the rail\u2019s conversation. The ask now happens right under the field it changes, and the rail never hears about it.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "The sparkle sits in the bottom-right of each Log Activity field and opens an instruction bar beneath it, already focused, so you can just start typing what should be written.",
+      },
+      {
+        kind: "feature",
+        text: "Press Enter or the arrow and the text streams into the field itself. While it writes, the field shimmers, the bar reads Generating\u2026, and a Stop button cancels \u2014 keeping whatever has already landed.",
+      },
+      {
+        kind: "feature",
+        text: "Once the text is in, the bar comes back as Describe your change, and a menu at its end offers three one-click revisions \u2014 More Formal, Friendlier, Shorten. It works on a note you typed yourself, too.",
+      },
+      {
+        kind: "refinement",
+        text: "Each tab of the Log Activity block keeps its own bar, a note can keep generating while you glance at the Call tab, and logging the activity puts its bar away.",
+      },
+      {
+        kind: "refinement",
+        text: "The rail\u2019s pinned-field chip, its quick-revision buttons and the tinted field are gone, along with Otto\u2019s stage-a-field tool. Field writing no longer shows up in the conversation at all.",
+      },
+    ],
+  },
+  {
     pr: 209,
     title:
       "A receivable can only be billed to a listed payer, and the commission breakdown names each internal broker",

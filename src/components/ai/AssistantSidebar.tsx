@@ -688,7 +688,6 @@ const ACTION_TOOLS = new Set([
   "assign_contact",
   "create_task",
   "add_activity",
-  "stage_field_value",
   "log_call",
   "start_call",
   "generateDoc",
@@ -936,9 +935,6 @@ export function AssistantSidebar() {
   const pendingLine = useAssistant((s) => s.pendingLine);
   const consumeLine = useAssistant((s) => s.consumeLine);
   const focusNonce = useAssistant((s) => s.focusNonce);
-  const fieldAsk = useAssistant((s) => s.fieldAsk);
-  const fieldAskNonce = useAssistant((s) => s.fieldAskNonce);
-  const clearFieldAsk = useAssistant((s) => s.clearFieldAsk);
   const expanded = useAssistant((s) => s.expanded);
   const toggleExpanded = useAssistant((s) => s.toggleExpanded);
   const setExpanded = useAssistant((s) => s.setExpanded);
@@ -1368,36 +1364,6 @@ export function AssistantSidebar() {
   }, [messages]);
 
   /**
-   * Messages produced while a field was pinned — a second reason a lookup is a
-   * step rather than an answer.
-   *
-   * `actionTurns` can only decide that in hindsight: it waits for the write to
-   * land, and the write does not exist until the model has read the lookup's
-   * results and taken another turn to think. In that gap — seconds, not frames —
-   * the lookup looks like the only result in the turn, so its record cards
-   * render and then retract once the write arrives. Asked to write a note from
-   * Earl's history, the rail flashed a card for a closed deal and took it away
-   * again.
-   *
-   * With a field pinned there is nothing to wait for. The field IS the turn's
-   * output — the system prompt says so — so a lookup can never be the answer,
-   * and that is knowable at render time from state already in hand.
-   *
-   * Accumulated and never revoked, deliberately. "This message was produced
-   * while a field was pinned" is a fact about the past: reading it off the
-   * CURRENT chip would collapse cards from turns that predate the pin the
-   * moment one is raised, and bring them back when it is cleared — the same
-   * retraction wearing a different hat. Adding to the set during render is safe
-   * because it is idempotent and only ever grows, and doing it in an effect
-   * instead would let each card paint once before vanishing.
-   */
-  const pinnedTurnsRef = useRef<Set<string>>(new Set());
-  if (fieldAsk) {
-    for (const m of messages) if (m.role === "assistant") pinnedTurnsRef.current.add(m.id);
-  }
-  const pinnedTurns = pinnedTurnsRef.current;
-
-  /**
    * The order the transcript is *drawn* in, as indices into `messages`.
    *
    * A turn that returns results is split across two messages: the model calls
@@ -1730,36 +1696,6 @@ export function AssistantSidebar() {
   }, [pendingLine, consumeLine, setMessages, messages]);
 
   /**
-   * A field handed over from the page (§"Ask at the rail, review at the field").
-   *
-   * Otto's opener is appended, not sent: with an empty field it is the question
-   * about what the note should cover, and with a value it is the hand-off into
-   * the quick actions below — neither is a turn the model has anything to add
-   * to, and round-tripping either would put a spinner between the click and the
-   * prompt the broker is already reading.
-   *
-   * Keyed on the nonce rather than on `fieldAsk`, so clicking the same field's
-   * sparkle twice re-announces instead of going quiet. Reads the ask through
-   * `getState` for the same reason the effect doesn't depend on `messages`: the
-   * one thing that should re-run this is a new request.
-   */
-  useEffect(() => {
-    if (fieldAskNonce === 0) return;
-    const ask = useAssistant.getState().fieldAsk;
-    if (!ask) return;
-    setView("chat");
-    setMessages([
-      ...messagesRef.current,
-      {
-        id: `field-ask-${fieldAskNonce}`,
-        role: "assistant",
-        parts: [{ type: "text", content: ask.opener }],
-      } as UIMessage,
-    ]);
-    scrollToBottom();
-  }, [fieldAskNonce, setMessages, scrollToBottom]);
-
-  /**
    * Offer the underwriting on a deal the assistant just created — but only once
    * the turn it was created in has finished.
    *
@@ -2038,7 +1974,7 @@ export function AssistantSidebar() {
                     narratedIndices.has(i) ||
                     (planPending && m.role === "assistant" && i === messages.length - 1)
                   }
-                  suppressLookupCards={actionTurns.has(i) || pinnedTurns.has(m.id)}
+                  suppressLookupCards={actionTurns.has(i)}
                   // The arriving turn, and only it. A spoken reply opts out:
                   // the TTS reads the whole answer the moment the turn ends,
                   // and text still typing behind the audio drifts out of step
@@ -2130,33 +2066,6 @@ export function AssistantSidebar() {
           />
         </div>
       )}
-      {/* Quick actions for a pinned field (§"Ask at the rail" step 02) — two to
-          four presets per field type, each one tap for one whole prompt. They
-          sit directly above the composer rather than in the transcript because
-          they are part of *asking*, not part of the conversation: in the flow
-          they'd scroll away the moment Otto answered, which is exactly when a
-          broker wants a second pass at the same field.
-
-          Blueprint outline buttons, the same weight as the greeting's offer
-          buttons — presets are an offer, not a result. */}
-      {fieldAsk && fieldAsk.actions.length > 0 && (
-        <div
-          className="assistant-rail__column d-flex flex-wrap gap-2"
-          style={{ padding: "0 20px 8px" }}
-        >
-          {fieldAsk.actions.map((a) => (
-            <Button
-              key={a.label}
-              size="sm"
-              variant="outline"
-              disabled={isLoading}
-              onClick={() => send(a.prompt)}
-            >
-              {a.label}
-            </Button>
-          ))}
-        </div>
-      )}
       {/* Input (Figma node 193:4425) — shared with the editor's Otto panel. The
           disclaimer under it is part of the input area, not the transcript, so
           it stays put across both views. */}
@@ -2171,9 +2080,6 @@ export function AssistantSidebar() {
           isLoading={isLoading}
           onStop={stop}
           placeholder="Ask Otto for assistance"
-          contextChip={
-            fieldAsk ? { label: fieldAsk.label, onRemove: clearFieldAsk } : null
-          }
           listening={listening}
           onMicToggle={() => {
             if (listening) {
