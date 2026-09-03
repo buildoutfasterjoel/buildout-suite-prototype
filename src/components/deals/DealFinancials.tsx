@@ -40,6 +40,7 @@ import {
   faTrashCan,
   faCaretDown,
   faCircleInfo,
+  faStamp,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type {
@@ -215,12 +216,20 @@ function BreakdownSection({ listing }: { listing: Listing }) {
     commissionAllocation(listing);
 
   const segments = [
-    { label: "Pre-Split Deductions", value: deductions, color: DEDUCTIONS_COLOR },
+    {
+      label: "Pre-Split Deductions",
+      value: deductions,
+      color: DEDUCTIONS_COLOR,
+    },
     { label: "Outside Commission", value: outside, color: OUTSIDE_COLOR },
     { label: "Broker Commission", value: internal, color: BROKER_COLOR },
     // The donut cannot draw a negative slice. An over-allocated voucher has no
     // remainder to show, and the row below is where that is stated in words.
-    { label: "Unallocated", value: Math.max(0, unallocated), color: UNALLOCATED_COLOR },
+    {
+      label: "Unallocated",
+      value: Math.max(0, unallocated),
+      color: UNALLOCATED_COLOR,
+    },
   ];
 
   const rows: BreakdownRow[] = [
@@ -699,7 +708,10 @@ function PartyCard({
                 it (`bottom-0 end-0`) a 16px chip covered a third of the
                 initials — the ring is what separates the two, so it needs to
                 straddle the edge rather than sit within it. */}
-            <span className="position-absolute" style={{ bottom: -3, right: -3 }}>
+            <span
+              className="position-absolute"
+              style={{ bottom: -3, right: -3 }}
+            >
               <QuickbooksSyncBadge synced={party.quickbooksSynced} />
             </span>
           </span>
@@ -1493,7 +1505,7 @@ function DepositRow({
           the field is typed `string` and a deposit stored before that could
           still be empty. */}
       {/* Spans Billing Description AND Receivable Amount.
-          
+
           The amount cell on a deposit row is deliberately empty — a deposit has
           no billed figure — so the two controls take room that was already
           blank rather than squeezing into the description column alone, where
@@ -1598,8 +1610,6 @@ function ReceivablesSection({
   const patch = (id: string, next: Partial<FinancialReceivable>) =>
     updateReceivable(listing.id, id, next);
 
-
-
   // Which rows the bulk actions apply to. Local state — nothing here persists,
   // and every read below goes through `selectedRows` rather than the set itself,
   // so an id left behind by a previous deal is ignored rather than miscounted.
@@ -1629,7 +1639,8 @@ function ReceivablesSection({
   // One invoice bills one payer. Compared by contact id, not by name: two
   // different contacts who happen to share a name are two payers.
   const canCreateInvoice =
-    someSelected && new Set(selectedRows.map((r) => r.payerContactId)).size === 1;
+    someSelected &&
+    new Set(selectedRows.map((r) => r.payerContactId)).size === 1;
 
   /**
    * Bill the given receivables on one invoice, filed against the deal.
@@ -1889,57 +1900,62 @@ function ReceivablesSection({
           </Table.Header>
           <Table.Body>
             {receivables.map((r) => {
-              const label = receivablePayerLabel(r.payerContactId, r.billToCompany);
+              const label = receivablePayerLabel(
+                r.payerContactId,
+                r.billToCompany,
+              );
               const paidBy = depositsForReceivable(
                 listing.transaction.backOffice.deposits,
                 r.id,
               );
               return (
                 <Fragment key={r.id}>
-                <Table.Row
-                  className={
-                    editable && selectedIds.has(r.id) ? "table-active" : undefined
-                  }
-                >
-                  {editable && (
-                    <Table.Cell
-                      style={{
-                        width: RECEIVABLE_CHECKBOX_W,
-                        minWidth: RECEIVABLE_CHECKBOX_W,
-                      }}
-                    >
-                      <Checkbox
-                        checked={selectedIds.has(r.id)}
-                        onCheckedChange={(c) => toggleOne(r.id, c === true)}
-                        aria-label={`Select receivable for ${label}`}
-                      />
-                    </Table.Cell>
-                  )}
-                  <Table.Cell style={{ width: RECEIVABLE_COL.payer }}>
-                    {editable ? (
-                      /* Two options, both naming this row's own payer: the
+                  <Table.Row
+                    className={
+                      editable && selectedIds.has(r.id)
+                        ? "table-active"
+                        : undefined
+                    }
+                  >
+                    {editable && (
+                      <Table.Cell
+                        style={{
+                          width: RECEIVABLE_CHECKBOX_W,
+                          minWidth: RECEIVABLE_CHECKBOX_W,
+                        }}
+                      >
+                        <Checkbox
+                          checked={selectedIds.has(r.id)}
+                          onCheckedChange={(c) => toggleOne(r.id, c === true)}
+                          aria-label={`Select receivable for ${label}`}
+                        />
+                      </Table.Cell>
+                    )}
+                    <Table.Cell style={{ width: RECEIVABLE_COL.payer }}>
+                      {editable ? (
+                        /* Two options, both naming this row's own payer: the
                          person, or the company they belong to. Deliberately NOT
                          the contact book — who a receivable bills is settled
                          when it is created, and re-offering every contact here
                          would let "how is this addressed" quietly become "who
                          is this billed to". */
-                      <Select
-                        value={r.billToCompany ? "company" : "person"}
-                        onValueChange={(v) =>
-                          patch(r.id, { billToCompany: v === "company" })
-                        }
-                      >
-                        <Select.Trigger
-                          className="bg-card"
-                          aria-label="Payer"
-                          title={label}
-                          // `min-width: 0` is what lets the label inside shrink:
-                          // a flex item refuses to go below its content width
-                          // without it, so the trigger would push the column
-                          // wider instead of the text truncating.
-                          style={{ minWidth: 0 }}
+                        <Select
+                          value={r.billToCompany ? "company" : "person"}
+                          onValueChange={(v) =>
+                            patch(r.id, { billToCompany: v === "company" })
+                          }
                         >
-                          {/* The label is passed as children, not left to
+                          <Select.Trigger
+                            className="bg-card"
+                            aria-label="Payer"
+                            title={label}
+                            // `min-width: 0` is what lets the label inside shrink:
+                            // a flex item refuses to go below its content width
+                            // without it, so the trigger would push the column
+                            // wider instead of the text truncating.
+                            style={{ minWidth: 0 }}
+                          >
+                            {/* The label is passed as children, not left to
                               `Select.Value` to derive. Blueprint's Select.Value
                               renders the raw VALUE when given none — here that
                               is the literal string "person" — and this is the
@@ -1947,112 +1963,115 @@ function ReceivablesSection({
                               a browser rather than by the type checker. If you
                               add a Select whose value is not also its label,
                               pass the label. */}
-                          <Select.Value>
-                            <span className="d-block text-truncate">
-                              {label}
-                            </span>
-                          </Select.Value>
-                        </Select.Trigger>
-                        <Select.Content>
-                          {payerFormOptions(r.payerContactId).map((o) => (
-                            <Select.Item key={o.value} value={o.value}>
-                              {o.label}
-                            </Select.Item>
-                          ))}
-                        </Select.Content>
-                      </Select>
-                    ) : (
-                      <span className="d-block text-truncate" title={label}>
-                        {label}
-                      </span>
-                    )}
-                  </Table.Cell>
-                  <Table.Cell style={{ width: RECEIVABLE_COL.dueDate }}>
-                    {editable ? (
-                      /* The same `DueDatePicker` the New Receivable modal uses,
+                            <Select.Value>
+                              <span className="d-block text-truncate">
+                                {label}
+                              </span>
+                            </Select.Value>
+                          </Select.Trigger>
+                          <Select.Content>
+                            {payerFormOptions(r.payerContactId).map((o) => (
+                              <Select.Item key={o.value} value={o.value}>
+                                {o.label}
+                              </Select.Item>
+                            ))}
+                          </Select.Content>
+                        </Select>
+                      ) : (
+                        <span className="d-block text-truncate" title={label}>
+                          {label}
+                        </span>
+                      )}
+                    </Table.Cell>
+                    <Table.Cell style={{ width: RECEIVABLE_COL.dueDate }}>
+                      {editable ? (
+                        /* The same `DueDatePicker` the New Receivable modal uses,
                          so one page does not offer two different date controls
                          for the same field. A native `<input type="date">` was
                          here first and rendered its own `mm/dd/yyyy` chrome,
                          which belongs to the browser rather than to Blueprint. */
-                      <DueDatePicker
-                        className="bg-card"
-                        value={r.dueDate}
-                        onChange={(next) => patch(r.id, { dueDate: next })}
-                      />
-                    ) : (
-                      formatDate(r.dueDate)
-                    )}
-                  </Table.Cell>
-                  <Table.Cell>
-                    {editable ? (
-                      <ReceivableTextCell
-                        value={r.billingDescription}
-                        placeholder="Billing description"
-                        ariaLabel="Billing description"
-                        className="w-100"
-                        onCommit={(next) =>
-                          patch(r.id, { billingDescription: next })
-                        }
-                      />
-                    ) : (
-                      r.billingDescription
-                    )}
-                  </Table.Cell>
-                  <Table.Cell
-                    className="text-end"
-                    style={{ width: RECEIVABLE_COL.amount }}
-                  >
-                    {editable ? (
-                      <MoneyCell
-                        label="Receivable amount"
-                        unit={faDollarSign}
-                        value={r.amount}
-                        step="0.01"
-                        onChange={(v) => patch(r.id, { amount: v ?? 0 })}
-                      />
-                    ) : (
-                      formatCurrency(r.amount)
-                    )}
-                  </Table.Cell>
-                  {/* Credited stays read-only at every status: it is what has
+                        <DueDatePicker
+                          className="bg-card"
+                          value={r.dueDate}
+                          onChange={(next) => patch(r.id, { dueDate: next })}
+                        />
+                      ) : (
+                        formatDate(r.dueDate)
+                      )}
+                    </Table.Cell>
+                    <Table.Cell>
+                      {editable ? (
+                        <ReceivableTextCell
+                          value={r.billingDescription}
+                          placeholder="Billing description"
+                          ariaLabel="Billing description"
+                          className="w-100"
+                          onCommit={(next) =>
+                            patch(r.id, { billingDescription: next })
+                          }
+                        />
+                      ) : (
+                        r.billingDescription
+                      )}
+                    </Table.Cell>
+                    <Table.Cell
+                      className="text-end"
+                      style={{ width: RECEIVABLE_COL.amount }}
+                    >
+                      {editable ? (
+                        <MoneyCell
+                          label="Receivable amount"
+                          unit={faDollarSign}
+                          value={r.amount}
+                          step="0.01"
+                          onChange={(v) => patch(r.id, { amount: v ?? 0 })}
+                        />
+                      ) : (
+                        formatCurrency(r.amount)
+                      )}
+                    </Table.Cell>
+                    {/* Credited stays read-only at every status: it is what has
                       been paid against this line, which is the deposit and
                       credit actions' business, not something to type over. */}
-                  <Table.Cell
-                    className="text-end"
-                    style={{ width: RECEIVABLE_COL.credited }}
-                  >
-                    {r.credited > 0 ? formatCurrency(r.credited) : "None"}
-                  </Table.Cell>
-                  <Table.Cell style={{ width: RECEIVABLE_COL.sync }}>
-                    <QuickbooksSyncBadge synced={r.quickbooksSynced} size={18} />
-                  </Table.Cell>
-                  {editable && (
-                    <Table.Cell style={{ width: RECEIVABLE_COL.actions }}>
-                      <ReceivableRowMenu
-                        label={label}
-                        settled={r.credited >= r.amount}
-                        onApplyDeposit={() => openDeposit([r])}
-                        onCreateInvoice={() => createInvoice([r.id])}
-                        onDelete={() => deleteReceivable(listing.id, r.id)}
+                    <Table.Cell
+                      className="text-end"
+                      style={{ width: RECEIVABLE_COL.credited }}
+                    >
+                      {r.credited > 0 ? formatCurrency(r.credited) : "None"}
+                    </Table.Cell>
+                    <Table.Cell style={{ width: RECEIVABLE_COL.sync }}>
+                      <QuickbooksSyncBadge
+                        synced={r.quickbooksSynced}
+                        size={18}
                       />
                     </Table.Cell>
-                  )}
-                </Table.Row>
-                {paidBy.map(({ deposit, amount }) => (
-                  <DepositRow
-                    key={deposit.id}
-                    deposit={deposit}
-                    amount={amount}
-                    editable={editable}
-                    onRenameReference={(next) =>
-                      updateDepositReference(listing.id, deposit.id, next)
-                    }
-                    onRenameCheckNumber={(next) =>
-                      updateDepositCheckNumber(listing.id, deposit.id, next)
-                    }
-                    onDelete={() => removeDeposit(deposit.id)}
-                  />
-                ))}
+                    {editable && (
+                      <Table.Cell style={{ width: RECEIVABLE_COL.actions }}>
+                        <ReceivableRowMenu
+                          label={label}
+                          settled={r.credited >= r.amount}
+                          onApplyDeposit={() => openDeposit([r])}
+                          onCreateInvoice={() => createInvoice([r.id])}
+                          onDelete={() => deleteReceivable(listing.id, r.id)}
+                        />
+                      </Table.Cell>
+                    )}
+                  </Table.Row>
+                  {paidBy.map(({ deposit, amount }) => (
+                    <DepositRow
+                      key={deposit.id}
+                      deposit={deposit}
+                      amount={amount}
+                      editable={editable}
+                      onRenameReference={(next) =>
+                        updateDepositReference(listing.id, deposit.id, next)
+                      }
+                      onRenameCheckNumber={(next) =>
+                        updateDepositCheckNumber(listing.id, deposit.id, next)
+                      }
+                      onDelete={() => removeDeposit(deposit.id)}
+                    />
+                  ))}
                 </Fragment>
               );
             })}
@@ -2898,9 +2917,25 @@ export function DealFinancials({
                and the only way a voucher reaches Approved outside the seed. It
                shows only to a holder of Approve Vouchers: to everyone else a
                Pending voucher is a page with no action at all. */
-            <Button variant="primary" onClick={() => setApproving(true)}>
-              Approve Voucher
-            </Button>
+            <div>
+              <DropdownMenu>
+                <DropdownMenu.Trigger
+                  render={
+                    <Button variant="secondary">
+                      <FontAwesomeIcon icon={faStamp} />
+                      Review
+                      <FontAwesomeIcon icon={faCaretDown} />
+                    </Button>
+                  }
+                />
+                <DropdownMenu.Content>
+                  <DropdownMenu.Item onClick={() => setApproving(true)}>
+                    Approve
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item>Request Changes</DropdownMenu.Item>
+                </DropdownMenu.Content>
+              </DropdownMenu>
+            </div>
           ) : undefined
         }
       />
