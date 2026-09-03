@@ -89,16 +89,12 @@ export interface NewReceivableInput {
  * numbers that then read as real ones. Amount defaults to $0.00, which the
  * Receivables table already renders honestly.
  *
- * The payer list is NOT the whole contact book. A receivable can only be billed
- * to someone already answering for this deal: a payer the voucher lists, or the
- * buyer/tenant acquiring. Anyone else is a contact who has no part in it, and
- * offering four hundred of them turns a two-name question into a search.
- *
- * The acquiring party is offered because it is how the first receivable gets
- * billed — a new voucher has no payers at all, and the buyer is who pays.
- * Choosing them adds them to the Billing section (see `addReceivable`), so the
- * two lists agree from the moment the line exists rather than after a separate
- * Add Payer.
+ * The payer list is the Billing section, and nothing else. A receivable bills
+ * someone this voucher already names as a payer; anyone else is a contact with
+ * no part in it. Which is also why there is no first-receivable shortcut here:
+ * a voucher with no payers cannot bill at all, and the Add Receivable button is
+ * disabled until one is added, rather than letting this modal quietly create
+ * one as a side effect.
  *
  * One entry per person, not two. Whether the invoice carries their name or
  * their company is the row's own dropdown once the line exists — see
@@ -108,15 +104,12 @@ export function NewReceivableModal({
 	open,
 	onOpenChange,
 	payerIds,
-	party,
 	onAdd,
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	/** The voucher's payers — the first and likeliest group. */
+	/** The voucher's payers — the only contacts a receivable can be billed to. */
 	payerIds: string[];
-	/** Who is acquiring, and what they are called: "Buyer" on a sale, "Tenant" on a lease. */
-	party: { label: string; ids: string[] };
 	onAdd: (input: NewReceivableInput) => void;
 }) {
 	const [payer, setPayer] = useState<ContactOption | null>(null);
@@ -141,21 +134,9 @@ export function NewReceivableModal({
 	// payer added since — the same reason `AddContactModal` calls its source
 	// directly.
 	const payers = contactOptionsFor(payerIds);
-	// A buyer who is already a payer belongs to the first group only: one contact
-	// listed twice in one dropdown reads as two people.
-	const payerSet = new Set(payerIds);
-	const acquiring = contactOptionsFor(party.ids).filter(
-		(o) => !payerSet.has(o.value),
-	);
-	const groups: ContactOptionGroup[] = [];
-	if (payers.length > 0)
-		groups.push({ value: "payers", label: "Payers on this voucher", items: payers });
-	if (acquiring.length > 0)
-		groups.push({
-			value: "party",
-			label: `${party.label}s on this deal`,
-			items: acquiring,
-		});
+	const groups: ContactOptionGroup[] = payers.length
+		? [{ value: "payers", label: "Payers on this voucher", items: payers }]
+		: [];
 
 	const add = () => {
 		if (!payer) return;
@@ -185,8 +166,8 @@ export function NewReceivableModal({
 				<Modal.Body className="d-flex flex-column gap-4">
 					<Field>
 						<Field.Label>Payer</Field.Label>
-						{/* The same picker the party sections use, over the two groups
-						    above. */}
+						{/* The same picker the party sections use, over the voucher's
+						    payers. */}
 						<ContactPicker
 							groups={groups}
 							value={payer}
@@ -196,8 +177,8 @@ export function NewReceivableModal({
 							labelSingleGroup
 							emptyMessage={
 								groups.length === 0
-									? `Add a ${party.label.toLowerCase()} or a payer to this voucher first.`
-									: "No matching contacts"
+									? "Add a payer to the Billing section first."
+									: "No matching payers"
 							}
 						/>
 					</Field>

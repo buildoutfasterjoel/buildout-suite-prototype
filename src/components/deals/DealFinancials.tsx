@@ -1637,18 +1637,15 @@ function DepositRow({
 function ReceivablesSection({
   listing,
   payerIds,
-  party,
   editable,
 }: {
   listing: Listing;
   /**
-   * The voucher's payers and its acquiring party — the only two lists a new
-   * receivable can be billed to. Passed from the page's working copies rather
-   * than re-read from `listing`, so a payer or a buyer added but not yet Saved
-   * is still billable.
+   * The voucher's payers — the only contacts a new receivable can be billed to.
+   * Passed from the page's working copy rather than re-read from `listing`, so
+   * a payer added but not yet Saved is still billable.
    */
   payerIds: string[];
-  party: { label: string; ids: string[] };
   /** False while the voucher is Pending — no adds, and nothing to select rows for. */
   editable: boolean;
 }) {
@@ -1798,10 +1795,38 @@ function ReceivablesSection({
               <FontAwesomeIcon icon={faPlus} />
               Set Sales Tax
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => setAddOpen(true)}>
-              <FontAwesomeIcon icon={faPlus} />
-              Add Receivable
-            </Button>
+            {/* Nothing to bill to until the Billing section names a payer, and
+                the picker inside would open empty. Disabled with the reason on a
+                wrapper, since a disabled button fires no pointer events — the
+                same trick `RemovePartyButton` uses. */}
+            <Tooltip>
+              <Tooltip.Trigger
+                render={
+                  payerIds.length === 0 ? (
+                    <span className="d-inline-flex">
+                      <Button variant="ghost" size="sm" disabled>
+                        <FontAwesomeIcon icon={faPlus} />
+                        Add Receivable
+                      </Button>
+                    </span>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setAddOpen(true)}
+                    >
+                      <FontAwesomeIcon icon={faPlus} />
+                      Add Receivable
+                    </Button>
+                  )
+                }
+              />
+              <Tooltip.Content>
+                {payerIds.length === 0
+                  ? "Add a payer to the Billing section first."
+                  : "Bill a new line on this voucher"}
+              </Tooltip.Content>
+            </Tooltip>
             <DropdownMenu>
               <DropdownMenu.Trigger
                 render={
@@ -2160,7 +2185,6 @@ function ReceivablesSection({
         open={addOpen}
         onOpenChange={setAddOpen}
         payerIds={payerIds}
-        party={party}
         onAdd={(input) => addReceivable(listing.id, input)}
       />
 
@@ -3073,7 +3097,6 @@ export function DealFinancials({
       <ReceivablesSection
         listing={listing}
         payerIds={payerIds}
-        party={acquiring}
         editable={!frozen}
       />
 
