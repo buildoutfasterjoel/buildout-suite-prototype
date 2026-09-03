@@ -117,6 +117,26 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 205,
+    title: "The Delgado Building\u2019s marketing stats read like a deal that just went to market",
+    mergedAt: "2026-09-03T14:55:00Z",
+    day: "2026-09-03",
+    author: "ZS-buildout",
+    area: "Deals",
+    summary:
+      "The Rosa Delgado story is about a deal that just went live, but the moment a deal existed on her building its client report and website showed a random year on market and a thousand-plus page views. Those numbers are now set to fit the story, and every other listing keeps its own.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "The Delgado Building\u2019s Client Report shows 10 days on market, and its Website page shows 350 page views, 200 unique visitors and 3 leads \u2014 a fresh listing with the first buyers showing up, not a year of made-up history.",
+      },
+      {
+        kind: "refinement",
+        text: "The Website traffic chart is scaled to agree with the 350 page views, and the change chip beside the tile is figured from the chart it sits next to.",
+      },
+    ],
+  },
+  {
     pr: 204,
     title: "A Back Office Manager who can approve vouchers, and vouchers scoped to whose they are",
     mergedAt: "2026-09-02T23:10:00Z",

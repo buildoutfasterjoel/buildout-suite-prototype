@@ -6,6 +6,7 @@ import { Placeholder } from "@buildoutinc/blueprint-react/ui/Placeholder";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload, faFaceSadSweat } from "@fortawesome/pro-regular-svg-icons";
 import type { Property } from "#/data/types";
+import { getDaysOnMarket } from "#/data/listingClientReport";
 import { hash } from "./propertyDisplay";
 
 const ACTIVITY = [
@@ -65,7 +66,7 @@ function ChartCard({
 /** "Dashboard" tab content for the property detail page. */
 export function PropertyDetailDashboard({ property }: { property: Property }) {
   const seed = hash(property.id);
-  const daysOnMarket = 100 + (seed % 900);
+  const daysOnMarket = getDaysOnMarket(property.id);
   const leadsCreated = 20 + (seed % 680);
 
   return (
