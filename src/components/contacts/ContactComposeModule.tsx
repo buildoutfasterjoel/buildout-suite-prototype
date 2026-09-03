@@ -307,17 +307,6 @@ export function ContactComposeModule({
       setSubject(draft.subject);
       setBody((b) => ({ ...b, email: draft.body }));
     }
-    // A value staged by `stage_field_value`, for whichever tab it belongs to.
-    // Same overwrite semantics for the same reason: a revision is an
-    // instruction to replace what's there, and the broker asked for it.
-    const { activityDraft } = useComposeFocus.getState();
-    if (activityDraft && activityDraft.contactId === contact.id) {
-      setBody((b) => ({ ...b, [activityDraft.kind]: activityDraft.body }));
-      // Absent means "leave the subject alone" — a body revision must not wipe
-      // a subject line the broker wrote themselves.
-      if (activityDraft.subject !== undefined) setSubject(activityDraft.subject);
-      readFromTopRef.current = true;
-    }
   }, [focusSeq, contact.id]);
   // Publish this composer's send so the assistant can hit it on an explicit
   // "send it" (see `composerSend.ts`). Registered every render because the
@@ -460,31 +449,11 @@ export function ContactComposeModule({
     );
   }
 
-  /**
-   * A value that arrived from the assistant rather than from typing, and so
-   * should be read from the first word.
-   *
-   * Handing the composer text focuses it, and focusing a textarea whose caret
-   * sits at the end scrolls that end into view — so a note long enough to hit
-   * the cap opened on its last paragraph, with the beginning above the fold of
-   * a field the broker had never scrolled.
-   */
-  const readFromTopRef = useRef(false);
-
   // Fit the field to its value. Runs on `tab` as well as the value because the
   // same textarea serves every tab: switching from a long note to an empty call
   // log has to bring the height back with it.
-  //
-  // After the focus effect above, deliberately: it is the focus that moves the
-  // caret, so the reset has to come once the field is both sized and focused.
   useEffect(() => {
-    const el = bodyRef.current;
-    autosize(el, body[tab]);
-    if (el && readFromTopRef.current) {
-      readFromTopRef.current = false;
-      el.setSelectionRange(0, 0);
-      el.scrollTop = 0;
-    }
+    autosize(bodyRef.current, body[tab]);
   }, [body, tab]);
 
   // A contact can carry more than one number; the dropdown only appears when

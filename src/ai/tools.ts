@@ -75,7 +75,6 @@ import { useUnderwritingOffer } from "#/ai/underwritingOffer";
 import { callFlow } from "#/components/call/callFlow";
 import { useComposeFocus } from "#/components/contacts/useComposeFocus";
 import { toISODate } from "#/lib/isoDate";
-import { useAssistant } from "#/ai/useAssistant";
 import {
   requestComposerSend,
   getPendingEmail,
@@ -125,7 +124,6 @@ import {
   analyzeBookDef,
   navigateToDef,
   addActivityDef,
-  stageFieldValueDef,
   logCallDef,
   createTaskDef,
   findContactDef,
@@ -1028,65 +1026,6 @@ export function createClientTools({
         touchContactActivity(c.id);
       }
       return { logged: true, type: kind, contactId: c.id, contactName: name };
-    }),
-
-    /**
-     * Step 03 of the "ask at the rail, review at the field" grammar: the model's
-     * answer lands in the field the broker is looking at, not on the record.
-     *
-     * A composer draft IS the review surface — nothing is written to the
-     * timeline until the broker hits Log Note — so this stages rather than
-     * commits without needing an Accept/Discard pair layered on top of a box
-     * that is already unsaved.
-     */
-    stageFieldValueDef.client(async (args) => {
-      const { text, subject, changed } = args as {
-        text: string;
-        subject?: string;
-        changed?: string;
-      };
-      const ask = useAssistant.getState().fieldAsk;
-      if (!ask) {
-        return {
-          error:
-            "No field is pinned right now — the broker hasn't handed you one from the page.",
-        };
-      }
-      const contact = getContact(ask.target.contactId);
-      if (!contact) return { error: "That field's record is no longer loaded." };
-      const { activity } = ask.target;
-      useComposeFocus.getState().requestActivityDraft({
-        contactId: ask.target.contactId,
-        kind: activity,
-        body: text,
-        // Only ever passed on an email, and only when the model set one —
-        // `undefined` here is what leaves the broker's own subject standing.
-        subject: activity === "email" ? subject : undefined,
-      });
-      // A staged email has to be sendable from anywhere, the same as one from
-      // `draft_email` — otherwise "send it" works only while the composer is
-      // the surface in focus. Subject falls back to what is already there,
-      // which `send_email` prefers from the live composer anyway.
-      if (activity === "email") {
-        setPendingEmail({
-          contactId: contact.id,
-          contactName: `${contact.firstName} ${contact.lastName}`.trim(),
-          to: contact.email,
-          subject: subject ?? "",
-          body: text,
-        });
-      }
-      // The pinned value follows what was just written, so the next revision
-      // revises THIS text rather than the version before it.
-      useAssistant.getState().updateFieldAskValue(text);
-      // Every key defined: an `undefined` in a client tool's result throws on
-      // serialize and the throw is stored as the tool's output, so the call
-      // reads as though it worked.
-      return {
-        staged: true,
-        field: ask.label,
-        changed: changed ?? "",
-      };
     }),
 
     logCallDef.client(async (args) => {
