@@ -403,6 +403,23 @@ export function getContactOptions(): ContactOption[] {
     .sort((a, b) => a.name.localeCompare(b.name))
 }
 
+/**
+ * Rich options for the given contact ids, in name order.
+ *
+ * An id the viewer cannot read — deleted, or never shared with them — is
+ * dropped rather than rendered as a placeholder: this feeds pickers, and an
+ * option nobody can identify is not a choice worth offering. Party *cards* keep
+ * showing a missing contact (see `voucherParty`), because recording who was
+ * billed is a different job from choosing who to bill next.
+ */
+export function contactOptionsFor(ids: string[]): ContactOption[] {
+  const wanted = new Set(ids)
+  return visibleContacts()
+    .filter((c) => wanted.has(c.id))
+    .map(toContactOption)
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
 /** A named group of contact options — used to section a picker (leads vs. CRM). */
 export interface ContactOptionGroup {
   value: string
