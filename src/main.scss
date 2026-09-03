@@ -2297,7 +2297,7 @@
   }
 }
 
-// Textarea with the AI "sparkle" affordance pinned to its top-right corner.
+// Textarea with the AI "sparkle" affordance pinned to its bottom-right corner.
 .compose-textarea {
   position: relative;
   width: 100%;
@@ -2306,33 +2306,35 @@
     padding-right: 2.5rem;
   }
 
-  // The field the assistant is holding (Figma node 1483:172765).
-  //
-  // The rail's chip names the field; this says the same thing where the
-  // broker's eyes already are, so the answer arriving in the box is expected
-  // rather than startling. Purple border and a 3px halo — the same focus
-  // grammar Blueprint already uses, in the AI colour — over the interactive
-  // gradient washed out to 25% by a white overlay, which keeps 14px body text
-  // readable on it.
-  //
-  // On the wrapper, not the textarea, because the sparkle sits in the same box
-  // and has to read as part of the tinted field rather than a control floating
-  // on top of it.
-  &--ai textarea {
+  // A run streaming into the field (Figma node 557:14566): purple border and
+  // halo — the same focus grammar Blueprint uses, in the AI colour — over a
+  // shimmer that sweeps the Otto gradient across the box, washed to 75% white
+  // so 14px body text stays readable as it lands. `animation` rather than a
+  // transition because the sweep has to keep moving for as long as the text
+  // does; it stops with the run.
+  &--generating textarea {
     border-color: colors.$purple-heart-400;
     box-shadow: 0 0 0 3px colors.$purple-heart-100;
+    // A pale purple ground with one brighter band sweeping across it. The band
+    // is the shimmer: it has to stand off the ground enough to be seen moving
+    // behind 14px text, so the wash is lighter here than on the resting tint.
     background-image:
-      linear-gradient(rgb(255 255 255 / 75%), rgb(255 255 255 / 75%)),
+      linear-gradient(rgb(255 255 255 / 45%), rgb(255 255 255 / 45%)),
       linear-gradient(
-        90deg,
+        100deg,
         colors.$purple-heart-100 0%,
-        colors.$buildout-blue-50 50%,
-        colors.$buildout-blue-100 100%
+        colors.$purple-heart-100 30%,
+        colors.$purple-heart-300 50%,
+        colors.$purple-heart-100 70%,
+        colors.$purple-heart-100 100%
       );
+    background-size:
+      100% 100%,
+      300% 100%;
+    animation: compose-shimmer 1.4s ease-in-out infinite;
 
-    // Focus is already the resting state here, so the theme's blue focus ring
-    // would fight the purple one and read as the tint switching off the moment
-    // the broker clicks in to edit.
+    // Focus is already the resting state here, so the theme's blue ring would
+    // read as the shimmer switching off the moment the caret lands.
     &:focus,
     &:focus-visible {
       border-color: colors.$purple-heart-400;
@@ -2340,9 +2342,24 @@
     }
   }
 }
+
+@keyframes compose-shimmer {
+  from {
+    background-position:
+      0 0,
+      100% 0;
+  }
+  to {
+    background-position:
+      0 0,
+      -100% 0;
+  }
+}
+
 .compose-sparkle {
   position: absolute;
-  top: 6px;
+  // Bottom-right, where the instruction bar it reveals will appear beneath.
+  bottom: 6px;
   right: 6px;
   width: 28px;
   height: 28px;
@@ -2359,6 +2376,111 @@
 
   &:hover {
     background: var(--color-purple-heart-50, #f9f5ff);
+  }
+
+  // Pressed while the bar it toggles is showing.
+  &.is-active {
+    background: var(--color-purple-heart-100, #f2e8ff);
+    color: var(--color-purple-heart-700, #6b21c8);
+  }
+}
+
+// The inline AI instruction bar a field's sparkle reveals beneath it (Figma
+// nodes 557:14534 → 557:14831). A single-line input with a sparkle at the head
+// and one control at the tail. The purple border and glowing ring are tied to
+// focus: the bar opens focused, so it glows on reveal; sending moves focus to
+// the field, which is the moment the field starts to shimmer and the bar
+// settles back to a grey edge (Figma node 557:14566).
+.field-instruct {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 2px 4px 2px 12px;
+  background-color: #fff;
+  border: 1px solid var(--input-border-color, #{colors.$storm-grey-200});
+  border-radius: 8px;
+  animation: field-instruct-in 220ms ease-out both;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &:focus-within {
+    border-color: colors.$purple-heart-400;
+    box-shadow:
+      0 0 0 2px colors.$purple-heart-100,
+      0 0 8px rgba(159, 85, 247, 0.16);
+  }
+
+  &__icon {
+    flex-shrink: 0;
+    color: colors.$purple-heart-500;
+    font-size: 14px;
+  }
+
+  &__input {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: colors.$storm-grey-950;
+    font-size: 14px;
+    line-height: 20px;
+
+    &::placeholder {
+      color: colors.$storm-grey-500;
+    }
+  }
+
+
+  &__end {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  // 28px controls, the rail composer's size, so the two AI inputs match.
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background-color: transparent;
+    color: colors.$storm-grey-900;
+    font-size: 13px;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      background-color: colors.$storm-grey-50;
+    }
+  }
+
+  // Send and Stop are bare glyphs (Figma nodes 557:14550, 557:14566) — the
+  // bar is a single line under a field, and a filled button on it would
+  // outrank the Log Note button below.
+  &__send,
+  &__stop {
+    color: colors.$storm-grey-950;
+    font-size: 14px;
+  }
+}
+
+@keyframes field-instruct-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 

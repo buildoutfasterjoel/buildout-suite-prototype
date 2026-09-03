@@ -37,8 +37,10 @@ import {
   SparkleButton,
 } from "#/components/contacts/callLogFields";
 import { useComposeFocus } from "#/components/contacts/useComposeFocus";
-import { useAssistant } from "#/ai/useAssistant";
-import { activityFieldAsk, fieldAskLabel } from "#/ai/fieldAsk";
+import { FieldInstructionBar } from "#/components/contacts/FieldInstructionBar";
+import { fieldSparkleLabel } from "#/ai/fieldText";
+import { useFieldText } from "#/ai/useFieldText";
+import { composeContactData } from "#/ai/contactData";
 import { registerComposerSend, setPendingEmail } from "#/components/contacts/composerSend";
 
 /** The payload emitted on submit — the panel stamps `id`/`seq`. */
@@ -354,29 +356,109 @@ export function ContactComposeModule({
   }, [pendingFocus, tab]);
 
   /**
-   * Which of this contact's activity fields the rail is holding, or null. Two
-   * jobs: it tints that field so the broker can see what the assistant is
-   * scoped to, and its value is what the model reads to know what it is
-   * revising.
+   * Inline AI writing — "ask at the field, review at the field". A field's
+   * sparkle reveals an instruction bar directly under it; the instruction is
+   * sent once and the answer streams into the field. Nothing here touches the
+   * rail, so a note being written and a conversation about a deal never share a
+   * transcript.
    *
-   * Pinned to one TAB rather than to the composer, because the five tabs are
-   * five fields — carrying the tint across a tab switch would claim Otto was
-   * holding a field it has never been handed.
+   * Per tab, like the body: the bar the broker opened under the note has no
+   * business appearing under the call log, and a run in flight on one tab
+   * carries on while they peek at another.
    */
-  const fieldAsk = useAssistant((s) => s.fieldAsk);
-  const pinnedKind =
-    fieldAsk?.target.kind === "contact-activity" && fieldAsk.target.contactId === contact.id
-      ? fieldAsk.target.activity
-      : null;
+  const [barOpen, setBarOpen] = useState<Record<ComposeKind, boolean>>({
+    note: false,
+    call: false,
+    email: false,
+    meeting: false,
+    tour: false,
+  });
+  const [instruction, setInstruction] = useState<Record<ComposeKind, string>>({ ...EMPTY });
+  const [fieldError, setFieldError] = useState<string | null>(null);
+  const instructRef = useRef<HTMLInputElement>(null);
+  const [pendingInstructFocus, setPendingInstructFocus] = useState<ComposeKind | null>(null);
+  const fieldText = useFieldText();
+  const generatingKind = fieldText.activeKey as ComposeKind | null;
+  // The tab as the stream callbacks will see it — state would be the render
+  // they were created in.
+  const tabRef = useRef(tab);
+  tabRef.current = tab;
 
-  // Keep the pinned value following the broker's own edits. Without this, text
-  // typed after the sparkle was clicked is invisible to the assistant, and
-  // "shorten it" shortens the version from the moment of the click.
-  const pinnedValue = pinnedKind ? body[pinnedKind] : "";
+  // Same two-pass focus as the body field above: the bar's input doesn't exist
+  // until the open state (and, when a run finishes on another tab, the tab
+  // switch) has committed.
   useEffect(() => {
-    if (!pinnedKind) return;
-    useAssistant.getState().updateFieldAskValue(pinnedValue.trim());
-  }, [pinnedKind, pinnedValue]);
+    if (!pendingInstructFocus || pendingInstructFocus !== tab || !barOpen[tab]) return;
+    setPendingInstructFocus(null);
+    instructRef.current?.focus();
+  }, [pendingInstructFocus, tab, barOpen]);
+
+  /**
+   * Focus follows the answer. Set when a run starts rather than in the click
+   * handler that started it, because one of those handlers is a menu item: the
+   * quick-edit menu returns focus to its trigger as it closes, and that trigger
+   * has just been unmounted in favour of Stop — so focus fell to the body.
+   * Deferred a tick for the same reason; the menu's own focus management runs
+   * first, and this has the last word.
+   */
+  useEffect(() => {
+    if (!generatingKind || generatingKind !== tab) return;
+    const id = window.setTimeout(() => bodyRef.current?.focus(), 0);
+    return () => window.clearTimeout(id);
+  }, [generatingKind, tab]);
+
+  /**
+   * The sparkle: reveal the bar and put the cursor in it, so the broker can
+   * just start typing; a second click puts it away. Not while generating —
+   * hiding the bar would hide the only Stop.
+   */
+  function toggleBar(kind: ComposeKind) {
+    if (barOpen[kind]) {
+      if (generatingKind === kind) return;
+      setBarOpen((o) => ({ ...o, [kind]: false }));
+      return;
+    }
+    setFieldError(null);
+    setBarOpen((o) => ({ ...o, [kind]: true }));
+    setPendingInstructFocus(kind);
+  }
+
+  function closeBar(kind: ComposeKind) {
+    setBarOpen((o) => ({ ...o, [kind]: false }));
+    bodyRef.current?.focus();
+  }
+
+  /**
+   * Send one instruction against one field. Focus moves to the field first —
+   * that is where the answer is about to appear — and comes back to the bar,
+   * reading "Describe your change", once the text has landed. Stop keeps what
+   * has streamed so far; the broker can revise it from there.
+   */
+  function runInstruction(kind: ComposeKind, prompt: string) {
+    const text = prompt.trim();
+    if (!text || generatingKind) return;
+    setFieldError(null);
+    setInstruction((i) => ({ ...i, [kind]: "" }));
+    bodyRef.current?.focus();
+    void fieldText.start(
+      kind,
+      {
+        activity: kind,
+        fullName: contactFullName(contact),
+        firstName: contact.firstName,
+        instruction: text,
+        current: body[kind].trim(),
+        contactData: composeContactData(contact.id),
+      },
+      {
+        onText: (t) => setTabBody(kind, t),
+        onDone: ({ error }) => {
+          if (error) setFieldError(error);
+          if (tabRef.current === kind) setPendingInstructFocus(kind);
+        },
+      },
+    );
+  }
 
   /**
    * A value that arrived from the assistant rather than from typing, and so
@@ -426,25 +508,49 @@ export function ContactComposeModule({
     (tab === "email" && subject.trim() !== "");
 
   /**
-   * A field's sparkle: hand it to Otto (§"Ask at the rail, review at the
-   * field"). The rail opens with that field pinned as a context chip, and
-   * either asks what it should say or offers the revise presets —
-   * `activityFieldAsk` decides which from the current value.
+   * The message field with its sparkle, and the instruction bar beneath it
+   * when open. Shared by the plain tabs and the email tab, so both get the
+   * same behaviour from one place. `gap-2` is the bound tier — a control and
+   * the field it reveals — from the record-form vocabulary.
    *
-   * Takes the kind rather than reading `tab`, so the email tab's own sparkle
-   * cannot pin the wrong field if the two ever drift apart.
+   * While a run streams in, the field shimmers and goes read-only: a keystroke
+   * landing mid-stream would be overwritten by the next delta.
    */
-  function askOttoAbout(kind: ComposeKind) {
-    useAssistant.getState().askAtField(
-      activityFieldAsk({
-        activity: kind,
-        contactId: contact.id,
-        fullName: contactFullName(contact),
-        firstName: contact.firstName,
-        // An email's value is its message body; the subject rides alongside as
-        // something Otto may set, not as the field being revised.
-        value: body[kind],
-      }),
+  function renderField(kind: ComposeKind, rows: number) {
+    const generating = generatingKind === kind;
+    const fieldHasValue = body[kind].trim() !== "";
+    return (
+      <div className="d-flex flex-column gap-2">
+        <div className={`compose-textarea${generating ? " compose-textarea--generating" : ""}`}>
+          <Textarea
+            ref={bodyRef}
+            value={body[kind]}
+            onChange={(e) => setTabBody(kind, e.target.value)}
+            placeholder={PLACEHOLDER[kind](composeName)}
+            rows={rows}
+            readOnly={generating}
+          />
+          <SparkleButton
+            label={barOpen[kind] ? "Hide AI instructions" : fieldSparkleLabel(kind, fieldHasValue)}
+            active={barOpen[kind]}
+            onClick={() => toggleBar(kind)}
+          />
+        </div>
+        {barOpen[kind] && (
+          <FieldInstructionBar
+            inputRef={instructRef}
+            value={instruction[kind]}
+            onChange={(v) => setInstruction((i) => ({ ...i, [kind]: v }))}
+            onSubmit={() => runInstruction(kind, instruction[kind])}
+            phase={generating ? "generating" : "idle"}
+            onStop={fieldText.stop}
+            hasFieldValue={fieldHasValue}
+            onQuickEdit={(prompt) => runInstruction(kind, prompt)}
+            onClose={() => closeBar(kind)}
+            error={fieldError}
+          />
+        )}
+      </div>
     );
   }
 
@@ -467,11 +573,11 @@ export function ContactComposeModule({
     // Reset the just-submitted tab back to a clean slate.
     setTabBody(tab, "");
     setPrivateByTab((p) => ({ ...p, [tab]: false }));
-    // The note is on the record, so the field the chip was scoped to no longer
-    // holds anything — and a chip still reading "Earl Pettigrew: Note" over an
-    // empty box would scope the next question to a draft that has been filed.
-    // Logging is the end of that conversation.
-    if (pinnedKind === tab) useAssistant.getState().clearFieldAsk();
+    // The note is on the record: a bar still open over an empty box would offer
+    // to revise a draft that has been filed. Logging is the end of that thread.
+    if (generatingKind === tab) fieldText.stop();
+    setBarOpen((o) => ({ ...o, [tab]: false }));
+    setInstruction((i) => ({ ...i, [tab]: "" }));
     if (tab === "email") {
       setSubject("");
       // Whatever the assistant was holding as sendable has now gone out by hand;
@@ -525,24 +631,7 @@ export function ContactComposeModule({
       <div className="d-flex flex-column gap-4 p-4">
         {tab === "call" && renderCallControls()}
 
-        {/* Tinted while the assistant holds this field (Figma node 1483:172765):
-            the chip in the rail says *what* Otto is scoped to, and this says it
-            again where the broker's eyes already are. Only the Note tab — the
-            pin is on the note, and carrying the tint across a tab switch would
-            claim Otto was holding a field it has never been handed. */}
-        <div className={`compose-textarea${pinnedKind === tab ? " compose-textarea--ai" : ""}`}>
-          <Textarea
-            ref={bodyRef}
-            value={body[tab]}
-            onChange={(e) => setTabBody(tab, e.target.value)}
-            placeholder={PLACEHOLDER[tab](composeName)}
-            rows={tab === "call" ? 5 : 3}
-          />
-          <SparkleButton
-            label={fieldAskLabel(tab, hasValue)}
-            onClick={() => askOttoAbout(tab)}
-          />
-        </div>
+        {renderField(tab, tab === "call" ? 5 : 3)}
 
         {tab === "call" && (
           <OutcomeChips value={outcome} onChange={setOutcome} />
@@ -661,23 +750,7 @@ export function ContactComposeModule({
                 ),
               )}
             </div>
-            <div
-              className={`compose-textarea${
-                pinnedKind === "email" ? " compose-textarea--ai" : ""
-              }`}
-            >
-              <Textarea
-                ref={bodyRef}
-                value={body.email}
-                onChange={(e) => setTabBody("email", e.target.value)}
-                placeholder={PLACEHOLDER.email(composeName)}
-                rows={5}
-              />
-              <SparkleButton
-                label={fieldAskLabel("email", hasValue)}
-                onClick={() => askOttoAbout("email")}
-              />
-            </div>
+            {renderField("email", 5)}
           </div>
 
           <div className="d-flex align-items-center justify-content-between gap-2">
