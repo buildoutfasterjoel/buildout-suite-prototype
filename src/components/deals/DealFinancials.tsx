@@ -816,10 +816,17 @@ function PartySection({
  */
 function PayersSection({
   payers,
+  party,
   editable,
   onChange,
 }: {
   payers: VoucherPayerRow[];
+  /**
+   * Who is acquiring, and what they are called. A payer is usually the buyer or
+   * the tenant, so the Add Payer picker names them first rather than leaving
+   * the broker to find them alphabetically among every contact.
+   */
+  party: { label: string; ids: string[] };
   editable: boolean;
   onChange: (next: string[]) => void;
 }) {
@@ -861,6 +868,10 @@ function PayersSection({
         onOpenChange={setAddOpen}
         takenIds={contactIds}
         title="Payer"
+        priority={{
+          label: `${party.label}s on this deal`,
+          ids: party.ids,
+        }}
         onAdd={(contactId) => onChange([...contactIds, contactId])}
       />
     </Section>
@@ -1555,9 +1566,19 @@ function DepositRow({
 
 function ReceivablesSection({
   listing,
+  payerIds,
+  party,
   editable,
 }: {
   listing: Listing;
+  /**
+   * The voucher's payers and its acquiring party — the only two lists a new
+   * receivable can be billed to. Passed from the page's working copies rather
+   * than re-read from `listing`, so a payer or a buyer added but not yet Saved
+   * is still billable.
+   */
+  payerIds: string[];
+  party: { label: string; ids: string[] };
   /** False while the voucher is Pending — no adds, and nothing to select rows for. */
   editable: boolean;
 }) {
@@ -2061,6 +2082,8 @@ function ReceivablesSection({
       <NewReceivableModal
         open={addOpen}
         onOpenChange={setAddOpen}
+        payerIds={payerIds}
+        party={party}
         onAdd={(input) => addReceivable(listing.id, input)}
       />
 
@@ -2743,6 +2766,14 @@ export function DealFinancials({
   // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on `storedPayers` alone by design
   useEffect(() => setPayerIds(storedPayers), [storedPayers]);
 
+  // Who is acquiring, as the party pickers want it: the working copy of the
+  // list, plus what this deal type calls them. Built once here so the Add Payer
+  // picker and the New Receivable picker cannot disagree about either.
+  const acquiring = {
+    label: partySectionTitle(listing.dealType),
+    ids: parties,
+  };
+
   const dirty =
     deductions !== stored ||
     brokers !== storedBrokers ||
@@ -2902,6 +2933,7 @@ export function DealFinancials({
         <div className="col-12 col-lg-6">
           <PayersSection
             payers={voucherPayers({ ...voucher, payerContactIds: payerIds })}
+            party={acquiring}
             editable={isDraft}
             onChange={setPayerIds}
           />
@@ -2912,7 +2944,12 @@ export function DealFinancials({
 
       <RentScheduleSection listing={listing} editable={!frozen} />
 
-      <ReceivablesSection listing={listing} editable={!frozen} />
+      <ReceivablesSection
+        listing={listing}
+        payerIds={payerIds}
+        party={acquiring}
+        editable={!frozen}
+      />
 
       <PayablesSection listing={listing} />
 

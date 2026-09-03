@@ -117,6 +117,35 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 207,
+    title:
+      "Payer pickers on the voucher offer the deal\u2019s own people first, and a receivable can only be billed to one of them",
+    mergedAt: "2026-09-03T18:45:00Z",
+    day: "2026-09-03",
+    author: "buildoutfasterjoel",
+    area: "Back Office",
+    summary:
+      "Adding a payer, or billing a receivable, meant searching the whole contact book for a question with two or three real answers \u2014 the buyer is usually the payer, and a receivable is billed to someone already on the deal. Both pickers now put those people first, and the receivable picker offers nobody else.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "Add Payer opens with the deal\u2019s buyers \u2014 tenants on a lease \u2014 in their own group at the top, with the rest of the contact book underneath. Confirming the name you already know, instead of finding it alphabetically among four hundred.",
+      },
+      {
+        kind: "feature",
+        text: "A new receivable can only be billed to the voucher\u2019s payers or the deal\u2019s buyer, grouped under headings that say which is which. Everyone else has no part in the transaction.",
+      },
+      {
+        kind: "refinement",
+        text: "Billing the buyer on a receivable adds them to the Billing section, so the first receivable on a new voucher no longer needs a trip through Add Payer first.",
+      },
+      {
+        kind: "refinement",
+        text: "A buyer you have added but not yet Saved is already available to bill, and a voucher with neither a buyer nor a payer says so \u2014 \u201cAdd a buyer or a payer to this voucher first\u201d \u2014 rather than dropping an empty menu.",
+      },
+    ],
+  },
+  {
     pr: 206,
     title: "The Delgado Building\u2019s marketing stats follow the deal\u2019s stage, reading as pre-market until it goes Active",
     mergedAt: "2026-09-03T15:35:47Z",
