@@ -1,4 +1,6 @@
 import { hash } from "#/components/properties/propertyDisplay";
+import { isDelgadoListing, isDelgadoOnMarket } from "#/data/rosaDemoStats";
+import { getListing } from "#/data/store";
 import { SYNDICATION_NETWORK_NAMES } from "#/data/listingSyndication";
 
 const EVENT_TYPES = [
@@ -68,6 +70,15 @@ const EVENT_COUNT = 48;
  * so values stay stable across renders (same approach as `getListingTraffic`).
  */
 export function getListingWebsiteActivity(listingId: string): WebsiteVisitEvent[] {
+  // The Delgado Building has no listing website until the deal goes to market,
+  // so its log stays empty while the deal is in Pitching (see rosaDemoStats).
+  if (
+    isDelgadoListing(listingId) &&
+    !isDelgadoOnMarket(getListing(listingId)!.propertyId)
+  ) {
+    return [];
+  }
+
   // Anchor date matches the prototype "today" used by listingTraffic.ts.
   const anchor = new Date(2026, 5, 26);
 

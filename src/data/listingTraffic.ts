@@ -1,5 +1,6 @@
 import { hash } from "#/components/properties/propertyDisplay";
-import { DELGADO_WEBSITE_TRAFFIC, isDelgadoListing } from "#/data/rosaDemoStats";
+import { delgadoWebsiteTraffic, isDelgadoListing } from "#/data/rosaDemoStats";
+import { getListing } from "#/data/store";
 
 /** One day's view count for the traffic trend chart. */
 export interface TrafficDayMetric {
@@ -55,16 +56,18 @@ export function getListingTraffic(listingId: string): ListingTraffic {
   const replies = Math.round(sent * (0.1 + ((h >>> 3) % 30) / 100)); // ~10–40% reply rate
   const cas = Math.round(replies * (0.2 + ((h >>> 5) % 25) / 100)); // subset of replies
 
-  // The Delgado Building's headline numbers are pinned for the Rosa demo, and
-  // the chart is scaled down to match — 14 days of bars should add up to
-  // roughly 14/30ths of the 30-day page-view total, not five times it.
+  // The Delgado Building's headline numbers follow the Rosa demo's stage —
+  // zero before the deal goes to market, pinned after — and the chart is
+  // scaled to match: 14 days of views should add up to roughly 14/30ths of
+  // the 30-day page-view total, not five times it.
   if (isDelgadoListing(listingId)) {
+    const pinned = delgadoWebsiteTraffic(getListing(listingId)!.propertyId);
     const scaled = scaleSeriesTo(
       series,
-      Math.round((DELGADO_WEBSITE_TRAFFIC.pageViews * 14) / 30),
+      Math.round((pinned.pageViews * 14) / 30),
     );
     return {
-      ...DELGADO_WEBSITE_TRAFFIC,
+      ...pinned,
       changePct: changePctFor(scaled),
       series: scaled,
       sent,
@@ -100,6 +103,7 @@ function scaleSeriesTo(
 ): TrafficDayMetric[] {
   const sum = series.reduce((acc, d) => acc + d.views, 0);
   if (sum === 0) return series;
+  if (total === 0) return series.map((d) => ({ ...d, views: 0 }));
   return series.map((d) => ({
     ...d,
     views: Math.max(1, Math.round((d.views * total) / sum)),
