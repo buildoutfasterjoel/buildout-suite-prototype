@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   Cell,
@@ -992,6 +992,15 @@ function emptyDeduction(): FinancialDeduction {
  * it: a `$` or `%` addon over a right-aligned number, so the unit is on the
  * field rather than only in the header two rows up. Empty-as-null on Covered $,
  * so an amount that has not been decided stays `null` rather than a typed zero.
+ *
+ * The box keeps its own text while someone is typing in it, on the same terms
+ * as `CurrencyInput`. Two reasons, and the first is what makes it
+ * necessary: a cell whose value cannot be null has to send 0 for an empty box,
+ * and rendering straight off the model then put that 0 back on screen — so
+ * clearing a figure to retype it left a 0 sitting there and the next keystroke
+ * read "05". Re-syncing only while unfocused also keeps a figure this cell's
+ * own edit recomputes elsewhere (Gross % writing Gross $, and back) from
+ * overwriting what is being typed here mid-keystroke.
  */
 function MoneyCell({
   label,
@@ -1009,6 +1018,13 @@ function MoneyCell({
   nullable?: boolean;
   onChange: (next: number | null) => void;
 }) {
+  const [text, setText] = useState(() => value?.toString() ?? "");
+  const focused = useRef(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on `value` alone by design
+  useEffect(() => {
+    if (!focused.current) setText(value?.toString() ?? "");
+  }, [value]);
+
   return (
     <InputGroup>
       <InputGroup.Addon>
@@ -1020,9 +1036,20 @@ function MoneyCell({
         min={0}
         aria-label={label}
         className="text-end"
-        value={value ?? ""}
+        value={text}
+        onFocus={() => {
+          focused.current = true;
+        }}
+        // Whatever survived typing — a lone "-", a clamped negative — is
+        // replaced by the figure actually stored, so the box never keeps
+        // showing something the deal does not hold.
+        onBlur={() => {
+          focused.current = false;
+          setText(value?.toString() ?? "");
+        }}
         onChange={(e) => {
           const raw = e.target.value;
+          setText(raw);
           if (raw === "") {
             onChange(nullable ? null : 0);
             return;
