@@ -117,6 +117,26 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 206,
+    title: "The Delgado Building\u2019s marketing stats follow the deal\u2019s stage, reading as pre-market until it goes Active",
+    mergedAt: "2026-09-03T15:35:47Z",
+    day: "2026-09-03",
+    author: "ZS-buildout",
+    area: "Deals",
+    summary:
+      "Pinning the Delgado Building\u2019s numbers got the Active beat of the Rosa story right and the Pitching beat wrong \u2014 a deal that has not gone to market has no website, yet 350 page views showed up the moment the deal was created. The numbers now follow the deal\u2019s stage.",
+    highlights: [
+      {
+        kind: "refinement",
+        text: "While the Delgado Building\u2019s deal is still in Pitching, its Client Report shows 0 days on market and its Website page shows no views, visitors or leads, a flat traffic chart and an empty Activity Log.",
+      },
+      {
+        kind: "refinement",
+        text: "Once the deal goes Active, and at every stage after, the numbers land where they were set: 10 days on market, 350 page views, 200 unique visitors and 3 leads, with the chart and activity log to match.",
+      },
+    ],
+  },
+  {
     pr: 205,
     title: "The Delgado Building\u2019s marketing stats read like a deal that just went to market",
     mergedAt: "2026-09-03T14:55:00Z",
