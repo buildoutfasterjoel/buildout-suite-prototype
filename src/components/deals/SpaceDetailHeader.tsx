@@ -36,9 +36,8 @@ export function SpaceDetailHeader({
   // /listings/{shellId}/spaces/{spaceId}/{section}, so the shell is the prefix
   // and the space's own section is the third segment.
   const { subsectionLabel } = dealBreadcrumbTrail(pathname, shell.id);
-  // Seeded on the space, not the building: access is granted per space deal —
-  // a broker can be on one suite of a building and not its neighbours — and the
-  // ref id names this deal, not its parent.
+  // Seeded on the space, not the building: the ref id names this deal, not its
+  // parent.
   const refId = getRefId(space.id);
 
   return (
