@@ -1294,6 +1294,19 @@ function brokerTeammateFor(seed: string): Teammate {
 }
 
 /**
+ * The roster member behind a deal's lead broker — who the deal is created by.
+ *
+ * Matched by name because `generateBroker` draws the identity from
+ * `BROKER_TEAMMATES` and keeps only the name and email on the row. Falls back to
+ * the protagonist, which cannot happen for a seeded deal but keeps the return
+ * type honest.
+ */
+function leadBrokerTeammate(internal: DealBroker[]): Teammate {
+  const name = internal[0]?.name
+  return BROKER_TEAMMATES.find((t) => t.name === name) ?? CURRENT_USER
+}
+
+/**
  * One broker and their share.
  *
  * `commissionAmount` is the pool this broker is drawn from, which for both
@@ -1456,6 +1469,47 @@ export function generateTasks(stage: ListingStage, stageStartedAt: string): Deal
  * A property contains 1–3 listings (spaces). Each listing IS its deal (1:1), so it
  * carries the deal's transaction, brokers, contacts, planner, history, and voucher.
  */
+/**
+ * A second internal broker on a deal that two of the firm's own worked.
+ *
+ * Everything here is hashed from the deal id rather than drawn, so adding
+ * co-brokered deals costs the faker stream nothing and the hand-written stories
+ * pinned to positions in it stay where they were.
+ *
+ * The split is 60/40 of what the lead already held, taken exactly rather than by
+ * two roundings: the second broker gets the remainder, so the pair still sums to
+ * what the one of them held before and the voucher's unallocated gate still
+ * reads $0.
+ */
+function withSecondBroker(dealId: string, internal: DealBroker[]): DealBroker[] {
+  const lead = internal[0]
+  if (!lead) return internal
+  // A different person from the lead — step past them if the hash lands there.
+  const i = hashCode(`${dealId}-co`) % BROKER_TEAMMATES.length
+  let member = BROKER_TEAMMATES[i]!
+  if (member.name === lead.name) {
+    member = BROKER_TEAMMATES[(i + 1) % BROKER_TEAMMATES.length]!
+  }
+  const leadPct = Math.round(lead.commissionSplitPct * 0.6)
+  const leadGross = Math.round(lead.grossCommission * 0.6)
+  const coId = `co-${dealId}`
+  return [
+    { ...lead, commissionSplitPct: leadPct, grossCommission: leadGross },
+    {
+      id: coId,
+      name: member.name,
+      role: 'Additional Broker',
+      email: member.email,
+      side: 'internal',
+      commissionSplitPct: lead.commissionSplitPct - leadPct,
+      grossCommission: lead.grossCommission - leadGross,
+      commissionPlan: commissionPlanFor(coId),
+      personalSplitPct: DEFAULT_PERSONAL_SPLIT_PCT,
+      transactionSide: lead.transactionSide,
+    },
+  ]
+}
+
 function generateListings(
   property: Property,
   propertyContacts: Contact[],
@@ -1557,6 +1611,15 @@ function generateListings(
       ...b,
       transactionSide: dealSide === 'buyer' ? 'Buy Side' : 'Sell Side',
     }))
+
+    // Roughly one deal in eight is worked by two of the firm's own. Most CRE
+    // deals have a single broker, so this stays a minority — but it cannot be
+    // none: a co-brokered deal is the only place the voucher's private-payout
+    // marker has anything to hide, and a feature with no seeded example is a
+    // feature nobody sees. Hashed from the deal id, so the choice is stable
+    // across runs and costs the faker stream nothing.
+    const internalTeam =
+      hashCode(id) % 8 === 0 ? withSecondBroker(id, brokersWithSide) : brokersWithSide
 
     // Parties are drawn from THIS property's associated contacts so the graph
     // stays reciprocal (a deal's contacts are linked to the deal's property).
@@ -2074,8 +2137,13 @@ function generateListings(
 
       // Deal (1:1)
       dealId,
-      createdById: brokerTeammateFor(id).id,
-      internalBrokers: brokersWithSide,
+      // The person who opened the deal is the person who works it. This used to
+      // hash the *deal's* id while the internal broker hashed the *broker row's*
+      // uuid, so the two rarely agreed and a deal could read "created by Sarah
+      // Chen" over a broker list holding only Marcus Patel — a creator who was
+      // on the deal's team without appearing anywhere on the deal.
+      createdById: leadBrokerTeammate(internalTeam).id,
+      internalBrokers: internalTeam,
       outsideBrokers,
       sellerContactIds: sellerContacts.map((c) => c.id),
       buyerContactIds: buyerContacts.map((c) => c.id),
