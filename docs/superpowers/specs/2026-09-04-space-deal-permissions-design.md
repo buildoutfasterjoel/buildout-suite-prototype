@@ -213,10 +213,16 @@ repeating it on each of six suites says the same thing six times.
 shell's list, and they would render as ghost avatars on the space header.
 
 The fix is one line inside the loop: a share earned by a listing hangs on
-`listing.parentDealId ?? listing.id`, deduplicated per member. Seven seeded
-spaces, one of them marketing-created (`space-107-100`), so
+`listing.parentDealId ?? listing.id`, deduplicated per member. So
 `seed.test.ts:912` — "leaves a marketing-opened deal to a broker, and shares it
 back" — must look for Maya's share on the parent rather than on the space.
+
+The witness for the space half of that test is `createdById`, not
+`marketingCreatedDeal`. Of the seven seeded spaces, three carry
+`createdById: 'maya-brooks'` (`space-104-100`, `-200`, `-300`) and exactly one
+satisfies `marketingCreatedDeal` (`space-107-100`) — and that one was *not*
+created by Maya. `seedDealShares` grants on `createdById`, so the three are what
+exercise the space path.
 
 This changes seeded data, so **`SEED_VERSION` moves 76 → 77**
 (`persistence.ts:5`). Without it a browser keeps the old IndexedDB snapshot and
