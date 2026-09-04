@@ -182,6 +182,100 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
+    pr: 212,
+    title:
+      "The access card on a read-only contact explains your standing without offering to request access",
+    mergedAt: "2026-09-04T02:22:37Z",
+    day: "2026-09-03",
+    author: "ZS-buildout",
+    area: "Contacts",
+    summary:
+      "Requesting access to a contact is out for now, so the card that stands in for the composer on a record you can read but not act on explains your standing and nothing more.",
+    highlights: [
+      {
+        kind: "refinement",
+        text: "The card's header now names your standing alone: \"Previewing Private Contact\" for a Managing Director on a private record, \"Read-Only Access\" on another broker's contact or a company record you aren't assigned to, and \"You Have View Access\" when you were shared in to read. The tier options and the Request access button are gone; the one-paragraph explanation stays.",
+      },
+      {
+        kind: "refinement",
+        text: "On a deal, the \"Private Contact\" placeholder row no longer offers a Request access button. It shows who holds the record, and its tooltip says the same instead of telling you to ask from the deal.",
+      },
+      {
+        kind: "refinement",
+        text: "The messages that refuse an action on a contact you can't work, and the toast that counts skipped contacts on a bulk list action, no longer point you at requesting access from the record.",
+      },
+    ],
+  },
+  {
+    pr: 211,
+    title:
+      "The app shell's rail expands into a labelled column, the top bar spans the window, and the omnibar picks up its new colors and radius",
+    mergedAt: "2026-09-04T00:38:19Z",
+    day: "2026-09-03",
+    author: "ZS-buildout",
+    area: "Navigation",
+    summary:
+      "The left rail could only ever be a strip of icons, so every section had to be recognised by its glyph alone. It now opens into a full labelled column when you want the names, closes back to the strip when you want the room, and the top bar and omnibar follow the updated designs.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "The hamburger beside the logo expands the left rail into a 220px column that names every section and lists each group\u2019s pages beneath it, and collapses it back to the icon strip. Your choice sticks across reloads.",
+      },
+      {
+        kind: "feature",
+        text: "A Dashboard row sits at the top of the rail and takes you home, the same place the logo does.",
+      },
+      {
+        kind: "refinement",
+        text: "The current section shows a solid purple icon with a slim marker on the rail\u2019s edge. In the expanded rail the marker moves to the exact page you\u2019re on, and hovering any row tints it blue.",
+      },
+      {
+        kind: "refinement",
+        text: "Hovering a group in the collapsed rail opens a navy flyout of its pages, matching the rail rather than a white menu, with the page you\u2019re on set in semibold.",
+      },
+      {
+        kind: "refinement",
+        text: "The top bar now runs the full width of the window with the rail tucked beneath it, and the search bar and Assistant button stay centred over the page \u2014 sliding across as the rail opens and closes.",
+      },
+      {
+        kind: "refinement",
+        text: "The Search or ask Otto bar is shorter and squarer with a translucent navy fill, lighting up solid with a purple glow on hover. The \u2318K reminder now sits quietly after the placeholder text instead of in a pill by the microphone.",
+      },
+    ],
+  },
+  {
+    pr: 210,
+    title: "Log Activity fields take AI instructions inline, right under the field, instead of through the Otto rail",
+    mergedAt: "2026-09-03T22:50:11Z",
+    day: "2026-09-03",
+    author: "ZS-buildout",
+    area: "Otto",
+    summary:
+      "Asking Otto to write a note meant opening the rail, typing there, and watching the answer land somewhere else on the page \u2014 and every field edit piled into the rail\u2019s conversation. The ask now happens right under the field it changes, and the rail never hears about it.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "The sparkle sits in the bottom-right of each Log Activity field and opens an instruction bar beneath it, already focused, so you can just start typing what should be written.",
+      },
+      {
+        kind: "feature",
+        text: "Press Enter or the arrow and the text streams into the field itself. While it writes, the field shimmers, the bar reads Generating\u2026, and a Stop button cancels \u2014 keeping whatever has already landed.",
+      },
+      {
+        kind: "feature",
+        text: "Once the text is in, the bar comes back as Describe your change, and a menu at its end offers three one-click revisions \u2014 More Formal, Friendlier, Shorten. It works on a note you typed yourself, too.",
+      },
+      {
+        kind: "refinement",
+        text: "Each tab of the Log Activity block keeps its own bar, a note can keep generating while you glance at the Call tab, and logging the activity puts its bar away.",
+      },
+      {
+        kind: "refinement",
+        text: "The rail\u2019s pinned-field chip, its quick-revision buttons and the tinted field are gone, along with Otto\u2019s stage-a-field tool. Field writing no longer shows up in the conversation at all.",
+      },
+    ],
+  },
+  {
     pr: 209,
     title:
       "A receivable can only be billed to a listed payer, and the commission breakdown names each internal broker",

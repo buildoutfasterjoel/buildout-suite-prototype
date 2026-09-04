@@ -32,6 +32,14 @@ import { useAddTask } from "#/data/useAddTask";
 export const SEARCH_HINT = formatForDisplay("Mod+K");
 
 /**
+ * The hint split at its last character, so the modifier can be set heavier than
+ * the key (Figma node 380:25841 — a bold ⌘ beside a regular K). Works for both
+ * shapes the formatter produces: "⌘K" → ["⌘", "K"], "Ctrl K" → ["Ctrl ", "K"].
+ */
+const SEARCH_HINT_MODIFIER = SEARCH_HINT.slice(0, -1);
+const SEARCH_HINT_KEY = SEARCH_HINT.slice(-1);
+
+/**
  * Client-side navigation for nav links, so the persistent shell — and the open
  * AI assistant session — survives section changes. A plain <a> would full-reload
  * the document and remount everything. The `<a href>` stays (for accessibility
@@ -62,14 +70,20 @@ export function useNavClick() {
 }
 
 /**
- * Omni search — a gradient "AI omnibar" trigger that opens the command palette.
- * A div (not a button) so the nested voice button is valid markup; it's
- * keyboard-activatable via role + handlers.
+ * Omni search — the "AI omnibar" trigger that opens the command palette (Figma
+ * node 380:25827). A div (not a button) so the nested voice button is valid
+ * markup; it's keyboard-activatable via role + handlers.
  *
  * Stays put while the palette is open: it used to fade out and hand off to the
  * palette's own bar, which read as the search box being yanked away mid-thought.
  * Only the tab stop goes, since the palette traps focus and the backdrop
  * swallows clicks.
+ *
+ * The ⌘K hint sits right after the placeholder text rather than at the far end
+ * beside the mic (Figma node 380:25836): a reminder belongs next to the words
+ * it annotates, and out there it competed with the one real control in the bar.
+ * It is hidden from assistive tech — the shortcut is already announced by the
+ * hotkey binding, and "command K" read aloud mid-label is noise.
  */
 export function OmniBarTrigger() {
   const openOmniSearch = useOmniSearch((s) => s.setOpen);
@@ -91,12 +105,17 @@ export function OmniBarTrigger() {
       aria-label="Search or ask Otto"
       className="omni-bar"
     >
-      <span className="omni-bar__icon">
-        <OmniSparkleIcon variant="navbar" />
+      <span className="omni-bar__front">
+        <span className="omni-bar__icon">
+          <OmniSparkleIcon variant="navbar" />
+        </span>
+        <span className="omni-bar__label">Search or ask Otto</span>
+        <span className="omni-bar__kbd" aria-hidden>
+          <b>{SEARCH_HINT_MODIFIER}</b>
+          {SEARCH_HINT_KEY}
+        </span>
       </span>
-      <span className="omni-bar__label">Search or ask Otto</span>
       <span className="omni-bar__end">
-        <span className="omni-bar__kbd">{SEARCH_HINT}</span>
         <button
           type="button"
           className="omni-bar__voice"

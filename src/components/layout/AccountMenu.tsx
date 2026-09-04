@@ -25,7 +25,6 @@ import {
   viewAsLabel,
   writeViewAsRole,
 } from "./viewAsRole";
-import { useAccessRequests } from "#/components/contacts/useAccessRequests";
 import { useRoster } from "#/components/settings/users/useRoster";
 import { useDesignToggles } from "./useDesignToggles";
 import { navModeLabel, useNavMode } from "./useNavMode";
@@ -81,7 +80,6 @@ export function AccountMenu() {
     if (roleOverridden) setRoles(seatId, realRoles(seatId));
     clearViewAsRole();
     setSeat(next);
-    useAccessRequests.setState({ requests: {} });
   }
 
   /** Try this seat's screens as another role. Same person, different permissions. */
