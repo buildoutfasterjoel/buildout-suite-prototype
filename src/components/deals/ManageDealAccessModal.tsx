@@ -10,19 +10,16 @@ import { viewerId } from "#/data/currentUser";
 import { teammateIdByName, type Teammate } from "#/data/teammates";
 import { roleName } from "#/data/permissions";
 import {
-  defaultScopeForRoles,
   SHARE_LEVELS,
-  SHARE_SCOPES,
-  shareSummary,
+  shareLevelLabel,
   type ShareLevel,
-  type ShareScope,
 } from "#/data/dealShares";
 import { notify } from "#/lib/notify";
 import type { Listing } from "#/data/types";
 import type { RosterUser } from "#/data/roster";
 import { useRoster } from "#/components/settings/users/useRoster";
 import { MemberAvatar, TeammatePicker } from "#/components/common/TeammatePicker";
-import { canContribute, brokerTeammate, dealCreator, dealTeamBrokers } from "./dealAccess";
+import { canEditMarketing, brokerTeammate, dealCreator, dealTeamBrokers } from "./dealAccess";
 import { useDealShares } from "./useDealAccess";
 
 /** One row of the access list: avatar, name + sub-line, and a trailing control. */
@@ -49,30 +46,20 @@ function AccessRow({
   );
 }
 
-/** The `scope:level` value a Select option carries, so one control sets both. */
-function optionValue(scope: ShareScope, level: ShareLevel): string {
-  return `${scope}:${level}`;
-}
-
-function parseOption(value: string): { scope: ShareScope; level: ShareLevel } {
-  const [scope, level] = value.split(":");
-  return { scope: scope as ShareScope, level: level as ShareLevel };
-}
-
 /**
  * Who can open this deal, and how to let someone else in — the modal behind the
  * deal header's user-gear button.
  *
- * A deal is two halves, and different people are trusted with each. So a share
- * names a **scope** — Marketing or Back office — and a **level** inside it. The
- * asymmetry between the two scopes is deliberate and lives in `dealAccessFor`:
- * back office carries marketing at view, marketing hides back office outright.
+ * **Sharing a deal shares its marketing.** There is no scope to pick: the
+ * voucher is not a broker's to hand out, and who sees the money is settled by a
+ * person's role rather than by one deal's invitations. So the only choice here
+ * is the level.
  *
- * Levels are capped by the person's role, not replaced by it. `permissions.ts`
- * already owns what a person may do; this modal only decides which records they
- * may do it on. Where the two meet — a role that can't edit vouchers offered a
- * back-office edit — the option is disabled with the reason on it, rather than
- * granted and quietly taken back on the page.
+ * That level is capped by the person's role, not replaced by it.
+ * `permissions.ts` already owns what a person may do; this modal only decides
+ * which records they may do it on. Where the two meet — a role that cannot edit
+ * marketing offered an edit — the option is disabled with the reason on it,
+ * rather than granted and quietly taken back on the page.
  *
  * Team rows (creator, internal brokers) stay label-only. Taking someone off a
  * deal also takes their row out of the commission table, and that consequence
@@ -94,7 +81,6 @@ export function ManageDealAccessModal({
   const [query, setQuery] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pending, setPending] = useState<Teammate[]>([]);
-  const [scope, setScope] = useState<ShareScope>("marketing");
   const [level, setLevel] = useState<ShareLevel>("view");
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -146,58 +132,52 @@ export function ManageDealAccessModal({
     blurTimer.current = setTimeout(() => setPickerOpen(false), 120);
   };
 
-  /** Staging the first person also chooses the opening scope from their role. */
+  /** Staging the first person also opens on the highest level their role allows. */
   const addPending = (member: Teammate, first: boolean) => {
     setPending((prev) => [...prev, member]);
     setQuery("");
     setPickerOpen(false);
     if (!first) return;
     const row = rosterRow(member.id);
-    const next = row ? defaultScopeForRoles(row.roleIds) : "marketing";
-    setScope(next);
-    setLevel(row && canContribute(next, row) ? "contribute" : "view");
+    setLevel(row && canEditMarketing(row) ? "contribute" : "view");
   };
 
   const removePending = (id: string) =>
     setPending((prev) => prev.filter((m) => m.id !== id));
 
-  /** Staged people whose role cannot edit in the chosen scope. */
+  /** Staged people whose role cannot edit marketing. */
   const cappedPending = useMemo(
-    () =>
-      pending.filter((m) => {
-        const row = rosterRow(m.id);
-        return row ? !canContribute(scope, row) : false;
-      }),
+    () => pending.filter((m) => {
+      const row = rosterRow(m.id);
+      return row ? !canEditMarketing(row) : false;
+    }),
     // `roster` is the reactive input rosterRow closes over.
-    [pending, scope, roster],
+    [pending, roster],
   );
   const anyCanContribute = pending.length > cappedPending.length;
 
-  // Choosing a scope nobody staged can edit in drops the level with it, so the
+  // Removing the last person who could edit drops the level with them, so the
   // Share button can never send a grant the radio no longer offers.
   useEffect(() => {
     if (!anyCanContribute && level === "contribute") setLevel("view");
   }, [anyCanContribute, level]);
 
-  const scopeMeta = SHARE_SCOPES.find((s) => s.value === scope);
   const capReason = (member: Teammate): string => {
     const row = rosterRow(member.id);
     const role = row ? roleName(row.roleIds[0]) : "Their role";
-    return `${role} cannot edit ${scopeMeta?.label.toLowerCase() ?? "this"}`;
+    return `${role} cannot edit marketing`;
   };
 
   const handleShare = () => {
     if (pending.length === 0) return;
-    grant(pending.map((m) => m.id), scope, level);
+    grant(pending.map((m) => m.id), level);
     notify({
       title:
         pending.length === 1
           ? `${pending[0].name} has access`
           : `${pending.length} people have access`,
       description:
-        scope === "back-office"
-          ? "Back office, plus read-only marketing so they can see what is being sold."
-          : "Marketing only — the voucher, invoices and commissions stay hidden.",
+        "The listing, website, documents and media. The voucher stays hidden.",
     });
     setPending([]);
     setStep("browse");
@@ -254,9 +234,9 @@ export function ManageDealAccessModal({
               )}
 
               <p className="fs-small text-muted mb-0">
-                The deal team can open all of it. Everyone else is shared into one
-                half: marketing, or the back office. A back-office share can read
-                the marketing side too — a marketing share never sees the money.
+                Sharing a deal shares its marketing — the listing, website,
+                documents and media. The voucher is never part of it: who sees
+                the money is set by a person&apos;s role, not from here.
               </p>
 
               <div className="d-flex flex-column gap-1">
@@ -306,45 +286,44 @@ export function ManageDealAccessModal({
                     </span>
                     {readOnly ? (
                       <span className="text-muted flex-shrink-0">
-                        {shareSummary(s)}
+                        {shareLevelLabel(s.level)}
                       </span>
                     ) : (
-                    <Select
-                      value={optionValue(s.scope, s.level)}
-                      onValueChange={(value) => {
-                        const v = value as string;
-                        if (v === "__remove") {
-                          revoke(s.member.id);
-                          return;
-                        }
-                        const next = parseOption(v);
-                        change(s.member.id, next.scope, next.level);
-                      }}
-                    >
-                      <Select.Trigger className="flex-shrink-0" style={{ width: 190 }}>
-                        <Select.Value>{shareSummary(s)}</Select.Value>
-                      </Select.Trigger>
-                      <Select.Content>
-                        {SHARE_SCOPES.flatMap((sc) =>
-                          SHARE_LEVELS.map((lv) => {
+                      <Select
+                        value={s.level}
+                        onValueChange={(value) => {
+                          const v = value as string;
+                          if (v === "__remove") {
+                            revoke(s.member.id);
+                            return;
+                          }
+                          change(s.member.id, v as ShareLevel);
+                        }}
+                      >
+                        <Select.Trigger className="flex-shrink-0" style={{ width: 150 }}>
+                          {/* The label, not the value: `Select.Value` renders the
+                              raw stored string on its own. */}
+                          <Select.Value>{shareLevelLabel(s.level)}</Select.Value>
+                        </Select.Trigger>
+                        <Select.Content>
+                          {SHARE_LEVELS.map((lv) => {
                             const row = rosterRow(s.member.id);
                             const blocked =
-                              lv.value === "contribute" && !!row && !canContribute(sc.value, row);
+                              lv.value === "contribute" && !!row && !canEditMarketing(row);
                             return (
                               <Select.Item
-                                key={optionValue(sc.value, lv.value)}
-                                value={optionValue(sc.value, lv.value)}
+                                key={lv.value}
+                                value={lv.value}
                                 disabled={blocked}
                               >
-                                {sc.label} · {lv.label}
+                                {lv.label}
                               </Select.Item>
                             );
-                          }),
-                        )}
-                        <Select.Separator />
-                        <Select.Item value="__remove">Remove access</Select.Item>
-                      </Select.Content>
-                    </Select>
+                          })}
+                          <Select.Separator />
+                          <Select.Item value="__remove">Remove access</Select.Item>
+                        </Select.Content>
+                      </Select>
                     )}
                   </div>
                 ))}
@@ -397,31 +376,10 @@ export function ManageDealAccessModal({
                 )}
               </div>
 
-              <div className="d-flex flex-column gap-1">
-                <span className="fw-semibold">What opens</span>
-                <RadioGroup
-                  value={scope}
-                  onValueChange={(value) => setScope(value as ShareScope)}
-                >
-                  {SHARE_SCOPES.map((s) => (
-                    <label
-                      key={s.value}
-                      htmlFor={`scope-${s.value}`}
-                      className="share-modal__tier d-flex gap-2 p-2 rounded-3 mb-0"
-                    >
-                      <RadioGroup.Item
-                        value={s.value}
-                        id={`scope-${s.value}`}
-                        className="mt-1 flex-shrink-0"
-                      />
-                      <span className="d-flex flex-column lh-sm">
-                        <span className="fw-semibold">{s.label}</span>
-                        <span className="fs-small text-muted">{s.description}</span>
-                      </span>
-                    </label>
-                  ))}
-                </RadioGroup>
-              </div>
+              <p className="fs-small text-muted mb-0">
+                They get this deal&apos;s marketing — the listing, website,
+                documents and media. Not the voucher.
+              </p>
 
               <div className="d-flex flex-column gap-1">
                 <span className="fw-semibold">What they can do</span>

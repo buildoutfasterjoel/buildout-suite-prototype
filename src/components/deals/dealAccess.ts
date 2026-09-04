@@ -7,11 +7,16 @@ import {
 import type { DealBroker, Listing } from "#/data/types";
 import {
   isPermissionOn,
-  ROLE_BY_ID,
   type PermissionOverrides,
   type RoleId,
 } from "#/data/permissions";
-import { SHARE_SCOPES, type DealShare, type ShareScope } from "#/data/dealShares";
+import {
+  BACK_OFFICE_EDIT_PERMISSION,
+  BACK_OFFICE_VIEW_PERMISSION,
+  MARKETING_EDIT_PERMISSIONS,
+  MARKETING_VIEW_PERMISSION,
+  type DealShare,
+} from "#/data/dealShares";
 
 /**
  * Who can open a deal, for the header's access cluster and its Manage Access
@@ -79,8 +84,15 @@ export interface DealAccess {
   backOffice: AccessLevel;
 }
 
-/** Everything, both halves — the deal team's access, and a broker's by default. */
+/** Everything, both halves — the deal team's access. */
 const FULL: DealAccess = { marketing: "contribute", backOffice: "contribute" };
+
+const RANK: Record<AccessLevel, number> = { none: 0, view: 1, contribute: 2 };
+
+/** The more open of two levels. A share raises what a role already granted. */
+function higher(a: AccessLevel, b: AccessLevel): AccessLevel {
+  return RANK[a] >= RANK[b] ? a : b;
+}
 
 /** The slice of a roster row this needs. Kept structural so tests can fake it. */
 export interface AccessViewer {
@@ -90,6 +102,9 @@ export interface AccessViewer {
   overrides: PermissionOverrides;
 }
 
+const can = (viewer: AccessViewer, permissionId: string) =>
+  isPermissionOn(viewer.roleIds, viewer.overrides, permissionId);
+
 /** True when the viewer created the deal or works it as an internal broker. */
 function onDealTeam(listing: Listing, viewer: AccessViewer): boolean {
   if (listing.createdById === viewer.id) return true;
@@ -97,32 +112,42 @@ function onDealTeam(listing: Listing, viewer: AccessViewer): boolean {
 }
 
 /**
- * Whether these roles bring their own book, or only see what is shared with them.
- *
- * The most open role wins, which matters only if the one-role-per-person rule in
- * `roster.ts` ever relaxes.
+ * Whether this person's role lets them edit marketing at all — the ceiling a
+ * share cannot exceed. Exported because the share modal disables "Can edit" and
+ * needs to say why before anything is granted.
  */
-function seesEveryDeal(roleIds: RoleId[]): boolean {
-  return roleIds.some((id) => ROLE_BY_ID.get(id)?.accessKind !== "sharing");
-}
-
-/** A share's level, lowered to `view` when the viewer's role can't back it up. */
-function cappedLevel(share: DealShare, viewer: AccessViewer): AccessLevel {
-  if (share.level === "view") return "view";
-  return canContribute(share.scope, viewer) ? "contribute" : "view";
+export function canEditMarketing(viewer: AccessViewer): boolean {
+  return MARKETING_EDIT_PERMISSIONS.some((id) => can(viewer, id));
 }
 
 /**
- * Whether this person's role lets them edit in a scope at all — the ceiling the
- * share cannot exceed. Exported because the share modal disables the option and
- * needs to say why before anything is granted.
+ * What a role alone opens on a deal its holder is not on — read straight from
+ * the two permissions that name it, rather than from `accessKind`.
+ *
+ * That distinction is the whole reason a Back Office Manager works: they hold
+ * `view-other-vouchers` and not `access-other-listings`, so they get the
+ * voucher on every deal in the firm and none of the marketing — which is
+ * exactly what the back office is for. A Managing Director holds both and keeps
+ * seeing everything. A Broker holds neither, which is what `accessKind: "owns"`
+ * has always claimed: a book of their own, not a window onto everyone else's.
+ *
+ * Editing follows the same split. `edit-other-vouchers` is the Back Office
+ * Manager's alone, so a Managing Director reaches a voucher at `view` — they
+ * sign work off, they do not type it.
  */
-export function canContribute(scope: ShareScope, viewer: AccessViewer): boolean {
-  const meta = SHARE_SCOPES.find((s) => s.value === scope);
-  if (!meta) return false;
-  return meta.contributePermissions.some((id) =>
-    isPermissionOn(viewer.roleIds, viewer.overrides, id),
-  );
+function roleAccess(viewer: AccessViewer): DealAccess {
+  return {
+    marketing: can(viewer, MARKETING_VIEW_PERMISSION)
+      ? canEditMarketing(viewer)
+        ? "contribute"
+        : "view"
+      : "none",
+    backOffice: can(viewer, BACK_OFFICE_VIEW_PERMISSION)
+      ? can(viewer, BACK_OFFICE_EDIT_PERMISSION)
+        ? "contribute"
+        : "view"
+      : "none",
+  };
 }
 
 /**
@@ -132,19 +157,15 @@ export function canContribute(scope: ShareScope, viewer: AccessViewer): boolean 
  * Rules, in order:
  *
  *  1. **On the deal team** — the creator or an internal broker — gets both
- *     halves. Team membership is still the full-access path; a share is for
- *     everyone else.
- *  2. **Shared in** gets exactly what the share says, capped by their role. A
- *     back office share also carries marketing at `view`: the money is
- *     unreadable without knowing what is being sold. A marketing share carries
- *     no back office at all — that asymmetry is the point of the feature.
- *  3. **No share, and a role that owns records or sees firm-wide** (Broker,
- *     Managing Director, Back Office Manager) gets both halves. This is the
- *     app's behaviour today, so nothing existing changes.
- *  4. **No share, and a role that works by sharing** gets nothing.
- *     `ROLE_ACCESS_DETAIL` has always said so in words — "they can only act on
- *     listings and deals that have been shared with them" — and this is the
- *     first place it becomes true.
+ *     halves. (What the *voucher* then shows them of a colleague's payout is a
+ *     narrower question, answered by `canSeeBrokerPayout`.)
+ *  2. **Everyone else** starts from what their role opens firm-wide, and a
+ *     share raises the marketing half on top of it — capped by the same role.
+ *     A share never touches the back office: sharing a deal shares its
+ *     marketing, and the voucher is not a broker's to hand out.
+ *
+ * The share is a floor, not a replacement, so sharing a deal's marketing with a
+ * Back Office Manager cannot take away the voucher their role already reaches.
  *
  * A viewer with no roster row falls through to full access rather than none: we
  * cannot resolve a ceiling for someone we can't find, and blanking the deal page
@@ -158,15 +179,13 @@ export function dealAccessFor(
   if (!viewer) return FULL;
   if (onDealTeam(listing, viewer)) return FULL;
 
+  const role = roleAccess(viewer);
   const share = shares.find((s) => s.member.id === viewer.id);
-  if (share) {
-    const level = cappedLevel(share, viewer);
-    return share.scope === "back-office"
-      ? { marketing: "view", backOffice: level }
-      : { marketing: level, backOffice: "none" };
-  }
+  if (!share) return role;
 
-  return seesEveryDeal(viewer.roleIds) ? FULL : { marketing: "none", backOffice: "none" };
+  const shared: AccessLevel =
+    share.level === "contribute" && canEditMarketing(viewer) ? "contribute" : "view";
+  return { marketing: higher(role.marketing, shared), backOffice: role.backOffice };
 }
 
 /** Whether the viewer can open the deal at all. */

@@ -152,17 +152,28 @@ export const CLASSIC_NAV_GROUPS: NavGroup[] = [
 export const CLASSIC_LANDING_HREF = "leads";
 
 /**
- * The nav group holding a deal's money, under each set's own name for it. A
- * viewer shared into marketing only never sees it — not the group, and not the
- * routes behind it (see the guard in `$listingId.tsx`).
+ * A deal's two halves, as the nav groups holding them — under each set's own
+ * name, since a classic deal calls them Listing and Financials.
+ *
+ * Both halves can be withheld, and independently: someone shared into a deal's
+ * marketing never sees the back office, and a Back Office Manager reaching a
+ * deal through `view-other-vouchers` sees the voucher and none of the
+ * marketing. The Deal group is neither half and is always shown, so nobody
+ * lands on a page with nothing on it.
  */
+const MARKETING_GROUP_LABELS = ["Marketing", "Listing"];
 const BACK_OFFICE_GROUP_LABELS = ["Back Office", "Financials"];
 
-function withoutBackOffice(groups: NavGroup[], shows: boolean): NavGroup[] {
-  if (shows) return groups;
-  return groups.filter(
-    (g) => !g.label || !BACK_OFFICE_GROUP_LABELS.includes(g.label),
-  );
+function withoutGroups(groups: NavGroup[], hidden: string[]): NavGroup[] {
+  if (hidden.length === 0) return groups;
+  return groups.filter((g) => !g.label || !hidden.includes(g.label));
+}
+
+/** Every href inside the named groups, across both the modern and classic sets. */
+function hrefsInGroups(labels: string[]): string[] {
+  return NAV_GROUPS.concat(CLASSIC_NAV_GROUPS)
+    .filter((g) => g.label && labels.includes(g.label))
+    .flatMap((g) => g.items.map((i) => i.href));
 }
 
 /**
@@ -171,11 +182,14 @@ function withoutBackOffice(groups: NavGroup[], shows: boolean): NavGroup[] {
  * The route guard reads this; the sidebar filters by group label above.
  */
 export const BACK_OFFICE_HREFS: readonly string[] = [
-  ...NAV_GROUPS.concat(CLASSIC_NAV_GROUPS)
-    .filter((g) => g.label && BACK_OFFICE_GROUP_LABELS.includes(g.label))
-    .flatMap((g) => g.items.map((i) => i.href)),
+  ...hrefsInGroups(BACK_OFFICE_GROUP_LABELS),
   "underwriting",
 ];
+
+/** Every section behind the marketing wall, by href. Read by the route guard. */
+export const MARKETING_HREFS: readonly string[] = hrefsInGroups(
+  MARKETING_GROUP_LABELS,
+);
 
 /**
  * Which section — and, on a drill-down, which record — the current URL is on.
@@ -294,21 +308,27 @@ export function visibleNavGroups(
      * CLASSIC_NAV_GROUPS. None of the shape rules below apply, so this returns
      * before them rather than threading `isClassic` through each one.
      *
-     * The back-office rule is the one exception: it is about who is looking, not
-     * what shape the deal is, so it applies to the classic set too.
+     * The access rules are the one exception: they are about who is looking, not
+     * what shape the deal is, so they apply to the classic set too.
      */
     isClassic?: boolean;
     /**
-     * Whether the viewer may see the money at all — false for someone shared
-     * into marketing only. Defaults to true, so every caller that has no opinion
-     * about access keeps today's sidebar. Resolved by `dealAccessFor`.
+     * Whether the viewer may see each half. Both default to true, so every
+     * caller with no opinion about access keeps today's sidebar. Resolved by
+     * `dealAccessFor`.
      */
+    showsMarketing?: boolean;
     showsBackOffice?: boolean;
   },
 ): NavGroup[] {
   const showsBackOffice = opts.showsBackOffice ?? true;
-  if (opts.isClassic) return withoutBackOffice(CLASSIC_NAV_GROUPS, showsBackOffice);
-  return withoutBackOffice(NAV_GROUPS, showsBackOffice).map((group) => ({
+  const showsMarketing = opts.showsMarketing ?? true;
+  const hidden = [
+    ...(showsMarketing ? [] : MARKETING_GROUP_LABELS),
+    ...(showsBackOffice ? [] : BACK_OFFICE_GROUP_LABELS),
+  ];
+  if (opts.isClassic) return withoutGroups(CLASSIC_NAV_GROUPS, hidden);
+  return withoutGroups(NAV_GROUPS, hidden).map((group) => ({
     ...group,
     items: group.items.filter((item) => {
       // A space's own marketing form is Details; every other shape's is Listing.

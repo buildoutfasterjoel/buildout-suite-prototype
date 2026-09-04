@@ -99,15 +99,17 @@ export function PropertyDetailSidebar({
   // from canAddSpaces, which governs only the Add-space buttons, not navigation.
   const leaseParent = isLeaseParent(listing);
 
-  // Someone shared into marketing only never sees the money — not the group, and
-  // not Underwriting. Everyone else resolves to full access, so this is a no-op
-  // for the deal team and for any role that owns records.
+  // Each half of the deal is shown only to someone entitled to it: a marketing
+  // share hides the money, and the back office reaching a deal through
+  // `view-other-vouchers` gets the voucher and no marketing. The deal team
+  // resolves to both, so this is a no-op for them.
   const access = useDealAccess(listing);
 
   const navGroups = visibleNavGroups(shape, {
     leaseParent,
     showsUnderwriting,
     isClassic: listing.isClassic,
+    showsMarketing: access.marketing !== "none",
     showsBackOffice: access.backOffice !== "none",
   });
 

@@ -4,7 +4,10 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLock } from "@fortawesome/pro-regular-svg-icons";
-import { BACK_OFFICE_HREFS } from "#/components/properties/dealNav";
+import {
+  BACK_OFFICE_HREFS,
+  MARKETING_HREFS,
+} from "#/components/properties/dealNav";
 import type { Listing } from "#/data/types";
 import { canOpenDeal } from "./dealAccess";
 import { useDealAccess } from "./useDealAccess";
@@ -38,9 +41,10 @@ function NoAccess({ listing }: { listing: Listing }) {
  *
  *  - A viewer with no access at all sees why instead of the deal. Hiding nav
  *    items would still leave the page itself readable underneath.
- *  - A back-office URL typed, bookmarked or linked by someone shared into
- *    marketing only sends them to the Overview. `visibleNavGroups` drops those
- *    items from the sidebar, but a URL walks straight past a sidebar.
+ *  - A URL into a half the viewer cannot see — typed, bookmarked, or linked —
+ *    sends them to the Overview, which belongs to neither half and is therefore
+ *    always theirs. `visibleNavGroups` drops those items from the sidebar, but a
+ *    URL walks straight past a sidebar.
  *
  * The redirect renders nothing while it runs, rather than the section behind a
  * queued navigation: a voucher that flashes for one frame has still been shown.
@@ -63,7 +67,8 @@ export function DealAccessGate({
     ? pathname.slice(basePath.length + 1).split("/")[0]
     : "";
   const blocked =
-    access.backOffice === "none" && BACK_OFFICE_HREFS.includes(section);
+    (access.backOffice === "none" && BACK_OFFICE_HREFS.includes(section)) ||
+    (access.marketing === "none" && MARKETING_HREFS.includes(section));
 
   useEffect(() => {
     if (blocked) void navigate({ to: `${basePath}/overview`, replace: true });

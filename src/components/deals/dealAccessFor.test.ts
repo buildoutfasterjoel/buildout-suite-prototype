@@ -1,9 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { TEAMMATES } from "#/data/teammates";
-import type { DealShare, ShareScope } from "#/data/dealShares";
+import type { DealShare, ShareLevel } from "#/data/dealShares";
 import type { RoleId } from "#/data/permissions";
 import type { Listing } from "#/data/types";
-import { canContribute, canOpenDeal, dealAccessFor, type AccessViewer } from "./dealAccess";
+import {
+  canEditMarketing,
+  canOpenDeal,
+  dealAccessFor,
+  type AccessViewer,
+} from "./dealAccess";
 
 /** A deal Ethan created, worked by Sarah Chen. Only the fields the resolver reads. */
 const deal = {
@@ -17,13 +22,13 @@ function viewer(id: string, roleIds: RoleId[], overrides = {}): AccessViewer {
   return { id, name: member?.name ?? id, roleIds, overrides };
 }
 
-function share(id: string, scope: ShareScope, level: "view" | "contribute"): DealShare {
+function share(id: string, level: ShareLevel): DealShare {
   const member = TEAMMATES.find((t) => t.id === id);
   if (!member) throw new Error(`no teammate ${id}`);
-  return { member, scope, level };
+  return { member, level };
 }
 
-describe("dealAccessFor", () => {
+describe("dealAccessFor — the deal team", () => {
   it("gives the creator both halves", () => {
     expect(dealAccessFor(deal, viewer("you", ["managing-director"]), [])).toEqual({
       marketing: "contribute",
@@ -32,20 +37,51 @@ describe("dealAccessFor", () => {
   });
 
   it("gives an internal broker both halves, matched by name", () => {
+    // Sarah holds neither cross-deal permission, so this is team membership
+    // alone doing the work.
     expect(dealAccessFor(deal, viewer("sarah-chen", ["broker"]), [])).toEqual({
       marketing: "contribute",
       backOffice: "contribute",
     });
   });
+});
 
-  it("gives an unshared broker both halves — they own records", () => {
+describe("dealAccessFor — what a role alone opens", () => {
+  it("gives a Broker nothing on someone else's deal", () => {
+    // accessKind "owns" means a book of their own, not a window onto everyone
+    // else's: a Broker holds neither access-other-listings nor
+    // view-other-vouchers.
     const access = dealAccessFor(deal, viewer("nina-alvarez", ["broker"]), []);
-    expect(access).toEqual({ marketing: "contribute", backOffice: "contribute" });
+    expect(access).toEqual({ marketing: "none", backOffice: "none" });
+    expect(canOpenDeal(access)).toBe(false);
   });
 
-  it("gives an unshared Back Office Manager both halves — firm-wide view", () => {
-    const access = dealAccessFor(deal, viewer("tessa-nakamura", ["back-office-manager"]), []);
-    expect(access).toEqual({ marketing: "contribute", backOffice: "contribute" });
+  it("gives a Back Office Manager the voucher and no marketing", () => {
+    // The whole point of the role: vouchers from every deal, nothing else.
+    expect(
+      dealAccessFor(deal, viewer("tessa-nakamura", ["back-office-manager"]), []),
+    ).toEqual({ marketing: "none", backOffice: "contribute" });
+  });
+
+  it("gives a Managing Director both halves, and both only to read", () => {
+    // Access, not edit, in each half — and the role's defaults say so twice.
+    // `access-other-listings` opens a listing without `edit-listings` opening
+    // the form, and `edit-other-vouchers` is the Back Office Manager's alone:
+    // an MD signs work off, they do not type it. A producing MD gets the edit
+    // rights by override, which the next test covers.
+    expect(
+      dealAccessFor(deal, viewer("priya-nair", ["managing-director"]), []),
+    ).toEqual({ marketing: "view", backOffice: "view" });
+  });
+
+  it("lets an override lift a Managing Director to editing marketing", () => {
+    // Diana is the roster's customized row: a Managing Director granted
+    // edit-listings beyond her role.
+    expect(
+      dealAccessFor(deal, viewer("diana-reyes", ["managing-director"], {
+        "edit-listings": true,
+      }), []),
+    ).toEqual({ marketing: "contribute", backOffice: "view" });
   });
 
   it("gives an unshared sharing-role nothing at all", () => {
@@ -53,61 +89,66 @@ describe("dealAccessFor", () => {
     expect(access).toEqual({ marketing: "none", backOffice: "none" });
     expect(canOpenDeal(access)).toBe(false);
   });
+});
 
-  it("a marketing share hides the back office outright", () => {
-    const access = dealAccessFor(deal, viewer("maya-brooks", ["marketing-assistant"]), [
-      share("maya-brooks", "marketing", "contribute"),
-    ]);
-    expect(access).toEqual({ marketing: "contribute", backOffice: "none" });
+describe("dealAccessFor — a share", () => {
+  it("opens marketing and never the back office", () => {
+    expect(
+      dealAccessFor(deal, viewer("maya-brooks", ["marketing-assistant"]), [
+        share("maya-brooks", "contribute"),
+      ]),
+    ).toEqual({ marketing: "contribute", backOffice: "none" });
   });
 
-  it("a back office share carries marketing at view", () => {
-    const access = dealAccessFor(
-      deal,
-      viewer("omar-haddad", ["transaction-coordinator"]),
-      [share("omar-haddad", "back-office", "contribute")],
-    );
-    expect(access).toEqual({ marketing: "view", backOffice: "contribute" });
-  });
-
-  it("caps a contribute share at view when the role cannot back it", () => {
-    // Office Admin has create-listings only — none of the marketing edit
-    // permissions, and no change-deal-statuses.
-    const riley = viewer("riley-park", ["office-admin"]);
-    expect(dealAccessFor(deal, riley, [share("riley-park", "marketing", "contribute")])).toEqual({
-      marketing: "view",
-      backOffice: "none",
-    });
-    expect(dealAccessFor(deal, riley, [share("riley-park", "back-office", "contribute")])).toEqual({
-      marketing: "view",
-      backOffice: "view",
-    });
+  it("caps contribute at view when the role cannot edit marketing", () => {
+    // Office Admin holds create-listings and none of the three edit permissions.
+    expect(
+      dealAccessFor(deal, viewer("riley-park", ["office-admin"]), [
+        share("riley-park", "contribute"),
+      ]),
+    ).toEqual({ marketing: "view", backOffice: "none" });
   });
 
   it("lets a per-user override lift the cap", () => {
     const riley = viewer("riley-park", ["office-admin"], { "edit-listings": true });
-    expect(dealAccessFor(deal, riley, [share("riley-park", "marketing", "contribute")])).toEqual({
+    expect(dealAccessFor(deal, riley, [share("riley-park", "contribute")])).toEqual({
       marketing: "contribute",
       backOffice: "none",
     });
   });
 
-  it("a view share stays view even for a role that could edit", () => {
-    const access = dealAccessFor(deal, viewer("maya-brooks", ["marketing-assistant"]), [
-      share("maya-brooks", "marketing", "view"),
-    ]);
-    expect(access).toEqual({ marketing: "view", backOffice: "none" });
+  it("stays view when the share says view, even for a role that could edit", () => {
+    expect(
+      dealAccessFor(deal, viewer("maya-brooks", ["marketing-assistant"]), [
+        share("maya-brooks", "view"),
+      ]),
+    ).toEqual({ marketing: "view", backOffice: "none" });
   });
 
-  it("the share wins over the role's own reach", () => {
-    // Nina is a Broker — unshared she would see everything. Shared into
-    // marketing only, the share is what she gets.
-    const access = dealAccessFor(deal, viewer("nina-alvarez", ["broker"]), [
-      share("nina-alvarez", "marketing", "contribute"),
-    ]);
-    expect(access).toEqual({ marketing: "contribute", backOffice: "none" });
+  it("raises what a role granted rather than replacing it", () => {
+    // Sharing marketing with the back office must not cost them the voucher
+    // their role reaches on every deal in the firm.
+    expect(
+      dealAccessFor(deal, viewer("tessa-nakamura", ["back-office-manager"]), [
+        share("tessa-nakamura", "view"),
+      ]),
+    ).toEqual({ marketing: "view", backOffice: "contribute" });
   });
 
+  it("never lowers a role that already opened more", () => {
+    // Diana's role plus her override already reaches contribute. A view share
+    // on top of that leaves the higher of the two, rather than demoting her.
+    expect(
+      dealAccessFor(
+        deal,
+        viewer("diana-reyes", ["managing-director"], { "edit-listings": true }),
+        [share("diana-reyes", "view")],
+      ),
+    ).toEqual({ marketing: "contribute", backOffice: "view" });
+  });
+});
+
+describe("dealAccessFor — the fallback", () => {
   it("falls open, not shut, for a viewer with no roster row", () => {
     expect(dealAccessFor(deal, undefined, [])).toEqual({
       marketing: "contribute",
@@ -116,13 +157,11 @@ describe("dealAccessFor", () => {
   });
 });
 
-describe("canContribute", () => {
-  it("reads the role's permissions per scope", () => {
-    const maya = viewer("maya-brooks", ["marketing-assistant"]);
-    expect(canContribute("marketing", maya)).toBe(true);
-    expect(canContribute("back-office", maya)).toBe(false);
-
-    const omar = viewer("omar-haddad", ["transaction-coordinator"]);
-    expect(canContribute("back-office", omar)).toBe(true);
+describe("canEditMarketing", () => {
+  it("reads the three marketing permissions, not edit-listings alone", () => {
+    // A Marketing Assistant builds sites and documents without holding the
+    // listing form.
+    expect(canEditMarketing(viewer("maya-brooks", ["marketing-assistant"]))).toBe(true);
+    expect(canEditMarketing(viewer("riley-park", ["office-admin"]))).toBe(false);
   });
 });

@@ -3140,20 +3140,24 @@ export function seedContactShares(
 }
 
 /**
- * Seed deal sharing so the marketing / back-office split has something to show
- * without anyone sharing a deal by hand first.
+ * Seed deal sharing so a marketing share has something to show without anyone
+ * sharing a deal by hand first.
  *
- * The three people used here are the roster's `sharing`-kind roles — the ones
- * that own no records and see only what is shared with them (see
- * `ROLE_ACCESS_DETAIL` in `permissions.ts`). That is what makes them the demo
- * seats: switch to Maya and a shared deal opens with no Back Office group at
- * all, while an unshared one does not open.
+ * Both people used here hold `sharing`-kind roles — they own no records and see
+ * only what is shared with them (see `ROLE_ACCESS_DETAIL` in `permissions.ts`).
+ * That is what makes them the demo seats: switch to Maya and a shared deal opens
+ * with no Back Office group at all, while an unshared one does not open.
  *
  * Riley is seeded at `view` on purpose. Their Office Admin role holds none of
  * the marketing edit permissions, so a `contribute` share would resolve down to
  * `view` anyway — and a stored share that lies about what someone gets is worth
  * avoiding. The capped case is demonstrated live instead: the modal disables
  * "Can edit" for Riley and says why.
+ *
+ * Omar, the Transaction Coordinator, is deliberately shared nothing. His job is
+ * the close, and the voucher is reached by role rather than by invitation — so
+ * an empty seat is the honest demonstration of a sharing-role person nobody has
+ * shared with.
  *
  * Keyed off the listing's index, so the assignment is deterministic and stable
  * across runs. No faker — the seed tests pin that nothing here draws from the
@@ -3163,14 +3167,11 @@ export function seedDealShares(listings: Listing[]): Map<string, DealShare[]> {
   const map = new Map<string, DealShare[]>()
   const member = (id: string) => TEAMMATES.find((t) => t.id === id)
   const maya = member('maya-brooks')
-  const omar = member('omar-haddad')
   const riley = member('riley-park')
   listings.forEach((l, i) => {
     const shares: DealShare[] = []
-    if (maya && i % 3 === 0) shares.push({ member: maya, scope: 'marketing', level: 'contribute' })
-    if (omar && i % 3 === 1)
-      shares.push({ member: omar, scope: 'back-office', level: 'contribute' })
-    if (riley && i % 6 === 2) shares.push({ member: riley, scope: 'marketing', level: 'view' })
+    if (maya && i % 3 === 0) shares.push({ member: maya, level: 'contribute' })
+    if (riley && i % 6 === 2) shares.push({ member: riley, level: 'view' })
     if (shares.length > 0) map.set(l.id, shares)
   })
   return map

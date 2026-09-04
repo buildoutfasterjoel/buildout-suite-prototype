@@ -30,7 +30,6 @@ import {
   DEFAULT_DEAL_SHARES,
   type DealShare,
   type ShareLevel,
-  type ShareScope,
 } from './dealShares'
 import { DEFAULT_STRATEGY, strategyLabel } from '#/components/deals/underwriting/strategies'
 import { buildUnderwritingResult } from '#/components/deals/underwriting/underwritingResult'
@@ -548,33 +547,31 @@ function setDealShares(listingId: string, shares: DealShare[]): void {
   useDataStore.getState().persist()
 }
 
-/** Share a deal with the given members at one scope and level (skips duplicates). */
+/** Share a deal's marketing with the given members at a level (skips duplicates). */
 export function grantDealShares(
   listingId: string,
   memberIds: string[],
-  scope: ShareScope,
   level: ShareLevel,
 ): void {
   const next = [...getDealShares(listingId)]
   for (const id of memberIds) {
     const member = findTeammate(id)
     if (!member || next.some((s) => s.member.id === id)) continue
-    next.push({ member, scope, level })
+    next.push({ member, level })
   }
   setDealShares(listingId, next)
 }
 
-/** Move an existing share to another scope or level. */
+/** Move an existing share to another level. */
 export function changeDealShare(
   listingId: string,
   memberId: string,
-  scope: ShareScope,
   level: ShareLevel,
 ): void {
   setDealShares(
     listingId,
     getDealShares(listingId).map((s) =>
-      s.member.id === memberId ? { ...s, scope, level } : s,
+      s.member.id === memberId ? { ...s, level } : s,
     ),
   )
 }

@@ -9,6 +9,7 @@ import {
   NAV_GROUPS,
   visibleNavGroups,
   BACK_OFFICE_HREFS,
+  MARKETING_HREFS,
 } from "./dealNav";
 
 const ID = "deal-1";
@@ -520,5 +521,53 @@ describe("visibleNavGroups and the back-office wall", () => {
     }
     expect(BACK_OFFICE_HREFS).not.toContain("overview");
     expect(BACK_OFFICE_HREFS).not.toContain("listing");
+  });
+});
+
+describe("visibleNavGroups and the marketing wall", () => {
+  it("drops the whole Marketing group, and keeps the money", () => {
+    // The Back Office Manager's view: vouchers from every deal, no marketing.
+    const shown = hrefs("sale", {
+      leaseParent: false,
+      showsUnderwriting: true,
+      showsMarketing: false,
+    });
+    for (const href of ["listing", "website", "documents", "media", "grids"]) {
+      expect(shown).not.toContain(href);
+    }
+    expect(shown).toContain("financials");
+    expect(shown).toContain("overview");
+  });
+
+  it("applies to a classic deal's Listing group", () => {
+    const shown = hrefs("sale", {
+      leaseParent: false,
+      showsUnderwriting: false,
+      isClassic: true,
+      showsMarketing: false,
+    });
+    expect(shown).not.toContain("website");
+    expect(shown).not.toContain("syndication");
+    expect(shown).toContain("deals");
+  });
+
+  it("leaves only the Deal group when both halves are withheld", () => {
+    const shown = hrefs("sale", {
+      leaseParent: false,
+      showsUnderwriting: true,
+      showsMarketing: false,
+      showsBackOffice: false,
+    });
+    expect(shown).toEqual(["overview", "client-report", "activities", "history", "files"]);
+  });
+
+  it("MARKETING_HREFS and BACK_OFFICE_HREFS do not overlap", () => {
+    // A section behind both walls would be unreachable by anyone but the team.
+    for (const href of MARKETING_HREFS) {
+      expect(BACK_OFFICE_HREFS, href).not.toContain(href);
+    }
+    expect(MARKETING_HREFS).toContain("website");
+    expect(MARKETING_HREFS).toContain("syndication");
+    expect(MARKETING_HREFS).not.toContain("overview");
   });
 });

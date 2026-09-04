@@ -8,7 +8,7 @@ import type { Listing } from "#/data/types";
 import { HeroAccessAvatar } from "#/components/common/HeroAccessAvatar";
 import { ManageDealAccessModal } from "./ManageDealAccessModal";
 import { useDealShares } from "./useDealAccess";
-import { shareSummary } from "#/data/dealShares";
+import { shareLevelLabel } from "#/data/dealShares";
 import { viewerId } from "#/data/currentUser";
 import {
   brokerInitials,
@@ -27,8 +27,9 @@ import {
  * cluster answers "who has this?" on hover and "change it" on click.
  *
  * The group is the deal team — a deal's internal brokers — followed by anyone
- * shared into it. A shared teammate's tooltip names their scope and level, so
- * the cluster answers "who has this, and to what?" without opening anything.
+ * shared into it. A shared teammate's tooltip says it is marketing and at what
+ * level, so the cluster answers "who has this, and to what?" without opening
+ * anything.
  */
 export function DealHeroAccessAvatars({ listing }: { listing: Listing }) {
   const [manageOpen, setManageOpen] = useState(false);
@@ -71,7 +72,7 @@ export function DealHeroAccessAvatars({ listing }: { listing: Listing }) {
               key={s.member.id}
               fallback={s.member.initials}
               name={s.member.name}
-              access={shareSummary(s)}
+              access={`Marketing · ${shareLevelLabel(s.level)}`}
               avatarUrl={s.member.avatarUrl}
               actionLabel={actionLabel}
               onOpenShare={open}

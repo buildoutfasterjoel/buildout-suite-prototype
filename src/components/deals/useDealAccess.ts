@@ -9,7 +9,6 @@ import {
   DEFAULT_DEAL_SHARES,
   type DealShare,
   type ShareLevel,
-  type ShareScope,
 } from "#/data/dealShares";
 import type { Listing } from "#/data/types";
 import { useViewer } from "#/components/settings/users/useViewer";
@@ -17,10 +16,10 @@ import { dealAccessFor, type AccessViewer, type DealAccess } from "./dealAccess"
 
 export interface DealSharesApi {
   shares: DealShare[];
-  /** Share the deal with the given members at one scope and level. */
-  grant: (memberIds: string[], scope: ShareScope, level: ShareLevel) => void;
-  /** Move an existing share to another scope or level. */
-  change: (memberId: string, scope: ShareScope, level: ShareLevel) => void;
+  /** Share the deal's marketing with the given members at a level. */
+  grant: (memberIds: string[], level: ShareLevel) => void;
+  /** Move an existing share to another level. */
+  change: (memberId: string, level: ShareLevel) => void;
   revoke: (memberId: string) => void;
 }
 
@@ -34,13 +33,13 @@ export function useDealShares(listingId: string): DealSharesApi {
   );
 
   const grant = useCallback(
-    (memberIds: string[], scope: ShareScope, level: ShareLevel) =>
-      grantDealShares(listingId, memberIds, scope, level),
+    (memberIds: string[], level: ShareLevel) =>
+      grantDealShares(listingId, memberIds, level),
     [listingId],
   );
   const change = useCallback(
-    (memberId: string, scope: ShareScope, level: ShareLevel) =>
-      changeDealShare(listingId, memberId, scope, level),
+    (memberId: string, level: ShareLevel) =>
+      changeDealShare(listingId, memberId, level),
     [listingId],
   );
   const revoke = useCallback(
