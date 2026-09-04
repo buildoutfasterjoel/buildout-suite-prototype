@@ -10,6 +10,10 @@ import { AppTopBar } from "#/components/layout/AppTopBar";
 import { AppSideNav } from "#/components/layout/AppSideNav";
 import { readNavMode, useNavMode } from "#/components/layout/useNavMode";
 import {
+  readRailExpanded,
+  useRailExpanded,
+} from "#/components/layout/useRailExpanded";
+import {
   readDesignTogglesShown,
   useDesignToggles,
 } from "#/components/layout/useDesignToggles";
@@ -37,6 +41,8 @@ export function AppShell() {
   const navMode = useNavMode((s) => s.mode);
   const setNavMode = useNavMode((s) => s.setMode);
   const setDesignTogglesShown = useDesignToggles((s) => s.setShown);
+  const railExpanded = useRailExpanded((s) => s.expanded);
+  const setRailExpanded = useRailExpanded((s) => s.setExpanded);
   // The assistant panel is positioned over the stage rather than laid out beside
   // it (see `.assistant-rail`), so the stage carries both facts about it: how
   // much width the page gives up to it while it is docked, and whether it has
@@ -86,6 +92,14 @@ export function AppShell() {
     if (stored !== useNavMode.getState().mode) setNavMode(stored);
   }, [setNavMode]);
 
+  // And for the rail's width. Collapsed is the default and the server's
+  // answer; the persisted expansion lands after the first commit, so the worst
+  // case is a rail that widens once on load rather than a hydration mismatch.
+  useEffect(() => {
+    const stored = readRailExpanded();
+    if (stored !== useRailExpanded.getState().expanded) setRailExpanded(stored);
+  }, [setRailExpanded]);
+
   // Same deal for the design-options button. An effect runs after the first
   // commit, so the worst it can do is make the button appear — never disagree
   // with the HTML the server sent.
@@ -102,9 +116,16 @@ export function AppShell() {
   // the mode from an ancestor class. Stamp it on <html> instead — that's the one
   // element both the shell and the portal can see. Written in an effect because
   // it's a DOM side-effect, not markup React renders.
+  //
+  // The rail's width goes on the same element for the same reason: the palette
+  // and the toast viewport both offset themselves by it, and neither can see
+  // the rail from where it's portaled to.
   useEffect(() => {
     document.documentElement.dataset.navMode = appMode ? "app" : "classic";
-  }, [appMode]);
+    document.documentElement.dataset.rail = railExpanded
+      ? "expanded"
+      : "collapsed";
+  }, [appMode, railExpanded]);
 
   // Global command-center shortcut. `Mod` resolves to ⌘ on macOS, Ctrl elsewhere.
   useHotkey("Mod+K", () => useOmniSearch.getState().toggle());
@@ -116,22 +137,24 @@ export function AppShell() {
       {/*
         One structure serves both nav modes, and the slots are deliberately
         never removed — `{appMode ? <AppSideNav/> : null}` holds its index so
-        the body div, the `<main>` and the assistant rail keep their positions
-        in the tree when the mode flips. Collapsing the rail's slot instead
-        would shift every sibling by one and remount the router outlet and the
-        open chat session along with it.
+        the stage, the `<main>` and the assistant rail keep their positions in
+        the tree when the mode flips. Collapsing the rail's slot instead would
+        shift every sibling by one and remount the router outlet and the open
+        chat session along with it.
 
-        In classic mode the rail slot is empty and the body is the full width,
-        which is exactly the old flex column.
+        The bar spans the window and the rail hangs beneath it (Figma node
+        2482:5072) — the rail is a child of the body row, not a sibling of the
+        column. In classic mode the rail slot is empty and the body is the
+        stage alone, which is exactly the old flex column.
       */}
       <div
-        className={`app-shell d-flex overflow-hidden vh-100${
+        className={`app-shell d-flex flex-column overflow-hidden vh-100${
           appMode ? " app-shell--app" : ""
         }`}
       >
-        {appMode ? <AppSideNav /> : null}
-        <div className="app-shell__body d-flex flex-column flex-grow-1 overflow-hidden">
-          {!mounted ? null : appMode ? <AppTopBar /> : <GlobalNavbar />}
+        {!mounted ? null : appMode ? <AppTopBar /> : <GlobalNavbar />}
+        <div className="app-shell__body d-flex flex-grow-1 overflow-hidden">
+          {appMode ? <AppSideNav /> : null}
           {/*
             The stage is what the app shell rounds: page content and the
             assistant rail share one container so the rail's 8px top/right

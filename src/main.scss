@@ -1501,47 +1501,33 @@
   justify-content: center;
 }
 
-// ── Omni-search: gradient "AI omnibar" trigger (navbar) ──────────────────────
-// A purple→blue wash over the dark navbar with a purple border + soft shadow;
-// on hover the gradient brightens and a purple glow blooms. The ⌘K hint fades
-// on hover as the voice affordance lights up.
+// ── Omni-search: "AI omnibar" trigger (navbar) ───────────────────────────────
+// A translucent navy fill over the dark bar with a purple border and a soft
+// shadow (Figma node 380:25827); on hover the fill goes solid, the border
+// lightens and a purple glow blooms (380:25836). The ⌘K hint sits inline after
+// the placeholder and only reads when the pointer (or the keyboard) is on the
+// bar — it teaches the shortcut once and then stays out of the way.
 .omni-bar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   width: 100%;
-  max-width: 600px;
+  max-width: 580px;
   min-width: 0;
-  height: 40px;
+  height: 36px;
   padding: 4px 4px 4px 8px;
   border: 1px solid var(--color-purple-heart-500, #9f55f7);
-  border-radius: var(--bp-border-radius-xl, 12px);
+  border-radius: var(--bp-border-radius-lg, 8px);
   cursor: pointer;
   outline: none;
-  background:
-    linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.08),
-      rgba(255, 255, 255, 0.08)
-    ),
-    linear-gradient(
-      90deg,
-      rgba(184, 140, 242, 0.18) 0%,
-      rgba(140, 166, 247, 0.18) 50%,
-      rgba(97, 194, 255, 0.18) 100%
-    );
+  background: rgba(32, 61, 136, 0.5);
   box-shadow:
     0 12px 20px 0 rgba(54, 7, 100, 0.1),
     0 8px 10px 0 rgba(33, 83, 212, 0.1);
   transition:
-    background 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease,
     box-shadow 0.2s ease;
-
-  &:focus-visible {
-    box-shadow:
-      0 0 0 3px rgba(159, 85, 247, 0.45),
-      0 8px 10px 0 rgba(33, 83, 212, 0.1);
-  }
 
   // The bar used to fade out while the palette was open, handing off to the
   // palette's own bar — reviewers read that as the search box being taken away
@@ -1549,23 +1535,32 @@
   // Nothing to hide means nothing to animate: the fade-out and its
   // reduced-motion counterpart came out with it.
 
-  &:hover {
-    background:
-      linear-gradient(
-        90deg,
-        rgba(255, 255, 255, 0.12),
-        rgba(255, 255, 255, 0.12)
-      ),
-      linear-gradient(
-        90deg,
-        rgba(184, 140, 242, 0.34) 0%,
-        rgba(140, 166, 247, 0.34) 50%,
-        rgba(97, 194, 255, 0.34) 100%
-      );
+  &:hover,
+  &:focus-visible,
+  &:focus-within {
+    background: var(--color-buildout-blue-900, #203d88);
+    border-color: var(--color-purple-heart-400, #b984fc);
     box-shadow:
       0 0 16px 0 rgba(212, 180, 254, 0.6),
       0 12px 20px 0 rgba(54, 7, 100, 0.1),
       0 8px 10px 0 rgba(33, 83, 212, 0.1);
+  }
+
+  &:focus-visible {
+    box-shadow:
+      0 0 0 3px rgba(159, 85, 247, 0.45),
+      0 8px 10px 0 rgba(33, 83, 212, 0.1);
+  }
+
+  // Icon, placeholder and hint, in reading order. This is the growing half of
+  // the bar; the label inside it shrink-wraps so the hint lands right after the
+  // last word rather than at the far end of the row.
+  &__front {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   &__icon {
@@ -1573,9 +1568,10 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    width: 22px;
+    width: 28px;
+    height: 28px;
     // The custom gradient SVG is sized via font-size (1em).
-    font-size: 18px;
+    font-size: 16px;
 
     svg {
       display: block;
@@ -1583,7 +1579,7 @@
   }
 
   &__label {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     min-width: 0;
     color: #fff;
     font-weight: 500;
@@ -1602,26 +1598,31 @@
     flex-shrink: 0;
   }
 
-  // The shortcut hint is a reminder, not a control: it teaches ⌘K once and then
-  // sits in the bar forever. Faded out until the pointer (or the keyboard) is on
-  // the bar, which is the moment it's worth reading. Opacity rather than
-  // `display`, so the space stays reserved and nothing shifts on hover.
+  // The shortcut hint is a reminder, not a control. Faded out until the pointer
+  // (or the keyboard) is on the bar, which is the moment it's worth reading.
+  // Opacity rather than `display`, so the space stays reserved and nothing
+  // shifts on hover. No fill of its own any more — a pale purple on the navy is
+  // the whole treatment, with the modifier a weight heavier than the key.
   &__kbd {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
     height: 20px;
-    min-width: 28px;
     padding: 0 8px;
     border-radius: 999px;
-    background: var(--color-purple-heart-600, #8833ea);
-    color: var(--color-purple-heart-50, #f9f5ff);
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 1;
+    color: var(--color-purple-heart-300, #d4b4fe);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 19px;
+    letter-spacing: 0.08em;
     white-space: nowrap;
     opacity: 0;
     transition: opacity 0.2s ease;
+
+    b {
+      font-weight: 700;
+    }
   }
 
   &:hover &__kbd,
@@ -1639,25 +1640,21 @@
     height: 28px;
     padding: 0;
     border: 0;
-    border-radius: var(--bp-border-radius-lg, 8px);
+    border-radius: var(--bp-border-radius, 6px);
     background: transparent;
     color: var(--color-purple-heart-200, #e7d5ff);
-    font-size: 12px;
+    font-size: 14px;
     cursor: pointer;
     transition:
       background 0.15s ease,
       color 0.15s ease;
   }
 
-  // On bar hover the voice button gains a translucent purple fill…
-  &:hover &__voice {
-    background: rgba(159, 85, 247, 0.55);
-    color: var(--color-purple-heart-50, #f9f5ff);
-  }
-
-  // …and hovering the voice button itself deepens it to a solid gradient.
-  &:hover &__voice:hover,
-  & &__voice:hover {
+  // Hovering the voice button itself gives it a solid purple gradient — the
+  // bar's own hover leaves it alone, so the one control in the bar reads as a
+  // control only when it's the thing under the pointer.
+  &__voice:hover,
+  &__voice:focus-visible {
     background: linear-gradient(
       221deg,
       rgba(159, 85, 247, 0.9) 13%,
@@ -1667,7 +1664,7 @@
   }
 }
 
-// The omnibar's `<li>`, in both navs. The 600px (Figma node 231:16767) is set
+// The omnibar's `<li>`, in both navs. The 580px (Figma node 2482:8645) is set
 // here rather than on the bar itself: the item is a flex *container*, and a
 // shrinkable flex item's max-content contribution is clamped to its content
 // width — so a `flex-basis` on the bar left the item shrink-wrapped at ~245px
@@ -1678,7 +1675,7 @@
 // pair over the middle of the page, and an item that filled the row would
 // left-align the pair instead.
 .omni-bar-item {
-  flex: 0 1 600px;
+  flex: 0 1 580px;
   min-width: 0;
 }
 
@@ -1697,9 +1694,14 @@
   /** Breathing room kept between the container and the viewport's bottom. */
   --omni-popup-inset: 16px;
   /**
-   * The omnibar's own top edge: it is 40px tall, centred in the 60px bar. The
-   * palette starts exactly there.
+   * The omnibar's own top edge: it is 36px tall, centred in the classic bar's
+   * 60px. The palette starts exactly there.
    */
+  --omni-popup-top: 12px;
+}
+
+// The app shell's bar is 56px, so the same 36px bar sits 2px higher there.
+:root[data-nav-mode="app"] .modal:has(.omni-search-popup) {
   --omni-popup-top: 10px;
 }
 
@@ -1715,12 +1717,12 @@
 
 // The palette is portaled to <body>, outside the shell, so it can't see the nav
 // mode from the DOM it sits in — `AppShell` stamps it on <html> instead. In app
-// mode the rail owns the first 48px of the window, and the omnibar is centred on
-// what's left; padding the overlay by the rail's width moves the palette's
-// centre onto the same point, so it lands squarely over the bar rather than 24px
-// to its left.
+// mode the rail owns the first 52px (or 220px, expanded) of the window, and the
+// omnibar is centred on what's left; padding the overlay by the rail's width
+// moves the palette's centre onto the same point, so it lands squarely over the
+// bar rather than half a rail to its left.
 :root[data-nav-mode="app"] .modal:has(.omni-search-popup) {
-  padding-left: 48px;
+  padding-left: var(--app-rail-width);
 }
 
 .omni-search-popup.omni-search-popup {
@@ -4537,12 +4539,12 @@
   align-items: flex-start;
 }
 
-// In the app shell that corner belongs to the 48px rail, so the viewport steps
-// clear of it — the same move `.design-toggle-fab` makes. Toasts render in a
-// portal outside `.app-shell--app`, so the mode comes off the `<html>` data
-// attribute AppShell stamps rather than an ancestor class.
+// In the app shell that corner belongs to the rail, so the viewport steps clear
+// of it — the same move `.design-toggle-fab` makes. Toasts render in a portal
+// outside `.app-shell--app`, so the mode comes off the `<html>` data attribute
+// AppShell stamps rather than an ancestor class.
 :root[data-nav-mode="app"] .toast-viewport {
-  left: 48px;
+  left: var(--app-rail-width);
 }
 
 // `.design-toggle-fab` already owns that corner on contact pages, and the
@@ -4644,14 +4646,27 @@ body:has(.design-toggle-fab) .toast-viewport {
 }
 
 // ── App shell nav mode ───────────────────────────────────────────────────────
-// The second global nav shape (Figma node 193:3678): a 48px icon rail down the
-// left and a top bar to its right, with the page content in a container that
-// rounds only its top-left corner — the one corner where the two navs meet — so
-// it reads as a surface sitting *inside* the chrome rather than butting against
-// it. The other three corners run to the window edge and stay square.
+// The second global nav shape (Figma nodes 2482:5072 and 2482:5509): a full-
+// width top bar, a navy rail hanging beneath its left end at one of two widths,
+// and the page content in a container that rounds only its top-left corner —
+// the one corner where the two navs meet — so it reads as a surface sitting
+// *inside* the chrome rather than butting against it. The other three corners
+// run to the window edge and stay square.
 //
 // Everything here is scoped to `.app-shell--app`; classic mode renders the same
 // DOM with the rail slot empty and none of these rules apply.
+
+// The rail's width, declared on <html> rather than on the shell because the
+// omni palette and the toast viewport are portaled to <body> and offset
+// themselves by it. `AppShell` stamps both data attributes.
+:root[data-nav-mode="app"] {
+  --app-rail-width: 52px;
+}
+
+:root[data-nav-mode="app"][data-rail="expanded"] {
+  --app-rail-width: 220px;
+}
+
 .app-shell--app {
   background-color: colors.$buildout-blue-950;
 
@@ -4669,98 +4684,188 @@ body:has(.design-toggle-fab) .toast-viewport {
   position: relative;
 }
 
-// The rail itself. Full window height — the top bar starts to its right, not
-// above it — so the brand, the sections and the page all sit in one frame.
+// The rail itself. Sits under the top bar, so its first row is the first thing
+// beneath the bar's floor.
 .app-rail {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  width: 48px;
+  width: var(--app-rail-width, 52px);
+  padding-bottom: 8px;
   background-color: colors.$buildout-blue-950;
+  box-shadow:
+    0 1px 3px 0 rgba(0, 0, 0, 0.1),
+    0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  transition: width 160ms ease;
 
-  // Matches the top bar's 60px, so the first section icon clears its floor.
-  &__top {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 60px;
-    flex-shrink: 0;
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
   }
 
+  // Deliberately not a scroll container: any `overflow` other than `visible`
+  // on either axis would clip a collapsed group's flyout, which hangs off the
+  // list's right edge. Six rows fit the shortest window this is used in.
   &__list {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    flex: 1 1 auto;
     gap: 4px;
     margin: 0;
-    padding: 8px 0;
+    padding: 0 0 8px;
     list-style: none;
   }
 
   // Pushed to the foot of the rail by the auto margin, so it stays put whether
   // there are five sections above it or fifteen.
   &__foot {
-    display: flex;
-    justify-content: center;
+    flex-shrink: 0;
     margin-top: auto;
-    padding: 8px 0;
   }
 
-  // The hover target for a group's flyout. `position: relative` anchors the
-  // flyout to the item rather than the rail, so it opens beside its own icon.
+  // One row: 8px of gutter either side of a 36px link. `position: relative`
+  // both anchors a group's flyout to its own row and gives the current marker
+  // the rail's edge to sit on.
   &__item {
     position: relative;
+    padding: 0 8px;
+  }
+
+  // The current marker (Figma "Current Indicator"): a 2px purple bar on the
+  // rail's edge, beside the lit row.
+  &__item--active::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 2px;
+    background-color: var(--color-purple-heart-400, #b984fc);
   }
 
   &__link {
     display: flex;
     align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
+    gap: 4px;
+    width: 100%;
+    height: 36px;
     padding: 0;
     border: 0;
     border-radius: 6px;
     background-color: transparent;
     color: colors.$buildout-blue-50;
-    font-size: 16px;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 19px;
+    text-align: left;
     text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    cursor: pointer;
     transition:
       background-color 0.12s ease,
       color 0.12s ease;
 
     &:hover,
     &:focus-visible {
-      background-color: rgba(255, 255, 255, 0.12);
-      color: #fff;
-    }
-
-    // Active is a filled purple tile, not a tinted glyph: with the labels gone
-    // there is no bold weight left to carry the state.
-    &--active,
-    &--active:hover,
-    &--active:focus-visible {
-      background-color: var(--color-purple-heart-600, #8833ea);
-      color: #fff;
-    }
-  }
-
-  // Inert until the collapsed/expanded rail exists — see AppSideNav.
-  &__hamburger {
-    cursor: default;
-
-    &:hover {
-      background-color: transparent;
+      background-color: var(--color-buildout-blue-900, #203d88);
       color: colors.$buildout-blue-50;
     }
   }
 
-  // A group's children, opened by hovering (or focusing into) the item. Its own
-  // left padding is the bridge across to the rail, so the pointer never crosses
-  // a dead gap on the way over and drops the menu.
+  // The glyph's 36px cell, which is the whole link when the rail is collapsed.
+  &__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+
+  // Lit: the glyph goes purple (and solid — `AppSideNav` swaps the icon). The
+  // label stays as it was; bold is already the resting weight here.
+  &__link--active &__icon {
+    color: var(--color-purple-heart-400, #b984fc);
+  }
+
+  &__label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // ── Expanded: a group's pages, listed beneath it ──
+  // Each page row is inset 16px and carries a hairline on its left (Figma
+  // 2489:8967) — the line is per row rather than one rule down the list so the
+  // open page can swap its own segment for the 2px purple marker without a
+  // second element.
+  &__sublist {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__subitem {
+    position: relative;
+    padding: 0 8px 0 32px;
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 16px;
+      width: 1px;
+      background-color: var(--color-buildout-blue-900, #203d88);
+    }
+  }
+
+  &__subitem--active::before {
+    width: 2px;
+    background-color: var(--color-purple-heart-400, #b984fc);
+  }
+
+  &__sublink {
+    display: flex;
+    align-items: center;
+    height: 36px;
+    padding: 0 8px;
+    border-radius: 6px;
+    color: var(--color-storm-grey-300, #afb9ca);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 19px;
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition:
+      background-color 0.12s ease,
+      color 0.12s ease;
+
+    &:hover,
+    &:focus-visible {
+      background-color: var(--color-buildout-blue-900, #203d88);
+      color: colors.$buildout-blue-50;
+    }
+  }
+
+  &__subitem--active &__sublink {
+    color: colors.$buildout-blue-50;
+    font-weight: 600;
+  }
+
+  // ── Collapsed: a group's pages in a flyout ──
+  // Opened by hovering (or focusing into) the row. Its own left padding is the
+  // bridge across to the rail, so the pointer never crosses a dead gap on the
+  // way over and drops the menu. Same navy as the rail with a hairline border
+  // (Figma 2482:3673) — it reads as the rail unfolding, not as a white menu
+  // dropped over the page.
   &__flyout {
     position: absolute;
-    top: -6px;
+    top: 0;
     left: 100%;
     z-index: 1040;
     display: none;
@@ -4773,65 +4878,65 @@ body:has(.design-toggle-fab) .toast-viewport {
   }
 
   &__flyout-inner {
-    min-width: 176px;
-    padding: 6px;
+    min-width: 196px;
+    padding: 4px;
+    border: 1px solid var(--color-buildout-blue-900, #203d88);
     border-radius: 8px;
-    background-color: #fff;
+    background-color: colors.$buildout-blue-950;
     box-shadow:
-      0 4px 6px -4px rgba(0, 0, 0, 0.1),
-      0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  }
-
-  // Carries the group's name, which the icon can no longer say on its own.
-  &__flyout-title {
-    padding: 4px 8px;
-    color: colors.$storm-grey-500;
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 14px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+      0 4px 6px -4px rgba(0, 0, 0, 0.2),
+      0 10px 15px -3px rgba(0, 0, 0, 0.2);
   }
 
   &__flyout-link {
-    display: block;
-    padding: 6px 8px;
+    display: flex;
+    align-items: center;
+    height: 36px;
+    padding: 0 8px;
     border-radius: 6px;
-    color: colors.$storm-grey-900;
+    color: var(--color-storm-grey-300, #afb9ca);
     font-size: 14px;
+    font-weight: 400;
     line-height: 19px;
     text-decoration: none;
+    white-space: nowrap;
 
     &:hover,
     &:focus-visible {
-      background-color: colors.$storm-grey-50;
-      color: colors.$storm-grey-950;
+      background-color: var(--color-buildout-blue-900, #203d88);
+      color: colors.$buildout-blue-50;
+    }
+
+    &--active {
+      color: colors.$buildout-blue-50;
+      font-weight: 600;
     }
   }
 }
 
 // The floating design-options button (`ContactDesignToggles`). It docks in the
 // lower-left, which in the app shell is the rail's own corner — where the
-// Support button already lives — so there it steps right of the rail's 48px
-// instead of landing on top of it.
+// Support button already lives — so there it steps right of the rail instead
+// of landing on top of it, and follows the rail when it widens.
 .design-toggle-fab {
   left: 16px;
   bottom: 16px;
 }
 
 .app-shell--app .design-toggle-fab {
-  left: 64px;
+  left: calc(var(--app-rail-width) + 16px);
 }
 
 // ── App shell top bar ────────────────────────────────────────────────────────
-// Three zones, and the whole design rests on the outer two being the same
-// width: that's what puts the omnibar and the Assistant button dead-centre over
-// the page container rather than wherever the brand and the account icons
-// happen to leave them.
+// Three zones. The end zone is the design's 244px; the start zone is that same
+// 244px plus the rail's width, so the middle is exactly as wide as the page
+// stage beneath it and the omnibar/Assistant pair is centred over the page
+// rather than over the window — and slides with the rail when it expands.
 .app-topbar {
   --app-topbar-side: 244px;
 
-  min-height: 60px;
+  height: 56px;
+  min-height: 56px;
   padding: 0;
 
   // Blueprint's Navbar nests a `.container-fluid` that carries 12px of its own
@@ -4848,6 +4953,50 @@ body:has(.design-toggle-fab) .toast-viewport {
     min-width: 0;
     margin: 0;
     padding: 0 16px;
+  }
+
+  &__side--start {
+    --app-topbar-side: calc(var(--app-rail-width, 52px) + 244px);
+
+    padding: 0;
+    transition: flex-basis 160ms ease, width 160ms ease;
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  // The rail's toggle, in the bar's own 52px corner (Figma node 2482:5512): a
+  // 32px button centred in the rail's collapsed width, so it sits over the
+  // column of icons below it.
+  &__menu {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    margin: 0 10px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background-color: transparent;
+    color: colors.$buildout-blue-50;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+
+    &:hover,
+    &:focus-visible {
+      background-color: var(--color-buildout-blue-900, #203d88);
+    }
+  }
+
+  // Bootstrap gives the brand padding and a trailing margin for the items that
+  // used to follow it; here it's alone in its zone, 4px off the toggle's cell.
+  &__brand.navbar-brand {
+    margin: 0 0 0 4px;
+    padding: 0;
   }
 
   // `.navbar-nav` grows by default, so each list stretched to share the zone's
@@ -4885,11 +5034,11 @@ body:has(.design-toggle-fab) .toast-viewport {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 8px;
   }
 }
 
-// The Assistant launcher in app mode (Figma node 208:11159). Where the classic
+// The Assistant launcher in app mode (Figma node 2482:5517). Where the classic
 // bar hides it in a filled circle at the end of an icon row, here it's a named
 // button next to the omnibar — the two AI entry points read as one pair, which
 // is the emphasis this layout exists to give them. Pale rather than saturated:
