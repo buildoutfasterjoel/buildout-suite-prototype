@@ -128,7 +128,7 @@ function PaymentRow({
       <Table.Cell className="text-muted" style={{ width: PAYABLE_COL.plan }}>
         {!seesPayout ? (
           deductions.length > 0 && (
-            <PrivatePayout brokerName={broker?.name ?? "this broker"} variant="cell" />
+            <PrivatePayout variant="cell" />
           )
         ) : deductions.length === 0 ? (
           ""
@@ -155,7 +155,7 @@ function PaymentRow({
         {seesPayout ? (
           formatCurrency(paymentNet(payment, broker))
         ) : (
-          <PrivatePayout brokerName={broker?.name ?? "this broker"} variant="cell" />
+          <PrivatePayout variant="cell" />
         )}
       </Table.Cell>
       <Table.Cell style={{ width: PAYABLE_COL.actions }}>
@@ -309,10 +309,7 @@ export function PayablesSection({
                       {canSee(payable) ? (
                         <CommissionPlanCell broker={broker} />
                       ) : (
-                        <PrivatePayout
-                          brokerName={broker?.name ?? "this broker"}
-                          variant="cell"
-                        />
+                        <PrivatePayout variant="cell" />
                       )}
                     </Table.Cell>
                     <Table.Cell
@@ -334,10 +331,7 @@ export function PayablesSection({
                       {canSee(payable) ? (
                         formatCurrency(payableNetPaid(payable, broker))
                       ) : (
-                        <PrivatePayout
-                          brokerName={broker?.name ?? "this broker"}
-                          variant="cell"
-                        />
+                        <PrivatePayout variant="cell" />
                       )}
                     </Table.Cell>
                     <Table.Cell style={{ width: PAYABLE_COL.actions }}>
@@ -385,7 +379,7 @@ export function PayablesSection({
                 {seesNetTotal ? (
                   formatCurrency(netPaidTotal)
                 ) : (
-                  <PrivatePayout brokerName="each broker" variant="cell" />
+                  <PrivatePayout variant="cell" />
                 )}
               </Table.Cell>
               <Table.Cell />

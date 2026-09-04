@@ -597,7 +597,7 @@ function InternalCommissionsSection({
                     <PersonLink name={b.name} contactId={b.id} />
                   </Table.Cell>
                   <Table.Cell colSpan={editable ? 5 : 4}>
-                    <PrivatePayout brokerName={b.name} />
+                    <PrivatePayout />
                   </Table.Cell>
                 </Table.Row>
               ) : (
