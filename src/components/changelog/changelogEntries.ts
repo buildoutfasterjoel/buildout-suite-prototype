@@ -117,6 +117,71 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 213,
+    title:
+      "Sharing a deal grants its marketing, a broker\u2019s payout is private, and the deals index shows a broker their own book",
+    mergedAt: "2026-09-04T19:56:25Z",
+    day: "2026-09-04",
+    author: "buildoutfasterjoel",
+    area: "Deals",
+    summary:
+      "Three rules that everyone assumed were true, and none of which the app enforced: sharing a deal hands over its marketing and never its voucher, what the brokerage pays a broker is between them and the back office, and a broker\u2019s deal list is their own book rather than the whole firm\u2019s.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "Share a deal from the header\u2019s access cluster. A share hands over the listing, website, documents and media at View only or Can edit \u2014 never the voucher, which is settled by a person\u2019s role rather than by anyone\u2019s invitation.",
+      },
+      {
+        kind: "feature",
+        text: "\u201cCan edit\u201d is offered only to someone whose role can actually edit, and says whose role it is when it cannot \u2014 \u201cOffice Admin cannot edit marketing\u201d \u2014 rather than granting an edit the page takes back later.",
+      },
+      {
+        kind: "feature",
+        text: "What a role opens on a deal it is not on now comes from the two permissions that name it. A Back Office Manager reaches the voucher on every deal in the firm and sees none of the marketing; a Managing Director still sees everything.",
+      },
+      {
+        kind: "feature",
+        text: "On the voucher, a broker\u2019s commission plan, personal split and net are theirs alone \u2014 a colleague\u2019s row reads \u201cPrivate\u201d. The gross beside it stays visible to everyone on the deal, because that is the deal\u2019s business. The back office sees all of it.",
+      },
+      {
+        kind: "feature",
+        text: "Payables & Payments shows a broker their own rows and their own totals. Someone else\u2019s cheque is not listed at all.",
+      },
+      {
+        kind: "feature",
+        text: "The Deals index shows what you can actually open. A broker\u2019s list is their own book plus what has been shared with them, and the filters, the count, the grid, the map and the board all agree about it.",
+      },
+      {
+        kind: "feature",
+        text: "A new deal names its Primary Broker before it can be created. A broker gets themselves pre-filled; a marketing person picks a broker, keeps the deal\u2019s marketing, and never sees its money.",
+      },
+      {
+        kind: "refinement",
+        text: "The Marketing and Back Office groups each leave the sidebar for someone not entitled to them, and a typed URL into either half lands on the Overview instead.",
+      },
+      {
+        kind: "refinement",
+        text: "The listing form\u2019s Save is disabled with the reason beside it when a deal was shared with you at View only.",
+      },
+      {
+        kind: "refinement",
+        text: "Commission splits disappear from the Overview\u2019s broker rail for a marketing viewer, rather than reading \u201cHidden\u201d \u2014 a label that told them a figure existed.",
+      },
+      {
+        kind: "refinement",
+        text: "Opening a deal you cannot see now says so, and who to ask, instead of a page with nothing on it.",
+      },
+      {
+        kind: "fix",
+        text: "A deal no longer reads \u201ccreated by Sarah Chen\u201d over a broker list holding only Marcus Patel. The person who opens a deal is a broker on it.",
+      },
+      {
+        kind: "fix",
+        text: "Maya Brooks is active again. She was the only Marketing Assistant on the roster and had been seeded deactivated, so nothing marketing-shaped could be demonstrated from her seat.",
+      },
+    ],
+  },
+  {
     pr: 209,
     title:
       "A receivable can only be billed to a listed payer, and the commission breakdown names each internal broker",
