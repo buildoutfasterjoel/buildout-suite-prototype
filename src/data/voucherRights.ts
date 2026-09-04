@@ -32,13 +32,17 @@ export const APPROVE_VOUCHERS = "approve-vouchers";
 /**
  * The deal team, as teammate ids — the people whose voucher this is.
  *
+ * The deal's internal brokers, and only them. `createdById` is not included: a
+ * marketing person with Create Listings can open a deal, and the voucher on a
+ * deal they typed in is no more theirs than any other.
+ *
  * Outside brokers are dropped: a co-broking agent is not on the firm's books
  * and has no seat in the app, so `teammateIdByName` finds nobody for them.
- * Mirrors the rule `components/deals/dealAccess.ts` draws the header avatars
- * from; that module answers "which faces", this one answers "which ids".
+ * Mirrors `onDealTeam` in `components/deals/dealAccess.ts`; that module answers
+ * "which faces", this one answers "which ids".
  */
 export function voucherTeamIds(deal: Listing): string[] {
-  const ids = new Set<string>([deal.createdById]);
+  const ids = new Set<string>();
   for (const broker of deal.internalBrokers) {
     const id = teammateIdByName(broker.name);
     if (id) ids.add(id);

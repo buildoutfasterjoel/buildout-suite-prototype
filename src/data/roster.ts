@@ -67,17 +67,27 @@ type Assignment = {
  * Diana Reyes carries the customized case: a Managing Director with three
  * overrides — one removed that her role allows, two granted beyond it — so the
  * Custom chips, the "changed from the role default" count, and the per-row
- * override controls all have something real to render. Maya Brooks is the
- * deactivated row.
+ * override controls all have something real to render. Maya Brooks carries the
+ * single-grant case: one permission handed to her beyond her role.
+ *
+ * Nobody is seeded deactivated. Maya used to be, and it cost more than it
+ * showed — she is the only Marketing Assistant, so the seat that demonstrates a
+ * marketing person creating and building a deal could not be sat in.
  *
  * Offices are spread across the list so the filter has more than one bucket to
  * show, with the two Chicago offices carrying most people.
  */
 const ASSIGNMENTS: Record<string, Assignment> = {
+  // A producing Managing Director. `have-listings` is not an MD default — the
+  // role is oversight — but Ethan and Diana are both in `BROKER_TEAMMATES` and
+  // carry deals of their own in the seed, so the roster has to say they can. The
+  // create-deal form reads this permission to decide whether it may put the
+  // person filling it on the deal as its broker.
   you: {
     title: "Managing Director",
     office: "Chicago — West Loop",
     roleIds: ["managing-director"],
+    overrides: { "have-listings": true },
   },
   "sarah-chen": {
     title: "Broker",
@@ -99,6 +109,9 @@ const ASSIGNMENTS: Record<string, Assignment> = {
       // Granted beyond the role.
       "edit-listings": true,
       "other-user-credentials": true,
+      // A producing MD, like Ethan — she is in `BROKER_TEAMMATES` and works
+      // deals of her own.
+      "have-listings": true,
     },
   },
   "riley-park": {
@@ -106,11 +119,18 @@ const ASSIGNMENTS: Record<string, Assignment> = {
     office: "Chicago — West Loop",
     roleIds: ["office-admin"],
   },
+  // Active, and granted Create Listings beyond her role. She is the seat the
+  // marketing-creates-a-deal flow is demoed from: she opens deals, builds their
+  // materials, and never reaches a voucher — the role holds neither
+  // `have-listings` nor `view-other-vouchers`, so she cannot be a deal's broker
+  // and cannot see its money. The grant is per-user rather than a role default
+  // on purpose: making deals is something an admin hands a marketing person,
+  // not what the role is for.
   "maya-brooks": {
     title: "Marketing Assistant",
     office: "Denver",
     roleIds: ["marketing-assistant"],
-    status: "deactivated",
+    overrides: { "create-listings": true },
   },
   "omar-haddad": {
     title: "Transaction Coordinator",

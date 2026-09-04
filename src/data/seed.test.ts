@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { generateTasks, generateDataset } from './seed'
+import {
+  generateTasks,
+  generateDataset,
+  marketingCreatedDeal,
+  seedDealShares,
+} from './seed'
 import { invoiceQuickbooksSynced, isQuickbooksSynced } from './quickbooks'
 import { findTeammate } from './teammates'
 import {
@@ -889,17 +894,34 @@ describe('deal team seed', () => {
   // that generate their own.
   const deals = listings.filter((l) => !l.parentDealId)
 
-  it('always makes the creator one of the deal\'s own internal brokers', () => {
+  it('makes a broker-created deal one of that broker\'s own', () => {
     // The bug this pins: the creator used to be hashed from the deal id while
     // the broker was hashed from the broker row's uuid, so a deal could read
     // "created by Sarah Chen" over a broker list holding only Marcus Patel.
-    for (const l of deals) {
+    // Marketing-opened deals are the deliberate exception below.
+    for (const l of deals.filter((x) => !marketingCreatedDeal(x.id))) {
       const creator = findTeammate(l.createdById)
       expect(creator, l.id).toBeDefined()
       expect(
         l.internalBrokers.map((b) => b.name),
         `${l.name} created by ${creator?.name}`,
       ).toContain(creator!.name)
+    }
+  })
+
+  it('leaves a marketing-opened deal to a broker, and shares it back', () => {
+    // Maya can open a deal and cannot hold one, so she is never on its broker
+    // list. Without the share she would have typed in a deal and lost it.
+    const shares = seedDealShares(listings)
+    const opened = deals.filter((l) => marketingCreatedDeal(l.id))
+    expect(opened.length).toBeGreaterThanOrEqual(1)
+    for (const l of opened) {
+      expect(l.createdById, l.name).toBe('maya-brooks')
+      expect(l.internalBrokers.map((b) => b.name), l.name).not.toContain('Maya Brooks')
+      expect(
+        (shares.get(l.id) ?? []).map((s) => s.member.id),
+        l.name,
+      ).toContain('maya-brooks')
     }
   })
 

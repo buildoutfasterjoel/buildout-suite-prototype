@@ -1301,6 +1301,21 @@ function brokerTeammateFor(seed: string): Teammate {
  * the protagonist, which cannot happen for a seeded deal but keeps the return
  * type honest.
  */
+/**
+ * The Marketing Assistant who opens deals for other people's books.
+ *
+ * She holds Create Listings by override and neither `have-listings` nor
+ * `view-other-vouchers`, so she can start a deal, build its materials, and never
+ * reach its voucher. A few seeded deals are hers so that flow exists on arrival
+ * rather than only after someone clicks through the create form.
+ */
+const MARKETING_CREATOR_ID = 'maya-brooks'
+
+/** Roughly one deal in eleven was opened by marketing rather than by its broker. */
+export function marketingCreatedDeal(dealId: string): boolean {
+  return hashCode(`${dealId}-opened-by`) % 11 === 3
+}
+
 function leadBrokerTeammate(internal: DealBroker[]): Teammate {
   const name = internal[0]?.name
   return BROKER_TEAMMATES.find((t) => t.name === name) ?? CURRENT_USER
@@ -2142,7 +2157,9 @@ function generateListings(
       // uuid, so the two rarely agreed and a deal could read "created by Sarah
       // Chen" over a broker list holding only Marcus Patel — a creator who was
       // on the deal's team without appearing anywhere on the deal.
-      createdById: leadBrokerTeammate(internalTeam).id,
+      createdById: marketingCreatedDeal(id)
+        ? MARKETING_CREATOR_ID
+        : leadBrokerTeammate(internalTeam).id,
       internalBrokers: internalTeam,
       outsideBrokers,
       sellerContactIds: sellerContacts.map((c) => c.id),
@@ -3238,7 +3255,14 @@ export function seedDealShares(listings: Listing[]): Map<string, DealShare[]> {
   const riley = member('riley-park')
   listings.forEach((l, i) => {
     const shares: DealShare[] = []
-    if (maya && i % 3 === 0) shares.push({ member: maya, level: 'contribute' })
+    // A deal Maya opened is a deal Maya keeps. The create form grants this share
+    // for real (see `CreateDealModal`); the seed grants it here for the deals
+    // that arrive already opened by her, because without it she would have typed
+    // in a deal and immediately lost it — `onDealTeam` reads the broker list,
+    // and marketing is never on it.
+    if (maya && (l.createdById === maya.id || i % 3 === 0)) {
+      shares.push({ member: maya, level: 'contribute' })
+    }
     if (riley && i % 6 === 2) shares.push({ member: riley, level: 'view' })
     if (shares.length > 0) map.set(l.id, shares)
   })

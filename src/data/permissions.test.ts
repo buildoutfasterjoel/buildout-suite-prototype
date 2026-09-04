@@ -113,8 +113,9 @@ describe("seed roster", () => {
     );
     // 12 from Managing Director (the mocks' 6 + the four contact permissions +
     // View Other Users' Vouchers and Approve Vouchers), minus one removed, plus
-    // two granted.
-    expect(summary).toMatchObject({ onCount: 13, customCount: 3 });
+    // three granted — the third being Own Listings, which a producing MD needs
+    // to be put on a deal as its broker.
+    expect(summary).toMatchObject({ onCount: 14, customCount: 4 });
   });
 
   it("gives every person exactly one real role", () => {

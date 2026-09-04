@@ -22,8 +22,7 @@ import {
  * Who can open a deal, for the header's access cluster and its Manage Access
  * modal.
  *
- * The deal team — the person who created it, plus its internal brokers — has it
- * all. Outside brokers are excluded: a co-broking agent is not on the firm's
+ * The deal team is its internal brokers, and they have it all. Outside brokers are excluded: a co-broking agent is not on the firm's
  * books and has no seat in the app.
  *
  * Everyone else gets in by being shared in, which is the second half of this
@@ -105,9 +104,18 @@ export interface AccessViewer {
 const can = (viewer: AccessViewer, permissionId: string) =>
   isPermissionOn(viewer.roleIds, viewer.overrides, permissionId);
 
-/** True when the viewer created the deal or works it as an internal broker. */
+/**
+ * True when the viewer works this deal as one of its internal brokers.
+ *
+ * `createdById` is deliberately *not* consulted. It used to be, on the
+ * assumption that whoever opened a deal works it — which held while only
+ * brokers could create one. A marketing person with Create Listings opens deals
+ * they must never see the voucher of, so the creator field is an audit fact and
+ * the broker list is the team. A marketing creator keeps the deal they built
+ * through the marketing share the create flow grants them, not through having
+ * typed it in.
+ */
 function onDealTeam(listing: Listing, viewer: AccessViewer): boolean {
-  if (listing.createdById === viewer.id) return true;
   return listing.internalBrokers.some((b) => b.name === viewer.name);
 }
 

@@ -30,18 +30,22 @@ function deal(createdById: string, internalBrokers: DealBroker[]): Listing {
 }
 
 describe("voucherTeamIds", () => {
-  it("includes the creator even when they work no broker row", () => {
-    expect(voucherTeamIds(deal("sarah-chen", []))).toEqual(["sarah-chen"]);
-  });
-
-  it("adds the internal brokers, matched by name", () => {
+  it("is the internal brokers, matched by name", () => {
     const ids = voucherTeamIds(
       deal("sarah-chen", [broker("Marcus Patel"), broker("Nina Alvarez")]),
     );
-    expect(ids).toEqual(["sarah-chen", "marcus-patel", "nina-alvarez"]);
+    expect(ids).toEqual(["marcus-patel", "nina-alvarez"]);
   });
 
-  it("does not repeat the creator when they are also on a broker row", () => {
+  it("leaves out the creator when they work no broker row", () => {
+    // A marketing person with Create Listings opens deals whose voucher is not
+    // theirs. Typing a deal in does not put you on its money.
+    expect(voucherTeamIds(deal("maya-brooks", [broker("Sarah Chen")]))).toEqual([
+      "sarah-chen",
+    ]);
+  });
+
+  it("names the creator once when they are also on a broker row", () => {
     const ids = voucherTeamIds(deal(CURRENT_USER.id, [broker(CURRENT_USER.name)]));
     expect(ids).toEqual([CURRENT_USER.id]);
   });
@@ -51,7 +55,7 @@ describe("voucherTeamIds", () => {
     const ids = voucherTeamIds(
       deal("sarah-chen", [broker("Dale Fenwick", "outside")]),
     );
-    expect(ids).toEqual(["sarah-chen"]);
+    expect(ids).toEqual([]);
   });
 });
 

@@ -164,6 +164,7 @@ import {
 } from './store'
 import { DEFAULT_PERSONAL_SPLIT_PCT, closeProbabilityForStage } from './commission'
 import { currentUser } from './currentUser'
+import { findTeammate } from './teammates'
 
 /**
  * The editable subset of a listing the New Listing modal collects — just the
@@ -204,6 +205,16 @@ export interface NewListingDraft {
   buyerContactId: string
   /** Lifecycle stage to create the deal in. Defaults to `proposal` (Pitching). */
   initialStage: PropertyStatus
+  /**
+   * The teammate id of the deal's primary broker.
+   *
+   * A deal has to be somebody's before it exists. It used to be implicit — the
+   * creator was the broker — which held while only brokers could create one.
+   * Now a marketing person with Create Listings opens deals they cannot be the
+   * broker of, so the broker is chosen rather than assumed, and the create
+   * button waits for it.
+   */
+  brokerId: string
   /** Context files the broker uploaded in the create-deal flow. */
   documents: DealDocument[]
   /**
@@ -296,6 +307,7 @@ export function emptyDraft(): NewListingDraft {
     sellerContactId: '',
     buyerContactId: '',
     initialStage: 'proposal',
+    brokerId: '',
     documents: [],
   }
 }
@@ -313,19 +325,24 @@ const DEFAULT_SUBTYPE: Record<PropertyType, PropertySubtype> = {
 }
 
 /**
- * The signed-in broker — a proposal is created under whoever starts it.
+ * The deal's primary broker, from the id the create form chose.
  *
- * Named from `CURRENT_USER` rather than a literal "You": a broker row sits beside
- * teammates and outside brokers who are named, so "You (Listing Broker)" read as a
- * placeholder next to them. "You" is still right in an activity log's voice, which
- * is why the history actor keeps it.
+ * Named rather than "You": a broker row sits beside teammates and outside
+ * brokers who are named, so "You (Listing Broker)" read as a placeholder next to
+ * them — and the person on the row is no longer necessarily the person filling
+ * the form. "You" is still right in an activity log's voice, which is why the
+ * history actor keeps it.
+ *
+ * Falls back to the signed-in user for a draft with no broker chosen, which the
+ * form does not allow but a programmatic caller (the AI tool, a test) can reach.
  */
-function currentUserBroker(commissionAmount: number): DealBroker {
+function primaryBroker(brokerId: string, commissionAmount: number): DealBroker {
+  const member = (brokerId ? findTeammate(brokerId) : undefined) ?? currentUser()
   return {
     id: crypto.randomUUID(),
-    name: currentUser().name,
+    name: member.name,
     role: 'Primary Broker - Sell Side',
-    email: currentUser().email,
+    email: member.email,
     side: 'internal',
     commissionSplitPct: 100,
     grossCommission: commissionAmount,
@@ -619,10 +636,12 @@ export function createProposalListing(draft: NewListingDraft): Listing {
 
     // Deal (1:1) — empty/zeroed for a brand-new proposal
     dealId,
-    // Whoever is looking created it — the same person `currentUserBroker` puts
-    // on the deal as its internal broker.
+    // Whoever is looking created it. No longer the same person as the broker:
+    // a marketing person with Create Listings opens deals for someone else's
+    // book, so the creator field is an audit fact and `internalBrokers` is the
+    // team (see `onDealTeam`).
     createdById: currentUser().id,
-    internalBrokers: [currentUserBroker(commissionAmount)],
+    internalBrokers: [primaryBroker(draft.brokerId, commissionAmount)],
     outsideBrokers: [],
     sellerContactIds: seller ? [seller.id] : [],
     buyerContactIds: buyer ? [buyer.id] : [],

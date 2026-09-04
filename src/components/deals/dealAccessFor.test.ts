@@ -30,11 +30,27 @@ function share(id: string, level: ShareLevel): DealShare {
 }
 
 describe("dealAccessFor — the deal team", () => {
-  it("gives the creator both halves", () => {
+  it("gives the creator nothing when they work no broker row", () => {
+    // Ethan opened this one but Sarah works it. Creating a deal is an audit
+    // fact; the broker list is the team. A marketing person with Create
+    // Listings depends on this — the deal they typed in is not their voucher.
+    // (Ethan is a Managing Director, so he still reaches it firm-wide at view;
+    // the point is that `createdById` bought him nothing.)
     expect(dealAccessFor(deal, viewer("you", ["managing-director"]), [])).toEqual({
-      marketing: "contribute",
-      backOffice: "contribute",
+      marketing: "view",
+      backOffice: "view",
     });
+  });
+
+  it("gives a marketing creator nothing at all without a share", () => {
+    const opened = {
+      id: "L2",
+      createdById: "maya-brooks",
+      internalBrokers: [{ id: "b1", name: "Sarah Chen", email: "" }],
+    } as unknown as Listing;
+    expect(
+      dealAccessFor(opened, viewer("maya-brooks", ["marketing-assistant"]), []),
+    ).toEqual({ marketing: "none", backOffice: "none" });
   });
 
   it("gives an internal broker both halves, matched by name", () => {
@@ -173,7 +189,7 @@ describe("visibleDeals", () => {
   const hers = {
     id: "hers",
     createdById: "sarah-chen",
-    internalBrokers: [],
+    internalBrokers: [{ id: "b0", name: "Sarah Chen", email: "" }],
   } as unknown as Listing;
   const his = {
     id: "his",
@@ -193,6 +209,17 @@ describe("visibleDeals", () => {
   it("gives a Broker their own book plus what is shared with them", () => {
     const seen = visibleDeals(all, viewer("sarah-chen", ["broker"]), shares);
     expect(seen.map((l) => l.id)).toEqual(["hers", "shared"]);
+  });
+
+  it("does not count a deal she merely opened as her own", () => {
+    // `hers` is hers because she is its broker, not because she created it.
+    const typedIn = {
+      id: "typed",
+      createdById: "sarah-chen",
+      internalBrokers: [{ id: "b9", name: "Marcus Patel", email: "" }],
+    } as unknown as Listing;
+    const seen = visibleDeals([typedIn], viewer("sarah-chen", ["broker"]), new Map());
+    expect(seen).toEqual([]);
   });
 
   it("gives a Back Office Manager every deal — the voucher is on all of them", () => {
