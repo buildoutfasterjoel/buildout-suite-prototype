@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   APPROVE_VOUCHERS,
+  canSeeBrokerPayout,
   canSeeVoucher,
   voucherApproverIds,
   voucherTeamIds,
@@ -153,5 +154,42 @@ describe("voucherApproverIds", () => {
       expect(approvers).not.toContain("omar-haddad");
       expect(approvers).not.toContain("riley-park");
     });
+  });
+});
+
+describe("canSeeBrokerPayout", () => {
+  const sarah = broker("Sarah Chen");
+  const marcus = broker("Marcus Patel");
+  const co = broker("Dale Whitmore", "outside");
+
+  it("shows a broker their own plan and net", () => {
+    expect(canSeeBrokerPayout(sarah, "sarah-chen", false)).toBe(true);
+  });
+
+  it("hides a colleague's from another broker", () => {
+    expect(canSeeBrokerPayout(marcus, "sarah-chen", false)).toBe(false);
+  });
+
+  it("hides it from the deal's creator too — the rule is symmetric", () => {
+    // Ethan opens most of the seeded deals. Opening a deal does not buy him a
+    // look at what the house pays somebody else.
+    expect(canSeeBrokerPayout(sarah, CURRENT_USER.id, false)).toBe(false);
+  });
+
+  it("shows every payout to the back office", () => {
+    expect(canSeeBrokerPayout(sarah, "tessa-nakamura", true)).toBe(true);
+    expect(canSeeBrokerPayout(marcus, "tessa-nakamura", true)).toBe(true);
+  });
+
+  it("leaves an outside broker's visible — it is a deal between two firms", () => {
+    // Nobody in the app is this person, so hiding it would hide it from
+    // everyone forever.
+    expect(canSeeBrokerPayout(co, "sarah-chen", false)).toBe(true);
+  });
+
+  it("hides a name that matches nobody on the roster", () => {
+    expect(canSeeBrokerPayout(broker("Nobody At All"), "sarah-chen", false)).toBe(
+      false,
+    );
   });
 });

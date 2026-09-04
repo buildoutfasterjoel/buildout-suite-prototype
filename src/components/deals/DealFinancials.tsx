@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   Cell,
@@ -104,12 +104,15 @@ import {
 import { QuickbooksSyncBadge } from "#/components/common/QuickbooksSyncBadge";
 import { Section } from "./VoucherSection";
 import { PayablesSection } from "./VoucherPayables";
+import { PrivatePayout } from "./PrivatePayout";
 import { ApproveVoucherModal } from "./ApproveVoucherModal";
 import { useCurrentUser } from "#/data/currentUser";
 import { useCan } from "#/components/settings/users/useViewer";
 import {
   APPROVE_VOUCHERS,
+  canSeeBrokerPayout,
   EDIT_OTHER_VOUCHERS,
+  VIEW_OTHER_VOUCHERS,
   voucherTeamIds,
 } from "#/data/voucherRights";
 import "./DealFinancials.scss";
@@ -403,6 +406,7 @@ function InternalCommissionsSection({
   brokers,
   netCommission,
   editable,
+  seesPayout,
   onChange,
 }: {
   brokers: DealBroker[];
@@ -414,6 +418,12 @@ function InternalCommissionsSection({
   netCommission: number;
   /** Draft only — a submitted voucher's splits are what an approver is reading. */
   editable: boolean;
+  /**
+   * Whether the viewer may see one broker's plan and net. The gross table above
+   * is the deal's business and needs no such test; the payout table below is
+   * between a broker and the house. See `canSeeBrokerPayout`.
+   */
+  seesPayout: (broker: DealBroker) => boolean;
   onChange: (next: DealBroker[]) => void;
 }) {
   const grossTotal = sum(brokers.map((b) => b.grossCommission));
@@ -575,7 +585,22 @@ function InternalCommissionsSection({
             </Table.Row>
           </Table.Header>
           <Table.Body>
-            {brokers.map((b) => (
+            {brokers.map((b) =>
+              // A payout the viewer may not see collapses its four cells into
+              // one statement. Four separate locks in a row would read as four
+              // withheld facts rather than the single one it is — and a
+              // withheld cell must never render an editable control, so the
+              // whole row branches here rather than each cell testing again.
+              !seesPayout(b) ? (
+                <Table.Row key={b.id}>
+                  <Table.Cell>
+                    <PersonLink name={b.name} contactId={b.id} />
+                  </Table.Cell>
+                  <Table.Cell colSpan={editable ? 5 : 4}>
+                    <PrivatePayout brokerName={b.name} />
+                  </Table.Cell>
+                </Table.Row>
+              ) : (
               <Table.Row key={b.id}>
                 <Table.Cell>
                   <PersonLink name={b.name} contactId={b.id} />
@@ -633,7 +658,8 @@ function InternalCommissionsSection({
                   </Table.Cell>
                 )}
               </Table.Row>
-            ))}
+              ),
+            )}
           </Table.Body>
         </Table>
       </div>
@@ -2834,6 +2860,16 @@ export function DealFinancials({
   const isMine = voucherTeamIds(listing).includes(viewerSeat);
   const canEditOthers = useCan(EDIT_OTHER_VOUCHERS);
   const canApprove = useCan(APPROVE_VOUCHERS);
+  // Seeing the voucher and seeing what the house pays each broker are two
+  // different questions. The first is team membership; the second is "is this
+  // row mine?", with the back office exempt. Built once here so the commission
+  // table and the payables table cannot answer it differently.
+  const canViewOtherVouchers = useCan(VIEW_OTHER_VOUCHERS);
+  const seesPayout = useCallback(
+    (broker: Pick<DealBroker, "name" | "side">) =>
+      canSeeBrokerPayout(broker, viewerSeat, canViewOtherVouchers),
+    [viewerSeat, canViewOtherVouchers],
+  );
   const frozen = isPending && !(canEditOthers && !isMine);
   // The broker's attestation, which gates both Submit buttons. Page state, not
   // stored: it is a confirmation of *this* reading of the voucher, so it should
@@ -3035,6 +3071,7 @@ export function DealFinancials({
         onChange={setDeductions}
       />
       <InternalCommissionsSection
+        seesPayout={seesPayout}
         brokers={brokers}
         netCommission={draftNetCommission}
         editable={isDraft}
@@ -3081,7 +3118,7 @@ export function DealFinancials({
         editable={!frozen}
       />
 
-      <PayablesSection listing={listing} />
+      <PayablesSection listing={listing} seesPayout={seesPayout} />
 
       {/* The header's cluster again, at the end of the page. This is a long
           scroll — commission breakdown, splits, rent schedule, receivables — and
