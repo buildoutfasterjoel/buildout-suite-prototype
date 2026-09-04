@@ -203,8 +203,24 @@ repeating it on each of six suites says the same thing six times.
   Vouchers index. Accepted as-is; splitting Notes out is a separate change.
 - **No new permission ids.** `access-other-listings`, `view-other-vouchers` and
   `edit-other-vouchers` keep their present meanings.
-- **No seed change.** Nothing here moves `SEED_VERSION`; the existing 2 shells
-  and 7 spaces exercise every row of the table.
+- **No new fixtures.** The existing 2 shells and 7 spaces exercise every row of
+  the table; no entity or shape changes.
+
+## The seed writes shares onto the building
+
+`seedDealShares` loops every listing and writes shares by index, spaces included
+(`seed.ts:3256`). Those space shares become unreachable once a space reads its
+shell's list, and they would render as ghost avatars on the space header.
+
+The fix is one line inside the loop: a share earned by a listing hangs on
+`listing.parentDealId ?? listing.id`, deduplicated per member. Seven seeded
+spaces, one of them marketing-created (`space-107-100`), so
+`seed.test.ts:912` — "leaves a marketing-opened deal to a broker, and shares it
+back" — must look for Maya's share on the parent rather than on the space.
+
+This changes seeded data, so **`SEED_VERSION` moves 76 → 77**
+(`persistence.ts:5`). Without it a browser keeps the old IndexedDB snapshot and
+the space headers still show ghost shares.
 
 ## Testing
 
