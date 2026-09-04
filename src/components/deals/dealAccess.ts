@@ -232,8 +232,12 @@ export function dealAccessFor(
   const onThis = onDealTeam(listing, viewer);
   const onShell = family.shell ? onDealTeam(family.shell, viewer) : false;
   const onAnySpace = (family.spaces ?? []).some((s) => onDealTeam(s, viewer));
-  // A lease deal is a shell only once it has children — the same rule
-  // `dealShape` states. Before that it is a normal deal and resolves as one.
+  // A lease deal is a shell only once it has children — before that it is a
+  // normal deal and resolves as one. This mirrors `dealShape`'s rule but isn't
+  // literally it: `dealShape` also requires `dealType === 'Lease'`, and the two
+  // converge today only because `addSpaceToDeal` is the sole writer of
+  // `parentDealId`. This file stays pure and React-free, so it doesn't import
+  // `dealShape`, which reads the store.
   const isShell = listing.parentDealId == null && (family.spaces?.length ?? 0) > 0;
 
   const role = roleAccess(viewer);

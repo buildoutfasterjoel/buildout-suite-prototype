@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useDealAccess } from "./useDealAccess";
+import { dealShape } from "#/data/dealShape";
 import { Link } from "@tanstack/react-router";
 import { Accordion } from "@buildoutinc/blueprint-react/ui/Accordion";
 import { Avatar } from "@buildoutinc/blueprint-react/ui/Avatar";
@@ -311,9 +312,12 @@ export function DealContextRail({ listing }: { listing: Listing }) {
   const addTo = (section: string) =>
     setOpen((prev) => (prev.includes(section) ? prev : [...prev, section]));
 
-  // Commission splits are back-office data sitting on an otherwise-marketing
-  // page. Everyone but a marketing-only share resolves to full access here.
-  const showsMoney = useDealAccess(listing).backOffice !== "none";
+  const access = useDealAccess(listing);
+  // A shell has no commission of its own — its spaces carry the transactions —
+  // so there is no money here to show or hide. Asking the shape rather than the
+  // access level keeps `backOffice: "view"` meaning only "may open the Vouchers
+  // index", which is all it means on a shell.
+  const showsMoney = dealShape(listing) !== "shell" && access.backOffice !== "none";
 
   const [brokersOpen, setBrokersOpen] = useState<string[]>(["internal"]);
   const addBroker = (section: string) =>

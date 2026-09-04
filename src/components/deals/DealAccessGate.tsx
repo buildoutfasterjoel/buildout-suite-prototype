@@ -11,6 +11,7 @@ import {
 import type { Listing } from "#/data/types";
 import { canOpenDeal } from "./dealAccess";
 import { useDealAccess } from "./useDealAccess";
+import { dealShape } from "#/data/dealShape";
 
 function NoAccess({ listing }: { listing: Listing }) {
   return (
@@ -68,7 +69,12 @@ export function DealAccessGate({
     : "";
   const blocked =
     (access.backOffice === "none" && BACK_OFFICE_HREFS.includes(section)) ||
-    (access.marketing === "none" && MARKETING_HREFS.includes(section));
+    (access.marketing === "none" && MARKETING_HREFS.includes(section)) ||
+    // A shell has no voucher of its own — `backOffice` there means "may open the
+    // Vouchers index", not "may see money". `visibleNavGroups` already drops
+    // these two items for a shell, and this is the URL that walks past it.
+    (dealShape(listing) === "shell" &&
+      (section === "financials" || section === "financial-documents"));
 
   useEffect(() => {
     if (blocked) void navigate({ to: `${basePath}/overview`, replace: true });
