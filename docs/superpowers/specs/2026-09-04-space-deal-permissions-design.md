@@ -41,6 +41,16 @@ A shell has no voucher of its own — it already shows a Vouchers *index* instea
 (`dealNav.ts:346`). So `backOffice` on a shell means "may open the index", and
 the index filters its rows per space.
 
+### What this adds to the deals index
+
+Space deals render as their own cards on `/listings` (`DealCard.tsx:158`), and
+`visibleDeals` uses the same rule as the deal page. So a suite broker's index
+grows: they now see every sibling suite in their building, and a person shared
+into a building sees all of its suites. That follows from marketing being one
+wall, and the card carries the suite label and address, never the commission. It
+is the intended consequence, not a leak — but it is a visible change to how full
+that page looks for a suite broker.
+
 ## Sharing moves to the building
 
 A share is a marketing grant, and marketing is the building's. So the building
