@@ -1,5 +1,6 @@
 import type {
   Contact,
+  DealBroker,
   Listing,
   MediaAsset,
   MediaLink,
@@ -45,6 +46,24 @@ export interface ShellSpec {
   childStages: PropertyStatus[]
   /** Suites after the deal-bearing ones: on the building, occupied, no deal. */
   occupiedSuites: { tenant: string; expiresInDays: number }[]
+  /**
+   * Who works each suite, by roster name, indexed like `childStages`. An absent
+   * or `undefined` entry leaves the suite on the shell's own brokers, which is
+   * what splitting a building normally produces.
+   *
+   * Naming someone else is how a building gets suites in different hands — the
+   * case `dealAccessFor` exists for, and the one a shell's brokers copied down
+   * every suite can never show. See the Central Campus spec below.
+   */
+  suiteBrokers?: (string | undefined)[]
+  /**
+   * Force the shell's own stage, when the base deal's is wrong for the suites
+   * above it. A space cannot advance past its building — `stageGates`' own
+   * `shellActive` rule reads "Building marketing published" — so a spec with a
+   * Leased suite under a still-pitching building would contradict the gate the
+   * app enforces. Omitted leaves the base deal's stage alone.
+   */
+  shellStatus?: PropertyStatus
 }
 
 export const SHELL_SPECS: ShellSpec[] = [
@@ -67,6 +86,30 @@ export const SHELL_SPECS: ShellSpec[] = [
     suiteProportions: [0.32, 0.26, 0.22],
     childStages: ['proposal', 'proposal', 'proposal'],
     occupiedSuites: [{ tenant: 'Sunbelt Fabrication', expiresInDays: 620 }],
+  },
+  // Central Campus — one building, two brokers, different suites. This is the
+  // case the space permission rules exist for, and the only shell that shows it:
+  // splitting a building copies its brokers onto every suite, so on the two
+  // shells above every seat either works all the suites or none, and the rule is
+  // invisible.
+  //
+  // Sarah holds the assignment and two of the three worked suites; Marcus holds
+  // the third. Neither may read the other's voucher, and each sees the other's
+  // suite on the directory as a locked row. Marcus's is the Leased one so it
+  // carries real commission — which is what makes the Vouchers index's filter
+  // legible: Sarah's total is missing money she can see exists.
+  //
+  // Five units, three children, one occupied, one vacant.
+  {
+    dealId: '102',
+    suiteProportions: [0.28, 0.24, 0.2, 0.16],
+    childStages: ['under-contract', 'active', 'closed'],
+    occupiedSuites: [{ tenant: 'Lumen Analytics', expiresInDays: 400 }],
+    suiteBrokers: [undefined, undefined, 'Marcus Patel'],
+    // The base deal is still pitching, and its suites are not: one is Leased.
+    // `shellActive` gates a space's advance on its building being live, so the
+    // building has to be.
+    shellStatus: 'active',
   },
 ]
 
@@ -210,6 +253,47 @@ export function isoTimestamp(days: number): string {
  * inherited marketing, own pipeline state, one terms row — so a seeded space and
  * a clicked-through one are the same record.
  */
+/**
+ * The brokers who work one suite.
+ *
+ * A suite normally inherits the building's, which is what `...shell` in
+ * `buildChild` already does — splitting a shell hands every suite the same team.
+ * A spec that names someone puts that one suite in different hands instead, so a
+ * building can hold suites its own brokers cannot open. That is the only way the
+ * seed produces the case `dealAccessFor` exists for.
+ *
+ * The named broker takes the whole split: they are the suite's only broker, and
+ * all of a commission nobody shares is theirs. `applySuiteCommission` divides the
+ * real figures over this list later, so the zeroes here are the same starting
+ * point every other suite gets.
+ *
+ * Faker-free like the rest of this module. The id derives from the suite and the
+ * email follows the roster's own `first.last@` convention rather than importing
+ * the roster: `seed.ts` loads this module at store-init time and must not pull
+ * `teammates.ts` in behind it.
+ */
+function suiteBrokers(shell: Listing, spec: ShellSpec, index: number): DealBroker[] {
+  const name = spec.suiteBrokers?.[index]
+  // Checked before the roster is touched at all, so a shell built without an
+  // `internalBrokers` array — as the payer-reset test's fake one is — takes the
+  // same path it did before this override existed.
+  if (!name) return shell.internalBrokers
+  const template = shell.internalBrokers?.[0]
+  // Nobody to copy the row's shape from: inherit rather than invent a broker.
+  if (!template) return shell.internalBrokers
+  return [
+    {
+      ...template,
+      id: `suite-broker-${spec.dealId}-${(index + 1) * 100}`,
+      name,
+      email: `${name.toLowerCase().replace(/\s+/g, '.')}@buildout.com`,
+      role: 'Primary Broker - Sell Side',
+      commissionSplitPct: 100,
+      grossCommission: 0,
+    },
+  ]
+}
+
 function buildChild(
   shell: Listing,
   unit: PropertyUnit,
@@ -231,6 +315,10 @@ function buildChild(
     slug: `${shell.slug}-space-${index + 1}`,
     status: stage,
     publishedAt: null,
+    // Whoever the spec names works this suite instead of the building's own
+    // team. Set here, before `applyStageDetail` runs `applySuiteCommission`,
+    // which divides the suite's commission over exactly this list.
+    internalBrokers: suiteBrokers(shell, spec, index),
     // Own pipeline state — a space does not inherit the shell's parties or history.
     sellerContactIds: [...shell.sellerContactIds],
     buyerContactIds: [],
@@ -749,6 +837,13 @@ export function applyLeaseSpaces(
     // already landlord-side they are the lease counterparties, so they become
     // the tenant pool instead. Merging them unconditionally would hand the
     // building's would-be tenants to the landlord and leave the spaces without one.
+    if (spec.shellStatus) {
+      shell.status = spec.shellStatus
+      // A live building the suites hang under has been published; leaving this
+      // null would render an active shell as never marketed.
+      shell.publishedAt ??= isoTimestamp(-150)
+    }
+
     const wasBuyerSide = shell.dealSide === 'buyer'
     const formerBuyerIds = [...shell.buyerContactIds]
     shell.dealSide = 'seller'

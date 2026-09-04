@@ -12,9 +12,10 @@ describe('useDataStore', () => {
     expect(s.properties.size).toBe(33)
     // 80 generated + the two "one person, many relationships" pairs.
     expect(s.contacts.size).toBe(84)
-    // One deal per pipeline property (see DEAL_PIPELINE), plus the 7 child space
-    // deals the two lease shells are split into (see leaseSpaceFixtures.ts).
-    expect(s.listings.size).toBe(31)
+    // One deal per pipeline property (see DEAL_PIPELINE), plus the 10 child
+    // space deals the three lease shells are split into (see
+    // leaseSpaceFixtures.ts).
+    expect(s.listings.size).toBe(34)
     expect(s.hydrated).toBe(false)
   })
 
