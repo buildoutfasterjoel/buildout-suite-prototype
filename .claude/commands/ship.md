@@ -26,9 +26,17 @@ continuing:
 
    - If the rebase is clean, continue. The gates in steps 3–4 now run on the merged result,
      which is the point.
-   - If it conflicts, **run `git rebase --abort` and stop.** Show the conflicting files and
-     let Joel decide. Do not resolve conflicts inside `/ship` — resolving is a review
-     decision, and this command is the mechanical part only.
+   - If it conflicts, **resolve it here.** This is a prototype; stopping to hand a
+     three-line conflict back is the slower path. Resolve, `git add` the files,
+     `git rebase --continue`, and let the gates in steps 3-4 prove the result compiles and
+     passes. Then say in one line what you resolved and how, so Joel can check the call.
+   - `src/components/changelog/changelogEntries.ts` conflicts on nearly every rebase,
+     because both sides prepend to the top of `CHANGELOG`. Keep **both** entries, ordered
+     by `pr` descending. Never drop the incoming one.
+   - **Abort and stop only when the two sides changed the same behaviour in incompatible
+     ways** — the same function rewritten twice, a field renamed on one side and used on
+     the other. That is a design decision, not a merge, and it is Joel's. `git rebase
+     --abort` and show him the conflicting hunks.
    - If the branch was already pushed, the rebase rewrote its commits, so step 5 needs
      `git push --force-with-lease -u origin HEAD`. Never plain `--force`.
 
