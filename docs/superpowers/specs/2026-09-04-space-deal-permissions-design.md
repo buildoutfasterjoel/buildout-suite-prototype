@@ -8,8 +8,10 @@ A lease building is not one record. The building is a shell deal and each rented
 space is its own child deal under it (`Listing.parentDealId`). The two halves of
 a deal then live at different levels:
 
-- **Marketing belongs to the building.** The media, the website, the documents
-  and the brochure are the building's, and every space inherits them.
+- **Marketing belongs to the building.** The website, the documents, the email
+  and the demographics are the building's alone — a space page does not even
+  show them (`BUILDING_OWNED_HREFS`). Reaching a space's own marketing therefore
+  means reaching the building first.
 - **Money belongs to the space.** Each space has its own broker team and its own
   voucher. Two brokers can work the same building and different suites, and
   neither may read the other's commission.
@@ -29,7 +31,7 @@ works one suite cannot open the building the suite is in.
 | Shared into the building | Marketing at their share level · no Vouchers index | Marketing ✓ on every space · Voucher ✗ |
 | Back Office Manager (`view-other-vouchers`) | Vouchers index: every space | Voucher ✓ · marketing per role |
 
-Two consequences worth stating plainly:
+Three consequences worth stating plainly:
 
 - **Working any space in a building earns that building's marketing.** That is
   where the space's own media and documents come from, so a suite broker who
