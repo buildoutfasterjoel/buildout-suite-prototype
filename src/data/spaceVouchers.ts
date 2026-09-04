@@ -1,6 +1,7 @@
 import type { PropertyStatus } from './types'
 import { getListing, getProperty, getContact } from './store'
 import { getChildDeals } from './leaseSpaces'
+import { voucherTeamIds } from './voucherRights'
 
 export interface SpaceVoucherRow {
   dealId: string
@@ -12,6 +13,10 @@ export interface SpaceVoucherRow {
   commissionAmount: number | null
   /** Raw status. Render through `dealStageLabel(stage, 'space')`. */
   stage: PropertyStatus
+  /** The suite's deal team, as teammate ids — who this voucher belongs to.
+   *  The index filters on it with `canSeeVoucher`, the same rule
+   *  `/backoffice/vouchers` uses. */
+  teamIds: string[]
 }
 
 /**
@@ -47,6 +52,7 @@ export function spaceVouchers(shellDealId: string): SpaceVoucherRow[] {
         // that taxes every call site app-wide for a distinction nothing makes.
         commissionAmount: commission > 0 ? commission : null,
         stage: child.status,
+        teamIds: voucherTeamIds(child),
       }
     })
     .sort((a, b) => a.label.localeCompare(b.label, 'en', { numeric: true }))
