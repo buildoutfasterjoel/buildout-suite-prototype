@@ -92,7 +92,7 @@ export function checkContactRight(
       ? `Only ${who} can move it to another book.`
       : right === "canAssign" && r.ownership.owner.kind === "person"
         ? `${who} owns it — it's theirs to transfer, not the company's to assign.`
-        : `${who} ${holds} — request access from the contact's page.`;
+        : `${who} ${holds}. Only they, and the people they've shared it with, can act on it.`;
   return {
     ok: false,
     message: `You can't ${VERB[right]} ${contactFullName(r.contact)}. ${tail}`,
