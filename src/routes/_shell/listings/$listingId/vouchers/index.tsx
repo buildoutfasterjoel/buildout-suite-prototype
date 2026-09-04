@@ -1,10 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useMemo } from "react";
 import { Table } from "@buildoutinc/blueprint-react/ui/Table";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faAngleRight } from "@fortawesome/pro-regular-svg-icons";
 import { useDataStore } from "#/data/dataStore";
 import { dealStageLabel } from "#/data/dealShape";
 import { spaceVouchers } from "#/data/spaceVouchers";
+import { useCurrentUser } from "#/data/currentUser";
+import { useCan } from "#/components/settings/users/useViewer";
+import { canSeeVoucher, VIEW_OTHER_VOUCHERS } from "#/data/voucherRights";
 import { ListingPageHeader } from "#/components/listings/ListingPageHeader";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
 
@@ -25,7 +29,17 @@ function VouchersIndexRoute() {
   // Subscribe to the map: a row's commission and tenant live on the *child*
   // deals, so this must re-render when any of them changes, not just the shell.
   void useDataStore((s) => s.listings);
-  const rows = spaceVouchers(listingId);
+  // Scoped before the total is footed, so the header's figure and the rows
+  // agree: a broker who works one suite must not read the building's whole
+  // commission off a sum they cannot break down. Same rule and same functions
+  // as /backoffice/vouchers — this index simply never asked.
+  const viewerSeat = useCurrentUser((s) => s.id);
+  const canViewOthers = useCan(VIEW_OTHER_VOUCHERS);
+  const all = spaceVouchers(listingId);
+  const rows = useMemo(
+    () => all.filter((r) => canSeeVoucher(r.teamIds, viewerSeat, canViewOthers)),
+    [all, viewerSeat, canViewOthers],
+  );
   const total = rows.reduce((sum, r) => sum + (r.commissionAmount ?? 0), 0);
 
   return (

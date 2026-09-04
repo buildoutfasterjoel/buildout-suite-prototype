@@ -117,6 +117,47 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 215,
+    title:
+      "A lease deal\u2019s marketing resolves on its building and its money on its space, so brokers on different suites can\u2019t read each other\u2019s commission",
+    mergedAt: "2026-09-04T23:34:15Z",
+    day: "2026-09-04",
+    author: "buildoutfasterjoel",
+    area: "Deals",
+    summary:
+      "A lease building and its suites are separate deals, and the two halves of a deal belong to different ones: the marketing is the building\u2019s, and the money is the suite\u2019s. Two brokers can now work the same building and different suites without either reading the other\u2019s commission.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "Working any suite in a building opens that building\u2019s marketing \u2014 which is where the suite\u2019s own media, documents and website live \u2014 without opening the neighbouring suites.",
+      },
+      {
+        kind: "feature",
+        text: "A building\u2019s Vouchers index lists only the suites whose money you may see, and foots its total on those rows. Two brokers open the same building and read different totals.",
+      },
+      {
+        kind: "feature",
+        text: "A suite someone else works still appears on the building\u2019s Spaces directory with its size, rate and stage \u2014 you should know the rest of the building is in flight \u2014 but it stops being a door: no link, and its stage is read-only.",
+      },
+      {
+        kind: "feature",
+        text: "A suite\u2019s header now shows the brokers who actually work it, replacing a decorative row of initials that stood for nobody.",
+      },
+      {
+        kind: "refinement",
+        text: "Sharing a deal happens on the building, and reaches every suite under it. A suite page shows who has access and no longer offers to change it, because a suite has nothing of its own to hand out.",
+      },
+      {
+        kind: "fix",
+        text: "A building has no voucher of its own, so its Voucher and Invoices pages are now closed to everyone by URL as well as by the sidebar \u2014 previously a typed address walked straight past it.",
+      },
+      {
+        kind: "fix",
+        text: "Broker commission splits on a building no longer appear to whoever happens to work one of its suites, nor hide from the broker who holds the building.",
+      },
+    ],
+  },
+  {
     pr: 213,
     title:
       "Sharing a deal grants its marketing, a broker\u2019s payout is private, and the deals index shows a broker their own book",

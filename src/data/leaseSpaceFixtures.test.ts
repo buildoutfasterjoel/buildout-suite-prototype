@@ -498,3 +498,61 @@ describe("a shell voucher already carrying payers", () => {
     }
   })
 })
+
+// The seed must contain at least one building whose suites are in different
+// hands. Splitting a shell copies its brokers onto every suite, so without a
+// deliberate override every seat either works all of a building's suites or none
+// — and `dealAccessFor`'s whole reason for existing (marketing on the building,
+// money on the suite, two brokers who cannot read each other's voucher) is
+// invisible on a fresh seed. These pin the fixture that makes it visible.
+describe('a building whose suites are in different hands', () => {
+  it('gives at least one shell a suite its own brokers do not work', () => {
+    const split = SHELL_SPECS.filter((s) => s.suiteBrokers?.some(Boolean))
+    expect(split.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('puts the named broker on that suite, and nobody else', () => {
+    for (const spec of SHELL_SPECS) {
+      if (!spec.suiteBrokers?.some(Boolean)) continue
+      const { shell } = shellFor(spec.dealId)
+      const children = getChildDeals(shell.id)
+      spec.suiteBrokers.forEach((name, i) => {
+        if (!name) return
+        const child = children[i]
+        expect(child, `${spec.dealId} child ${i}`).toBeDefined()
+        expect(child.internalBrokers.map((b) => b.name)).toEqual([name])
+        // The whole split, because they are the only broker on it.
+        expect(child.internalBrokers[0].commissionSplitPct).toBe(100)
+        // And genuinely not the building's team, or the case is not reproduced.
+        expect(shell.internalBrokers.map((b) => b.name)).not.toContain(name)
+      })
+    }
+  })
+
+  it('leaves the unnamed suites on the building\'s own brokers', () => {
+    for (const spec of SHELL_SPECS) {
+      if (!spec.suiteBrokers?.some(Boolean)) continue
+      const { shell } = shellFor(spec.dealId)
+      const children = getChildDeals(shell.id)
+      const shellNames = shell.internalBrokers.map((b) => b.name)
+      spec.childStages.forEach((_, i) => {
+        if (spec.suiteBrokers?.[i]) return
+        expect(children[i].internalBrokers.map((b) => b.name)).toEqual(shellNames)
+      })
+    }
+  })
+
+  // A space cannot advance past its building — `stageGates` gates it on
+  // `shellActive`, "Building marketing published" — so a spec that leases a
+  // suite has to leave the building live, or the fixture contradicts the rule
+  // the app enforces on every stage move.
+  it('keeps every suite at or behind its building', () => {
+    for (const spec of SHELL_SPECS) {
+      const { shell } = shellFor(spec.dealId)
+      const advanced = getChildDeals(shell.id).filter((c) => c.status !== 'proposal')
+      if (advanced.length === 0) continue
+      expect(shell.status, `${shell.name} has advanced suites`).toBe('active')
+      expect(shell.publishedAt, `${shell.name} is live but unpublished`).not.toBeNull()
+    }
+  })
+})

@@ -76,8 +76,9 @@ function SpaceDetailLayout() {
   const { subsectionLabel } = dealBreadcrumbTrail(pathname, listingId);
 
   return (
-    // The space is its own record with its own shares, so the gate reads the
-    // space — not the shell it hangs under.
+    // The space's money is its own, while its marketing resolves from the shell
+    // through the deal family — so the gate reads the space, not the shell it
+    // hangs under.
     <DealAccessGate
       listing={record.space}
       basePath={`/listings/${listingId}/spaces/${spaceId}`}

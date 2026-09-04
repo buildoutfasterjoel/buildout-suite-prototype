@@ -8,7 +8,7 @@ import { faVectorSquare, faPlus, faAngleRight } from "@fortawesome/pro-regular-s
 import { useDataStore } from "#/data/dataStore";
 import { getListing } from "#/data/store";
 import { buildingSuites, groupSuites, type SuiteRow } from "#/data/buildingSuites";
-import { canAddSpaces, isLeaseParent } from "#/data/dealShape";
+import { canAddSpaces, isLeaseParent, dealStageLabel } from "#/data/dealShape";
 import { addSpaceToDeal } from "#/data/leaseSpaces";
 import { updateDealMarketing } from "#/data/actions";
 import { emptySpaceLeaseTerms } from "#/data/createListing";
@@ -17,6 +17,8 @@ import { AddSpaceModal } from "#/components/deals/AddSpaceModal";
 import { StatusPill } from "#/components/deals/DealStageBadge";
 import { DealStageSelect } from "#/components/deals/DealStageSelect";
 import { formatMonthYear } from "#/components/deals/dealDisplay";
+import { STATUS_COLORS } from "#/components/properties/propertyDisplay";
+import { useOpenableSpaces } from "#/components/deals/useDealAccess";
 
 export const Route = createFileRoute("/_shell/listings/$listingId/spaces")({
   component: SpacesTab,
@@ -34,7 +36,7 @@ export const Route = createFileRoute("/_shell/listings/$listingId/spaces")({
  * A suite with no deal has no stage to pick, so occupancy stays a muted, dot-less
  * pill: it is a fact about the asset, not a position on the ladder.
  */
-function SuiteStatusControl({ row }: { row: SuiteRow }) {
+function SuiteStatusControl({ row, locked }: { row: SuiteRow; locked: boolean }) {
   const deal = row.dealId ? getListing(row.dealId) : null;
   if (!deal) {
     return (
@@ -42,6 +44,17 @@ function SuiteStatusControl({ row }: { row: SuiteRow }) {
       // stage control on the deal rows above, and those read at body size.
       <StatusPill color="var(--stage-inactive)" dot={false} fontSize={14}>
         {row.status}
+      </StatusPill>
+    );
+  }
+  if (locked) {
+    // A suite someone else works. You may know it is under contract — that is
+    // the building's business — but you may not move it, and the control is
+    // what would say otherwise. Dotted, unlike the occupancy pill above: this
+    // suite *is* on the ladder, it is just not yours to move.
+    return (
+      <StatusPill color={STATUS_COLORS[deal.status]} fontSize={14}>
+        {dealStageLabel(deal.status, "space")}
       </StatusPill>
     );
   }
@@ -157,13 +170,17 @@ function SuiteRowItem({
   row,
   listingId,
   canAddSpace,
+  canOpen,
   onStartDeal,
 }: {
   row: SuiteRow;
   listingId: string;
   canAddSpace: boolean;
+  /** Whether this viewer may open the suite's deal. False locks the row. */
+  canOpen: boolean;
   onStartDeal: (unitId: string) => void;
 }) {
+  const locked = row.dealId != null && !canOpen;
   const shared = (
     <>
       <span className="fw-semibold">{row.label}</span>
@@ -172,15 +189,18 @@ function SuiteRowItem({
         {row.leaseRate != null ? `$${row.leaseRate} ${row.leaseRateUnits}` : ""}
       </span>
       <span className="ms-auto d-flex align-items-center gap-3">
-        <SuiteStatusControl row={row} />
+        <SuiteStatusControl row={row} locked={locked} />
       </span>
     </>
   );
 
   // A suite with a deal is a link to that deal's page. A suite without one is
   // not — there is nowhere to go, so the row carries whatever action it does
-  // support instead.
-  if (row.dealId) {
+  // support instead. A suite worked by somebody else is the third case: there
+  // is somewhere to go and this viewer may not go there, so the row keeps the
+  // building's own facts about the unit and drops the chevron that would
+  // promise a door.
+  if (row.dealId && canOpen) {
     return (
       <Link
         to="/listings/$listingId/spaces/$spaceId/overview"
@@ -196,7 +216,7 @@ function SuiteRowItem({
   return (
     <div className="d-flex align-items-center gap-3 border rounded p-3">
       {shared}
-      {row.status === "Occupied" ? (
+      {locked ? null : row.status === "Occupied" ? (
         <SuiteTenant row={row} shellId={listingId} />
       ) : (
         canAddSpace && (
@@ -223,6 +243,7 @@ function SpacesTab() {
   const leaseParent = isLeaseParent(listing);
   const canAddSpace = listing ? canAddSpaces(listing) : false;
   const rows = buildingSuites(listingId);
+  const openableSpaces = useOpenableSpaces(listingId);
   const { deals, available, occupied } = groupSuites(rows);
   // Empty groups are dropped rather than rendered as a bare heading, so a
   // building with nothing vacant simply has no "Available spaces" — and the
@@ -298,6 +319,7 @@ function SpacesTab() {
                   row={row}
                   listingId={listingId}
                   canAddSpace={canAddSpace}
+                  canOpen={row.dealId == null || openableSpaces.has(row.dealId)}
                   onStartDeal={startDeal}
                 />
               ))}

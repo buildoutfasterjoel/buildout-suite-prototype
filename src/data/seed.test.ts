@@ -912,6 +912,10 @@ describe('deal team seed', () => {
   it('leaves a marketing-opened deal to a broker, and shares it back', () => {
     // Maya can open a deal and cannot hold one, so she is never on its broker
     // list. Without the share she would have typed in a deal and lost it.
+    //
+    // A space's share hangs on its building: marketing is the building's, so
+    // `dealAccessFor` reads the shell's list for a space and would never see a
+    // share written on the space itself.
     const shares = seedDealShares(listings)
     const opened = deals.filter((l) => marketingCreatedDeal(l.id))
     expect(opened.length).toBeGreaterThanOrEqual(1)
@@ -919,10 +923,33 @@ describe('deal team seed', () => {
       expect(l.createdById, l.name).toBe('maya-brooks')
       expect(l.internalBrokers.map((b) => b.name), l.name).not.toContain('Maya Brooks')
       expect(
-        (shares.get(l.id) ?? []).map((s) => s.member.id),
+        (shares.get(l.parentDealId ?? l.id) ?? []).map((s) => s.member.id),
         l.name,
       ).toContain('maya-brooks')
     }
+
+    // `deals` above excludes spaces, so that loop never sees one — and a space
+    // is the whole point of this change. Its share lands on its building, so
+    // check that shape directly. Filtered on `createdById` rather than on
+    // `marketingCreatedDeal`, because `createdById` is the condition
+    // `seedDealShares` actually grants on.
+    const openedSpaces = listings.filter(
+      (l) => l.parentDealId != null && l.createdById === 'maya-brooks',
+    )
+    expect(openedSpaces.length).toBeGreaterThanOrEqual(1)
+    for (const l of openedSpaces) {
+      expect(
+        (shares.get(l.parentDealId as string) ?? []).map((s) => s.member.id),
+        l.name,
+      ).toContain('maya-brooks')
+    }
+  })
+
+  it('writes no share onto a space', () => {
+    const shares = seedDealShares(listings)
+    const spaceIds = listings.filter((l) => l.parentDealId != null).map((l) => l.id)
+    expect(spaceIds.length).toBeGreaterThan(0)
+    for (const id of spaceIds) expect(shares.has(id), id).toBe(false)
   })
 
   it('seeds a minority of deals with a second internal broker', () => {

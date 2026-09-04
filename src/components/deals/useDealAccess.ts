@@ -12,7 +12,13 @@ import {
 } from "#/data/dealShares";
 import type { Listing } from "#/data/types";
 import { useViewer } from "#/components/settings/users/useViewer";
-import { dealAccessFor, type AccessViewer, type DealAccess } from "./dealAccess";
+import {
+  canOpenDeal,
+  dealAccessFor,
+  type AccessViewer,
+  type DealAccess,
+  type DealFamily,
+} from "./dealAccess";
 
 export interface DealSharesApi {
   shares: DealShare[];
@@ -71,6 +77,35 @@ export function useAccessViewer(): AccessViewer | undefined {
 }
 
 /**
+ * The lease family around one listing, resolved from the store.
+ *
+ * A space gets its shell and the shell's shares; a shell gets its spaces. Never
+ * both — a listing is one or the other, and `dealAccessFor` reads whichever it
+ * was given.
+ *
+ * The spaces are filtered out of the live `listings` map rather than read
+ * through `getChildDeals`, so the hook re-runs when a space is added or a
+ * broker changes hands. `getChildDeals` reads the store outside React and would
+ * leave this stale.
+ */
+export function useDealFamily(listing: Listing): DealFamily {
+  const shellId = listing.parentDealId;
+  const listings = useDataStore((s) => s.listings);
+  const shellShares = useDataStore((s) =>
+    shellId ? (s.dealShares.get(shellId) ?? DEFAULT_DEAL_SHARES) : DEFAULT_DEAL_SHARES,
+  );
+
+  return useMemo(() => {
+    if (shellId) {
+      const shell = listings.get(shellId);
+      return shell ? { shell, shellShares } : {};
+    }
+    const spaces = [...listings.values()].filter((l) => l.parentDealId === listing.id);
+    return spaces.length > 0 ? { spaces } : {};
+  }, [shellId, listing.id, listings, shellShares]);
+}
+
+/**
  * What the signed-in person may do on this deal. Reactive to both the seat
  * switch and the share list, so granting access in the modal updates the page
  * behind it.
@@ -78,8 +113,42 @@ export function useAccessViewer(): AccessViewer | undefined {
 export function useDealAccess(listing: Listing): DealAccess {
   const { shares } = useDealShares(listing.id);
   const viewer = useAccessViewer();
+  const family = useDealFamily(listing);
   return useMemo(
-    () => dealAccessFor(listing, viewer, shares),
-    [listing, viewer, shares],
+    () => dealAccessFor(listing, viewer, shares, family),
+    [listing, viewer, shares, family],
   );
+}
+
+/**
+ * Which of a shell's spaces this viewer may actually open.
+ *
+ * The Spaces roster needs it per row: a suite the viewer cannot open still
+ * shows — a broker should know the rest of the building is in flight — but it
+ * stops being a link. Returned as a Set so a roster of twenty rows asks twenty
+ * O(1) questions rather than re-resolving access per render.
+ */
+export function useOpenableSpaces(shellId: string): ReadonlySet<string> {
+  const viewer = useAccessViewer();
+  const listings = useDataStore((s) => s.listings);
+  const shellShares = useDataStore(
+    (s) => s.dealShares.get(shellId) ?? DEFAULT_DEAL_SHARES,
+  );
+
+  return useMemo(() => {
+    const open = new Set<string>();
+    const shell = listings.get(shellId);
+    if (!shell) return open;
+    for (const child of listings.values()) {
+      if (child.parentDealId !== shellId) continue;
+      // A space carries no shares of its own, so the third argument is empty by
+      // construction — the shell's list is what `dealAccessFor` will read.
+      const access = dealAccessFor(child, viewer, DEFAULT_DEAL_SHARES, {
+        shell,
+        shellShares,
+      });
+      if (canOpenDeal(access)) open.add(child.id);
+    }
+    return open;
+  }, [shellId, listings, shellShares, viewer]);
 }

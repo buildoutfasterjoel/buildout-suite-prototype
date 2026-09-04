@@ -83,6 +83,25 @@ export interface DealAccess {
   backOffice: AccessLevel;
 }
 
+/**
+ * The lease family around a listing, when it has one.
+ *
+ * Marketing belongs to the building and money belongs to the space, so
+ * resolving either half needs a record the listing itself does not carry: a
+ * space needs its shell, a shell needs its spaces. Passed in rather than read,
+ * because this module stays pure — `useDealAccess` does the store work.
+ *
+ * Never both at once: a listing is a shell or a space, never the two.
+ */
+export interface DealFamily {
+  /** The shell this space hangs under. Undefined for a top-level deal. */
+  shell?: Listing;
+  /** Shares granted on that shell — the only share list a space ever reads. */
+  shellShares?: DealShare[];
+  /** A shell's child space deals. Set only when `listing` is the shell. */
+  spaces?: Listing[];
+}
+
 /** Everything, both halves — the deal team's access. */
 const FULL: DealAccess = { marketing: "contribute", backOffice: "contribute" };
 
@@ -129,6 +148,18 @@ export function canEditMarketing(viewer: AccessViewer): boolean {
 }
 
 /**
+ * What a share opens for this viewer, capped by what their role may edit.
+ *
+ * Lifted out of `dealAccessFor` because a space resolves its share against its
+ * shell's list rather than its own, so the cap now runs on one of two lists.
+ */
+function sharedLevel(shares: DealShare[], viewer: AccessViewer): AccessLevel {
+  const share = shares.find((s) => s.member.id === viewer.id);
+  if (!share) return "none";
+  return share.level === "contribute" && canEditMarketing(viewer) ? "contribute" : "view";
+}
+
+/**
  * What a role alone opens on a deal its holder is not on — read straight from
  * the two permissions that name it, rather than from `accessKind`.
  *
@@ -158,22 +189,33 @@ function roleAccess(viewer: AccessViewer): DealAccess {
   };
 }
 
+/** Stable empty list, so the filter above allocates nothing per unshared deal. */
+const NO_SHARES: DealShare[] = [];
+
 /**
  * What this viewer may do on this deal — the one function the whole feature
  * rests on. Pure, so it is testable without a store or a browser.
  *
- * Rules, in order:
+ * **Marketing resolves on the shell. Money resolves on the space.** A lease
+ * building is a shell deal and each rented suite is its own child deal, so the
+ * two halves of one page answer to two different records:
  *
- *  1. **On the deal team** — the creator or an internal broker — gets both
- *     halves. (What the *voucher* then shows them of a colleague's payout is a
- *     narrower question, answered by `canSeeBrokerPayout`.)
- *  2. **Everyone else** starts from what their role opens firm-wide, and a
- *     share raises the marketing half on top of it — capped by the same role.
- *     A share never touches the back office: sharing a deal shares its
- *     marketing, and the voucher is not a broker's to hand out.
+ *  1. **Marketing** is the building's — the website, documents, email and
+ *     demographics only exist there. Working any suite in a building therefore
+ *     opens the building, and being on the building's team opens every suite's
+ *     marketing. It stops at the building: a broker on Suite 3 reaches nothing
+ *     on Suite 4, or a large building would fill every one of its brokers'
+ *     deal indexes with suites they do not work.
+ *  2. **Money** is the suite's. Only its own broker team reaches its voucher —
+ *     the shell's team does not, because the shell owns the assignment and the
+ *     suite owns the transaction. A shell has no voucher at all: `backOffice`
+ *     there means "may open the Vouchers index", and the index filters per row.
  *
- * The share is a floor, not a replacement, so sharing a deal's marketing with a
- * Back Office Manager cannot take away the voucher their role already reaches.
+ * A share is unchanged and still never touches the back office. It now always
+ * hangs on the building, so a space reads `family.shellShares`.
+ *
+ * A deal with no family — every sale deal and every unsplit lease deal —
+ * resolves exactly as it did before this argument existed.
  *
  * A viewer with no roster row falls through to full access rather than none: we
  * cannot resolve a ceiling for someone we can't find, and blanking the deal page
@@ -183,17 +225,37 @@ export function dealAccessFor(
   listing: Listing,
   viewer: AccessViewer | undefined,
   shares: DealShare[],
+  family: DealFamily = {},
 ): DealAccess {
   if (!viewer) return FULL;
-  if (onDealTeam(listing, viewer)) return FULL;
+
+  const onThis = onDealTeam(listing, viewer);
+  const onShell = family.shell ? onDealTeam(family.shell, viewer) : false;
+  const onAnySpace = (family.spaces ?? []).some((s) => onDealTeam(s, viewer));
+  // A lease deal is a shell only once it has children — before that it is a
+  // normal deal and resolves as one. This mirrors `dealShape`'s rule but isn't
+  // literally it: `dealShape` also requires `dealType === 'Lease'`, and the two
+  // converge today only because `addSpaceToDeal` is the sole writer of
+  // `parentDealId`. This file stays pure and React-free, so it doesn't import
+  // `dealShape`, which reads the store.
+  const isShell = listing.parentDealId == null && (family.spaces?.length ?? 0) > 0;
 
   const role = roleAccess(viewer);
-  const share = shares.find((s) => s.member.id === viewer.id);
-  if (!share) return role;
+  // Marketing is the building's, so a space reads its shell's share list and
+  // never its own. Every other shape reads the list it was handed.
+  const marketingShares = family.shell ? (family.shellShares ?? NO_SHARES) : shares;
 
-  const shared: AccessLevel =
-    share.level === "contribute" && canEditMarketing(viewer) ? "contribute" : "view";
-  return { marketing: higher(role.marketing, shared), backOffice: role.backOffice };
+  return {
+    marketing:
+      onThis || onShell || (isShell && onAnySpace)
+        ? "contribute"
+        : higher(role.marketing, sharedLevel(marketingShares, viewer)),
+    backOffice: isShell
+      ? higher(onAnySpace ? "view" : "none", role.backOffice)
+      : onThis
+        ? "contribute"
+        : role.backOffice,
+  };
 }
 
 /** Whether the viewer can open the deal at all. */
@@ -205,23 +267,35 @@ export function canOpenDeal(access: DealAccess): boolean {
  * The deals this viewer may know exist — every enumeration of the book goes
  * through here, the way `visibleContacts` gates the contact book.
  *
- * It asks exactly the question the deal page asks. A Broker's index is their own
- * book plus what has been shared with them, because `dealAccessFor` already says
- * a Broker holds neither `access-other-listings` nor `view-other-vouchers`; a
- * Back Office Manager's index is every deal in the firm, since the voucher they
- * can reach is on all of them. Listing a deal the viewer cannot open would be a
- * row that goes nowhere, and on a book of business the row itself is the leak —
- * the address and the price are on the card.
+ * It asks exactly the question the deal page asks, family included: a suite
+ * broker's index is their building plus the suites they work, and a
+ * neighbouring suite's card does not appear. The two lookup maps are built once
+ * rather than per row — a book of 27 listings scanned per listing is 27 scans
+ * to answer one question.
+ *
+ * Listing a deal the viewer cannot open would be a row that goes nowhere, and
+ * on a book of business the row itself is the leak — the address and the price
+ * are on the card.
  */
 export function visibleDeals(
   listings: Listing[],
   viewer: AccessViewer | undefined,
   shares: ReadonlyMap<string, DealShare[]>,
 ): Listing[] {
-  return listings.filter((l) =>
-    canOpenDeal(dealAccessFor(l, viewer, shares.get(l.id) ?? NO_SHARES)),
-  );
-}
+  const byId = new Map(listings.map((l) => [l.id, l]));
+  const spacesByShell = new Map<string, Listing[]>();
+  for (const l of listings) {
+    if (l.parentDealId == null) continue;
+    const kids = spacesByShell.get(l.parentDealId);
+    if (kids) kids.push(l);
+    else spacesByShell.set(l.parentDealId, [l]);
+  }
 
-/** Stable empty list, so the filter above allocates nothing per unshared deal. */
-const NO_SHARES: DealShare[] = [];
+  return listings.filter((l) => {
+    const shell = l.parentDealId ? byId.get(l.parentDealId) : undefined;
+    const family: DealFamily = shell
+      ? { shell, shellShares: shares.get(shell.id) ?? NO_SHARES }
+      : { spaces: spacesByShell.get(l.id) };
+    return canOpenDeal(dealAccessFor(l, viewer, shares.get(l.id) ?? NO_SHARES, family));
+  });
+}
