@@ -62,12 +62,12 @@ const spaceA = {
   internalBrokers: [{ id: "b2", name: "Marcus Patel", email: "" }],
 } as unknown as Listing;
 
-/** Suite 200, worked by Priya. Marcus must never reach it. */
+/** Suite 200, worked by Nina. Marcus must never reach it. */
 const spaceB = {
   id: "SP-B",
   parentDealId: "SH1",
-  createdById: "priya-raman",
-  internalBrokers: [{ id: "b3", name: "Priya Raman", email: "" }],
+  createdById: "nina-alvarez",
+  internalBrokers: [{ id: "b3", name: "Nina Alvarez", email: "" }],
 } as unknown as Listing;
 
 const shellFamily = { spaces: [spaceA, spaceB] };
