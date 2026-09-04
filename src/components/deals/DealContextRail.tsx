@@ -218,9 +218,14 @@ function ContactSection({
 /**
  * A broker row in the rail — mirrors ContactRow, with the gross commission % on
  * the right. The split is the only money on the Overview, so it is what a
- * marketing-only share hides: the row still names the broker (knowing who works
- * the deal is not a financial fact), and the figure reads as withheld rather
- * than as missing.
+ * marketing-only share hides: the row still names the broker, because knowing
+ * who works the deal is not a financial fact.
+ *
+ * The column is dropped rather than marked. A lock or a "Hidden" tells someone
+ * a figure exists and is being kept from them, which is worth saying on the
+ * voucher — that page is about the money, and a broker reading it needs to know
+ * the row is not simply blank. Here it is worth nothing: a marketing person has
+ * no business with the split and no reason to learn there is one.
  */
 function BrokerRow({ broker, showsMoney }: { broker: DealBroker; showsMoney: boolean }) {
   return (
@@ -234,16 +239,12 @@ function BrokerRow({ broker, showsMoney }: { broker: DealBroker; showsMoney: boo
           <div className="text-muted text-truncate fs-small">{broker.role}</div>
         )}
       </div>
-      <div className="text-end flex-shrink-0">
-        {showsMoney ? (
-          <>
-            <div className="fw-semibold">{broker.commissionSplitPct}%</div>
-            <div className="text-muted fs-small">Gross comm.</div>
-          </>
-        ) : (
-          <div className="text-muted fs-small">Hidden</div>
-        )}
-      </div>
+      {showsMoney && (
+        <div className="text-end flex-shrink-0">
+          <div className="fw-semibold">{broker.commissionSplitPct}%</div>
+          <div className="text-muted fs-small">Gross comm.</div>
+        </div>
+      )}
     </div>
   );
 }
