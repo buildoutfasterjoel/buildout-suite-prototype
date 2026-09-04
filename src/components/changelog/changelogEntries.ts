@@ -117,6 +117,43 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 211,
+    title:
+      "The app shell's rail expands into a labelled column, the top bar spans the window, and the omnibar picks up its new colors and radius",
+    mergedAt: "2026-09-04T00:38:19Z",
+    day: "2026-09-03",
+    author: "ZS-buildout",
+    area: "Navigation",
+    summary:
+      "The left rail could only ever be a strip of icons, so every section had to be recognised by its glyph alone. It now opens into a full labelled column when you want the names, closes back to the strip when you want the room, and the top bar and omnibar follow the updated designs.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "The hamburger beside the logo expands the left rail into a 220px column that names every section and lists each group\u2019s pages beneath it, and collapses it back to the icon strip. Your choice sticks across reloads.",
+      },
+      {
+        kind: "feature",
+        text: "A Dashboard row sits at the top of the rail and takes you home, the same place the logo does.",
+      },
+      {
+        kind: "refinement",
+        text: "The current section shows a solid purple icon with a slim marker on the rail\u2019s edge. In the expanded rail the marker moves to the exact page you\u2019re on, and hovering any row tints it blue.",
+      },
+      {
+        kind: "refinement",
+        text: "Hovering a group in the collapsed rail opens a navy flyout of its pages, matching the rail rather than a white menu, with the page you\u2019re on set in semibold.",
+      },
+      {
+        kind: "refinement",
+        text: "The top bar now runs the full width of the window with the rail tucked beneath it, and the search bar and Assistant button stay centred over the page \u2014 sliding across as the rail opens and closes.",
+      },
+      {
+        kind: "refinement",
+        text: "The Search or ask Otto bar is shorter and squarer with a translucent navy fill, lighting up solid with a purple glow on hover. The \u2318K reminder now sits quietly after the placeholder text instead of in a pill by the microphone.",
+      },
+    ],
+  },
+  {
     pr: 210,
     title: "Log Activity fields take AI instructions inline, right under the field, instead of through the Otto rail",
     mergedAt: "2026-09-03T22:50:11Z",

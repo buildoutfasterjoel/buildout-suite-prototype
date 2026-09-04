@@ -1,5 +1,6 @@
 import { Navbar } from "@buildoutinc/blueprint-react/ui/Navbar";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBars } from "@fortawesome/pro-regular-svg-icons";
 // The AI assistant launcher uses the solid sparkle (per Figma).
 import { faSparkles } from "@fortawesome/pro-solid-svg-icons";
 import BuildoutIcon from "#/features/assets/buildout-icon";
@@ -13,19 +14,26 @@ import {
   TasksLink,
   useNavClick,
 } from "./navbarParts";
+import { useRailExpanded } from "./useRailExpanded";
 
 /**
- * The app shell's top bar (Figma node 208:11154) — the horizontal half of the
- * `app` nav mode, sitting to the right of `AppSideNav`.
+ * The app shell's top bar (Figma node 2482:5510) — the full-width strip across
+ * the top of the `app` nav mode, with `AppSideNav` hanging beneath its left end.
  *
- * Three zones, and the point of the whole thing is that the outer two are the
- * *same width*: the omnibar and the Assistant pill then land dead-centre over
- * the page content rather than drifting with the length of the brand or the
- * count of account icons. 244px is the design's number; it's a CSS variable
- * (`--app-topbar-side`) so both zones can only ever be changed together.
+ * Three zones. The right one is the design's 244px; the left one is that same
+ * 244px *plus the rail's width*, so the middle zone is exactly as wide as the
+ * page stage below it and the omnibar/Assistant pair is centred over the page
+ * rather than over the window. When the rail expands the left zone grows with
+ * it and the pair slides right to stay centred. Both numbers are CSS variables
+ * (`--app-topbar-side`, `--app-rail-width`) so the zones can only move together.
  *
- * Sections are gone from here entirely — they're the rail's job now, which is
- * what buys the middle its room.
+ * The hamburger that collapses and expands the rail sits here rather than in
+ * the rail (Figma puts it in the bar's own 52px corner, left of the brand): the
+ * rail's width is the thing being toggled, so the control that toggles it
+ * shouldn't move when it does.
+ *
+ * Sections are gone from here entirely — they're the rail's job, which is what
+ * buys the middle its room.
  *
  * It's still a Blueprint `Navbar` rather than a bare flex row because
  * `AccountMenu`, `NewMenu` and the notification links all read `useNavbar()`
@@ -37,18 +45,32 @@ export function AppTopBar() {
   const handleNavClick = useNavClick();
   const assistantOpen = useAssistant((s) => s.open);
   const toggleAssistant = useAssistant((s) => s.toggle);
+  const railExpanded = useRailExpanded((s) => s.expanded);
+  const toggleRail = useRailExpanded((s) => s.toggle);
 
   return (
     <Navbar expand="sm" className="global-navbar app-topbar">
-      <Navbar.Brand
-        href="/suite"
-        onClick={(e) => handleNavClick(e, "/suite")}
-        aria-label="Buildout"
-        className="app-topbar__side d-inline-flex align-items-center gap-2"
-      >
-        <BuildoutIcon style={{ height: 24, width: 24 }} />
-        <BuildoutWordmark style={{ height: 24 }} />
-      </Navbar.Brand>
+      <div className="app-topbar__side app-topbar__side--start d-flex align-items-center">
+        <button
+          type="button"
+          className="app-topbar__menu"
+          aria-label={railExpanded ? "Collapse navigation" : "Expand navigation"}
+          aria-expanded={railExpanded}
+          aria-controls="app-rail"
+          onClick={toggleRail}
+        >
+          <FontAwesomeIcon icon={faBars} />
+        </button>
+        <Navbar.Brand
+          href="/suite"
+          onClick={(e) => handleNavClick(e, "/suite")}
+          aria-label="Buildout"
+          className="app-topbar__brand d-inline-flex align-items-center gap-2"
+        >
+          <BuildoutIcon style={{ height: 24, width: 24 }} />
+          <BuildoutWordmark style={{ height: 24 }} />
+        </Navbar.Brand>
+      </div>
 
       <Navbar.Toggler />
 
@@ -59,7 +81,7 @@ export function AppTopBar() {
           </Navbar.Item>
 
           {/* Assistant, promoted out of the icon cluster into a named button
-              beside the omnibar (Figma node 208:11159): in the app shell the two
+              beside the omnibar (Figma node 2482:5517): in the app shell the two
               AI entry points read as one pair, which is the emphasis this
               layout exists to give them. */}
           <Navbar.Item className="d-flex align-items-center">
