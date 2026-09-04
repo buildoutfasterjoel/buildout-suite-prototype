@@ -2858,7 +2858,7 @@ export function generateDataset() {
   // wire their deals — before reconciliation so derived fields follow.
   applyHeroes(contacts, listings, properties)
 
-  // Turn two seeded lease deals into umbrella shells with child space deals.
+  // Turn three seeded lease deals into umbrella shells with child space deals.
   // After applyHeroes so the heroes have already claimed their listings; before
   // reconciliation so the children's tenants get their contact fields resolved.
   // One Person, many Relationships — two seeded pairs so both readings can be
