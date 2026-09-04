@@ -16,6 +16,22 @@ continuing:
 2. **Confirm there is something to ship.** `git log origin/main..HEAD --oneline`. If empty,
    stop: there are no commits to open a PR for.
 
+2a. **Rebase onto the latest `origin/main` before the gates run.** Otherwise the gates
+   pass against a stale base and the conflict shows up on the PR instead.
+
+   ```
+   git fetch origin main
+   git rebase origin/main
+   ```
+
+   - If the rebase is clean, continue. The gates in steps 3–4 now run on the merged result,
+     which is the point.
+   - If it conflicts, **run `git rebase --abort` and stop.** Show the conflicting files and
+     let Joel decide. Do not resolve conflicts inside `/ship` — resolving is a review
+     decision, and this command is the mechanical part only.
+   - If the branch was already pushed, the rebase rewrote its commits, so step 5 needs
+     `git push --force-with-lease -u origin HEAD`. Never plain `--force`.
+
 2b. **Check `gh` auth before running the gates**, so a 10-minute test run isn't wasted on a
    step that can't finish: `gh auth status`. If it reports logged in, continue.
 
@@ -55,7 +71,8 @@ continuing:
 4. **Test.** `bun --bun run test`. Must exit 0. Ignore the known-harmless biome output and
    the react/module Vitest stderr line; neither is a gate.
 
-5. **Push.** `git push -u origin HEAD`.
+5. **Push.** `git push -u origin HEAD`, or `git push --force-with-lease -u origin HEAD`
+   if step 2a rebased an already-pushed branch.
 
 6. **Open the PR.** `gh pr create --base main --title "<title>" --body "<body>"`.
    - Title: a plain sentence describing the change, matching the repo's style. Lowercase
