@@ -20,6 +20,8 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import { getProperty, getStore } from "#/data/store";
 import { useDataStore } from "#/data/dataStore";
+import { visibleDeals } from "#/components/deals/dealAccess";
+import { useAccessViewer } from "#/components/deals/useDealAccess";
 import { useCreateDeal } from "#/data/useCreateDeal";
 import type { Listing, PropertyStatus, DealSide } from "#/data/types";
 import { DealBoard } from "#/components/deals/DealBoard";
@@ -127,9 +129,15 @@ function useToggleSet<T extends string>() {
 function PropertyListings() {
   // Bumped when a deal is re-staged so the derived lists recompute.
   const [version, setVersion] = useState(0);
+  // Only the deals this seat may open — the same rule the deal page enforces,
+  // asked once here so the facets, the counts, the grid, the map and the board
+  // all agree about what exists. Reactive to the seat switch and to the roster
+  // (a role change re-derives), on top of the store bump below.
+  const viewer = useAccessViewer();
+  const dealShares = useDataStore((s) => s.dealShares);
   const listings = useMemo(
-    () => Array.from(getStore().listings.values()),
-    [version],
+    () => visibleDeals(Array.from(getStore().listings.values()), viewer, dealShares),
+    [version, viewer, dealShares],
   );
 
   // Re-derive the board whenever the store's listings change (e.g. a gate commit).

@@ -192,3 +192,28 @@ export function dealAccessFor(
 export function canOpenDeal(access: DealAccess): boolean {
   return access.marketing !== "none" || access.backOffice !== "none";
 }
+
+/**
+ * The deals this viewer may know exist — every enumeration of the book goes
+ * through here, the way `visibleContacts` gates the contact book.
+ *
+ * It asks exactly the question the deal page asks. A Broker's index is their own
+ * book plus what has been shared with them, because `dealAccessFor` already says
+ * a Broker holds neither `access-other-listings` nor `view-other-vouchers`; a
+ * Back Office Manager's index is every deal in the firm, since the voucher they
+ * can reach is on all of them. Listing a deal the viewer cannot open would be a
+ * row that goes nowhere, and on a book of business the row itself is the leak —
+ * the address and the price are on the card.
+ */
+export function visibleDeals(
+  listings: Listing[],
+  viewer: AccessViewer | undefined,
+  shares: ReadonlyMap<string, DealShare[]>,
+): Listing[] {
+  return listings.filter((l) =>
+    canOpenDeal(dealAccessFor(l, viewer, shares.get(l.id) ?? NO_SHARES)),
+  );
+}
+
+/** Stable empty list, so the filter above allocates nothing per unshared deal. */
+const NO_SHARES: DealShare[] = [];

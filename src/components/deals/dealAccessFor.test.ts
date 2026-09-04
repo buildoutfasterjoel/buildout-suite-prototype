@@ -7,6 +7,7 @@ import {
   canEditMarketing,
   canOpenDeal,
   dealAccessFor,
+  visibleDeals,
   type AccessViewer,
 } from "./dealAccess";
 
@@ -163,5 +164,56 @@ describe("canEditMarketing", () => {
     // listing form.
     expect(canEditMarketing(viewer("maya-brooks", ["marketing-assistant"]))).toBe(true);
     expect(canEditMarketing(viewer("riley-park", ["office-admin"]))).toBe(false);
+  });
+});
+
+describe("visibleDeals", () => {
+  // Three deals: one Sarah works, one Marcus works, one nobody on the roster
+  // has been given.
+  const hers = {
+    id: "hers",
+    createdById: "sarah-chen",
+    internalBrokers: [],
+  } as unknown as Listing;
+  const his = {
+    id: "his",
+    createdById: "marcus-patel",
+    internalBrokers: [],
+  } as unknown as Listing;
+  const shared = {
+    id: "shared",
+    createdById: "marcus-patel",
+    internalBrokers: [],
+  } as unknown as Listing;
+  const all = [hers, his, shared];
+  const shares = new Map<string, DealShare[]>([
+    ["shared", [share("sarah-chen", "view")]],
+  ]);
+
+  it("gives a Broker their own book plus what is shared with them", () => {
+    const seen = visibleDeals(all, viewer("sarah-chen", ["broker"]), shares);
+    expect(seen.map((l) => l.id)).toEqual(["hers", "shared"]);
+  });
+
+  it("gives a Back Office Manager every deal — the voucher is on all of them", () => {
+    const seen = visibleDeals(
+      all,
+      viewer("tessa-nakamura", ["back-office-manager"]),
+      shares,
+    );
+    expect(seen.map((l) => l.id)).toEqual(["hers", "his", "shared"]);
+  });
+
+  it("gives an unshared sharing-role an empty book", () => {
+    const seen = visibleDeals(
+      all,
+      viewer("maya-brooks", ["marketing-assistant"]),
+      new Map(),
+    );
+    expect(seen).toEqual([]);
+  });
+
+  it("hides nothing when there is no roster row to judge by", () => {
+    expect(visibleDeals(all, undefined, shares)).toHaveLength(3);
   });
 });
