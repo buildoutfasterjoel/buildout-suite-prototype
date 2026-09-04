@@ -117,6 +117,31 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 212,
+    title:
+      "The access card on a read-only contact explains your standing without offering to request access",
+    mergedAt: "2026-09-04T02:22:37Z",
+    day: "2026-09-03",
+    author: "ZS-buildout",
+    area: "Contacts",
+    summary:
+      "Requesting access to a contact is out for now, so the card that stands in for the composer on a record you can read but not act on explains your standing and nothing more.",
+    highlights: [
+      {
+        kind: "refinement",
+        text: "The card's header now names your standing alone: \"Previewing Private Contact\" for a Managing Director on a private record, \"Read-Only Access\" on another broker's contact or a company record you aren't assigned to, and \"You Have View Access\" when you were shared in to read. The tier options and the Request access button are gone; the one-paragraph explanation stays.",
+      },
+      {
+        kind: "refinement",
+        text: "On a deal, the \"Private Contact\" placeholder row no longer offers a Request access button. It shows who holds the record, and its tooltip says the same instead of telling you to ask from the deal.",
+      },
+      {
+        kind: "refinement",
+        text: "The messages that refuse an action on a contact you can't work, and the toast that counts skipped contacts on a bulk list action, no longer point you at requesting access from the record.",
+      },
+    ],
+  },
+  {
     pr: 211,
     title:
       "The app shell's rail expands into a labelled column, the top bar spans the window, and the omnibar picks up its new colors and radius",
