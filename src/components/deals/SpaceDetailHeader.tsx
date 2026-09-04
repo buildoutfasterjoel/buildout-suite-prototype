@@ -7,8 +7,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faHandshake, faPencil } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing, Property } from "#/data/types";
 import { dealBreadcrumbTrail } from "#/components/properties/dealNav";
-import { hash, getRefId, getPhotoUrl } from "#/components/properties/propertyDisplay";
-import { AvatarGroup } from "#/components/properties/AvatarGroup";
+import { getRefId, getPhotoUrl } from "#/components/properties/propertyDisplay";
+import { DealHeroAccessAvatars } from "#/components/deals/DealHeroAccessAvatars";
 import { DealStageSelect } from "#/components/deals/DealStageSelect";
 import { dealEditTarget } from "#/components/deals/dealCardLink";
 
@@ -36,10 +36,9 @@ export function SpaceDetailHeader({
   // /listings/{shellId}/spaces/{spaceId}/{section}, so the shell is the prefix
   // and the space's own section is the third segment.
   const { subsectionLabel } = dealBreadcrumbTrail(pathname, shell.id);
-  // Both seeded on the space, not the building: access is granted per space deal
-  // — a broker can be on one suite of a building and not its neighbours — and the
+  // Seeded on the space, not the building: access is granted per space deal —
+  // a broker can be on one suite of a building and not its neighbours — and the
   // ref id names this deal, not its parent.
-  const seed = hash(space.id);
   const refId = getRefId(space.id);
 
   return (
@@ -49,17 +48,13 @@ export function SpaceDetailHeader({
             PropertyDetailHeader uses, so a space header and a building header
             read as the same kind of page. */}
         <div className="d-flex align-items-center gap-3">
-          {/* Thumbnail with the access avatars overlaid in the corner.
-              Everything here is seeded on the SPACE's id, not the building's:
-              each suite gets its own photo instead of six copies of the
-              building's, and the avatars show who can see *this* suite, since a
-              broker may hold one space deal in a building and not its
-              neighbours. Photos are not modelled on a Listing yet —
-              `getPhotoUrl` derives a stable one from the curated CRE pool — so
-              this is the one call site that changes when spaces gain real
-              media. */}
+          {/* Thumbnail, seeded on the SPACE's id, not the building's: each
+              suite gets its own photo instead of six copies of the building's.
+              Photos are not modelled on a Listing yet — `getPhotoUrl` derives
+              a stable one from the curated CRE pool — so this is the one call
+              site that changes when spaces gain real media. */}
           <div
-            className="flex-shrink-0 d-none d-sm-block align-self-stretch position-relative"
+            className="flex-shrink-0 d-none d-sm-block align-self-stretch"
             style={{ width: 164 }}
           >
             <img
@@ -73,9 +68,6 @@ export function SpaceDetailHeader({
                 display: "block",
               }}
             />
-            <div className="position-absolute" style={{ right: 6, bottom: 6 }}>
-              <AvatarGroup seed={seed} size="default" />
-            </div>
           </div>
 
           {/* `minWidth: 0` lets the truncation below actually engage — a flex
@@ -179,8 +171,13 @@ export function SpaceDetailHeader({
               controls sit where a broker already expects them. No Add Space (a
               suite has no suites) and no options menu: access is granted per
               space deal and deleting one is the roster's job, so neither of the
-              building menu's two items has a space equivalent yet. */}
+              building menu's two items has a space equivalent yet.
+              The access cluster leads it, as on the building: the same people,
+              resolved from this suite's own broker team rather than the
+              building's. No gear — sharing is the building's, and a suite has
+              nothing of its own to hand out. */}
           <div className="d-flex align-items-center gap-3 flex-shrink-0">
+            <DealHeroAccessAvatars listing={space} manage={false} />
             <div className="d-flex align-items-center gap-2">
               <DealStageSelect listing={space} />
             </div>

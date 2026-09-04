@@ -22,21 +22,29 @@ import {
  *
  * The creator stands alone with an offset ring: they opened the deal, and that
  * doesn't change hands. Everyone else who can open it stacks into an
- * overlapping group beside them, and the user-gear button opens the modal that
- * says who they are. Every avatar is also a way into that modal, so the whole
- * cluster answers "who has this?" on hover and "change it" on click.
+ * overlapping group beside them.
  *
- * The group is the deal team — a deal's internal brokers — followed by anyone
- * shared into it. A shared teammate's tooltip says it is marketing and at what
- * level, so the cluster answers "who has this, and to what?" without opening
- * anything.
+ * `manage` is false on a space. Access to a suite is its broker team plus
+ * whoever holds the building — neither is granted here, so a gear button would
+ * open a modal with nothing to change. The cluster still identifies the people;
+ * the avatars simply stop being buttons.
  */
-export function DealHeroAccessAvatars({ listing }: { listing: Listing }) {
+export function DealHeroAccessAvatars({
+  listing,
+  manage = true,
+}: {
+  listing: Listing;
+  /** False on a space: sharing lives on the building, so there is nothing to manage. */
+  manage?: boolean;
+}) {
   const [manageOpen, setManageOpen] = useState(false);
   const creator = dealCreator(listing);
   const team = dealTeamBrokers(listing);
   const { shares } = useDealShares(listing.id);
-  const open = () => setManageOpen(true);
+  // Undefined rather than a no-op: `HeroAccessAvatar` reads it to decide whether
+  // the avatar is a button at all, and an avatar that looks clickable and does
+  // nothing is worse than one that doesn't.
+  const open = manage ? () => setManageOpen(true) : undefined;
   // A share row means the viewer is a guest on this deal, not on its team. Guests
   // read the access list; they don't hand it out.
   const readOnly = shares.some((s) => s.member.id === viewerId());
@@ -81,30 +89,36 @@ export function DealHeroAccessAvatars({ listing }: { listing: Listing }) {
         </Avatar.Group>
       )}
 
-      <Tooltip>
-        <Tooltip.Trigger
-          render={
-            <Button
-              variant="ghost"
-              appearance="muted"
-              size="icon-sm"
-              aria-label={readOnly ? "See who has access" : "Manage access"}
-              onClick={open}
-              className="hero-access__btn"
-            >
-              <FontAwesomeIcon icon={faUserGear} />
-            </Button>
-          }
-        />
-        <Tooltip.Content>{readOnly ? "Who has access" : "Manage access"}</Tooltip.Content>
-      </Tooltip>
+      {manage && (
+        <>
+          <Tooltip>
+            <Tooltip.Trigger
+              render={
+                <Button
+                  variant="ghost"
+                  appearance="muted"
+                  size="icon-sm"
+                  aria-label={readOnly ? "See who has access" : "Manage access"}
+                  onClick={open}
+                  className="hero-access__btn"
+                >
+                  <FontAwesomeIcon icon={faUserGear} />
+                </Button>
+              }
+            />
+            <Tooltip.Content>
+              {readOnly ? "Who has access" : "Manage access"}
+            </Tooltip.Content>
+          </Tooltip>
 
-      <ManageDealAccessModal
-        listing={listing}
-        open={manageOpen}
-        onOpenChange={setManageOpen}
-        readOnly={readOnly}
-      />
+          <ManageDealAccessModal
+            listing={listing}
+            open={manageOpen}
+            onOpenChange={setManageOpen}
+            readOnly={readOnly}
+          />
+        </>
+      )}
     </div>
   );
 }
