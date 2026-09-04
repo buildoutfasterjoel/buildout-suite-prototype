@@ -20,7 +20,6 @@ import {
 } from "#/data/payables";
 import { deletePayment, recordPayment } from "#/data/actions";
 import { notify } from "#/lib/notify";
-import { PrivatePayout } from "./PrivatePayout";
 import { Section } from "./VoucherSection";
 import { CreatePaymentModal, type CreatePaymentInput } from "./CreatePaymentModal";
 import { formatCurrency, formatDate } from "./dealDisplay";
@@ -96,17 +95,10 @@ function CommissionPlanCell({ broker }: { broker: DealBroker | undefined }) {
 function PaymentRow({
   payment,
   broker,
-  seesPayout,
   onDelete,
 }: {
   payment: VoucherPayment;
   broker: DealBroker | undefined;
-  /**
-   * Whether the viewer may see this broker's payout. A cheque's net and the
-   * hold-backs that shaped it are both what the person actually took home, so
-   * they go behind the marker together — see `canSeeBrokerPayout`.
-   */
-  seesPayout: boolean;
   onDelete: () => void;
 }) {
   const deductions = payment.deductions;
@@ -126,17 +118,11 @@ function PaymentRow({
           read as a count, since three descriptions do not fit the column and the
           figure beside it already says what they came to. */}
       <Table.Cell className="text-muted" style={{ width: PAYABLE_COL.plan }}>
-        {!seesPayout ? (
-          deductions.length > 0 && (
-            <PrivatePayout variant="cell" />
-          )
-        ) : deductions.length === 0 ? (
-          ""
-        ) : deductions.length === 1 ? (
-          `${deductions[0]!.description} −${formatCurrency(deductions[0]!.amount)}`
-        ) : (
-          `${deductions.length} deductions −${formatCurrency(paymentDeductionTotal(payment))}`
-        )}
+        {deductions.length === 0
+          ? ""
+          : deductions.length === 1
+            ? `${deductions[0]!.description} −${formatCurrency(deductions[0]!.amount)}`
+            : `${deductions.length} deductions −${formatCurrency(paymentDeductionTotal(payment))}`}
       </Table.Cell>
       {/* Gross Amount stays empty. A payment has no amount owed — the figure it
           carries is what was paid, and that belongs under the two paid columns
@@ -152,11 +138,7 @@ function PaymentRow({
         className="text-end text-muted"
         style={{ width: PAYABLE_COL.netPaid }}
       >
-        {seesPayout ? (
-          formatCurrency(paymentNet(payment, broker))
-        ) : (
-          <PrivatePayout variant="cell" />
-        )}
+        {formatCurrency(paymentNet(payment, broker))}
       </Table.Cell>
       <Table.Cell style={{ width: PAYABLE_COL.actions }}>
         {/* A bare trash button rather than a menu: a payment has exactly one
@@ -194,7 +176,7 @@ export function PayablesSection({
 }: {
   listing: Listing;
   /** See `canSeeBrokerPayout` — resolved once by the voucher and passed down. */
-  seesPayout: (broker: Pick<DealBroker, "name" | "side">) => boolean;
+  seesPayout: (broker: Pick<DealBroker, "name">) => boolean;
 }) {
   const voucher = listing.transaction.backOffice;
   const payables = voucher.payables ?? [];
@@ -202,23 +184,29 @@ export function PayablesSection({
 
   const brokerFor = (payable: VoucherPayable) =>
     findPayableBroker(listing, payable.brokerId);
-  // An unresolvable broker is treated as private: we cannot show it is the
-  // viewer's own row, and guessing open is the wrong way to be wrong about pay.
-  const canSee = (payable: VoucherPayable) => {
-    const broker = brokerFor(payable);
-    return broker ? seesPayout(broker) : false;
-  };
 
-  const grossTotal = payables.reduce((t, p) => t + p.grossAmount, 0);
-  const grossPaidTotal = payables.reduce((t, p) => t + payableGrossPaid(p), 0);
-  const netPaidTotal = payables.reduce(
+  // Every row this viewer is entitled to. Unlike the commission tables above,
+  // which mark a colleague's payout and keep the row, this section drops the
+  // row entirely: a payable is a cheque owed to one person, and there is
+  // nothing on it — not the date, not the gross, not the payments beneath it —
+  // that a different broker has business reading. Marking four cells on a row
+  // that should not be there at all was the more complicated way to say less.
+  //
+  // An unresolvable broker is dropped too: we cannot show the row is the
+  // viewer's own, and guessing open is the wrong way to be wrong about pay.
+  const mine = payables.filter((p) => {
+    const broker = brokerFor(p);
+    return broker ? seesPayout(broker) : false;
+  });
+
+  // Totals over the rows on screen. That is the honest sum of a filtered table:
+  // the section is this broker's payables, so its Sum is what they are owed.
+  const grossTotal = mine.reduce((t, p) => t + p.grossAmount, 0);
+  const grossPaidTotal = mine.reduce((t, p) => t + payableGrossPaid(p), 0);
+  const netPaidTotal = mine.reduce(
     (t, p) => t + payableNetPaid(p, brokerFor(p)),
     0,
   );
-  // A Net Paid total over only the rows the viewer can see would be a wrong
-  // number under the right label, so the total is withheld unless every row is
-  // visible. Gross Amount and Gross Paid are the deal's business and keep theirs.
-  const seesNetTotal = payables.every(canSee);
 
   const pay = (input: CreatePaymentInput) => {
     if (!paying) return;
@@ -255,10 +243,11 @@ export function PayablesSection({
 
   return (
     <Section title="Payables & Payments">
-      {payables.length === 0 ? (
+      {mine.length === 0 ? (
         <p className="text-muted mb-0">
-          No payables yet. Applying a deposit to this voucher will create one for
-          each broker, for their share of what arrived.
+          {payables.length === 0
+            ? "No payables yet. Applying a deposit to this voucher will create one for each broker, for their share of what arrived."
+            : "Nothing here is yours yet. This section shows what the brokerage owes you on this deal."}
         </p>
       ) : (
         <Table dense className="align-middle">
@@ -290,7 +279,7 @@ export function PayablesSection({
             </Table.Row>
           </Table.Header>
           <Table.Body>
-            {payables.map((payable) => {
+            {mine.map((payable) => {
               const broker = brokerFor(payable);
               return (
                 <Fragment key={payable.id}>
@@ -306,11 +295,7 @@ export function PayablesSection({
                       {formatDate(payable.date)}
                     </Table.Cell>
                     <Table.Cell style={{ width: PAYABLE_COL.plan }}>
-                      {canSee(payable) ? (
-                        <CommissionPlanCell broker={broker} />
-                      ) : (
-                        <PrivatePayout variant="cell" />
-                      )}
+                      <CommissionPlanCell broker={broker} />
                     </Table.Cell>
                     <Table.Cell
                       className="text-end"
@@ -328,11 +313,7 @@ export function PayablesSection({
                       className="text-end"
                       style={{ width: PAYABLE_COL.netPaid }}
                     >
-                      {canSee(payable) ? (
-                        formatCurrency(payableNetPaid(payable, broker))
-                      ) : (
-                        <PrivatePayout variant="cell" />
-                      )}
+                      {formatCurrency(payableNetPaid(payable, broker))}
                     </Table.Cell>
                     <Table.Cell style={{ width: PAYABLE_COL.actions }}>
                       {/* Gone once the payable is settled, rather than disabled.
@@ -355,7 +336,6 @@ export function PayablesSection({
                       key={payment.id}
                       payment={payment}
                       broker={broker}
-                      seesPayout={canSee(payable)}
                       onDelete={() => removePayment(payable, payment)}
                     />
                   ))}
@@ -376,11 +356,7 @@ export function PayablesSection({
                 {formatCurrency(grossPaidTotal)}
               </Table.Cell>
               <Table.Cell className="text-end">
-                {seesNetTotal ? (
-                  formatCurrency(netPaidTotal)
-                ) : (
-                  <PrivatePayout variant="cell" />
-                )}
+                {formatCurrency(netPaidTotal)}
               </Table.Cell>
               <Table.Cell />
             </Table.Row>

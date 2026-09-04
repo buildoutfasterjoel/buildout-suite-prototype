@@ -9,25 +9,18 @@ import { faLock } from "@fortawesome/pro-regular-svg-icons";
  * A lock and the word. No tooltip, and no name: unlike a private contact, this
  * is not a record someone can be asked to share. What the brokerage pays a
  * person is between them and the back office, and naming a holder would invite
- * a colleague to ask — which is the request the marker exists to prevent. The
- * row says the figure is withheld and stops there.
+ * a colleague to ask — which is the request the marker exists to prevent.
  *
- * `cell` drops the word for a narrow money column, where the lock alone has to
- * carry it. The label moves to `aria-label` there, so the column is not silent
- * to a screen reader; the `row` variant needs none, since its own text says it.
+ * Used in one place: the internal commissions table, where the row has to stay
+ * because the gross beside it is the deal's business. Payables has no marker at
+ * all — a payable is one person's cheque end to end, so the row is dropped
+ * rather than half-hidden.
  */
-export function PrivatePayout({
-  variant = "row",
-}: {
-  variant?: "row" | "cell";
-}) {
+export function PrivatePayout() {
   return (
-    <span
-      className="text-muted d-inline-flex align-items-center gap-2"
-      aria-label={variant === "cell" ? "Private" : undefined}
-    >
+    <span className="text-muted d-inline-flex align-items-center gap-2">
       <FontAwesomeIcon icon={faLock} />
-      {variant === "row" && <span>Private</span>}
+      <span>Private</span>
     </span>
   );
 }

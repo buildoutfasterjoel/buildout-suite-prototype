@@ -102,22 +102,21 @@ export function voucherApproverIds(users: readonly ApproverCandidate[]): string[
  * is symmetric: a broker sees their own plan and nobody else's, the person who
  * opened the deal included.
  *
- * Two exemptions:
+ * One exemption: `canViewOthers` — View Other Users' Vouchers. The back office
+ * cuts the cheques, so it has to see every payout. No new permission for this;
+ * the one that already governs reaching past your own voucher is the right one.
  *
- *  - `canViewOthers` — View Other Users' Vouchers. The back office cuts the
- *    cheques, so it has to see every payout. No new permission for this; the one
- *    that already governs reaching past your own voucher is the right one.
- *  - An **outside** broker. Their split is an arrangement between two firms,
- *    not a colleague's personal comp, and nobody in the app is them — so hiding
- *    it would hide it from everyone forever. They never appear in the internal
- *    commissions table anyway; only in Payables.
+ * Outside brokers are *not* exempt, though they were briefly. A co-broker's
+ * split reads like a deal between two firms rather than a colleague's personal
+ * comp, so exempting it seemed harmless — but it is still somebody else's
+ * cheque on the Payables table, and Payables now shows a broker their own rows
+ * and no one else's. The exemption never applied to the internal commissions
+ * table, which has no outside rows to begin with.
  */
 export function canSeeBrokerPayout(
-  broker: Pick<DealBroker, "name" | "side">,
+  broker: Pick<DealBroker, "name">,
   viewerId: string,
   canViewOthers: boolean,
 ): boolean {
-  if (canViewOthers) return true;
-  if (broker.side === "outside") return true;
-  return teammateIdByName(broker.name) === viewerId;
+  return canViewOthers || teammateIdByName(broker.name) === viewerId;
 }

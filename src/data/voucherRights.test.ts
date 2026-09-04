@@ -181,10 +181,9 @@ describe("canSeeBrokerPayout", () => {
     expect(canSeeBrokerPayout(marcus, "tessa-nakamura", true)).toBe(true);
   });
 
-  it("leaves an outside broker's visible — it is a deal between two firms", () => {
-    // Nobody in the app is this person, so hiding it would hide it from
-    // everyone forever.
-    expect(canSeeBrokerPayout(co, "sarah-chen", false)).toBe(true);
+  it("hides an outside broker's too — it is still somebody else's cheque", () => {
+    expect(canSeeBrokerPayout(co, "sarah-chen", false)).toBe(false);
+    expect(canSeeBrokerPayout(co, "tessa-nakamura", true)).toBe(true);
   });
 
   it("hides a name that matches nobody on the roster", () => {

@@ -2866,7 +2866,7 @@ export function DealFinancials({
   // table and the payables table cannot answer it differently.
   const canViewOtherVouchers = useCan(VIEW_OTHER_VOUCHERS);
   const seesPayout = useCallback(
-    (broker: Pick<DealBroker, "name" | "side">) =>
+    (broker: Pick<DealBroker, "name">) =>
       canSeeBrokerPayout(broker, viewerSeat, canViewOtherVouchers),
     [viewerSeat, canViewOtherVouchers],
   );
