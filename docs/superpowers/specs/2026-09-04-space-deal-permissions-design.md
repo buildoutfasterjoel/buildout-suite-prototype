@@ -25,7 +25,7 @@ works one suite cannot open the building the suite is in.
 | Viewer | Building page | Space page |
 | --- | --- | --- |
 | On the shell's broker team | Marketing ✓ · Vouchers index of the spaces they are on | Marketing ✓ · Voucher ✗ |
-| On Space 1's broker team | Marketing ✓ · Vouchers index: Space 1 only | Space 1: both halves ✓ · Space 2: marketing ✓, voucher ✗ |
+| On Space 1's broker team | Marketing ✓ · Vouchers index: Space 1 only | Space 1: both halves ✓ · Space 2: no access |
 | Shared into the building | Marketing at their share level · no Vouchers index | Marketing ✓ on every space · Voucher ✗ |
 | Back Office Manager (`view-other-vouchers`) | Vouchers index: every space | Voucher ✓ · marketing per role |
 
@@ -33,23 +33,31 @@ Two consequences worth stating plainly:
 
 - **Working any space in a building earns that building's marketing.** That is
   where the space's own media and documents come from, so a suite broker who
-  cannot open the building cannot do their job.
+  cannot open the building cannot do their job. It earns the building's
+  marketing only — not the neighbouring suites'.
 - **Being on the shell's team earns no space's money.** The shell team owns the
   assignment; the suite team owns the transaction.
+- **A suite is reached by working it, or by a building share.** A broker on
+  Suite 3 has no access to Suite 4 in either half. Marketing is one wall across
+  the *building*, not across its suites: a large building would otherwise fill
+  every one of its brokers' deal indexes with suites they do not work.
 
 A shell has no voucher of its own — it already shows a Vouchers *index* instead
 (`dealNav.ts:346`). So `backOffice` on a shell means "may open the index", and
 the index filters its rows per space.
 
-### What this adds to the deals index
+### What this does to the deals index
 
 Space deals render as their own cards on `/listings` (`DealCard.tsx:158`), and
-`visibleDeals` uses the same rule as the deal page. So a suite broker's index
-grows: they now see every sibling suite in their building, and a person shared
-into a building sees all of its suites. That follows from marketing being one
-wall, and the card carries the suite label and address, never the commission. It
-is the intended consequence, not a leak — but it is a visible change to how full
-that page looks for a suite broker.
+`visibleDeals` uses the same rule as the deal page. A suite broker's index is
+therefore their building plus the suites they actually work — a neighbouring
+suite resolves to `none` in both halves, so its card does not appear. That is
+the reason marketing stops at the building rather than running through to every
+suite under it.
+
+A person shared into a building does see all of its suites on the index, because
+a building share is an explicit grant to work that building's marketing, suites
+included.
 
 ## Sharing moves to the building
 
@@ -73,9 +81,8 @@ export interface DealFamily {
   shell?: Listing
   /** Shares granted on that shell. */
   shellShares?: DealShare[]
-  /** Every space under the relevant shell — the shell's children when viewing
-   *  the shell, the viewed space's siblings (itself included) when viewing a
-   *  space. Undefined for a deal with no spaces. */
+  /** A shell's child space deals. Set only when `listing` is the shell —
+   *  a space never needs its siblings, because it grants nothing across them. */
   spaces?: Listing[]
 }
 
@@ -97,7 +104,7 @@ onAnySpace = on any team in family.spaces
 isSpace = listing.parentDealId != null
 isShell = !isSpace && (family.spaces?.length ?? 0) > 0
 
-marketing = (onThis || onShell || onAnySpace)
+marketing = (onThis || onShell || (isShell && onAnySpace))
   ? "contribute"
   : higher(role.marketing, sharedLevel(shellShares ?? shares, viewer))
 
@@ -121,9 +128,9 @@ empty index page.
 
 `dealAccessFor` stays pure, so the store read lives one level up:
 
-- `useDealAccess(listing)` resolves the shell (`getListing(parentDealId)`), its
-  shares (`dealShares.get(shellId)`), and the sibling or child spaces
-  (`getChildDeals`), then passes them.
+- `useDealAccess(listing)` resolves the shell (`getListing(parentDealId)`) and
+  its shares (`dealShares.get(shellId)`) for a space, or the child spaces
+  (`getChildDeals`) for a shell. Never both — a listing is one or the other.
 - `visibleDeals` groups the listing array by `parentDealId` once and reuses the
   grouping for every row, rather than scanning per listing.
 
@@ -138,6 +145,32 @@ empty index page.
 4. **`SpaceDetailHeader.tsx`** — a real access cluster, see below.
 5. **`DealHeroAccessAvatars.tsx`** — a `readOnly` prop that drops the gear
    button and the modal entirely.
+6. **`$listingId/spaces.tsx`** — lock the rows the viewer cannot open, see
+   below.
+
+### The Spaces roster locks what it cannot open
+
+A suite broker still needs to see that the rest of the building is in flight.
+The roster keeps every row; the rows they cannot open stop being doors.
+
+The file already has both shapes. `SuiteRowItem` renders a `<Link>` when
+`row.dealId` is set and a plain `<div>` otherwise (`spaces.tsx:183`). A locked
+row takes the plain shape: same label, same square footage, same lease rate —
+all of them the building's own marketing facts, drawn from `Property.units`,
+which this viewer already has.
+
+Two things change inside a locked row:
+
+- **The stage control becomes a label.** `SuiteStatusControl` renders an
+  editable `DealStageSelect` for any suite with a deal (`spaces.tsx:58`). A
+  locked row gets the read-only `StatusPill` branch instead, showing
+  `dealStageLabel(deal.status, "space")` — you can see the suite is under
+  contract, you cannot move it.
+- **No chevron.** The trailing `faAngleRight` says "this opens"; a locked row
+  does not.
+
+Nothing about the suite's deal — its tenant, its brokers, its money — appears on
+a locked row.
 
 ### The space header's access cluster
 
@@ -176,7 +209,8 @@ repeating it on each of six suites says the same thing six times.
 `dealAccessFor.test.ts` gains a case per row of the access table, plus:
 
 - a shell team member on no space gets `backOffice: "none"`
-- a suite broker reaches a sibling suite's marketing and not its voucher
+- a suite broker resolves `none` in both halves on a sibling suite, so its card
+  leaves their deals index
 - a building share reaches every space's marketing
 - a deal with no family resolves identically with and without the argument
 
