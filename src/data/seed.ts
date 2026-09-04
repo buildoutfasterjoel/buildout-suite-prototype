@@ -54,7 +54,7 @@ import {
   type ContactShare,
   type Teammate,
 } from './teammates'
-import type { DealShare } from './dealShares'
+import type { DealShare, ShareLevel } from './dealShares'
 import {
   DEFAULT_PERSONAL_SPLIT_PCT,
   STAGE_CLOSE_PROBABILITY,
@@ -3253,18 +3253,32 @@ export function seedDealShares(listings: Listing[]): Map<string, DealShare[]> {
   const member = (id: string) => TEAMMATES.find((t) => t.id === id)
   const maya = member('maya-brooks')
   const riley = member('riley-park')
+
+  /**
+   * A share always hangs on the building. Marketing is the building's, so
+   * `dealAccessFor` reads a space's shell for its share list and would never
+   * find one written on the space — see `components/deals/dealAccess.ts`. A
+   * member already granted keeps the level they were granted first.
+   */
+  const grant = (listing: Listing, who: Teammate, level: ShareLevel) => {
+    const key = listing.parentDealId ?? listing.id
+    const shares = map.get(key)
+    if (!shares) {
+      map.set(key, [{ member: who, level }])
+      return
+    }
+    if (shares.some((s) => s.member.id === who.id)) return
+    shares.push({ member: who, level })
+  }
+
   listings.forEach((l, i) => {
-    const shares: DealShare[] = []
     // A deal Maya opened is a deal Maya keeps. The create form grants this share
     // for real (see `CreateDealModal`); the seed grants it here for the deals
     // that arrive already opened by her, because without it she would have typed
     // in a deal and immediately lost it — `onDealTeam` reads the broker list,
     // and marketing is never on it.
-    if (maya && (l.createdById === maya.id || i % 3 === 0)) {
-      shares.push({ member: maya, level: 'contribute' })
-    }
-    if (riley && i % 6 === 2) shares.push({ member: riley, level: 'view' })
-    if (shares.length > 0) map.set(l.id, shares)
+    if (maya && (l.createdById === maya.id || i % 3 === 0)) grant(l, maya, 'contribute')
+    if (riley && i % 6 === 2) grant(l, riley, 'view')
   })
   return map
 }
