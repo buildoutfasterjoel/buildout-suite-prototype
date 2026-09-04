@@ -54,6 +54,7 @@ import {
   type ContactShare,
   type Teammate,
 } from './teammates'
+import type { DealShare } from './dealShares'
 import {
   DEFAULT_PERSONAL_SPLIT_PCT,
   STAGE_CLOSE_PROBABILITY,
@@ -1293,6 +1294,34 @@ function brokerTeammateFor(seed: string): Teammate {
 }
 
 /**
+ * The roster member behind a deal's lead broker — who the deal is created by.
+ *
+ * Matched by name because `generateBroker` draws the identity from
+ * `BROKER_TEAMMATES` and keeps only the name and email on the row. Falls back to
+ * the protagonist, which cannot happen for a seeded deal but keeps the return
+ * type honest.
+ */
+/**
+ * The Marketing Assistant who opens deals for other people's books.
+ *
+ * She holds Create Listings by override and neither `have-listings` nor
+ * `view-other-vouchers`, so she can start a deal, build its materials, and never
+ * reach its voucher. A few seeded deals are hers so that flow exists on arrival
+ * rather than only after someone clicks through the create form.
+ */
+const MARKETING_CREATOR_ID = 'maya-brooks'
+
+/** Roughly one deal in eleven was opened by marketing rather than by its broker. */
+export function marketingCreatedDeal(dealId: string): boolean {
+  return hashCode(`${dealId}-opened-by`) % 11 === 3
+}
+
+function leadBrokerTeammate(internal: DealBroker[]): Teammate {
+  const name = internal[0]?.name
+  return BROKER_TEAMMATES.find((t) => t.name === name) ?? CURRENT_USER
+}
+
+/**
  * One broker and their share.
  *
  * `commissionAmount` is the pool this broker is drawn from, which for both
@@ -1455,6 +1484,47 @@ export function generateTasks(stage: ListingStage, stageStartedAt: string): Deal
  * A property contains 1–3 listings (spaces). Each listing IS its deal (1:1), so it
  * carries the deal's transaction, brokers, contacts, planner, history, and voucher.
  */
+/**
+ * A second internal broker on a deal that two of the firm's own worked.
+ *
+ * Everything here is hashed from the deal id rather than drawn, so adding
+ * co-brokered deals costs the faker stream nothing and the hand-written stories
+ * pinned to positions in it stay where they were.
+ *
+ * The split is 60/40 of what the lead already held, taken exactly rather than by
+ * two roundings: the second broker gets the remainder, so the pair still sums to
+ * what the one of them held before and the voucher's unallocated gate still
+ * reads $0.
+ */
+function withSecondBroker(dealId: string, internal: DealBroker[]): DealBroker[] {
+  const lead = internal[0]
+  if (!lead) return internal
+  // A different person from the lead — step past them if the hash lands there.
+  const i = hashCode(`${dealId}-co`) % BROKER_TEAMMATES.length
+  let member = BROKER_TEAMMATES[i]!
+  if (member.name === lead.name) {
+    member = BROKER_TEAMMATES[(i + 1) % BROKER_TEAMMATES.length]!
+  }
+  const leadPct = Math.round(lead.commissionSplitPct * 0.6)
+  const leadGross = Math.round(lead.grossCommission * 0.6)
+  const coId = `co-${dealId}`
+  return [
+    { ...lead, commissionSplitPct: leadPct, grossCommission: leadGross },
+    {
+      id: coId,
+      name: member.name,
+      role: 'Additional Broker',
+      email: member.email,
+      side: 'internal',
+      commissionSplitPct: lead.commissionSplitPct - leadPct,
+      grossCommission: lead.grossCommission - leadGross,
+      commissionPlan: commissionPlanFor(coId),
+      personalSplitPct: DEFAULT_PERSONAL_SPLIT_PCT,
+      transactionSide: lead.transactionSide,
+    },
+  ]
+}
+
 function generateListings(
   property: Property,
   propertyContacts: Contact[],
@@ -1556,6 +1626,15 @@ function generateListings(
       ...b,
       transactionSide: dealSide === 'buyer' ? 'Buy Side' : 'Sell Side',
     }))
+
+    // Roughly one deal in eight is worked by two of the firm's own. Most CRE
+    // deals have a single broker, so this stays a minority — but it cannot be
+    // none: a co-brokered deal is the only place the voucher's private-payout
+    // marker has anything to hide, and a feature with no seeded example is a
+    // feature nobody sees. Hashed from the deal id, so the choice is stable
+    // across runs and costs the faker stream nothing.
+    const internalTeam =
+      hashCode(id) % 8 === 0 ? withSecondBroker(id, brokersWithSide) : brokersWithSide
 
     // Parties are drawn from THIS property's associated contacts so the graph
     // stays reciprocal (a deal's contacts are linked to the deal's property).
@@ -2073,8 +2152,15 @@ function generateListings(
 
       // Deal (1:1)
       dealId,
-      createdById: brokerTeammateFor(id).id,
-      internalBrokers: brokersWithSide,
+      // The person who opened the deal is the person who works it. This used to
+      // hash the *deal's* id while the internal broker hashed the *broker row's*
+      // uuid, so the two rarely agreed and a deal could read "created by Sarah
+      // Chen" over a broker list holding only Marcus Patel — a creator who was
+      // on the deal's team without appearing anywhere on the deal.
+      createdById: marketingCreatedDeal(id)
+        ? MARKETING_CREATOR_ID
+        : leadBrokerTeammate(internalTeam).id,
+      internalBrokers: internalTeam,
       outsideBrokers,
       sellerContactIds: sellerContacts.map((c) => c.id),
       buyerContactIds: buyerContacts.map((c) => c.id),
@@ -3135,5 +3221,50 @@ export function seedContactShares(
   // The one hand-placed share: Sarah's Dana Whitfield, shared with Ethan at
   // Contributor, so the Link action on the person pair has a seat to run from.
   map.set(PERSON_PAIR_IDS.danaSarah, [{ member: CURRENT_USER, tier: 'contributor' }])
+  return map
+}
+
+/**
+ * Seed deal sharing so a marketing share has something to show without anyone
+ * sharing a deal by hand first.
+ *
+ * Both people used here hold `sharing`-kind roles — they own no records and see
+ * only what is shared with them (see `ROLE_ACCESS_DETAIL` in `permissions.ts`).
+ * That is what makes them the demo seats: switch to Maya and a shared deal opens
+ * with no Back Office group at all, while an unshared one does not open.
+ *
+ * Riley is seeded at `view` on purpose. Their Office Admin role holds none of
+ * the marketing edit permissions, so a `contribute` share would resolve down to
+ * `view` anyway — and a stored share that lies about what someone gets is worth
+ * avoiding. The capped case is demonstrated live instead: the modal disables
+ * "Can edit" for Riley and says why.
+ *
+ * Omar, the Transaction Coordinator, is deliberately shared nothing. His job is
+ * the close, and the voucher is reached by role rather than by invitation — so
+ * an empty seat is the honest demonstration of a sharing-role person nobody has
+ * shared with.
+ *
+ * Keyed off the listing's index, so the assignment is deterministic and stable
+ * across runs. No faker — the seed tests pin that nothing here draws from the
+ * shared stream.
+ */
+export function seedDealShares(listings: Listing[]): Map<string, DealShare[]> {
+  const map = new Map<string, DealShare[]>()
+  const member = (id: string) => TEAMMATES.find((t) => t.id === id)
+  const maya = member('maya-brooks')
+  const riley = member('riley-park')
+  listings.forEach((l, i) => {
+    const shares: DealShare[] = []
+    // A deal Maya opened is a deal Maya keeps. The create form grants this share
+    // for real (see `CreateDealModal`); the seed grants it here for the deals
+    // that arrive already opened by her, because without it she would have typed
+    // in a deal and immediately lost it — `onDealTeam` reads the broker list,
+    // and marketing is never on it.
+    if (maya && (l.createdById === maya.id || i % 3 === 0)) {
+      shares.push({ member: maya, level: 'contribute' })
+    }
+    if (riley && i % 6 === 2) shares.push({ member: riley, level: 'view' })
+    if (shares.length > 0) map.set(l.id, shares)
+  })
   return map
 }

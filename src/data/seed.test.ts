@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { generateTasks, generateDataset } from './seed'
+import {
+  generateTasks,
+  generateDataset,
+  marketingCreatedDeal,
+  seedDealShares,
+} from './seed'
 import { invoiceQuickbooksSynced, isQuickbooksSynced } from './quickbooks'
 import { findTeammate } from './teammates'
 import {
@@ -880,5 +885,88 @@ describe('quickbooks sync seed', () => {
     const synced = all.filter((r) => r.quickbooksSynced)
     expect(synced.length).toBeGreaterThan(0)
     expect(synced.length).toBeLessThan(all.length)
+  })
+})
+
+describe('deal team seed', () => {
+  const { listings } = generateDataset()
+  // Spaces clone their parent's brokers; the rules below are about the deals
+  // that generate their own.
+  const deals = listings.filter((l) => !l.parentDealId)
+
+  it('makes a broker-created deal one of that broker\'s own', () => {
+    // The bug this pins: the creator used to be hashed from the deal id while
+    // the broker was hashed from the broker row's uuid, so a deal could read
+    // "created by Sarah Chen" over a broker list holding only Marcus Patel.
+    // Marketing-opened deals are the deliberate exception below.
+    for (const l of deals.filter((x) => !marketingCreatedDeal(x.id))) {
+      const creator = findTeammate(l.createdById)
+      expect(creator, l.id).toBeDefined()
+      expect(
+        l.internalBrokers.map((b) => b.name),
+        `${l.name} created by ${creator?.name}`,
+      ).toContain(creator!.name)
+    }
+  })
+
+  it('leaves a marketing-opened deal to a broker, and shares it back', () => {
+    // Maya can open a deal and cannot hold one, so she is never on its broker
+    // list. Without the share she would have typed in a deal and lost it.
+    const shares = seedDealShares(listings)
+    const opened = deals.filter((l) => marketingCreatedDeal(l.id))
+    expect(opened.length).toBeGreaterThanOrEqual(1)
+    for (const l of opened) {
+      expect(l.createdById, l.name).toBe('maya-brooks')
+      expect(l.internalBrokers.map((b) => b.name), l.name).not.toContain('Maya Brooks')
+      expect(
+        (shares.get(l.id) ?? []).map((s) => s.member.id),
+        l.name,
+      ).toContain('maya-brooks')
+    }
+  })
+
+  it('seeds a minority of deals with a second internal broker', () => {
+    const coBroked = deals.filter((l) => l.internalBrokers.length > 1)
+    // Enough that the voucher's private-payout marker has something to hide...
+    expect(coBroked.length).toBeGreaterThanOrEqual(2)
+    // ...and few enough that a single broker is still the norm.
+    expect(coBroked.length).toBeLessThan(deals.length / 2)
+  })
+
+  it('gives a co-brokered deal two different people, both on the roster', () => {
+    for (const l of deals.filter((x) => x.internalBrokers.length > 1)) {
+      const names = l.internalBrokers.map((b) => b.name)
+      expect(new Set(names).size, l.name).toBe(names.length)
+      for (const b of l.internalBrokers) {
+        expect(b.personalSplitPct, `${l.name}/${b.name}`).toBeGreaterThan(0)
+        expect(COMMISSION_PLANS, `${l.name}/${b.name}`).toContain(b.commissionPlan)
+      }
+    }
+  })
+
+  it('splits a co-brokered deal without losing or inventing a dollar', () => {
+    // The second broker takes the remainder rather than a second rounding, so
+    // the pair still sums to 100% and the voucher's unallocated gate reads zero.
+    // A proposal-stage deal can carry no commission at all, and 0 split two ways
+    // is 0 and 0 — that is the split working, not failing.
+    for (const l of deals.filter((x) => x.internalBrokers.length > 1)) {
+      const pctTotal = l.internalBrokers.reduce((t, b) => t + b.commissionSplitPct, 0)
+      const outside = l.outsideBrokers.reduce((t, b) => t + b.commissionSplitPct, 0)
+      expect(pctTotal + outside, l.name).toBe(100)
+      for (const b of l.internalBrokers) {
+        expect(b.grossCommission, `${l.name}/${b.name}`).toBeGreaterThanOrEqual(0)
+      }
+    }
+  })
+
+  it('gives at least one co-brokered deal real money on both rows', () => {
+    // Otherwise the private-payout marker has a demo that reads "$0 vs locked",
+    // which shows nothing.
+    const withMoney = deals.filter(
+      (l) =>
+        l.internalBrokers.length > 1 &&
+        l.internalBrokers.every((b) => b.grossCommission > 0),
+    )
+    expect(withMoney.length).toBeGreaterThanOrEqual(1)
   })
 })

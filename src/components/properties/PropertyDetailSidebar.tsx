@@ -14,6 +14,7 @@ import type { Listing } from "#/data/types";
 import { propertyQualifiesForUnderwriting } from "#/components/deals/underwriting/eligibility";
 import { dealShape, isLeaseParent } from "#/data/dealShape";
 import { visibleNavGroups } from "#/components/properties/dealNav";
+import { useDealAccess } from "#/components/deals/useDealAccess";
 
 /** localStorage key for which sidebar category groups are collapsed. */
 const COLLAPSED_STORAGE_KEY = "deal-sidebar-collapsed-groups";
@@ -98,10 +99,18 @@ export function PropertyDetailSidebar({
   // from canAddSpaces, which governs only the Add-space buttons, not navigation.
   const leaseParent = isLeaseParent(listing);
 
+  // Each half of the deal is shown only to someone entitled to it: a marketing
+  // share hides the money, and the back office reaching a deal through
+  // `view-other-vouchers` gets the voucher and no marketing. The deal team
+  // resolves to both, so this is a no-op for them.
+  const access = useDealAccess(listing);
+
   const navGroups = visibleNavGroups(shape, {
     leaseParent,
     showsUnderwriting,
     isClassic: listing.isClassic,
+    showsMarketing: access.marketing !== "none",
+    showsBackOffice: access.backOffice !== "none",
   });
 
   function handleTabChange(value: string) {

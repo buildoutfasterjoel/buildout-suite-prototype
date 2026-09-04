@@ -7,6 +7,9 @@ import { faUserGear } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing } from "#/data/types";
 import { HeroAccessAvatar } from "#/components/common/HeroAccessAvatar";
 import { ManageDealAccessModal } from "./ManageDealAccessModal";
+import { useDealShares } from "./useDealAccess";
+import { shareLevelLabel } from "#/data/dealShares";
+import { viewerId } from "#/data/currentUser";
 import {
   brokerInitials,
   brokerTeammate,
@@ -23,15 +26,21 @@ import {
  * says who they are. Every avatar is also a way into that modal, so the whole
  * cluster answers "who has this?" on hover and "change it" on click.
  *
- * Access is the deal team today (see `dealAccess.ts`), so the group is a deal's
- * internal brokers. When roles beyond brokers can be granted access, they join
- * the group here without this component changing shape.
+ * The group is the deal team — a deal's internal brokers — followed by anyone
+ * shared into it. A shared teammate's tooltip says it is marketing and at what
+ * level, so the cluster answers "who has this, and to what?" without opening
+ * anything.
  */
 export function DealHeroAccessAvatars({ listing }: { listing: Listing }) {
   const [manageOpen, setManageOpen] = useState(false);
   const creator = dealCreator(listing);
   const team = dealTeamBrokers(listing);
+  const { shares } = useDealShares(listing.id);
   const open = () => setManageOpen(true);
+  // A share row means the viewer is a guest on this deal, not on its team. Guests
+  // read the access list; they don't hand it out.
+  const readOnly = shares.some((s) => s.member.id === viewerId());
+  const actionLabel = readOnly ? "see who has access" : "manage access";
 
   return (
     <div className="d-flex align-items-center" style={{ gap: 4 }}>
@@ -41,11 +50,11 @@ export function DealHeroAccessAvatars({ listing }: { listing: Listing }) {
         access="Created this deal"
         avatarUrl={creator.avatarUrl}
         isOwner
-        actionLabel="manage access"
+        actionLabel={actionLabel}
         onOpenShare={open}
       />
 
-      {team.length > 0 && (
+      {(team.length > 0 || shares.length > 0) && (
         <Avatar.Group className="hero-access__group">
           {team.map((b) => (
             <HeroAccessAvatar
@@ -54,7 +63,18 @@ export function DealHeroAccessAvatars({ listing }: { listing: Listing }) {
               name={b.name}
               access={b.role}
               avatarUrl={brokerTeammate(b)?.avatarUrl}
-              actionLabel="manage access"
+              actionLabel={actionLabel}
+              onOpenShare={open}
+            />
+          ))}
+          {shares.map((s) => (
+            <HeroAccessAvatar
+              key={s.member.id}
+              fallback={s.member.initials}
+              name={s.member.name}
+              access={`Marketing · ${shareLevelLabel(s.level)}`}
+              avatarUrl={s.member.avatarUrl}
+              actionLabel={actionLabel}
               onOpenShare={open}
             />
           ))}
@@ -68,7 +88,7 @@ export function DealHeroAccessAvatars({ listing }: { listing: Listing }) {
               variant="ghost"
               appearance="muted"
               size="icon-sm"
-              aria-label="Manage access"
+              aria-label={readOnly ? "See who has access" : "Manage access"}
               onClick={open}
               className="hero-access__btn"
             >
@@ -76,13 +96,14 @@ export function DealHeroAccessAvatars({ listing }: { listing: Listing }) {
             </Button>
           }
         />
-        <Tooltip.Content>Manage access</Tooltip.Content>
+        <Tooltip.Content>{readOnly ? "Who has access" : "Manage access"}</Tooltip.Content>
       </Tooltip>
 
       <ManageDealAccessModal
         listing={listing}
         open={manageOpen}
         onOpenChange={setManageOpen}
+        readOnly={readOnly}
       />
     </div>
   );

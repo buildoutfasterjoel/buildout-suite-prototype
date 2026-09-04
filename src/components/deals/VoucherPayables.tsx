@@ -170,7 +170,14 @@ function PaymentRow({
  * amount: a payable is a consequence of money arriving, and the way to change
  * one is to change the deposit that raised it.
  */
-export function PayablesSection({ listing }: { listing: Listing }) {
+export function PayablesSection({
+  listing,
+  seesPayout,
+}: {
+  listing: Listing;
+  /** See `canSeeBrokerPayout` — resolved once by the voucher and passed down. */
+  seesPayout: (broker: Pick<DealBroker, "name">) => boolean;
+}) {
   const voucher = listing.transaction.backOffice;
   const payables = voucher.payables ?? [];
   const [paying, setPaying] = useState<VoucherPayable | null>(null);
@@ -178,9 +185,25 @@ export function PayablesSection({ listing }: { listing: Listing }) {
   const brokerFor = (payable: VoucherPayable) =>
     findPayableBroker(listing, payable.brokerId);
 
-  const grossTotal = payables.reduce((t, p) => t + p.grossAmount, 0);
-  const grossPaidTotal = payables.reduce((t, p) => t + payableGrossPaid(p), 0);
-  const netPaidTotal = payables.reduce(
+  // Every row this viewer is entitled to. Unlike the commission tables above,
+  // which mark a colleague's payout and keep the row, this section drops the
+  // row entirely: a payable is a cheque owed to one person, and there is
+  // nothing on it — not the date, not the gross, not the payments beneath it —
+  // that a different broker has business reading. Marking four cells on a row
+  // that should not be there at all was the more complicated way to say less.
+  //
+  // An unresolvable broker is dropped too: we cannot show the row is the
+  // viewer's own, and guessing open is the wrong way to be wrong about pay.
+  const mine = payables.filter((p) => {
+    const broker = brokerFor(p);
+    return broker ? seesPayout(broker) : false;
+  });
+
+  // Totals over the rows on screen. That is the honest sum of a filtered table:
+  // the section is this broker's payables, so its Sum is what they are owed.
+  const grossTotal = mine.reduce((t, p) => t + p.grossAmount, 0);
+  const grossPaidTotal = mine.reduce((t, p) => t + payableGrossPaid(p), 0);
+  const netPaidTotal = mine.reduce(
     (t, p) => t + payableNetPaid(p, brokerFor(p)),
     0,
   );
@@ -220,10 +243,11 @@ export function PayablesSection({ listing }: { listing: Listing }) {
 
   return (
     <Section title="Payables & Payments">
-      {payables.length === 0 ? (
+      {mine.length === 0 ? (
         <p className="text-muted mb-0">
-          No payables yet. Applying a deposit to this voucher will create one for
-          each broker, for their share of what arrived.
+          {payables.length === 0
+            ? "No payables yet. Applying a deposit to this voucher will create one for each broker, for their share of what arrived."
+            : "Nothing here is yours yet. This section shows what the brokerage owes you on this deal."}
         </p>
       ) : (
         <Table dense className="align-middle">
@@ -255,7 +279,7 @@ export function PayablesSection({ listing }: { listing: Listing }) {
             </Table.Row>
           </Table.Header>
           <Table.Body>
-            {payables.map((payable) => {
+            {mine.map((payable) => {
               const broker = brokerFor(payable);
               return (
                 <Fragment key={payable.id}>

@@ -2164,6 +2164,20 @@
   &:hover {
     background: var(--color-storm-grey-50, #f6f7f9);
   }
+
+  // A level the staged person's role can't back. Kept visible and readable —
+  // its sub-line carries the reason, which is the whole point of showing it.
+  &--blocked {
+    cursor: not-allowed;
+
+    &:hover {
+      background: transparent;
+    }
+
+    .fw-semibold {
+      opacity: 0.55;
+    }
+  }
 }
 
 // ── Contact engagement compose module ────────────────────────────────────────

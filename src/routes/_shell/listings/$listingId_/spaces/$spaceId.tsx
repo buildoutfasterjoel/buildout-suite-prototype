@@ -7,6 +7,7 @@ import { faVectorSquare } from "@fortawesome/pro-regular-svg-icons";
 import { getListing, getStore } from "#/data/store";
 import { dealBreadcrumbTrail } from "#/components/properties/dealNav";
 import { PropertyDetailSidebar } from "#/components/properties/PropertyDetailSidebar";
+import { DealAccessGate } from "#/components/deals/DealAccessGate";
 import { SpaceDetailHeader } from "#/components/deals/SpaceDetailHeader";
 import { useSpaceRoute } from "#/components/deals/useSpaceRoute";
 
@@ -75,33 +76,40 @@ function SpaceDetailLayout() {
   const { subsectionLabel } = dealBreadcrumbTrail(pathname, listingId);
 
   return (
-    <div className="h-100 overflow-y-auto overflow-x-hidden">
-      <SpaceDetailHeader
-        space={record.space}
-        shell={shell}
-        property={record.property}
-        label={record.label}
-      />
+    // The space is its own record with its own shares, so the gate reads the
+    // space — not the shell it hangs under.
+    <DealAccessGate
+      listing={record.space}
+      basePath={`/listings/${listingId}/spaces/${spaceId}`}
+    >
+      <div className="h-100 overflow-y-auto overflow-x-hidden">
+        <SpaceDetailHeader
+          space={record.space}
+          shell={shell}
+          property={record.property}
+          label={record.label}
+        />
 
-      <div className="container d-flex align-items-start gap-4 py-4">
-        <Card
-          className="shadow flex-shrink-0 position-sticky"
-          style={{ width: 180, top: 0 }}
-        >
-          <PropertyDetailSidebar
-            listing={record.space}
-            basePath={`/listings/${listingId}/spaces/${spaceId}`}
-            activeLabel={subsectionLabel}
-            // `listingId` here is the shell's — the space's route is nested under
-            // it — which is exactly the building that owns its marketing.
-            buildingLink={{ label: "Building", listingId, name: shell.name }}
-          />
-        </Card>
+        <div className="container d-flex align-items-start gap-4 py-4">
+          <Card
+            className="shadow flex-shrink-0 position-sticky"
+            style={{ width: 180, top: 0 }}
+          >
+            <PropertyDetailSidebar
+              listing={record.space}
+              basePath={`/listings/${listingId}/spaces/${spaceId}`}
+              activeLabel={subsectionLabel}
+              // `listingId` here is the shell's — the space's route is nested under
+              // it — which is exactly the building that owns its marketing.
+              buildingLink={{ label: "Building", listingId, name: shell.name }}
+            />
+          </Card>
 
-        <Card className="flex-grow-1 shadow" style={{ minWidth: 0 }}>
-          <Outlet />
-        </Card>
+          <Card className="flex-grow-1 shadow" style={{ minWidth: 0 }}>
+            <Outlet />
+          </Card>
+        </div>
       </div>
-    </div>
+    </DealAccessGate>
   );
 }

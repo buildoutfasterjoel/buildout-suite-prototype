@@ -40,6 +40,10 @@ import {
   type NewListingDraft,
 } from "#/data/createListing";
 import { createDeal } from "#/data/actions";
+import { grantDealShares } from "#/data/store";
+import { viewerId } from "#/data/currentUser";
+import { BROKER_TEAMMATES } from "#/data/teammates";
+import { useCan } from "#/components/settings/users/useViewer";
 import {
   getPropertyOptions,
   getContactOptions,
@@ -216,6 +220,15 @@ export function CreateDealModal({
   const [dealType, setDealType] = useState<NewListingDraft["dealType"]>("Sale");
   const [side, setSide] = useState<DealSide | null>(null);
   const [stage, setStage] = useState<PropertyStatus>("proposal");
+  // Who the deal is for. Pre-filled with the person filling the form when their
+  // role lets them hold a listing, so a broker opening their own deal confirms
+  // rather than picks. A marketing person cannot hold one, so they get an empty
+  // field and the Create button waits for them to name a broker.
+  const canOwnListings = useCan("have-listings");
+  const [brokerId, setBrokerId] = useState("");
+  useEffect(() => {
+    if (open) setBrokerId(canOwnListings ? viewerId() : "");
+  }, [open, canOwnListings]);
   const [contactOption, setContactOption] = useState<ContactOption | null>(
     null,
   );
@@ -450,14 +463,17 @@ export function CreateDealModal({
   // units) is always fine.
   const unitOk = !hasUnits || wholeBuilding || selectedUnitId !== null;
   // A deal needs a side plus at least one of contact/property; a chosen property
-  // with units also needs a unit (or whole-building).
-  const canCreate = side !== null && (hasContact || hasProperty) && unitOk;
+  // with units also needs a unit (or whole-building); and it needs a broker,
+  // because a deal belongs to somebody before it exists.
+  const canCreate =
+    side !== null && (hasContact || hasProperty) && unitOk && brokerId !== "";
 
   // Spell out what's still required so the disabled buttons aren't a dead end.
   const missingBits: string[] = [];
   if (side === null) missingBits.push("a side");
   if (!hasContact && !hasProperty) missingBits.push("a contact or property");
   if (hasUnits && !unitOk) missingBits.push("a unit");
+  if (brokerId === "") missingBits.push("a primary broker");
   const missingHint = missingBits.length
     ? `Add ${joinList(missingBits)} to continue.`
     : "";
@@ -511,6 +527,7 @@ export function CreateDealModal({
       attachAs: unit ? "space" : "building",
       spaceLabel: unit?.label ?? "",
       unitId: unit?.id ?? null,
+      brokerId,
       sellerContactId: side === "seller" ? contactId : "",
       buyerContactId: side === "buyer" ? contactId : "",
       documents: files,
@@ -527,6 +544,14 @@ export function CreateDealModal({
           : undefined,
     };
     const { deal: listing } = createDeal(draft);
+    // Someone who opened a deal for somebody else's book keeps the marketing
+    // they are about to build, and nothing more. Without this a marketing
+    // person would type in a deal and immediately lose it: `onDealTeam` reads
+    // the broker list, and they are not on it. `contribute` is what is asked
+    // for; `dealAccessFor` caps it at view for a role that cannot edit.
+    if (brokerId !== viewerId()) {
+      grantDealShares(listing.id, [viewerId()], "contribute");
+    }
     onOpenChange(false);
     void navigate({
       to: "/listings/$listingId/overview",
@@ -586,6 +611,39 @@ export function CreateDealModal({
                   </p>
                 )}
               </div>
+
+              {/* Above Side rather than below it because it is the one field a
+                  marketing person cannot answer from the deal itself — they have
+                  to know whose book it is before anything else.
+
+                  The label carries the whole explanation. A marketing assistant
+                  needs to know a deal takes a primary broker, not why her role
+                  cannot be one; the sentence that used to sit under this field
+                  explained the permission model to someone who is only trying to
+                  start a deal. */}
+              <Field>
+                <Field.Label>Primary Broker</Field.Label>
+                <Select
+                  value={brokerId}
+                  onValueChange={(v) => setBrokerId(v as string)}
+                >
+                  <Select.Trigger>
+                    {/* The name, not the id: `Select.Value` renders the raw
+                        stored value on its own. */}
+                    <Select.Value placeholder="Choose a broker">
+                      {BROKER_TEAMMATES.find((t) => t.id === brokerId)?.name}
+                    </Select.Value>
+                  </Select.Trigger>
+                  <Select.Content>
+                    {BROKER_TEAMMATES.map((t) => (
+                      <Select.Item key={t.id} value={t.id}>
+                        {t.name}
+                        {t.id === viewerId() ? " (you)" : ""}
+                      </Select.Item>
+                    ))}
+                  </Select.Content>
+                </Select>
+              </Field>
 
               {/* Side */}
               <Field>

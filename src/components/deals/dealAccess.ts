@@ -5,15 +5,29 @@ import {
   type Teammate,
 } from "#/data/teammates";
 import type { DealBroker, Listing } from "#/data/types";
+import {
+  isPermissionOn,
+  type PermissionOverrides,
+  type RoleId,
+} from "#/data/permissions";
+import {
+  BACK_OFFICE_EDIT_PERMISSION,
+  BACK_OFFICE_VIEW_PERMISSION,
+  MARKETING_EDIT_PERMISSIONS,
+  MARKETING_VIEW_PERMISSION,
+  type DealShare,
+} from "#/data/dealShares";
 
 /**
  * Who can open a deal, for the header's access cluster and its Manage Access
  * modal.
  *
- * Access follows the deal team: the person who created it, plus its internal
- * brokers. Outside brokers are excluded — a co-broking agent is not on the
- * firm's books and has no seat in the app. There is no separate share list yet;
- * when other roles can be granted access, it lands here.
+ * The deal team is its internal brokers, and they have it all. Outside brokers are excluded: a co-broking agent is not on the firm's
+ * books and has no seat in the app.
+ *
+ * Everyone else gets in by being shared in, which is the second half of this
+ * file: `dealAccessFor` resolves a team membership, a share and a role into what
+ * one person may do on one deal.
  */
 
 /** The person who opened the deal. Falls back to the protagonist for an unknown id. */
@@ -56,3 +70,158 @@ export function dealTeamBrokers(listing: Listing): DealBroker[] {
   const creator = dealCreator(listing);
   return listing.internalBrokers.filter((b) => b.name !== creator.name);
 }
+
+/* ------------------------------------------------------------------------- *
+ * Resolution: what one person may do on one deal.
+ * ------------------------------------------------------------------------- */
+
+/** What a person may do in one half of a deal. */
+export type AccessLevel = "none" | "view" | "contribute";
+
+export interface DealAccess {
+  marketing: AccessLevel;
+  backOffice: AccessLevel;
+}
+
+/** Everything, both halves — the deal team's access. */
+const FULL: DealAccess = { marketing: "contribute", backOffice: "contribute" };
+
+const RANK: Record<AccessLevel, number> = { none: 0, view: 1, contribute: 2 };
+
+/** The more open of two levels. A share raises what a role already granted. */
+function higher(a: AccessLevel, b: AccessLevel): AccessLevel {
+  return RANK[a] >= RANK[b] ? a : b;
+}
+
+/** The slice of a roster row this needs. Kept structural so tests can fake it. */
+export interface AccessViewer {
+  id: string;
+  name: string;
+  roleIds: RoleId[];
+  overrides: PermissionOverrides;
+}
+
+const can = (viewer: AccessViewer, permissionId: string) =>
+  isPermissionOn(viewer.roleIds, viewer.overrides, permissionId);
+
+/**
+ * True when the viewer works this deal as one of its internal brokers.
+ *
+ * `createdById` is deliberately *not* consulted. It used to be, on the
+ * assumption that whoever opened a deal works it — which held while only
+ * brokers could create one. A marketing person with Create Listings opens deals
+ * they must never see the voucher of, so the creator field is an audit fact and
+ * the broker list is the team. A marketing creator keeps the deal they built
+ * through the marketing share the create flow grants them, not through having
+ * typed it in.
+ */
+function onDealTeam(listing: Listing, viewer: AccessViewer): boolean {
+  return listing.internalBrokers.some((b) => b.name === viewer.name);
+}
+
+/**
+ * Whether this person's role lets them edit marketing at all — the ceiling a
+ * share cannot exceed. Exported because the share modal disables "Can edit" and
+ * needs to say why before anything is granted.
+ */
+export function canEditMarketing(viewer: AccessViewer): boolean {
+  return MARKETING_EDIT_PERMISSIONS.some((id) => can(viewer, id));
+}
+
+/**
+ * What a role alone opens on a deal its holder is not on — read straight from
+ * the two permissions that name it, rather than from `accessKind`.
+ *
+ * That distinction is the whole reason a Back Office Manager works: they hold
+ * `view-other-vouchers` and not `access-other-listings`, so they get the
+ * voucher on every deal in the firm and none of the marketing — which is
+ * exactly what the back office is for. A Managing Director holds both and keeps
+ * seeing everything. A Broker holds neither, which is what `accessKind: "owns"`
+ * has always claimed: a book of their own, not a window onto everyone else's.
+ *
+ * Editing follows the same split. `edit-other-vouchers` is the Back Office
+ * Manager's alone, so a Managing Director reaches a voucher at `view` — they
+ * sign work off, they do not type it.
+ */
+function roleAccess(viewer: AccessViewer): DealAccess {
+  return {
+    marketing: can(viewer, MARKETING_VIEW_PERMISSION)
+      ? canEditMarketing(viewer)
+        ? "contribute"
+        : "view"
+      : "none",
+    backOffice: can(viewer, BACK_OFFICE_VIEW_PERMISSION)
+      ? can(viewer, BACK_OFFICE_EDIT_PERMISSION)
+        ? "contribute"
+        : "view"
+      : "none",
+  };
+}
+
+/**
+ * What this viewer may do on this deal — the one function the whole feature
+ * rests on. Pure, so it is testable without a store or a browser.
+ *
+ * Rules, in order:
+ *
+ *  1. **On the deal team** — the creator or an internal broker — gets both
+ *     halves. (What the *voucher* then shows them of a colleague's payout is a
+ *     narrower question, answered by `canSeeBrokerPayout`.)
+ *  2. **Everyone else** starts from what their role opens firm-wide, and a
+ *     share raises the marketing half on top of it — capped by the same role.
+ *     A share never touches the back office: sharing a deal shares its
+ *     marketing, and the voucher is not a broker's to hand out.
+ *
+ * The share is a floor, not a replacement, so sharing a deal's marketing with a
+ * Back Office Manager cannot take away the voucher their role already reaches.
+ *
+ * A viewer with no roster row falls through to full access rather than none: we
+ * cannot resolve a ceiling for someone we can't find, and blanking the deal page
+ * over a missing row is a worse failure than showing it.
+ */
+export function dealAccessFor(
+  listing: Listing,
+  viewer: AccessViewer | undefined,
+  shares: DealShare[],
+): DealAccess {
+  if (!viewer) return FULL;
+  if (onDealTeam(listing, viewer)) return FULL;
+
+  const role = roleAccess(viewer);
+  const share = shares.find((s) => s.member.id === viewer.id);
+  if (!share) return role;
+
+  const shared: AccessLevel =
+    share.level === "contribute" && canEditMarketing(viewer) ? "contribute" : "view";
+  return { marketing: higher(role.marketing, shared), backOffice: role.backOffice };
+}
+
+/** Whether the viewer can open the deal at all. */
+export function canOpenDeal(access: DealAccess): boolean {
+  return access.marketing !== "none" || access.backOffice !== "none";
+}
+
+/**
+ * The deals this viewer may know exist — every enumeration of the book goes
+ * through here, the way `visibleContacts` gates the contact book.
+ *
+ * It asks exactly the question the deal page asks. A Broker's index is their own
+ * book plus what has been shared with them, because `dealAccessFor` already says
+ * a Broker holds neither `access-other-listings` nor `view-other-vouchers`; a
+ * Back Office Manager's index is every deal in the firm, since the voucher they
+ * can reach is on all of them. Listing a deal the viewer cannot open would be a
+ * row that goes nowhere, and on a book of business the row itself is the leak —
+ * the address and the price are on the card.
+ */
+export function visibleDeals(
+  listings: Listing[],
+  viewer: AccessViewer | undefined,
+  shares: ReadonlyMap<string, DealShare[]>,
+): Listing[] {
+  return listings.filter((l) =>
+    canOpenDeal(dealAccessFor(l, viewer, shares.get(l.id) ?? NO_SHARES)),
+  );
+}
+
+/** Stable empty list, so the filter above allocates nothing per unshared deal. */
+const NO_SHARES: DealShare[] = [];

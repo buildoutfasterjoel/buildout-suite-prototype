@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   APPROVE_VOUCHERS,
+  canSeeBrokerPayout,
   canSeeVoucher,
   voucherApproverIds,
   voucherTeamIds,
@@ -29,18 +30,22 @@ function deal(createdById: string, internalBrokers: DealBroker[]): Listing {
 }
 
 describe("voucherTeamIds", () => {
-  it("includes the creator even when they work no broker row", () => {
-    expect(voucherTeamIds(deal("sarah-chen", []))).toEqual(["sarah-chen"]);
-  });
-
-  it("adds the internal brokers, matched by name", () => {
+  it("is the internal brokers, matched by name", () => {
     const ids = voucherTeamIds(
       deal("sarah-chen", [broker("Marcus Patel"), broker("Nina Alvarez")]),
     );
-    expect(ids).toEqual(["sarah-chen", "marcus-patel", "nina-alvarez"]);
+    expect(ids).toEqual(["marcus-patel", "nina-alvarez"]);
   });
 
-  it("does not repeat the creator when they are also on a broker row", () => {
+  it("leaves out the creator when they work no broker row", () => {
+    // A marketing person with Create Listings opens deals whose voucher is not
+    // theirs. Typing a deal in does not put you on its money.
+    expect(voucherTeamIds(deal("maya-brooks", [broker("Sarah Chen")]))).toEqual([
+      "sarah-chen",
+    ]);
+  });
+
+  it("names the creator once when they are also on a broker row", () => {
     const ids = voucherTeamIds(deal(CURRENT_USER.id, [broker(CURRENT_USER.name)]));
     expect(ids).toEqual([CURRENT_USER.id]);
   });
@@ -50,7 +55,7 @@ describe("voucherTeamIds", () => {
     const ids = voucherTeamIds(
       deal("sarah-chen", [broker("Dale Fenwick", "outside")]),
     );
-    expect(ids).toEqual(["sarah-chen"]);
+    expect(ids).toEqual([]);
   });
 });
 
@@ -153,5 +158,41 @@ describe("voucherApproverIds", () => {
       expect(approvers).not.toContain("omar-haddad");
       expect(approvers).not.toContain("riley-park");
     });
+  });
+});
+
+describe("canSeeBrokerPayout", () => {
+  const sarah = broker("Sarah Chen");
+  const marcus = broker("Marcus Patel");
+  const co = broker("Dale Whitmore", "outside");
+
+  it("shows a broker their own plan and net", () => {
+    expect(canSeeBrokerPayout(sarah, "sarah-chen", false)).toBe(true);
+  });
+
+  it("hides a colleague's from another broker", () => {
+    expect(canSeeBrokerPayout(marcus, "sarah-chen", false)).toBe(false);
+  });
+
+  it("hides it from the deal's creator too — the rule is symmetric", () => {
+    // Ethan opens most of the seeded deals. Opening a deal does not buy him a
+    // look at what the house pays somebody else.
+    expect(canSeeBrokerPayout(sarah, CURRENT_USER.id, false)).toBe(false);
+  });
+
+  it("shows every payout to the back office", () => {
+    expect(canSeeBrokerPayout(sarah, "tessa-nakamura", true)).toBe(true);
+    expect(canSeeBrokerPayout(marcus, "tessa-nakamura", true)).toBe(true);
+  });
+
+  it("hides an outside broker's too — it is still somebody else's cheque", () => {
+    expect(canSeeBrokerPayout(co, "sarah-chen", false)).toBe(false);
+    expect(canSeeBrokerPayout(co, "tessa-nakamura", true)).toBe(true);
+  });
+
+  it("hides a name that matches nobody on the roster", () => {
+    expect(canSeeBrokerPayout(broker("Nobody At All"), "sarah-chen", false)).toBe(
+      false,
+    );
   });
 });

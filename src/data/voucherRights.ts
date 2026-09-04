@@ -20,7 +20,7 @@ import {
   type RoleId,
 } from "#/data/permissions";
 import { teammateIdByName } from "#/data/teammates";
-import type { Listing } from "#/data/types";
+import type { DealBroker, Listing } from "#/data/types";
 
 /** See every voucher on the book, not only the ones you are on the team for. */
 export const VIEW_OTHER_VOUCHERS = "view-other-vouchers";
@@ -32,13 +32,17 @@ export const APPROVE_VOUCHERS = "approve-vouchers";
 /**
  * The deal team, as teammate ids — the people whose voucher this is.
  *
+ * The deal's internal brokers, and only them. `createdById` is not included: a
+ * marketing person with Create Listings can open a deal, and the voucher on a
+ * deal they typed in is no more theirs than any other.
+ *
  * Outside brokers are dropped: a co-broking agent is not on the firm's books
  * and has no seat in the app, so `teammateIdByName` finds nobody for them.
- * Mirrors the rule `components/deals/dealAccess.ts` draws the header avatars
- * from; that module answers "which faces", this one answers "which ids".
+ * Mirrors `onDealTeam` in `components/deals/dealAccess.ts`; that module answers
+ * "which faces", this one answers "which ids".
  */
 export function voucherTeamIds(deal: Listing): string[] {
-  const ids = new Set<string>([deal.createdById]);
+  const ids = new Set<string>();
   for (const broker of deal.internalBrokers) {
     const id = teammateIdByName(broker.name);
     if (id) ids.add(id);
@@ -88,4 +92,35 @@ export function voucherApproverIds(users: readonly ApproverCandidate[]): string[
         isPermissionOn(u.roleIds, u.overrides, APPROVE_VOUCHERS),
     )
     .map((u) => u.id);
+}
+
+/**
+ * Whether this viewer may see one broker's **payout** — their commission plan,
+ * their personal split, and the net that falls out of the two.
+ *
+ * Narrower than `canSeeVoucher`, and deliberately so. A deal's gross commission
+ * is the deal's business: every internal broker on it sees the pool, the
+ * pre-split deductions, the outside brokers, and each internal broker's gross
+ * slice. What a broker keeps *after* the house takes its share is not the deal's
+ * business — it is the arrangement between that person and the brokerage. So it
+ * is symmetric: a broker sees their own plan and nobody else's, the person who
+ * opened the deal included.
+ *
+ * One exemption: `canViewOthers` — View Other Users' Vouchers. The back office
+ * cuts the cheques, so it has to see every payout. No new permission for this;
+ * the one that already governs reaching past your own voucher is the right one.
+ *
+ * Outside brokers are *not* exempt, though they were briefly. A co-broker's
+ * split reads like a deal between two firms rather than a colleague's personal
+ * comp, so exempting it seemed harmless — but it is still somebody else's
+ * cheque on the Payables table, and Payables now shows a broker their own rows
+ * and no one else's. The exemption never applied to the internal commissions
+ * table, which has no outside rows to begin with.
+ */
+export function canSeeBrokerPayout(
+  broker: Pick<DealBroker, "name">,
+  viewerId: string,
+  canViewOthers: boolean,
+): boolean {
+  return canViewOthers || teammateIdByName(broker.name) === viewerId;
 }
