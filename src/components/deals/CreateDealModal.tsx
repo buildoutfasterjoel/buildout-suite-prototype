@@ -473,7 +473,7 @@ export function CreateDealModal({
   if (side === null) missingBits.push("a side");
   if (!hasContact && !hasProperty) missingBits.push("a contact or property");
   if (hasUnits && !unitOk) missingBits.push("a unit");
-  if (brokerId === "") missingBits.push("a broker");
+  if (brokerId === "") missingBits.push("a primary broker");
   const missingHint = missingBits.length
     ? `Add ${joinList(missingBits)} to continue.`
     : "";
@@ -612,11 +612,17 @@ export function CreateDealModal({
                 )}
               </div>
 
-              {/* Broker. Above Side rather than below it because it is the one
-                  field a marketing person cannot answer from the deal itself —
-                  they have to know whose book it is before anything else. */}
+              {/* Above Side rather than below it because it is the one field a
+                  marketing person cannot answer from the deal itself — they have
+                  to know whose book it is before anything else.
+
+                  The label carries the whole explanation. A marketing assistant
+                  needs to know a deal takes a primary broker, not why her role
+                  cannot be one; the sentence that used to sit under this field
+                  explained the permission model to someone who is only trying to
+                  start a deal. */}
               <Field>
-                <Field.Label>Broker</Field.Label>
+                <Field.Label>Primary Broker</Field.Label>
                 <Select
                   value={brokerId}
                   onValueChange={(v) => setBrokerId(v as string)}
@@ -637,12 +643,6 @@ export function CreateDealModal({
                     ))}
                   </Select.Content>
                 </Select>
-                {!canOwnListings && (
-                  <p className="form-text mb-0">
-                    Your role doesn&apos;t hold listings, so this deal needs a
-                    broker. You&apos;ll keep its marketing.
-                  </p>
-                )}
               </Field>
 
               {/* Side */}
