@@ -32,7 +32,7 @@ import {
   type TimelineVisibility,
 } from "#/components/contacts/timeline";
 import { buildContactTimeline } from "#/components/contacts/timelineArcs";
-import { ContactRequestAccessCard } from "#/components/contacts/ContactRequestAccessCard";
+import { ContactAccessCard } from "#/components/contacts/ContactAccessCard";
 import { HiddenBlock } from "#/components/contacts/HiddenBlock";
 import type { ContactOwnership } from "#/data/contactOwnership";
 import type { ContactRights } from "#/data/contactViewerAccess";
@@ -477,11 +477,7 @@ export function ContactEngagementPanel({
           />
         </Card>
       ) : (
-        <ContactRequestAccessCard
-          contact={contact}
-          ownership={ownership}
-          rights={rights}
-        />
+        <ContactAccessCard ownership={ownership} rights={rights} />
       )}
 
       {/* "Stacked" narrow layout: the right column's cards land here, between the

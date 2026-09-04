@@ -310,7 +310,7 @@ function PeoplePage() {
       notify({
         title: `${skipped} contact${skipped === 1 ? "" : "s"} skipped`,
         description:
-          "You don't have access to make changes to them — request access from their records.",
+          "You don't have access to make changes to them.",
       });
     }
     return allowed;
