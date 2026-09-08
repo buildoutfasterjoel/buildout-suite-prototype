@@ -117,6 +117,27 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 216,
+    title:
+      "The changelog\u2019s Slack DM-open call retries a dropped socket, and the post deliberately never does",
+    mergedAt: "2026-09-08T20:40:26Z",
+    day: "2026-09-08",
+    author: "ZS-buildout",
+    area: "Platform",
+    summary:
+      "Four merged pull requests never reached the changelog channel because a single dropped socket was the only attempt the post ever made. The step that opens a direct message now retries; the post itself stays a single attempt so a card can never land twice.",
+    highlights: [
+      {
+        kind: "fix",
+        text: "Opening a direct message for the changelog card retries a dropped connection, a rate limit or a server error up to three times, and says so in the workflow log.",
+      },
+      {
+        kind: "refinement",
+        text: "Posting the card is still one attempt, on purpose: a failed run is visible and can be re-run by hand, while a duplicate card would be noise for the whole channel.",
+      },
+    ],
+  },
+  {
     pr: 215,
     title:
       "A lease deal\u2019s marketing resolves on its building and its money on its space, so brokers on different suites can\u2019t read each other\u2019s commission",

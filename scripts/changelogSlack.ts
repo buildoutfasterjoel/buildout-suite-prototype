@@ -121,16 +121,73 @@ async function slackCall(
   method: string,
   token: string,
   body: unknown,
+  /**
+   * Only for calls that are safe to repeat. `conversations.open` is — opening
+   * an open DM is a no-op. `chat.postMessage` is not: a retry after a reset
+   * would post twice if the first request landed and only the response was
+   * lost, and Slack offers no idempotency key to prevent it. A missing card
+   * shows up in the failed run; a duplicate card is noise for the whole channel.
+   */
+  { retry = false }: { retry?: boolean } = {},
 ): Promise<SlackResponse> {
-  const res = await fetch(`https://slack.com/api/${method}`, {
+  const url = `https://slack.com/api/${method}`;
+  const init: RequestInit = {
     method: "POST",
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(body),
-  });
+  };
+  const res = retry ? await fetchWithRetry(url, init) : await fetch(url, init);
   return (await res.json()) as SlackResponse;
+}
+
+/**
+ * Retry the transport, never the application. A thrown fetch (the
+ * `ECONNRESET` that has dropped several changelog cards), a 429, or a 5xx gets
+ * tried again after a short backoff; a 200 comes back as-is even when its body
+ * says `ok: false`, because a bad channel or a missing scope will be just as
+ * bad on the third try. Opt-in per call — see `slackCall`.
+ */
+export async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  {
+    attempts = 3,
+    baseDelayMs = 1000,
+    fetchImpl = fetch,
+    sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms)),
+    log = (line: string) => console.warn(line),
+  }: {
+    attempts?: number;
+    baseDelayMs?: number;
+    fetchImpl?: typeof fetch;
+    sleep?: (ms: number) => Promise<void>;
+    log?: (line: string) => void;
+  } = {},
+): Promise<Response> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    let reason: string;
+    let delayMs = baseDelayMs * 2 ** (attempt - 1);
+    try {
+      const res = await fetchImpl(url, init);
+      if (res.status !== 429 && res.status < 500) return res;
+      reason = `HTTP ${res.status}`;
+      // Slack says how long to wait when it rate-limits; take its word for it.
+      const retryAfter = Number(res.headers.get("retry-after"));
+      if (res.status === 429 && retryAfter > 0) delayMs = retryAfter * 1000;
+      lastError = new Error(`${url} answered ${reason}`);
+    } catch (err) {
+      lastError = err;
+      reason = err instanceof Error ? err.message : String(err);
+    }
+    if (attempt === attempts) break;
+    log(`Slack call failed (${reason}); retrying in ${delayMs}ms (${attempt}/${attempts}).`);
+    await sleep(delayMs);
+  }
+  throw lastError;
 }
 
 function parseArgs(argv: string[]) {
@@ -257,9 +314,12 @@ async function main() {
   // A person needs their DM opened before it can be posted to.
   let destination = channel;
   if (isUserId(destination)) {
-    const opened = await slackCall("conversations.open", token, {
-      users: destination,
-    });
+    const opened = await slackCall(
+      "conversations.open",
+      token,
+      { users: destination },
+      { retry: true },
+    );
     if (!opened.ok || !opened.channel?.id) {
       console.error(
         `Could not open a DM with ${destination}: ${opened.error ?? "unknown error"}`,
