@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CHANGELOG } from "#/components/changelog/changelogEntries";
-import { buildPayload, isUserId } from "./changelogSlack";
+import { buildPayload, fetchWithRetry, isUserId } from "./changelogSlack";
 
 /**
  * The payload shape was reviewed in Slack's Block Kit Builder before any of this
@@ -112,5 +112,103 @@ describe("buildPayload", () => {
         );
       }
     }
+  });
+});
+
+describe("fetchWithRetry", () => {
+  const ok = () => new Response("{}", { status: 200 });
+  const noSleep = { sleep: async () => {}, log: () => {} };
+  const reset = () =>
+    Object.assign(new TypeError("The socket connection was closed unexpectedly."), {
+      code: "ECONNRESET",
+    });
+
+  it("returns the first non-retryable response untouched", async () => {
+    let calls = 0;
+    const res = await fetchWithRetry("u", {}, {
+      ...noSleep,
+      fetchImpl: async () => {
+        calls++;
+        return ok();
+      },
+    });
+    expect(res.status).toBe(200);
+    expect(calls).toBe(1);
+  });
+
+  it("retries a thrown fetch and succeeds on a later attempt", async () => {
+    let calls = 0;
+    const res = await fetchWithRetry("u", {}, {
+      ...noSleep,
+      fetchImpl: async () => {
+        calls++;
+        if (calls < 3) throw reset();
+        return ok();
+      },
+    });
+    expect(res.status).toBe(200);
+    expect(calls).toBe(3);
+  });
+
+  it("retries 5xx and 429, and does not retry a 200 whose body says ok:false", async () => {
+    const statuses = [503, 429, 200];
+    let calls = 0;
+    const res = await fetchWithRetry("u", {}, {
+      ...noSleep,
+      fetchImpl: async () =>
+        new Response('{"ok":false,"error":"channel_not_found"}', {
+          status: statuses[calls++],
+        }),
+    });
+    expect(res.status).toBe(200);
+    expect(calls).toBe(3);
+
+    let once = 0;
+    await fetchWithRetry("u", {}, {
+      ...noSleep,
+      fetchImpl: async () => {
+        once++;
+        return new Response('{"ok":false}', { status: 200 });
+      },
+    });
+    expect(once).toBe(1);
+  });
+
+  it("gives up after the last attempt and rethrows the last error", async () => {
+    let calls = 0;
+    await expect(
+      fetchWithRetry("u", {}, {
+        ...noSleep,
+        attempts: 3,
+        fetchImpl: async () => {
+          calls++;
+          throw reset();
+        },
+      }),
+    ).rejects.toMatchObject({ code: "ECONNRESET" });
+    expect(calls).toBe(3);
+  });
+
+  it("backs off exponentially, and honors Retry-After on a 429", async () => {
+    const waits: number[] = [];
+    const responses = [
+      () => {
+        throw reset();
+      },
+      () => new Response("", { status: 429, headers: { "retry-after": "5" } }),
+      () => new Response("", { status: 500 }),
+      ok,
+    ];
+    let i = 0;
+    await fetchWithRetry("u", {}, {
+      attempts: 4,
+      baseDelayMs: 100,
+      log: () => {},
+      sleep: async (ms) => {
+        waits.push(ms);
+      },
+      fetchImpl: async () => responses[i++](),
+    });
+    expect(waits).toEqual([100, 5000, 400]);
   });
 });
