@@ -1734,6 +1734,35 @@
   overflow: hidden;
 }
 
+// On a phone the palette is the screen (Figma node 2512:16653): no top offset
+// to line up with a bar it now covers, no inset, no rounded corners. The rail
+// padding is already zero there (`data-rail="hidden"`). `:root[data-nav-mode]`
+// matches both modes at the specificity the app-mode top offset used, so this
+// wins by order.
+@media (max-width: 767.98px) {
+  :root[data-nav-mode] .modal:has(.omni-search-popup) {
+    --omni-popup-top: 0px;
+    --omni-popup-inset: 0px;
+    --omni-popup-max-height: 100dvh;
+  }
+
+  .modal:has(.omni-search-popup) .modal-dialog {
+    max-width: none;
+    margin: 0;
+  }
+
+  .omni-search-popup.omni-search-popup {
+    border: 0;
+    border-radius: 0;
+  }
+
+  // The bar inside is a 44px tap target (2512:16656). Doubled so it outranks
+  // the base rule, which is declared further down the file.
+  .omni-menu__bar.omni-menu__bar {
+    height: 44px;
+  }
+}
+
 // Everything inside the popup — carries the popup's flex column down a level so
 // the results body is the part that gives when height runs out.
 .omni-menu__panel {
@@ -4681,6 +4710,11 @@ body:has(.design-toggle-fab) .toast-viewport {
   --app-rail-width: 220px;
 }
 
+// The phone layout has no rail; everything that offsets by it offsets by nothing.
+:root[data-nav-mode="app"][data-rail="hidden"] {
+  --app-rail-width: 0px;
+}
+
 .app-shell--app {
   background-color: colors.$buildout-blue-950;
 
@@ -4902,6 +4936,18 @@ body:has(.design-toggle-fab) .toast-viewport {
       0 10px 15px -3px rgba(0, 0, 0, 0.2);
   }
 
+  // The group's name, which its icon can no longer say (Figma 2482:3673). Small
+  // caps rather than a row: it's a heading for the pages, not a page itself.
+  &__flyout-title {
+    padding: 4px 4px 4px 8px;
+    color: colors.$buildout-blue-50;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 19px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
   &__flyout-link {
     display: flex;
     align-items: center;
@@ -5087,6 +5133,349 @@ body:has(.design-toggle-fab) .toast-viewport {
 
   &[aria-pressed="true"] {
     box-shadow: 0 0 0 2px rgba(159, 85, 247, 0.55);
+  }
+}
+
+// ── App shell, phone layout ──────────────────────────────────────────────────
+// Below md the shell drops its rail and desktop bar for one 56px bar (Figma node
+// 2512:13672) and two full-screen sheets — the sections behind the hamburger,
+// the account menu behind the avatar. Rows here are the rail's rows scaled for
+// a thumb: 44px tall, 24px glyphs, 17px labels (Figma 2482:2852, Mobile).
+
+// No rail to meet, so the stage's corner has nothing to round against.
+.app-shell--mobile .app-shell__stage {
+  border-top-left-radius: 0;
+}
+
+.app-mbar {
+  position: relative;
+  z-index: 1030;
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  height: 56px;
+  background-color: colors.$buildout-blue-950;
+  box-shadow:
+    0 1px 3px 0 rgba(0, 0, 0, 0.1),
+    0 1px 2px -1px rgba(0, 0, 0, 0.1);
+
+  // The bar's 52px end cells — hamburger and avatar.
+  &__cell {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 52px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: colors.$buildout-blue-50;
+    font-size: 24px;
+    cursor: pointer;
+  }
+
+  // Omnibar and Assistant share what the cells leave.
+  &__center {
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    gap: 8px;
+    min-width: 0;
+    padding: 8px;
+  }
+
+  // The bar's omnibar has no shortcut to hint at and no room for a mic — the
+  // one inside the full-screen palette is a tap away.
+  .omni-bar {
+    max-width: none;
+  }
+
+  .omni-bar__kbd,
+  .omni-bar__voice {
+    display: none;
+  }
+
+  // The unread marker, pinned to a glyph's top-right inside its 44/52px cell.
+  &__dot {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 8px;
+    height: 8px;
+    border: 2px solid colors.$buildout-blue-950;
+    border-radius: 999px;
+    background-color: var(--color-purple-heart-400, #b984fc);
+    box-sizing: content-box;
+  }
+}
+
+// The Assistant shrunk to its sparkle (Figma 2512:13679).
+.app-assistant-btn--icon {
+  width: 36px;
+  padding: 0;
+  justify-content: center;
+}
+
+// A sheet: the whole window, navy, with the bar's height as its header.
+.app-msheet {
+  position: fixed;
+  inset: 0;
+  z-index: 1055;
+  display: flex;
+  flex-direction: column;
+  background-color: colors.$buildout-blue-950;
+  color: colors.$buildout-blue-50;
+
+  &__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    height: 56px;
+    border-bottom: 1px solid var(--color-buildout-blue-900, #203d88);
+    box-shadow:
+      0 1px 3px 0 rgba(0, 0, 0, 0.1),
+      0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  &__bar-start {
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+  }
+
+  &__bar-end {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    gap: 12px;
+    padding: 8px;
+  }
+
+  &__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px;
+    color: inherit;
+  }
+
+  // Bell and close: 44px tap targets around 24px glyphs.
+  &__iconbtn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: colors.$buildout-blue-50;
+    font-size: 24px;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      background-color: var(--color-buildout-blue-900, #203d88);
+    }
+
+    .app-mbar__dot {
+      top: 8px;
+      right: 8px;
+    }
+  }
+
+  // The account sheet's header: who you are, where the brand would be.
+  &__identity {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    padding-left: 12px;
+  }
+
+  &__who {
+    min-width: 0;
+  }
+
+  &__name,
+  &__email {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__name {
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 19px;
+  }
+
+  &__email {
+    color: var(--color-buildout-blue-200, #c0dcfd);
+    font-size: 12px;
+    line-height: 16px;
+  }
+
+  &__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 16px 0 8px;
+    overflow-y: auto;
+  }
+}
+
+// The rows inside a sheet.
+.app-mnav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  &__item {
+    position: relative;
+    padding: 0 12px;
+  }
+
+  // The current marker, 4px here against the rail's 2px (Figma 2505:12729).
+  &__item--active::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 4px;
+    background-color: var(--color-purple-heart-400, #b984fc);
+  }
+
+  &__link {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background-color: transparent;
+    color: colors.$buildout-blue-50;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 26px;
+    text-align: left;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible,
+    &:active {
+      background-color: var(--color-buildout-blue-900, #203d88);
+      color: colors.$buildout-blue-50;
+    }
+  }
+
+  &__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    font-size: 24px;
+  }
+
+  &__link--active &__icon {
+    color: var(--color-purple-heart-400, #b984fc);
+  }
+
+  &__label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // A group's disclosure, in the row's last 24px (Figma 2512:12868).
+  &__chevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+    font-size: 20px;
+  }
+
+  // The hairline between the Tasks, sections and Support groups.
+  &__divider {
+    height: 1px;
+    margin: 4px 24px;
+    background-color: var(--color-buildout-blue-900, #203d88);
+  }
+
+  // A group's pages, once opened: inset with the hairline the rail's pages
+  // have, the open page trading its segment for the purple marker.
+  &__sublist {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__subitem {
+    position: relative;
+    padding: 0 8px 0 48px;
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 32px;
+      width: 1px;
+      background-color: var(--color-buildout-blue-900, #203d88);
+    }
+  }
+
+  &__subitem--active::before {
+    width: 2px;
+    background-color: var(--color-purple-heart-400, #b984fc);
+  }
+
+  &__sublink {
+    display: flex;
+    align-items: center;
+    height: 44px;
+    padding: 0 12px;
+    border-radius: 6px;
+    color: var(--color-storm-grey-300, #afb9ca);
+    font-size: 17px;
+    font-weight: 400;
+    line-height: 26px;
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    &:hover,
+    &:focus-visible,
+    &:active {
+      background-color: var(--color-buildout-blue-900, #203d88);
+      color: colors.$buildout-blue-50;
+    }
+  }
+
+  &__subitem--active &__sublink {
+    color: colors.$buildout-blue-50;
+    font-weight: 600;
   }
 }
 

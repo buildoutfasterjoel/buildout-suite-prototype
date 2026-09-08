@@ -117,6 +117,39 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 217,
+    title:
+      "The app shell gets a phone layout with full-screen menu, account and search sheets, and a collapsed group's flyout names itself",
+    mergedAt: "2026-09-08T21:26:04Z",
+    day: "2026-09-08",
+    author: "ZS-buildout",
+    area: "Navigation",
+    summary:
+      "The app shell only knew desktop widths, so on a phone the rail and the bar fought for a screen neither fit. Below tablet width the shell now collapses to a single bar whose hamburger, avatar and search each open full-screen, and the collapsed rail\u2019s flyouts say which section they belong to.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "On a phone the app shell is one bar: a hamburger, the search bar filling the middle, the Assistant sparkle and your avatar. The left rail is gone.",
+      },
+      {
+        kind: "feature",
+        text: "Tapping the hamburger opens a full-screen menu with Tasks, Dashboard, every section and Support in thumb-sized rows. Sections with pages start closed and open in place with a chevron; the page you\u2019re on is marked.",
+      },
+      {
+        kind: "feature",
+        text: "Tapping your avatar opens a full-screen account sheet headed by your name and email, with Profile and Company settings, the prototype index, the changelog and Reset demo.",
+      },
+      {
+        kind: "refinement",
+        text: "Search or ask Otto fills the whole screen on a phone instead of floating as a card, with a taller bar that\u2019s easier to tap.",
+      },
+      {
+        kind: "refinement",
+        text: "When the desktop rail is collapsed, hovering a section with pages shows the section\u2019s name as a heading above them, so the flyout says what it\u2019s a menu of.",
+      },
+    ],
+  },
+  {
     pr: 216,
     title:
       "The changelog\u2019s Slack DM-open call retries a dropped socket, and the post deliberately never does",
