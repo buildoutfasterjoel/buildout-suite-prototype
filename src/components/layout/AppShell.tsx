@@ -7,6 +7,7 @@ import { ToastBridge } from "#/components/layout/ToastBridge";
 import { UndoHotkey } from "#/components/layout/UndoHotkey";
 import { GlobalNavbar } from "#/components/layout/GlobalNavbar";
 import { AppTopBar } from "#/components/layout/AppTopBar";
+import { AppTopBarMobile } from "#/components/layout/MobileNav";
 import { AppSideNav } from "#/components/layout/AppSideNav";
 import { readNavMode, useNavMode } from "#/components/layout/useNavMode";
 import {
@@ -35,6 +36,7 @@ import { useDataStore } from "#/data/dataStore";
 import { useHydrateContactAccessSettings } from "#/components/settings/useContactAccessSettings";
 import { useCurrentUser, useHydrateCurrentUser } from "#/data/currentUser";
 import { useRoster } from "#/components/settings/users/useRoster";
+import { APP_SHELL_MOBILE_QUERY, useMediaQuery } from "#/lib/useMediaQuery";
 
 export function AppShell() {
   const hydrated = useDataStore((s) => s.hydrated);
@@ -111,6 +113,12 @@ export function AppShell() {
   }, [setDesignTogglesShown]);
 
   const appMode = mounted && navMode === "app";
+  // On a phone the shell has no rail at all: the sections move into a
+  // full-screen menu behind the bar's hamburger (Figma node 2492:12202). The
+  // media query answers `false` on the server, so the first render is the
+  // desktop tree there too — and `mounted` already holds the bar back a render.
+  const phone = useMediaQuery(APP_SHELL_MOBILE_QUERY);
+  const appMobile = appMode && phone;
 
   // The omni palette is portaled to <body>, outside this tree, so it can't read
   // the mode from an ancestor class. Stamp it on <html> instead — that's the one
@@ -119,13 +127,16 @@ export function AppShell() {
   //
   // The rail's width goes on the same element for the same reason: the palette
   // and the toast viewport both offset themselves by it, and neither can see
-  // the rail from where it's portaled to.
+  // the rail from where it's portaled to. `hidden` is the phone layout, where
+  // the rail is gone and that offset must be zero.
   useEffect(() => {
     document.documentElement.dataset.navMode = appMode ? "app" : "classic";
-    document.documentElement.dataset.rail = railExpanded
-      ? "expanded"
-      : "collapsed";
-  }, [appMode, railExpanded]);
+    document.documentElement.dataset.rail = appMobile
+      ? "hidden"
+      : railExpanded
+        ? "expanded"
+        : "collapsed";
+  }, [appMode, appMobile, railExpanded]);
 
   // Global command-center shortcut. `Mod` resolves to ⌘ on macOS, Ctrl elsewhere.
   useHotkey("Mod+K", () => useOmniSearch.getState().toggle());
@@ -150,11 +161,17 @@ export function AppShell() {
       <div
         className={`app-shell d-flex flex-column overflow-hidden vh-100${
           appMode ? " app-shell--app" : ""
-        }`}
+        }${appMobile ? " app-shell--mobile" : ""}`}
       >
-        {!mounted ? null : appMode ? <AppTopBar /> : <GlobalNavbar />}
+        {!mounted ? null : !appMode ? (
+          <GlobalNavbar />
+        ) : appMobile ? (
+          <AppTopBarMobile />
+        ) : (
+          <AppTopBar />
+        )}
         <div className="app-shell__body d-flex flex-grow-1 overflow-hidden">
-          {appMode ? <AppSideNav /> : null}
+          {appMode && !appMobile ? <AppSideNav /> : null}
           {/*
             The stage is what the app shell rounds: page content and the
             assistant rail share one container so the rail's 8px top/right

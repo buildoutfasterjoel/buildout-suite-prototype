@@ -42,7 +42,8 @@ import { useRailExpanded } from "./useRailExpanded";
  *   `:hover, :focus-within` in CSS rather than React state. Clicking the group's
  *   icon goes to its first child: a section you can hover but not click reads
  *   as broken. The flyout has no gap to cross — it starts at the rail's edge and
- *   pads its own content in.
+ *   pads its own content in, and its heading carries the group's name, which
+ *   the icon can no longer say on its own (Figma 2482:3673).
  * - **Expanded**, every section is labelled and a group's pages are listed
  *   beneath it, always open (Figma 2489:8967): five sections and six pages fit
  *   without folding, and a fold would hide the very links the width exists to
@@ -143,6 +144,9 @@ export function AppSideNav() {
         {header}
         <div className="app-rail__flyout" role="group" aria-label={section.label}>
           <div className="app-rail__flyout-inner">
+            <div className="app-rail__flyout-title" aria-hidden>
+              {section.label}
+            </div>
             {section.items.map((item) => {
               const itemActive = isPathActive(item.href, pathname);
               return (
@@ -205,7 +209,11 @@ export function AppSideNav() {
  * The home row. Not in `NAV_SECTIONS` because the classic bar has no such item
  * — there the brand is the way home — so it's the rail's own.
  */
-const HOME: NavLeaf = { label: "Dashboard", href: "/suite", icon: faHouse };
+export const HOME: NavLeaf = {
+  label: "Dashboard",
+  href: "/suite",
+  icon: faHouse,
+};
 
 /**
  * The solid cut of each section's icon, for the lit state (Figma 2482:2847).
@@ -223,6 +231,11 @@ const SOLID_BY_NAME: Record<string, IconDefinition> = Object.fromEntries(
   ].map((icon) => [icon.iconName, icon]),
 );
 
+/** The solid cut of a section icon when one is listed, else the icon itself. */
+export function solidIconFor(icon: IconDefinition): IconDefinition {
+  return SOLID_BY_NAME[icon.iconName] ?? icon;
+}
+
 function RailGlyph({
   icon,
   active,
@@ -230,7 +243,7 @@ function RailGlyph({
   icon: IconDefinition;
   active: boolean;
 }) {
-  const shown = active ? (SOLID_BY_NAME[icon.iconName] ?? icon) : icon;
+  const shown = active ? solidIconFor(icon) : icon;
   return (
     <span className="app-rail__icon">
       <FontAwesomeIcon icon={shown} />

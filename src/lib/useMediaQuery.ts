@@ -30,6 +30,14 @@ export function useMediaQuery(query: string): boolean {
 }
 
 /**
+ * Below this the app shell swaps its rail and top bar for the phone layout
+ * (Figma node 2512:13672): a hamburger that opens a full-screen menu, and the
+ * omnibar filling the bar. The Blueprint `md` token, matching the repo's other
+ * single-column breakpoints.
+ */
+export const APP_SHELL_MOBILE_QUERY = "(max-width: 767.98px)";
+
+/**
  * How much page width the docked assistant rail takes: its 380px box plus the
  * 8px inset the app shell floats it on. Mirrors `$rail-width + $rail-inset` in
  * `main.scss` — keep the two in sync.
