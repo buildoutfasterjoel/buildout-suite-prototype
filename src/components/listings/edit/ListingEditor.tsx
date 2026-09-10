@@ -13,6 +13,7 @@ import { listingSavePatch, propertySavePatch } from "#/components/deals/edit/sav
 import { useDealAccess } from "#/components/deals/useDealAccess";
 import { reseedDraft } from "#/components/deals/edit/reseedDraft";
 import { PendingPublishBanner } from "#/components/deals/edit/PendingPublishBanner";
+import { MarketingReadinessBanner } from "#/components/listings/edit/MarketingReadinessBanner";
 import {
 	conflictRowId,
 	countConflictsFor,
@@ -166,6 +167,7 @@ export function ListingEditor({
 		>
 			<div className="d-flex flex-column gap-6 p-4">
 				<PendingPublishBanner listing={listing} />
+				<MarketingReadinessBanner listing={listing} />
 
 				<ListingPageHeader
 					title="Listing"

@@ -192,6 +192,30 @@ export const MARKETING_HREFS: readonly string[] = hrefsInGroups(
 );
 
 /**
+ * The sections that cannot be built without the deal's marketing content — see
+ * `marketingReadiness`. These are the *output* surfaces: each one renders the
+ * sale/lease copy, the price and the building facts into something a client or
+ * the public sees.
+ *
+ * Deliberately narrower than `MARKETING_HREFS`, which is the whole Marketing
+ * group. The rest of that group takes input rather than producing output and
+ * stays open on an unready deal: Media and Plans collect files, Demographics
+ * reads the address off the property record, Inquiries is inbound, and Listing
+ * itself is the form the broker is being sent to. Locking those would block the
+ * work that clears the gate.
+ *
+ * `syndication` is in the list but in neither group's items — it is a classic
+ * deal's section, and it pushes the same content to LoopNet and Crexi.
+ */
+export const MARKETING_GATED_HREFS: readonly string[] = [
+  "documents",
+  "website",
+  "email",
+  "syndication",
+  "grids",
+];
+
+/**
  * Which section — and, on a drill-down, which record — the current URL is on.
  *
  * Returns the section's *label* (from the static NAV_GROUPS) and the detail's

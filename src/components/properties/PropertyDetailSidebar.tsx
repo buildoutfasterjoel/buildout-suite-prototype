@@ -13,8 +13,12 @@ import { getProperty } from "#/data/store";
 import type { Listing } from "#/data/types";
 import { propertyQualifiesForUnderwriting } from "#/components/deals/underwriting/eligibility";
 import { dealShape, isLeaseParent } from "#/data/dealShape";
-import { visibleNavGroups } from "#/components/properties/dealNav";
+import {
+  MARKETING_GATED_HREFS,
+  visibleNavGroups,
+} from "#/components/properties/dealNav";
 import { useDealAccess } from "#/components/deals/useDealAccess";
+import { useMarketingReadiness } from "#/components/deals/useMarketingReadiness";
 
 /** localStorage key for which sidebar category groups are collapsed. */
 const COLLAPSED_STORAGE_KEY = "deal-sidebar-collapsed-groups";
@@ -105,6 +109,13 @@ export function PropertyDetailSidebar({
   // resolves to both, so this is a no-op for them.
   const access = useDealAccess(listing);
 
+  // The sections built *from* the listing content, greyed out until the content
+  // exists. Disabled rather than hidden: a broker who cannot find Documents has
+  // a worse problem than one who can see it is not ready yet. `DealAccessGate`
+  // holds the same rule for URLs, which walk past a sidebar.
+  const { ready } = useMarketingReadiness(listing);
+  const gated = (href: string) => !ready && MARKETING_GATED_HREFS.includes(href);
+
   const navGroups = visibleNavGroups(shape, {
     leaseParent,
     showsUnderwriting,
@@ -117,7 +128,7 @@ export function PropertyDetailSidebar({
     const item = navGroups
       .flatMap((g) => g.items)
       .find((i) => i.label === value);
-    if (!item) return;
+    if (!item || gated(item.href)) return;
     void navigate({ to: `${basePath}/${item.href}` });
   }
 
@@ -186,6 +197,15 @@ export function PropertyDetailSidebar({
                 <Tabs.Tab
                   key={item.label}
                   value={item.label}
+                  disabled={gated(item.href)}
+                  // `disabled` alone is invisible here: base-ui marks a disabled
+                  // tab with `aria-disabled` rather than the native attribute, so
+                  // neither Bootstrap's `:disabled` rule nor a browser's own
+                  // click suppression applies and the row reads as available.
+                  // `.nav-link.disabled` is the theme's own muted state, and it
+                  // carries `pointer-events: none` — which is what actually stops
+                  // the click, `handleTabChange`'s guard being the backstop.
+                  className={gated(item.href) ? "disabled" : undefined}
                   icon={<FontAwesomeIcon icon={item.icon} />}
                 >
                   {item.label}

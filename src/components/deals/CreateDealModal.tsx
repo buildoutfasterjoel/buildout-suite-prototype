@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
+import { Alert } from "@buildoutinc/blueprint-react/ui/Alert";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Field } from "@buildoutinc/blueprint-react/ui/Field";
 import { Combobox } from "@buildoutinc/blueprint-react/ui/Combobox";
@@ -13,6 +14,7 @@ import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
 import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faTriangleExclamation } from "@fortawesome/pro-duotone-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
   faMagnifyingGlass,
@@ -54,6 +56,10 @@ import {
   type ContactOption,
 } from "#/data/store";
 import { STAGE_LABEL } from "#/data/stageGates";
+import {
+  MARKETING_FIELD_LABEL,
+  newDealMarketingGaps,
+} from "#/data/marketingReadiness";
 import { isMultifamilyOnly } from "#/data/leaseEligibility";
 import {
   TYPE_ICONS,
@@ -313,6 +319,14 @@ export function CreateDealModal({
   // Self Storage, Industrial Outdoor Storage).
   const underwritingEligible =
     propertyQualifiesForUnderwriting(selectedProperty);
+
+  // What the deal will still be short the moment it exists. A new deal carries
+  // no copy and no price, so this is close to a constant — but it is worth
+  // saying out loud on the step that promises drafted documents, rather than
+  // letting the broker find out when the Documents tab is greyed out. A warning
+  // only: the deal is created either way, and the fields are entered on a form
+  // that does not exist yet.
+  const marketingGaps = newDealMarketingGaps(dealType, selectedProperty);
   // A locked property — New Deal opened from the property record — can't be
   // filtered out of a picker, so the multifamily guardrail moves onto the Lease
   // tab itself: the building is a property-management assignment, not a lease.
@@ -1070,6 +1084,17 @@ export function CreateDealModal({
 
           {step === 2 && (
             <>
+              {marketingGaps.length > 0 && (
+                <Alert severity="warning" withIcon>
+                  <FontAwesomeIcon icon={faTriangleExclamation} />
+                  <Alert.Title>These drafts will have gaps</Alert.Title>
+                  Buildout writes from the listing content, and this deal has
+                  none yet. Add{" "}
+                  {joinList(marketingGaps.map((f) => MARKETING_FIELD_LABEL[f]))}{" "}
+                  on the Listing form after the deal is created.
+                </Alert>
+              )}
+
               {/* Suggested documents — the firm's preset catalog. Defaults are
               pre-selected; search narrows the Available list. Underwriting lives
               here as a deliverable that reveals its depth control once chosen. */}
