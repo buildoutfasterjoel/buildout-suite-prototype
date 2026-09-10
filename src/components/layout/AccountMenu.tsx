@@ -135,10 +135,22 @@ export function AccountMenu() {
             </div>
           </div>
 
-          {/* Zone 2 — real product settings. Profile settings has no screen yet,
-              so it closes the menu and goes nowhere. */}
+          {/* Zone 2 — real product settings. Profile settings opens the
+              viewer's own user record in Company Settings — the same page an
+              admin reaches from the Users roster, so there is one profile
+              screen, not a second one under the avatar. Keyed on the seat the
+              menu already subscribes to, so switching who you are viewing as
+              (zone 1 above) moves this link with you. */}
           <Navbar.Separator orientation="horizontal" className="my-1" />
-          <Navbar.GroupMenuItem className="d-flex align-items-center gap-2">
+          <Navbar.GroupMenuItem
+            className="d-flex align-items-center gap-2"
+            onClick={() =>
+              navigate({
+                to: "/settings/users/$userId/profile",
+                params: { userId: seatId },
+              })
+            }
+          >
             <FontAwesomeIcon icon={faUserGear} />
             Profile settings
           </Navbar.GroupMenuItem>
