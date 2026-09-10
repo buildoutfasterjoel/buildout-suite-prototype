@@ -81,7 +81,10 @@ export function DealInvoices({
       {invoices.length === 0 ? (
         <Empty className="py-8">
           <Empty.Media>
-            <FontAwesomeIcon icon={faFileInvoiceDollar} aria-label="No invoices" />
+            <FontAwesomeIcon
+              icon={faFileInvoiceDollar}
+              aria-label="No invoices"
+            />
           </Empty.Media>
           <Empty.Content>
             <Empty.Title>No invoices yet</Empty.Title>
@@ -93,7 +96,7 @@ export function DealInvoices({
           <Table.Header>
             <Table.Row>
               <Table.Head style={{ width: 44 }}>
-                <FontAwesomeIcon icon={faFileLines} className="text-muted" />
+                <FontAwesomeIcon icon={faFileLines} />
               </Table.Head>
               <Table.Head>Attachment Name</Table.Head>
               <Table.Head>Invoice Number</Table.Head>
@@ -144,7 +147,10 @@ export function DealInvoices({
                     />
                     <DropdownMenu.Content align="end">
                       <DropdownMenu.Item>
-                        <FontAwesomeIcon icon={faPenToSquare} className="me-2" />
+                        <FontAwesomeIcon
+                          icon={faPenToSquare}
+                          className="me-2"
+                        />
                         Edit
                       </DropdownMenu.Item>
                       <DropdownMenu.Item>
