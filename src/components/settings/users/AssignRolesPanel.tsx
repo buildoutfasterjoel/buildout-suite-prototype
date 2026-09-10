@@ -8,13 +8,14 @@ import { faCheck } from "@fortawesome/pro-regular-svg-icons";
 import { faCircleInfo } from "@fortawesome/pro-duotone-svg-icons";
 import {
   PERMISSIONS,
+  PERMISSION_AREAS,
   ROLES,
   ROLE_ACCESS_DETAIL,
   ROLE_ACCESS_LABELS,
   ROLE_BY_ID,
   type RoleId,
 } from "#/data/permissions";
-import { NeutralBadge, SCOPE_META } from "./roleDisplay";
+import { NeutralBadge } from "./roleDisplay";
 
 /**
  * Assign a role to one user.
@@ -56,14 +57,19 @@ export function AssignRolesPanel({
     if (open) setSelected(roleIds[0] ?? null);
   }, [open, roleIds]);
 
-  // The chosen role's defaults, split by scope and in registry order so the two
-  // lists read the same way as the permissions page behind the panel.
+  // The chosen role's defaults, grouped by product area and in registry order
+  // so the list reads the same way as the permissions page behind the panel.
+  // Areas the role grants nothing in are dropped rather than shown empty.
   const granted = useMemo(() => {
     const role = selected ? ROLE_BY_ID.get(selected) : undefined;
     const ids = new Set(role?.defaults ?? []);
     return {
-      record: PERMISSIONS.filter((p) => p.scope === "record" && ids.has(p.id)),
-      account: PERMISSIONS.filter((p) => p.scope === "account" && ids.has(p.id)),
+      areas: PERMISSION_AREAS.map((area) => ({
+        area,
+        permissions: PERMISSIONS.filter(
+          (p) => p.area === area.id && ids.has(p.id),
+        ),
+      })).filter((group) => group.permissions.length > 0),
       total: ids.size,
     };
   }, [selected]);
@@ -160,29 +166,27 @@ export function AssignRolesPanel({
                 </div>
               </div>
 
-              {(["record", "account"] as const).map((scope) =>
-                granted[scope].length === 0 ? null : (
-                  <div key={scope}>
-                    <div className="text-uppercase fw-semibold small text-muted mb-1">
-                      {SCOPE_META[scope].heading}
-                    </div>
-                    <ul className="list-unstyled mb-0 d-flex flex-column gap-1">
-                      {granted[scope].map((permission) => (
-                        <li
-                          key={permission.id}
-                          className="d-flex align-items-start gap-2 small"
-                        >
-                          <FontAwesomeIcon
-                            icon={faCheck}
-                            className="text-mountain-meadow-700 mt-1 flex-shrink-0"
-                          />
-                          {permission.label}
-                        </li>
-                      ))}
-                    </ul>
+              {granted.areas.map(({ area, permissions }) => (
+                <div key={area.id}>
+                  <div className="text-uppercase fw-semibold small text-muted mb-1">
+                    {area.heading}
                   </div>
-                ),
-              )}
+                  <ul className="list-unstyled mb-0 d-flex flex-column gap-1">
+                    {permissions.map((permission) => (
+                      <li
+                        key={permission.id}
+                        className="d-flex align-items-start gap-2 small"
+                      >
+                        <FontAwesomeIcon
+                          icon={faCheck}
+                          className="text-mountain-meadow-700 mt-1 flex-shrink-0"
+                        />
+                        {permission.label}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
             </div>
           )}
         </Modal.Body>

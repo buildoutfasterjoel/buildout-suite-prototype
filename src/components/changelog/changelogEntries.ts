@@ -117,6 +117,43 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 218,
+    title:
+      "Permissions are grouped by product area, reconciled against the permissions inventory, and read as Listings & Deals",
+    mergedAt: "2026-09-10T18:00:00Z",
+    day: "2026-09-10",
+    author: "ZS-buildout",
+    area: "Settings",
+    summary:
+      "The permissions page grouped by a rule of the model — whether a permission needs a record shared with you — which is not how an admin thinks. It now groups by the product area the permission belongs to, the way the product team's own permissions inventory does, and the list was reconciled against that inventory: five permissions added, two labels widened, and the Record and Account tags set aside as noise.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "A person's permissions are grouped by product area — Listings & Deals, Back Office, Documents, Email, Comps, Contacts, Company & Account — each with a count and a one-line explanation on hover. The groups flow into two columns so a short group never leaves a hole.",
+      },
+      {
+        kind: "feature",
+        text: "The list now carries all 32 permissions from the inventory: Use Back Office, Administrate Back Office, Edit Documents, Share Document Links That Bypass the CA, and Manage All Contacts & Lists are new.",
+      },
+      {
+        kind: "refinement",
+        text: "Own Listings, Create Listings, Delete Listings and Access Other Users' Listings now say Listings & Deals, because a listing and its deal are one record. Edit Listings stays narrow: it gates only the listing form.",
+      },
+      {
+        kind: "refinement",
+        text: "Change Deal Statuses sits with the listing permissions rather than under Back Office — moving a deal along the pipeline is how a broker works the record. Back Office is now just the voucher, payable and receivable rows.",
+      },
+      {
+        kind: "refinement",
+        text: "The Record and Account tag beside every row is hidden for now. Twenty rows of the same two words read as noise; the distinction still drives what sharing means.",
+      },
+      {
+        kind: "refinement",
+        text: "The assign-role panel previews a role's permissions in the same product-area groups.",
+      },
+    ],
+  },
+  {
     pr: 217,
     title:
       "The app shell gets a phone layout with full-screen menu, account and search sheets, and a collapsed group's flyout names itself",
