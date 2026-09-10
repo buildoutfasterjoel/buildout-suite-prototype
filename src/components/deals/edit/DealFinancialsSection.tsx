@@ -11,7 +11,6 @@ import {
 	NumberField,
 	Readout,
 	ReadoutCards,
-	SwitchRow,
 } from "#/components/common/recordForm/fieldWidgets";
 import { SubGroup } from "#/components/common/recordForm/FieldGroup";
 import { LineItemEditor } from "#/components/deals/edit/LineItemEditor";
@@ -29,9 +28,11 @@ import { formatCalcAmount, formatCalcPercent } from "#/components/deals/edit/cal
  * computed cap rate sits under the entered one, and the three income figures sit
  * under the fields that drive them.
  *
- * This group deliberately has NO `AdditionalFields` disclosure: `askingPrice` and
- * `noi` carry ingestion conflicts, and a closed `Collapsible` is `display: none`,
- * which would make `?review=ingestion`'s `scrollIntoView` a silent no-op.
+ * This group deliberately has NO `AdditionalFields` disclosure: `noi` carries an
+ * ingestion conflict, and a closed `Collapsible` is `display: none`, which would
+ * make `?review=ingestion`'s `scrollIntoView` a silent no-op. `askingPrice`
+ * carries one too, and its field moved to the Listing page's Sale section — so
+ * the same constraint went with it, and so did its `CONFLICT_PAGE` entry.
  */
 export function DealFinancialsSection({
 	financials,
@@ -51,26 +52,8 @@ export function DealFinancialsSection({
 
 	return (
 		<>
-			<SubGroup label="Pricing" description="What the asset is priced at.">
+			<SubGroup label="Pricing" description="What the asset is valued at.">
 				<FieldGrid>
-					<Col>
-						{/* `gap-2` is the bound tier: Hide price governs Asking Price, so it
-						    sits under it. It used to float at the end of the cluster, below the
-						    computed cap rate, where it read as hiding the calculated figure. */}
-						<div className="d-flex flex-column gap-2">
-							<NumberField
-								label="Asking Price"
-								value={financials.askingPrice}
-								onChange={(v) => patchFinancials({ askingPrice: v ?? 0 })}
-								fieldKey="askingPrice"
-							/>
-							<SwitchRow
-								label="Hide price"
-								checked={financials.hidePrice}
-								onChange={(v) => patchFinancials({ hidePrice: v })}
-							/>
-						</div>
-					</Col>
 					<Col>
 						<NumberField
 							label="NOI"
@@ -89,7 +72,18 @@ export function DealFinancialsSection({
 				</FieldGrid>
 				{/* NOI lives here, not under Income: it is the numerator of the
 				    computed cap rate, and `noi()` (gross − opex) is never called on
-				    this form, so NOI is entered rather than derived. */}
+				    this form, so NOI is entered rather than derived.
+
+				    The asking price is the denominator, and it is entered on the
+				    Listing page now — it is the figure the marketing prints, so it
+				    sits beside the copy that prints it. Echoed here read-only rather
+				    than dropped: a cap rate divided by a number that appears nowhere
+				    on the page is a figure nobody can check, and the row doubles as
+				    the pointer to where the field went. */}
+				<Readout
+					label="Asking price (on the Listing form)"
+					value={formatCalcAmount(financials.askingPrice)}
+				/>
 				<Readout
 					label="Computed cap rate"
 					value={formatCalcPercent(capRate(financials.noi, financials.askingPrice))}

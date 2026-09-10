@@ -18,8 +18,10 @@ import type {
  * from outside either page (the stage gate, the Spaces roster, seeding) made
  * mid-edit.
  *
- * Eight keys are shared this way: `financials.rentRoll` (Listing page's Units
- * section, inside a `financials` object the Deal page owns the rest of),
+ * Ten keys are shared this way: `financials.rentRoll` (Listing page's Units
+ * section) and `financials.askingPrice` / `financials.hidePrice` (its Sale
+ * section's Price cluster) — all three inside a `financials` object the Deal
+ * page owns the rest of,
  * `marketing.spaceLeaseTerms` / `marketing.availableSqFt` (the stage gate,
  * inside a `marketing` object the Listing page owns the rest of),
  * `marketing.occupancySnapshot` (written only at seed/creation today, same
@@ -31,11 +33,32 @@ import type {
  * `dealSavePatch` covers the one the Deal page saves.
  */
 
+/**
+ * The `financials` keys the Listing page owns.
+ *
+ * The asking price is the figure the marketing shows, so it is entered beside
+ * the copy that shows it; the Deal page's `transaction.salePrice` is what the
+ * asset actually sold for. `hidePrice` comes with it because it governs it.
+ *
+ * Both are primitives, which is what makes `listingPricing` safe to hand to
+ * `reseedDraft`: that function compares by identity, and a fresh projection
+ * object each call would defeat it for anything but a number or a boolean.
+ */
+export type ListingPricing = Pick<
+  DealPitchFinancials,
+  "askingPrice" | "hidePrice"
+>;
+
+export function listingPricing(f: DealPitchFinancials): ListingPricing {
+  return { askingPrice: f.askingPrice, hidePrice: f.hidePrice };
+}
+
 /** The Listing page's draft (`/listings/:id/listing`). */
 export interface ListingDraft {
   marketing: DealMarketing;
   internalNotes: string;
   rentRoll: RentRollRow[];
+  pricing: ListingPricing;
 }
 
 /** The Deal page's draft (`/listings/:id/edit`). */
@@ -75,8 +98,13 @@ export function listingSavePatch(
       visualMedia: current.marketing.visualMedia,
     },
     internalNotes: draft.internalNotes,
-    // Only `rentRoll` is ours; the rest of financials comes off the record.
-    financials: { ...current.financials, rentRoll: draft.rentRoll },
+    // Only `rentRoll` and the two pricing keys are ours; the rest of financials
+    // comes off the record.
+    financials: {
+      ...current.financials,
+      rentRoll: draft.rentRoll,
+      ...draft.pricing,
+    },
   };
 }
 
@@ -105,7 +133,14 @@ export function dealSavePatch(
     internalBrokers: draft.internalBrokers,
     outsideBrokers: draft.outsideBrokers,
     transaction: draft.transaction,
-    // Everything but `rentRoll` is ours; that one stays as stored.
-    financials: { ...draft.financials, rentRoll: current.financials.rentRoll },
+    // Everything but `rentRoll` and the pricing keys is ours; those stay as
+    // stored. The Deal page still *reads* `askingPrice` — its computed cap rate
+    // divides by it — so the draft carries the value and only the write is
+    // withheld.
+    financials: {
+      ...draft.financials,
+      rentRoll: current.financials.rentRoll,
+      ...listingPricing(current.financials),
+    },
   };
 }

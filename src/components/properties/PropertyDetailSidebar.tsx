@@ -13,8 +13,13 @@ import { getProperty } from "#/data/store";
 import type { Listing } from "#/data/types";
 import { propertyQualifiesForUnderwriting } from "#/components/deals/underwriting/eligibility";
 import { dealShape, isLeaseParent } from "#/data/dealShape";
-import { visibleNavGroups } from "#/components/properties/dealNav";
+import {
+  MARKETING_GATED_HREFS,
+  visibleNavGroups,
+} from "#/components/properties/dealNav";
 import { useDealAccess } from "#/components/deals/useDealAccess";
+import { useMarketingReadiness } from "#/components/deals/useMarketingReadiness";
+import { MARKETING_FIELD_LABEL } from "#/data/marketingReadiness";
 
 /** localStorage key for which sidebar category groups are collapsed. */
 const COLLAPSED_STORAGE_KEY = "deal-sidebar-collapsed-groups";
@@ -105,6 +110,26 @@ export function PropertyDetailSidebar({
   // resolves to both, so this is a no-op for them.
   const access = useDealAccess(listing);
 
+  // The sections built *from* the listing content, greyed out until the content
+  // exists. Disabled rather than hidden: a broker who cannot find Documents has
+  // a worse problem than one who can see it is not ready yet. `DealAccessGate`
+  // holds the same rule for URLs, which walk past a sidebar.
+  const { ready, missing } = useMarketingReadiness(listing);
+  const gated = (href: string) => !ready && MARKETING_GATED_HREFS.includes(href);
+  // The greyed row says a section is unavailable but not why, and the banner
+  // that explains it is on a page the broker has not opened yet. Name the actual
+  // fields rather than saying "fill in the missing fields": the list is what
+  // turns the row from a dead end into an instruction.
+  //
+  // `Intl.ListFormat` rather than a hand-rolled joiner — it is the stdlib answer
+  // for "a, b, and c" and needs no comma-and-Oxford-comma logic of our own.
+  const gateReason = `Add ${new Intl.ListFormat("en", {
+    style: "long",
+    type: "conjunction",
+  }).format(
+    missing.map((f) => MARKETING_FIELD_LABEL[f]),
+  )} on the Listing form to unlock this section.`;
+
   const navGroups = visibleNavGroups(shape, {
     leaseParent,
     showsUnderwriting,
@@ -117,7 +142,7 @@ export function PropertyDetailSidebar({
     const item = navGroups
       .flatMap((g) => g.items)
       .find((i) => i.label === value);
-    if (!item) return;
+    if (!item || gated(item.href)) return;
     void navigate({ to: `${basePath}/${item.href}` });
   }
 
@@ -182,15 +207,47 @@ export function PropertyDetailSidebar({
             orientation="vertical"
           >
             <Tabs.List variant="pills" orientation="vertical">
-              {group.items.map((item) => (
-                <Tabs.Tab
-                  key={item.label}
-                  value={item.label}
-                  icon={<FontAwesomeIcon icon={item.icon} />}
-                >
-                  {item.label}
-                </Tabs.Tab>
-              ))}
+              {group.items.map((item) => {
+                const isGated = gated(item.href);
+                const tab = (
+                  <Tabs.Tab
+                    key={item.label}
+                    value={item.label}
+                    disabled={isGated}
+                    // `disabled` alone is invisible here: base-ui marks a
+                    // disabled tab with `aria-disabled` rather than the native
+                    // attribute, so neither Bootstrap's `:disabled` rule nor a
+                    // browser's own click suppression applies, and the row reads
+                    // as available. `.nav-link.disabled` is the theme's own
+                    // muted state.
+                    className={isGated ? "disabled" : undefined}
+                    // That same theme rule carries `pointer-events: none`, which
+                    // would make the row inert to hover as well as to clicks —
+                    // and an inert row can never trigger the tooltip that says
+                    // why it is greyed out. Take the colour, put the events back:
+                    // the click is stopped by `handleTabChange`'s guard, which is
+                    // where it should be stopped anyway, since a URL has to be
+                    // caught by `DealAccessGate` regardless.
+                    style={isGated ? { pointerEvents: "auto" } : undefined}
+                    icon={<FontAwesomeIcon icon={item.icon} />}
+                  >
+                    {item.label}
+                  </Tabs.Tab>
+                );
+                if (!isGated) return tab;
+                // `Tooltip.Provider` is mounted app-wide in `__root.tsx`, and
+                // `Tooltip.Root` renders no DOM — so the Tab stays a direct DOM
+                // child of `Tabs.List` and its roving focus is untouched. Passed
+                // through `render` rather than wrapped in a span for the same
+                // reason the building link below is: a wrapper element breaks the
+                // pills' alignment.
+                return (
+                  <Tooltip key={item.label}>
+                    <Tooltip.Trigger render={tab} />
+                    <Tooltip.Content side="right">{gateReason}</Tooltip.Content>
+                  </Tooltip>
+                );
+              })}
               {linkRow}
             </Tabs.List>
           </Tabs>

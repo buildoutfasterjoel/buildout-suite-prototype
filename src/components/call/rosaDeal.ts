@@ -26,6 +26,11 @@ export function createRosaProposalDeal(
     commissionPct: 5,
     availableSqFt: property.buildingSqFt,
     description: `Sale of ${property.name}, underwritten from the owner's T12 and rent roll.`,
+    // Without this the deal is short exactly one marketing field, and the hero
+    // arc opens on four greyed tabs and a warning — see `marketingReadiness`.
+    // Everything else it needs is already here or on the linked property:
+    // `listingPrice` above, and the building's class and size.
+    locationDescription: `${property.submarket ? `${property.submarket}, ` : ""}${property.city}, ${property.state}.`,
     dealSide: "seller",
     sellerContactId: contact.id,
     initialStage: "proposal",

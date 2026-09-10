@@ -117,6 +117,59 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 221,
+    title:
+      "Marketing output waits for the listing content it is built from, and the asking price moves to the Listing form",
+    mergedAt: "2026-09-10T22:51:56Z",
+    day: "2026-09-10",
+    author: "buildoutfasterjoel",
+    area: "Deals",
+    summary:
+      "Documents, the website, email campaigns and grids are written from a deal's copy, its price and its building facts \u2014 and nothing stopped you opening them on a deal that had none of it, so the AI drafted from blanks. Those sections now wait until the fields exist, say which ones are missing, and the asking price has moved to the form where the rest of that content is written.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "Documents, Website, Email and Grids stay locked until the deal holds what they are built from: a sale needs its asking price, sale description, location description, building class and building size; a lease needs its lease type, title and description. Media, Plans, Demographics and Inquiries stay open \u2014 they collect what you put in rather than print what you wrote.",
+      },
+      {
+        kind: "feature",
+        text: "The deal Overview and the Listing form both name the fields that are still missing, and the Overview's banner has a button straight to the form. A field that lives elsewhere says so \u2014 a lease type links to the Spaces tab, because that is where each suite holds its own.",
+      },
+      {
+        kind: "feature",
+        text: "Hovering a locked section in the sidebar tells you what would unlock it: \"Add Asking Price, Sale Description, Location Description, and Building Size on the Listing form to unlock this section.\"",
+      },
+      {
+        kind: "feature",
+        text: "Creating a deal with documents now says they will wait rather than promising drafts with gaps, and lists what to fill in. Every way of starting a deal \u2014 the wizard, Otto, or Start a Deal from a contact \u2014 lands on the same notice, so documents Buildout drafted are never silently held.",
+      },
+      {
+        kind: "refinement",
+        text: "The Asking Price and its Hide price switch have moved from the Deal form to the Listing form, in a Price cluster right under the headline: it is the figure your marketing prints, so it belongs beside the copy that prints it. The Deal form keeps Sale Price, what the asset actually sold for, and echoes the asking price read-only above its computed cap rate so the math is still checkable.",
+      },
+      {
+        kind: "refinement",
+        text: "A document that disagrees with your asking price now asks you to settle it on the Listing form, where the field now lives, instead of sending you to the Deal form.",
+      },
+      {
+        kind: "refinement",
+        text: "A locked sidebar row takes a hover highlight like any other, so you can tell it apart from a live one before you click it.",
+      },
+      {
+        kind: "fix",
+        text: "A brand-new lease deal keeps its Spaces tab reachable. A lease type is set per suite, so locking that tab too would have left nowhere to set the one field standing in the way.",
+      },
+      {
+        kind: "fix",
+        text: "A deal still reading its uploaded documents is left alone. Those files fill in the very fields the notice would ask for, so warning about them mid-read only gets in the way.",
+      },
+      {
+        kind: "fix",
+        text: "A building split into suites is no longer asked for a lease type it cannot hold \u2014 its suites each carry their own \u2014 and a suite is never asked at all, since its building owns every section this affects.",
+      },
+    ],
+  },
+  {
     pr: 220,
     title:
       "A deal's invoices show their number, last activity, activity date and who completed it",

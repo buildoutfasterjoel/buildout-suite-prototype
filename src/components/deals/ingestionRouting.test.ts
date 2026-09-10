@@ -30,7 +30,7 @@ describe("CONFLICT_PAGE", () => {
     // A field with no page would be unreachable — the broker could never
     // resolve it, and the publish gate would block forever.
     expect(CONFLICT_PAGE).toEqual({
-      askingPrice: "deal",
+      askingPrice: "listing",
       noi: "deal",
       occupancyPct: "listing",
     });
@@ -39,8 +39,12 @@ describe("CONFLICT_PAGE", () => {
 
 describe("conflictKeysOn", () => {
   it("partitions the keys between the two pages", () => {
-    expect(conflictKeysOn("deal").sort()).toEqual(["askingPrice", "noi"]);
-    expect(conflictKeysOn("listing")).toEqual(["occupancyPct"]);
+    expect(conflictKeysOn("deal")).toEqual(["noi"]);
+    // The asking price moved to the Listing form's Sale section with its field.
+    expect(conflictKeysOn("listing").sort()).toEqual([
+      "askingPrice",
+      "occupancyPct",
+    ]);
   });
 });
 

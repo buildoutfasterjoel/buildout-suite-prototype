@@ -26,6 +26,7 @@ import {
 import { UnitsSection } from "#/components/listings/edit/sections/UnitsSection";
 import { DisclaimerNotesSection } from "#/components/listings/edit/sections/DisclaimerNotesSection";
 import { propertyTypeEffects, showBuyerSection } from "#/data/listingFormLogic";
+import type { ListingPricing } from "#/components/deals/edit/savePatches";
 import type {
   DealMarketing,
   DealType,
@@ -51,6 +52,8 @@ export function ListingFormEditor({
   setRentRoll,
   internalNotes,
   setInternalNotes,
+  pricing,
+  patchPricing,
 }: {
   dealType: DealType;
   status: PropertyStatus;
@@ -62,6 +65,9 @@ export function ListingFormEditor({
   setRentRoll: (v: RentRollRow[]) => void;
   internalNotes: string;
   setInternalNotes: (v: string) => void;
+  /** The two `financials` keys this form owns — see `savePatches.ts`. */
+  pricing: ListingPricing;
+  patchPricing: (p: Partial<ListingPricing>) => void;
 }) {
   const effects = propertyTypeEffects(property.propertyType);
   const groups = visibleListingGroups({
@@ -91,6 +97,8 @@ export function ListingFormEditor({
             <SaleSection
               marketing={marketing}
               patchMarketing={patchMarketing}
+              pricing={pricing}
+              patchPricing={patchPricing}
             />
           ) : (
             // Space terms belong to the space deal that owns the unit — a

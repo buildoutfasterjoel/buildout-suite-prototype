@@ -3,16 +3,29 @@ import { Link, useBlocker } from "@tanstack/react-router";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Dialog } from "@buildoutinc/blueprint-react/ui/Dialog";
-import type { DealMarketing, Listing, Property, RentRollRow } from "#/data/types";
+import type {
+	DealMarketing,
+	IngestionFieldKey,
+	Listing,
+	Property,
+	RentRollRow,
+} from "#/data/types";
 import { resolveIngestionConflict, updateDeal } from "#/data/actions";
+import { useDataStore } from "#/data/dataStore";
 import { updateProperty } from "#/data/store";
 import { notify } from "#/lib/notify";
 import { ListingFormEditor } from "#/components/listings/edit/ListingFormEditor";
 import { ListingPageHeader } from "#/components/listings/ListingPageHeader";
-import { listingSavePatch, propertySavePatch } from "#/components/deals/edit/savePatches";
+import {
+	listingPricing,
+	listingSavePatch,
+	propertySavePatch,
+	type ListingPricing,
+} from "#/components/deals/edit/savePatches";
 import { useDealAccess } from "#/components/deals/useDealAccess";
 import { reseedDraft } from "#/components/deals/edit/reseedDraft";
 import { PendingPublishBanner } from "#/components/deals/edit/PendingPublishBanner";
+import { MarketingReadinessBanner } from "#/components/deals/MarketingReadinessBanner";
 import {
 	conflictRowId,
 	countConflictsFor,
@@ -51,6 +64,13 @@ export function ListingEditor({
 		listing.financials.rentRoll,
 	);
 	const [internalNotes, setInternalNotes] = useState(listing.internalNotes);
+	// The asking price and its Hide switch — the two `financials` keys this page
+	// reaches into that object for. Held apart from `marketing` because they are
+	// not marketing copy, and apart from a whole-`financials` draft because this
+	// page must not write the rest of it (see `savePatches.ts`).
+	const [pricing, setPricing] = useState<ListingPricing>(
+		listingPricing(listing.financials),
+	);
 	const [dirty, setDirty] = useState(false);
 
 	// Every broker-facing edit marks the draft dirty. The ingestion re-seed below
@@ -70,6 +90,10 @@ export function ListingEditor({
 	};
 	const patchInternalNotes = (v: string) => {
 		setInternalNotes(v);
+		setDirty(true);
+	};
+	const patchPricing = (patch: Partial<ListingPricing>) => {
+		setPricing((p) => ({ ...p, ...patch }));
 		setDirty(true);
 	};
 
@@ -93,6 +117,10 @@ export function ListingEditor({
 	// marketing straight to the store — values this draft snapshotted at mount, so
 	// saving would silently revert them. Re-seed on that ONE transition out of
 	// `processing`, and only for keys untouched since mount.
+	//
+	// The pricing draft rides along: an ingestion run reads an asking price off a
+	// document and writes `financials.askingPrice` (`ingestion.ts`), which is this
+	// page's field now.
 	const ingestionStatus = listing.ingestion?.status;
 	const previousIngestionStatus = useRef(ingestionStatus);
 	const mountedListing = useRef(listing);
@@ -102,6 +130,13 @@ export function ListingEditor({
 		if (previous !== "processing" || ingestionStatus === "processing") return;
 		const base = mountedListing.current;
 		setMarketing((d) => reseedDraft(d, base.marketing, listing.marketing));
+		setPricing((d) =>
+			reseedDraft(
+				d,
+				listingPricing(base.financials),
+				listingPricing(listing.financials),
+			),
+		);
 	}, [ingestionStatus, listing]);
 
 	const conflicts = listing.ingestion?.conflicts ?? [];
@@ -126,6 +161,32 @@ export function ListingEditor({
 			?.scrollIntoView({ behavior: "smooth", block: "center" });
 	}, []);
 
+	// A resolution writes `financials` straight to the store
+	// (`resolveIngestionConflict` → `updateDealFinancials`), and the asking price
+	// is a conflict field this page now owns. Without this, Save would push the
+	// pricing draft's pre-resolution value back over the figure the broker just
+	// picked — and `pricePerSqFt`, recomputed alongside it, has no field on
+	// either form to bring it back.
+	//
+	// The base is read off the store immediately before resolving rather than
+	// kept in a ref. `listing` is the route's reactive store record, so that IS
+	// what the draft was last synced to, by construction — the Deal page learned
+	// this the hard way across three review rounds (see `DealEditor`), because a
+	// ref goes stale the moment the ingestion-transition re-seed above moves the
+	// same draft without touching it.
+	const onResolveConflict = (
+		fieldKey: IngestionFieldKey,
+		side: "doc" | "current",
+	) => {
+		const base = useDataStore.getState().listings.get(listing.id)?.financials;
+		resolveIngestionConflict(listing.id, fieldKey, side);
+		const updated = useDataStore.getState().listings.get(listing.id);
+		if (!base || !updated) return;
+		setPricing((d) =>
+			reseedDraft(d, listingPricing(base), listingPricing(updated.financials)),
+		);
+	};
+
 	const access = useDealAccess(listing);
 
 	const save = () => {
@@ -133,7 +194,10 @@ export function ListingEditor({
 		// snapshots — so the patches keep the gate-owned marketing keys, the
 		// seed/creation-only occupancy snapshot, and the property's `units` exactly
 		// as stored, even if they moved while this form was open. See savePatches.ts.
-		updateDeal(listing.id, listingSavePatch(listing, { marketing, internalNotes, rentRoll }));
+		updateDeal(
+			listing.id,
+			listingSavePatch(listing, { marketing, internalNotes, rentRoll, pricing }),
+		);
 		updateProperty(property.id, propertySavePatch(property, propertyDraft));
 		setDirty(false);
 		notify({ title: "Listing saved" });
@@ -160,12 +224,11 @@ export function ListingEditor({
 	return (
 		<IngestionConflictProvider
 			conflicts={conflicts}
-			onResolve={(fieldKey, side) =>
-				resolveIngestionConflict(listing.id, fieldKey, side)
-			}
+			onResolve={onResolveConflict}
 		>
 			<div className="d-flex flex-column gap-6 p-4">
 				<PendingPublishBanner listing={listing} />
+				<MarketingReadinessBanner listing={listing} onListingForm />
 
 				<ListingPageHeader
 					title="Listing"
@@ -206,6 +269,8 @@ export function ListingEditor({
 					setRentRoll={setRentRoll}
 					internalNotes={internalNotes}
 					setInternalNotes={patchInternalNotes}
+					pricing={pricing}
+					patchPricing={patchPricing}
 				/>
 
 				<div className="d-flex justify-content-end align-items-center gap-2 border-top pt-4">

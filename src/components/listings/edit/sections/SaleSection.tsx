@@ -11,6 +11,7 @@ import {
 	YesNoNaField,
 } from "#/components/common/recordForm/fieldWidgets";
 import type { DealMarketing, InvestmentType, PropertyUse } from "#/data/types";
+import type { ListingPricing } from "#/components/deals/edit/savePatches";
 
 // ── Option lists (string unions from the data model) ────────────────────────
 const PROPERTY_USES: PropertyUse[] = [
@@ -40,9 +41,19 @@ const INVESTMENT_TYPES: InvestmentType[] = [
 export function SaleSection({
 	marketing,
 	patchMarketing,
+	pricing,
+	patchPricing,
 }: {
 	marketing: DealMarketing;
 	patchMarketing: (p: Partial<DealMarketing>) => void;
+	/**
+	 * The asking price and its visibility switch. They sit on `financials`
+	 * rather than `marketing` — the two keys the Listing page reaches into that
+	 * object for (see `savePatches.ts`) — so they arrive as their own draft
+	 * instead of riding along with the copy.
+	 */
+	pricing: ListingPricing;
+	patchPricing: (p: Partial<ListingPricing>) => void;
 }) {
 	return (
 		<>
@@ -71,6 +82,40 @@ export function SaleSection({
 					bullets={marketing.saleBullets ?? []}
 					onChange={(v) => patchMarketing({ saleBullets: v })}
 				/>
+			</SubGroup>
+
+			{/* Second, straight after the copy: the price is the fact a buyer reads
+			    next, and it is the number every marketing surface prints. It used to
+			    live in the Deal page's Pricing cluster beside NOI and cap rate —
+			    underwriting figures, which is a different job. The Deal page keeps
+			    `transaction.salePrice`, what the asset actually sold for.
+
+			    NOT inside `SaleAdditionalFields`: `askingPrice` carries ingestion
+			    conflicts, and a closed `Collapsible` is `display: none`, which would
+			    make `?review=ingestion`'s `scrollIntoView` a silent no-op. */}
+			<SubGroup
+				label="Price"
+				description="What the asset is marketed at."
+			>
+				<FieldGrid>
+					<Col>
+						{/* `gap-2` is the bound tier: Hide price governs Asking Price, so
+						    it sits directly under it. */}
+						<div className="d-flex flex-column gap-2">
+							<NumberField
+								label="Asking Price"
+								value={pricing.askingPrice || null}
+								onChange={(v) => patchPricing({ askingPrice: v ?? 0 })}
+								fieldKey="askingPrice"
+							/>
+							<SwitchRow
+								label="Hide price"
+								checked={pricing.hidePrice}
+								onChange={(v) => patchPricing({ hidePrice: v })}
+							/>
+						</div>
+					</Col>
+				</FieldGrid>
 			</SubGroup>
 
 			<SubGroup
