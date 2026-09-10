@@ -110,7 +110,7 @@ export function DealInvoices({
             {invoices.map((invoice) => (
               <Table.Row key={invoice.id}>
                 <Table.Cell>
-                  <FontAwesomeIcon icon={faFilePdf} className="text-danger" />
+                  <FontAwesomeIcon icon={faFilePdf} />
                 </Table.Cell>
                 <Table.Cell className="fw-medium">{invoice.name}</Table.Cell>
                 {/* "Draft" in place of a number, which is what an unfinalized
