@@ -6,6 +6,7 @@ import type {
   DealBroker,
   DealHistoryEntry,
   DealInvoice,
+  InvoiceActivity,
   FinancialDeduction,
   FinancialReceivable,
   VoucherDeposit,
@@ -66,6 +67,7 @@ import {
   invoiceFileName,
   invoiceLineItems,
   invoicePayerFileLabel,
+  nextInvoiceNumber,
 } from './invoices'
 import { generateDepositReference } from './deposits'
 import { payablesForDeposit } from './payables'
@@ -1926,6 +1928,11 @@ function generateListings(
     // seed every group is a single row — a split commission bills the OTHER side,
     // so two receivables on one voucher never share a payer — but grouping is
     // what the rule actually is, and it follows the seed if that changes.
+    // Each one's last activity is hashed from the payer, not drawn from faker:
+    // roughly six in eight are Finalized, one is still an unfinalized draft and
+    // one has been Voided, so all three rows are reachable on a fresh seed
+    // without moving every value the seed generates after this loop (the reason
+    // `quickbooks.ts` hashes too).
     const invoices: DealInvoice[] = []
     if (voucherStatus !== 'Draft') {
       for (const payerId of payerContactIds) {
@@ -1937,17 +1944,28 @@ function generateListings(
         // look up in yet. Every payer is drawn from `propertyContacts`.
         const payer = propertyContacts.find((c) => c.id === payerId)
         // Sent in the days after the close, so it lands before the sign-off that
-        // `voucherApproval` dates from one to ten days out.
+        // `voucherApproval` dates from one to ten days out. The time of day is
+        // hashed rather than drawn — a column of midnights does not read as a
+        // filing time, and hashing keeps the faker stream where it was.
+        const minuteOfDay = 9 * 60 + (hashCode(`${payerId}-sent`) % (9 * 60))
         const sentAt = voucherCloseDate
           ? new Date(
               Date.parse(`${voucherCloseDate}T00:00:00`) +
-                faker.number.int({ min: 1, max: 3 }) * 86_400_000,
+                faker.number.int({ min: 1, max: 3 }) * 86_400_000 +
+                minuteOfDay * 60_000,
             ).toISOString()
           : createdAt
         // Drawn from the roster rather than from `internalBrokers`, whose ids are
         // faker uuids that `findTeammate` cannot resolve — the same reason
         // `messageAuthors` above draws from here.
         const author = faker.helpers.arrayElement([CURRENT_USER, ...TEAMMATES])
+        const bucket = hashCode(`${payerId}-invoice`) % 8
+        const lastActivity: InvoiceActivity =
+          bucket === 0 ? 'Created' : bucket === 1 ? 'Voided' : 'Finalized'
+        // A draft has no number and nobody has completed it. A voided invoice
+        // keeps the number it was finalized under — the bill went out, and
+        // voiding it does not un-issue that number.
+        const number = lastActivity === 'Created' ? undefined : nextInvoiceNumber(invoices)
         invoices.push({
           id: faker.string.uuid(),
           name: invoiceFileName(
@@ -1958,10 +1976,12 @@ function generateListings(
               },
               billed[0].billToCompany,
             ),
-            invoices.length + 1,
+            number,
           ),
-          createdAt: sentAt,
-          createdById: author.id,
+          number,
+          lastActivity,
+          activityAt: sentAt,
+          completedById: lastActivity === 'Created' ? undefined : author.id,
           payerContactId: payerId,
           billToCompany: billed[0].billToCompany,
           dueDate: invoiceDueDate(lineItems),

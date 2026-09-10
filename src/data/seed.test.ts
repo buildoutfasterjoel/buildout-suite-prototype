@@ -5,7 +5,7 @@ import {
   marketingCreatedDeal,
   seedDealShares,
 } from './seed'
-import { invoiceQuickbooksSynced, isQuickbooksSynced } from './quickbooks'
+import { isQuickbooksSynced } from './quickbooks'
 import { findTeammate } from './teammates'
 import {
   payableBalance,
@@ -766,11 +766,36 @@ describe('invoice seed', () => {
     }
   })
 
-  it('names a creator who is actually on the roster', () => {
+  it('names a completer who is actually on the roster, or nobody at all', () => {
     const invoices = listings.flatMap((l) => l.invoices ?? [])
     expect(invoices.length).toBeGreaterThan(0)
     for (const invoice of invoices) {
-      expect(findTeammate(invoice.createdById)).toBeDefined()
+      // A draft has nobody: it has been created, not completed. Anything else
+      // has to resolve, or the Completed By column shows an em-dash.
+      if (invoice.lastActivity === 'Created') {
+        expect(invoice.completedById).toBeUndefined()
+        continue
+      }
+      expect(findTeammate(invoice.completedById!)).toBeDefined()
+    }
+  })
+
+  it('leaves all three activities reachable, and numbers all but the drafts', () => {
+    const invoices = listings.flatMap((l) => l.invoices ?? [])
+    expect(new Set(invoices.map((i) => i.lastActivity))).toEqual(
+      new Set(['Created', 'Finalized', 'Voided']),
+    )
+    for (const invoice of invoices) {
+      // A number is assigned at finalize, and voiding does not un-issue it.
+      if (invoice.lastActivity === 'Created') expect(invoice.number).toBeUndefined()
+      else expect(invoice.number).toBeGreaterThan(0)
+    }
+  })
+
+  it('never issues one number twice on a deal', () => {
+    for (const deal of listings) {
+      const numbers = (deal.invoices ?? []).flatMap((i) => i.number ?? [])
+      expect(new Set(numbers).size, deal.name).toBe(numbers.length)
     }
   })
 
@@ -800,11 +825,11 @@ describe('invoice seed', () => {
     }
   })
 
-  it('names each invoice file after its payer, numbered within the deal', () => {
+  it('names each invoice file after its payer, by number or as a draft', () => {
     for (const deal of listings) {
       const names = (deal.invoices ?? []).map((i) => i.name)
       expect(new Set(names).size).toBe(names.length)
-      for (const name of names) expect(name).toMatch(/_Invoice_\d+\.pdf$/)
+      for (const name of names) expect(name).toMatch(/_Invoice_(\d+|Draft)\.pdf$/)
     }
   })
 })
@@ -851,33 +876,6 @@ describe('quickbooks sync seed', () => {
         expect(byId.get(receivable.payerContactId)?.quickbooksSynced).toBe(true)
       }
     }
-  })
-
-  it('never shows an invoice in QuickBooks above a receivable that is not', () => {
-    // Same invariant, one link further down. The invoice badge is derived, so
-    // this is really a check that the seed cannot produce an invoice whose lines
-    // point at receivables it disagrees with.
-    for (const deal of listings) {
-      const receivables = deal.transaction.backOffice.receivables
-      for (const invoice of deal.invoices ?? []) {
-        if (!invoiceQuickbooksSynced(invoice.lineItems, receivables)) continue
-        for (const line of invoice.lineItems) {
-          const billed = receivables.find((r) => r.id === line.receivableId)
-          expect(billed?.quickbooksSynced).toBe(true)
-        }
-      }
-    }
-  })
-
-  it('leaves both states reachable on the invoices page', () => {
-    const states = new Set(
-      listings.flatMap((l) =>
-        (l.invoices ?? []).map((i) =>
-          invoiceQuickbooksSynced(i.lineItems, l.transaction.backOffice.receivables),
-        ),
-      ),
-    )
-    expect(states).toEqual(new Set([true, false]))
   })
 
   it('gives the receivables both states, so the badge column is never uniform', () => {

@@ -45,7 +45,6 @@ import {
   invoiceFileName,
   invoiceLineItems,
   invoicePayerFileLabel,
-  nextInvoiceOrdinal,
 } from './invoices'
 import { voucherParty } from './vouchers'
 
@@ -1257,14 +1256,20 @@ export function createInvoiceFromReceivables(
   // one party; taking the first is what the receivables table shows first.
   const billToCompany = billed[0].billToCompany
 
+  // Filed as a draft: no number, nobody has completed it, and the only thing
+  // that has happened to it is that it was created.
+  //
+  // Finalizing — the step that assigns the number, see `nextInvoiceNumber` — is
+  // not wired yet; the seed is where Finalized and Voided rows come from for
+  // now. Which is why `completedById` is left off rather than set to the
+  // viewer: the broker who drafted a bill has not completed it.
   const invoice: DealInvoice = {
     id: invoiceId,
     name: invoiceFileName(
       invoicePayerFileLabel(voucherParty(billed[0].payerContactId), billToCompany),
-      nextInvoiceOrdinal(deal),
     ),
-    createdAt: now,
-    createdById: viewerId(),
+    lastActivity: 'Created',
+    activityAt: now,
     payerContactId: billed[0].payerContactId,
     billToCompany,
     dueDate: invoiceDueDate(lineItems),

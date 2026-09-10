@@ -117,6 +117,43 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 220,
+    title:
+      "A deal's invoices show their number, last activity, activity date and who completed it",
+    mergedAt: "2026-09-10T21:30:00Z",
+    day: "2026-09-10",
+    author: "buildoutfasterjoel",
+    area: "Back Office",
+    summary:
+      "The Invoices table listed a filename, a created date and a QuickBooks badge, which is not how an invoice is read. It now shows the bill: its number, the last thing that happened to it, when that happened, and who did it — with \"Draft\" standing in for the number until the invoice is finalized.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "Every invoice row carries its Invoice Number, Last Activity, Activity Date and Completed By. A bill that has only been drafted reads \"Draft\" where its number will go, and its Completed By stays empty — nobody has completed it yet.",
+      },
+      {
+        kind: "feature",
+        text: "Last Activity says Created, Finalized or Voided, on the same status pill the deal stages and voucher statuses use: grey while a bill is only drafted, green once it is finalized, red once it is voided.",
+      },
+      {
+        kind: "refinement",
+        text: "An invoice's number is assigned when it is finalized rather than when it is created, so the filename follows — NA_North_Invoice_Draft.pdf becomes NA_North_Invoice_5.pdf — and two bills to the same payer can never share a number.",
+      },
+      {
+        kind: "refinement",
+        text: "The Activity Date states the time and its zone — \"09/09/2026 at 6:20pm CDT\" — because a filing time is something you may have to repeat to an accountant.",
+      },
+      {
+        kind: "refinement",
+        text: "The QuickBooks column is gone from the Invoices table. It described the receivables behind each bill, and the voucher's own Receivables table already says that one row at a time, where you can act on it.",
+      },
+      {
+        kind: "refinement",
+        text: "Ten-X leaves the syndication channel list.",
+      },
+    ],
+  },
+  {
     pr: 219,
     title: "Profile settings in the avatar menu opens your own user record",
     mergedAt: "2026-09-10T21:00:00Z",

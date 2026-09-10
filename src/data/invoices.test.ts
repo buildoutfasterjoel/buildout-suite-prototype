@@ -4,8 +4,9 @@ import {
   invoiceFileName,
   invoiceLineItems,
   invoicePayerFileLabel,
+  nextInvoiceNumber,
 } from './invoices'
-import type { FinancialReceivable } from './types'
+import type { DealInvoice, FinancialReceivable } from './types'
 
 function receivable(over: Partial<FinancialReceivable> = {}): FinancialReceivable {
   return {
@@ -21,8 +22,14 @@ function receivable(over: Partial<FinancialReceivable> = {}): FinancialReceivabl
 }
 
 describe('invoiceFileName', () => {
-  it('turns a payer label into a filename with the invoice ordinal', () => {
-    expect(invoiceFileName('ABC, Corp.', 1)).toBe('ABC_Corp_Invoice_1.pdf')
+  it('turns a payer label into a filename with the invoice number', () => {
+    expect(invoiceFileName('ABC, Corp.', 5)).toBe('ABC_Corp_Invoice_5.pdf')
+  })
+
+  it('spells an unnumbered invoice as a draft', () => {
+    // A number is assigned at finalize, so a draft has none — and the filename
+    // says the same thing the Invoice Number column says.
+    expect(invoiceFileName('ABC, Corp.')).toBe('ABC_Corp_Invoice_Draft.pdf')
   })
 
   it('leaves no trailing separator when the label ends in punctuation', () => {
@@ -36,8 +43,36 @@ describe('invoiceFileName', () => {
 
   it('falls back to Invoice when the label has nothing usable in it', () => {
     // A contact removed from the store resolves to a label we cannot spell a
-    // filename from; the ordinal still makes the row identifiable.
+    // filename from; the number still makes the row identifiable.
     expect(invoiceFileName('—', 4)).toBe('Invoice_4.pdf')
+  })
+})
+
+describe('nextInvoiceNumber', () => {
+  function invoice(number?: number): DealInvoice {
+    return {
+      id: `i${number ?? 'draft'}`,
+      name: 'x.pdf',
+      number,
+      lastActivity: number === undefined ? 'Created' : 'Finalized',
+      activityAt: '2026-01-31T00:00:00.000Z',
+      payerContactId: 'c1',
+      billToCompany: false,
+      dueDate: '2026-01-31',
+      lineItems: [],
+    }
+  }
+
+  it('starts at 1 on a deal with no invoices', () => {
+    expect(nextInvoiceNumber()).toBe(1)
+    expect(nextInvoiceNumber([])).toBe(1)
+  })
+
+  it('takes the highest number already issued, not the row count', () => {
+    // The drafts among them have no number. Counting rows would hand out 3 here
+    // and collide with the invoice already numbered 3 the moment the draft is
+    // finalized.
+    expect(nextInvoiceNumber([invoice(1), invoice(), invoice(3)])).toBe(4)
   })
 })
 
