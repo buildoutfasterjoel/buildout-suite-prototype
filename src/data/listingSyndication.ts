@@ -36,14 +36,21 @@ interface ChannelDefinition {
  * derived per listing.
  */
 const CHANNEL_DEFINITIONS: ChannelDefinition[] = [
-  { id: "commercialedge-network", name: "CommercialEdge Network", delivery: "direct" },
+  {
+    id: "commercialedge-network",
+    name: "CommercialEdge Network",
+    delivery: "direct",
+  },
   { id: "rcm1-marketplace", name: "RCM1 Marketplace", delivery: "direct" },
-  { id: "apartmentbuildings-com", name: "apartmentbuildings.com", delivery: "direct" },
+  {
+    id: "apartmentbuildings-com",
+    name: "apartmentbuildings.com",
+    delivery: "direct",
+  },
   { id: "brevitas", name: "Brevitas", delivery: "direct" },
   { id: "costar", name: "CoStar", delivery: "email" },
   { id: "loopnet", name: "LoopNet", delivery: "email" },
   { id: "crexi", name: "Crexi", delivery: "email" },
-  { id: "ten-x", name: "Ten-X", delivery: "email" },
 ];
 
 /**
@@ -187,7 +194,9 @@ export function getListingSyndication(
     // push, or a broken push behind it — nothing has been attempted yet.
     if (
       anchor == null &&
-      (state === "updated" || state === "pending" || state === "needs-attention")
+      (state === "updated" ||
+        state === "pending" ||
+        state === "needs-attention")
     ) {
       state = "pending";
     }
@@ -195,7 +204,9 @@ export function getListingSyndication(
     const everPublished =
       state !== "not-available" &&
       (state !== "off" || ((h >>> (i + 16)) & 1) === 1);
-    const publishedAt = everPublished ? afterPublish(anchor, firstDelay, 0) : null;
+    const publishedAt = everPublished
+      ? afterPublish(anchor, firstDelay, 0)
+      : null;
 
     return {
       ...def,
@@ -208,9 +219,7 @@ export function getListingSyndication(
       // Nothing to expire until the listing has reached the channel, and a
       // paused channel has no live listing on the other end to expire.
       expiresInDays:
-        publishedAt && state !== "off"
-          ? 1 + ((h >>> (i + 20)) % 210)
-          : null,
+        publishedAt && state !== "off" ? 1 + ((h >>> (i + 20)) % 210) : null,
     };
   });
 
