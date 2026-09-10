@@ -17,19 +17,23 @@ import type { InvoiceActivity, Listing } from "#/data/types";
 import { findTeammate } from "#/data/teammates";
 import { ListingPageHeader } from "#/components/listings/ListingPageHeader";
 import { formatDateAtTime } from "#/components/deals/dealDisplay";
+import { StatusPill } from "#/components/deals/DealStageBadge";
 
 /**
- * The activity dot's colour — purple while a bill is only drafted, the brand
- * blue once it has been finalized, grey once it has been voided.
+ * Invoice-activity colours, on the same pill every other status in the app is
+ * built from — `StatusPill`, tinted fill and a leading dot.
  *
- * Colour and word together, never colour alone: the label sits beside the dot
- * in every row, so the dot is a scanning aid rather than the only place the
- * state is said.
+ * Two of the three deliberately borrow the voucher's own words: a bill that has
+ * only been created is grey, the colour a Draft voucher takes, and one that has
+ * been finalized is the closed green an Approved voucher takes. A broker reading
+ * a voucher and then its invoices should not have to learn a second palette one
+ * page apart. Voided is the destructive red — the only state here that means a
+ * document was withdrawn after it went out.
  */
-const ACTIVITY_BG: Record<InvoiceActivity, string> = {
-  Created: "bg-purple-heart-500",
-  Finalized: "bg-buildout-blue-500",
-  Voided: "bg-storm-grey-500",
+const ACTIVITY_COLORS: Record<InvoiceActivity, string> = {
+  Created: "var(--stage-inactive)",
+  Finalized: "var(--stage-closed)",
+  Voided: "var(--bp-destructive)",
 };
 
 /**
@@ -110,16 +114,9 @@ export function DealInvoices({
                     bill has: the number is assigned at finalize. */}
                 <Table.Cell>{invoice.number ?? "Draft"}</Table.Cell>
                 <Table.Cell>
-                  <span className="d-inline-flex align-items-center gap-2">
-                    <span
-                      className={`d-inline-flex align-items-center justify-content-center rounded-circle text-white ${ACTIVITY_BG[invoice.lastActivity]}`}
-                      style={{ width: 24, height: 24, fontSize: 12 }}
-                      aria-hidden
-                    >
-                      <FontAwesomeIcon icon={faFileLines} />
-                    </span>
+                  <StatusPill color={ACTIVITY_COLORS[invoice.lastActivity]}>
                     {invoice.lastActivity}
-                  </span>
+                  </StatusPill>
                 </Table.Cell>
                 <Table.Cell>{formatDateAtTime(invoice.activityAt)}</Table.Cell>
                 {/* Resolved through the roster rather than stored as a name, so

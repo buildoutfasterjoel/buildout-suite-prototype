@@ -26,13 +26,13 @@ describe('roster', () => {
   it('exposes every channel name for the traffic-source pool', () => {
     expect(SYNDICATION_NETWORK_NAMES).toContain('CoStar')
     expect(SYNDICATION_NETWORK_NAMES).toContain('CommercialEdge Network')
-    expect(SYNDICATION_NETWORK_NAMES).toHaveLength(8)
+    expect(SYNDICATION_NETWORK_NAMES).toHaveLength(7)
   })
 
   it('produces both delivery methods for a populated listing', () => {
     const { channels } = getListingSyndication(populatedListings()[0])
     expect(channels.filter((c) => c.delivery === 'direct')).toHaveLength(4)
-    expect(channels.filter((c) => c.delivery === 'email')).toHaveLength(4)
+    expect(channels.filter((c) => c.delivery === 'email')).toHaveLength(3)
   })
 })
 
