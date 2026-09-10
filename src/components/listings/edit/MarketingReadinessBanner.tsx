@@ -15,9 +15,9 @@ import type { Listing } from "#/data/types";
  * What the broker still has to type before this deal can produce marketing.
  *
  * Every row names the field and, when the field is not on this page, where it
- * actually is. Three of the eight live elsewhere — the sale price is a Deal-form
- * figure and the lease type is a per-space one — and a banner that listed them
- * flat would send the broker looking through a form that does not contain them.
+ * actually is. One of the eight lives elsewhere — the lease type is per-space —
+ * and listing it flat would send the broker looking through a form that does
+ * not contain it.
  *
  * `useMarketingReadiness` decides who sees this, so the banner cannot disagree
  * with the sidebar rows and the route guard reading the same hook.
@@ -48,7 +48,7 @@ export function MarketingReadinessBanner({ listing }: { listing: Listing }) {
 	);
 }
 
-/** Where a field lives, for the two cases that are not this page. */
+/** Where a field lives, for the one case that is not this page. */
 function FieldWhere({
 	field,
 	listingId,
@@ -56,27 +56,22 @@ function FieldWhere({
 	field: MarketingField;
 	listingId: string;
 }) {
-	const form = MARKETING_FIELD_FORM[field];
-	if (form === "listing") return null;
-	// Both targets are building-level sections. A space never reaches this banner
-	// — `marketingReadiness` returns ready for one, since its building owns every
-	// gated section — but the id goes through the same resolver the rest of the
-	// app uses, so the rule holds without a second exemption to reason about.
-	const target = buildingSectionListingId(listingId);
+	if (MARKETING_FIELD_FORM[field] === "listing") return null;
 	// A space's lease type is set on the space itself, and a lease deal with no
 	// space yet has to add one — so both cases land on the Spaces tab rather than
 	// on a `$spaceId` route this banner has no id for.
-	return form === "deal" ? (
+	//
+	// The Spaces tab is building-level. A space never reaches this banner —
+	// `marketingReadiness` reports one ready, its building owning every gated
+	// section — but the id still goes through the same resolver the rest of the
+	// app uses, so the rule holds without a second exemption to reason about.
+	return (
 		<>
 			{" — on the "}
-			<Link to="/listings/$listingId/edit" params={{ listingId: target }}>
-				Deal form
-			</Link>
-		</>
-	) : (
-		<>
-			{" — on the "}
-			<Link to="/listings/$listingId/spaces" params={{ listingId: target }}>
+			<Link
+				to="/listings/$listingId/spaces"
+				params={{ listingId: buildingSectionListingId(listingId) }}
+			>
 				Spaces tab
 			</Link>
 		</>

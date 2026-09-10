@@ -4,7 +4,12 @@ import { updateDeal } from "#/data/actions";
 import { addPropertyUnit, getProperty } from "#/data/store";
 import { emptySpaceLeaseTerms } from "#/data/createListing";
 import type { Listing, Property, RentRollRow, VisualMediaType } from "#/data/types";
-import { dealSavePatch, listingSavePatch, propertySavePatch } from "./savePatches";
+import {
+  dealSavePatch,
+  listingPricing,
+  listingSavePatch,
+  propertySavePatch,
+} from "./savePatches";
 
 /** The first seeded deal. Read fresh per test — these tests write to the store. */
 function seededDeal(): Listing {
@@ -41,10 +46,10 @@ function rentRow(id: string): RentRollRow {
 }
 
 describe("listingSavePatch", () => {
-  it("writes the rent roll without disturbing deal-side financials", () => {
+  it("writes the rent roll and the asking price, and nothing else in financials", () => {
     const deal = seededDeal();
     updateDeal(deal.id, {
-      financials: { ...deal.financials, askingPrice: 4_250_000, rentRoll: [] },
+      financials: { ...deal.financials, noi: 310_000, rentRoll: [] },
     });
     const record = current(deal.id);
 
@@ -52,11 +57,15 @@ describe("listingSavePatch", () => {
       marketing: record.marketing,
       internalNotes: "a note",
       rentRoll: [rentRow("row-1")],
+      pricing: { askingPrice: 4_250_000, hidePrice: true },
     });
 
     expect(patch.financials?.rentRoll.map((r) => r.id)).toEqual(["row-1"]);
-    // The number the Deal page owns survives a Listing page save.
+    // The marketing price is entered on this page now, so this save carries it.
     expect(patch.financials?.askingPrice).toBe(4_250_000);
+    expect(patch.financials?.hidePrice).toBe(true);
+    // A figure the Deal page still owns survives a Listing page save.
+    expect(patch.financials?.noi).toBe(310_000);
   });
 
   it("names only the keys the Listing page owns", () => {
@@ -65,6 +74,7 @@ describe("listingSavePatch", () => {
       marketing: record.marketing,
       internalNotes: "",
       rentRoll: [],
+      pricing: listingPricing(record.financials),
     });
     expect(Object.keys(patch).sort()).toEqual([
       "financials",
@@ -99,6 +109,7 @@ describe("listingSavePatch", () => {
       marketing: { ...staleMarketing, leaseTitle: "New title" },
       internalNotes: "",
       rentRoll: record.financials.rentRoll,
+      pricing: listingPricing(record.financials),
     });
 
     expect(patch.marketing?.spaceLeaseTerms).toEqual(
@@ -119,6 +130,7 @@ describe("listingSavePatch", () => {
       marketing: { ...record.marketing, occupancySnapshot: null },
       internalNotes: "",
       rentRoll: record.financials.rentRoll,
+      pricing: listingPricing(record.financials),
     });
 
     expect(patch.marketing?.occupancySnapshot).toBe(92);
@@ -191,6 +203,7 @@ describe("listingSavePatch", () => {
       },
       internalNotes: "",
       rentRoll: record.financials.rentRoll,
+      pricing: listingPricing(record.financials),
     });
 
     // All three media keys must come from current (newer), not draft (stale)
@@ -248,7 +261,28 @@ describe("dealSavePatch", () => {
     });
 
     expect(patch.financials?.rentRoll.map((r) => r.id)).toEqual(["row-2"]);
-    expect(patch.financials?.askingPrice).toBe(9_000_000);
+  });
+
+  it("preserves the stored asking price over a stale draft snapshot", () => {
+    const deal = seededDeal();
+    updateDeal(deal.id, {
+      financials: { ...deal.financials, askingPrice: 5_500_000, hidePrice: true },
+    });
+    const record = current(deal.id);
+
+    const patch = dealSavePatch(record, {
+      status: record.status,
+      dealType: record.dealType,
+      internalBrokers: record.internalBrokers,
+      outsideBrokers: record.outsideBrokers,
+      transaction: record.transaction,
+      // A draft that mounted before the Listing page repriced the deal. Saving
+      // the Deal page must not roll the marketing price back.
+      financials: { ...record.financials, askingPrice: 9_000_000, hidePrice: false },
+    });
+
+    expect(patch.financials?.askingPrice).toBe(5_500_000);
+    expect(patch.financials?.hidePrice).toBe(true);
   });
 
   it("names only the keys the Deal page owns", () => {

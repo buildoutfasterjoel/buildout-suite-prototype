@@ -12,7 +12,9 @@ export type ConflictPage = "deal" | "listing";
  * with it. A field missing here would be unresolvable.
  */
 export const CONFLICT_PAGE: Record<IngestionFieldKey, ConflictPage> = {
-  askingPrice: "deal",
+  // Follows the field: the asking price is entered in the Listing form's Sale
+  // section, so that is the only page whose draft can hold the resolution.
+  askingPrice: "listing",
   noi: "deal",
   occupancyPct: "listing",
 };

@@ -24,7 +24,7 @@ export type MarketingField =
   | 'leaseDescription'
 
 export const MARKETING_FIELD_LABEL: Record<MarketingField, string> = {
-  askingPrice: 'Sale Price',
+  askingPrice: 'Asking Price',
   saleDescription: 'Sale Description',
   locationDescription: 'Location Description',
   buildingClass: 'Building Class',
@@ -35,15 +35,19 @@ export const MARKETING_FIELD_LABEL: Record<MarketingField, string> = {
 }
 
 /**
- * Which form the broker fixes each field on. Three of the eight are not on the
- * Listing form: the sale price is a Deal-form figure and the lease type is a
- * per-space one, so a banner that named them without saying where to go would
- * be a dead end.
+ * Which form the broker fixes each field on. All but one are on the Listing
+ * form; the lease type is per-space, so a banner naming it without saying where
+ * to go would be a dead end.
+ *
+ * The asking price used to be the second exception, on the Deal form. It moved
+ * to the Listing form's Sale section — it is the figure the marketing prints, so
+ * it belongs beside the copy that prints it, and the Deal form keeps
+ * `transaction.salePrice`, what the asset actually sold for.
  */
-export type MarketingFieldForm = 'listing' | 'deal' | 'space'
+export type MarketingFieldForm = 'listing' | 'space'
 
 export const MARKETING_FIELD_FORM: Record<MarketingField, MarketingFieldForm> = {
-  askingPrice: 'deal',
+  askingPrice: 'listing',
   saleDescription: 'listing',
   locationDescription: 'listing',
   buildingClass: 'listing',
