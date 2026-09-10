@@ -102,13 +102,13 @@ const ALLOWED: Record<string, string> = {
   // itself be a shell, so this can never be handed a space id.
   "src/components/listings/media/SpaceMedia.tsx": "space Media's read-only block links up to the building's Media page, whose id can never be a space",
 
-  // The Listing form's marketing-readiness banner points at the two fields that
-  // are not on the Listing form — the sale price on the Deal form, the lease type
-  // on the Spaces tab. Both are building-level sections and the id goes through
+  // The marketing-readiness banner links to the Listing form (from the Overview)
+  // and to the Spaces tab (for a lease type, the one gated field that is not on
+  // the Listing form). Both are building-level and the id goes through
   // `buildingSectionListingId`, and the banner cannot render on a space anyway:
   // `marketingReadiness` reports a space ready, because its building owns every
   // section the gate closes.
-  "src/components/listings/edit/MarketingReadinessBanner.tsx": "readiness banner links to the building's Deal form and Spaces tab via buildingSectionListingId",
+  "src/components/deals/MarketingReadinessBanner.tsx": "readiness banner links to the building's Listing form and Spaces tab via buildingSectionListingId",
 
   // The model composes its own path, so there is no link to fix: both of these
   // resolve a space id on the way out. See `rewriteSpaceDealPath`.

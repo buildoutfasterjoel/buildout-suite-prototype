@@ -1087,11 +1087,11 @@ export function CreateDealModal({
               {marketingGaps.length > 0 && (
                 <Alert severity="warning" withIcon>
                   <FontAwesomeIcon icon={faTriangleExclamation} />
-                  <Alert.Title>These drafts will have gaps</Alert.Title>
+                  <Alert.Title>These drafts will wait</Alert.Title>
                   Buildout writes from the listing content, and this deal has
-                  none yet. Add{" "}
+                  none yet — so Documents stays locked until it does. Add{" "}
                   {joinList(marketingGaps.map((f) => MARKETING_FIELD_LABEL[f]))}{" "}
-                  on the Listing form after the deal is created.
+                  on the Listing form and they unlock.
                 </Alert>
               )}
 

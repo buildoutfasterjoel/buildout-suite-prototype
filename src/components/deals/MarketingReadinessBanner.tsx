@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Alert } from "@buildoutinc/blueprint-react/ui/Alert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTriangleExclamation } from "@fortawesome/pro-duotone-svg-icons";
+import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { buildingSectionListingId } from "#/components/deals/dealCardLink";
 import { useMarketingReadiness } from "#/components/deals/useMarketingReadiness";
 import {
@@ -21,8 +22,26 @@ import type { Listing } from "#/data/types";
  *
  * `useMarketingReadiness` decides who sees this, so the banner cannot disagree
  * with the sidebar rows and the route guard reading the same hook.
+ *
+ * Shown on two surfaces, because a deal can be created four ways and only one
+ * of them passes through the Listing form: the form itself, and the Overview,
+ * which is where every creation path lands — the wizard, Otto's `createDeal`
+ * tool, and a contact record's "Start a Deal". Three of those four also attach
+ * the AI document set, so without the Overview copy a broker is handed
+ * documents they were never told are waiting on anything.
  */
-export function MarketingReadinessBanner({ listing }: { listing: Listing }) {
+export function MarketingReadinessBanner({
+	listing,
+	onListingForm = false,
+}: {
+	listing: Listing;
+	/**
+	 * True when this renders on the Listing form, where the fields the banner
+	 * names are on the page below it. The Overview has no fields, so it gets the
+	 * way there instead.
+	 */
+	onListingForm?: boolean;
+}) {
 	const { missing } = useMarketingReadiness(listing);
 	if (missing.length === 0) return null;
 
@@ -30,10 +49,11 @@ export function MarketingReadinessBanner({ listing }: { listing: Listing }) {
 		<Alert severity="warning" withIcon>
 			<FontAwesomeIcon icon={faTriangleExclamation} />
 			<Alert.Title>Marketing is locked</Alert.Title>
-			<div className="d-flex flex-column gap-2">
+			<div className="d-flex flex-column align-items-start gap-2">
 				<span>
-					Documents, the website, email campaigns and grids are built from the
-					fields below. Fill them in and those sections unlock.
+					Documents, the website, email campaigns and grids are built from{" "}
+					{onListingForm ? "the fields below" : "the listing content"}. Anything
+					Buildout drafted for this deal waits until these are filled in:
 				</span>
 				<ul className="mb-0 ps-4">
 					{missing.map((field) => (
@@ -43,6 +63,21 @@ export function MarketingReadinessBanner({ listing }: { listing: Listing }) {
 						</li>
 					))}
 				</ul>
+				{!onListingForm && (
+					<Button
+						variant="primary"
+						size="sm"
+						nativeButton={false}
+						render={
+							<Link
+								to="/listings/$listingId/listing"
+								params={{ listingId: buildingSectionListingId(listing.id) }}
+							/>
+						}
+					>
+						Complete listing fields
+					</Button>
+				)}
 			</div>
 		</Alert>
 	);
