@@ -117,6 +117,22 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 219,
+    title: "Profile settings in the avatar menu opens your own user record",
+    mergedAt: "2026-09-10T21:00:00Z",
+    day: "2026-09-10",
+    author: "ZS-buildout",
+    area: "Navigation",
+    summary:
+      "Profile settings under the avatar closed the menu and went nowhere. It now opens your own user record in Company Settings — the same page an admin reaches from the Users roster — so there is one profile screen rather than a dead item.",
+    highlights: [
+      {
+        kind: "fix",
+        text: "Profile settings in the avatar menu opens your user record's Profile tab, and follows whoever you are viewing the app as.",
+      },
+    ],
+  },
+  {
     pr: 218,
     title:
       "Permissions are grouped by product area, reconciled against the permissions inventory, and read as Listings & Deals",
