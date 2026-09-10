@@ -1479,6 +1479,23 @@
   border-left-color: colors.$purple-heart-500;
 }
 
+// The seven product-area groups on the permissions page. CSS columns rather
+// than a grid: the groups are uneven (two to seven rows), so a grid would leave
+// a hole under every short one, while columns let each group start where the
+// previous one ends. `break-inside: avoid` keeps a heading with its rows.
+.permission-areas {
+  column-gap: 1.5rem;
+
+  @media (min-width: 992px) {
+    column-count: 2;
+  }
+}
+
+.permission-area {
+  break-inside: avoid;
+  margin-bottom: 1.5rem;
+}
+
 .contacts-row,
 .list-row,
 .users-roster__row {

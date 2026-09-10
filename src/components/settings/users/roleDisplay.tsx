@@ -1,5 +1,6 @@
 import { forwardRef, type ComponentProps } from "react";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
+import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCircleCheck,
@@ -123,26 +124,50 @@ export function StatusIndicator({ status }: { status: UserStatus }) {
 }
 
 /**
- * The two permission groups.
+ * The two scopes, as a tag on each permission row.
  *
- * The scope distinction is what the whole model hangs on, but it only needs
- * explaining once per visit — so the heading carries the name and an info icon
- * carries the rest, rather than a standing subtitle under each group.
+ * Scope used to be the page's grouping; it is now a word beside each row, since
+ * the page groups by product area. The distinction is still what the model
+ * hangs on — it says whether sharing is involved — so the tag carries the
+ * explanation on hover rather than losing it.
  */
 export const SCOPE_META: Record<
   PermissionScope,
-  { heading: string; tooltip: string }
+  { tag: string; tooltip: string }
 > = {
   record: {
-    heading: "On specific listings, deals & contacts",
+    tag: "Record",
     tooltip:
-      "Applies to records they own or that have been shared with them",
+      "Acts on listings, deals and other records. Sharing still decides which ones they can open.",
   },
   account: {
-    heading: "Account-wide",
-    tooltip: "Applies everywhere — no record sharing required",
+    tag: "Account",
+    tooltip: "Applies everywhere — nothing needs to be shared.",
   },
 };
+
+/** The scope tag itself, with its explanation on hover. */
+export function ScopeTag({ scope }: { scope: PermissionScope }) {
+  return (
+    <Tooltip>
+      <Tooltip.Trigger
+        render={
+          <NeutralBadge
+            tabIndex={0}
+            appearance="muted"
+            className="fw-normal"
+            style={{ cursor: "help" }}
+          />
+        }
+      >
+        {SCOPE_META[scope].tag}
+      </Tooltip.Trigger>
+      <Tooltip.Content side="top" style={{ maxWidth: 280 }}>
+        {SCOPE_META[scope].tooltip}
+      </Tooltip.Content>
+    </Tooltip>
+  );
+}
 
 /**
  * Read-only state for one permission.

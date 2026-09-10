@@ -6,10 +6,11 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLock, faPencil, faRotateLeft } from "@fortawesome/pro-regular-svg-icons";
 import { faCircleInfo } from "@fortawesome/pro-duotone-svg-icons";
 import {
+  PERMISSION_AREAS,
   resolvePermissions,
   roleName,
   summarize,
-  type PermissionScope,
+  type PermissionArea,
 } from "#/data/permissions";
 import type { RosterUser } from "#/data/roster";
 import {
@@ -26,11 +27,8 @@ import {
   CUSTOM_TEXT,
   CustomChip,
   NeutralBadge,
-  SCOPE_META,
   StatePill,
 } from "./roleDisplay";
-
-const SCOPE_ORDER: PermissionScope[] = ["record", "account"];
 
 /** "an Office Admin" but "a Broker" — every role name is spoken in a toast. */
 function article(word: string): string {
@@ -87,14 +85,16 @@ export function UserPermissions({ user }: { user: RosterUser }) {
     [user.roleIds, user.overrides, accessSettings],
   );
   const summary = summarize(resolved);
-  const byScope = useMemo(
+  // Grouped by product area, in registry order within each — the way the
+  // product team's own permissions inventory reads.
+  const byArea = useMemo(
     () =>
       Object.fromEntries(
-        SCOPE_ORDER.map((scope) => [
-          scope,
-          resolved.filter((r) => r.permission.scope === scope),
+        PERMISSION_AREAS.map((area) => [
+          area.id,
+          resolved.filter((r) => r.permission.area === area.id),
         ]),
-      ) as Record<PermissionScope, EffectivePermission[]>,
+      ) as Record<PermissionArea, EffectivePermission[]>,
     [resolved],
   );
 
@@ -235,17 +235,19 @@ export function UserPermissions({ user }: { user: RosterUser }) {
           record visibility rather than a permission, so it wants its own home
           once record-level sharing exists. */}
 
-      {/* Permission groups, side by side from lg up. Two narrower columns keep
-          each label within a short glance of its own switch — one full-width
-          column made the eye travel the page's whole width per row. The groups
-          are uneven (15 vs 5), which is fine: they're independent lists, and
-          pairing them halves the scroll. */}
-      <div className="row g-4">
-        {SCOPE_ORDER.map((scope) => (
-          <div key={scope} className="col-lg-6">
+      {/* Permission groups by product area, flowing into two columns from lg
+          up. CSS columns rather than a grid because the seven groups are
+          uneven (two to seven rows each) and a grid would leave a hole under
+          every short one; columns let each group start where the previous one
+          ends. Two narrower columns also keep each label within a short glance
+          of its own switch — one full-width column made the eye travel the
+          page's whole width per row. */}
+      <div className="permission-areas">
+        {PERMISSION_AREAS.map((area) => (
+          <section key={area.id} className="permission-area">
             {/* The icon leads the heading: at this size it reads as the group's
-                marker — the job the coloured dot used to do — and carries the
-                scope explanation on hover rather than in a standing subtitle. */}
+                marker and carries the area's one-line blurb on hover rather
+                than in a standing subtitle. */}
             <div className="d-flex align-items-center gap-2 mb-2">
               <Tooltip>
                 <Tooltip.Trigger
@@ -254,23 +256,22 @@ export function UserPermissions({ user }: { user: RosterUser }) {
                       tabIndex={0}
                       className="text-muted d-inline-flex align-items-center"
                       style={{ cursor: "help", fontSize: "1.25rem" }}
-                      aria-label={`What "${SCOPE_META[scope].heading}" means`}
+                      aria-label={`What "${area.heading}" covers`}
                     />
                   }
                 >
                   <FontAwesomeIcon icon={faCircleInfo} />
                 </Tooltip.Trigger>
                 <Tooltip.Content side="top" style={{ maxWidth: 300 }}>
-                  {SCOPE_META[scope].tooltip}
+                  {area.blurb}
                 </Tooltip.Content>
               </Tooltip>
-              <span className="fs-6 fw-semibold">
-                {SCOPE_META[scope].heading}
-              </span>
+              <span className="fs-6 fw-semibold">{area.heading}</span>
+              <span className="text-muted small">{byArea[area.id].length}</span>
             </div>
 
             <div className="border rounded overflow-hidden">
-              {byScope[scope].map((row) => (
+              {byArea[area.id].map((row) => (
                 <PermissionRow
                   key={row.permission.id}
                   row={row}
@@ -280,7 +281,7 @@ export function UserPermissions({ user }: { user: RosterUser }) {
                 />
               ))}
             </div>
-          </div>
+          </section>
         ))}
       </div>
 
@@ -408,6 +409,10 @@ function PermissionRow({
           clears the override, so a second control for the same move was noise.
           "Reset all to role defaults" above still clears the page at once. */}
       <div className="flex-shrink-0 d-flex align-items-center gap-2">
+        {/* No scope tag (Record / Account) beside the control for now — twenty
+            rows of the same two words read as noise. The distinction still
+            drives the model; `ScopeTag` in roleDisplay.tsx is kept so it can
+            come back here as one line if a per-row cue is wanted again. */}
         {editing && !locked ? (
           <Switch
             checked={on}

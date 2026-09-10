@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   PERMISSIONS,
+  PERMISSION_AREAS,
   ROLES,
   resolvePermissions,
   roleUnionCount,
@@ -12,13 +13,40 @@ import { OFFICES, SEED_ROSTER } from "#/data/roster";
 const BROKER_ONLY = "delete-listings";
 
 describe("permission registry", () => {
-  it("carries the mocks' 20 plus the contact and voucher permissions, split 22 / 5", () => {
-    // 15 record-scoped from the mocks + Own Contacts, Mark Contacts Private,
-    // View Private Contacts, Assign Contacts + View / Edit Other Users'
-    // Vouchers and Approve Vouchers.
-    expect(PERMISSIONS).toHaveLength(27);
-    expect(PERMISSIONS.filter((p) => p.scope === "record")).toHaveLength(22);
-    expect(PERMISSIONS.filter((p) => p.scope === "account")).toHaveLength(5);
+  it("carries the 32 from the reconciled inventory, split 25 record / 7 account", () => {
+    // The mocks' 20 + the four contact permissions + the three voucher
+    // permissions + the five the 2026-09-09 inventory pass added: Use Back
+    // Office, Administrate Back Office, Edit Documents, Share Document Links
+    // That Bypass the CA, Manage All Contacts & Lists.
+    expect(PERMISSIONS).toHaveLength(32);
+    expect(PERMISSIONS.filter((p) => p.scope === "record")).toHaveLength(25);
+    expect(PERMISSIONS.filter((p) => p.scope === "account")).toHaveLength(7);
+  });
+
+  it("groups every permission into a known, non-empty product area", () => {
+    const areaIds = new Set(PERMISSION_AREAS.map((a) => a.id));
+    for (const p of PERMISSIONS) expect(areaIds, p.id).toContain(p.area);
+    for (const area of PERMISSION_AREAS) {
+      expect(
+        PERMISSIONS.filter((p) => p.area === area.id).length,
+        area.heading,
+      ).toBeGreaterThan(0);
+    }
+  });
+
+  it("keeps each area's permissions contiguous, so the page order is the registry order", () => {
+    // The page groups by area but renders rows in registry order within each
+    // group. If an area's rows were scattered through the registry, the
+    // registry would no longer read the way the page does.
+    const seen = new Set<string>();
+    let current: string | undefined;
+    for (const p of PERMISSIONS) {
+      if (p.area !== current) {
+        expect(seen, `${p.area} appears twice`).not.toContain(p.area);
+        seen.add(p.area);
+        current = p.area;
+      }
+    }
   });
 
   it("has no duplicate permission ids", () => {
@@ -36,23 +64,27 @@ describe("permission registry", () => {
 });
 
 describe("role defaults match the mocks", () => {
-  it("gives a Broker-only user 13 of 27", () => {
-    // The mocks' 11, plus the two contact-ownership grants Broker carries. The
-    // three voucher permissions are none of a broker's business: they see their
-    // own vouchers by being on the deal, not by holding anything.
+  it("gives a Broker-only user 15 of 32", () => {
+    // The mocks' 11, plus the two contact-ownership grants Broker carries,
+    // plus Use Back Office (they raise vouchers on their own deals) and Edit
+    // Documents (the base the mocks' document permissions assumed). The other
+    // voucher permissions are none of a broker's business: they see their own
+    // vouchers by being on the deal, not by holding anything.
     const resolved = resolvePermissions(["broker"], {});
     expect(summarize(resolved)).toMatchObject({
-      onCount: 13,
-      total: 27,
+      onCount: 15,
+      total: 32,
       customCount: 0,
     });
   });
 
-  it("unions Broker + Managing Director to 22", () => {
+  it("unions Broker + Managing Director to 25", () => {
     // The mocks' 16, plus the four contact permissions (both roles carry the
     // two grants; only MD adds see-through and assignment), plus the two
-    // voucher permissions an MD holds — see the whole book, and sign off.
-    expect(roleUnionCount(["broker", "managing-director"])).toBe(22);
+    // voucher permissions an MD holds — see the whole book, and sign off —
+    // plus Use Back Office (both), Edit Documents (Broker) and Manage All
+    // Contacts & Lists (MD).
+    expect(roleUnionCount(["broker", "managing-director"])).toBe(25);
   });
 
   it("grants nothing without a role", () => {
@@ -65,7 +97,7 @@ describe("resolvePermissions", () => {
     const off = resolvePermissions(["broker"], { [BROKER_ONLY]: false });
     const row = off.find((r) => r.permission.id === BROKER_ONLY);
     expect(row).toMatchObject({ on: false, custom: true, roleDefault: true });
-    expect(summarize(off)).toMatchObject({ onCount: 12, customCount: 1 });
+    expect(summarize(off)).toMatchObject({ onCount: 14, customCount: 1 });
   });
 
   it("can grant a permission no assigned role allows", () => {
@@ -79,7 +111,7 @@ describe("resolvePermissions", () => {
 
   it("does not count an override that agrees with the role as custom", () => {
     const redundant = resolvePermissions(["broker"], { [BROKER_ONLY]: true });
-    expect(summarize(redundant)).toMatchObject({ onCount: 13, customCount: 0 });
+    expect(summarize(redundant)).toMatchObject({ onCount: 15, customCount: 0 });
   });
 
   it("attributes a permission to every role granting it", () => {
@@ -111,11 +143,12 @@ describe("seed roster", () => {
     const summary = summarize(
       resolvePermissions(diana!.roleIds, diana!.overrides),
     );
-    // 12 from Managing Director (the mocks' 6 + the four contact permissions +
-    // View Other Users' Vouchers and Approve Vouchers), minus one removed, plus
-    // three granted — the third being Own Listings, which a producing MD needs
-    // to be put on a deal as its broker.
-    expect(summary).toMatchObject({ onCount: 14, customCount: 4 });
+    // 14 from Managing Director (the mocks' 6 + the four contact permissions +
+    // Use Back Office, View Other Users' Vouchers and Approve Vouchers + Manage
+    // All Contacts & Lists), minus one removed, plus three granted — the third
+    // being Own Listings, which a producing MD needs to be put on a deal as
+    // its broker.
+    expect(summary).toMatchObject({ onCount: 16, customCount: 4 });
   });
 
   it("gives every person exactly one real role", () => {
