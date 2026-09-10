@@ -13,22 +13,39 @@ import {
   faPrint,
   faTrashCan,
 } from "@fortawesome/pro-regular-svg-icons";
-import type { Listing } from "#/data/types";
-import { invoiceQuickbooksSynced } from "#/data/quickbooks";
-import { QuickbooksSyncBadge } from "#/components/common/QuickbooksSyncBadge";
+import type { InvoiceActivity, Listing } from "#/data/types";
 import { findTeammate } from "#/data/teammates";
 import { ListingPageHeader } from "#/components/listings/ListingPageHeader";
-import { formatDate } from "#/components/deals/dealDisplay";
+import { formatDateAtTime } from "#/components/deals/dealDisplay";
+
+/**
+ * The activity dot's colour — purple while a bill is only drafted, the brand
+ * blue once it has been finalized, grey once it has been voided.
+ *
+ * Colour and word together, never colour alone: the label sits beside the dot
+ * in every row, so the dot is a scanning aid rather than the only place the
+ * state is said.
+ */
+const ACTIVITY_BG: Record<InvoiceActivity, string> = {
+  Created: "bg-purple-heart-500",
+  Finalized: "bg-buildout-blue-500",
+  Voided: "bg-storm-grey-500",
+};
 
 /**
  * The deal's invoices — one row per PDF that has been generated against its
  * voucher.
  *
  * The rows are the deal's own records now; this used to derive a single fake
- * "Draft" row from the deal's primary party. Three columns, because that is what
- * a broker scanning a list of files needs: which file, when it was made, and by
- * whom. The amounts live on the invoice and belong on the invoice, not spread
- * across a directory of them.
+ * "Draft" row from the deal's primary party. The columns are what a broker
+ * scanning a list of bills needs: which file, which bill number, what last
+ * happened to it, when, and who did it. The amounts live on the invoice and
+ * belong on the invoice, not spread across a directory of them.
+ *
+ * No QuickBooks column. It used to carry a sync badge derived from the
+ * receivables each invoice billed, which said something about the A/R rows
+ * rather than about the bill — and the voucher's own Receivables table already
+ * says it, one row per line, where a broker can act on it.
  *
  * The row menu is deliberately inert at this stage. Edit needs the invoice view
  * that has not been built, and Print needs a print layout; wiring Delete alone
@@ -44,9 +61,6 @@ export function DealInvoices({
   heading?: string;
 }) {
   const invoices = listing.invoices ?? [];
-  // The voucher's own receivables — what an invoice's QuickBooks state is read
-  // from. Resolved once here rather than per row.
-  const receivables = listing.transaction.backOffice.receivables;
 
   return (
     <div className="d-flex flex-column gap-3 p-4">
@@ -78,14 +92,10 @@ export function DealInvoices({
                 <FontAwesomeIcon icon={faFileLines} className="text-muted" />
               </Table.Head>
               <Table.Head>Attachment Name</Table.Head>
-              <Table.Head>Created</Table.Head>
-              <Table.Head>Created By</Table.Head>
-              {/* Unheaded, like the same gutter on the Receivables table: the
-                  badge is a row status and its tooltip names it. */}
-              <Table.Head
-                style={{ width: 40 }}
-                aria-label="QuickBooks sync status"
-              />
+              <Table.Head>Invoice Number</Table.Head>
+              <Table.Head>Last Activity</Table.Head>
+              <Table.Head>Activity Date</Table.Head>
+              <Table.Head>Completed By</Table.Head>
               <Table.Head />
             </Table.Row>
           </Table.Header>
@@ -96,22 +106,31 @@ export function DealInvoices({
                   <FontAwesomeIcon icon={faFilePdf} className="text-danger" />
                 </Table.Cell>
                 <Table.Cell className="fw-medium">{invoice.name}</Table.Cell>
-                <Table.Cell>{formatDate(invoice.createdAt)}</Table.Cell>
-                {/* Resolved through the roster rather than stored as a name, so
-                    correcting a teammate corrects every invoice they made. Falls
-                    back to an em-dash for an id no longer on the roster — the
-                    invoice is still a record of a bill that went out. */}
-                <Table.Cell>{findTeammate(invoice.createdById)?.name ?? "—"}</Table.Cell>
-                {/* Derived from the lines, never stored — an invoice cannot be
-                    in QuickBooks unless the receivables it bills are. */}
+                {/* "Draft" in place of a number, which is what an unfinalized
+                    bill has: the number is assigned at finalize. */}
+                <Table.Cell>{invoice.number ?? "Draft"}</Table.Cell>
                 <Table.Cell>
-                  <QuickbooksSyncBadge
-                    synced={invoiceQuickbooksSynced(
-                      invoice.lineItems,
-                      receivables,
-                    )}
-                    size={18}
-                  />
+                  <span className="d-inline-flex align-items-center gap-2">
+                    <span
+                      className={`d-inline-flex align-items-center justify-content-center rounded-circle text-white ${ACTIVITY_BG[invoice.lastActivity]}`}
+                      style={{ width: 24, height: 24, fontSize: 12 }}
+                      aria-hidden
+                    >
+                      <FontAwesomeIcon icon={faFileLines} />
+                    </span>
+                    {invoice.lastActivity}
+                  </span>
+                </Table.Cell>
+                <Table.Cell>{formatDateAtTime(invoice.activityAt)}</Table.Cell>
+                {/* Resolved through the roster rather than stored as a name, so
+                    correcting a teammate corrects every invoice they completed.
+                    Empty on a draft — nobody has completed it — and an em-dash
+                    for an id no longer on the roster, since the bill itself is
+                    still a record of what went out. */}
+                <Table.Cell>
+                  {invoice.completedById
+                    ? (findTeammate(invoice.completedById)?.name ?? "—")
+                    : ""}
                 </Table.Cell>
                 <Table.Cell className="text-end">
                   <DropdownMenu>

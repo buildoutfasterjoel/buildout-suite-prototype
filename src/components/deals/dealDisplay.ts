@@ -79,6 +79,30 @@ export function formatMonthYear(iso: string | null): string {
   });
 }
 
+/**
+ * "09/09/2026 at 6:20pm CDT" from an ISO string, or a dash when absent — the
+ * Invoices table's activity stamp.
+ *
+ * Carries the zone, which `formatDateTime` does not. An invoice's activity is a
+ * filing time somebody may have to state to an accountant, and the app's other
+ * timestamps are conversational ("a message came in this afternoon"), so the
+ * zone is worth its width here and nowhere else. The am/pm is lower-cased and
+ * closed up the way the product spells it.
+ */
+export function formatDateAtTime(iso: string | null): string {
+  if (!iso) return "--";
+  const d = new Date(iso);
+  const time = d
+    .toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+    })
+    // "6:20 PM CDT" → "6:20pm CDT".
+    .replace(/\s(AM|PM)/, (_, m) => m.toLowerCase());
+  return `${formatDate(iso)} at ${time}`;
+}
+
 /** "Jun 12, 2026 · 3:40 PM" from an ISO string, or a dash when absent. */
 export function formatDateTime(iso: string | null): string {
   if (!iso) return "--";

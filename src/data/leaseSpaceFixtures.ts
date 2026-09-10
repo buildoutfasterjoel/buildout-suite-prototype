@@ -689,10 +689,15 @@ function applyStageDetail(
         invoicePayerFileLabel(tenant ?? { name: '', company: '' }, suiteReceivable.billToCompany),
         1,
       ),
+      number: 1,
+      // Finalized rather than left a draft: the bill for a suite whose voucher
+      // is Approved has gone out, and a numbered row is what the demo walks
+      // through.
+      lastActivity: 'Finalized',
       // Two days after the "Submit commission voucher" task completed, a day
       // before the sign-off above.
-      createdAt: `${isoDate(-7)}T17:00:00.000Z`,
-      createdById: 'you',
+      activityAt: `${isoDate(-7)}T17:00:00.000Z`,
+      completedById: 'you',
       payerContactId: suiteReceivable.payerContactId,
       billToCompany: suiteReceivable.billToCompany,
       dueDate: invoiceDueDate(suiteLineItems),

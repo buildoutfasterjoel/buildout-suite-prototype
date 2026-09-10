@@ -34,7 +34,7 @@ describe('createInvoiceFromReceivables', () => {
 
     const { invoiceId, name } = createInvoiceFromReceivables(deal.id, [receivable.id])
     expect(invoiceId).not.toBeNull()
-    expect(name).toMatch(/_Invoice_\d+\.pdf$/)
+    expect(name).toMatch(/_Invoice_Draft\.pdf$/)
 
     const invoice = reread(deal.id).invoices!.at(-1)!
     expect(reread(deal.id).invoices).toHaveLength(before + 1)
@@ -99,11 +99,16 @@ describe('createInvoiceFromReceivables', () => {
     })
   })
 
-  it('numbers a deal\'s invoices in sequence, so two to one payer do not collide', () => {
+  it('files a draft: no number, nobody has completed it, only created', () => {
+    // The number is assigned at finalize, which is why a freshly billed invoice
+    // has none and its Completed By cell is empty.
     const deal = dealWithOneReceivable()
     const id = deal.transaction.backOffice.receivables[0].id
-    const first = createInvoiceFromReceivables(deal.id, [id]).name
-    const second = createInvoiceFromReceivables(deal.id, [id]).name
-    expect(first).not.toBe(second)
+    createInvoiceFromReceivables(deal.id, [id])
+    const invoice = reread(deal.id).invoices!.at(-1)!
+    expect(invoice.number).toBeUndefined()
+    expect(invoice.lastActivity).toBe('Created')
+    expect(invoice.completedById).toBeUndefined()
+    expect(invoice.activityAt).not.toBe('')
   })
 })

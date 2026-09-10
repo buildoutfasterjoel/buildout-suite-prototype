@@ -1,4 +1,4 @@
-import type { DealInvoiceLineItem, FinancialReceivable, Listing } from './types'
+import type { DealInvoice, DealInvoiceLineItem, FinancialReceivable } from './types'
 
 /**
  * Invoices: turning receivables the voucher says are owed into the record of a
@@ -43,23 +43,34 @@ export function invoicePayerFileLabel(
 }
 
 /**
- * `ABC_Corp_Invoice_1.pdf` — what the Invoices table shows.
+ * `ABC_Corp_Invoice_5.pdf`, or `ABC_Corp_Invoice_Draft.pdf` — what the Invoices
+ * table shows.
  *
- * The ordinal is the invoice's position on the deal, not per payer, so two
- * invoices to the same party cannot collide. Punctuation collapses to a single
- * underscore and trailing separators are trimmed, or "ABC, Corp." would spell
- * `ABC_Corp__Invoice_1.pdf`.
+ * The number is the invoice's own, assigned at finalize, so two bills to the
+ * same party cannot collide. A draft has none and says so in the filename,
+ * which is what the product does: the file is named after the bill, and until
+ * it is finalized there is no bill number to name it after.
+ *
+ * Punctuation collapses to a single underscore and trailing separators are
+ * trimmed, or "ABC, Corp." would spell `ABC_Corp__Invoice_5.pdf`.
  */
-export function invoiceFileName(payerLabel: string, ordinal: number): string {
+export function invoiceFileName(payerLabel: string, invoiceNumber?: number): string {
+  const suffix = invoiceNumber ?? 'Draft'
   const slug = payerLabel.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
   // A contact that has left the store can resolve to a label with no letters in
-  // it at all. The ordinal alone still names the row.
-  return slug ? `${slug}_Invoice_${ordinal}.pdf` : `Invoice_${ordinal}.pdf`
+  // it at all. The suffix alone still names the row.
+  return slug ? `${slug}_Invoice_${suffix}.pdf` : `Invoice_${suffix}.pdf`
 }
 
-/** The ordinal the deal's next invoice takes. */
-export function nextInvoiceOrdinal(deal: Listing): number {
-  return (deal.invoices?.length ?? 0) + 1
+/**
+ * The number the deal's next FINALIZED invoice takes.
+ *
+ * Reads the highest number already on the deal rather than counting rows: the
+ * drafts among them have no number, so a count would hand the same number out
+ * twice the moment one of them is finalized.
+ */
+export function nextInvoiceNumber(invoices: readonly DealInvoice[] = []): number {
+  return invoices.reduce((max, i) => Math.max(max, i.number ?? 0), 0) + 1
 }
 
 /**

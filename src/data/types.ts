@@ -553,14 +553,42 @@ export interface DealInvoiceLineItem {
  * shown, so copying six more fields onto it would only create six more things
  * that can disagree with the record they came from.
  */
+/**
+ * The last thing that happened to an invoice, which is also all the status it
+ * has: a draft has been `Created`, a numbered bill has been `Finalized`, and a
+ * bill withdrawn after the fact has been `Voided`.
+ *
+ * One field rather than a status plus an activity log. The table shows the last
+ * activity and its date, and every state a broker can reach is the terminal one
+ * of a single step, so a second field would only be able to disagree with this.
+ */
+export type InvoiceActivity = 'Created' | 'Finalized' | 'Voided'
+
 export interface DealInvoice {
   id: string
-  /** The filename the Invoices table shows, e.g. `ABC_Corp_Invoice_1.pdf`. */
+  /** The filename the Invoices table shows, e.g. `ABC_Corp_Invoice_5.pdf`. */
   name: string
-  /** ISO timestamp. The table shows the calendar day only. */
-  createdAt: string
-  /** A `TEAMMATES` id — resolve it with `findTeammate`. */
-  createdById: string
+  /**
+   * The invoice number, absent while the invoice is a draft.
+   *
+   * Assigned at finalize, not at creation, which is why it is optional: a draft
+   * shows "Draft" in the number column and spells `_Invoice_Draft.pdf` in its
+   * filename. Numbers run within the deal, so two bills to one payer cannot
+   * collide.
+   */
+  number?: number
+  /** Where the invoice stands — see {@link InvoiceActivity}. */
+  lastActivity: InvoiceActivity
+  /** ISO timestamp of `lastActivity`, shown to the minute. */
+  activityAt: string
+  /**
+   * A `TEAMMATES` id — who finalized or voided it. Resolve with `findTeammate`.
+   *
+   * Absent on a draft, which is why the Completed By column is empty on a
+   * `Created` row: nobody has completed anything yet. Storing the creator there
+   * would fill the column with a name that does not answer the question it asks.
+   */
+  completedById?: string
   /**
    * Who is billed, as a contact id. Every line's receivable named this same
    * payer — one invoice bills one party, which is what `canCreateInvoice`
