@@ -11,7 +11,6 @@ import type { Property } from "#/data/types";
 import type { SpaceRow } from "#/data/propertySpaces";
 import { spaceAssetLink } from "#/components/deals/dealCardLink";
 import { DealStageBadge } from "#/components/deals/NewDealStageChip";
-import { SpaceStatusDot } from "./SpaceStatusDot";
 import { TYPE_LABELS, formatSqFt, getPhotoUrl } from "./propertyDisplay";
 import {
   formatAvailabilityHeadline,
@@ -206,9 +205,9 @@ export function PropertyListRow({
           </div>
           {/* Left-aligned, read down the columns, each line a taller hit
               target. Plain buttons rather than `.btn-link`: `.btn` centres its
-              content, which read as a ragged indent down the list. The status
-              is the dot in front of the label — the roster's mark — rather than
-              a word repeated on every line when a single status is filtered.
+              content, which read as a ragged indent down the list. Status
+              stays a trailing word: a coloured dot per line and a fixed label
+              column were tried and read as noise and gaps, not clarity.
               Capped at six so a 24-suite tower doesn't become the page; the
               rest are one click away on the Spaces tab. */}
           <div className="property-row__spaces">
@@ -224,27 +223,27 @@ export function PropertyListRow({
                   void navigate(spaceAssetLink(property.id, s.unitId));
                 }}
               >
-                <SpaceStatusDot status={s.status} className="fw-semibold property-row__space-label">
-                  {s.label}
-                </SpaceStatusDot>
+                <span className="fw-semibold text-nowrap">{s.label}</span>
                 <span className="text-muted text-truncate property-row__space-meta">
-                  {[s.floor != null ? `Fl ${s.floor}` : null, formatSqFt(s.sqft)]
+                  {[s.floor != null ? `Fl ${s.floor}` : null, formatSqFt(s.sqft), s.status]
                     .filter(Boolean)
                     .join(" · ")}
                 </span>
               </button>
             ))}
-            {matchedSpaces.length > MAX_UNFOLDED_SPACES && (
-              <Link
-                to="/properties/$propertyId/spaces"
-                params={{ propertyId: property.id }}
-                className="property-row__space text-primary text-decoration-none"
-                onClick={(e) => e.stopPropagation()}
-              >
-                and {matchedSpaces.length - MAX_UNFOLDED_SPACES} more
-              </Link>
-            )}
           </div>
+          {matchedSpaces.length > MAX_UNFOLDED_SPACES && (
+            // Its own line under the columns, not a seventh item dangling in
+            // one of them.
+            <Link
+              to="/properties/$propertyId/spaces"
+              params={{ propertyId: property.id }}
+              className="property-row__space text-primary text-decoration-none"
+              onClick={(e) => e.stopPropagation()}
+            >
+              and {matchedSpaces.length - MAX_UNFOLDED_SPACES} more
+            </Link>
+          )}
         </div>
       )}
     </div>

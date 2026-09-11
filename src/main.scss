@@ -551,6 +551,11 @@
   cursor: pointer;
   break-inside: avoid;
 
+  // Outside the column box ("and N more") the width hack isn't needed.
+  .property-row__spaces + & {
+    width: auto;
+  }
+
   &:hover,
   &:focus-visible {
     background: var(--color-storm-grey-100, #f1f3f6);
@@ -558,12 +563,7 @@
   }
 }
 
-// A fixed label column so "Fl 1 · 6,387 SF" starts at the same x on every
-// line, and tabular numerals so the sizes stack digit over digit.
-.property-row__space-label {
-  min-width: 84px;
-}
-
+// Tabular numerals so the sizes stack digit over digit down a column.
 .property-row__space-meta {
   font-variant-numeric: tabular-nums;
 }
