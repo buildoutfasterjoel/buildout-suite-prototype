@@ -135,6 +135,10 @@ export const CHANGELOG: ChangelogEntry[] = [
         text: "Sizes and prices are free min/max ranges rather than fixed bands, so Under 10,000 SF and 12,000 to 18,000 SF are both one filter away. Active filters remain removable pills under the toolbar.",
       },
       {
+        kind: "refinement",
+        text: "Filter buttons look the same everywhere they appear — Properties, Deals, Contacts, Tasks, Back Office and the pipeline report: a light grey stroke at rest, and once a filter is applied a dark purple stroke with the count in the label, as in \"Filters (2)\". The count badges are gone.",
+      },
+      {
         kind: "feature",
         text: "With a space filter set, each building row unfolds the spaces that matched — \"2 of 6 spaces match\", then one line per suite with floor, size and status — and each line opens that space's page.",
       },
