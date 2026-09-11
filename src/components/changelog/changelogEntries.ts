@@ -140,7 +140,11 @@ export const CHANGELOG: ChangelogEntry[] = [
       },
       {
         kind: "feature",
-        text: "With a space filter set, each building row unfolds the spaces that matched — \"2 of 6 spaces match\", then one line per suite with floor, size and status — and each line opens that space's page.",
+        text: "With a space filter set, each building row unfolds the spaces that matched — \"2 of 6 spaces match\", then a two-column list of suites with a status dot, floor and size — and each line opens that space's page. Six show; \"and N more\" opens the Spaces tab.",
+      },
+      {
+        kind: "refinement",
+        text: "The index remembers your search and filters when you open a property or space and come back, as Contacts and Tasks do.",
       },
       {
         kind: "refinement",
