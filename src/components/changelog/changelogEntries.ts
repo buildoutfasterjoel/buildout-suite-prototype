@@ -117,6 +117,35 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 224,
+    title:
+      "The syndication modal reports where a listing goes, and emails the reps from one place",
+    mergedAt: "2026-09-11T23:10:00Z",
+    day: "2026-09-11",
+    author: "buildoutfasterjoel",
+    area: "Deals",
+    summary:
+      "The syndication modal was doing two jobs at once: reporting where a listing had reached, and switching channels on and off — while the email it is named for was a dead mailto: link to the first broker on the deal. The switches come out, ahead of moving them to the user profile where connections are actually made, and the email becomes a real compose step with a template to pick.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "Email Reps, in the Email Updates header, opens a compose step: pick New Listing, Update Listing or Close/Offline Listing, add a message of your own, and one email goes to every email channel at once. The template starts on whichever matches the listing — unpublished on New Listing, live on Update, closed on Close/Offline.",
+      },
+      {
+        kind: "refinement",
+        text: "The modal now reports rather than configures. Every on/off switch is gone, ahead of those controls moving to your profile, and the group headers lose the \"n of m active\" counts that went with them.",
+      },
+      {
+        kind: "refinement",
+        text: "Channels your account has no connection for no longer appear. The list is what this listing can actually reach, so the header's \"syndicating to 2/6\" counts against a number it can reach.",
+      },
+      {
+        kind: "fix",
+        text: "The footer's Send Rep Email is gone. It opened your mail client addressed to the first broker on the deal, which reached nobody at CoStar, LoopNet or Crexi.",
+      },
+    ],
+  },
+  {
     pr: 223,
     title:
       "The Properties index filters like Buildout's, unfolds the spaces a filter matched, and every index shares one filter button",
