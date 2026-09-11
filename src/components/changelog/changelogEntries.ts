@@ -164,6 +164,10 @@ export const CHANGELOG: ChangelogEntry[] = [
         text: "A deal's context rail lists the connected property's contacts with their property role, scoped to the deal: a lease shell shows the building's people, a space deal shows its own suite's, a sale shows every suite's in-place tenant.",
       },
       {
+        kind: "feature",
+        text: "The Properties index shows each building's space availability on its row — Available · 1 of 6 spaces — and the Filters flyout gains a Space Availability facet that matches a building when any of its spaces is in that state.",
+      },
+      {
         kind: "fix",
         text: "Editing a space's suite, floor, ceiling height, offices, conference rooms or furnished on its deal's Details now updates the property record too. Those were edited on a copy before, so the asset record went quietly stale after the first edit.",
       },
