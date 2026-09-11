@@ -11,8 +11,15 @@ import type { Property } from "#/data/types";
 import type { SpaceRow } from "#/data/propertySpaces";
 import { spaceAssetLink } from "#/components/deals/dealCardLink";
 import { DealStageBadge } from "#/components/deals/NewDealStageChip";
+import { SpaceStatusDot } from "./SpaceStatusDot";
 import { TYPE_LABELS, formatSqFt, getPhotoUrl } from "./propertyDisplay";
-import { formatAvailabilityHeadline, propertyAvailability } from "#/data/propertySpaces";
+import {
+  formatAvailabilityHeadline,
+  propertyAvailability,
+} from "#/data/propertySpaces";
+
+/** How many matching spaces a row unfolds before handing off to the Spaces tab. */
+const MAX_UNFOLDED_SPACES = 6;
 
 /** "Retail • Multi-Tenant • 10,716 SF" — the meta line under the address. */
 function metaLine(property: Property): string {
@@ -61,7 +68,8 @@ export function PropertyListRow({
 }) {
   const navigate = useNavigate();
   // Your own record only: a prospect has no deals, so nothing to derive from.
-  const availability = mode === "owned" ? propertyAvailability(property.id) : null;
+  const availability =
+    mode === "owned" ? propertyAvailability(property.id) : null;
   return (
     <div
       role="button"
@@ -74,143 +82,169 @@ export function PropertyListRow({
         }
       }}
       aria-pressed={selected}
-      className={`bg-card border rounded d-flex align-items-stretch w-100 text-start${
+      className={`bg-card border rounded d-flex flex-column w-100 text-start${
         selected ? " border-primary" : ""
       }`}
-      style={{ gap: 12, padding: 12, cursor: "pointer" }}
+      style={{ padding: 12, cursor: "pointer" }}
     >
-      <div className="d-flex flex-column flex-grow-1" style={{ minWidth: 0 }}>
-        <div className="fw-semibold text-truncate" style={{ fontSize: 14 }}>
-          {property.street || property.name}
-        </div>
-        <div className="text-muted text-truncate" style={{ fontSize: 12 }}>
-          {property.city}, {property.state} {property.zip}
-        </div>
-        {/* Under the address, not trailing the meta line: the meta line's
+      <div className="d-flex align-items-stretch" style={{ gap: 12 }}>
+        <div className="d-flex flex-column flex-grow-1" style={{ minWidth: 0 }}>
+          <div className="fw-semibold text-truncate" style={{ fontSize: 14 }}>
+            {property.street || property.name}
+          </div>
+          <div className="text-muted text-truncate" style={{ fontSize: 12 }}>
+            {property.city}, {property.state} {property.zip}
+          </div>
+          {/* Under the address, not trailing the meta line: the meta line's
             length varies per record, so a badge appended to it landed at a
             different x on every row. Anchored here it forms a clean column.
             No deal means no stage — the slot is simply absent, not "none". */}
-        {/* Stage badge and, inline to its right, the space availability headline
+          {/* Stage badge and, inline to its right, the space availability headline
             the record's header carries — "Available · 1 of 6 spaces". Text only:
             a second coloured dot beside the stage chip's competed with it. Either
             can be absent (no deal / no spaces); the row is there when one is. */}
-        {mode === "owned" && (property.status || availability) && (
-          <div className="mt-1 d-flex align-items-center gap-2 flex-wrap">
-            {property.status && <DealStageBadge value={property.status} />}
-            {availability && (
-              <span className="text-muted text-nowrap" style={{ fontSize: 12 }}>
-                {formatAvailabilityHeadline(availability)}
-              </span>
+          {mode === "owned" && (property.status || availability) && (
+            <div className="mt-1 d-flex align-items-center gap-2 flex-wrap">
+              {property.status && <DealStageBadge value={property.status} />}
+              {availability && (
+                <span
+                  className="text-muted text-nowrap"
+                  style={{ fontSize: 12 }}
+                >
+                  {formatAvailabilityHeadline(availability)}
+                </span>
+              )}
+            </div>
+          )}
+          <div
+            className="text-muted text-truncate mt-auto pt-3"
+            style={{ fontSize: 12 }}
+          >
+            {metaLine(property)}
+          </div>
+        </div>
+
+        <img
+          src={getPhotoUrl(property.id, 320, 200)}
+          alt=""
+          className="flex-shrink-0"
+          style={{
+            width: 160,
+            height: 96,
+            objectFit: "cover",
+            borderRadius: 4,
+            display: "block",
+          }}
+        />
+
+        {mode === "prospect" && (
+          // Fixed width so swapping the Add button for the "Added" badge doesn't
+          // reflow the row under the pointer that just clicked it.
+          <div
+            className="d-flex flex-column align-items-center justify-content-center gap-2 flex-shrink-0"
+            style={{ width: 76 }}
+          >
+            {inDatabase ? (
+              <>
+                <Badge
+                  variant="secondary"
+                  appearance="muted"
+                  className="d-inline-flex align-items-center gap-1"
+                >
+                  <FontAwesomeIcon icon={faCircleCheck} />
+                  Added
+                </Badge>
+                {/* The record is yours now, so the useful next move is opening
+                  it — the row itself still opens the prospect flyout. */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  nativeButton={false}
+                  onClick={(e) => e.stopPropagation()}
+                  render={
+                    <Link
+                      to="/properties/$propertyId"
+                      params={{ propertyId: property.id }}
+                    />
+                  }
+                >
+                  View
+                </Button>
+              </>
+            ) : (
+              <Tooltip>
+                <Tooltip.Trigger
+                  render={
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      aria-label={`Add ${property.street || property.name} to your properties`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAdd?.();
+                      }}
+                    >
+                      <FontAwesomeIcon icon={faBuildingCircleArrowRight} />
+                    </Button>
+                  }
+                />
+                <Tooltip.Content>Add Property</Tooltip.Content>
+              </Tooltip>
             )}
           </div>
         )}
-        <div
-          className="text-muted text-truncate mt-auto pt-3"
-          style={{ fontSize: 12 }}
-        >
-          {metaLine(property)}
-        </div>
-        {matchedSpaces && matchedSpaces.length > 0 && availability && (
-          <div className="mt-2 pt-2 border-top" style={{ fontSize: 12 }}>
-            <div className="text-muted mb-1">
-              {matchedSpaces.length} of {availability.spaceCount}{" "}
-              {availability.spaceCount === 1 ? "space" : "spaces"}{" "}
-              {matchedSpaces.length === 1 ? "matches" : "match"}
-            </div>
-            <div className="d-flex flex-column gap-1">
-              {matchedSpaces.map((s) => (
-                // Each line opens the space's own page. Stopped before the row,
-                // whose click opens the property.
-                <button
-                  key={s.unitId}
-                  type="button"
-                  className="btn btn-link p-0 border-0 text-start text-reset text-decoration-none d-flex align-items-center gap-2"
-                  style={{ fontSize: 12 }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void navigate(spaceAssetLink(property.id, s.unitId));
-                  }}
-                >
-                  <span className="fw-semibold text-nowrap">{s.label}</span>
-                  <span className="text-muted text-nowrap">
-                    {[s.floor != null ? `Fl ${s.floor}` : null, formatSqFt(s.sqft), s.status]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
-
-      <img
-        src={getPhotoUrl(property.id, 320, 200)}
-        alt=""
-        className="flex-shrink-0"
-        style={{
-          width: 160,
-          height: 96,
-          objectFit: "cover",
-          borderRadius: 4,
-          display: "block",
-        }}
-      />
-
-      {mode === "prospect" && (
-        // Fixed width so swapping the Add button for the "Added" badge doesn't
-        // reflow the row under the pointer that just clicked it.
-        <div
-          className="d-flex flex-column align-items-center justify-content-center gap-2 flex-shrink-0"
-          style={{ width: 76 }}
-        >
-          {inDatabase ? (
-            <>
-              <Badge
-                variant="secondary"
-                appearance="muted"
-                className="d-inline-flex align-items-center gap-1"
+      {/* Below the whole top row, not inside the text column: spanning the
+          card's full width is what gives the space lines room for two columns
+          beside a 160px photo. */}
+      {matchedSpaces && matchedSpaces.length > 0 && availability && (
+        <div className="mt-2 pt-2 border-top" style={{ fontSize: 12 }}>
+          <div className="text-muted mb-1">
+            {matchedSpaces.length} of {availability.spaceCount}{" "}
+            {availability.spaceCount === 1 ? "space" : "spaces"}{" "}
+            {matchedSpaces.length === 1 ? "matches" : "match"}
+          </div>
+          {/* Left-aligned, read down the columns, each line a taller hit
+              target. Plain buttons rather than `.btn-link`: `.btn` centres its
+              content, which read as a ragged indent down the list. The status
+              is the dot in front of the label — the roster's mark — rather than
+              a word repeated on every line when a single status is filtered.
+              Capped at six so a 24-suite tower doesn't become the page; the
+              rest are one click away on the Spaces tab. */}
+          <div className="property-row__spaces">
+            {matchedSpaces.slice(0, MAX_UNFOLDED_SPACES).map((s) => (
+              // Each line opens the space's own page. Stopped before the row,
+              // whose click opens the property.
+              <button
+                key={s.unitId}
+                type="button"
+                className="property-row__space"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void navigate(spaceAssetLink(property.id, s.unitId));
+                }}
               >
-                <FontAwesomeIcon icon={faCircleCheck} />
-                Added
-              </Badge>
-              {/* The record is yours now, so the useful next move is opening
-                  it — the row itself still opens the prospect flyout. */}
-              <Button
-                variant="outline"
-                size="sm"
-                nativeButton={false}
+                <SpaceStatusDot status={s.status} className="fw-semibold property-row__space-label">
+                  {s.label}
+                </SpaceStatusDot>
+                <span className="text-muted text-truncate property-row__space-meta">
+                  {[s.floor != null ? `Fl ${s.floor}` : null, formatSqFt(s.sqft)]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              </button>
+            ))}
+            {matchedSpaces.length > MAX_UNFOLDED_SPACES && (
+              <Link
+                to="/properties/$propertyId/spaces"
+                params={{ propertyId: property.id }}
+                className="property-row__space text-primary text-decoration-none"
                 onClick={(e) => e.stopPropagation()}
-                render={
-                  <Link
-                    to="/properties/$propertyId"
-                    params={{ propertyId: property.id }}
-                  />
-                }
               >
-                View
-              </Button>
-            </>
-          ) : (
-            <Tooltip>
-              <Tooltip.Trigger
-                render={
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    aria-label={`Add ${property.street || property.name} to your properties`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onAdd?.();
-                    }}
-                  >
-                    <FontAwesomeIcon icon={faBuildingCircleArrowRight} />
-                  </Button>
-                }
-              />
-              <Tooltip.Content>Add Property</Tooltip.Content>
-            </Tooltip>
-          )}
+                and {matchedSpaces.length - MAX_UNFOLDED_SPACES} more
+              </Link>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -518,6 +518,56 @@
   }
 }
 
+// ── Property index row: unfolded matching spaces ──
+// Left-aligned space lines under a filtered building row, in as many columns
+// as fit at 200px each — two across a card at desktop widths, one when the
+// card is narrow enough that a second column would truncate. CSS columns
+// rather than a grid so the sorted suites read *down* (103, 302, 403 on the
+// left; 202, 401, 503 on the right), the way the roster orders them. Each line
+// is a full-width hit target with a little vertical room (28px) and a hover
+// fill, so the eye reads a list of links rather than loose text.
+.property-row__spaces {
+  columns: 200px;
+  column-gap: 12px;
+}
+
+.property-row__space {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  width: calc(100% + 12px);
+  min-width: 0;
+  min-height: 28px;
+  padding: 4px 6px;
+  margin: 0 -6px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: inherit;
+  font-size: 12px;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+  break-inside: avoid;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--color-storm-grey-100, #f1f3f6);
+    text-decoration: none;
+  }
+}
+
+// A fixed label column so "Fl 1 · 6,387 SF" starts at the same x on every
+// line, and tabular numerals so the sizes stack digit over digit.
+.property-row__space-label {
+  min-width: 84px;
+}
+
+.property-row__space-meta {
+  font-variant-numeric: tabular-nums;
+}
+
 // ── Filter buttons (every index toolbar) ──
 // Figma My Sandbox 1575:52305 (default) / 1575:52306 (applied). Default is
 // Blueprint's outline button with a lighter stroke — storm-grey-200 rather than
