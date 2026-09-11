@@ -1,5 +1,4 @@
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
-import { Switch } from "@buildoutinc/blueprint-react/ui/Switch";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUpRightFromSquare } from "@fortawesome/pro-regular-svg-icons";
@@ -28,16 +27,13 @@ export function SyndicationChannelCard({
   channel,
   websiteUrl,
   websiteLabel,
-  onToggle,
 }: {
   channel: SyndicationChannel;
   websiteUrl: string;
   websiteLabel: string;
-  onToggle: (active: boolean) => void;
 }) {
   const badge = channelBadge(channel.state);
   const segments = channelMetaSegments(channel);
-  const unavailable = channel.state === "not-available";
 
   // The badge is a status readout, not content — nothing here is worth
   // selecting, and an I-beam over it reads as "this text is the point".
@@ -56,30 +52,17 @@ export function SyndicationChannelCard({
   );
 
   return (
-    <div
-      className={`border rounded bg-body px-3 py-2${unavailable ? " opacity-75" : ""}`}
-    >
-      <div className="d-flex align-items-center justify-content-between gap-2">
-        <div
-          className="d-flex align-items-center gap-2"
-          style={{ minWidth: 0 }}
-        >
-          <span className="fw-semibold text-truncate">{channel.name}</span>
-          {badge.explanation ? (
-            <Tooltip>
-              <Tooltip.Trigger render={statusBadge} />
-              <Tooltip.Content side="top">{badge.explanation}</Tooltip.Content>
-            </Tooltip>
-          ) : (
-            statusBadge
-          )}
-        </div>
-        <Switch
-          checked={channel.active}
-          disabled={unavailable}
-          onCheckedChange={onToggle}
-          aria-label={`Toggle syndication to ${channel.name}`}
-        />
+    <div className="border rounded bg-body px-3 py-2">
+      <div className="d-flex align-items-center gap-2" style={{ minWidth: 0 }}>
+        <span className="fw-semibold text-truncate">{channel.name}</span>
+        {badge.explanation ? (
+          <Tooltip>
+            <Tooltip.Trigger render={statusBadge} />
+            <Tooltip.Content side="top">{badge.explanation}</Tooltip.Content>
+          </Tooltip>
+        ) : (
+          statusBadge
+        )}
       </div>
 
       <div className="fs-small text-muted mt-1">
@@ -109,11 +92,9 @@ export function SyndicationChannelCard({
         ))}
       </div>
 
-      {!unavailable && (
-        <div className="d-flex flex-wrap gap-3 fs-small mt-1">
-          <ChannelLink href={websiteUrl}>{websiteLabel}</ChannelLink>
-        </div>
-      )}
+      <div className="d-flex flex-wrap gap-3 fs-small mt-1">
+        <ChannelLink href={websiteUrl}>{websiteLabel}</ChannelLink>
+      </div>
     </div>
   );
 }
