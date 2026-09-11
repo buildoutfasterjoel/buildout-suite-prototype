@@ -117,6 +117,63 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 222,
+    title:
+      "The Property record shows every space in a building, its contacts by role, and can start a deal on a space",
+    mergedAt: "2026-09-11T23:00:00Z",
+    day: "2026-09-11",
+    author: "ZS-buildout",
+    area: "Properties",
+    summary:
+      "A broker managing a multi-tenant building had no asset-level view of its spaces — a suite nobody had started a deal on was invisible outside the unit list — and no way to attach contacts to a property by role. The Property record is rebuilt around Buildout's own property page: a Spaces tab listing every space with a status derived from its deal, a page per space, contacts with property roles that spaces inherit, and a Create Deal path that starts a space deal on the building's lease assignment.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "The Property record is laid out like Buildout's property page: Overview and Spaces as tabs across the main card, Buildout's grouped details with a filter box, and a right rail of collapsible Deals, Contacts and Comps that stays put on both tabs.",
+      },
+      {
+        kind: "feature",
+        text: "The Spaces tab lists every space on the building — name, floor, size, type, status, asking rent and the deal working it — available ones first. Status is derived: a space with a deal reads what the deal advertises; one without reads Vacant or Occupied.",
+      },
+      {
+        kind: "feature",
+        text: "The property header says how the building is doing in one line — Available · 3 of 6 spaces — with the full breakdown on hover.",
+      },
+      {
+        kind: "feature",
+        text: "Every space has its own page under the property, whether or not a deal exists on it: the unit's facts, the deal's lease terms read-only with a link to edit them on the deal, and the parent property for orientation.",
+      },
+      {
+        kind: "feature",
+        text: "Add Space creates a space on the property record — label, type, size, suite, floor — and refuses a label the property already uses. The same form edits a space from its page.",
+      },
+      {
+        kind: "feature",
+        text: "Create Deal on a space starts a space deal on the building's lease assignment and lands on it. When the building has no lease assignment yet, the Create Deal modal opens on Lease with the building as its scope and adds the space to the deal it creates.",
+      },
+      {
+        kind: "feature",
+        text: "Contacts attach to a property with Buildout's roles — Owner / Landlord, Owner Agent, Tenant, Tenant Agent and the rest — through the same Add Contact modal as production: search your book or create someone, pick a role, set visibility. Owner-side contacts carry to every space; tenant-side contacts attach to one suite.",
+      },
+      {
+        kind: "feature",
+        text: "Deal and comp cards on the property and space pages use the redesigned card. A space deal shows the Space glyph and its suite; a lease shell's card counts its spaces and opens the Spaces tab. Comps get a matching card with the transaction's numbers.",
+      },
+      {
+        kind: "refinement",
+        text: "A deal's context rail lists the connected property's contacts with their property role, scoped to the deal: a lease shell shows the building's people, a space deal shows its own suite's, a sale shows every suite's in-place tenant.",
+      },
+      {
+        kind: "fix",
+        text: "Editing a space's suite, floor, ceiling height, offices, conference rooms or furnished on its deal's Details now updates the property record too. Those were edited on a copy before, so the asset record went quietly stale after the first edit.",
+      },
+      {
+        kind: "fix",
+        text: "Cap rates on property details and comps read 5.8%, not 0.1% — the seed stores them as fractions and two surfaces forgot to scale them.",
+      },
+    ],
+  },
+  {
     pr: 221,
     title:
       "Marketing output waits for the listing content it is built from, and the asking price moves to the Listing form",
