@@ -37,8 +37,9 @@ import {
   EMPTY_FACETS,
   type PropertyFacetState,
 } from "#/components/properties/PropertyFiltersFlyout";
-import { filterProperties } from "#/components/properties/propertyIndexFilters";
-import { propertyAvailability } from "#/data/propertySpaces";
+import { filterProperties, matchingSpaces } from "#/components/properties/propertyIndexFilters";
+import type { SpaceStatus } from "#/data/propertySpaces";
+import { propertySpaces } from "#/data/propertySpaces";
 
 export const Route = createFileRoute("/_shell/properties/")({
   // `?q=` pre-fills the address/name search, the same contract `/listings`
@@ -111,6 +112,19 @@ function PropertiesIndex() {
     [facets, mode],
   );
 
+  // The space-level half of the facets, shared by the filter and by each row's
+  // unfolded matches so the two cannot disagree about which suites count.
+  const spaceFacet = useMemo(
+    () => ({
+      availability:
+        appliedFacets.availability === "all"
+          ? new Set<SpaceStatus>()
+          : new Set<SpaceStatus>([appliedFacets.availability]),
+      size: appliedFacets.size,
+    }),
+    [appliedFacets],
+  );
+
   const results = useMemo(
     () =>
       filterProperties(source, {
@@ -122,15 +136,12 @@ function PropertiesIndex() {
             ? new Set()
             : new Set([appliedFacets.status]),
         size: appliedFacets.size,
-        availability:
-          appliedFacets.availability === "all"
-            ? new Set()
-            : new Set([appliedFacets.availability]),
-        availabilityOf: (p) => propertyAvailability(p.id)?.statuses ?? null,
+        availability: spaceFacet.availability,
+        spacesOf: (p) => propertySpaces(p.id),
       }).sort((a, b) => (a.street || a.name).localeCompare(b.street || b.name)),
-    // `listingsMap` is a dependency and not an input: `propertyAvailability`
-    // reads the store, and this is what re-runs it when a deal moves.
-    [source, query, appliedFacets, listingsMap],
+    // `listingsMap` is a dependency and not an input: `propertySpaces` reads
+    // the store, and this is what re-runs it when a deal moves.
+    [source, query, appliedFacets, spaceFacet, listingsMap],
   );
 
   // The prospecting overlays. `flyoutId` rather than the record itself so the
@@ -407,6 +418,7 @@ function PropertiesIndex() {
               onSelect={() => onSelect(p)}
               onAdd={() => setAddTarget(p)}
               inDatabase={mode === "prospect" && propertiesMap.has(p.id)}
+              matchedSpaces={mode === "owned" ? matchingSpaces(propertySpaces(p.id), spaceFacet) : []}
             />
           ))
         )}

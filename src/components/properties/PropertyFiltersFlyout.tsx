@@ -119,6 +119,11 @@ export function PropertyFiltersFlyout({
                 ))}
               </Select.Content>
             </Select>
+            {showStage && (
+              <Field.Description>
+                The building, or any space in it. Matching spaces unfold under the row.
+              </Field.Description>
+            )}
           </Field>
 
           {showStage && (

@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
@@ -8,6 +8,8 @@ import {
   faCircleCheck,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Property } from "#/data/types";
+import type { SpaceRow } from "#/data/propertySpaces";
+import { spaceAssetLink } from "#/components/deals/dealCardLink";
 import { DealStageBadge } from "#/components/deals/NewDealStageChip";
 import { TYPE_LABELS, formatSqFt, getPhotoUrl } from "./propertyDisplay";
 import { formatAvailabilityHeadline, propertyAvailability } from "#/data/propertySpaces";
@@ -39,6 +41,7 @@ export function PropertyListRow({
   onSelect,
   onAdd,
   inDatabase = false,
+  matchedSpaces,
 }: {
   property: Property;
   mode: "owned" | "prospect";
@@ -48,7 +51,15 @@ export function PropertyListRow({
   onAdd?: () => void;
   /** Prospect mode only — the record has already been added. */
   inDatabase?: boolean;
+  /**
+   * The spaces that satisfy the active space-level facets, when any is set.
+   * The row unfolds exactly these — "2 of 6 spaces match" — so a filter that
+   * describes suites shows the suites it found, on the row, rather than
+   * surfacing the building and leaving the reader to guess. Empty otherwise.
+   */
+  matchedSpaces?: SpaceRow[];
 }) {
+  const navigate = useNavigate();
   // Your own record only: a prospect has no deals, so nothing to derive from.
   const availability = mode === "owned" ? propertyAvailability(property.id) : null;
   return (
@@ -99,6 +110,38 @@ export function PropertyListRow({
         >
           {metaLine(property)}
         </div>
+        {matchedSpaces && matchedSpaces.length > 0 && availability && (
+          <div className="mt-2 pt-2 border-top" style={{ fontSize: 12 }}>
+            <div className="text-muted mb-1">
+              {matchedSpaces.length} of {availability.spaceCount}{" "}
+              {availability.spaceCount === 1 ? "space" : "spaces"}{" "}
+              {matchedSpaces.length === 1 ? "matches" : "match"}
+            </div>
+            <div className="d-flex flex-column gap-1">
+              {matchedSpaces.map((s) => (
+                // Each line opens the space's own page. Stopped before the row,
+                // whose click opens the property.
+                <button
+                  key={s.unitId}
+                  type="button"
+                  className="btn btn-link p-0 border-0 text-start text-reset text-decoration-none d-flex align-items-center gap-2"
+                  style={{ fontSize: 12 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void navigate(spaceAssetLink(property.id, s.unitId));
+                  }}
+                >
+                  <span className="fw-semibold text-nowrap">{s.label}</span>
+                  <span className="text-muted text-nowrap">
+                    {[s.floor != null ? `Fl ${s.floor}` : null, formatSqFt(s.sqft), s.status]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <img
