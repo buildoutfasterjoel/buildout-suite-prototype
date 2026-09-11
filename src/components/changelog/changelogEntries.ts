@@ -117,6 +117,26 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 223,
+    title: "A space-level filter on the Properties index unfolds the spaces it matched under each building",
+    mergedAt: "2026-09-11T23:30:00Z",
+    day: "2026-09-11",
+    author: "ZS-buildout",
+    area: "Properties",
+    summary:
+      "Filtering the Properties index by space availability surfaced the right buildings but left you guessing which suites had matched. The index now follows the marketplaces' rule for lease inventory: results stay buildings, filters describe spaces, and each matching building unfolds exactly the spaces that matched.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "With a space filter set, each building row unfolds the spaces that matched — \"2 of 6 spaces match\", then one line per suite with floor, size and status — and each line opens that space's page.",
+      },
+      {
+        kind: "refinement",
+        text: "Building Size now matches a building when it, or any space in it, falls in the range. A 400,000 SF tower is a hit for Under 10,000 SF through its 1,200 SF suite, and that suite is the one unfolded.",
+      },
+    ],
+  },
+  {
     pr: 222,
     title:
       "The Property record shows every space in a building, its contacts by role, and can start a deal on a space",
