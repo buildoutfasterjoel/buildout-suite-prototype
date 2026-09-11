@@ -1446,6 +1446,37 @@ export interface OwnerSignal {
  */
 export type HeroKey = 'rosa' | 'earl' | 'victor' | 'margaret' | 'patricia'
 
+/**
+ * How a contact relates to a *property* — Buildout's own role list for the
+ * property record's Contacts tab. Distinct from `ContactRole`, which is the
+ * contact's role in the broker's book, and from a deal's parties (seller / buyer
+ * / tenant lists on the `Listing`), which are the deal's own.
+ *
+ * Owner-side roles and `owner-user` describe the building, so every space on it
+ * inherits them; the tenant-side roles describe one suite in a multi-tenant
+ * building, so they attach to a unit (`PropertyContactLink.unitId`). `buyer` is
+ * a deal-level fact and is never inherited by a space.
+ */
+export type PropertyContactRole =
+  | 'owner-landlord'
+  | 'owner-agent'
+  | 'owner-contact'
+  | 'owner-user'
+  | 'tenant'
+  | 'tenant-contact'
+  | 'tenant-agent'
+  | 'buyer'
+  | 'lender'
+  | 'other'
+
+/** One contact ↔ property attachment, with the role it carries there. */
+export interface PropertyContactLink {
+  propertyId: string
+  role: PropertyContactRole
+  /** Set when the link is to one space on the property rather than the building. */
+  unitId?: string | null
+}
+
 export interface Contact {
   id: string
   firstName: string
@@ -1458,7 +1489,16 @@ export interface Contact {
   emails?: string[]
   company: string
   role: ContactRole
+  /**
+   * Properties this contact is attached to. Kept as the flat id list every
+   * reader already joins on; `propertyLinks` below carries the per-property
+   * role. The two are written together (`linkContactToProperty`), and a contact
+   * with ids but no links is read as one link per id with a role derived from
+   * `role` (see `propertyContacts.ts`), so seeded records need no links.
+   */
   propertyIds: string[]
+  /** Per-property role, and per-space where the role is suite-level. See `PropertyContactLink`. */
+  propertyLinks?: PropertyContactLink[]
   /**
    * Properties the contact owns outright, with or without a deal on them.
    * Shown in the contact page's "Properties Owned" panel even when no deal

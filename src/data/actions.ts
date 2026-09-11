@@ -7,7 +7,7 @@ import {
   type ContactFilterState,
 } from '#/components/contacts/contactFilterModel'
 import { recordEngagement } from '#/components/contacts/useContactSession'
-import type { Contact, ContactRole, ContactSource, DealDocument, DealHistoryEntry, DealIngestion, DealInvoice, DealMarketing, DealPitchFinancials, DealBroker, DealFinancials, DealTask, DealTransaction, DepositAllocation, DocumentGeneration, FinancialDeduction, FinancialReceivable, GeneratedSection, IngestionFieldKey, Listing, PaymentDeduction, PropertyStatus, Task, VoucherDeposit, VoucherPayable, VoucherPayment } from './types'
+import type { Contact, ContactRole, ContactSource, DealDocument, PropertyContactLink, DealHistoryEntry, DealIngestion, DealInvoice, DealMarketing, DealPitchFinancials, DealBroker, DealFinancials, DealTask, DealTransaction, DepositAllocation, DocumentGeneration, FinancialDeduction, FinancialReceivable, GeneratedSection, IngestionFieldKey, Listing, PaymentDeduction, PropertyStatus, SpaceLeaseTerms, Task, VoucherDeposit, VoucherPayable, VoucherPayment } from './types'
 import { teammateIdByName, CURRENT_USER, TEAMMATES } from './teammates'
 import { currentUser, viewerId } from './currentUser'
 import { STAGE_LABEL, type StageTransitionInput } from './stageGates'
@@ -29,7 +29,7 @@ import {
   resolveConflict,
   resolvedPropertyPatch,
 } from './ingestion'
-import { getContact, getProperty, updateProperty } from './store'
+import { getContact, getProperty, updateProperty, updatePropertyUnit } from './store'
 import {
   deductionBalance,
   generateDepositReference,
@@ -282,6 +282,49 @@ export function updateDealMarketing(
       updatedAt: new Date().toISOString(),
     })),
   }
+}
+
+/**
+ * Save a space deal's Details form: the deal's terms row and size as
+ * `updateDealMarketing` would, **and** the unit's copy of every physical fact.
+ *
+ * Why both: `spaceTermsFromUnit` clones seven physical fields from the unit onto
+ * the deal's terms when a space deal is created, and the Details form edits the
+ * clone. Before this, nothing wrote the unit back, so the asset record was
+ * write-once at creation and silently stale after the first Details edit — the
+ * property roster would have shown ceiling height 12 while the deal said 14.
+ *
+ * The rule (spaces-on-property spec §2.1): **physical facts are the unit's**
+ * (suite, floor, ceiling height, offices, conference rooms, furnished) and are
+ * written through here; **commercial terms are the deal's** (rate, term,
+ * divisibility, TI, `availableSqFt`) and stay on the deal; **display names are
+ * deal-side overrides** (`spaceName`, `tenantName`, `spaceType`) with an asset
+ * fallback, so they are deliberately not written to the unit. The seed already
+ * flows unit → terms (`termsForUnit`), so both arrows now point the same way.
+ */
+export function saveSpaceDetails(
+  spaceId: string,
+  draft: { terms: SpaceLeaseTerms; availableSqFt: number | null },
+): { deal: Listing | null } {
+  const result = updateDealMarketing(spaceId, {
+    spaceLeaseTerms: [draft.terms],
+    // 0 rather than null: `DealMarketing.availableSqFt` is a number, and a
+    // cleared field means "no size on record", which the publish gate reads as unmet.
+    availableSqFt: draft.availableSqFt ?? 0,
+  })
+  const space = result.deal
+  if (space?.unitId) {
+    const t = draft.terms
+    updatePropertyUnit(space.propertyId, space.unitId, {
+      suite: t.suite?.trim() || null,
+      floor: t.floor ?? null,
+      ceilingHeight: t.ceilingHeight ?? null,
+      offices: t.offices ?? null,
+      conferenceRooms: t.conferenceRooms ?? null,
+      furnished: t.furnished ?? false,
+    })
+  }
+  return result
 }
 
 /** Merge-patch the deal's transaction terms (price, commission %/$, close probability). */
@@ -1417,6 +1460,44 @@ export function linkContactToDeal(
 }
 
 /**
+ * Attach a contact to a property — or to one space on it — with a role, the way
+ * the property record's Add Contact modal does. Both halves are written
+ * together: `propertyIds` so every existing reader still finds the contact on
+ * the property, and `propertyLinks` for the role. One link per (property, unit):
+ * adding the same person again with a new role replaces the role rather than
+ * stacking a second row.
+ *
+ * Deliberately separate from `linkContactToDeal`. Production keeps them apart
+ * too — adding a Seller to a deal does not attach them to the property — and a
+ * deal party is a fact about the transaction, not the asset.
+ */
+export function linkContactToProperty(
+  contactId: string,
+  link: PropertyContactLink,
+): { contact: Contact | null } {
+  const existing = useDataStore.getState().contacts.get(contactId)
+  if (!existing) return { contact: null }
+  const unitId = link.unitId ?? null
+  const others = (existing.propertyLinks ?? []).filter(
+    (l) => !(l.propertyId === link.propertyId && (l.unitId ?? null) === unitId),
+  )
+  const updated: Contact = {
+    ...existing,
+    propertyIds: existing.propertyIds.includes(link.propertyId)
+      ? existing.propertyIds
+      : [...existing.propertyIds, link.propertyId],
+    propertyLinks: [...others, { propertyId: link.propertyId, role: link.role, unitId }],
+  }
+  useDataStore.setState((s) => {
+    const contacts = new Map(s.contacts)
+    contacts.set(contactId, updated)
+    return { contacts }
+  })
+  useDataStore.getState().persist()
+  return { contact: updated }
+}
+
+/**
  * Create a draft email campaign and prepend it to the store so it appears at the
  * top of the Email module. Persists via the single write path.
  */
@@ -1746,6 +1827,8 @@ export interface NewContactInput {
   phone?: string
   role?: ContactRole
   propertyIds?: string[]
+  /** Per-property roles (see `PropertyContactLink`); `propertyIds` is kept in step. */
+  propertyLinks?: PropertyContactLink[]
   /** Job title (free text), e.g. "Managing Partner". */
   title?: string
   /** Lead source; defaults to 'Referral' for the deal-flow caller. */
@@ -2059,7 +2142,10 @@ export function createContact(input: NewContactInput): { contact: Contact } {
     phone: input.phone ?? '',
     company: input.company ?? '',
     role: input.role ?? 'owner',
-    propertyIds: input.propertyIds ?? [],
+    propertyIds: [
+      ...new Set([...(input.propertyIds ?? []), ...(input.propertyLinks ?? []).map((l) => l.propertyId)]),
+    ],
+    ...(input.propertyLinks?.length ? { propertyLinks: input.propertyLinks } : {}),
     // Whoever is creating it works it; ownership follows from their grants.
     assignedTo: currentUser().name,
     source: input.source ?? 'Referral',

@@ -93,7 +93,14 @@ export function updateProperty(
 /** Append a new unit shell to a Property (source of truth) and return the created unit. */
 export function addPropertyUnit(
   propertyId: string,
-  unit: { label: string; sqft: number; unitType: UnitType },
+  unit: {
+    label: string
+    sqft: number
+    unitType: UnitType
+    /** Optional so the deal-side Add Space modal, which asks for neither, is unchanged. */
+    suite?: string | null
+    floor?: number | null
+  },
 ): PropertyUnit | undefined {
   const existing = getStore().properties.get(propertyId)
   if (!existing) return undefined
@@ -104,8 +111,8 @@ export function addPropertyUnit(
     sqft: unit.sqft,
     beds: null,
     baths: null,
-    suite: null,
-    floor: null,
+    suite: unit.suite?.trim() || null,
+    floor: unit.floor ?? null,
     ceilingHeight: null,
     offices: null,
     conferenceRooms: null,
@@ -117,6 +124,29 @@ export function addPropertyUnit(
   }
   updateProperty(propertyId, { units: [...existing.units, created] })
   return created
+}
+
+/**
+ * Merge a patch into one unit on a Property and return the updated unit.
+ *
+ * The unit is the source of truth for a space's *physical* facts (suite, floor,
+ * ceiling height, offices, conference rooms, furnished). Both the asset page's
+ * editor and the space deal's Details save (`saveSpaceDetails`) write through
+ * here, so there is one record and no clone to diverge.
+ */
+export function updatePropertyUnit(
+  propertyId: string,
+  unitId: string,
+  patch: Partial<Omit<PropertyUnit, 'id'>>,
+): PropertyUnit | undefined {
+  const existing = getStore().properties.get(propertyId)
+  const unit = existing?.units.find((u) => u.id === unitId)
+  if (!existing || !unit) return undefined
+  const updated: PropertyUnit = { ...unit, ...patch, id: unit.id }
+  updateProperty(propertyId, {
+    units: existing.units.map((u) => (u.id === unitId ? updated : u)),
+  })
+  return updated
 }
 
 /** A property picker option — carries `label` (address) plus display metadata. */
