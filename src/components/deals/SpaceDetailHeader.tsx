@@ -4,13 +4,13 @@ import { Breadcrumb } from "@buildoutinc/blueprint-react/ui/Breadcrumb";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faHandshake, faPencil } from "@fortawesome/pro-regular-svg-icons";
+import { faBuilding, faHandshake, faPencil } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing, Property } from "#/data/types";
 import { dealBreadcrumbTrail } from "#/components/properties/dealNav";
 import { getRefId, getPhotoUrl } from "#/components/properties/propertyDisplay";
 import { DealHeroAccessAvatars } from "#/components/deals/DealHeroAccessAvatars";
 import { DealStageSelect } from "#/components/deals/DealStageSelect";
-import { dealEditTarget } from "#/components/deals/dealCardLink";
+import { dealEditTarget, spaceAssetLink } from "#/components/deals/dealCardLink";
 
 /**
  * The space page's own header. Deliberately not `PropertyDetailHeader`, which is
@@ -181,6 +181,28 @@ export function SpaceDetailHeader({
               <DealStageSelect listing={space} />
             </div>
             <div className="d-flex align-items-center gap-2">
+              {/* The space's asset record on the property side — the unit's
+                  own facts, whether or not this deal exists. `spaceAssetLink`
+                  is the one rule for that crossing, as `dealCardLinkProps` is
+                  for the way back. Only when the deal still points at a unit. */}
+              {space.unitId && (
+                <Tooltip>
+                  <Tooltip.Trigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Property record"
+                        nativeButton={false}
+                        render={<Link {...spaceAssetLink(property.id, space.unitId)} />}
+                      >
+                        <FontAwesomeIcon icon={faBuilding} />
+                      </Button>
+                    }
+                  />
+                  <Tooltip.Content>Property record</Tooltip.Content>
+                </Tooltip>
+              )}
               <Tooltip>
                 <Tooltip.Trigger
                   render={

@@ -294,11 +294,11 @@ function SpacesTab() {
       {rows.length === 0 ? (
         <Empty>
           <Empty.Media>
-            <FontAwesomeIcon icon={faVectorSquare} aria-label="No suites" />
+            <FontAwesomeIcon icon={faVectorSquare} aria-label="No spaces" />
           </Empty.Media>
           <Empty.Content>
-            <Empty.Title>No suites on this property yet</Empty.Title>
-            Add a space to put a suite on the building and start its deal.
+            <Empty.Title>No spaces on this property yet</Empty.Title>
+            Add a space to put it on the building and start its deal.
           </Empty.Content>
           {canAddSpace && (
             <Empty.Actions>

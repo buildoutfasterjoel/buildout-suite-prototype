@@ -14,7 +14,10 @@ import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { Tabs } from "@buildoutinc/blueprint-react/ui/Tabs";
 import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTriangleExclamation } from "@fortawesome/pro-duotone-svg-icons";
+import {
+  faCircleInfo as faCircleInfoDuotone,
+  faTriangleExclamation,
+} from "@fortawesome/pro-duotone-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
   faMagnifyingGlass,
@@ -43,6 +46,7 @@ import {
 } from "#/data/createListing";
 import { createDeal } from "#/data/actions";
 import { grantDealShares } from "#/data/store";
+import { addSpaceToDeal } from "#/data/leaseSpaces";
 import { viewerId } from "#/data/currentUser";
 import { BROKER_TEAMMATES } from "#/data/teammates";
 import { useCan } from "#/components/settings/users/useViewer";
@@ -210,6 +214,8 @@ export function CreateDealModal({
   contact,
   property,
   initialAddress,
+  spaceUnitId,
+  lockLease,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -219,6 +225,14 @@ export function CreateDealModal({
   property?: Property;
   /** Seed text for the property address field when starting from a raw query. */
   initialAddress?: string;
+  /**
+   * "Create deal from this space" on a property with no lease assignment yet.
+   * The deal being created is the building's lease shell; once it exists this
+   * unit is added to it as its first space and the modal lands there.
+   */
+  spaceUnitId?: string;
+  /** Lock the type to Lease. Set alongside `spaceUnitId`. */
+  lockLease?: boolean;
 }) {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -336,9 +350,13 @@ export function CreateDealModal({
   // to representing the whole building (you're selling the asset); a Lease starts
   // unscoped so the broker picks the specific unit being leased.
   useEffect(() => {
-    setWholeBuilding(dealType === "Sale");
+    // Starting from a space: the deal is the *building's* lease assignment, so
+    // the scope is the whole building regardless of type — the unit is added
+    // to it afterwards as a child space, not chosen here as the deal's scope.
+    setWholeBuilding(dealType === "Sale" || spaceUnitId != null);
     setSelectedUnitId(null);
-  }, [selectedProperty?.id, dealType]);
+  }, [selectedProperty?.id, dealType, spaceUnitId]);
+
 
   // Switching to Lease drops a multifamily pick made under Sale — that building
   // just left the picker, so it can't stay selected behind the tab change.
@@ -416,7 +434,9 @@ export function CreateDealModal({
     }
 
     setStep(1);
-    setDealType("Sale");
+    // Locked to Lease when started from a space (the deal is the building's
+    // lease assignment); otherwise the default the form has always opened on.
+    setDealType(lockLease ? "Lease" : "Sale");
     setStage("proposal");
     setUnderwritingOn(false);
     setUnderwritingStrategy(DEFAULT_STRATEGY);
@@ -567,6 +587,19 @@ export function CreateDealModal({
       grantDealShares(listing.id, [viewerId()], "contribute");
     }
     onOpenChange(false);
+    // Started from a space: the deal just created is the building's lease
+    // shell, so the space is added to it now and the broker lands on the space
+    // — the thing they set out to work — rather than on the building.
+    if (spaceUnitId) {
+      const child = addSpaceToDeal(listing.id, spaceUnitId);
+      if (child) {
+        void navigate({
+          to: "/listings/$listingId/spaces/$spaceId/details",
+          params: { listingId: listing.id, spaceId: child.deal.id },
+        });
+        return;
+      }
+    }
     void navigate({
       to: "/listings/$listingId/overview",
       params: { listingId: listing.id },
@@ -592,6 +625,17 @@ export function CreateDealModal({
 
           {step === 1 && (
             <>
+              {/* Started from a space on a property with no lease assignment.
+                  Says what is actually being created — the building's deal —
+                  and what happens to the space when it is. */}
+              {spaceUnitId && property && (
+                <Alert severity="info" withIcon>
+                  <FontAwesomeIcon icon={faCircleInfoDuotone} />
+                  This starts {property.name}&apos;s lease assignment.{" "}
+                  {property.units.find((u) => u.id === spaceUnitId)?.label ?? "The space"} is
+                  added to it as its first space when you finish.
+                </Alert>
+              )}
               <div>
                 <Tabs
                   value={dealType}
@@ -603,6 +647,7 @@ export function CreateDealModal({
                   <Tabs.List variant="pills">
                     <Tabs.Tab
                       value="Sale"
+                      disabled={lockLease}
                       className="flex-grow-1 justify-content-center"
                     >
                       Sale
@@ -1015,7 +1060,7 @@ export function CreateDealModal({
               {/* Deal scope — only when the chosen property already has units on
               record. Whole-building by default; unchecking reveals a single-select
               list of the property's units. */}
-              {hasUnits && (
+              {hasUnits && !spaceUnitId && (
                 <Field>
                   <Field.Label>Deal scope</Field.Label>
                   <label
