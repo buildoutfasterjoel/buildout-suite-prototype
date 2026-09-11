@@ -916,6 +916,16 @@ export function applyLeaseSpaces(
             tenantName = `${tenant.firstName} ${tenant.lastName}`.trim()
             tenantPayer = { name: tenantName, company: tenant.company }
             tenantSynced = tenant.quickbooksSynced === true
+            // The tenant is a contact of *this suite* on the property record —
+            // a suite-level link, so the space page lists them and the building's
+            // other suites do not. Mirrors what `linkContactToProperty` writes.
+            tenant.propertyLinks = [
+              ...(tenant.propertyLinks ?? []).filter(
+                (l) => !(l.propertyId === property.id && l.unitId === unit.id),
+              ),
+              { propertyId: property.id, role: 'tenant', unitId: unit.id },
+            ]
+            if (!tenant.propertyIds.includes(property.id)) tenant.propertyIds.push(property.id)
           }
         }
       }

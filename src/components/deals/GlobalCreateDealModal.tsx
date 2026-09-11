@@ -7,6 +7,8 @@ export function GlobalCreateDealModal() {
   const contact = useCreateDeal((s) => s.contact);
   const property = useCreateDeal((s) => s.property);
   const initialAddress = useCreateDeal((s) => s.initialAddress);
+  const spaceUnitId = useCreateDeal((s) => s.spaceUnitId);
+  const lockLease = useCreateDeal((s) => s.lockLease);
   const close = useCreateDeal((s) => s.close);
 
   return (
@@ -18,6 +20,8 @@ export function GlobalCreateDealModal() {
       contact={contact}
       property={property}
       initialAddress={initialAddress}
+      spaceUnitId={spaceUnitId}
+      lockLease={lockLease}
     />
   );
 }

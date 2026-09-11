@@ -10,6 +10,7 @@ import {
 import type { Property } from "#/data/types";
 import { DealStageBadge } from "#/components/deals/NewDealStageChip";
 import { TYPE_LABELS, formatSqFt, getPhotoUrl } from "./propertyDisplay";
+import { formatAvailabilityHeadline, propertyAvailability } from "#/data/propertySpaces";
 
 /** "Retail • Multi-Tenant • 10,716 SF" — the meta line under the address. */
 function metaLine(property: Property): string {
@@ -48,6 +49,8 @@ export function PropertyListRow({
   /** Prospect mode only — the record has already been added. */
   inDatabase?: boolean;
 }) {
+  // Your own record only: a prospect has no deals, so nothing to derive from.
+  const availability = mode === "owned" ? propertyAvailability(property.id) : null;
   return (
     <div
       role="button"
@@ -76,9 +79,18 @@ export function PropertyListRow({
             length varies per record, so a badge appended to it landed at a
             different x on every row. Anchored here it forms a clean column.
             No deal means no stage — the slot is simply absent, not "none". */}
-        {mode === "owned" && property.status && (
-          <div className="mt-1">
-            <DealStageBadge value={property.status} />
+        {/* Stage badge and, inline to its right, the space availability headline
+            the record's header carries — "Available · 1 of 6 spaces". Text only:
+            a second coloured dot beside the stage chip's competed with it. Either
+            can be absent (no deal / no spaces); the row is there when one is. */}
+        {mode === "owned" && (property.status || availability) && (
+          <div className="mt-1 d-flex align-items-center gap-2 flex-wrap">
+            {property.status && <DealStageBadge value={property.status} />}
+            {availability && (
+              <span className="text-muted text-nowrap" style={{ fontSize: 12 }}>
+                {formatAvailabilityHeadline(availability)}
+              </span>
+            )}
           </div>
         )}
         <div

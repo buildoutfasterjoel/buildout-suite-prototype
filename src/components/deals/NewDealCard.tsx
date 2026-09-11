@@ -1,9 +1,11 @@
+import { useNavigate } from "@tanstack/react-router";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faShareNodes } from "@fortawesome/pro-regular-svg-icons";
+import { faShareNodes, faVectorSquare } from "@fortawesome/pro-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { Listing, PropertyStatus } from "#/data/types";
 import { getProperty } from "#/data/store";
+import { isUmbrella, spacesStageBreakdown } from "#/data/leaseSpaces";
 import {
   TYPE_ICONS,
   TYPE_LABELS,
@@ -79,10 +81,27 @@ export function NewDealCard({
   shareCount?: number;
   onStageChange?: (next: PropertyStatus) => void;
 }) {
+  const navigate = useNavigate();
   const board = variant === "board";
   const property = getProperty(listing.propertyId);
-  const typeIcon = property ? TYPE_ICONS[property.propertyType] : null;
-  const typeLabel = property ? TYPE_LABELS[property.propertyType] : "";
+  // A space deal is a type of its own on the card, as it was on the old one:
+  // the vector-square glyph says "Space" where a building says its asset class,
+  // and the title is the suite's label rather than the long "Building — Suite"
+  // deal name, which would truncate the suite off the end.
+  const isSpace = listing.parentDealId != null;
+  const unitLabel = isSpace
+    ? property?.units.find((u) => u.id === listing.unitId)?.label
+    : undefined;
+  const typeIcon = isSpace
+    ? faVectorSquare
+    : property
+      ? TYPE_ICONS[property.propertyType]
+      : null;
+  const typeLabel = isSpace ? "Space" : property ? TYPE_LABELS[property.propertyType] : "";
+  const title = unitLabel ?? listing.name;
+  // A lease shell rolls its spaces up — the count the old card carried, so a
+  // building with six suites in play says so before you open it.
+  const rollup = isUmbrella(listing.id) ? spacesStageBreakdown(listing.id) : null;
   const side = sideBadge(listing.dealSide, listing.dealType);
   const critical = shortDate(listing.transaction.nextCriticalDate);
   // The critical date is the next open task's due date, so name that milestone —
@@ -129,9 +148,7 @@ export function NewDealCard({
               )}
               <Tooltip>
                 <Tooltip.Trigger
-                  render={
-                    <span className="deal-tile__title">{listing.name}</span>
-                  }
+                  render={<span className="deal-tile__title">{title}</span>}
                 />
                 <Tooltip.Content>
                   {propertyAddress(property) ?? listing.name}
@@ -199,6 +216,37 @@ export function NewDealCard({
                   )}
                 />
               </span>
+            )}
+            {/* The rollup is a way in, not just a count: it opens the property's
+                Spaces tab, where every suite and its deal are laid out. Outlined
+                like the property card's "Deal" badge, because it is a link out
+                rather than a state. Stops the click so the card beneath does not
+                also open the shell. */}
+            {rollup && (
+              <Tooltip>
+                <Tooltip.Trigger
+                  render={
+                    <button
+                      type="button"
+                      className="deal-tile__badge deal-tile__badge--outline"
+                      aria-label={`See the ${rollup.total} ${rollup.total === 1 ? "space" : "spaces"} on this property`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void navigate({
+                          to: "/properties/$propertyId/spaces",
+                          params: { propertyId: listing.propertyId },
+                        });
+                      }}
+                    >
+                      <FontAwesomeIcon icon={faVectorSquare} className="deal-tile__badge-icon" />
+                      {rollup.total}
+                    </button>
+                  }
+                />
+                <Tooltip.Content>
+                  {rollup.total} {rollup.total === 1 ? "space" : "spaces"} in this deal · open the Spaces tab
+                </Tooltip.Content>
+              </Tooltip>
             )}
             {board && shareCount != null && shareCount > 1 && (
               <CardBadge

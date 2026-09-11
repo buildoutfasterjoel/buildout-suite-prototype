@@ -75,7 +75,7 @@ export function AddSpaceModal({
         <Modal.Header>
           <Modal.Title>Add space</Modal.Title>
           <Modal.Description>
-            Add a suite to {property.name} and start its deal. Suites already on
+            Add a space to {property.name} and start its deal. Spaces already on
             the property are listed on the Spaces page.
           </Modal.Description>
         </Modal.Header>

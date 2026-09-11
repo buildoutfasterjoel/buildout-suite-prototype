@@ -23,6 +23,20 @@ export function dealCardLinkProps(listing: Listing):
 }
 
 /**
+ * Where a space's *asset* page is — the property-side record for a unit,
+ * whether or not a deal exists on it. The one rule for the crossing from the
+ * deal side to the asset side, the way `dealCardLinkProps` is the one rule for
+ * the crossing back. Keyed by `unitId`, not `spaceId`: it names a
+ * `PropertyUnit`, and the deal-side route names a `Listing`.
+ */
+export function spaceAssetLink(
+  propertyId: string,
+  unitId: string,
+): { to: "/properties/$propertyId/spaces/$unitId"; params: { propertyId: string; unitId: string } } {
+  return { to: "/properties/$propertyId/spaces/$unitId", params: { propertyId, unitId } };
+}
+
+/**
  * The listing whose page owns a building-level section for this deal. Sections
  * like Documents and Website belong to the building, so a space resolves to its
  * parent and everything else to itself. Takes an id rather than a Listing

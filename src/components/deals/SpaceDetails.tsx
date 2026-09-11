@@ -2,7 +2,7 @@ import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { useState } from "react";
 import { SpaceFormEditor } from "#/components/listings/edit/SpaceFormEditor";
 import { ListingPageHeader } from "#/components/listings/ListingPageHeader";
-import { updateDealMarketing } from "#/data/actions";
+import { saveSpaceDetails } from "#/data/actions";
 import { emptySpaceLeaseTerms } from "#/data/createListing";
 import type {
 	Listing,
@@ -50,12 +50,12 @@ export function SpaceDetails({
 
 	const save = () => {
 		if (!draft) return;
-		updateDealMarketing(space.id, {
-			spaceLeaseTerms: [draft.terms],
-			// 0 rather than null: `DealMarketing.availableSqFt` is a number, and a
-			// cleared field means "no size on record", which the gate reads as unmet.
-			availableSqFt: draft.availableSqFt ?? 0,
-		});
+		// Through `saveSpaceDetails`, not `updateDealMarketing` directly: the
+		// physical fields on this form (suite, floor, ceiling height, offices,
+		// conference rooms, furnished) are the *unit's* facts, and the save writes
+		// them through to the property record so the asset roster and this form
+		// never disagree. Rate, term and the display overrides stay on the deal.
+		saveSpaceDetails(space.id, draft);
 		setDraft(null);
 		notify({ title: "Space details saved" });
 	};

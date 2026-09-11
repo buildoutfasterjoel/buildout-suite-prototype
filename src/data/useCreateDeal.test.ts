@@ -14,6 +14,16 @@ describe('useCreateDeal', () => {
     expect(useCreateDeal.getState().property).toBeUndefined()
   })
 
+  it('carries a space to start on, and clears it on close', () => {
+    useCreateDeal.getState().openFor({ spaceUnitId: 'unit-1', lockLease: true })
+    expect(useCreateDeal.getState().spaceUnitId).toBe('unit-1')
+    expect(useCreateDeal.getState().lockLease).toBe(true)
+
+    useCreateDeal.getState().close()
+    expect(useCreateDeal.getState().spaceUnitId).toBeUndefined()
+    expect(useCreateDeal.getState().lockLease).toBeUndefined()
+  })
+
   it('openFor with no context opens an empty create flow', () => {
     useCreateDeal.getState().openFor()
     expect(useCreateDeal.getState().open).toBe(true)

@@ -43,6 +43,13 @@ function pillsFor(f: PropertyFacetState): Pill[] {
       clear: (prev) => ({ ...prev, status: "all" }),
     });
   }
+  if (f.availability !== "all") {
+    pills.push({
+      key: "availability",
+      label: `Spaces: ${f.availability}`,
+      clear: (prev) => ({ ...prev, availability: "all" }),
+    });
+  }
   return pills;
 }
 

@@ -73,6 +73,7 @@ import { generateDepositReference } from './deposits'
 import { payablesForDeposit } from './payables'
 import { isQuickbooksSynced } from './quickbooks'
 import { applyLeaseSpaces } from './leaseSpaceFixtures'
+import { applyPropertySpaceFixtures } from './propertySpaceFixtures'
 
 const SEED = 20240101
 /** Properties that carry a deal — must stay equal to `DEAL_PIPELINE.length`. */
@@ -2809,6 +2810,9 @@ export function generateDataset() {
   const trackedProperties = Array.from({ length: TRACKED_PROPERTY_COUNT }, () =>
     generateProperty(),
   )
+  // Named space fixtures on four of the tracked properties (zero / one / uniform /
+  // 24-suite density). Faker-free and applied before anything reads their units.
+  applyPropertySpaceFixtures(trackedProperties)
   const properties = [...dealProperties, ...trackedProperties]
 
   const allPropertyIds = properties.map((p) => p.id)

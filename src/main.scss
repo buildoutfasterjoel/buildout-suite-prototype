@@ -17,6 +17,9 @@
   --stage-under-contract: #{colors.$purple-heart-500};
   --stage-closed: #{colors.$mountain-meadow-500};
   --stage-inactive: #{colors.$storm-grey-500};
+  // A space with a sitting tenant and no deal (see SPACE_STATUS_COLORS). One
+  // step lighter than Lost so the two greys separate in a segmented bar.
+  --space-occupied: #{colors.$storm-grey-400};
 
   // Deal side accents — distinct from the stage palette above.
   --side-seller: #{colors.$buildout-blue-600};
@@ -797,6 +800,101 @@
       box-shadow: none;
     }
   }
+}
+
+// A card with no page behind it (a comp): same shell, but nothing to promise on
+// hover, so the pointer and the lift are gone.
+.deal-tile--static {
+  cursor: default;
+
+  &:hover {
+    box-shadow:
+      0 1px 2px -1px rgba(0, 0, 0, 0.1),
+      0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  }
+}
+
+// Contact identity chip (Figma "Contact Chip", My Sandbox 1567:50174): 28px
+// gradient avatar, 10px initials; a text block that fills the row, with the
+// name (14/19 semibold) and the role (12/16 muted) on one line, ends apart, and
+// the company (12/16 muted) beneath. Measurements transcribed from the frame.
+.contact-identity-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+
+  &__avatar {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    background: linear-gradient(
+      225deg,
+      var(--color-storm-grey-100, #eceef2) 0%,
+      var(--color-storm-grey-200, #d5dae2) 72%,
+      var(--color-storm-grey-300, #afb9ca) 100%
+    );
+    font-size: 12px; // stepped up from the frame's 10px for legibility
+    font-weight: 600;
+    line-height: 13px;
+    letter-spacing: 0.2px;
+    color: var(--color-storm-grey-950, #22262f);
+  }
+  &__text {
+    display: flex;
+    flex: 1 0 0;
+    flex-direction: column;
+    min-width: 0;
+  }
+  // Name and role bottom-align so the smaller role sits on the name's baseline.
+  &__row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+  }
+  &__name,
+  &__role,
+  &__detail {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  &__name {
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 19px;
+    color: var(--color-storm-grey-950, #22262f);
+  }
+  &__role,
+  &__detail {
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--color-storm-grey-700, #506079); // body/text-muted
+  }
+  &__role {
+    flex-shrink: 0;
+  }
+  &__detail {
+    min-width: 0;
+  }
+}
+
+// Record details (property / space pages), after Buildout's own property page:
+// the section glyph carries the brand purple, the rows are plain utilities.
+.record-details__heading svg {
+  // purple-heart/700 — what Buildout's page paints its section glyphs in. The
+  // theme exposes no `--bs-primary`, so the family token is named directly.
+  color: var(--color-purple-heart-700, #7422ce);
+  font-size: 16px;
 }
 
 // The card's own fill, scoped away from the lost variant so the
