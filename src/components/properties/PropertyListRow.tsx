@@ -10,6 +10,8 @@ import {
 import type { Property } from "#/data/types";
 import { DealStageBadge } from "#/components/deals/NewDealStageChip";
 import { TYPE_LABELS, formatSqFt, getPhotoUrl } from "./propertyDisplay";
+import { formatAvailabilityHeadline, propertyAvailability } from "#/data/propertySpaces";
+import { SpaceStatusDot } from "./SpaceStatusDot";
 
 /** "Retail • Multi-Tenant • 10,716 SF" — the meta line under the address. */
 function metaLine(property: Property): string {
@@ -48,6 +50,8 @@ export function PropertyListRow({
   /** Prospect mode only — the record has already been added. */
   inDatabase?: boolean;
 }) {
+  // Your own record only: a prospect has no deals, so nothing to derive from.
+  const availability = mode === "owned" ? propertyAvailability(property.id) : null;
   return (
     <div
       role="button"
@@ -79,6 +83,16 @@ export function PropertyListRow({
         {mode === "owned" && property.status && (
           <div className="mt-1">
             <DealStageBadge value={property.status} />
+          </div>
+        )}
+        {/* The same headline the record's header carries — "Available · 1 of 6
+            spaces" — so the list answers "how is this building doing" without
+            opening it. Absent for a property with no spaces, like the stage. */}
+        {availability && (
+          <div className="mt-1" style={{ fontSize: 12 }}>
+            <SpaceStatusDot status={availability.headline}>
+              {formatAvailabilityHeadline(availability)}
+            </SpaceStatusDot>
           </div>
         )}
         <div

@@ -15,11 +15,15 @@ import {
   type SizeBand,
   type StageFacetValue,
 } from "./propertyIndexFilters";
+import { SPACE_STATUS_PRECEDENCE, type SpaceStatus } from "#/data/propertySpaces";
+import { SpaceStatusDot } from "./SpaceStatusDot";
 
 export interface PropertyFacetState {
   type: PropertyType | "all";
   size: SizeBand;
   status: StageFacetValue | "all";
+  /** A space status; the property matches when any of its spaces has it. */
+  availability: SpaceStatus | "all";
 }
 
 /** Everything unset — what "Clear all" restores and what the pills count against. */
@@ -27,13 +31,15 @@ export const EMPTY_FACETS: PropertyFacetState = {
   type: "all",
   size: "all",
   status: "all",
+  availability: "all",
 };
 
 export function countActiveFacets(f: PropertyFacetState): number {
   return (
     (f.type !== "all" ? 1 : 0) +
     (f.size !== "all" ? 1 : 0) +
-    (f.status !== "all" ? 1 : 0)
+    (f.status !== "all" ? 1 : 0) +
+    (f.availability !== "all" ? 1 : 0)
   );
 }
 
@@ -47,7 +53,7 @@ export function PropertyFiltersFlyout({
   onOpenChange,
   facets,
   onChange,
-  /** Stage is a deal concept, so it's hidden on prospect records. */
+  /** Stage and space availability are deal-side concepts, so both hide on prospect records. */
   showStage,
 }: {
   open: boolean;
@@ -145,6 +151,43 @@ export function PropertyFiltersFlyout({
                   ))}
                 </Select.Content>
               </Select>
+            </Field>
+          )}
+
+          {/* Any-space semantics, said in the field so nobody reads it as "every
+              space": a building with 3 of 6 available is an Available building. */}
+          {showStage && (
+            <Field>
+              <Field.Label>Space Availability</Field.Label>
+              <Select
+                value={facets.availability}
+                onValueChange={(v) =>
+                  onChange({ ...facets, availability: v as SpaceStatus | "all" })
+                }
+              >
+                <Select.Trigger>
+                  <Select.Value>
+                    {(v) =>
+                      v === "all" ? (
+                        "Any availability"
+                      ) : (
+                        <SpaceStatusDot status={v as SpaceStatus} />
+                      )
+                    }
+                  </Select.Value>
+                </Select.Trigger>
+                <Select.Content>
+                  <Select.Item value="all">Any availability</Select.Item>
+                  {SPACE_STATUS_PRECEDENCE.map((s) => (
+                    <Select.Item key={s} value={s}>
+                      <SpaceStatusDot status={s} />
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select>
+              <Field.Description>
+                Buildings with at least one space in this state.
+              </Field.Description>
             </Field>
           )}
         </Offcanvas.Body>

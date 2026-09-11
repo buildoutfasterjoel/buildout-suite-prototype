@@ -57,3 +57,42 @@ describe('filterProperties', () => {
     expect(bandIds(undefined)).toHaveLength(3)
   })
 })
+
+describe('filterProperties — space availability', () => {
+  const props = [
+    { ...base(), id: 'mixed' },
+    { ...base(), id: 'leased' },
+    { ...base(), id: 'none' },
+  ]
+  // What each building's spaces carry; `none` has no spaces at all.
+  const statuses: Record<string, Set<'Available' | 'Under Contract' | 'Vacant' | 'Leased' | 'Occupied' | 'Not advertised'> | null> = {
+    mixed: new Set(['Available', 'Leased', 'Occupied']),
+    leased: new Set(['Leased']),
+    none: null,
+  }
+  const availabilityOf = (p: Property) => statuses[p.id]
+
+  it('matches a building when ANY of its spaces has the status — no Mixed value needed', () => {
+    const out = filterProperties(props, {
+      query: '', types: emptyTypes, statuses: emptyStatuses,
+      availability: new Set(['Available']), availabilityOf,
+    })
+    expect(out.map((p) => p.id)).toEqual(['mixed'])
+  })
+
+  it('never matches a building with no spaces', () => {
+    const out = filterProperties(props, {
+      query: '', types: emptyTypes, statuses: emptyStatuses,
+      availability: new Set(['Leased']), availabilityOf,
+    })
+    expect(out.map((p) => p.id)).toEqual(['mixed', 'leased'])
+  })
+
+  it('is a no-op with an empty set', () => {
+    const out = filterProperties(props, {
+      query: '', types: emptyTypes, statuses: emptyStatuses,
+      availability: new Set(), availabilityOf,
+    })
+    expect(out).toHaveLength(3)
+  })
+})

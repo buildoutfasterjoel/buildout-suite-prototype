@@ -38,6 +38,7 @@ import {
   type PropertyFacetState,
 } from "#/components/properties/PropertyFiltersFlyout";
 import { filterProperties } from "#/components/properties/propertyIndexFilters";
+import { propertyAvailability } from "#/data/propertySpaces";
 
 export const Route = createFileRoute("/_shell/properties/")({
   // `?q=` pre-fills the address/name search, the same contract `/listings`
@@ -84,6 +85,9 @@ function PropertiesIndex() {
   // Subscribed rather than read once: adding a prospect writes here, and both
   // the owned list and the prospect rows' "Added" state must follow.
   const propertiesMap = useDataStore((s) => s.properties);
+  // A row's availability line and the availability facet join units to their
+  // child deals, so a stage change on a space deal must re-filter and repaint.
+  const listingsMap = useDataStore((s) => s.listings);
 
   const owned = useMemo(() => [...propertiesMap.values()], [propertiesMap]);
   const prospects = useMemo(() => getProspectProperties(), []);
@@ -98,7 +102,12 @@ function PropertiesIndex() {
    * The user's stage choice is preserved in `facets` and returns with the mode.
    */
   const appliedFacets: PropertyFacetState = useMemo(
-    () => ({ ...facets, status: mode === "owned" ? facets.status : "all" }),
+    () => ({
+      ...facets,
+      status: mode === "owned" ? facets.status : "all",
+      // Same rule as stage: a prospect has no deals, so no derived availability.
+      availability: mode === "owned" ? facets.availability : "all",
+    }),
     [facets, mode],
   );
 
@@ -113,8 +122,15 @@ function PropertiesIndex() {
             ? new Set()
             : new Set([appliedFacets.status]),
         size: appliedFacets.size,
+        availability:
+          appliedFacets.availability === "all"
+            ? new Set()
+            : new Set([appliedFacets.availability]),
+        availabilityOf: (p) => propertyAvailability(p.id)?.statuses ?? null,
       }).sort((a, b) => (a.street || a.name).localeCompare(b.street || b.name)),
-    [source, query, appliedFacets],
+    // `listingsMap` is a dependency and not an input: `propertyAvailability`
+    // reads the store, and this is what re-runs it when a deal moves.
+    [source, query, appliedFacets, listingsMap],
   );
 
   // The prospecting overlays. `flyoutId` rather than the record itself so the
@@ -434,11 +450,15 @@ function PropertiesIndex() {
               <div className="d-flex align-items-center gap-2 flex-wrap">
                 {facetPlaceholders}
 
-                {/* Inert in both modes: a working flyout beside a row of dead
-                    dropdowns reads as the dropdowns being broken. The flyout
-                    itself still exists and works — see `PropertyFiltersFlyout`
-                    — it just has nothing opening it for now. */}
-                <Button variant="outline" className="property-filter-btn">
+                {/* Opens the flyout. It was inert for a while — a working flyout
+                    beside the row of placeholder dropdowns reads as the
+                    dropdowns being broken — but the space-availability facet
+                    lives only in the flyout, so the button is the way to it. */}
+                <Button
+                  variant="outline"
+                  className="property-filter-btn"
+                  onClick={() => setShowFilters(true)}
+                >
                   <FontAwesomeIcon icon={faFilter} />
                   {mode === "prospect" ? "All Filters" : "Filters"}
                 </Button>
