@@ -118,8 +118,9 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
 export const CHANGELOG: ChangelogEntry[] = [
   {
     pr: 223,
-    title: "The Properties index filters like Buildout's, and a space-level filter unfolds the spaces it matched",
-    mergedAt: "2026-09-11T23:30:00Z",
+    title:
+      "The Properties index filters like Buildout's, unfolds the spaces a filter matched, and every index shares one filter button",
+    mergedAt: "2026-09-11T22:53:44Z",
     day: "2026-09-11",
     author: "ZS-buildout",
     area: "Properties",
