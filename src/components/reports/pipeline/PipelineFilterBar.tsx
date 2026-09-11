@@ -1,4 +1,5 @@
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
+import { FilterButton } from "#/components/common/FilterButton";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -142,10 +143,13 @@ export function PipelineFilterBar({
           width={150}
         />
 
-        <Button variant="outline" onClick={onOpenAll} className="flex-shrink-0">
-          <FontAwesomeIcon icon={faSliders} />
-          All Filters
-        </Button>
+        <FilterButton
+          label="All Filters"
+          icon={faSliders}
+          caret={false}
+          onClick={onOpenAll}
+          className="flex-shrink-0"
+        />
       </div>
 
       {chips.length > 0 && (

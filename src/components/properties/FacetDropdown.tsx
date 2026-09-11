@@ -1,8 +1,5 @@
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCaretDown } from "@fortawesome/pro-regular-svg-icons";
-import { Button } from "@buildoutinc/blueprint-react/ui/Button";
-import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
+import { FilterButton } from "#/components/common/FilterButton";
 import { Popover } from "@buildoutinc/blueprint-react/ui/Popover";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { Facet } from "./PropertyFilters";
@@ -50,19 +47,18 @@ export function FacetDropdown({
 
   return (
     <Popover>
+      {/* The shared filter trigger: grey stroke, purple with the count in the
+          label once something is picked. Its caret is at default size, which
+          matches Blueprint's Select.Trigger, so the facet dropdowns read the
+          same as Sort By beside them. */}
       <Popover.Trigger
         render={
-          <Button
-            variant="outline"
-            className={`d-inline-flex align-items-center gap-2 ${count ? "active" : ""} ${className ?? ""}`}
-          >
-            {icon && <FontAwesomeIcon icon={icon} />}
-            {facet.title}
-            {count > 0 && <Badge variant="primary">{count}</Badge>}
-            {/* caret-down at default size — matches Blueprint's Select.Trigger,
-                so the facet dropdowns read the same as Sort By beside them. */}
-            <FontAwesomeIcon icon={faCaretDown} />
-          </Button>
+          <FilterButton
+            label={facet.title}
+            count={count}
+            icon={icon}
+            className={`d-inline-flex align-items-center gap-2 ${className ?? ""}`}
+          />
         }
       />
       <Popover.Content

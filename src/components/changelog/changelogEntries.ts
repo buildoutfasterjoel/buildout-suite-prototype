@@ -117,6 +117,43 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 223,
+    title:
+      "The Properties index filters like Buildout's, unfolds the spaces a filter matched, and every index shares one filter button",
+    mergedAt: "2026-09-11T22:53:44Z",
+    day: "2026-09-11",
+    author: "ZS-buildout",
+    area: "Properties",
+    summary:
+      "The Properties index had four fixed size bands in a flyout while Buildout's own index has a dropdown per group with free ranges. The toolbar is rebuilt to match production — Property & Building, Availability, Location, View, Sale/Lease — and the index follows the marketplaces' rule for lease inventory: results stay buildings, filters describe spaces, and each matching building unfolds exactly the spaces that matched.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "The filter toolbar is one dropdown per group, as on buildout.com: Property & Building (type, class, building size, lot size in SF or acres, units, ceiling height, year built, available SF, APN), Availability (deal stage and space availability), Location (market, submarket, city, state, zip, county), View (active deals, active listings) and Sale/Lease (sale or lease, sales price, sale date, price per SF, price per unit, cap rate). Each dropdown shows how many of its filters are set.",
+      },
+      {
+        kind: "refinement",
+        text: "Sizes and prices are free min/max ranges rather than fixed bands, so Under 10,000 SF and 12,000 to 18,000 SF are both one filter away. Active filters remain removable pills under the toolbar.",
+      },
+      {
+        kind: "refinement",
+        text: "Filter buttons look the same everywhere they appear — Properties, Deals, Contacts, Tasks, Back Office and the pipeline report: a light grey stroke at rest, and once a filter is applied a dark purple stroke with the count in the label, as in \"Filters (2)\". The count badges are gone.",
+      },
+      {
+        kind: "feature",
+        text: "With a space filter set, each building row unfolds the spaces that matched — \"2 of 6 spaces match\", then a two-column list of suites with a status dot, floor and size — and each line opens that space's page. Six show; \"and N more\" opens the Spaces tab.",
+      },
+      {
+        kind: "refinement",
+        text: "The index remembers your search and filters when you open a property or space and come back, as Contacts and Tasks do.",
+      },
+      {
+        kind: "refinement",
+        text: "Building Size now matches a building when it, or any space in it, falls in the range. A 400,000 SF tower is a hit for Under 10,000 SF through its 1,200 SF suite, and that suite is the one unfolded.",
+      },
+    ],
+  },
+  {
     pr: 222,
     title:
       "The Property record shows every space in a building, its contacts by role, and can start a deal on a space",

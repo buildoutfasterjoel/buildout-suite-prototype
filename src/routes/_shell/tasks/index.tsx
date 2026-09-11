@@ -28,6 +28,7 @@ import { todayISO } from "#/components/contacts/contactDisplay";
 import { TaskListRow } from "#/components/tasks/TaskListRow";
 import { toggleTaskCompleted } from "#/components/tasks/taskCompletion";
 import { TaskFilters } from "#/components/tasks/TaskFilters";
+import { FilterButton } from "#/components/common/FilterButton";
 import { TaskFilterBar } from "#/components/tasks/TaskFilterBar";
 import { useTaskUiPrefs } from "#/components/tasks/useTaskUiPrefs";
 import {
@@ -240,15 +241,14 @@ function TasksPage() {
                     />
                   </InputGroup>
                 </div>
-                <Button
-                  variant="outline"
+                <FilterButton
+                  label="Filters"
+                  count={activeFilterCount}
+                  icon={faFilter}
+                  caret={false}
                   onClick={() => setShowFilters((v) => !v)}
                   aria-pressed={showFilters}
-                >
-                  <FontAwesomeIcon icon={faFilter} />
-                  Filters
-                  {activeFilterCount > 0 && ` (${activeFilterCount})`}
-                </Button>
+                />
                 <span className="text-muted">
                   <span className="fw-semibold text-body">{openCount}</span> open
                   {openCount === 1 ? " task" : " tasks"}
