@@ -120,7 +120,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     pr: 223,
     title:
       "The Properties index filters like Buildout's, unfolds the spaces a filter matched, and every index shares one filter button",
-    mergedAt: "2026-09-11T22:53:44Z",
+    mergedAt: "2026-09-11T23:05:00Z",
     day: "2026-09-11",
     author: "ZS-buildout",
     area: "Properties",
