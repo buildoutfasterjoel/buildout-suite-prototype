@@ -117,6 +117,23 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 225,
+    title:
+      "Company settings gains Back Office, Invoice Defaults, QuickBooks and Document Defaults pages",
+    mergedAt: "2026-09-11T23:20:00Z",
+    day: "2026-09-11",
+    author: "ZS-buildout",
+    area: "Settings",
+    summary:
+      "Buildout's company settings menu has four sections the grouped prototype sidebar was missing, so the grouping could not be judged against the full menu. Each now has a page and a home in the sidebar.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "Back Office, Invoice Defaults and QuickBooks appear under Deals & Data, after Listings, each with the icon it has in Buildout today. Document Defaults appears under Marketing, between Syndication and Plugins.",
+      },
+    ],
+  },
+  {
     pr: 224,
     title:
       "The syndication modal reports where a listing goes, and emails the reps from one place",
