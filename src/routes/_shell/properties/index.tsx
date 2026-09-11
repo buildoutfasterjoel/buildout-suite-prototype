@@ -15,8 +15,6 @@ import {
   faBuilding,
   faBuildings,
   faCaretDown,
-  faFilter,
-  faFolder,
   faLocationDot,
   faRadar,
   faTableList,
@@ -32,14 +30,16 @@ import { PropertyRecordMap } from "#/components/properties/PropertyRecordMap";
 import { AddProspectDialog } from "#/components/properties/AddProspectDialog";
 import { ProspectFlyout } from "#/components/properties/ProspectFlyout";
 import { PropertyFilterPills } from "#/components/properties/PropertyFilterPills";
+import { PropertyFacetDropdowns } from "#/components/properties/PropertyFacetDropdowns";
 import {
-  PropertyFiltersFlyout,
   EMPTY_FACETS,
+  filterProperties,
+  matchingSpaces,
+  withoutDealSideFacets,
   type PropertyFacetState,
-} from "#/components/properties/PropertyFiltersFlyout";
-import { filterProperties, matchingSpaces } from "#/components/properties/propertyIndexFilters";
-import type { SpaceStatus } from "#/data/propertySpaces";
+} from "#/components/properties/propertyIndexFilters";
 import { propertySpaces } from "#/data/propertySpaces";
+import { getListingsForProperty } from "#/data/store";
 
 export const Route = createFileRoute("/_shell/properties/")({
   // `?q=` pre-fills the address/name search, the same contract `/listings`
@@ -79,7 +79,6 @@ function PropertiesIndex() {
   const [query, setQuery] = useState(q ?? "");
   const [facets, setFacets] = useState<PropertyFacetState>(EMPTY_FACETS);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
   // Visual only — the table view isn't built yet (see `viewSwitcher`).
   const [resultsView, setResultsView] = useState<"map" | "table">("map");
 
@@ -96,52 +95,39 @@ function PropertiesIndex() {
   const source = mode === "owned" ? owned : prospects;
 
   /**
-   * The facets actually in force. Deal stage is meaningless on a record you
-   * don't own, so it drops out in prospect mode — and everything that reports
-   * on filtering (the results, the Filters count, the pills) reads this rather
-   * than raw state, so none of them can claim a filter the list isn't applying.
-   * The user's stage choice is preserved in `facets` and returns with the mode.
+   * The facets actually in force. Deal stage, space availability and the
+   * sale-side ranges are meaningless on a record you don't own, so they drop
+   * out in prospect mode — and everything that reports on filtering (the
+   * results, the dropdown counts, the pills) reads this rather than raw state,
+   * so none of them can claim a filter the list isn't applying. The user's
+   * choices are preserved in `facets` and return with the mode.
    */
   const appliedFacets: PropertyFacetState = useMemo(
-    () => ({
-      ...facets,
-      status: mode === "owned" ? facets.status : "all",
-      // Same rule as stage: a prospect has no deals, so no derived availability.
-      availability: mode === "owned" ? facets.availability : "all",
-    }),
+    () => (mode === "owned" ? facets : withoutDealSideFacets(facets)),
     [facets, mode],
-  );
-
-  // The space-level half of the facets, shared by the filter and by each row's
-  // unfolded matches so the two cannot disagree about which suites count.
-  const spaceFacet = useMemo(
-    () => ({
-      availability:
-        appliedFacets.availability === "all"
-          ? new Set<SpaceStatus>()
-          : new Set<SpaceStatus>([appliedFacets.availability]),
-      size: appliedFacets.size,
-    }),
-    [appliedFacets],
   );
 
   const results = useMemo(
     () =>
-      filterProperties(source, {
+      filterProperties(source, appliedFacets, {
         query,
-        types:
-          appliedFacets.type === "all" ? new Set() : new Set([appliedFacets.type]),
-        statuses:
-          appliedFacets.status === "all"
-            ? new Set()
-            : new Set([appliedFacets.status]),
-        size: appliedFacets.size,
-        availability: spaceFacet.availability,
         spacesOf: (p) => propertySpaces(p.id),
+        dealsOf: (p) => getListingsForProperty(p.id),
       }).sort((a, b) => (a.street || a.name).localeCompare(b.street || b.name)),
-    // `listingsMap` is a dependency and not an input: `propertySpaces` reads
-    // the store, and this is what re-runs it when a deal moves.
-    [source, query, appliedFacets, spaceFacet, listingsMap],
+    // `listingsMap` is a dependency and not an input: `propertySpaces` and
+    // `getListingsForProperty` read the store, and this is what re-runs them
+    // when a deal moves.
+    [source, query, appliedFacets, listingsMap],
+  );
+
+  // Distinct markets / submarkets in the current source, for the Location selects.
+  const markets = useMemo(
+    () => [...new Set(source.map((p) => p.market).filter((m): m is string => !!m))].sort(),
+    [source],
+  );
+  const submarkets = useMemo(
+    () => [...new Set(source.map((p) => p.submarket).filter(Boolean))].sort(),
+    [source],
   );
 
   // The prospecting overlays. `flyoutId` rather than the record itself so the
@@ -350,38 +336,6 @@ function PropertiesIndex() {
     </ButtonGroup>
   );
 
-  /**
-   * The toolbar's facet dropdowns, one set per mode, matching each product's
-   * own filter bar. Placeholders — they carry a caret but open nothing. Real
-   * ones raise questions this prototype hasn't answered (Prospecting's would
-   * have to filter the national record set rather than the loaded page), so
-   * they're shown for layout and nothing more.
-   */
-  const facetPlaceholders = (
-    mode === "owned"
-      ? [
-          // The saved-view selector leads the row and carries a real count —
-          // it's free, and a fake one next to a live result count would clash.
-          { label: `All Properties (${owned.length})`, icon: faFolder },
-          { label: "Property & Building" },
-          { label: "Availability" },
-          { label: "Location" },
-          { label: "Sale/Lease" },
-        ]
-      : [
-          { label: "Property Type" },
-          { label: "Number of Units" },
-          { label: "Building Size" },
-          { label: "Lot Size" },
-        ]
-  ).map(({ label, icon }) => (
-    <Button key={label} variant="outline" className="property-filter-btn">
-      {icon && <FontAwesomeIcon icon={icon} />}
-      {label}
-      <FontAwesomeIcon icon={faCaretDown} />
-    </Button>
-  ));
-
   /** The results rail + map. */
   const results_ = (
     <>
@@ -418,7 +372,7 @@ function PropertiesIndex() {
               onSelect={() => onSelect(p)}
               onAdd={() => setAddTarget(p)}
               inDatabase={mode === "prospect" && propertiesMap.has(p.id)}
-              matchedSpaces={mode === "owned" ? matchingSpaces(propertySpaces(p.id), spaceFacet) : []}
+              matchedSpaces={mode === "owned" ? matchingSpaces(propertySpaces(p.id), appliedFacets) : []}
             />
           ))
         )}
@@ -459,21 +413,18 @@ function PropertiesIndex() {
               {/* The facets are one cluster, tighter within than the gaps
                   separating them from the search box and the count — so the row
                   reads as three groups rather than eight loose controls. */}
+              {/* Production's filter bar: one dropdown per group. The facets
+                  are one cluster, tighter within than the gaps separating them
+                  from the search box and the count. */}
               <div className="d-flex align-items-center gap-2 flex-wrap">
-                {facetPlaceholders}
-
-                {/* Opens the flyout. It was inert for a while — a working flyout
-                    beside the row of placeholder dropdowns reads as the
-                    dropdowns being broken — but the space-availability facet
-                    lives only in the flyout, so the button is the way to it. */}
-                <Button
-                  variant="outline"
-                  className="property-filter-btn"
-                  onClick={() => setShowFilters(true)}
-                >
-                  <FontAwesomeIcon icon={faFilter} />
-                  {mode === "prospect" ? "All Filters" : "Filters"}
-                </Button>
+                <PropertyFacetDropdowns
+                  mode={mode}
+                  facets={facets}
+                  onChange={setFacets}
+                  ownedCount={owned.length}
+                  markets={markets}
+                  submarkets={submarkets}
+                />
               </div>
               <span className="text-muted">{countLabel}</span>
               <div className="ms-auto">{viewSwitcher}</div>
@@ -518,13 +469,6 @@ function PropertiesIndex() {
         }}
       />
 
-      <PropertyFiltersFlyout
-        open={showFilters}
-        onOpenChange={setShowFilters}
-        facets={facets}
-        onChange={setFacets}
-        showStage={mode === "owned"}
-      />
     </>
   );
 }
