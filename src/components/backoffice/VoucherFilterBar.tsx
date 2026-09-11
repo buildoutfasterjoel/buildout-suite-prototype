@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { FilterButton } from "#/components/common/FilterButton";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Calendar } from "@buildoutinc/blueprint-react/ui/Calendar";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
@@ -9,7 +9,6 @@ import { RadioGroup } from "@buildoutinc/blueprint-react/ui/RadioGroup";
 import { Separator } from "@buildoutinc/blueprint-react/ui/Separator";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faCaretDown,
   faMagnifyingGlass,
   faUserGroupSimple,
 } from "@fortawesome/pro-regular-svg-icons";
@@ -17,6 +16,7 @@ import type { DealType, PropertyStatus, PropertyType } from "#/data/types";
 import {
   CLOSE_DATE_PRESETS,
   CLOSE_DATE_LABELS,
+  emptyVoucherFilters,
   type CloseDatePreset,
   type VoucherFilterState,
 } from "#/data/voucherFilters";
@@ -104,13 +104,13 @@ function CloseDateDropdown({
     <Popover open={open} onOpenChange={setOpen}>
       <Popover.Trigger
         render={
-          <Button
-            variant="outline"
+          <FilterButton
+            label={label}
+            // A window is always set, so "applied" here is having narrowed
+            // it from the default preset rather than a count.
+            active={value !== emptyVoucherFilters().closeDate}
             className="d-inline-flex align-items-center gap-2 text-nowrap"
-          >
-            {label}
-            <FontAwesomeIcon icon={faCaretDown} />
-          </Button>
+          />
         }
       />
       <Popover.Content side="bottom" align="start" sideOffset={6} style={{ minWidth: 260 }}>

@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Combobox } from "@buildoutinc/blueprint-react/ui/Combobox";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCaretDown, faUserGroupSimple } from "@fortawesome/pro-regular-svg-icons";
+import { faUserGroupSimple } from "@fortawesome/pro-regular-svg-icons";
+import { FilterButton } from "#/components/common/FilterButton";
 
 /**
  * The pieces every Back Office index toolbar shares.
@@ -56,14 +56,11 @@ export function OfficesDropdown({ noun }: { noun: string }) {
           // A span wrapper, because a disabled button fires no pointer events
           // and would never surface the tooltip that explains it.
           <span className="d-inline-flex">
-            <Button
-              variant="outline"
+            <FilterButton
+              label="All Offices"
               disabled
               className={`d-inline-flex align-items-center gap-2 text-nowrap ${SELECT_LOOK}`}
-            >
-              All Offices
-              <FontAwesomeIcon icon={faCaretDown} />
-            </Button>
+            />
           </span>
         }
       />

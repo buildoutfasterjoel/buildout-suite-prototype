@@ -518,19 +518,28 @@
   }
 }
 
-// ── Properties toolbar filter controls ──
-// One neutral border across the whole facet row — storm-grey-200 rather than
-// Blueprint's outline-button ink, so a bar of six or seven dropdowns reads as a
-// quiet band of controls instead of a row competing with the results. Chained
-// with `.btn` for specificity over `.btn-outline-*`, and the hover keeps the
-// border put so only the fill responds.
-.btn.property-filter-btn {
+// ── Filter buttons (every index toolbar) ──
+// Figma My Sandbox 1575:52305 (default) / 1575:52306 (applied). Default is
+// Blueprint's outline button with a lighter stroke — storm-grey-200 rather than
+// the outline ink — so a bar of six or seven dropdowns reads as a quiet band of
+// controls instead of a row competing with the results. With a filter applied
+// the stroke goes to the dark purple ink and the count joins the label
+// ("Filter (2)"); there is no badge. Hover uses Blueprint's own outline hover
+// (ink-coloured border), which is also what the applied stroke is — so an
+// applied button doesn't change on hover. Chained with `.btn` for specificity
+// over `.btn-outline`; `.form-select` (the Back Office look) loses to it too.
+.btn.filter-btn {
   border-color: var(--color-storm-grey-200, #d5dae2);
 
-  &:hover,
-  &:focus-visible,
   &[aria-pressed="true"] {
     border-color: var(--color-storm-grey-200, #d5dae2);
+  }
+
+  &.filter-btn--active,
+  &.filter-btn--active[aria-pressed="true"],
+  &:hover,
+  &:focus-visible {
+    border-color: var(--color-purple-heart-950, #360764);
   }
 }
 

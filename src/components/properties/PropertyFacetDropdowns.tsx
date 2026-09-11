@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Checkbox } from "@buildoutinc/blueprint-react/ui/Checkbox";
 import { Field } from "@buildoutinc/blueprint-react/ui/Field";
@@ -8,6 +7,7 @@ import { Popover } from "@buildoutinc/blueprint-react/ui/Popover";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCaretDown, faFolder } from "@fortawesome/pro-regular-svg-icons";
+import { FilterButton } from "#/components/common/FilterButton";
 import type { BuildingClass, DealType, PropertyType } from "#/data/types";
 import { SPACE_STATUS_PRECEDENCE, type SpaceStatus } from "#/data/propertySpaces";
 import { PROPERTY_STATUSES, STATUS_LABELS, TYPE_LABELS } from "./propertyDisplay";
@@ -139,8 +139,9 @@ function UnitChip({ children }: { children: ReactNode }) {
 }
 
 /**
- * One toolbar dropdown: an outline button with a caret and, when anything in
- * the group is set, a count badge; the fields in a Popover beneath.
+ * One toolbar dropdown: the shared `FilterButton` — grey stroke, going purple
+ * with the count in the label when anything in the group is set — and the
+ * fields in a Popover beneath.
  */
 function FacetPopover({
   label,
@@ -155,19 +156,7 @@ function FacetPopover({
 }) {
   return (
     <Popover>
-      <Popover.Trigger
-        render={
-          <Button variant="outline" className={`property-filter-btn${count > 0 ? " active" : ""}`}>
-            {label}
-            {count > 0 && (
-              <Badge variant="primary" className="fs-xs">
-                {count}
-              </Badge>
-            )}
-            <FontAwesomeIcon icon={faCaretDown} />
-          </Button>
-        }
-      />
+      <Popover.Trigger render={<FilterButton label={label} count={count} />} />
       <Popover.Content align="start" className="p-3" style={{ width, maxWidth: "calc(100vw - 32px)" }}>
         {children}
       </Popover.Content>
@@ -275,7 +264,7 @@ export function PropertyFacetDropdowns({
     <>
       {/* The saved-view selector leads the row and carries a real count. Inert:
           saved views are not built. */}
-      <Button variant="outline" className="property-filter-btn">
+      <Button variant="outline" className="filter-btn">
         <FontAwesomeIcon icon={faFolder} />
         All Properties ({ownedCount})
         <FontAwesomeIcon icon={faCaretDown} />

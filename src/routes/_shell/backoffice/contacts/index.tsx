@@ -65,6 +65,7 @@ import {
   type ContactListSource,
 } from "#/components/contacts/useContactListNav";
 import { ContactFilters } from "#/components/contacts/ContactFilters";
+import { FilterButton } from "#/components/common/FilterButton";
 import {
   ContactFilterBar,
   type FilterBarContext,
@@ -665,16 +666,14 @@ function PeoplePage() {
                       <Tooltip>
                         <Tooltip.Trigger
                           render={
-                            <Button
-                              variant="outline"
+                            <FilterButton
+                              label="Filters"
+                              count={countActiveContactFilters(filters)}
+                              icon={faFilter}
+                              caret={false}
                               onClick={() => setShowFilters((v) => !v)}
                               aria-pressed={showFilters}
-                            >
-                              <FontAwesomeIcon icon={faFilter} />
-                              Filters
-                              {countActiveContactFilters(filters) > 0 &&
-                                ` (${countActiveContactFilters(filters)})`}
-                            </Button>
+                            />
                           }
                         />
                         <Tooltip.Content>
@@ -682,16 +681,14 @@ function PeoplePage() {
                         </Tooltip.Content>
                       </Tooltip>
                     ) : (
-                      <Button
-                        variant="outline"
+                      <FilterButton
+                        label="Filters"
+                        count={countActiveContactFilters(filters)}
+                        icon={faFilter}
+                        caret={false}
                         onClick={() => setShowFilters((v) => !v)}
                         aria-pressed={showFilters}
-                      >
-                        <FontAwesomeIcon icon={faFilter} />
-                        Filters
-                        {countActiveContactFilters(filters) > 0 &&
-                          ` (${countActiveContactFilters(filters)})`}
-                      </Button>
+                      />
                     ))}
                   <span className="text-muted">{filtered.length} contacts</span>
 
