@@ -2258,6 +2258,25 @@
   }
 }
 
+// Email Reps modal: the template choice cards. Base UI marks the chosen radio
+// with `data-checked`, so the card it sits in can carry the selected state
+// without tracking it twice in React.
+.email-reps__choice {
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease-in-out,
+    border-color 0.12s ease-in-out;
+
+  &:hover {
+    background: var(--color-storm-grey-100, #f1f3f7);
+  }
+
+  &:has([data-checked]) {
+    border-color: var(--bp-primary);
+    box-shadow: inset 0 0 0 1px var(--bp-primary);
+  }
+}
+
 // Add-to-list modal: selectable list rows with a clear hover affordance.
 .add-to-list__row {
   cursor: pointer;

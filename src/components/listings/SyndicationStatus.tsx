@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Modal } from "@buildoutinc/blueprint-react/ui/Modal";
-import { Switch } from "@buildoutinc/blueprint-react/ui/Switch";
 import { Alert } from "@buildoutinc/blueprint-react/ui/Alert";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
@@ -16,12 +15,15 @@ import { faTriangleExclamation } from "@fortawesome/pro-duotone-svg-icons";
 import type { Listing } from "#/data/types";
 import {
   getListingSyndication,
-  withChannelActive,
   type SyndicationChannel,
   type SyndicationDelivery,
 } from "#/data/listingSyndication";
 import { getListingWebsiteSettings } from "#/data/listingWebsiteSettings";
 import { SyndicationChannelCard } from "./syndication/SyndicationChannelCard";
+import {
+  EmailRepsModal,
+  type EmailRepsTemplate,
+} from "./syndication/EmailRepsModal";
 
 const AFFILIATION_DISCLAIMER =
   "Buildout has no financial, legal, commercial, or partnership affiliation with CoStar Group, Inc., LoopNet, or Crexi, Inc. No association or relationship between these companies should be implied or inferred. Buildout assists customers in sending email updates to these unaffiliated channels when listings are added, updated, or removed.";
@@ -33,26 +35,29 @@ const GROUPS: { delivery: SyndicationDelivery; label: string }[] = [
 
 /**
  * Header widget: an at-a-glance syndication status button that opens a modal
- * with per-channel status, dates, links, on/off toggles, and the disclaimers
- * that qualify each group.
+ * with per-channel status, dates, links, and the disclaimers that qualify each
+ * group. Turning channels on and off lives on the user profile, not here.
  */
 export function SyndicationStatus({ listing }: { listing: Listing }) {
   // Recomputed from `listing` on every render (deterministic, so identical
   // input always yields identical output) rather than frozen at mount — a
   // publish/unpublish elsewhere in the app re-renders this component with a
   // new `listing.publishedAt`, and the channel list must track it instead of
-  // going stale. Only the user's own toggles are kept in state; they're
-  // reapplied on top of the fresh base list below.
-  const { channels: baseChannels, blockingIssues, blocksSyndication } =
+  // going stale.
+  const { channels: allChannels, blockingIssues, blocksSyndication } =
     getListingSyndication(listing);
-  const [overrides, setOverrides] = useState<Record<string, boolean>>({});
-  const channels = baseChannels.map((c) =>
-    c.id in overrides ? withChannelActive(c, overrides[c.id]) : c,
-  );
-  const rep = listing.internalBrokers[0];
+  // A channel the account has no connection for is not something this listing
+  // can reach, so it isn't part of this listing's story — it belongs on the
+  // profile page where connections are made, not in a list of where the
+  // listing goes.
+  const channels = allChannels.filter((c) => c.state !== "not-available");
   const websiteUrl = getListingWebsiteSettings(listing).websiteUrl;
   const websiteLabel =
     listing.dealType === "Lease" ? "Lease Website" : "Sale Website";
+  // The two modals take turns rather than stacking: a dialog opened over
+  // another dialog reads as a panel spliced into the first one.
+  const [open, setOpen] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
 
   const published = listing.publishedAt != null;
   // A Closed or Lost deal that was published is off-market now — show its history
@@ -60,6 +65,13 @@ export function SyndicationStatus({ listing }: { listing: Listing }) {
   const offMarket =
     published && (listing.status === "closed" || listing.status === "inactive");
   const activeCount = channels.filter((c) => c.active).length;
+  // The listing's own state says what the broker is almost certainly here to
+  // send, so the template that matches it starts selected.
+  const defaultTemplate: EmailRepsTemplate = offMarket
+    ? "offline"
+    : published
+      ? "update"
+      : "new";
   const label = !published
     ? "Not published"
     : offMarket
@@ -78,29 +90,13 @@ export function SyndicationStatus({ listing }: { listing: Listing }) {
         ? "var(--bp-warning)"
         : "var(--stage-active)";
 
-  const toggle = (id: string, active: boolean) => {
-    setOverrides((prev) => ({ ...prev, [id]: active }));
-  };
-
-  const toggleGroup = (delivery: SyndicationDelivery, active: boolean) => {
-    setOverrides((prev) => {
-      const next = { ...prev };
-      for (const c of baseChannels) {
-        if (c.delivery === delivery && c.state !== "not-available") {
-          next[c.id] = active;
-        }
-      }
-      return next;
-    });
-  };
-
   return (
     <div className="d-flex align-items-center gap-2">
       <div className="d-flex align-items-center gap-0-5 fs-small">
         <FontAwesomeIcon icon={faCircleWifi} style={{ color: statusColor }} />
         {label}
       </div>
-      <Modal>
+      <Modal open={open} onOpenChange={setOpen}>
         <Tooltip>
           <Tooltip.Trigger
             render={
@@ -185,8 +181,20 @@ export function SyndicationStatus({ listing }: { listing: Listing }) {
                     }
                     websiteUrl={websiteUrl}
                     websiteLabel={websiteLabel}
-                    onToggle={toggle}
-                    onToggleAll={(active) => toggleGroup(group.delivery, active)}
+                    action={
+                      group.delivery === "email" ? (
+                        <Button
+                          variant="secondary"
+                          onClick={() => {
+                            setOpen(false);
+                            setEmailOpen(true);
+                          }}
+                        >
+                          <FontAwesomeIcon icon={faEnvelope} />
+                          Email Reps
+                        </Button>
+                      ) : undefined
+                    }
                   />
                 );
               })
@@ -195,19 +203,18 @@ export function SyndicationStatus({ listing }: { listing: Listing }) {
 
           <Modal.Footer>
             <Modal.Close render={<Button variant="ghost">Close</Button>} />
-            {rep && (
-              <Button
-                variant="primary"
-                nativeButton={false}
-                render={<a href={`mailto:${rep.email}`} />}
-              >
-                <FontAwesomeIcon icon={faEnvelope} />
-                Send Rep Email
-              </Button>
-            )}
           </Modal.Footer>
         </Modal.Content>
       </Modal>
+
+      <EmailRepsModal
+        open={emailOpen}
+        onOpenChange={setEmailOpen}
+        channelNames={channels
+          .filter((c) => c.delivery === "email")
+          .map((c) => c.name)}
+        defaultTemplate={defaultTemplate}
+      />
     </div>
   );
 }
@@ -215,7 +222,8 @@ export function SyndicationStatus({ listing }: { listing: Listing }) {
 /**
  * One delivery-method group. A group that carries a `disclaimer` renders it
  * below its own cards, so the note stays scoped to the channels it names
- * rather than sitting unattributed at the foot of the modal.
+ * rather than sitting unattributed at the foot of the modal. `action` is the
+ * group's own button, sitting opposite the label.
  */
 function SyndicationGroup({
   label,
@@ -223,40 +231,20 @@ function SyndicationGroup({
   disclaimer,
   websiteUrl,
   websiteLabel,
-  onToggle,
-  onToggleAll,
+  action,
 }: {
   label: string;
   channels: SyndicationChannel[];
   disclaimer?: string;
   websiteUrl: string;
   websiteLabel: string;
-  onToggle: (id: string, active: boolean) => void;
-  onToggleAll: (active: boolean) => void;
+  action?: React.ReactNode;
 }) {
-  // "Not available" channels have no connection to turn on, so they don't
-  // belong in either half of an "n of m" count — a count that includes them
-  // could never reach its own denominator, and the master switch (which also
-  // skips them) would show "on" beside a total it can't produce.
-  const eligible = channels.filter((c) => c.state !== "not-available");
-  const activeCount = eligible.filter((c) => c.active).length;
-  const allActive = eligible.length > 0 && eligible.every((c) => c.active);
-
   return (
     <div className="d-flex flex-column gap-2">
       <div className="d-flex align-items-center justify-content-between gap-3 pb-2 border-bottom">
         <span className="fs-large fw-semibold">{label}</span>
-        <div className="d-flex align-items-center gap-2">
-          <span className="fs-small text-muted">
-            {activeCount} of {eligible.length} active
-          </span>
-          <Switch
-            checked={allActive}
-            disabled={eligible.length === 0}
-            onCheckedChange={onToggleAll}
-            aria-label={`Toggle all ${label.toLowerCase()}`}
-          />
-        </div>
+        {action}
       </div>
       {channels.map((channel) => (
         <SyndicationChannelCard
@@ -264,7 +252,6 @@ function SyndicationGroup({
           channel={channel}
           websiteUrl={websiteUrl}
           websiteLabel={websiteLabel}
-          onToggle={(active) => onToggle(channel.id, active)}
         />
       ))}
       {disclaimer && (
