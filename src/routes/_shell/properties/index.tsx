@@ -32,12 +32,12 @@ import { ProspectFlyout } from "#/components/properties/ProspectFlyout";
 import { PropertyFilterPills } from "#/components/properties/PropertyFilterPills";
 import { PropertyFacetDropdowns } from "#/components/properties/PropertyFacetDropdowns";
 import {
-  EMPTY_FACETS,
   filterProperties,
   matchingSpaces,
   withoutDealSideFacets,
   type PropertyFacetState,
 } from "#/components/properties/propertyIndexFilters";
+import { usePropertyUiPrefs } from "#/components/properties/usePropertyUiPrefs";
 import { propertySpaces } from "#/data/propertySpaces";
 import { getListingsForProperty } from "#/data/store";
 
@@ -74,10 +74,14 @@ function PropertiesIndex() {
   const navigate = useNavigate();
   const { q } = Route.useSearch();
   const [mode, setMode] = useState<Mode>("owned");
-  // Seeded from `?q=`, then owned by the box: arriving with a query pre-fills
-  // the search, and typing over it is a plain edit, not a fight with the URL.
-  const [query, setQuery] = useState(q ?? "");
-  const [facets, setFacets] = useState<PropertyFacetState>(EMPTY_FACETS);
+  // Search and facets live in a session store (`usePropertyUiPrefs`) rather
+  // than component state, so opening a property and coming back restores the
+  // filtered view — the Contacts and Tasks pattern. `?q=` still seeds the box
+  // on arrival (the effect below); typing over it is a plain edit.
+  const query = usePropertyUiPrefs((s) => s.query);
+  const setQuery = usePropertyUiPrefs((s) => s.setQuery);
+  const facets = usePropertyUiPrefs((s) => s.facets);
+  const setFacets = usePropertyUiPrefs((s) => s.setFacets);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // Visual only — the table view isn't built yet (see `viewSwitcher`).
   const [resultsView, setResultsView] = useState<"map" | "table">("map");
