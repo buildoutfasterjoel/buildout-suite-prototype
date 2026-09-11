@@ -6,6 +6,7 @@ import {
   seedDealShares,
 } from './seed'
 import { isQuickbooksSynced } from './quickbooks'
+import { PROPERTY_SPACE_FIXTURE_NAMES } from './propertySpaceFixtures'
 import { findTeammate } from './teammates'
 import {
   payableBalance,
@@ -168,12 +169,61 @@ describe('classic deal seed', () => {
   })
 })
 
-describe('property units + financial records seed', () => {
-  const { properties } = generateDataset()
+describe('property space fixtures', () => {
+  const { properties, listings } = generateDataset()
+  const byName = (role: keyof typeof PROPERTY_SPACE_FIXTURE_NAMES) => {
+    const p = properties.find((p) => p.name === PROPERTY_SPACE_FIXTURE_NAMES[role])
+    if (!p) throw new Error(`fixture ${role} not seeded`)
+    return p
+  }
+  const withDeal = new Set(listings.map((l) => l.propertyId))
 
-  it('gives every property at least one unit with a physical shell', () => {
+  it('puts every fixture on a property with no deal, so the no-shell flow is reachable', () => {
+    for (const role of Object.keys(PROPERTY_SPACE_FIXTURE_NAMES) as (keyof typeof PROPERTY_SPACE_FIXTURE_NAMES)[]) {
+      expect(withDeal.has(byName(role).id), role).toBe(false)
+    }
+  })
+
+  it('seeds exactly one property with no spaces at all', () => {
+    expect(byName('zeroSpaces').units).toEqual([])
+    expect(properties.filter((p) => p.units.length === 0)).toHaveLength(1)
+  })
+
+  it('seeds a single occupied space', () => {
+    const [only, ...rest] = byName('singleOccupied').units
+    expect(rest).toHaveLength(0)
+    expect(only.occupancy).toBe('occupied')
+    expect(only.tenantName).toBe('Halvorsen Dental')
+  })
+
+  it('seeds four uniformly vacant spaces summing to the building', () => {
+    const p = byName('uniformVacant')
+    expect(p.units).toHaveLength(4)
+    expect(p.units.every((u) => u.occupancy === 'vacant')).toBe(true)
+    expect(p.units.reduce((s, u) => s + u.sqft, 0)).toBe(p.buildingSqFt)
+  })
+
+  it('seeds a 24-space commercial tower over six floors, 16 occupied', () => {
+    const p = byName('density')
+    expect(p.units).toHaveLength(24)
+    expect(new Set(p.units.map((u) => u.floor)).size).toBe(6)
+    expect(p.units.filter((u) => u.occupancy === 'occupied')).toHaveLength(16)
+    expect(p.units.every((u) => u.unitType !== 'residential')).toBe(true)
+    expect(p.units.reduce((s, u) => s + u.sqft, 0)).toBe(p.buildingSqFt)
+    // Vacancies interleave with tenants across floors rather than clustering.
+    expect(new Set(p.units.filter((u) => u.occupancy === 'vacant').map((u) => u.floor)).size).toBeGreaterThan(3)
+  })
+})
+
+describe('property units + financial records seed', () => {
+  const { properties, listings } = generateDataset()
+  const withDeal = new Set(listings.map((l) => l.propertyId))
+
+  it('gives every deal-bearing property at least one unit with a physical shell', () => {
+    // Narrowed from "every property": a tracked record may have no known space
+    // breakdown at all (the `zeroSpaces` fixture above is exactly one such).
     for (const p of properties) {
-      expect(p.units.length).toBeGreaterThan(0)
+      if (withDeal.has(p.id)) expect(p.units.length).toBeGreaterThan(0)
       for (const u of p.units) {
         expect(u.sqft).toBeGreaterThan(0)
         expect(typeof u.label).toBe('string')
