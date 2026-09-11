@@ -526,6 +526,17 @@
 // left; 202, 401, 503 on the right), the way the roster orders them. Each line
 // is a full-width hit target with a little vertical room (28px) and a hover
 // fill, so the eye reads a list of links rather than loose text.
+// The unfolded group sits on a grey-50 well — 6px radius, 12px padding, no
+// divider — so it reads as one attached block under the building rather than
+// loose lines; a hovered line lifts to white against it.
+.property-row__unfold {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 6px;
+  background: var(--color-storm-grey-50, #f6f7f9);
+  font-size: 12px;
+}
+
 .property-row__spaces {
   columns: 200px;
   column-gap: 12px;
@@ -558,7 +569,7 @@
 
   &:hover,
   &:focus-visible {
-    background: var(--color-storm-grey-100, #f1f3f6);
+    background: #fff;
     text-decoration: none;
   }
 }

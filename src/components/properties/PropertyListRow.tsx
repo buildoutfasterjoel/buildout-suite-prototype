@@ -197,7 +197,7 @@ export function PropertyListRow({
           card's full width is what gives the space lines room for two columns
           beside a 160px photo. */}
       {matchedSpaces && matchedSpaces.length > 0 && availability && (
-        <div className="mt-2 pt-2 border-top" style={{ fontSize: 12 }}>
+        <div className="property-row__unfold">
           <div className="text-muted mb-1">
             {matchedSpaces.length} of {availability.spaceCount}{" "}
             {availability.spaceCount === 1 ? "space" : "spaces"}{" "}
