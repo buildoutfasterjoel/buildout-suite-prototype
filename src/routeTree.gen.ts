@@ -37,9 +37,12 @@ import { Route as ShellReportsStandardRouteImport } from './routes/_shell/report
 import { Route as ShellReportsPipelineRouteImport } from './routes/_shell/reports_/pipeline'
 import { Route as ShellSettingsIndexRouteImport } from './routes/_shell/settings/index'
 import { Route as ShellSettingsAffiliationsRouteImport } from './routes/_shell/settings/affiliations'
+import { Route as ShellSettingsBackOfficeRouteImport } from './routes/_shell/settings/back-office'
 import { Route as ShellSettingsCompanyRouteImport } from './routes/_shell/settings/company'
 import { Route as ShellSettingsCustomFieldsRouteImport } from './routes/_shell/settings/custom-fields'
+import { Route as ShellSettingsDocumentDefaultsRouteImport } from './routes/_shell/settings/document-defaults'
 import { Route as ShellSettingsEmailRouteImport } from './routes/_shell/settings/email'
+import { Route as ShellSettingsInvoiceDefaultsRouteImport } from './routes/_shell/settings/invoice-defaults'
 import { Route as ShellSettingsListingsRouteImport } from './routes/_shell/settings/listings'
 import { Route as ShellSettingsLogosRouteImport } from './routes/_shell/settings/logos'
 import { Route as ShellSettingsNotificationsRouteImport } from './routes/_shell/settings/notifications'
@@ -47,6 +50,7 @@ import { Route as ShellSettingsOfficesRouteImport } from './routes/_shell/settin
 import { Route as ShellSettingsPipelineRouteImport } from './routes/_shell/settings/pipeline'
 import { Route as ShellSettingsPlaybooksRouteImport } from './routes/_shell/settings/playbooks'
 import { Route as ShellSettingsPluginsRouteImport } from './routes/_shell/settings/plugins'
+import { Route as ShellSettingsQuickbooksRouteImport } from './routes/_shell/settings/quickbooks'
 import { Route as ShellSettingsSyndicationRouteImport } from './routes/_shell/settings/syndication'
 import { Route as ShellSettingsUsersRouteImport } from './routes/_shell/settings/users'
 import { Route as ShellSuiteIndexRouteImport } from './routes/_shell/suite/index'
@@ -249,6 +253,11 @@ const ShellSettingsAffiliationsRoute =
     path: '/affiliations',
     getParentRoute: () => ShellSettingsRoute,
   } as any)
+const ShellSettingsBackOfficeRoute = ShellSettingsBackOfficeRouteImport.update({
+  id: '/back-office',
+  path: '/back-office',
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
 const ShellSettingsCompanyRoute = ShellSettingsCompanyRouteImport.update({
   id: '/company',
   path: '/company',
@@ -260,11 +269,23 @@ const ShellSettingsCustomFieldsRoute =
     path: '/custom-fields',
     getParentRoute: () => ShellSettingsRoute,
   } as any)
+const ShellSettingsDocumentDefaultsRoute =
+  ShellSettingsDocumentDefaultsRouteImport.update({
+    id: '/document-defaults',
+    path: '/document-defaults',
+    getParentRoute: () => ShellSettingsRoute,
+  } as any)
 const ShellSettingsEmailRoute = ShellSettingsEmailRouteImport.update({
   id: '/email',
   path: '/email',
   getParentRoute: () => ShellSettingsRoute,
 } as any)
+const ShellSettingsInvoiceDefaultsRoute =
+  ShellSettingsInvoiceDefaultsRouteImport.update({
+    id: '/invoice-defaults',
+    path: '/invoice-defaults',
+    getParentRoute: () => ShellSettingsRoute,
+  } as any)
 const ShellSettingsListingsRoute = ShellSettingsListingsRouteImport.update({
   id: '/listings',
   path: '/listings',
@@ -299,6 +320,11 @@ const ShellSettingsPlaybooksRoute = ShellSettingsPlaybooksRouteImport.update({
 const ShellSettingsPluginsRoute = ShellSettingsPluginsRouteImport.update({
   id: '/plugins',
   path: '/plugins',
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
+const ShellSettingsQuickbooksRoute = ShellSettingsQuickbooksRouteImport.update({
+  id: '/quickbooks',
+  path: '/quickbooks',
   getParentRoute: () => ShellSettingsRoute,
 } as any)
 const ShellSettingsSyndicationRoute =
@@ -680,9 +706,12 @@ export interface FileRoutesByFullPath {
   '/reports/standard': typeof ShellReportsStandardRoute
   '/reports/pipeline': typeof ShellReportsPipelineRoute
   '/settings/affiliations': typeof ShellSettingsAffiliationsRoute
+  '/settings/back-office': typeof ShellSettingsBackOfficeRoute
   '/settings/company': typeof ShellSettingsCompanyRoute
   '/settings/custom-fields': typeof ShellSettingsCustomFieldsRoute
+  '/settings/document-defaults': typeof ShellSettingsDocumentDefaultsRoute
   '/settings/email': typeof ShellSettingsEmailRoute
+  '/settings/invoice-defaults': typeof ShellSettingsInvoiceDefaultsRoute
   '/settings/listings': typeof ShellSettingsListingsRoute
   '/settings/logos': typeof ShellSettingsLogosRoute
   '/settings/notifications': typeof ShellSettingsNotificationsRoute
@@ -690,6 +719,7 @@ export interface FileRoutesByFullPath {
   '/settings/pipeline': typeof ShellSettingsPipelineRoute
   '/settings/playbooks': typeof ShellSettingsPlaybooksRoute
   '/settings/plugins': typeof ShellSettingsPluginsRoute
+  '/settings/quickbooks': typeof ShellSettingsQuickbooksRoute
   '/settings/syndication': typeof ShellSettingsSyndicationRoute
   '/settings/users': typeof ShellSettingsUsersRouteWithChildren
   '/app/': typeof ShellAppIndexRoute
@@ -769,9 +799,12 @@ export interface FileRoutesByTo {
   '/reports/standard': typeof ShellReportsStandardRoute
   '/reports/pipeline': typeof ShellReportsPipelineRoute
   '/settings/affiliations': typeof ShellSettingsAffiliationsRoute
+  '/settings/back-office': typeof ShellSettingsBackOfficeRoute
   '/settings/company': typeof ShellSettingsCompanyRoute
   '/settings/custom-fields': typeof ShellSettingsCustomFieldsRoute
+  '/settings/document-defaults': typeof ShellSettingsDocumentDefaultsRoute
   '/settings/email': typeof ShellSettingsEmailRoute
+  '/settings/invoice-defaults': typeof ShellSettingsInvoiceDefaultsRoute
   '/settings/listings': typeof ShellSettingsListingsRoute
   '/settings/logos': typeof ShellSettingsLogosRoute
   '/settings/notifications': typeof ShellSettingsNotificationsRoute
@@ -779,6 +812,7 @@ export interface FileRoutesByTo {
   '/settings/pipeline': typeof ShellSettingsPipelineRoute
   '/settings/playbooks': typeof ShellSettingsPlaybooksRoute
   '/settings/plugins': typeof ShellSettingsPluginsRoute
+  '/settings/quickbooks': typeof ShellSettingsQuickbooksRoute
   '/settings/syndication': typeof ShellSettingsSyndicationRoute
   '/app': typeof ShellAppIndexRoute
   '/email': typeof ShellEmailIndexRoute
@@ -867,9 +901,12 @@ export interface FileRoutesById {
   '/_shell/reports/standard': typeof ShellReportsStandardRoute
   '/_shell/reports_/pipeline': typeof ShellReportsPipelineRoute
   '/_shell/settings/affiliations': typeof ShellSettingsAffiliationsRoute
+  '/_shell/settings/back-office': typeof ShellSettingsBackOfficeRoute
   '/_shell/settings/company': typeof ShellSettingsCompanyRoute
   '/_shell/settings/custom-fields': typeof ShellSettingsCustomFieldsRoute
+  '/_shell/settings/document-defaults': typeof ShellSettingsDocumentDefaultsRoute
   '/_shell/settings/email': typeof ShellSettingsEmailRoute
+  '/_shell/settings/invoice-defaults': typeof ShellSettingsInvoiceDefaultsRoute
   '/_shell/settings/listings': typeof ShellSettingsListingsRoute
   '/_shell/settings/logos': typeof ShellSettingsLogosRoute
   '/_shell/settings/notifications': typeof ShellSettingsNotificationsRoute
@@ -877,6 +914,7 @@ export interface FileRoutesById {
   '/_shell/settings/pipeline': typeof ShellSettingsPipelineRoute
   '/_shell/settings/playbooks': typeof ShellSettingsPlaybooksRoute
   '/_shell/settings/plugins': typeof ShellSettingsPluginsRoute
+  '/_shell/settings/quickbooks': typeof ShellSettingsQuickbooksRoute
   '/_shell/settings/syndication': typeof ShellSettingsSyndicationRoute
   '/_shell/settings/users': typeof ShellSettingsUsersRouteWithChildren
   '/_shell/app/': typeof ShellAppIndexRoute
@@ -968,9 +1006,12 @@ export interface FileRouteTypes {
     | '/reports/standard'
     | '/reports/pipeline'
     | '/settings/affiliations'
+    | '/settings/back-office'
     | '/settings/company'
     | '/settings/custom-fields'
+    | '/settings/document-defaults'
     | '/settings/email'
+    | '/settings/invoice-defaults'
     | '/settings/listings'
     | '/settings/logos'
     | '/settings/notifications'
@@ -978,6 +1019,7 @@ export interface FileRouteTypes {
     | '/settings/pipeline'
     | '/settings/playbooks'
     | '/settings/plugins'
+    | '/settings/quickbooks'
     | '/settings/syndication'
     | '/settings/users'
     | '/app/'
@@ -1057,9 +1099,12 @@ export interface FileRouteTypes {
     | '/reports/standard'
     | '/reports/pipeline'
     | '/settings/affiliations'
+    | '/settings/back-office'
     | '/settings/company'
     | '/settings/custom-fields'
+    | '/settings/document-defaults'
     | '/settings/email'
+    | '/settings/invoice-defaults'
     | '/settings/listings'
     | '/settings/logos'
     | '/settings/notifications'
@@ -1067,6 +1112,7 @@ export interface FileRouteTypes {
     | '/settings/pipeline'
     | '/settings/playbooks'
     | '/settings/plugins'
+    | '/settings/quickbooks'
     | '/settings/syndication'
     | '/app'
     | '/email'
@@ -1154,9 +1200,12 @@ export interface FileRouteTypes {
     | '/_shell/reports/standard'
     | '/_shell/reports_/pipeline'
     | '/_shell/settings/affiliations'
+    | '/_shell/settings/back-office'
     | '/_shell/settings/company'
     | '/_shell/settings/custom-fields'
+    | '/_shell/settings/document-defaults'
     | '/_shell/settings/email'
+    | '/_shell/settings/invoice-defaults'
     | '/_shell/settings/listings'
     | '/_shell/settings/logos'
     | '/_shell/settings/notifications'
@@ -1164,6 +1213,7 @@ export interface FileRouteTypes {
     | '/_shell/settings/pipeline'
     | '/_shell/settings/playbooks'
     | '/_shell/settings/plugins'
+    | '/_shell/settings/quickbooks'
     | '/_shell/settings/syndication'
     | '/_shell/settings/users'
     | '/_shell/app/'
@@ -1436,6 +1486,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellSettingsAffiliationsRouteImport
       parentRoute: typeof ShellSettingsRoute
     }
+    '/_shell/settings/back-office': {
+      id: '/_shell/settings/back-office'
+      path: '/back-office'
+      fullPath: '/settings/back-office'
+      preLoaderRoute: typeof ShellSettingsBackOfficeRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
     '/_shell/settings/company': {
       id: '/_shell/settings/company'
       path: '/company'
@@ -1450,11 +1507,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellSettingsCustomFieldsRouteImport
       parentRoute: typeof ShellSettingsRoute
     }
+    '/_shell/settings/document-defaults': {
+      id: '/_shell/settings/document-defaults'
+      path: '/document-defaults'
+      fullPath: '/settings/document-defaults'
+      preLoaderRoute: typeof ShellSettingsDocumentDefaultsRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
     '/_shell/settings/email': {
       id: '/_shell/settings/email'
       path: '/email'
       fullPath: '/settings/email'
       preLoaderRoute: typeof ShellSettingsEmailRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/invoice-defaults': {
+      id: '/_shell/settings/invoice-defaults'
+      path: '/invoice-defaults'
+      fullPath: '/settings/invoice-defaults'
+      preLoaderRoute: typeof ShellSettingsInvoiceDefaultsRouteImport
       parentRoute: typeof ShellSettingsRoute
     }
     '/_shell/settings/listings': {
@@ -1504,6 +1575,13 @@ declare module '@tanstack/react-router' {
       path: '/plugins'
       fullPath: '/settings/plugins'
       preLoaderRoute: typeof ShellSettingsPluginsRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    '/_shell/settings/quickbooks': {
+      id: '/_shell/settings/quickbooks'
+      path: '/quickbooks'
+      fullPath: '/settings/quickbooks'
+      preLoaderRoute: typeof ShellSettingsQuickbooksRouteImport
       parentRoute: typeof ShellSettingsRoute
     }
     '/_shell/settings/syndication': {
@@ -2219,9 +2297,12 @@ const ShellSettingsUsersRouteWithChildren =
 
 interface ShellSettingsRouteChildren {
   ShellSettingsAffiliationsRoute: typeof ShellSettingsAffiliationsRoute
+  ShellSettingsBackOfficeRoute: typeof ShellSettingsBackOfficeRoute
   ShellSettingsCompanyRoute: typeof ShellSettingsCompanyRoute
   ShellSettingsCustomFieldsRoute: typeof ShellSettingsCustomFieldsRoute
+  ShellSettingsDocumentDefaultsRoute: typeof ShellSettingsDocumentDefaultsRoute
   ShellSettingsEmailRoute: typeof ShellSettingsEmailRoute
+  ShellSettingsInvoiceDefaultsRoute: typeof ShellSettingsInvoiceDefaultsRoute
   ShellSettingsListingsRoute: typeof ShellSettingsListingsRoute
   ShellSettingsLogosRoute: typeof ShellSettingsLogosRoute
   ShellSettingsNotificationsRoute: typeof ShellSettingsNotificationsRoute
@@ -2229,6 +2310,7 @@ interface ShellSettingsRouteChildren {
   ShellSettingsPipelineRoute: typeof ShellSettingsPipelineRoute
   ShellSettingsPlaybooksRoute: typeof ShellSettingsPlaybooksRoute
   ShellSettingsPluginsRoute: typeof ShellSettingsPluginsRoute
+  ShellSettingsQuickbooksRoute: typeof ShellSettingsQuickbooksRoute
   ShellSettingsSyndicationRoute: typeof ShellSettingsSyndicationRoute
   ShellSettingsUsersRoute: typeof ShellSettingsUsersRouteWithChildren
   ShellSettingsIndexRoute: typeof ShellSettingsIndexRoute
@@ -2236,9 +2318,12 @@ interface ShellSettingsRouteChildren {
 
 const ShellSettingsRouteChildren: ShellSettingsRouteChildren = {
   ShellSettingsAffiliationsRoute: ShellSettingsAffiliationsRoute,
+  ShellSettingsBackOfficeRoute: ShellSettingsBackOfficeRoute,
   ShellSettingsCompanyRoute: ShellSettingsCompanyRoute,
   ShellSettingsCustomFieldsRoute: ShellSettingsCustomFieldsRoute,
+  ShellSettingsDocumentDefaultsRoute: ShellSettingsDocumentDefaultsRoute,
   ShellSettingsEmailRoute: ShellSettingsEmailRoute,
+  ShellSettingsInvoiceDefaultsRoute: ShellSettingsInvoiceDefaultsRoute,
   ShellSettingsListingsRoute: ShellSettingsListingsRoute,
   ShellSettingsLogosRoute: ShellSettingsLogosRoute,
   ShellSettingsNotificationsRoute: ShellSettingsNotificationsRoute,
@@ -2246,6 +2331,7 @@ const ShellSettingsRouteChildren: ShellSettingsRouteChildren = {
   ShellSettingsPipelineRoute: ShellSettingsPipelineRoute,
   ShellSettingsPlaybooksRoute: ShellSettingsPlaybooksRoute,
   ShellSettingsPluginsRoute: ShellSettingsPluginsRoute,
+  ShellSettingsQuickbooksRoute: ShellSettingsQuickbooksRoute,
   ShellSettingsSyndicationRoute: ShellSettingsSyndicationRoute,
   ShellSettingsUsersRoute: ShellSettingsUsersRouteWithChildren,
   ShellSettingsIndexRoute: ShellSettingsIndexRoute,
