@@ -118,14 +118,22 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
 export const CHANGELOG: ChangelogEntry[] = [
   {
     pr: 223,
-    title: "A space-level filter on the Properties index unfolds the spaces it matched under each building",
+    title: "The Properties index filters like Buildout's, and a space-level filter unfolds the spaces it matched",
     mergedAt: "2026-09-11T23:30:00Z",
     day: "2026-09-11",
     author: "ZS-buildout",
     area: "Properties",
     summary:
-      "Filtering the Properties index by space availability surfaced the right buildings but left you guessing which suites had matched. The index now follows the marketplaces' rule for lease inventory: results stay buildings, filters describe spaces, and each matching building unfolds exactly the spaces that matched.",
+      "The Properties index had four fixed size bands in a flyout while Buildout's own index has a dropdown per group with free ranges. The toolbar is rebuilt to match production — Property & Building, Availability, Location, View, Sale/Lease — and the index follows the marketplaces' rule for lease inventory: results stay buildings, filters describe spaces, and each matching building unfolds exactly the spaces that matched.",
     highlights: [
+      {
+        kind: "feature",
+        text: "The filter toolbar is one dropdown per group, as on buildout.com: Property & Building (type, class, building size, lot size in SF or acres, units, ceiling height, year built, available SF, APN), Availability (deal stage and space availability), Location (market, submarket, city, state, zip, county), View (active deals, active listings) and Sale/Lease (sale or lease, sales price, sale date, price per SF, price per unit, cap rate). Each dropdown shows how many of its filters are set.",
+      },
+      {
+        kind: "refinement",
+        text: "Sizes and prices are free min/max ranges rather than fixed bands, so Under 10,000 SF and 12,000 to 18,000 SF are both one filter away. Active filters remain removable pills under the toolbar.",
+      },
       {
         kind: "feature",
         text: "With a space filter set, each building row unfolds the spaces that matched — \"2 of 6 spaces match\", then one line per suite with floor, size and status — and each line opens that space's page.",
