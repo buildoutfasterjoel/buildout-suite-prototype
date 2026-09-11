@@ -81,10 +81,14 @@ import { Route as ShellListingsListingIdSyndicationRouteImport } from './routes/
 import { Route as ShellListingsListingIdUnderwritingRouteImport } from './routes/_shell/listings/$listingId/underwriting'
 import { Route as ShellListingsListingIdWebActivityRouteImport } from './routes/_shell/listings/$listingId/web-activity'
 import { Route as ShellListingsListingIdWebsiteRouteImport } from './routes/_shell/listings/$listingId/website'
+import { Route as ShellPropertiesPropertyIdIndexRouteImport } from './routes/_shell/properties/$propertyId/index'
+import { Route as ShellPropertiesPropertyIdOverviewRouteImport } from './routes/_shell/properties/$propertyId/overview'
+import { Route as ShellPropertiesPropertyIdSpacesRouteImport } from './routes/_shell/properties/$propertyId/spaces'
 import { Route as ShellSettingsUsersIndexRouteImport } from './routes/_shell/settings/users/index'
 import { Route as ShellSettingsUsersUserIdRouteImport } from './routes/_shell/settings/users/$userId'
 import { Route as ShellListingsListingIdVouchersIndexRouteImport } from './routes/_shell/listings/$listingId/vouchers/index'
 import { Route as ShellListingsListingIdSpacesSpaceIdRouteImport } from './routes/_shell/listings/$listingId_/spaces/$spaceId'
+import { Route as ShellPropertiesPropertyIdSpacesUnitIdRouteImport } from './routes/_shell/properties/$propertyId_/spaces/$unitId'
 import { Route as ShellSettingsUsersUserIdIndexRouteImport } from './routes/_shell/settings/users/$userId/index'
 import { Route as ShellSettingsUsersUserIdEmailRouteImport } from './routes/_shell/settings/users/$userId/email'
 import { Route as ShellSettingsUsersUserIdIntegrationsRouteImport } from './routes/_shell/settings/users/$userId/integrations'
@@ -498,6 +502,24 @@ const ShellListingsListingIdWebsiteRoute =
     path: '/website',
     getParentRoute: () => ShellListingsListingIdRoute,
   } as any)
+const ShellPropertiesPropertyIdIndexRoute =
+  ShellPropertiesPropertyIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => ShellPropertiesPropertyIdRoute,
+  } as any)
+const ShellPropertiesPropertyIdOverviewRoute =
+  ShellPropertiesPropertyIdOverviewRouteImport.update({
+    id: '/overview',
+    path: '/overview',
+    getParentRoute: () => ShellPropertiesPropertyIdRoute,
+  } as any)
+const ShellPropertiesPropertyIdSpacesRoute =
+  ShellPropertiesPropertyIdSpacesRouteImport.update({
+    id: '/spaces',
+    path: '/spaces',
+    getParentRoute: () => ShellPropertiesPropertyIdRoute,
+  } as any)
 const ShellSettingsUsersIndexRoute = ShellSettingsUsersIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -520,6 +542,12 @@ const ShellListingsListingIdSpacesSpaceIdRoute =
     id: '/$listingId_/spaces/$spaceId',
     path: '/$listingId/spaces/$spaceId',
     getParentRoute: () => ShellListingsRoute,
+  } as any)
+const ShellPropertiesPropertyIdSpacesUnitIdRoute =
+  ShellPropertiesPropertyIdSpacesUnitIdRouteImport.update({
+    id: '/$propertyId_/spaces/$unitId',
+    path: '/$propertyId/spaces/$unitId',
+    getParentRoute: () => ShellPropertiesRoute,
   } as any)
 const ShellSettingsUsersUserIdIndexRoute =
   ShellSettingsUsersUserIdIndexRouteImport.update({
@@ -647,7 +675,7 @@ export interface FileRoutesByFullPath {
   '/editor/$listingId': typeof ShellEditorListingIdRoute
   '/email/$emailId': typeof ShellEmailEmailIdRoute
   '/listings/$listingId': typeof ShellListingsListingIdRouteWithChildren
-  '/properties/$propertyId': typeof ShellPropertiesPropertyIdRoute
+  '/properties/$propertyId': typeof ShellPropertiesPropertyIdRouteWithChildren
   '/reports/my-reports': typeof ShellReportsMyReportsRoute
   '/reports/standard': typeof ShellReportsStandardRoute
   '/reports/pipeline': typeof ShellReportsPipelineRoute
@@ -696,6 +724,8 @@ export interface FileRoutesByFullPath {
   '/listings/$listingId/underwriting': typeof ShellListingsListingIdUnderwritingRoute
   '/listings/$listingId/web-activity': typeof ShellListingsListingIdWebActivityRoute
   '/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
+  '/properties/$propertyId/overview': typeof ShellPropertiesPropertyIdOverviewRoute
+  '/properties/$propertyId/spaces': typeof ShellPropertiesPropertyIdSpacesRoute
   '/settings/users/$userId': typeof ShellSettingsUsersUserIdRouteWithChildren
   '/backoffice/contacts/': typeof ShellBackofficeContactsIndexRoute
   '/backoffice/deposits/': typeof ShellBackofficeDepositsIndexRoute
@@ -703,8 +733,10 @@ export interface FileRoutesByFullPath {
   '/backoffice/receivables/': typeof ShellBackofficeReceivablesIndexRoute
   '/backoffice/vouchers/': typeof ShellBackofficeVouchersIndexRoute
   '/listings/$listingId/': typeof ShellListingsListingIdIndexRoute
+  '/properties/$propertyId/': typeof ShellPropertiesPropertyIdIndexRoute
   '/settings/users/': typeof ShellSettingsUsersIndexRoute
   '/listings/$listingId/spaces/$spaceId': typeof ShellListingsListingIdSpacesSpaceIdRouteWithChildren
+  '/properties/$propertyId/spaces/$unitId': typeof ShellPropertiesPropertyIdSpacesUnitIdRoute
   '/settings/users/$userId/email': typeof ShellSettingsUsersUserIdEmailRoute
   '/settings/users/$userId/integrations': typeof ShellSettingsUsersUserIdIntegrationsRoute
   '/settings/users/$userId/notifications': typeof ShellSettingsUsersUserIdNotificationsRoute
@@ -733,7 +765,6 @@ export interface FileRoutesByTo {
   '/editor': typeof ShellEditorRouteWithChildren
   '/editor/$listingId': typeof ShellEditorListingIdRoute
   '/email/$emailId': typeof ShellEmailEmailIdRoute
-  '/properties/$propertyId': typeof ShellPropertiesPropertyIdRoute
   '/reports/my-reports': typeof ShellReportsMyReportsRoute
   '/reports/standard': typeof ShellReportsStandardRoute
   '/reports/pipeline': typeof ShellReportsPipelineRoute
@@ -781,13 +812,17 @@ export interface FileRoutesByTo {
   '/listings/$listingId/underwriting': typeof ShellListingsListingIdUnderwritingRoute
   '/listings/$listingId/web-activity': typeof ShellListingsListingIdWebActivityRoute
   '/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
+  '/properties/$propertyId/overview': typeof ShellPropertiesPropertyIdOverviewRoute
+  '/properties/$propertyId/spaces': typeof ShellPropertiesPropertyIdSpacesRoute
   '/backoffice/contacts': typeof ShellBackofficeContactsIndexRoute
   '/backoffice/deposits': typeof ShellBackofficeDepositsIndexRoute
   '/backoffice/payables': typeof ShellBackofficePayablesIndexRoute
   '/backoffice/receivables': typeof ShellBackofficeReceivablesIndexRoute
   '/backoffice/vouchers': typeof ShellBackofficeVouchersIndexRoute
   '/listings/$listingId': typeof ShellListingsListingIdIndexRoute
+  '/properties/$propertyId': typeof ShellPropertiesPropertyIdIndexRoute
   '/settings/users': typeof ShellSettingsUsersIndexRoute
+  '/properties/$propertyId/spaces/$unitId': typeof ShellPropertiesPropertyIdSpacesUnitIdRoute
   '/settings/users/$userId/email': typeof ShellSettingsUsersUserIdEmailRoute
   '/settings/users/$userId/integrations': typeof ShellSettingsUsersUserIdIntegrationsRoute
   '/settings/users/$userId/notifications': typeof ShellSettingsUsersUserIdNotificationsRoute
@@ -827,7 +862,7 @@ export interface FileRoutesById {
   '/_shell/editor/$listingId': typeof ShellEditorListingIdRoute
   '/_shell/email/$emailId': typeof ShellEmailEmailIdRoute
   '/_shell/listings/$listingId': typeof ShellListingsListingIdRouteWithChildren
-  '/_shell/properties/$propertyId': typeof ShellPropertiesPropertyIdRoute
+  '/_shell/properties/$propertyId': typeof ShellPropertiesPropertyIdRouteWithChildren
   '/_shell/reports/my-reports': typeof ShellReportsMyReportsRoute
   '/_shell/reports/standard': typeof ShellReportsStandardRoute
   '/_shell/reports_/pipeline': typeof ShellReportsPipelineRoute
@@ -876,6 +911,8 @@ export interface FileRoutesById {
   '/_shell/listings/$listingId/underwriting': typeof ShellListingsListingIdUnderwritingRoute
   '/_shell/listings/$listingId/web-activity': typeof ShellListingsListingIdWebActivityRoute
   '/_shell/listings/$listingId/website': typeof ShellListingsListingIdWebsiteRoute
+  '/_shell/properties/$propertyId/overview': typeof ShellPropertiesPropertyIdOverviewRoute
+  '/_shell/properties/$propertyId/spaces': typeof ShellPropertiesPropertyIdSpacesRoute
   '/_shell/settings/users/$userId': typeof ShellSettingsUsersUserIdRouteWithChildren
   '/_shell/backoffice/contacts/': typeof ShellBackofficeContactsIndexRoute
   '/_shell/backoffice/deposits/': typeof ShellBackofficeDepositsIndexRoute
@@ -883,8 +920,10 @@ export interface FileRoutesById {
   '/_shell/backoffice/receivables/': typeof ShellBackofficeReceivablesIndexRoute
   '/_shell/backoffice/vouchers/': typeof ShellBackofficeVouchersIndexRoute
   '/_shell/listings/$listingId/': typeof ShellListingsListingIdIndexRoute
+  '/_shell/properties/$propertyId/': typeof ShellPropertiesPropertyIdIndexRoute
   '/_shell/settings/users/': typeof ShellSettingsUsersIndexRoute
   '/_shell/listings/$listingId_/spaces/$spaceId': typeof ShellListingsListingIdSpacesSpaceIdRouteWithChildren
+  '/_shell/properties/$propertyId_/spaces/$unitId': typeof ShellPropertiesPropertyIdSpacesUnitIdRoute
   '/_shell/settings/users/$userId/email': typeof ShellSettingsUsersUserIdEmailRoute
   '/_shell/settings/users/$userId/integrations': typeof ShellSettingsUsersUserIdIntegrationsRoute
   '/_shell/settings/users/$userId/notifications': typeof ShellSettingsUsersUserIdNotificationsRoute
@@ -973,6 +1012,8 @@ export interface FileRouteTypes {
     | '/listings/$listingId/underwriting'
     | '/listings/$listingId/web-activity'
     | '/listings/$listingId/website'
+    | '/properties/$propertyId/overview'
+    | '/properties/$propertyId/spaces'
     | '/settings/users/$userId'
     | '/backoffice/contacts/'
     | '/backoffice/deposits/'
@@ -980,8 +1021,10 @@ export interface FileRouteTypes {
     | '/backoffice/receivables/'
     | '/backoffice/vouchers/'
     | '/listings/$listingId/'
+    | '/properties/$propertyId/'
     | '/settings/users/'
     | '/listings/$listingId/spaces/$spaceId'
+    | '/properties/$propertyId/spaces/$unitId'
     | '/settings/users/$userId/email'
     | '/settings/users/$userId/integrations'
     | '/settings/users/$userId/notifications'
@@ -1010,7 +1053,6 @@ export interface FileRouteTypes {
     | '/editor'
     | '/editor/$listingId'
     | '/email/$emailId'
-    | '/properties/$propertyId'
     | '/reports/my-reports'
     | '/reports/standard'
     | '/reports/pipeline'
@@ -1058,13 +1100,17 @@ export interface FileRouteTypes {
     | '/listings/$listingId/underwriting'
     | '/listings/$listingId/web-activity'
     | '/listings/$listingId/website'
+    | '/properties/$propertyId/overview'
+    | '/properties/$propertyId/spaces'
     | '/backoffice/contacts'
     | '/backoffice/deposits'
     | '/backoffice/payables'
     | '/backoffice/receivables'
     | '/backoffice/vouchers'
     | '/listings/$listingId'
+    | '/properties/$propertyId'
     | '/settings/users'
+    | '/properties/$propertyId/spaces/$unitId'
     | '/settings/users/$userId/email'
     | '/settings/users/$userId/integrations'
     | '/settings/users/$userId/notifications'
@@ -1152,6 +1198,8 @@ export interface FileRouteTypes {
     | '/_shell/listings/$listingId/underwriting'
     | '/_shell/listings/$listingId/web-activity'
     | '/_shell/listings/$listingId/website'
+    | '/_shell/properties/$propertyId/overview'
+    | '/_shell/properties/$propertyId/spaces'
     | '/_shell/settings/users/$userId'
     | '/_shell/backoffice/contacts/'
     | '/_shell/backoffice/deposits/'
@@ -1159,8 +1207,10 @@ export interface FileRouteTypes {
     | '/_shell/backoffice/receivables/'
     | '/_shell/backoffice/vouchers/'
     | '/_shell/listings/$listingId/'
+    | '/_shell/properties/$propertyId/'
     | '/_shell/settings/users/'
     | '/_shell/listings/$listingId_/spaces/$spaceId'
+    | '/_shell/properties/$propertyId_/spaces/$unitId'
     | '/_shell/settings/users/$userId/email'
     | '/_shell/settings/users/$userId/integrations'
     | '/_shell/settings/users/$userId/notifications'
@@ -1694,6 +1744,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellListingsListingIdWebsiteRouteImport
       parentRoute: typeof ShellListingsListingIdRoute
     }
+    '/_shell/properties/$propertyId/': {
+      id: '/_shell/properties/$propertyId/'
+      path: '/'
+      fullPath: '/properties/$propertyId/'
+      preLoaderRoute: typeof ShellPropertiesPropertyIdIndexRouteImport
+      parentRoute: typeof ShellPropertiesPropertyIdRoute
+    }
+    '/_shell/properties/$propertyId/overview': {
+      id: '/_shell/properties/$propertyId/overview'
+      path: '/overview'
+      fullPath: '/properties/$propertyId/overview'
+      preLoaderRoute: typeof ShellPropertiesPropertyIdOverviewRouteImport
+      parentRoute: typeof ShellPropertiesPropertyIdRoute
+    }
+    '/_shell/properties/$propertyId/spaces': {
+      id: '/_shell/properties/$propertyId/spaces'
+      path: '/spaces'
+      fullPath: '/properties/$propertyId/spaces'
+      preLoaderRoute: typeof ShellPropertiesPropertyIdSpacesRouteImport
+      parentRoute: typeof ShellPropertiesPropertyIdRoute
+    }
     '/_shell/settings/users/': {
       id: '/_shell/settings/users/'
       path: '/'
@@ -1721,6 +1792,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/listings/$listingId/spaces/$spaceId'
       preLoaderRoute: typeof ShellListingsListingIdSpacesSpaceIdRouteImport
       parentRoute: typeof ShellListingsRoute
+    }
+    '/_shell/properties/$propertyId_/spaces/$unitId': {
+      id: '/_shell/properties/$propertyId_/spaces/$unitId'
+      path: '/$propertyId/spaces/$unitId'
+      fullPath: '/properties/$propertyId/spaces/$unitId'
+      preLoaderRoute: typeof ShellPropertiesPropertyIdSpacesUnitIdRouteImport
+      parentRoute: typeof ShellPropertiesRoute
     }
     '/_shell/settings/users/$userId/': {
       id: '/_shell/settings/users/$userId/'
@@ -2047,14 +2125,36 @@ const ShellListingsRouteWithChildren = ShellListingsRoute._addFileChildren(
   ShellListingsRouteChildren,
 )
 
+interface ShellPropertiesPropertyIdRouteChildren {
+  ShellPropertiesPropertyIdOverviewRoute: typeof ShellPropertiesPropertyIdOverviewRoute
+  ShellPropertiesPropertyIdSpacesRoute: typeof ShellPropertiesPropertyIdSpacesRoute
+  ShellPropertiesPropertyIdIndexRoute: typeof ShellPropertiesPropertyIdIndexRoute
+}
+
+const ShellPropertiesPropertyIdRouteChildren: ShellPropertiesPropertyIdRouteChildren =
+  {
+    ShellPropertiesPropertyIdOverviewRoute:
+      ShellPropertiesPropertyIdOverviewRoute,
+    ShellPropertiesPropertyIdSpacesRoute: ShellPropertiesPropertyIdSpacesRoute,
+    ShellPropertiesPropertyIdIndexRoute: ShellPropertiesPropertyIdIndexRoute,
+  }
+
+const ShellPropertiesPropertyIdRouteWithChildren =
+  ShellPropertiesPropertyIdRoute._addFileChildren(
+    ShellPropertiesPropertyIdRouteChildren,
+  )
+
 interface ShellPropertiesRouteChildren {
-  ShellPropertiesPropertyIdRoute: typeof ShellPropertiesPropertyIdRoute
+  ShellPropertiesPropertyIdRoute: typeof ShellPropertiesPropertyIdRouteWithChildren
   ShellPropertiesIndexRoute: typeof ShellPropertiesIndexRoute
+  ShellPropertiesPropertyIdSpacesUnitIdRoute: typeof ShellPropertiesPropertyIdSpacesUnitIdRoute
 }
 
 const ShellPropertiesRouteChildren: ShellPropertiesRouteChildren = {
-  ShellPropertiesPropertyIdRoute: ShellPropertiesPropertyIdRoute,
+  ShellPropertiesPropertyIdRoute: ShellPropertiesPropertyIdRouteWithChildren,
   ShellPropertiesIndexRoute: ShellPropertiesIndexRoute,
+  ShellPropertiesPropertyIdSpacesUnitIdRoute:
+    ShellPropertiesPropertyIdSpacesUnitIdRoute,
 }
 
 const ShellPropertiesRouteWithChildren = ShellPropertiesRoute._addFileChildren(

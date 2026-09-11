@@ -1,17 +1,34 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
+import { Card } from "@buildoutinc/blueprint-react/ui/Card";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBuildingCircleExclamation } from "@fortawesome/pro-regular-svg-icons";
-import { getPropertyDetailClient } from "#/data/selectors";
+import { getStore } from "#/data/store";
+import { usePropertyDetail } from "#/components/properties/usePropertyDetail";
 import { PropertyRecordHeader } from "#/components/properties/PropertyRecordHeader";
-import { PropertyFactsCard } from "#/components/properties/PropertyFactsCard";
-import { PropertyDealsPanel } from "#/components/properties/PropertyDealsPanel";
-import { PropertyOwnersCard } from "#/components/properties/PropertyOwnersCard";
+import { PropertyRecordTabs } from "#/components/properties/PropertyRecordTabs";
+import { PropertyRecordRail } from "#/components/properties/PropertyRecordRail";
+import { propertySectionLabel } from "#/components/properties/propertyNav";
 
+/**
+ * The Property record's layout: top rail, then a main card whose sections are
+ * underline tabs across its top (Overview · Spaces) with the section beneath,
+ * and a right rail of collapsible Deals / Contacts / Comps that stays put
+ * whichever tab is showing. The shape Buildout's own property page uses, not the
+ * deal shell's side nav — two sections do not earn a sidebar.
+ *
+ * The space asset page (`$propertyId_/spaces/$unitId`) is deliberately *not*
+ * nested here: the trailing underscore keeps its URL under the property while
+ * escaping this layout, so it paints its own header rather than a second one
+ * inside this frame.
+ */
 export const Route = createFileRoute("/_shell/properties/$propertyId")({
-  component: PropertyRecordPage,
-  head: () => ({ meta: [{ title: "Property | Buildout Suite" }] }),
+  component: PropertyRecordLayout,
+  head: ({ params }) => {
+    const property = getStore().properties.get(params.propertyId);
+    return { meta: [{ title: `${property?.name ?? "Property"} | Buildout Suite` }] };
+  },
 });
 
 function PropertyNotFound() {
@@ -35,27 +52,45 @@ function PropertyNotFound() {
   );
 }
 
-function PropertyRecordPage() {
+function PropertyRecordLayout() {
   const { propertyId } = Route.useParams();
-  const detail = getPropertyDetailClient(propertyId);
+  const detail = usePropertyDetail(propertyId);
+  // Hoisted above the not-found guard: hooks can't be called conditionally.
+  const { pathname } = useLocation();
   if (!detail) return <PropertyNotFound />;
-  const { property, deals, contacts, comps } = detail;
+
+  const sectionLabel = propertySectionLabel(pathname, propertyId);
 
   return (
-    <div className="d-flex flex-column h-100 overflow-auto">
-      <PropertyRecordHeader property={property} />
-      <div className="container py-4">
-        <div className="row g-4">
-          <div className="col-12 col-lg-3">
-            <PropertyFactsCard property={property} />
-          </div>
-          <div className="col-12 col-lg-6">
-            <PropertyDealsPanel property={property} deals={deals} />
-          </div>
-          <div className="col-12 col-lg-3">
-            <PropertyOwnersCard contacts={contacts} comps={comps} />
-          </div>
-        </div>
+    <div className="h-100 overflow-y-auto overflow-x-hidden">
+      <PropertyRecordHeader
+        property={detail.property}
+        deals={detail.deals}
+        availability={detail.availability}
+        sectionLabel={sectionLabel}
+      />
+
+      <div className="container d-flex align-items-start gap-4 py-4">
+        {/* `panel-card`: the 12px corners and elevation the Contact Details and
+            Contacts page cards share. `overflow-hidden` keeps the flush tab strip
+            and the rail's accordion inside the rounded corners. */}
+        <Card className="flex-grow-1 panel-card overflow-hidden" style={{ minWidth: 0 }}>
+          <PropertyRecordTabs
+            propertyId={propertyId}
+            activeLabel={sectionLabel}
+            counts={{ Spaces: detail.availability?.spaceCount ?? 0 }}
+          />
+          <Outlet />
+        </Card>
+
+        {/* The same 380px the contact page gives its side columns. */}
+        <Card className="panel-card overflow-hidden flex-shrink-0 d-none d-xl-block" style={{ width: 380 }}>
+          <PropertyRecordRail
+            property={detail.property}
+            deals={detail.deals}
+            comps={detail.comps}
+          />
+        </Card>
       </div>
     </div>
   );
