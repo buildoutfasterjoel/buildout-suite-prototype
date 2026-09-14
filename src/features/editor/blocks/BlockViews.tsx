@@ -9,6 +9,10 @@ import {
   faTableColumnsAddAfter,
   faTableRowsAddAbove,
   faTableRowsAddBelow,
+  faArrowUp,
+  faArrowDown,
+  faArrowLeft,
+  faArrowRight,
   faTrashCan,
 } from "@fortawesome/pro-regular-svg-icons";
 import { DropdownMenu } from "@buildoutinc/blueprint-react/ui/DropdownMenu";
@@ -876,6 +880,7 @@ function ColumnHandles({
 }) {
   const addColumn = useEditorStore((s) => s.addColumn);
   const removeColumn = useEditorStore((s) => s.removeColumn);
+  const moveColumn = useEditorStore((s) => s.moveColumn);
   const stop = (e: React.MouseEvent) => e.stopPropagation();
 
   return (
@@ -915,6 +920,18 @@ function ColumnHandles({
                 Insert column right
               </DropdownMenu.Item>
               <DropdownMenu.Separator />
+              <DropdownMenu.Item disabled={i === 0} onClick={() => moveColumn(blockId, i, i - 1)}>
+                <FontAwesomeIcon icon={faArrowLeft} />
+                Move column left
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                disabled={i >= colCount - 1}
+                onClick={() => moveColumn(blockId, i, i + 1)}
+              >
+                <FontAwesomeIcon icon={faArrowRight} />
+                Move column right
+              </DropdownMenu.Item>
+              <DropdownMenu.Separator />
               <DropdownMenu.Item disabled={colCount <= 1} onClick={() => removeColumn(blockId, i)}>
                 <FontAwesomeIcon icon={faTrashCan} />
                 Delete column
@@ -950,6 +967,7 @@ function RowHandles({
 }) {
   const addRow = useEditorStore((s) => s.addRow);
   const removeRow = useEditorStore((s) => s.removeRow);
+  const moveRow = useEditorStore((s) => s.moveRow);
   const stop = (e: React.MouseEvent) => e.stopPropagation();
 
   return (
@@ -987,6 +1005,23 @@ function RowHandles({
               <DropdownMenu.Item onClick={() => addRow(blockId, rowIndexMap[i] + 1)}>
                 <FontAwesomeIcon icon={faTableRowsAddBelow} />
                 Insert row below
+              </DropdownMenu.Item>
+              <DropdownMenu.Separator />
+              {/* Swap with the neighbouring VISIBLE row: with pruned rows the
+                  model index next door may belong to a row nobody can see. */}
+              <DropdownMenu.Item
+                disabled={i === 0}
+                onClick={() => moveRow(blockId, rowIndexMap[i], rowIndexMap[i - 1])}
+              >
+                <FontAwesomeIcon icon={faArrowUp} />
+                Move row up
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                disabled={i >= rowCount - 1}
+                onClick={() => moveRow(blockId, rowIndexMap[i], rowIndexMap[i + 1])}
+              >
+                <FontAwesomeIcon icon={faArrowDown} />
+                Move row down
               </DropdownMenu.Item>
               <DropdownMenu.Separator />
               <DropdownMenu.Item disabled={rowCount <= 1} onClick={() => removeRow(blockId, rowIndexMap[i])}>
