@@ -320,6 +320,19 @@
   outline: 2px solid var(--bp-primary);
 }
 
+/* A fixed-height type's frame is a hard box (see FIXED_HEIGHT in frames.ts) —
+   its block visual has to fill that box rather than sitting at its own
+   intrinsic size, and a photo has to cover it rather than letterbox. */
+.bo-editor-frame--boxed > .bo-editor-block {
+  height: 100%;
+}
+.bo-editor-frame--boxed > .bo-editor-block > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 /* ---- Selectable blocks ---- */
 .bo-editor-block {
   position: relative;

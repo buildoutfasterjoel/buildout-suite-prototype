@@ -1,5 +1,5 @@
 import { useEditorStore } from "../store";
-import { frameHeightStyle } from "../frames";
+import { FIXED_HEIGHT, frameHeightStyle } from "../frames";
 import type { Block, Rect, Selection } from "../types";
 import { BlockVisual } from "./BlockViews";
 
@@ -24,10 +24,15 @@ export function FreeBlock({
     (s) => s.highlightedBlockId === block.id && s.selection?.blockId !== block.id,
   );
   const selected = selection?.blockId === block.id && !selection?.cellId;
+  // Fixed-height types (image, map, divider, spacer, section, columns) get a
+  // hard box from the frame — the `--boxed` modifier makes the block visual
+  // fill it instead of floating at its own intrinsic size (an image covers
+  // rather than letterboxing).
+  const boxed = FIXED_HEIGHT.includes(block.type);
 
   return (
     <div
-      className={`bo-editor-frame${selected ? " is-selected" : ""}${located ? " is-located" : ""}`}
+      className={`bo-editor-frame${boxed ? " bo-editor-frame--boxed" : ""}${selected ? " is-selected" : ""}${located ? " is-located" : ""}`}
       data-block-id={block.id}
       style={{
         position: "absolute",
@@ -45,7 +50,11 @@ export function FreeBlock({
         block={block}
         pageId={pageId}
         selection={selection}
-        locked={false}
+        // A free page's containers hold blocks the user can't yet drag or
+        // remove in place, same as a locked preset's block structure — so a
+        // section renders as a plain rectangle instead of an empty list's
+        // drag-and-drop zone.
+        locked
         index={0}
       />
     </div>

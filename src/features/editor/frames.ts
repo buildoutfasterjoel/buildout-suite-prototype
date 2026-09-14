@@ -73,7 +73,7 @@ export function frameAt(type: Block["type"], x: number, y: number): Rect {
  * so a long `{{property.name}}` grows its block downward instead of being cut
  * off — the one thing a fixed-box layout must not do to bound content.
  */
-const FIXED_HEIGHT: Block["type"][] = [
+export const FIXED_HEIGHT: Block["type"][] = [
   "image",
   "map",
   "divider",

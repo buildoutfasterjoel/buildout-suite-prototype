@@ -96,7 +96,11 @@ export function buildGeneratedDocumentPages(
  * — because that is the thing the stacked layout could not express at all.
  */
 function buildFreeFormPage(property: Property | undefined): Page {
-  const photo = heroImage("editor-free-form");
+  // Requested at the photo frame's own size (below) — an image block covers
+  // its box (see the `.bo-editor-frame--boxed` rule in editor.scss), but
+  // covering still upscales a source narrower than the frame, so asking for
+  // it directly keeps the seeded photo sharp.
+  const photo = heroImage("editor-free-form", 816, 520);
   const band: Block = {
     id: uid("block"),
     type: "section",
