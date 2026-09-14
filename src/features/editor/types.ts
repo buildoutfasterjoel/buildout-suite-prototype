@@ -4,8 +4,9 @@ import type { DealMarketing, Property, PropertyType } from "#/data/types";
  * Document model for the editor prototype.
  *
  * A Document is a stack of Pages; each Page is a vertical stack of Blocks
- * (heading, text, table, image). A table Cell may carry a `dynamicKey` that
- * resolves to a live value from the bound listing (e.g. `askingPrice`).
+ * (heading, text, table, image). Text-bearing content — headings, text blocks
+ * and table cells alike — binds to live listing data by carrying an inline
+ * `{{property.askingPrice}}` token in its text (see inlineTokens.ts).
  *
  * Phase 1 only reads this model — selection + display. Mutation, add/remove,
  * and undo/redo land in later phases.
@@ -60,14 +61,19 @@ export type MarketingField = Exclude<
  */
 export type DynamicKey = keyof Property | `marketing.${MarketingField}`;
 
+/** How a resolved field value is printed. A property of the field, not the cell. */
+export type FieldFormat =
+  | "currency"
+  | "currencyPerSf"
+  | "percent"
+  | "text"
+  | "boolean"
+  | "year";
+
 export interface Cell {
   id: string;
-  /** Static label/value; ignored when `dynamicKey` is set. */
+  /** The cell's text, which may carry inline `{{...}}` field tokens. */
   value: string;
-  /** When set, the cell renders the listing's live value for this field. */
-  dynamicKey?: DynamicKey;
-  /** Optional currency/number formatting hint for dynamic values. */
-  format?: "currency" | "currencyPerSf" | "percent" | "text" | "boolean" | "year";
   align?: TextAlign;
   header?: boolean;
   style: CellStyle;

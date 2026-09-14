@@ -1,6 +1,7 @@
 import type { Property } from "#/data/types";
 import type {
   Cell,
+  DynamicKey,
   HeadingBlock,
   ImageBlock,
   TableBlock,
@@ -9,6 +10,7 @@ import type {
 } from "../types";
 import { getPhotoUrl } from "#/components/properties/propertyDisplay";
 import { pricePerSf } from "../dynamic";
+import { tokenSyntax } from "../inlineTokens";
 import {
   DEFAULT_CELL_STYLE,
   DEFAULT_TEXT_STYLE,
@@ -30,16 +32,17 @@ export function headerCell(value: string): Cell {
   };
 }
 
-export function valueCell(
-  value: string,
-  dynamicKey?: Cell["dynamicKey"],
-  format?: Cell["format"],
-): Cell {
+/**
+ * A table's value cell. Passing a `key` binds it to live listing data — as an
+ * inline token, the same representation a heading uses and the same one the
+ * toolbar's "Insert field" produces, so the broker can edit around it, delete
+ * it, or swap it for another field. `value` is then only the fallback text for
+ * an unbound cell.
+ */
+export function valueCell(value: string, key?: DynamicKey): Cell {
   return {
     id: uid("cell"),
-    value,
-    dynamicKey,
-    format,
+    value: key ? tokenSyntax(key) : value,
     align: "right",
     style: { ...DEFAULT_CELL_STYLE },
   };
@@ -102,11 +105,11 @@ export function buildFinancialSummaryTable(property?: Property): TableBlock {
     title: "Financial Summary",
     style: { borderWidth: 1, borderStyle: "solid", borderColor: "#d5dae2" },
     rows: [
-      [headerCell("Price"), valueCell("$2,000,000", "askingPrice", "currency")],
+      [headerCell("Price"), valueCell("$2,000,000", "askingPrice")],
       [headerCell("Price per SF"), valueCell(pricePerSf(property))],
-      [headerCell("Cap Rate"), valueCell("—", "capRate", "percent")],
-      [headerCell("Net Operating Income"), valueCell("—", "noi", "currency")],
-      [headerCell("Building Size"), valueCell("—", "buildingSqFt", "text")],
+      [headerCell("Cap Rate"), valueCell("—", "capRate")],
+      [headerCell("Net Operating Income"), valueCell("—", "noi")],
+      [headerCell("Building Size"), valueCell("—", "buildingSqFt")],
     ],
   };
 }

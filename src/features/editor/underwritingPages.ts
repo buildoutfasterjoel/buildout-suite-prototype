@@ -3,7 +3,6 @@ import type {
   Block,
   Cell,
   ContentBlock,
-  DynamicKey,
   Page,
   TableBlock,
   TextStyle,
@@ -79,15 +78,10 @@ function hcell(value: string, align: Cell["align"] = "left"): Cell {
   };
 }
 
-function vcell(
-  value: string,
-  opts: { align?: Cell["align"]; dynamicKey?: DynamicKey; format?: Cell["format"] } = {},
-): Cell {
+function vcell(value: string, opts: { align?: Cell["align"] } = {}): Cell {
   return {
     id: uid("cell"),
     value,
-    dynamicKey: opts.dynamicKey,
-    format: opts.format,
     align: opts.align ?? "right",
     style: { ...DEFAULT_CELL_STYLE },
   };

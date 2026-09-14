@@ -88,7 +88,7 @@ export const editBlockTextDef = toolDefinition({
 export const setTableCellsDef = toolDefinition({
   name: "setTableCells",
   description:
-    "Set several table cell values in one call — always batch rather than calling once per cell. Cells are addressed by the cellId in your context. A cell with a dynamicKey is bound to live listing data and REFUSED — its rendered value comes from the deal, so a value set here would never appear on the page. Works on locked pages.",
+    "Set several table cell values in one call — always batch rather than calling once per cell. Cells are addressed by the cellId in your context. A cell whose value holds a \`{{property.x}}\` token is bound to live listing data: keep the token in the value you write, or the cell stops tracking the deal. Works on locked pages.",
   outputSchema: TOOL_RESULT_SCHEMA,
   inputSchema: {
     type: "object",

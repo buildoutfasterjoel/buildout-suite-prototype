@@ -39,7 +39,7 @@ import type {
 } from "../types";
 import { useDocumentData, useEditorStore } from "../store";
 import { findBlock } from "../tree";
-import { resolveDynamic, resolveList } from "../dynamic";
+import { resolveList } from "../dynamic";
 import {
   hasTokens,
   hydrateTokens,
@@ -720,8 +720,8 @@ function TableBlockView({ block, pageId, selection }: { block: TableBlock } & Vi
                   cell={cell}
                   border={border}
                   selected={selection?.blockId === block.id && selection?.cellId === cell.id}
-                  value={resolveDynamic(cell, data)}
-                  editable={!cell.dynamicKey}
+                  value={cell.value}
+                  editable
                   onChange={(v) => setCellValue(block.id, cell.id, v)}
                   onSelect={(e) => {
                     e.stopPropagation();

@@ -20,7 +20,7 @@ function blockHasDynamicContent(block: Block): boolean {
   if (block.type === "heading" || block.type === "text") return hasTokens(block.text);
   if (block.type === "list") return block.dynamicKey !== undefined;
   if (block.type === "table") {
-    return block.rows.some((row) => row.some((c) => c.dynamicKey !== undefined));
+    return block.rows.some((row) => row.some((c) => hasTokens(c.value)));
   }
   return false;
 }

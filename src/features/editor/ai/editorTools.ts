@@ -6,7 +6,6 @@ import { TEMPLATES, buildBlankPage, buildTemplatePage } from "../templates";
 import { describeBlock } from "./blockShape";
 import type {
   Block,
-  Cell,
   DropTarget,
   EditorDocument,
   ListBlock,
@@ -99,25 +98,10 @@ export function setTableCells(args: {
     return err(`No cell in this table with id ${missing.map((m) => `"${m}"`).join(", ")}.`);
   }
 
-  // A bound cell renders `resolveDynamic(cell, data)` and is not editable on
-  // the canvas (`BlockViews.tsx`), so writing its `value` would change nothing
-  // the broker can see while this call still answered `{ ok: true }` — the
-  // worst failure available to an agent whose only verification channel is the
-  // canvas. Refused in code rather than left to the prompt, exactly as
-  // `setListItems` refuses a bound list, and refused before applying any of the
-  // batch so a half-written table never survives the refusal. The dynamicKey
-  // comes back so the model can say which live field owns the value.
-  const bound = args.cells
-    .map(({ cellId }) => cells.get(cellId))
-    .filter((cell): cell is Cell => Boolean(cell?.dynamicKey));
-  if (bound.length > 0) {
-    return err(
-      `${bound.length === 1 ? "Cell" : "Cells"} ${bound
-        .map((cell) => `"${cell.id}" (bound to ${cell.dynamicKey})`)
-        .join(", ")} pull live listing data, so a value set here would never show on the page. Nothing was changed — edit the listing's own field instead, or target a different cell.`,
-    );
-  }
-
+  // No bound-cell refusal here, unlike `setListItems`. A cell's binding is an
+  // inline `{{...}}` token inside its value, exactly as in a heading, so a
+  // write that keeps the token keeps the binding and one that drops it is a
+  // deliberate unbind — the same bargain every text block already makes.
   const store = useEditorStore.getState();
   for (const { cellId, value } of args.cells) store.setCellValue(args.blockId, cellId, value);
   return { ok: true, updated: args.cells.length };

@@ -108,11 +108,13 @@ export function RichTextToolbar() {
   const { block, cell } = useSelectedEntities();
   const data = useDocumentData();
 
-  // Text nodes: heading/text blocks, or a static (non-dynamic) table cell.
+  // Text nodes: heading/text blocks, or any selected table cell. A cell bound
+  // to listing data is one too — its binding is an inline token inside the
+  // text, so it is edited exactly like a sentence that carries one.
   const isTextNode =
     block?.type === "heading" ||
     block?.type === "text" ||
-    (block?.type === "table" && cell != null && cell.dynamicKey == null);
+    (block?.type === "table" && cell != null);
   const open = Boolean(isTextNode);
 
   const [format, setFormat] = useState<FormatState>(EMPTY_FORMAT);

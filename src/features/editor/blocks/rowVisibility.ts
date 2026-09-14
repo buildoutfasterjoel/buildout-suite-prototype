@@ -1,5 +1,6 @@
 import type { Cell, TableBlock } from "../types";
 import { isEmptyValue, resolveFieldValue, type DocumentData } from "../dynamic";
+import { tokenKeys } from "../inlineTokens";
 
 export interface VisibleRow {
   cells: Cell[];
@@ -12,8 +13,9 @@ export interface VisibleRow {
  *
  * Rows carry their rule in `block.rowRules`, keyed by the first cell's id. A
  * row is dropped when its type rule excludes the bound property, or when every
- * dynamic cell it has resolves empty. Rows with no dynamic cells are never
- * dropped — a hand-authored row belongs to the user, not the data.
+ * field its cells bind to (via inline `{{...}}` tokens) resolves empty. Rows
+ * that bind to nothing are never dropped — a hand-authored row belongs to the
+ * user, not the data.
  *
  * With no property bound — i.e. an unbound document, before `initDocument`
  * has run — nothing is pruned: every value would read empty and the table
@@ -31,9 +33,9 @@ export function visibleRows(block: TableBlock, data: DocumentData): VisibleRow[]
     if (rule?.types && !rule.types.includes(data.property!.propertyType)) return false;
     if (rule?.keepEmpty) return true;
 
-    const dynamic = cells.filter((c) => c.dynamicKey !== undefined);
-    if (dynamic.length === 0) return true;
-    return dynamic.some((c) => !isEmptyValue(resolveFieldValue(c.dynamicKey!, data)));
+    const bound = cells.flatMap((c) => tokenKeys(c.value));
+    if (bound.length === 0) return true;
+    return bound.some((key) => !isEmptyValue(resolveFieldValue(key, data)));
   });
 }
 

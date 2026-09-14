@@ -211,12 +211,10 @@ describe("setTableCells", () => {
     expect((findBlock(doc(), block.id) as TableBlock).rows[0][0].value).toBe(before);
   });
 
-  it("refuses a data-bound cell instead of writing a value nothing renders", () => {
-    // A bound cell renders `resolveDynamic`, so a `value` written here would
-    // never appear on the canvas — and the canvas is the broker's only way to
-    // verify what Otto claims it did. The refusal names the cell and its key
-    // so the model can explain itself, and the unbound cell in the same batch
-    // must be left alone.
+  it("writes a bound cell, because its binding is a token in the value", () => {
+    // A cell binds to listing data by carrying an inline token, exactly as a
+    // heading does. So there is nothing to refuse: a write that keeps the
+    // token keeps the binding, and one that drops it is a deliberate unbind.
     const block = seed("table") as TableBlock;
     const bound = block.rows[0][0].id;
     const free = block.rows[0][1].id;
@@ -233,7 +231,7 @@ describe("setTableCells", () => {
                         ...b,
                         rows: (b as TableBlock).rows.map((row) =>
                           row.map((c) =>
-                            c.id === bound ? { ...c, dynamicKey: "askingPrice" as const } : c,
+                            c.id === bound ? { ...c, value: "{{property.askingPrice}}" } : c,
                           ),
                         ),
                       }
@@ -248,15 +246,15 @@ describe("setTableCells", () => {
     const result = setTableCells({
       blockId: block.id,
       cells: [
-        { cellId: bound, value: "$9,000,000" },
+        { cellId: bound, value: "{{property.askingPrice}} or best offer" },
         { cellId: free, value: "Changed" },
       ],
     });
 
-    expect(result).toEqual({ error: expect.stringContaining("askingPrice") });
+    expect(result).toEqual({ ok: true, updated: 2 });
     const table = findBlock(doc(), block.id) as TableBlock;
-    expect(table.rows[0][0].value).not.toBe("$9,000,000");
-    expect(table.rows[0][1].value).not.toBe("Changed");
+    expect(table.rows[0][0].value).toBe("{{property.askingPrice}} or best offer");
+    expect(table.rows[0][1].value).toBe("Changed");
   });
 
   it("errors when the block is not a table", () => {

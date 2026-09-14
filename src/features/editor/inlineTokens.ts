@@ -74,6 +74,21 @@ export function hasTokens(stored: string): boolean {
   return TOKEN_RE.test(stored);
 }
 
+/**
+ * Every field a stored string binds to, in order. This is what makes a token
+ * a *binding* and not just decoration: row pruning asks a cell which fields it
+ * carries the same way it used to read a `dynamicKey` off it.
+ */
+export function tokenKeys(stored: string): DynamicKey[] {
+  const keys: DynamicKey[] = [];
+  TOKEN_RE.lastIndex = 0;
+  for (const match of stored.matchAll(TOKEN_RE)) {
+    const key = keyFromTokenPath(match[1]);
+    if (key) keys.push(key);
+  }
+  return keys;
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
