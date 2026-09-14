@@ -141,10 +141,16 @@ export function FreeBlock({
   const boxed = FIXED_HEIGHT.includes(block.type);
   const { rect, start } = useFrameDrag(pageId, block.id, frame);
   const bodyDraggable = BODY_DRAGGABLE.includes(block.type);
+  // A table is the one block with no workable grab: its cells are editable, so
+  // the body can't be dragged, and its own row/column handles and insert dots
+  // float in the gutter exactly where the drag handle sits — they take the
+  // pointer first. Its frame gets a padding band instead, grabbable because a
+  // pointerdown there lands on the frame itself rather than on anything inside.
+  const grabBand = block.type === "table";
 
   return (
     <div
-      className={`bo-editor-frame${boxed ? " bo-editor-frame--boxed" : ""}${bodyDraggable ? " bo-editor-frame--draggable" : ""}${selected ? " is-selected" : ""}${located ? " is-located" : ""}`}
+      className={`bo-editor-frame${boxed ? " bo-editor-frame--boxed" : ""}${bodyDraggable ? " bo-editor-frame--draggable" : ""}${grabBand ? " bo-editor-frame--grab-band" : ""}${selected ? " is-selected" : ""}${located ? " is-located" : ""}`}
       data-block-id={block.id}
       style={{
         position: "absolute",
@@ -158,7 +164,17 @@ export function FreeBlock({
         zIndex: depth,
         ...frameHeightStyle(block.type, rect.h),
       }}
-      onPointerDown={bodyDraggable ? (e) => start(e, "move") : undefined}
+      onPointerDown={(e) => {
+        if (bodyDraggable) {
+          start(e, "move");
+          return;
+        }
+        if (!grabBand || e.target !== e.currentTarget) return;
+        // The gesture calls preventDefault, which can swallow the click that
+        // would otherwise select the block — so select from the band directly.
+        select({ pageId, blockId: block.id });
+        start(e, "move");
+      }}
       onClick={(e) => {
         e.stopPropagation();
         select({ pageId, blockId: block.id });

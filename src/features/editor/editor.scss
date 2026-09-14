@@ -1175,3 +1175,15 @@
 .bo-editor-frame--draggable:active {
   cursor: grabbing;
 }
+
+/* A table's frame keeps a padding band around the table — the grab area, since
+   a table can be dragged neither by its body (editable cells) nor by the drag
+   handle (its own insert dots and row handles sit in that gutter). 16px clears
+   those dots, which float 12px outside the table's top and left edges. */
+.bo-editor-frame--grab-band {
+  padding: 16px;
+  cursor: grab;
+}
+.bo-editor-frame--grab-band:active {
+  cursor: grabbing;
+}
