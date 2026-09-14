@@ -1,4 +1,3 @@
-import { useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faSliders,
@@ -19,7 +18,7 @@ import { BRAND } from "../brand";
 import { PAGE_WIDTH, PAGE_HEIGHT, PAGE_PADDING, type Page, type Selection } from "../types";
 import { BlockList } from "./BlockViews";
 import { FreeBlock } from "./FreeBlock";
-import { frameAt, measureFrames } from "../frames";
+import { frameAt, measurePageElement } from "../frames";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 
 /** Icon button + tooltip shown in the page toolbar popover. */
@@ -57,11 +56,9 @@ function PageToolbarButton({
 function PageToolbar({
   page,
   open,
-  pageRef,
 }: {
   page: Page;
   open: boolean;
-  pageRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const workspaceRef = useWorkspaceRef();
   const zoom = useEditorStore((s) => s.zoom);
@@ -70,9 +67,9 @@ function PageToolbar({
   // Measuring is the whole conversion: the rects come off the page as it is
   // rendered right now, so the page cannot move when it is unfrozen.
   const unfreeze = () => {
-    const el = pageRef.current;
-    if (!el) return;
-    freePage(page.id, measureFrames(el, zoom));
+    const measured = measurePageElement(page.id, zoom);
+    if (!measured) return;
+    freePage(page.id, measured);
   };
 
   return (
@@ -206,12 +203,10 @@ export function PageView({
   // Base pages are framed by the brand logo header and the company footer;
   // covers and other bespoke layouts own the whole sheet.
   const chrome = (page.chrome ?? "base") === "base";
-  const pageRef = useRef<HTMLDivElement>(null);
 
   return (
     <div style={{ position: "relative" }}>
       <div
-        ref={pageRef}
         className={`bo-editor-page${pageSelected ? " is-page-selected" : ""}`}
         style={{ width: PAGE_WIDTH, height: PAGE_HEIGHT }}
         onClick={() => select({ pageId: page.id })}
@@ -262,7 +257,7 @@ export function PageView({
 
         {chrome && <PageFooter pageNumber={pageNumber} />}
       </div>
-      <PageToolbar page={page} open={pageSelected} pageRef={pageRef} />
+      <PageToolbar page={page} open={pageSelected} />
     </div>
   );
 }

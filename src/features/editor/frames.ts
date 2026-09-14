@@ -151,3 +151,20 @@ export function measureFrames(pageEl: HTMLElement, zoom: number): Record<string,
   }
   return out;
 }
+
+/**
+ * `measureFrames`, but for callers that only have a page id, not a ref to its
+ * `.bo-editor-page` element — the Layers panel, which is scoped to a page but
+ * doesn't render it. Finds the element the same way `Canvas.tsx` locates pages
+ * generally, by `[data-page-id]`.
+ *
+ * Returns null when the element isn't in the DOM (page not currently mounted).
+ * A null here must stop the conversion rather than fall through to an empty
+ * `measured` map — `flattenForFree` treats missing measurements as "center this
+ * block by default," so an empty map would silently redesign every block on the
+ * page instead of leaving it alone.
+ */
+export function measurePageElement(pageId: string, zoom: number): Record<string, Rect> | null {
+  const el = document.querySelector<HTMLElement>(`[data-page-id="${pageId}"] .bo-editor-page`);
+  return el ? measureFrames(el, zoom) : null;
+}
