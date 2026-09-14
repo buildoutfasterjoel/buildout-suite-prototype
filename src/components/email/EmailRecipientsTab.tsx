@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { badgeVariants } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Empty } from "@buildoutinc/blueprint-react/ui/Empty";
 import { Field } from "@buildoutinc/blueprint-react/ui/Field";
@@ -147,18 +148,27 @@ export function EmailRecipientsTab({
 
       {/* Action filter chips */}
       <div className="d-flex align-items-center gap-2 flex-wrap">
-        {RECIPIENT_ACTIONS.map((action) => (
-          <Button
-            key={action}
-            size="sm"
-            variant={selected.has(action) ? "primary" : "outline"}
-            className="rounded-pill"
-            aria-pressed={selected.has(action)}
-            onClick={() => toggleAction(action)}
-          >
-            {action} ({counts[action]})
-          </Button>
-        ))}
+        {RECIPIENT_ACTIONS.map((action) => {
+          const active = selected.has(action);
+          return (
+            // A chip is a Blueprint badge that toggles, so it wears
+            // `badgeVariants` on a real button rather than a Badge div — the
+            // styling is the component's, the semantics and keyboard handling
+            // are the element's.
+            <button
+              key={action}
+              type="button"
+              className={badgeVariants({
+                variant: active ? "primary" : "secondary",
+                appearance: "accent",
+              })}
+              aria-pressed={active}
+              onClick={() => toggleAction(action)}
+            >
+              {action} ({counts[action]})
+            </button>
+          );
+        })}
         {selected.size > 0 && (
           <Button
             variant="ghost"
