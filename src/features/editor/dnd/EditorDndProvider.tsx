@@ -12,7 +12,33 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEditorStore } from "../store";
 import { BLOCK_ICONS } from "../blocks/blockMeta";
+import { frameAt } from "../frames";
 import { toDropTarget, type DragOverData } from "./dndTypes";
+
+/**
+ * Where a drag ended, in page coordinates.
+ *
+ * dnd-kit reports the activator event and a delta, which together give the
+ * release point without tracking pointermove ourselves. The page is found by
+ * hit-testing the rendered pages rather than `elementFromPoint`, which returns
+ * the drag overlay sitting under the cursor.
+ */
+function dropPoint(e: DragEndEvent): { pageId: string; x: number; y: number } | null {
+  const activator = e.activatorEvent as PointerEvent;
+  if (typeof activator?.clientX !== "number") return null;
+  const cx = activator.clientX + e.delta.x;
+  const cy = activator.clientY + e.delta.y;
+
+  const zoom = useEditorStore.getState().zoom;
+  for (const el of document.querySelectorAll<HTMLElement>("[data-page-id] .bo-editor-page")) {
+    const r = el.getBoundingClientRect();
+    if (cx < r.left || cx > r.right || cy < r.top || cy > r.bottom) continue;
+    const pageId = el.closest<HTMLElement>("[data-page-id]")?.dataset.pageId;
+    if (!pageId) continue;
+    return { pageId, x: (cx - r.left) / zoom, y: (cy - r.top) / zoom };
+  }
+  return null;
+}
 
 /**
  * Provides the single DndContext shared by the Blocks palette and the canvas.
@@ -37,8 +63,29 @@ export function EditorDndProvider({ children }: { children: ReactNode }) {
   function onDragEnd(e: DragEndEvent) {
     setActive(null);
     const a = e.active.data.current as DragOverData | undefined;
+    if (!a) return;
+
+    // A free page has no sibling lists to drop into — the pointer position is
+    // the whole instruction, so it is resolved here rather than through a
+    // DropTarget index.
+    if (a.source === "palette" && a.blockType) {
+      const point = dropPoint(e);
+      const page = point
+        ? useEditorStore.getState().document.pages.find((p) => p.id === point.pageId)
+        : undefined;
+      if (point && page?.frames) {
+        addBlock(
+          { kind: "page", pageId: page.id, index: page.blocks.length },
+          a.blockType,
+          a.variant,
+          frameAt(a.blockType, point.x, point.y),
+        );
+        return;
+      }
+    }
+
     const o = e.over?.data.current as DragOverData | undefined;
-    if (!a || !o) return;
+    if (!o) return;
 
     // Layers-panel reorder: page-scoped, over another layer row in the same page.
     if (a.source === "layer" && o.source === "layer" && a.pageId === o.pageId) {
