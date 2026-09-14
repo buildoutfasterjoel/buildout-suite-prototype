@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { PointerEvent as ReactPointerEvent } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faGripDotsVertical,
@@ -67,6 +67,25 @@ function useFrameDrag(pageId: string, blockId: string, frame: Rect) {
 }
 
 const RESIZE_DIRS: ResizeDir[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
+
+/**
+ * `.bo-editor-page` clips its content (`overflow: hidden`), so the actions
+ * row (`top: -32px`) and the north/west handles (`-5px` outside the frame)
+ * get clipped off for a block sitting at the page's top or left edge — the
+ * seeded hero photo at (0,0) is exactly this case. When the frame is close
+ * enough to an edge that the default offset would land outside the page,
+ * pull that chrome inside the frame instead.
+ */
+const EDGE_THRESHOLD_Y = 36;
+const EDGE_THRESHOLD_X = 6;
+const INSET = 4;
+
+function handleOverride(dir: ResizeDir, nearTop: boolean, nearLeft: boolean): CSSProperties | undefined {
+  const style: CSSProperties = {};
+  if (nearTop && (dir === "nw" || dir === "n" || dir === "ne")) style.top = INSET;
+  if (nearLeft && (dir === "nw" || dir === "sw" || dir === "w")) style.left = INSET;
+  return Object.keys(style).length > 0 ? style : undefined;
+}
 
 /** Human-readable direction for each resize handle's `aria-label`. */
 const DIR_LABELS: Record<ResizeDir, string> = {
@@ -149,7 +168,10 @@ export function FreeBlock({
 
       {selected && (
         <>
-          <div className="bo-editor-frame-actions">
+          <div
+            className="bo-editor-frame-actions"
+            style={rect.y < EDGE_THRESHOLD_Y ? { top: INSET } : undefined}
+          >
             <Tooltip>
               <Tooltip.Trigger
                 render={
@@ -208,6 +230,7 @@ export function FreeBlock({
               key={dir}
               className={`bo-editor-handle is-${dir}`}
               aria-label={`Resize from ${DIR_LABELS[dir]}`}
+              style={handleOverride(dir, rect.y < EDGE_THRESHOLD_Y, rect.x < EDGE_THRESHOLD_X)}
               onPointerDown={(e) => start(e, dir)}
             />
           ))}
@@ -223,7 +246,13 @@ export function FreeBlock({
         // section renders as a plain rectangle instead of an empty list's
         // drag-and-drop zone.
         locked
+        // `index` only matters to ImageBlockView's now-disabled fullBleed
+        // check (see `freeLayer` below); there's no list position here.
         index={0}
+        // The frame already gives this block its explicit width/position —
+        // fullBleed's page-padding-canceling margins don't apply on a free
+        // canvas (see ImageBlockView).
+        freeLayer
       />
     </div>
   );

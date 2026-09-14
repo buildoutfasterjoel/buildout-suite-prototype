@@ -381,7 +381,8 @@ export function BlockVisual({
   selection,
   locked,
   index,
-}: { block: Block; index: number } & VisualProps) {
+  freeLayer,
+}: { block: Block; index: number; freeLayer?: boolean } & VisualProps) {
   switch (block.type) {
     case "heading":
       return <HeadingBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
@@ -391,7 +392,14 @@ export function BlockVisual({
       return <TableBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "image":
       return (
-        <ImageBlockView block={block} pageId={pageId} selection={selection} locked={locked} index={index} />
+        <ImageBlockView
+          block={block}
+          pageId={pageId}
+          selection={selection}
+          locked={locked}
+          index={index}
+          freeLayer={freeLayer}
+        />
       );
     case "list":
       return <ListBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
@@ -458,13 +466,25 @@ function TextBlockView({ block, pageId, selection }: { block: TextBlock } & Visu
   );
 }
 
-function ImageBlockView({ block, pageId, selection, index }: { block: ImageBlock; index: number } & VisualProps) {
+function ImageBlockView({
+  block,
+  pageId,
+  selection,
+  index,
+  freeLayer,
+}: { block: ImageBlock; index: number; freeLayer?: boolean } & VisualProps) {
   const { selected, onClick } = useBlockSelect(block.id, pageId, selection);
+  // `fullBleed`'s negative margins cancel the stacked page's content padding
+  // so a cover photo reaches the paper's edge. A free-page frame already has
+  // its own explicit width/position (and `--boxed` fills it with `object-fit:
+  // cover`), so the same margins would just make the image spill past its
+  // frame instead — skip them here.
+  const style = freeLayer ? {} : fullBleedStyle(block.fullBleed, index === 0);
   return (
     <div
       className={`bo-editor-block${selected ? " is-selected" : ""}`}
       onClick={onClick}
-      style={fullBleedStyle(block.fullBleed, index === 0)}
+      style={style}
     >
       <img
         src={block.src}

@@ -290,6 +290,13 @@
   justify-content: space-between;
   gap: tokens.$spacing-4;
   margin: 0 40px;
+  // Overrides the shorthand's top value above. On the stacked path the
+  // content column's `flex: 1 0 0` already pushes the footer to the bottom,
+  // so `auto` never has anything to push against there. On a free page the
+  // content is `position: absolute` and takes no flex space, leaving the
+  // footer with nothing to sit against but the header — `auto` is what
+  // carries it back down to the bottom of the sheet.
+  margin-top: auto;
   padding: 10px 0 22px;
   border-top: 1px solid tokens.$root-border-color;
   font-size: 9px;
@@ -315,9 +322,22 @@
 .bo-editor-frame:hover {
   outline-color: tokens.$buildout-blue-300;
 }
-.bo-editor-frame.is-selected,
-.bo-editor-frame.is-located {
+.bo-editor-frame.is-selected {
   outline: 2px solid var(--bp-primary);
+}
+/* "Located" from the Layers panel gets the same dashed treatment as the
+   stacked path (.bo-editor-sortable.is-located), so a locate stays visually
+   distinct from a click-selection here too. */
+.bo-editor-frame.is-located {
+  outline: 2px dashed var(--bp-primary);
+  outline-offset: 3px;
+}
+/* A text-bearing frame (heading/text/list/table) has no body-drag affordance
+   — it falls back to the drag handle, which is only ever revealed by a
+   `.bo-editor-sortable` hover on the stacked path. `.bo-editor-frame` isn't
+   that class, so without this the handle stayed invisible at opacity 0. */
+.bo-editor-frame:hover > .bo-editor-drag-handle {
+  opacity: 1;
 }
 
 /* A fixed-height type's frame is a hard box (see FIXED_HEIGHT in frames.ts) —
