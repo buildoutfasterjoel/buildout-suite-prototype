@@ -375,7 +375,7 @@ function MapBlockView({ block, pageId, selection }: { block: MapBlock } & Visual
   );
 }
 
-function BlockVisual({
+export function BlockVisual({
   block,
   pageId,
   selection,

@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faSliders,
@@ -16,6 +17,8 @@ import { useWorkspaceRef } from "../workspaceContext";
 import { BRAND } from "../brand";
 import { PAGE_WIDTH, PAGE_HEIGHT, PAGE_PADDING, type Page, type Selection } from "../types";
 import { BlockList } from "./BlockViews";
+import { FreeBlock } from "./FreeBlock";
+import { frameAt } from "../frames";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 
 /** Icon button + tooltip shown in the page toolbar popover. */
@@ -168,10 +171,12 @@ export function PageView({
   // Base pages are framed by the brand logo header and the company footer;
   // covers and other bespoke layouts own the whole sheet.
   const chrome = (page.chrome ?? "base") === "base";
+  const pageRef = useRef<HTMLDivElement>(null);
 
   return (
     <div style={{ position: "relative" }}>
       <div
+        ref={pageRef}
         className={`bo-editor-page${pageSelected ? " is-page-selected" : ""}`}
         style={{ width: PAGE_WIDTH, height: PAGE_HEIGHT }}
         onClick={() => select({ pageId: page.id })}
@@ -186,23 +191,39 @@ export function PageView({
           </div>
         )}
 
-        <div
-          className="d-flex flex-column"
-          style={{
-            gap: bleed ? 0 : 32,
-            padding: bleed ? 0 : PAGE_PADDING,
-            flex: "1 0 0",
-            minHeight: 0,
-          }}
-        >
-          <BlockList
-            blocks={page.blocks}
-            pageId={page.id}
-            list={{ kind: "page", pageId: page.id }}
-            selection={pageSelection}
-            locked={page.locked ?? false}
-          />
-        </div>
+        {page.frames ? (
+          // A free page owns the whole sheet: blocks sit in page coordinates,
+          // over the chrome if that is where they were put.
+          <div className="bo-editor-free-layer">
+            {page.blocks.map((block) => (
+              <FreeBlock
+                key={block.id}
+                block={block}
+                pageId={page.id}
+                frame={page.frames![block.id] ?? frameAt(block.type, PAGE_WIDTH / 2, 120)}
+                selection={pageSelection}
+              />
+            ))}
+          </div>
+        ) : (
+          <div
+            className="d-flex flex-column"
+            style={{
+              gap: bleed ? 0 : 32,
+              padding: bleed ? 0 : PAGE_PADDING,
+              flex: "1 0 0",
+              minHeight: 0,
+            }}
+          >
+            <BlockList
+              blocks={page.blocks}
+              pageId={page.id}
+              list={{ kind: "page", pageId: page.id }}
+              selection={pageSelection}
+              locked={page.locked ?? false}
+            />
+          </div>
+        )}
 
         {chrome && <PageFooter pageNumber={pageNumber} />}
       </div>

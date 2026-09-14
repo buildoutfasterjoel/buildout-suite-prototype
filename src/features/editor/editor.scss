@@ -263,6 +263,7 @@
 }
 
 .bo-editor-page {
+  position: relative;
   background: tokens.$white;
   box-shadow: tokens.$shadow-base;
   display: flex;
@@ -296,6 +297,27 @@
   letter-spacing: 0.7px;
   text-transform: uppercase;
   color: tokens.$body-text-muted;
+}
+
+/* A free page's blocks are placed in page coordinates over the whole sheet,
+   including the logo header and footer, so the layer covers the page rather
+   than sitting in the flex flow. */
+.bo-editor-free-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.bo-editor-frame {
+  outline: 1px solid transparent;
+  outline-offset: 2px;
+  transition: outline-color motion.$short2 ease;
+}
+.bo-editor-frame:hover {
+  outline-color: tokens.$buildout-blue-300;
+}
+.bo-editor-frame.is-selected,
+.bo-editor-frame.is-located {
+  outline: 2px solid var(--bp-primary);
 }
 
 /* ---- Selectable blocks ---- */
