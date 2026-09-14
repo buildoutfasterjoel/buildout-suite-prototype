@@ -3,7 +3,7 @@ import { isDelgadoListing, isDelgadoOnMarket } from "#/data/rosaDemoStats";
 import { getLeadsForProperty, getListing } from "#/data/store";
 import { dealShape } from "#/data/dealShape";
 import { leadsForSpaceDeal } from "#/data/unitScopedMarketing";
-import type { Listing } from "#/data/types";
+import type { Contact, Listing } from "#/data/types";
 
 /** Documents a visitor can act on from the listing website. */
 const DOCUMENTS = [
@@ -29,12 +29,11 @@ function activityFor(eventId: string): string {
  * other row is an anonymous visitor, who can do anything a lead can: the
  * website gates documents behind a CA, not behind being a known contact.
  */
-function inquirerNames(listing: Listing): string[] {
-  const scoped = leadsForSpaceDeal(
+function inquirers(listing: Listing): Contact[] {
+  return leadsForSpaceDeal(
     getLeadsForProperty(listing.propertyId),
     dealShape(listing) === "space" ? listing.id : null,
   );
-  return scoped.map((c) => `${c.firstName} ${c.lastName}`.trim());
 }
 
 /** Options for the Activity Log's filter dropdown — the kinds `activityFor` emits. */
@@ -49,6 +48,8 @@ export const ACTIVITY_FILTER_OPTIONS = [
 export interface WebsiteVisitEvent {
   id: string;
   performedBy: string;
+  /** The inquirer who performed it — absent on an anonymous visitor. */
+  performedById?: string;
   performedAt: string;
   activity: string;
 }
@@ -77,7 +78,7 @@ export function getListingWebsiteActivity(
     return [];
   }
 
-  const names = inquirerNames(listing);
+  const leads = inquirers(listing);
 
   // Anchor date matches the prototype "today" used by listingTraffic.ts.
   const anchor = new Date(2026, 5, 26);
@@ -87,12 +88,20 @@ export function getListingWebsiteActivity(
     const date = new Date(anchor);
     date.setDate(date.getDate() - spread(hash(`${id}#day`), 30));
 
-    const performedBy =
-      names.length > 0 && spread(hash(`${id}#who`), 2) === 0
-        ? pickFor(names, id, "lead")
-        : "Anonymous User";
+    const lead =
+      leads.length > 0 && spread(hash(`${id}#who`), 2) === 0
+        ? pickFor(leads, id, "lead")
+        : undefined;
 
-    return { id, date, performedBy, activity: activityFor(id) };
+    return {
+      id,
+      date,
+      performedBy: lead
+        ? `${lead.firstName} ${lead.lastName}`.trim()
+        : "Anonymous User",
+      performedById: lead?.id,
+      activity: activityFor(id),
+    };
   })
     .sort((a, b) => b.date.getTime() - a.date.getTime())
     .map(({ date, ...rest }) => ({ ...rest, performedAt: fmtDate(date) }));

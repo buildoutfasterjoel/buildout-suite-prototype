@@ -1,3 +1,7 @@
+import type { Listing, Property } from './types'
+import { getListing } from './store'
+import { dealShape } from './dealShape'
+
 /**
  * A space shows its own assets plus the building-wide ones — a suite with no
  * photos of its own should still show the building's.
@@ -52,4 +56,38 @@ export function leadsForSpaceDeal<T extends { inquiredListingIds?: string[] }>(
 ): T[] {
   if (!spaceDealId) return leads
   return leads.filter((l) => (l.inquiredListingIds ?? []).includes(spaceDealId))
+}
+
+/**
+ * The child space deal a contact inquired about on this property, if any.
+ *
+ * An inquiry is not a record of its own, so every edit to one is stored under a
+ * listing id — and a suite's inquiry is the *suite's* inquiry no matter which
+ * page it was opened from. Keying it to whichever page the broker happened to
+ * be on (the building's Inquiries table, its Web Activity log) would write two
+ * records for one inquiry and let the two disagree, so both surfaces resolve
+ * the id through here.
+ */
+export function inquiredSpaceDeal(
+  contact: { inquiredListingIds?: string[] },
+  property: Property,
+): Listing | undefined {
+  for (const listingId of contact.inquiredListingIds ?? []) {
+    const deal = getListing(listingId)
+    // Only a child space deal names a unit; a building-level inquiry does not.
+    if (!deal?.parentDealId) continue
+    if (property.units.some((u) => u.id === deal.unitId)) return deal
+  }
+  return undefined
+}
+
+/** The listing an inquiry's edits are stored under, from any deal's page. */
+export function inquiryListingId(
+  contact: { inquiredListingIds?: string[] },
+  listing: Listing,
+  property: Property,
+): string {
+  // On a space page every inquiry shown is that space's own.
+  if (dealShape(listing) === 'space') return listing.id
+  return inquiredSpaceDeal(contact, property)?.id ?? listing.id
 }

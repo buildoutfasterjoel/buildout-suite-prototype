@@ -12,6 +12,14 @@ import {
   faChartLine,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing } from "#/data/types";
+import { getStore } from "#/data/store";
+import { useDataStore } from "#/data/dataStore";
+import {
+  inquiredSpaceDeal,
+  inquiryListingId,
+} from "#/data/unitScopedMarketing";
+import { toInquiry } from "#/components/properties/inquiryRow";
+import { InquiryFlyout } from "#/components/properties/InquiryFlyout";
 import {
   ACTIVITY_FILTER_OPTIONS,
   getListingWebsiteActivity,
@@ -26,11 +34,34 @@ const FILTERS = [
 /** Searchable/filterable log of individual visits to the listing's website. */
 export function WebsiteActivityLog({ listing }: { listing: Listing }) {
   const [search, setSearch] = useState("");
+  // The inquirer whose detail panel is open. Held as a contact id, not the
+  // projection, so the panel re-reads the current record as it is edited.
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  // An edit in the panel lands on the contact record, so the log's names follow it.
+  const contacts = useDataStore((s) => s.contacts);
 
   const events = useMemo(
     () => getListingWebsiteActivity(listing.id),
-    [listing.id],
+    [listing.id, contacts],
   );
+
+  /**
+   * The open row's inquiry, keyed to the listing the Inquiries page would key
+   * it to — a suite's inquiry belongs to the suite even when it is opened from
+   * the building's log, or the two surfaces would store rival edits.
+   */
+  const open = useMemo(() => {
+    const contact = openId ? contacts.get(openId) : undefined;
+    const property = getStore().properties.get(listing.propertyId);
+    if (!contact || !property) return null;
+    const spaceDeal = inquiredSpaceDeal(contact, property);
+    return {
+      inquiry: toInquiry(contact, inquiryListingId(contact, listing, property)),
+      // Which suite they inquired about, the same as the building's Inquiries table.
+      spaceLabel: property.units.find((u) => u.id === spaceDeal?.unitId)?.label,
+    };
+  }, [openId, contacts, listing]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -108,10 +139,16 @@ export function WebsiteActivityLog({ listing }: { listing: Listing }) {
               {filtered.map((event) => (
                 <Table.Row key={event.id}>
                   <Table.Cell>
-                    {event.performedBy === "Anonymous User" ? (
-                      <span className="text-muted">Anonymous User</span>
+                    {event.performedById ? (
+                      <button
+                        type="button"
+                        className="btn btn-link p-0 border-0 link-primary text-nowrap"
+                        onClick={() => setOpenId(event.performedById!)}
+                      >
+                        {event.performedBy}
+                      </button>
                     ) : (
-                      event.performedBy
+                      <span className="text-muted">{event.performedBy}</span>
                     )}
                   </Table.Cell>
                   <Table.Cell className="text-nowrap">
@@ -124,6 +161,15 @@ export function WebsiteActivityLog({ listing }: { listing: Listing }) {
           </Table>
         )}
       </div>
+
+      <InquiryFlyout
+        inquiry={open?.inquiry ?? null}
+        spaceLabel={open?.spaceLabel}
+        open={openId !== null}
+        onOpenChange={(next) => {
+          if (!next) setOpenId(null);
+        }}
+      />
     </Section>
   );
 }
