@@ -9,8 +9,10 @@ import type {
   MapBlock,
   NavPanel,
   Page,
+  Rect,
   Selection,
 } from "./types";
+import { PAGE_PADDING } from "./types";
 import type { DocumentData } from "./dynamic";
 import { buildGeneratedDocument, buildSampleDocument } from "./sampleDocument";
 import { buildBlankPage, buildTemplatePage } from "./templates";
@@ -24,6 +26,7 @@ import {
   replaceBlock,
   updateTableRows,
 } from "./tree";
+import { DEFAULT_SIZE, clampRect, flattenForFree } from "./frames";
 
 /** Deep-clone plain document/block data (no functions or dates in the model). */
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -141,7 +144,13 @@ interface EditorState {
   togglePageHidden: (pageId: string) => void;
 
   // Phase 2 actions (structural mutation via drag-and-drop).
-  addBlock: (target: DropTarget, type: Block["type"], variant?: BlockVariant) => void;
+  addBlock: (
+    target: DropTarget,
+    type: Block["type"],
+    variant?: BlockVariant,
+    /** Where it landed on a free page. Omitted = placed below what's there. */
+    rect?: Rect,
+  ) => void;
   /**
    * Insert a pre-built block at a drop target. Unlike `addBlock`, the caller
    * owns construction — which is what lets a table arrive with its rows already
@@ -150,6 +159,16 @@ interface EditorState {
   insertBlock: (target: DropTarget, block: Block) => void;
   moveBlock: (blockId: string, target: DropTarget) => void;
   removeBlock: (blockId: string) => void;
+
+  /** Set one block's box on a free page. No-op on a stacked page. */
+  setFrame: (pageId: string, blockId: string, rect: Rect) => void;
+  /**
+   * Convert a stacked page into a free canvas from rects measured off the
+   * rendered page. No-op if it is already free.
+   */
+  freePage: (pageId: string, measured: Record<string, Rect>) => void;
+  /** Move a block to the front or back of its page's paint order. */
+  setBlockDepth: (blockId: string, depth: "front" | "back") => void;
 
   /** Edit a heading/text block's content in place. */
   setBlockText: (blockId: string, text: string) => void;
@@ -185,6 +204,44 @@ function pageIdForTarget(doc: EditorDocument, target: DropTarget): string {
   if (target.kind === "page") return target.pageId;
   const loc = findLocation(doc, target.blockId);
   return loc && "pageId" in loc ? loc.pageId : doc.pages[0]?.id;
+}
+
+/**
+ * Give a block a frame when it lands on a free page. Without a drop point it
+ * stacks below whatever is already there, so an agent adding three blocks in a
+ * row does not pile them on the same spot.
+ */
+function assignFrame(
+  doc: EditorDocument,
+  pageId: string,
+  block: Block,
+  rect?: Rect,
+): EditorDocument {
+  return {
+    ...doc,
+    pages: doc.pages.map((page) => {
+      if (page.id !== pageId || !page.frames) return page;
+      const bottom = Object.values(page.frames).reduce(
+        (max, f) => Math.max(max, f.y + f.h + 16),
+        PAGE_PADDING,
+      );
+      const size = DEFAULT_SIZE[block.type];
+      const placed = rect ?? { x: PAGE_PADDING, y: bottom, w: size.w, h: size.h };
+      return { ...page, frames: { ...page.frames, [block.id]: clampRect(placed) } };
+    }),
+  };
+}
+
+/** Drop a removed block's frame, so a free page keeps no orphan geometry. */
+function pruneFrame(doc: EditorDocument, blockId: string): EditorDocument {
+  return {
+    ...doc,
+    pages: doc.pages.map((page) => {
+      if (!page.frames || !(blockId in page.frames)) return page;
+      const { [blockId]: _dropped, ...frames } = page.frames;
+      return { ...page, frames };
+    }),
+  };
 }
 
 const ZOOM_MIN = 0.25;
@@ -392,17 +449,18 @@ export const useEditorStore = create<EditorState>((set, get) => {
       };
     }),
 
-  addBlock: (target, type, variant) =>
+  addBlock: (target, type, variant, rect) =>
     set((s) => {
       // Containers may only be dropped at the top level (one-level nesting).
       if ((type === "columns" || type === "section") && target.kind !== "page") {
         return s;
       }
       const block = createBlock(type, variant);
-      const document = insertAt(s.document, target, block);
+      const inserted = insertAt(s.document, target, block);
+      const pageId = pageIdForTarget(inserted, target);
       return {
-        document,
-        selection: { pageId: pageIdForTarget(document, target), blockId: block.id },
+        document: assignFrame(inserted, pageId, block, rect),
+        selection: { pageId, blockId: block.id },
         activeNavPanel: null,
         dirty: true,
       };
@@ -413,10 +471,11 @@ export const useEditorStore = create<EditorState>((set, get) => {
       // One-level nesting: a container can only live at the top level. Mirrors
       // the same guard in `addBlock` and `moveBlock`.
       if (isContainer(block) && target.kind !== "page") return s;
-      const document = insertAt(s.document, target, block);
+      const inserted = insertAt(s.document, target, block);
+      const pageId = pageIdForTarget(inserted, target);
       return {
-        document,
-        selection: { pageId: pageIdForTarget(document, target), blockId: block.id },
+        document: assignFrame(inserted, pageId, block),
+        selection: { pageId, blockId: block.id },
         dirty: true,
       };
     }),
@@ -440,8 +499,58 @@ export const useEditorStore = create<EditorState>((set, get) => {
       const { doc, removed } = removeBlockFromDoc(s.document, blockId);
       if (!removed) return s;
       const clears = s.selection?.blockId === blockId;
-      return { document: doc, selection: clears ? null : s.selection, dirty: true };
+      return {
+        document: pruneFrame(doc, blockId),
+        selection: clears ? null : s.selection,
+        dirty: true,
+      };
     }),
+
+  setFrame: (pageId, blockId, rect) =>
+    set((s) => ({
+      document: {
+        ...s.document,
+        pages: s.document.pages.map((p) =>
+          p.id === pageId && p.frames
+            ? { ...p, frames: { ...p.frames, [blockId]: clampRect(rect) } }
+            : p,
+        ),
+      },
+      dirty: true,
+    })),
+
+  freePage: (pageId, measured) =>
+    set((s) => {
+      const page = s.document.pages.find((p) => p.id === pageId);
+      if (!page || page.frames) return s;
+      const { blocks, frames } = flattenForFree(page, measured);
+      return {
+        document: {
+          ...s.document,
+          pages: s.document.pages.map((p) =>
+            p.id === pageId ? { ...p, blocks, frames, locked: false } : p,
+          ),
+        },
+        dirty: true,
+      };
+    }),
+
+  setBlockDepth: (blockId, depth) =>
+    set((s) => ({
+      document: {
+        ...s.document,
+        pages: s.document.pages.map((page) => {
+          const index = page.blocks.findIndex((b) => b.id === blockId);
+          if (index === -1) return page;
+          const blocks = [...page.blocks];
+          const [block] = blocks.splice(index, 1);
+          if (depth === "front") blocks.push(block);
+          else blocks.unshift(block);
+          return { ...page, blocks };
+        }),
+      },
+      dirty: true,
+    })),
 
   setBlockText: (blockId, text) =>
     set((s) => {

@@ -17,5 +17,8 @@ export function buildBlankPage(): Page {
     logoSrc: BRAND.logoSrc,
     locked: false,
     blocks: [],
+    // A page built from nothing is a free canvas: blocks are placed, not
+    // stacked. Template pages stay stacked until the user unfreezes them.
+    frames: {},
   };
 }
