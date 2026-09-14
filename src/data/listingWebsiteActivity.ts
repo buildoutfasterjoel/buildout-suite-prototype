@@ -1,75 +1,67 @@
-import { hash } from "#/components/properties/propertyDisplay";
+import { hash, pickFor, spread } from "#/components/properties/propertyDisplay";
 import { isDelgadoListing, isDelgadoOnMarket } from "#/data/rosaDemoStats";
 import { getListing } from "#/data/store";
-import { SYNDICATION_NETWORK_NAMES } from "#/data/listingSyndication";
 
-const EVENT_TYPES = [
-  "Page View",
-  "Page View",
-  "Page View",
-  "Lead Form Submitted",
-  "Document Downloaded",
-  "Contact Clicked",
-] as const;
-
-const PAGES = ["/overview", "/photos", "/financials", "/documents", "/contact"];
-
-const SOURCES = [
-  "Direct",
-  "Organic Search",
-  "Email Campaign",
-  "Referral",
-  ...SYNDICATION_NETWORK_NAMES,
+/** Documents a visitor can act on from the listing website. */
+const DOCUMENTS = [
+  "Offering Memorandum.pdf",
+  "Rent Roll 2026.xlsx",
+  "T-12 Operating Statement 2025.pdf",
+  "Submarket Report.pdf",
+  "Site Photos.zip",
 ];
 
-const DEVICES = ["Desktop", "Mobile", "Tablet"] as const;
+/**
+ * The four things a web visitor does: the CA, then the documents behind it.
+ * Signing is what puts a name on a visitor, so anonymous rows never sign.
+ */
+const ACTIVITY_KINDS = ["Viewed CA", "Signed CA", "Viewed", "Downloaded"] as const;
+const ANON_ACTIVITY_KINDS = ACTIVITY_KINDS.filter((k) => k !== "Signed CA");
 
-const LOCATIONS = [
-  "Chicago, IL",
-  "Dallas, TX",
-  "Atlanta, GA",
-  "Denver, CO",
-  "Phoenix, AZ",
-  "Seattle, WA",
-  "Charlotte, NC",
-  "Austin, TX",
+function activityFor(eventId: string, isAnonymous: boolean): string {
+  const kind = pickFor(
+    isAnonymous ? ANON_ACTIVITY_KINDS : ACTIVITY_KINDS,
+    eventId,
+    "activity",
+  );
+  if (kind === "Viewed CA" || kind === "Signed CA") return kind;
+  return `${kind} ${pickFor(DOCUMENTS, eventId, "document")}`;
+}
+
+/** Options for the Activity Log's filter dropdown — the kinds `activityFor` emits. */
+export const ACTIVITY_FILTER_OPTIONS = [
+  "Viewed CA",
+  "Signed CA",
+  "Viewed Document",
+  "Downloaded Document",
 ];
 
 const FIRST_NAMES = ["Jordan", "Casey", "Morgan", "Riley", "Avery", "Taylor"];
 const LAST_NAMES = ["Reed", "Brooks", "Kim", "Patel", "Nguyen", "Ortiz"];
 
-const MONTHS_SHORT = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
-
-/** A single visitor event on a listing's marketing site. */
+/** A single visitor action on a listing's marketing site. */
 export interface WebsiteVisitEvent {
   id: string;
-  timestamp: string;
-  visitor: string;
-  eventType: (typeof EVENT_TYPES)[number];
-  page: string;
-  source: string;
-  device: (typeof DEVICES)[number];
-  location: string;
+  performedBy: string;
+  performedAt: string;
+  activity: string;
 }
 
-function fmtTimestamp(d: Date): string {
-  const hours24 = d.getHours();
-  const hours12 = hours24 % 12 === 0 ? 12 : hours24 % 12;
-  const minutes = String(d.getMinutes()).padStart(2, "0");
-  const ampm = hours24 < 12 ? "AM" : "PM";
-  return `${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()} ${hours12}:${minutes} ${ampm}`;
+function fmtDate(d: Date): string {
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${mm}/${dd}/${d.getFullYear()}`;
 }
 
-const EVENT_COUNT = 48;
+const EVENT_COUNT = 12;
 
 /**
- * Deterministic per-listing website visit events derived from the listing id,
- * so values stay stable across renders (same approach as `getListingTraffic`).
+ * Deterministic per-listing website activity derived from the listing id, so
+ * values stay stable across renders (same approach as `getListingTraffic`).
  */
-export function getListingWebsiteActivity(listingId: string): WebsiteVisitEvent[] {
+export function getListingWebsiteActivity(
+  listingId: string,
+): WebsiteVisitEvent[] {
   // The Delgado Building has no listing website until the deal goes to market,
   // so its log stays empty while the deal is in Pitching (see rosaDemoStats).
   if (
@@ -83,27 +75,19 @@ export function getListingWebsiteActivity(listingId: string): WebsiteVisitEvent[
   const anchor = new Date(2026, 5, 26);
 
   return Array.from({ length: EVENT_COUNT }, (_, i) => {
-    const h = hash(`${listingId}-visit-${i}`);
+    const id = `${listingId}-visit-${i}`;
     const date = new Date(anchor);
-    date.setDate(date.getDate() - (h % 30));
-    date.setHours((h >>> 4) % 24, (h >>> 8) % 60);
+    date.setDate(date.getDate() - spread(hash(`${id}#day`), 30));
 
-    const isAnonymous = h % 5 !== 0;
-    const visitor = isAnonymous
-      ? "Anonymous"
-      : `${FIRST_NAMES[h % FIRST_NAMES.length]} ${LAST_NAMES[(h >>> 2) % LAST_NAMES.length]}`;
+    // A visitor stays unidentified until they fill in the CA, so the log runs
+    // about half anonymous.
+    const isAnonymous = spread(hash(`${id}#who`), 2) !== 0;
+    const performedBy = isAnonymous
+      ? "Anonymous User"
+      : `${pickFor(FIRST_NAMES, id, "first")} ${pickFor(LAST_NAMES, id, "last")}`;
 
-    return {
-      id: `${listingId}-visit-${i}`,
-      date,
-      visitor,
-      eventType: EVENT_TYPES[(h >>> 3) % EVENT_TYPES.length],
-      page: PAGES[(h >>> 5) % PAGES.length],
-      source: SOURCES[(h >>> 6) % SOURCES.length],
-      device: DEVICES[(h >>> 7) % DEVICES.length],
-      location: LOCATIONS[(h >>> 9) % LOCATIONS.length],
-    };
+    return { id, date, performedBy, activity: activityFor(id, isAnonymous) };
   })
     .sort((a, b) => b.date.getTime() - a.date.getTime())
-    .map(({ date, ...rest }) => ({ ...rest, timestamp: fmtTimestamp(date) }));
+    .map(({ date, ...rest }) => ({ ...rest, performedAt: fmtDate(date) }));
 }

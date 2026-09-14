@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Table } from "@buildoutinc/blueprint-react/ui/Table";
-import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 import { Select } from "@buildoutinc/blueprint-react/ui/Select";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
@@ -13,32 +12,15 @@ import {
   faChartLine,
 } from "@fortawesome/pro-regular-svg-icons";
 import type { Listing } from "#/data/types";
-import { getListingWebsiteActivity } from "#/data/listingWebsiteActivity";
-import { SYNDICATION_NETWORK_NAMES } from "#/data/listingSyndication";
+import {
+  ACTIVITY_FILTER_OPTIONS,
+  getListingWebsiteActivity,
+} from "#/data/listingWebsiteActivity";
 import { Section } from "./listingWidgets";
 
-const EVENT_TYPE_OPTIONS = [
-  "Page View",
-  "Lead Form Submitted",
-  "Document Downloaded",
-  "Contact Clicked",
-];
-// Mirrors the SOURCES pool in listingWebsiteActivity.ts so this dropdown never
-// drifts from the channel roster the table can actually show.
-const SOURCE_OPTIONS = [
-  "Direct",
-  "Organic Search",
-  "Email Campaign",
-  "Referral",
-  ...SYNDICATION_NETWORK_NAMES,
-];
-const DEVICE_OPTIONS = ["Desktop", "Mobile", "Tablet"];
-
-/** Visual-only filter dropdowns from the Activity Log toolbar. */
+/** Visual-only filter dropdown from the Activity Log toolbar. */
 const FILTERS = [
-  { label: "Event Type", options: EVENT_TYPE_OPTIONS },
-  { label: "Source", options: SOURCE_OPTIONS },
-  { label: "Device", options: DEVICE_OPTIONS },
+  { label: "All User Activities", options: ACTIVITY_FILTER_OPTIONS },
 ];
 
 /** Searchable/filterable log of individual visits to the listing's website. */
@@ -55,7 +37,8 @@ export function WebsiteActivityLog({ listing }: { listing: Listing }) {
     if (!q) return events;
     return events.filter(
       (e) =>
-        e.visitor.toLowerCase().includes(q) || e.page.toLowerCase().includes(q),
+        e.performedBy.toLowerCase().includes(q) ||
+        e.activity.toLowerCase().includes(q),
     );
   }, [events, search]);
 
@@ -78,7 +61,7 @@ export function WebsiteActivityLog({ listing }: { listing: Listing }) {
               </InputGroup.Addon>
               <Input
                 type="search"
-                placeholder="Search by visitor or page"
+                placeholder="Search by user or activity"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -116,41 +99,25 @@ export function WebsiteActivityLog({ listing }: { listing: Listing }) {
           <Table dense>
             <Table.Header>
               <Table.Row>
-                <Table.Head>Timestamp</Table.Head>
-                <Table.Head>Visitor</Table.Head>
-                <Table.Head>Event</Table.Head>
-                <Table.Head>Page</Table.Head>
-                <Table.Head>Source</Table.Head>
-                <Table.Head>Device</Table.Head>
-                <Table.Head>Location</Table.Head>
+                <Table.Head>Performed By</Table.Head>
+                <Table.Head>Performed At</Table.Head>
+                <Table.Head>Activity</Table.Head>
               </Table.Row>
             </Table.Header>
             <Table.Body>
               {filtered.map((event) => (
                 <Table.Row key={event.id}>
-                  <Table.Cell className="text-nowrap">
-                    {event.timestamp}
-                  </Table.Cell>
                   <Table.Cell>
-                    {event.visitor === "Anonymous" ? (
-                      <span className="text-muted">Anonymous</span>
+                    {event.performedBy === "Anonymous User" ? (
+                      <span className="text-muted">Anonymous User</span>
                     ) : (
-                      event.visitor
+                      event.performedBy
                     )}
                   </Table.Cell>
-                  <Table.Cell>
-                    <Badge variant="secondary" appearance="muted">
-                      {event.eventType}
-                    </Badge>
-                  </Table.Cell>
-                  <Table.Cell className="text-nowrap">{event.page}</Table.Cell>
                   <Table.Cell className="text-nowrap">
-                    {event.source}
+                    {event.performedAt}
                   </Table.Cell>
-                  <Table.Cell>{event.device}</Table.Cell>
-                  <Table.Cell className="text-nowrap">
-                    {event.location}
-                  </Table.Cell>
+                  <Table.Cell>{event.activity}</Table.Cell>
                 </Table.Row>
               ))}
             </Table.Body>
