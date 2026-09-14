@@ -180,6 +180,25 @@ function PageFooter({ pageNumber }: { pageNumber: number }) {
   );
 }
 
+/**
+ * Render a free page's blocks in a stable DOM order, carrying their paint order
+ * as a depth number instead.
+ *
+ * `page.blocks` order IS the paint order, but rendering in that order makes
+ * React move DOM nodes whenever a block is sent to the back or brought to the
+ * front. Moving a node detaches it, and a block that owns a live widget does
+ * not survive that: Leaflet loses its container, and the *second* reorder of a
+ * map threw inside Leaflet and blanked the whole document through the route's
+ * error boundary. Sorting by id keeps every node where it is for the lifetime
+ * of the page, so reordering only rewrites a `z-index` — nothing is detached,
+ * and no block can be broken by being restacked.
+ */
+function paintOrder(blocks: Page["blocks"]): { block: Page["blocks"][number]; depth: number }[] {
+  return blocks
+    .map((block, depth) => ({ block, depth }))
+    .sort((a, b) => (a.block.id < b.block.id ? -1 : a.block.id > b.block.id ? 1 : 0));
+}
+
 /** A single fixed-size page (US Letter) rendering its block stack. */
 export function PageView({
   page,
@@ -225,13 +244,14 @@ export function PageView({
           // A free page owns the whole sheet: blocks sit in page coordinates,
           // over the chrome if that is where they were put.
           <div className="bo-editor-free-layer">
-            {page.blocks.map((block) => (
+            {paintOrder(page.blocks).map(({ block, depth }) => (
               <FreeBlock
                 key={block.id}
                 block={block}
                 pageId={page.id}
                 frame={page.frames![block.id] ?? frameAt(block.type, PAGE_WIDTH / 2, 120)}
                 selection={pageSelection}
+                depth={depth}
               />
             ))}
           </div>

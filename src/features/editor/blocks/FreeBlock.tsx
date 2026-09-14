@@ -7,6 +7,7 @@ import {
   faBringForward,
   faSendBackward,
 } from "@fortawesome/pro-regular-svg-icons";
+import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { useEditorStore } from "../store";
 import { FIXED_HEIGHT, frameHeightStyle, moveRect, resizeRect, type ResizeDir } from "../frames";
@@ -70,13 +71,13 @@ const RESIZE_DIRS: ResizeDir[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
 
 /**
  * `.bo-editor-page` clips its content (`overflow: hidden`), so the actions
- * row (`top: -32px`) and the north/west handles (`-5px` outside the frame)
+ * tray (`top: -36px`) and the north/west handles (`-5px` outside the frame)
  * get clipped off for a block sitting at the page's top or left edge — the
  * seeded hero photo at (0,0) is exactly this case. When the frame is close
  * enough to an edge that the default offset would land outside the page,
  * pull that chrome inside the frame instead.
  */
-const EDGE_THRESHOLD_Y = 36;
+const EDGE_THRESHOLD_Y = 40;
 const EDGE_THRESHOLD_X = 6;
 const INSET = 4;
 
@@ -117,11 +118,14 @@ export function FreeBlock({
   pageId,
   frame,
   selection,
+  depth,
 }: {
   block: Block;
   pageId: string;
   frame: Rect;
   selection: Selection | null;
+  /** Position in the page's paint order — 0 is the backmost block. */
+  depth: number;
 }) {
   const select = useEditorStore((s) => s.select);
   const removeBlock = useEditorStore((s) => s.removeBlock);
@@ -147,6 +151,11 @@ export function FreeBlock({
         left: rect.x,
         top: rect.y,
         width: rect.w,
+        // Paint order comes from this, not from DOM order — see `paintOrder`.
+        // Deliberately not boosted while selected: lifting the selected block
+        // would make "Send to back" look like it did nothing until you click
+        // away.
+        zIndex: depth,
         ...frameHeightStyle(block.type, rect.h),
       }}
       onPointerDown={bodyDraggable ? (e) => start(e, "move") : undefined}
@@ -171,12 +180,21 @@ export function FreeBlock({
           <div
             className="bo-editor-frame-actions"
             style={rect.y < EDGE_THRESHOLD_Y ? { top: INSET } : undefined}
+            // A body-draggable block starts its move gesture from a pointerdown
+            // anywhere inside the frame, and that gesture calls preventDefault
+            // — which cancels the click before the button ever sees it. So the
+            // tray keeps pointerdown to itself; without this, every one of
+            // these buttons is dead on exactly the blocks you can drag by their
+            // body, and works fine on the ones you can't.
+            onPointerDown={(e) => e.stopPropagation()}
           >
             <Tooltip>
               <Tooltip.Trigger
                 render={
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    appearance="accent"
+                    size="icon-sm"
                     aria-label="Bring to front"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -184,7 +202,7 @@ export function FreeBlock({
                     }}
                   >
                     <FontAwesomeIcon icon={faBringForward} />
-                  </button>
+                  </Button>
                 }
               />
               <Tooltip.Content>Bring to front</Tooltip.Content>
@@ -192,8 +210,10 @@ export function FreeBlock({
             <Tooltip>
               <Tooltip.Trigger
                 render={
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    appearance="accent"
+                    size="icon-sm"
                     aria-label="Send to back"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -201,7 +221,7 @@ export function FreeBlock({
                     }}
                   >
                     <FontAwesomeIcon icon={faSendBackward} />
-                  </button>
+                  </Button>
                 }
               />
               <Tooltip.Content>Send to back</Tooltip.Content>
@@ -209,8 +229,10 @@ export function FreeBlock({
             <Tooltip>
               <Tooltip.Trigger
                 render={
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    appearance="accent"
+                    size="icon-sm"
                     aria-label={`Delete ${block.type}`}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -218,7 +240,7 @@ export function FreeBlock({
                     }}
                   >
                     <FontAwesomeIcon icon={faTrashCan} />
-                  </button>
+                  </Button>
                 }
               />
               <Tooltip.Content>Delete {block.type}</Tooltip.Content>

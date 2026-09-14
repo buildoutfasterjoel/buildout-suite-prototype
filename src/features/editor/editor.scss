@@ -1146,24 +1146,23 @@
 .bo-editor-handle.is-w  { top: 50%; left: -5px; margin-top: -5px; cursor: ew-resize; }
 
 /* Front/back/delete, floated above the selected block. */
+/* The selected block's actions, given the page toolbar's floating-surface
+   treatment — one tray rather than three separate chips — over a subtle accent
+   tint that ties it to the selection outline it belongs to. The buttons inside
+   are Blueprint's, so they bring their own sizing and states. */
 .bo-editor-frame-actions {
   position: absolute;
-  top: -32px;
+  top: -36px;
   right: 0;
   display: flex;
+  align-items: center;
   gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: rgba(var(--bp-primary-rgb), 0.08);
+  border: 1px solid rgba(var(--bp-primary-rgb), 0.16);
+  box-shadow: tokens.$shadow-base;
   z-index: 3;
-}
-.bo-editor-frame-actions button {
-  border: 1px solid tokens.$root-border-color;
-  background: tokens.$white;
-  border-radius: 4px;
-  width: 26px;
-  height: 26px;
-  color: tokens.$body-text-muted;
-}
-.bo-editor-frame-actions button:hover {
-  color: var(--bp-primary);
 }
 
 /* A body-draggable block (image, map, divider, spacer, section, contents)
