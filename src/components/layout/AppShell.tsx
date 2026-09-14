@@ -5,6 +5,7 @@ import { CircularProgress } from "@buildoutinc/blueprint-react/ui/Progress";
 import { ToasterProvider } from "@buildoutinc/blueprint-react/ui/Toast";
 import { ToastBridge } from "#/components/layout/ToastBridge";
 import { UndoHotkey } from "#/components/layout/UndoHotkey";
+import { DevModeBar } from "#/components/devMode/DevModeBar";
 import { GlobalNavbar } from "#/components/layout/GlobalNavbar";
 import { AppTopBar } from "#/components/layout/AppTopBar";
 import { AppTopBarMobile } from "#/components/layout/MobileNav";
@@ -145,6 +146,9 @@ export function AppShell() {
     <ToasterProvider>
       <ToastBridge />
       <UndoHotkey />
+      {/* ⌘⇧D. Renders nothing until toggled on, then portals the pink bar to
+          <body> — see the component for why it lives outside the shell. */}
+      <DevModeBar />
       {/*
         One structure serves both nav modes, and the slots are deliberately
         never removed — `{appMode ? <AppSideNav/> : null}` holds its index so

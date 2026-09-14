@@ -5191,6 +5191,57 @@ body:has(.design-toggle-fab) .toast-viewport {
   left: calc(var(--app-rail-width) + 16px);
 }
 
+// ── Dev mode bar ─────────────────────────────────────────────────────────────
+// The pink bar that says dev mode is on (⌘⇧D — see `DevModeBar`). Deliberately
+// off-palette: hot pink and monospace, so nothing about it can be mistaken for
+// Blueprint or for the product. It is portaled to <body> and fixed to the
+// viewport, and its z-index is one above the TanStack devtools trigger
+// (2147483646): it is the topmost thing on screen by design, since it exists
+// to sit over whatever is being inspected.
+//
+// Docked in the bottom-left by default; a drag hands over inline `top`/`left`
+// and clears `bottom`. `touch-action: none` keeps a finger-drag from scrolling
+// the page underneath instead of moving the bar.
+.dev-mode-bar {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 12px;
+  background: #ff2d9b;
+  color: #fff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1;
+  box-shadow:
+    0 6px 20px rgba(255, 45, 155, 0.35),
+    0 1px 3px rgba(0, 0, 0, 0.25);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+
+  &[data-dragging] {
+    cursor: grabbing;
+  }
+
+  &__label {
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+}
+
+// The bar's docked home is the toast stack's too. While it is there the toasts
+// start above it (40px bar + 16px it sits on + 16px gap), the same clearance
+// `.design-toggle-fab` gets; once the bar is dragged away the stack drops back.
+body:has(.dev-mode-bar--docked) .toast-viewport {
+  padding-bottom: 72px;
+}
+
 // ── App shell top bar ────────────────────────────────────────────────────────
 // Three zones. The end zone is the design's 244px; the start zone is that same
 // 244px plus the rail's width, so the middle is exactly as wide as the page
