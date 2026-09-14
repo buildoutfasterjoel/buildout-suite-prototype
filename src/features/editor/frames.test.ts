@@ -81,4 +81,8 @@ describe("frameHeightStyle", () => {
   it("gives text a floor so long bound values grow the box", () => {
     expect(frameHeightStyle("text", 96)).toEqual({ minHeight: 96 });
   });
+
+  it("gives a table no height at all — its rows are its height", () => {
+    expect(frameHeightStyle("table", 200)).toEqual({});
+  });
 });

@@ -10,7 +10,14 @@ import {
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Tooltip } from "@buildoutinc/blueprint-react/ui/Tooltip";
 import { useEditorStore } from "../store";
-import { FIXED_HEIGHT, frameHeightStyle, moveRect, resizeRect, type ResizeDir } from "../frames";
+import {
+  AUTO_HEIGHT,
+  FIXED_HEIGHT,
+  frameHeightStyle,
+  moveRect,
+  resizeRect,
+  type ResizeDir,
+} from "../frames";
 import type { Block, Rect, Selection } from "../types";
 import { BlockVisual } from "./BlockViews";
 
@@ -24,7 +31,7 @@ import { BlockVisual } from "./BlockViews";
  * Deltas divide by zoom because the pointer moves in screen pixels and the
  * model stores page pixels.
  */
-function useFrameDrag(pageId: string, blockId: string, frame: Rect) {
+function useFrameDrag(pageId: string, blockId: string, frame: Rect, autoHeight: boolean) {
   const zoom = useEditorStore((s) => s.zoom);
   const setFrame = useEditorStore((s) => s.setFrame);
   const [draft, setDraft] = useState<Rect | null>(null);
@@ -42,7 +49,13 @@ function useFrameDrag(pageId: string, blockId: string, frame: Rect) {
     target.setPointerCapture(pointerId);
     const startX = e.clientX;
     const startY = e.clientY;
-    const base = frame;
+    // An auto-height block's stored `h` is whatever it was last given, not what
+    // it renders at — a 2-row table dropped at DEFAULT_SIZE still says 200. The
+    // gesture measures the real box instead, so `clampRect` stops reserving
+    // height the block doesn't occupy (which kept a short table out of the
+    // bottom of the page) and the height it commits is the one on screen.
+    const el = (e.currentTarget as HTMLElement).closest<HTMLElement>(".bo-editor-frame");
+    const base = autoHeight && el ? { ...frame, h: el.offsetHeight } : frame;
     let next = base;
 
     const onMove = (ev: PointerEvent) => {
@@ -139,7 +152,7 @@ export function FreeBlock({
   // fill it instead of floating at its own intrinsic size (an image covers
   // rather than letterboxing).
   const boxed = FIXED_HEIGHT.includes(block.type);
-  const { rect, start } = useFrameDrag(pageId, block.id, frame);
+  const { rect, start } = useFrameDrag(pageId, block.id, frame, AUTO_HEIGHT.includes(block.type));
   const bodyDraggable = BODY_DRAGGABLE.includes(block.type);
   // A table is the one block with no workable grab: its cells are editable, so
   // the body can't be dragged, and its own row/column handles and insert dots

@@ -82,7 +82,19 @@ export const FIXED_HEIGHT: Block["type"][] = [
   "columns",
 ];
 
+/**
+ * Types whose height is their content's, not their frame's. A table's height is
+ * its rows' — a frame can only hold it taller than that, which is dead space
+ * nobody asked for: a dropped table stood in a 200px box (DEFAULT_SIZE) with
+ * the bottom half empty.
+ *
+ * Their stored `h` still exists, but only as what the gesture measured last
+ * (see `useFrameDrag`), so clamping keeps working.
+ */
+export const AUTO_HEIGHT: Block["type"][] = ["table"];
+
 export function frameHeightStyle(type: Block["type"], h: number): CSSProperties {
+  if (AUTO_HEIGHT.includes(type)) return {};
   return FIXED_HEIGHT.includes(type) ? { height: h } : { minHeight: h };
 }
 
