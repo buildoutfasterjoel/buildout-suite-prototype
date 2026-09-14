@@ -117,6 +117,35 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 228,
+    title:
+      "Table rows and columns can be reordered, and a prefilled cell is editable text with a live field chip",
+    mergedAt: "2026-09-14T16:53:44Z",
+    day: "2026-09-14",
+    author: "buildoutfasterjoel",
+    area: "Documents",
+    summary:
+      "A table in the document editor could gain and lose rows but never reorder them, and the cells that arrived prefilled with deal data were frozen \u2014 clicking one opened nothing and typing did nothing. Rows and columns now move, and a prefilled value is ordinary text carrying a live field chip you can write around.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "A row or column handle can move it \u2014 up and down, left and right \u2014 so fixing the order of a fact table no longer means retyping every cell. The move is disabled at the ends, and a row skips over any row the deal has hidden.",
+      },
+      {
+        kind: "feature",
+        text: "A prefilled cell is editable. The deal's value shows as a chip you can type beside, delete, or replace, so \"176,761\" becomes \"176,761 SF\" while still tracking the listing. More than one field can share a cell.",
+      },
+      {
+        kind: "fix",
+        text: "Inserting a field from the toolbar lands in the cell you selected. It was going into the table's first cell every time, whichever cell you had clicked.",
+      },
+      {
+        kind: "refinement",
+        text: "Vacancy rate, warehouse percentage and free-standing now print as a percentage or as Yes/No wherever they appear, not only inside a table.",
+      },
+    ],
+  },
+  {
     pr: 227,
     title:
       "The Web Activity log records what a visitor did, and a named row opens that inquiry",
