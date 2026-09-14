@@ -31,6 +31,14 @@ function useFrameDrag(pageId: string, blockId: string, frame: Rect) {
   const start = (e: ReactPointerEvent, dir: ResizeDir | "move") => {
     e.preventDefault();
     e.stopPropagation();
+    // Pointer capture redirects this pointer's events to `target` regardless
+    // of where the release happens — including outside the browser window,
+    // which never delivers a `pointerup` to `window` on its own. Without it,
+    // a release over OS chrome or another app leaves the listeners attached
+    // and the gesture's final `setFrame` never fires.
+    const target = e.currentTarget;
+    const pointerId = e.pointerId;
+    target.setPointerCapture(pointerId);
     const startX = e.clientX;
     const startY = e.clientY;
     const base = frame;
@@ -42,20 +50,35 @@ function useFrameDrag(pageId: string, blockId: string, frame: Rect) {
       next = dir === "move" ? moveRect(base, dx, dy) : resizeRect(base, dir, dx, dy);
       setDraft(next);
     };
-    const onUp = () => {
+    const onEnd = () => {
       window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointerup", onEnd);
+      window.removeEventListener("pointercancel", onEnd);
+      target.releasePointerCapture(pointerId);
       setDraft(null);
       setFrame(pageId, blockId, next);
     };
     window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointerup", onEnd);
+    window.addEventListener("pointercancel", onEnd);
   };
 
   return { rect: draft ?? frame, start };
 }
 
 const RESIZE_DIRS: ResizeDir[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
+
+/** Human-readable direction for each resize handle's `aria-label`. */
+const DIR_LABELS: Record<ResizeDir, string> = {
+  nw: "top left",
+  n: "top",
+  ne: "top right",
+  e: "right",
+  se: "bottom right",
+  s: "bottom",
+  sw: "bottom left",
+  w: "left",
+};
 
 /**
  * Types whose body can be grabbed directly. Text-bearing blocks are excluded:
@@ -98,7 +121,7 @@ export function FreeBlock({
 
   return (
     <div
-      className={`bo-editor-frame${boxed ? " bo-editor-frame--boxed" : ""}${selected ? " is-selected" : ""}${located ? " is-located" : ""}`}
+      className={`bo-editor-frame${boxed ? " bo-editor-frame--boxed" : ""}${bodyDraggable ? " bo-editor-frame--draggable" : ""}${selected ? " is-selected" : ""}${located ? " is-located" : ""}`}
       data-block-id={block.id}
       style={{
         position: "absolute",
@@ -184,6 +207,7 @@ export function FreeBlock({
             <span
               key={dir}
               className={`bo-editor-handle is-${dir}`}
+              aria-label={`Resize from ${DIR_LABELS[dir]}`}
               onPointerDown={(e) => start(e, dir)}
             />
           ))}

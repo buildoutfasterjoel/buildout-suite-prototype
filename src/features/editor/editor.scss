@@ -1137,7 +1137,13 @@
   color: var(--bp-primary);
 }
 
-/* A body-draggable block shows the move cursor over its whole box. */
-.bo-editor-frame:hover {
-  cursor: default;
+/* A body-draggable block (image, map, divider, spacer, section, contents)
+   shows a grab cursor over its whole box — the only affordance telling a
+   broker it can be picked up anywhere. Text-bearing frames don't get this
+   class, so they keep their normal text cursor over the body. */
+.bo-editor-frame--draggable {
+  cursor: grab;
+}
+.bo-editor-frame--draggable:active {
+  cursor: grabbing;
 }
