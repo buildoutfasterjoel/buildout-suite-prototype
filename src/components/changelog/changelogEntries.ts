@@ -117,6 +117,35 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 231,
+    title:
+      "A table on a free page can be grabbed by a band around it, hugs its rows, and its handles sit where they should",
+    mergedAt: "2026-09-14T22:41:35Z",
+    day: "2026-09-14",
+    author: "buildoutfasterjoel",
+    area: "Documents",
+    summary:
+      "A table was the one block on a free page you could barely move: its cells are editable, so it cannot be dragged by its body, and its own row and column controls sit exactly where the drag handle was. It now has a band to grab it by, and the controls around it are easier to hit.",
+    highlights: [
+      {
+        kind: "fix",
+        text: "A table can be moved by the space around it. Grab anywhere in the band between the table and its selection box — clicking a cell still edits it.",
+      },
+      {
+        kind: "fix",
+        text: "A table's box is as tall as its rows. A table dropped from the palette no longer arrives in a 200px box with the bottom half empty, and a short one can now be dragged to the bottom of the page.",
+      },
+      {
+        kind: "refinement",
+        text: "The eight resize handles sit on the selection outline instead of floating just inside it.",
+      },
+      {
+        kind: "refinement",
+        text: "A table's row and column handles swell under the pointer, the way the insert dots do, so the bar that selects a whole column or row is easier to hit.",
+      },
+    ],
+  },
+  {
     pr: 230,
     title:
       "Blocks on a document page can be placed and resized anywhere, and a template page can be unfrozen into a free canvas",
