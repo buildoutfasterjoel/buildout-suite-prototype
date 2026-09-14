@@ -1,5 +1,5 @@
 import type { DealMarketing, Property } from "#/data/types";
-import type { Cell, DynamicKey, ListBlock } from "./types";
+import type { DynamicKey, FieldFormat, ListBlock } from "./types";
 
 /** Everything a document can bind to — the asset's facts and the deal's copy. */
 export interface DocumentData {
@@ -41,10 +41,13 @@ export const DYNAMIC_FIELD_LABELS: Partial<Record<DynamicKey, string>> = {
  * this table is what gives those bindings their currency/percent formatting. Anything absent here formats as text, which
  * already handles thousands separators and joins arrays.
  */
-export const INLINE_FIELD_FORMAT: Partial<Record<DynamicKey, Cell["format"]>> = {
+export const INLINE_FIELD_FORMAT: Partial<Record<DynamicKey, FieldFormat>> = {
   askingPrice: "currency",
   noi: "currency",
   capRate: "percent",
+  vacancyRate: "percent",
+  warehousePct: "percent",
+  freeStanding: "boolean",
   yearBuilt: "year",
 };
 
@@ -134,7 +137,7 @@ export function isEmptyValue(value: unknown): boolean {
 /** Resolve + format a single bound field. Returns "—" when unavailable. */
 export function resolveField(
   key: DynamicKey,
-  format: Cell["format"],
+  format: FieldFormat | undefined,
   data: DocumentData,
 ): string {
   const raw = resolveFieldValue(key, data);
@@ -156,15 +159,6 @@ export function resolveField(
       if (Array.isArray(raw)) return raw.join(", ");
       return typeof raw === "number" ? raw.toLocaleString("en-US") : String(raw);
   }
-}
-
-/**
- * Resolve a cell's display value. Dynamic cells pull live data and apply the
- * cell's format hint; static cells return their own value.
- */
-export function resolveDynamic(cell: Cell, data: DocumentData): string {
-  if (!cell.dynamicKey) return cell.value;
-  return resolveField(cell.dynamicKey, cell.format, data);
 }
 
 /** The items a list block renders — its binding when set, else its static items. */

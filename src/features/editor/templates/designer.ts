@@ -83,49 +83,44 @@ export function buildPropertySummaryPage(property?: Property): Page {
   const rows: Cell[][] = [];
   const rowRules: Record<string, RowVisibility> = {};
 
-  const metaRow = (
-    label: string,
-    key: DynamicKey,
-    format: Cell["format"] = "text",
-    rule?: RowVisibility,
-  ) => {
+  const metaRow = (label: string, key: DynamicKey, rule?: RowVisibility) => {
     const head = headerCell(label);
-    rows.push([head, valueCell("—", key, format)]);
+    rows.push([head, valueCell("—", key)]);
     if (rule) rowRules[head.id] = rule;
   };
 
   const built: RowVisibility = { types: BUILT_TYPES };
 
-  metaRow("Building Size", "buildingSqFt", "text", built);
+  metaRow("Building Size", "buildingSqFt", built);
   metaRow("Lot Size", "lotSqFt");
-  metaRow("Year Built", "yearBuilt", "year", built);
-  metaRow("Building Class", "buildingClass", "text", built);
-  metaRow("Stories", "stories", "text", built);
-  metaRow("Buildings", "numberOfBuildings", "text", built);
+  metaRow("Year Built", "yearBuilt", built);
+  metaRow("Building Class", "buildingClass", built);
+  metaRow("Stories", "stories", built);
+  metaRow("Buildings", "numberOfBuildings", built);
 
-  metaRow("Units", "residentialUnits", "text", { types: ["multifamily", "mixed-use"] });
-  metaRow("Total Bathrooms", "totalBathrooms", "text", { types: ["multifamily", "mixed-use"] });
+  metaRow("Units", "residentialUnits", { types: ["multifamily", "mixed-use"] });
+  metaRow("Total Bathrooms", "totalBathrooms", { types: ["multifamily", "mixed-use"] });
 
-  metaRow("Clear Height", "ceilingHeight", "text", { types: ["industrial"] });
-  metaRow("Dock-High Doors", "dockHighDoors", "text", { types: ["industrial"] });
-  metaRow("Grade-Level Doors", "gradeLevelDoors", "text", { types: ["industrial"] });
-  metaRow("Drive-In Bays", "driveInBays", "text", { types: ["industrial"] });
-  metaRow("Warehouse %", "warehousePct", "percent", { types: ["industrial"] });
-  metaRow("Cranes", "numberOfCranes", "text", { types: ["industrial"] });
+  metaRow("Clear Height", "ceilingHeight", { types: ["industrial"] });
+  metaRow("Dock-High Doors", "dockHighDoors", { types: ["industrial"] });
+  metaRow("Grade-Level Doors", "gradeLevelDoors", { types: ["industrial"] });
+  metaRow("Drive-In Bays", "driveInBays", { types: ["industrial"] });
+  metaRow("Warehouse %", "warehousePct", { types: ["industrial"] });
+  metaRow("Cranes", "numberOfCranes", { types: ["industrial"] });
 
-  metaRow("Office SF", "officeSpaceSqFt", "text", { types: ["office"] });
-  metaRow("Elevators", "numberOfElevators", "text", { types: ["office"] });
-  metaRow("Load Factor", "loadFactor", "text", { types: ["office"] });
-  metaRow("Tenancy", "tenancy", "text", { types: ["office"] });
+  metaRow("Office SF", "officeSpaceSqFt", { types: ["office"] });
+  metaRow("Elevators", "numberOfElevators", { types: ["office"] });
+  metaRow("Load Factor", "loadFactor", { types: ["office"] });
+  metaRow("Tenancy", "tenancy", { types: ["office"] });
 
-  metaRow("Traffic Count", "trafficCount", "text", { types: ["retail"] });
-  metaRow("Clientele", "retailClientele", "text", { types: ["retail"] });
-  metaRow("Free Standing", "freeStanding", "boolean", { types: ["retail"] });
+  metaRow("Traffic Count", "trafficCount", { types: ["retail"] });
+  metaRow("Clientele", "retailClientele", { types: ["retail"] });
+  metaRow("Free Standing", "freeStanding", { types: ["retail"] });
 
-  metaRow("Number of Lots", "numberOfLots", "text", { types: ["land"] });
-  metaRow("Best Use", "bestUse", "text", { types: ["land"] });
-  metaRow("Topography", "topography", "text", { types: ["land"] });
-  metaRow("Soil Type", "soilType", "text", { types: ["land"] });
+  metaRow("Number of Lots", "numberOfLots", { types: ["land"] });
+  metaRow("Best Use", "bestUse", { types: ["land"] });
+  metaRow("Topography", "topography", { types: ["land"] });
+  metaRow("Soil Type", "soilType", { types: ["land"] });
 
   metaRow("Zoning", "zoning");
   metaRow("Parking Spaces", "parkingSpaces");
@@ -519,11 +514,11 @@ export function buildLocationMapPage(_property?: Property): Page {
     title: "Location",
     style: { borderWidth: 1, borderStyle: "solid", borderColor: "#d5dae2" },
     rows: [
-      [headerCell("Address"), valueCell("—", "street", "text")],
-      [headerCell("City"), valueCell("—", "city", "text")],
-      [headerCell("State"), valueCell("—", "state", "text")],
-      [headerCell("County"), valueCell("—", "county", "text")],
-      [headerCell("Submarket"), valueCell("—", "submarket", "text")],
+      [headerCell("Address"), valueCell("—", "street")],
+      [headerCell("City"), valueCell("—", "city")],
+      [headerCell("State"), valueCell("—", "state")],
+      [headerCell("County"), valueCell("—", "county")],
+      [headerCell("Submarket"), valueCell("—", "submarket")],
     ],
   };
 

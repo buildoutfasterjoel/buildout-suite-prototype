@@ -108,11 +108,13 @@ export function RichTextToolbar() {
   const { block, cell } = useSelectedEntities();
   const data = useDocumentData();
 
-  // Text nodes: heading/text blocks, or a static (non-dynamic) table cell.
+  // Text nodes: heading/text blocks, or any selected table cell. A cell bound
+  // to listing data is one too — its binding is an inline token inside the
+  // text, so it is edited exactly like a sentence that carries one.
   const isTextNode =
     block?.type === "heading" ||
     block?.type === "text" ||
-    (block?.type === "table" && cell != null && cell.dynamicKey == null);
+    (block?.type === "table" && cell != null);
   const open = Boolean(isTextNode);
 
   const [format, setFormat] = useState<FormatState>(EMPTY_FORMAT);
@@ -130,6 +132,7 @@ export function RichTextToolbar() {
   const sizeInputRef = useRef<HTMLInputElement | null>(null);
 
   const blockId = block?.id;
+  const cellId = cell?.id;
 
   const getActiveEditable = useCallback((): HTMLElement | null => {
     if (typeof document === "undefined") return null;
@@ -142,13 +145,20 @@ export function RichTextToolbar() {
     if (fromSelection) return fromSelection;
 
     if (blockId) {
+      // Scope to the selected CELL when there is one. A table block holds one
+      // contentEditable per cell, so a block-wide query hands back the first
+      // cell whichever one the user actually picked — and since the picker is
+      // a text input, it steals focus and we always land in this branch.
+      const scope = cellId
+        ? `[data-block-id="${blockId}"] [data-cell-id="${cellId}"]`
+        : `[data-block-id="${blockId}"]`;
       const inBlock = document.querySelector<HTMLElement>(
-        `[data-block-id="${blockId}"] [contenteditable="true"]`,
+        `${scope} [contenteditable="true"]`,
       );
       if (inBlock) return inBlock;
     }
     return lastEditableRef.current;
-  }, [blockId]);
+  }, [blockId, cellId]);
 
   const refreshFormat = useCallback(() => {
     // Don't clobber the size field while the user is typing into it.

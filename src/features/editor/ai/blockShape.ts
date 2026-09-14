@@ -19,7 +19,7 @@ export interface EditorAgentBlock {
   text?: string;
   /** table */
   title?: string;
-  rows?: Array<Array<{ id: string; value: string; dynamicKey?: string }>>;
+  rows?: Array<Array<{ id: string; value: string }>>;
   /** list */
   items?: string[];
   /**
@@ -53,8 +53,9 @@ export interface EditorAgentBlock {
  *
  * Heading/text keep their stored form rather than a rendered preview — the
  * agent writes back into the same field, so it has to see the `{{tokens}}` it
- * must preserve. `dynamicKey` is emitted only where it exists, so its presence
- * always means "bound, don't overwrite".
+ * must preserve. Table cells are the same: their value is stored form too. A
+ * list's `dynamicKey` is emitted only where it exists, so its presence always
+ * means "bound, don't overwrite".
  */
 export function describeBlock(block: Block): EditorAgentBlock {
   switch (block.type) {
@@ -67,11 +68,7 @@ export function describeBlock(block: Block): EditorAgentBlock {
         type: "table",
         title: block.title,
         rows: block.rows.map((row) =>
-          row.map((c) => ({
-            id: c.id,
-            value: c.value,
-            ...(c.dynamicKey ? { dynamicKey: c.dynamicKey } : {}),
-          })),
+          row.map((c) => ({ id: c.id, value: c.value })),
         ),
       };
     case "list":

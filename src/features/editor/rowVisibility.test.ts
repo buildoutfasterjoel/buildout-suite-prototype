@@ -8,6 +8,11 @@ function cell(value: string, opts: Partial<Cell> = {}): Cell {
   return { id: `cell-${(n += 1)}`, value, style: {} as Cell['style'], ...opts }
 }
 
+/** A cell bound to a listing field — an inline token, the way templates build them. */
+function boundCell(key: string): Cell {
+  return cell(`{{property.${key}}}`)
+}
+
 function table(rows: Cell[][], rowRules?: TableBlock['rowRules']): TableBlock {
   return { id: 'table-1', type: 'table', rows, rowRules, style: {} as TableBlock['style'] }
 }
@@ -19,7 +24,7 @@ const industrial = { propertyType: 'industrial', residentialUnits: null, driveIn
 describe('visibleRows', () => {
   it('keeps a row whose type rule matches and drops one whose rule does not', () => {
     const units = cell('Units')
-    const t = table([[units, cell('—', { dynamicKey: 'residentialUnits' })]], {
+    const t = table([[units, boundCell('residentialUnits')]], {
       [units.id]: { types: ['multifamily', 'mixed-use'] },
     })
     expect(visibleRows(t, { property: multifamily, marketing })).toHaveLength(1)
@@ -28,27 +33,27 @@ describe('visibleRows', () => {
 
   it('drops a row whose only dynamic value is empty', () => {
     const label = cell('Units')
-    const t = table([[label, cell('—', { dynamicKey: 'residentialUnits' })]])
+    const t = table([[label, boundCell('residentialUnits')]])
     expect(visibleRows(t, { property: industrial, marketing })).toHaveLength(0)
   })
 
   // Zero drive-in bays is a recorded fact, not missing data.
   it('keeps a row whose dynamic value is 0', () => {
     const label = cell('Drive-In Bays')
-    const t = table([[label, cell('—', { dynamicKey: 'driveInBays' })]])
+    const t = table([[label, boundCell('driveInBays')]])
     expect(visibleRows(t, { property: industrial, marketing })).toHaveLength(1)
   })
 
   it('keeps an empty row when keepEmpty is set', () => {
     const label = cell('Units')
-    const t = table([[label, cell('—', { dynamicKey: 'residentialUnits' })]], {
+    const t = table([[label, boundCell('residentialUnits')]], {
       [label.id]: { keepEmpty: true },
     })
     expect(visibleRows(t, { property: industrial, marketing })).toHaveLength(1)
   })
 
   // A hand-authored row belongs to the user, not to the data.
-  it('never drops a row with no dynamic cells', () => {
+  it('never drops a row that binds to nothing', () => {
     const t = table([[cell('Notes'), cell('Anything')]])
     expect(visibleRows(t, { property: industrial, marketing })).toHaveLength(1)
   })
@@ -59,8 +64,8 @@ describe('visibleRows', () => {
     const units = cell('Units')
     const t = table(
       [
-        [units, cell('—', { dynamicKey: 'residentialUnits' })],
-        [cell('Docks'), cell('—', { dynamicKey: 'dockHighDoors' })],
+        [units, boundCell('residentialUnits')],
+        [cell('Docks'), boundCell('dockHighDoors')],
       ],
       { [units.id]: { types: ['multifamily'] } },
     )
@@ -72,8 +77,8 @@ describe('visibleRows', () => {
     const b = cell('B')
     const t = table(
       [
-        [a, cell('—', { dynamicKey: 'residentialUnits' })],
-        [b, cell('—', { dynamicKey: 'driveInBays' })],
+        [a, boundCell('residentialUnits')],
+        [b, boundCell('driveInBays')],
       ],
     )
     const rows = visibleRows(t, { property: industrial, marketing })
@@ -92,10 +97,10 @@ describe('trailingRowInsertIndex', () => {
     const keep = { types: ['industrial' as const] }
     const drop = { types: ['multifamily' as const] }
     return table([
-      [cell('A', { id: 'a' }), cell('—', { dynamicKey: 'driveInBays' })],
-      [cell('B', { id: 'b' }), cell('—', { dynamicKey: 'driveInBays' })],
-      [cell('C', { id: 'c' }), cell('—', { dynamicKey: 'driveInBays' })],
-      [cell('D', { id: 'd' }), cell('—', { dynamicKey: 'driveInBays' })],
+      [cell('A', { id: 'a' }), boundCell('driveInBays')],
+      [cell('B', { id: 'b' }), boundCell('driveInBays')],
+      [cell('C', { id: 'c' }), boundCell('driveInBays')],
+      [cell('D', { id: 'd' }), boundCell('driveInBays')],
     ], { a: keep, b: drop, c: keep, d: drop })
   }
 

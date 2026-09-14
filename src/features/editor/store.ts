@@ -169,6 +169,10 @@ interface EditorState {
   removeColumn: (blockId: string, index: number) => void;
   addRow: (blockId: string, index: number) => void;
   removeRow: (blockId: string, index: number) => void;
+  /** Move a row. Both indices address `block.rows`, not rendered rows. */
+  moveRow: (blockId: string, from: number, to: number) => void;
+  /** Move a column. */
+  moveColumn: (blockId: string, from: number, to: number) => void;
 
   /** Edit a cell's static text value. */
   setCellValue: (blockId: string, cellId: string, value: string) => void;
@@ -546,6 +550,20 @@ export const useEditorStore = create<EditorState>((set, get) => {
       };
     }),
 
+  moveRow: (blockId, from, to) =>
+    set((s) => ({
+      document: updateTableRows(s.document, blockId, (rows) => moveItem(rows, from, to)),
+      dirty: true,
+    })),
+
+  moveColumn: (blockId, from, to) =>
+    set((s) => ({
+      document: updateTableRows(s.document, blockId, (rows) =>
+        rows.map((row) => moveItem(row, from, to)),
+      ),
+      dirty: true,
+    })),
+
   setCellValue: (blockId, cellId, value) =>
     set((s) => ({
       document: updateTableRows(s.document, blockId, (rows) =>
@@ -571,6 +589,15 @@ export const useEditorStore = create<EditorState>((set, get) => {
 /** Clamp an insertion index into the inclusive range [0, length]. */
 function clampIndex(index: number, length: number): number {
   return Math.max(0, Math.min(index, length));
+}
+
+/** Move the item at `from` to `to`. Out-of-range indices are a no-op. */
+function moveItem<T>(list: T[], from: number, to: number): T[] {
+  if (from === to || from < 0 || to < 0 || from >= list.length || to >= list.length) return list;
+  const next = [...list];
+  const [item] = next.splice(from, 1);
+  next.splice(to, 0, item);
+  return next;
 }
 
 /** Drop the cell part of a selection when it points at the given table. */

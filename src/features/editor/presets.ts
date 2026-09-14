@@ -1,5 +1,5 @@
 import type { DealUnderwriting, GeneratedSection, Property } from "#/data/types";
-import type { Block, Cell, DynamicKey, Page, TableBlock } from "./types";
+import type { Block, DynamicKey, Page, TableBlock } from "./types";
 import { uid } from "./blocks/blockFactory";
 import { buildUnderwritingSection } from "./underwritingPages";
 import {
@@ -34,7 +34,6 @@ interface StubPageSpec {
   seed: string;
   dynamicKey?: DynamicKey;
   dynamicLabel?: string;
-  format?: Cell["format"];
 }
 
 function buildStubPage(property: Property | undefined, spec: StubPageSpec): Page {
@@ -50,7 +49,7 @@ function buildStubPage(property: Property | undefined, spec: StubPageSpec): Page
       type: "table",
       title: spec.name,
       style: { borderWidth: 1, borderStyle: "solid", borderColor: "#d5dae2" },
-      rows: [[headerCell(spec.dynamicLabel ?? "Detail"), valueCell("—", spec.dynamicKey, spec.format)]],
+      rows: [[headerCell(spec.dynamicLabel ?? "Detail"), valueCell("—", spec.dynamicKey)]],
     };
     blocks.push(table);
   }
@@ -123,7 +122,6 @@ export function buildDocumentPages(
       seed: "editor-highlights",
       dynamicKey: "buildingSqFt",
       dynamicLabel: "Building Size",
-      format: "text",
     }),
     // Keeps the section name the document's contents already advertises.
     withPageIdentity(buildPhotoGalleryPage(property), "Additional Photos"),
@@ -134,7 +132,6 @@ export function buildDocumentPages(
       seed: "editor-site-plans",
       dynamicKey: "zoning",
       dynamicLabel: "Zoning",
-      format: "text",
     }),
     financialSummary,
     buildStubPage(property, {
@@ -142,35 +139,30 @@ export function buildDocumentPages(
       seed: "editor-income",
       dynamicKey: "noi",
       dynamicLabel: "Net Operating Income",
-      format: "currency",
     }),
     buildStubPage(property, {
       name: "Sale Comps",
       seed: "editor-sale-comps",
       dynamicKey: "capRate",
       dynamicLabel: "Cap Rate",
-      format: "percent",
     }),
     buildStubPage(property, {
       name: "Lease Comps",
       seed: "editor-lease-comps",
       dynamicKey: "vacancyRate",
       dynamicLabel: "Vacancy Rate",
-      format: "percent",
     }),
     buildStubPage(property, {
       name: "Demographics",
       seed: "editor-demographics",
       dynamicKey: "censusTract",
       dynamicLabel: "Census Tract",
-      format: "text",
     }),
     buildStubPage(property, {
       name: "Advisor Bios",
       seed: "editor-advisor",
       dynamicKey: "name",
       dynamicLabel: "Prepared For",
-      format: "text",
     }),
   ];
 }
