@@ -628,7 +628,9 @@
   border-radius: 3px;
   cursor: pointer;
   pointer-events: auto;
-  transition: background motion.$short2 ease;
+  transition:
+    background motion.$short2 ease,
+    transform motion.$short2 ease;
   z-index: 1;
 }
 .bo-editor-col-handle:hover,
@@ -636,6 +638,22 @@
 .bo-editor-row-handle:hover,
 .bo-editor-row-handle.is-active {
   background: var(--bp-primary);
+}
+/* Under the pointer the bar swells, the way an insert dot does — a bigger
+   target for a 6px-thick bar, and the cue that this is the thing that selects
+   the column or row. It grows mostly across its thickness, where it is hardest
+   to hit, and a little along its length.
+
+   A transform rather than width/height: those are inline (the bar's span is
+   measured off the rendered table), and a transform scales about the centre, so
+   the bar stays centred on the table's border line as it grows. */
+.bo-editor-col-handle:hover,
+.bo-editor-col-handle.is-active {
+  transform: scale(1.25, 1.8);
+}
+.bo-editor-row-handle:hover,
+.bo-editor-row-handle.is-active {
+  transform: scale(1.8, 1.25);
 }
 
 /* Boundary insert dots: a small grey dot that grows into a purple "+" circle. */
@@ -1126,24 +1144,37 @@
 }
 
 /* Resize handles, shown only on the selected block. Eight of them: four
-   corners and four edge midpoints. */
+   corners and four edge midpoints.
+
+   Each one centres on the selection outline, not on the frame's box edge. The
+   outline is painted outside that edge — `outline-offset` (2px) plus half its
+   own 2px width — so its centre line runs 3px out, and a 9px handle has to
+   start 7.5px out to sit on it. Centring on the box edge instead left every
+   handle floating 3.5px inside the line. */
+$handle-size: 9px;
+/* -(3px + $handle-size * 0.5): outward offset that lands the handle's centre on
+   the outline's centre line. */
+$handle-edge: -7.5px;
+/* -$handle-size * 0.5: centres an edge-midpoint handle on its 50% anchor. */
+$handle-mid: -4.5px;
+
 .bo-editor-handle {
   position: absolute;
-  width: 9px;
-  height: 9px;
+  width: $handle-size;
+  height: $handle-size;
   background: tokens.$white;
   border: 1px solid var(--bp-primary);
   border-radius: 2px;
   z-index: 2;
 }
-.bo-editor-handle.is-nw { top: -5px; left: -5px; cursor: nwse-resize; }
-.bo-editor-handle.is-n  { top: -5px; left: 50%; margin-left: -5px; cursor: ns-resize; }
-.bo-editor-handle.is-ne { top: -5px; right: -5px; cursor: nesw-resize; }
-.bo-editor-handle.is-e  { top: 50%; right: -5px; margin-top: -5px; cursor: ew-resize; }
-.bo-editor-handle.is-se { bottom: -5px; right: -5px; cursor: nwse-resize; }
-.bo-editor-handle.is-s  { bottom: -5px; left: 50%; margin-left: -5px; cursor: ns-resize; }
-.bo-editor-handle.is-sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
-.bo-editor-handle.is-w  { top: 50%; left: -5px; margin-top: -5px; cursor: ew-resize; }
+.bo-editor-handle.is-nw { top: $handle-edge; left: $handle-edge; cursor: nwse-resize; }
+.bo-editor-handle.is-n  { top: $handle-edge; left: 50%; margin-left: $handle-mid; cursor: ns-resize; }
+.bo-editor-handle.is-ne { top: $handle-edge; right: $handle-edge; cursor: nesw-resize; }
+.bo-editor-handle.is-e  { top: 50%; right: $handle-edge; margin-top: $handle-mid; cursor: ew-resize; }
+.bo-editor-handle.is-se { bottom: $handle-edge; right: $handle-edge; cursor: nwse-resize; }
+.bo-editor-handle.is-s  { bottom: $handle-edge; left: 50%; margin-left: $handle-mid; cursor: ns-resize; }
+.bo-editor-handle.is-sw { bottom: $handle-edge; left: $handle-edge; cursor: nesw-resize; }
+.bo-editor-handle.is-w  { top: 50%; left: $handle-edge; margin-top: $handle-mid; cursor: ew-resize; }
 
 /* Front/back/delete, floated above the selected block. */
 /* The selected block's actions, given the page toolbar's floating-surface
@@ -1173,5 +1204,17 @@
   cursor: grab;
 }
 .bo-editor-frame--draggable:active {
+  cursor: grabbing;
+}
+
+/* A table's frame keeps a padding band around the table — the grab area, since
+   a table can be dragged neither by its body (editable cells) nor by the drag
+   handle (its own insert dots and row handles sit in that gutter). 16px clears
+   those dots, which float 12px outside the table's top and left edges. */
+.bo-editor-frame--grab-band {
+  padding: 16px;
+  cursor: grab;
+}
+.bo-editor-frame--grab-band:active {
   cursor: grabbing;
 }
