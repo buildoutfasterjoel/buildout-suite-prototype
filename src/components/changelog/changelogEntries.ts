@@ -117,6 +117,35 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 229,
+    title:
+      "The campaign Recipients tab is a real roster, filterable by what each contact did",
+    mergedAt: "2026-09-14T18:19:29Z",
+    day: "2026-09-14",
+    author: "buildoutfasterjoel",
+    area: "Deals",
+    summary:
+      "A sent campaign showed how it performed but never who it went to — the Recipients tab was a “coming in a future update” placeholder sitting behind a count of several hundred people. It now lists them.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "The Recipients tab lists everyone a campaign reached. Search by name, sort by name, action or date, and click any name to open that contact's record.",
+      },
+      {
+        kind: "feature",
+        text: "A row of filter chips narrows the roster to what each person did — delivered, opened, clicked, replied, bounced, unsubscribed, reported as spam or never sent. Pick more than one, and Clear Selected drops them all.",
+      },
+      {
+        kind: "refinement",
+        text: "Each chip carries its own count, and the counts add up to the number on the tab, so the roster you filter to always reconciles with the one you started from.",
+      },
+      {
+        kind: "feature",
+        text: "Download Recipients Report saves the rows currently in view as a CSV, search and filters included.",
+      },
+    ],
+  },
+  {
     pr: 228,
     title:
       "Table rows and columns can be reordered, and a prefilled cell is editable text with a live field chip",
