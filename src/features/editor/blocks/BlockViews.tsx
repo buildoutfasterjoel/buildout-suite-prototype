@@ -1165,6 +1165,7 @@ function CellView({
   return (
     <td
       className={`bo-editor-cell${selected ? " is-selected" : ""}`}
+      data-cell-id={cell.id}
       onClick={onSelect}
       style={{
         border,

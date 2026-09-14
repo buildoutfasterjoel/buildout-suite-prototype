@@ -130,6 +130,7 @@ export function RichTextToolbar() {
   const sizeInputRef = useRef<HTMLInputElement | null>(null);
 
   const blockId = block?.id;
+  const cellId = cell?.id;
 
   const getActiveEditable = useCallback((): HTMLElement | null => {
     if (typeof document === "undefined") return null;
@@ -142,13 +143,20 @@ export function RichTextToolbar() {
     if (fromSelection) return fromSelection;
 
     if (blockId) {
+      // Scope to the selected CELL when there is one. A table block holds one
+      // contentEditable per cell, so a block-wide query hands back the first
+      // cell whichever one the user actually picked — and since the picker is
+      // a text input, it steals focus and we always land in this branch.
+      const scope = cellId
+        ? `[data-block-id="${blockId}"] [data-cell-id="${cellId}"]`
+        : `[data-block-id="${blockId}"]`;
       const inBlock = document.querySelector<HTMLElement>(
-        `[data-block-id="${blockId}"] [contenteditable="true"]`,
+        `${scope} [contenteditable="true"]`,
       );
       if (inBlock) return inBlock;
     }
     return lastEditableRef.current;
-  }, [blockId]);
+  }, [blockId, cellId]);
 
   const refreshFormat = useCallback(() => {
     // Don't clobber the size field while the user is typing into it.
