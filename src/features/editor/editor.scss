@@ -346,6 +346,15 @@
 .bo-editor-frame--boxed > .bo-editor-block {
   height: 100%;
 }
+/* The frame draws the selection and hover outline on a free page, so the block
+   inside it must not draw a second one — two concentric boxes around one block
+   read as two blocks, and they disagree whenever the block's own size differs
+   from its frame. */
+.bo-editor-frame > .bo-editor-block,
+.bo-editor-frame > .bo-editor-block:hover,
+.bo-editor-frame > .bo-editor-block.is-selected {
+  outline-color: transparent;
+}
 .bo-editor-frame--boxed > .bo-editor-block > img {
   width: 100%;
   height: 100%;
