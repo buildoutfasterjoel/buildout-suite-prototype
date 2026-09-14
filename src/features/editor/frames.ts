@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import type { Block, Rect } from "./types";
+import type { Block, Page, Rect } from "./types";
 import { PAGE_HEIGHT, PAGE_WIDTH } from "./types";
 
 /** Smallest a block can be resized to, so one can't be lost to a stray drag. */
@@ -84,4 +84,70 @@ const FIXED_HEIGHT: Block["type"][] = [
 
 export function frameHeightStyle(type: Block["type"], h: number): CSSProperties {
   return FIXED_HEIGHT.includes(type) ? { height: h } : { minHeight: h };
+}
+
+/**
+ * Turn a stacked page into a free one, given the rects its blocks currently
+ * occupy on screen.
+ *
+ * Containers dissolve, which is what makes them unnecessary once blocks can be
+ * positioned: a `columns` block disappears and its children become top-level
+ * blocks where they already sat. A `section` survives as a plain background
+ * rectangle — its children are promoted to sit *after* it, so they paint in
+ * front of the band that used to contain them. That is what keeps the cover
+ * page's navy title band intact.
+ *
+ * A block with no measurement keeps its content and gets a centered default
+ * rather than being dropped — losing a block to free a page would be the worst
+ * possible trade.
+ */
+export function flattenForFree(
+  page: Page,
+  measured: Record<string, Rect>,
+): { blocks: Block[]; frames: Record<string, Rect> } {
+  const blocks: Block[] = [];
+  const frames: Record<string, Rect> = {};
+
+  const push = (block: Block) => {
+    blocks.push(block);
+    frames[block.id] =
+      clampRect(measured[block.id] ?? frameAt(block.type, PAGE_WIDTH / 2, PAGE_HEIGHT / 2));
+  };
+
+  for (const block of page.blocks) {
+    if (block.type === "columns") {
+      for (const column of block.columns) for (const child of column) push(child);
+    } else if (block.type === "section") {
+      push({ ...block, blocks: [] });
+      for (const child of block.blocks) push(child);
+    } else {
+      push(block);
+    }
+  }
+
+  return { blocks, frames };
+}
+
+/**
+ * Read where every block on a page actually sits. The DOM half of unfreezing —
+ * no logic worth testing, which is why it is separate from `flattenForFree`.
+ *
+ * Divides by zoom because `getBoundingClientRect` reports post-transform pixels
+ * and the model stores page pixels.
+ */
+export function measureFrames(pageEl: HTMLElement, zoom: number): Record<string, Rect> {
+  const page = pageEl.getBoundingClientRect();
+  const out: Record<string, Rect> = {};
+  for (const el of pageEl.querySelectorAll<HTMLElement>("[data-block-id]")) {
+    const id = el.dataset.blockId;
+    if (!id) continue;
+    const r = el.getBoundingClientRect();
+    out[id] = {
+      x: (r.left - page.left) / zoom,
+      y: (r.top - page.top) / zoom,
+      w: r.width / zoom,
+      h: r.height / zoom,
+    };
+  }
+  return out;
 }
