@@ -315,6 +315,16 @@ function validateContainerTarget(
   if (args.containerBlockId === undefined) return null;
 
   const page = doc.pages.find((p) => p.id === args.pageId);
+
+  // A free page's render only walks `page.blocks` (FreeBlock has no concept
+  // of "inside a section"), so a block placed into a container here would
+  // exist in the model with no frame and never draw — and `assignFrame`
+  // would write a frame for a block that isn't in `page.blocks`, exactly the
+  // orphan frame the free-canvas geometry must not accumulate.
+  if (page?.frames) {
+    return `Page "${args.pageId}" is a free canvas; place the block on the page instead.`;
+  }
+
   const container = page?.blocks.find((b) => b.id === args.containerBlockId);
   if (!container || (container.type !== "columns" && container.type !== "section")) {
     return `No section or columns block with id "${args.containerBlockId}" on page "${args.pageId}".`;

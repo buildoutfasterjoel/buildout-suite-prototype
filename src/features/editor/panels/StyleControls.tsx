@@ -187,6 +187,12 @@ const BORDER_STYLES: BorderStyle[] = ["none", "solid", "dashed", "dotted"];
 function MapStyleControls({ block }: { block: MapBlock }) {
   const updateMapBlock = useEditorStore((s) => s.updateMapBlock);
   const maxZoom = Math.min(MAP_ZOOM_MAX, mapStyleDef(block.mapStyle).maxZoom);
+  // On a free page the frame owns the block's height, so the size preset and
+  // the frame would fight over it. The stored value is left untouched — the
+  // block must still render correctly if it ends up back on a stacked page.
+  const pageIsFree = useEditorStore(
+    (s) => s.document.pages.find((p) => p.id === s.selection?.pageId)?.frames !== undefined,
+  );
 
   return (
     <div className="d-flex flex-column gap-4">
@@ -214,13 +220,15 @@ function MapStyleControls({ block }: { block: MapBlock }) {
             onChange={(zoom) => updateMapBlock(block.id, { zoom })}
           />
         </EditorOption>
-        <EditorOption label="Size">
-          <ToggleButtonGroup
-            items={MAP_SIZE_ITEMS}
-            active={[block.size]}
-            onToggle={(size) => updateMapBlock(block.id, { size })}
-          />
-        </EditorOption>
+        {!pageIsFree && (
+          <EditorOption label="Size">
+            <ToggleButtonGroup
+              items={MAP_SIZE_ITEMS}
+              active={[block.size]}
+              onToggle={(size) => updateMapBlock(block.id, { size })}
+            />
+          </EditorOption>
+        )}
         <p className="fs-small mb-0" style={{ color: "#506079" }}>
           Centered on the deal's address — the map follows the listing this
           document is bound to.

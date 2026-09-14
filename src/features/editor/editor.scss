@@ -263,6 +263,7 @@
 }
 
 .bo-editor-page {
+  position: relative;
   background: tokens.$white;
   box-shadow: tokens.$shadow-base;
   display: flex;
@@ -289,6 +290,13 @@
   justify-content: space-between;
   gap: tokens.$spacing-4;
   margin: 0 40px;
+  // Overrides the shorthand's top value above. On the stacked path the
+  // content column's `flex: 1 0 0` already pushes the footer to the bottom,
+  // so `auto` never has anything to push against there. On a free page the
+  // content is `position: absolute` and takes no flex space, leaving the
+  // footer with nothing to sit against but the header — `auto` is what
+  // carries it back down to the bottom of the sheet.
+  margin-top: auto;
   padding: 10px 0 22px;
   border-top: 1px solid tokens.$root-border-color;
   font-size: 9px;
@@ -296,6 +304,62 @@
   letter-spacing: 0.7px;
   text-transform: uppercase;
   color: tokens.$body-text-muted;
+}
+
+/* A free page's blocks are placed in page coordinates over the whole sheet,
+   including the logo header and footer, so the layer covers the page rather
+   than sitting in the flex flow. */
+.bo-editor-free-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.bo-editor-frame {
+  outline: 1px solid transparent;
+  outline-offset: 2px;
+  transition: outline-color motion.$short2 ease;
+}
+.bo-editor-frame:hover {
+  outline-color: tokens.$buildout-blue-300;
+}
+.bo-editor-frame.is-selected {
+  outline: 2px solid var(--bp-primary);
+}
+/* "Located" from the Layers panel gets the same dashed treatment as the
+   stacked path (.bo-editor-sortable.is-located), so a locate stays visually
+   distinct from a click-selection here too. */
+.bo-editor-frame.is-located {
+  outline: 2px dashed var(--bp-primary);
+  outline-offset: 3px;
+}
+/* A text-bearing frame (heading/text/list/table) has no body-drag affordance
+   — it falls back to the drag handle, which is only ever revealed by a
+   `.bo-editor-sortable` hover on the stacked path. `.bo-editor-frame` isn't
+   that class, so without this the handle stayed invisible at opacity 0. */
+.bo-editor-frame:hover > .bo-editor-drag-handle {
+  opacity: 1;
+}
+
+/* A fixed-height type's frame is a hard box (see FIXED_HEIGHT in frames.ts) —
+   its block visual has to fill that box rather than sitting at its own
+   intrinsic size, and a photo has to cover it rather than letterbox. */
+.bo-editor-frame--boxed > .bo-editor-block {
+  height: 100%;
+}
+/* The frame draws the selection and hover outline on a free page, so the block
+   inside it must not draw a second one — two concentric boxes around one block
+   read as two blocks, and they disagree whenever the block's own size differs
+   from its frame. */
+.bo-editor-frame > .bo-editor-block,
+.bo-editor-frame > .bo-editor-block:hover,
+.bo-editor-frame > .bo-editor-block.is-selected {
+  outline-color: transparent;
+}
+.bo-editor-frame--boxed > .bo-editor-block > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 /* ---- Selectable blocks ---- */
@@ -1059,4 +1123,55 @@
 .bo-editor-pages-row-gap-hit:hover .bo-editor-pages-row-gap-line,
 .bo-editor-pages-row-gap-hit:hover .bo-editor-pages-row-gap-btn {
   transition-delay: motion.$medium3;
+}
+
+/* Resize handles, shown only on the selected block. Eight of them: four
+   corners and four edge midpoints. */
+.bo-editor-handle {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  background: tokens.$white;
+  border: 1px solid var(--bp-primary);
+  border-radius: 2px;
+  z-index: 2;
+}
+.bo-editor-handle.is-nw { top: -5px; left: -5px; cursor: nwse-resize; }
+.bo-editor-handle.is-n  { top: -5px; left: 50%; margin-left: -5px; cursor: ns-resize; }
+.bo-editor-handle.is-ne { top: -5px; right: -5px; cursor: nesw-resize; }
+.bo-editor-handle.is-e  { top: 50%; right: -5px; margin-top: -5px; cursor: ew-resize; }
+.bo-editor-handle.is-se { bottom: -5px; right: -5px; cursor: nwse-resize; }
+.bo-editor-handle.is-s  { bottom: -5px; left: 50%; margin-left: -5px; cursor: ns-resize; }
+.bo-editor-handle.is-sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
+.bo-editor-handle.is-w  { top: 50%; left: -5px; margin-top: -5px; cursor: ew-resize; }
+
+/* Front/back/delete, floated above the selected block. */
+/* The selected block's actions, given the page toolbar's floating-surface
+   treatment — one tray rather than three separate chips — over Blueprint's
+   accent surface, the same tint its accent ghost buttons sit on. The buttons
+   inside are Blueprint's, so they bring their own sizing and states. */
+.bo-editor-frame-actions {
+  position: absolute;
+  top: -36px;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: tokens.$buildout-blue-50;
+  border: 1px solid tokens.$buildout-blue-100;
+  box-shadow: tokens.$shadow-base;
+  z-index: 3;
+}
+
+/* A body-draggable block (image, map, divider, spacer, section, contents)
+   shows a grab cursor over its whole box — the only affordance telling a
+   broker it can be picked up anywhere. Text-bearing frames don't get this
+   class, so they keep their normal text cursor over the body. */
+.bo-editor-frame--draggable {
+  cursor: grab;
+}
+.bo-editor-frame--draggable:active {
+  cursor: grabbing;
 }

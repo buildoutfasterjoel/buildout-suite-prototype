@@ -83,7 +83,7 @@ describe("readPage", () => {
     // answers for every other one, so the two must agree: flat `children`
     // carrying `columnIndex`, plus `columnCount` so an empty column is
     // visible rather than an out-of-range surprise.
-    const pageId = blankPageId();
+    const pageId = stackedPageId();
     const columns = addBlock({ pageId, type: "columns" }) as { blockId: string };
     const child = addBlock({
       pageId,
@@ -378,6 +378,16 @@ function blankPageId(): string {
   return result.pageId;
 }
 
+/**
+ * A stacked (non-free-canvas) page — every `blankPageId()` page has an empty
+ * `frames: {}`, which is itself a free canvas (see `buildBlankPage`), so
+ * container placement (`containerBlockId`/`columnIndex`) has to be exercised
+ * against a page with no `frames` map instead.
+ */
+function stackedPageId(): string {
+  return firstPage().id;
+}
+
 describe("addBlock", () => {
   it("inserts a block at the requested index", () => {
     const pageId = blankPageId();
@@ -498,6 +508,23 @@ describe("addBlock", () => {
     expect(result).toEqual({ error: expect.stringContaining("container") });
   });
 
+  it("refuses placing a block into a container on a free-canvas page", () => {
+    // A free page's render only walks `page.blocks` — a block inserted into a
+    // section's own `blocks` array would exist in the model but never draw,
+    // and nothing would ever assign it a frame. `blankPageId()` pages are
+    // free canvases from creation (empty `frames: {}`), so this is reachable
+    // the moment a section sits on one.
+    const pageId = blankPageId();
+    const section = addBlock({ pageId, type: "section" }) as { blockId: string };
+
+    const result = addBlock({ pageId, type: "text", containerBlockId: section.blockId });
+
+    expect(result).toEqual({ error: expect.stringContaining("free canvas") });
+    const page = doc().pages.find((p) => p.id === pageId)!;
+    const sectionBlock = page.blocks.find((b) => b.id === section.blockId) as SectionBlock;
+    expect(sectionBlock.blocks).toHaveLength(0);
+  });
+
   it("errors for an unknown page id", () => {
     expect(addBlock({ pageId: "nope", type: "text" })).toEqual({
       error: expect.stringContaining("nope"),
@@ -540,7 +567,7 @@ describe("removeBlock", () => {
     // Removing a section takes its whole subtree. With no undo, a bare
     // `{ ok: true }` would let Otto confirm a deletion far larger than the
     // one the broker asked for.
-    const pageId = blankPageId();
+    const pageId = stackedPageId();
     const section = addBlock({ pageId, type: "section" }) as { blockId: string };
     addBlock({ pageId, type: "text", containerBlockId: section.blockId });
     addBlock({ pageId, type: "heading", containerBlockId: section.blockId });
@@ -601,7 +628,7 @@ describe("moveBlock", () => {
   });
 
   it("moves a block into a section block", () => {
-    const pageId = blankPageId();
+    const pageId = stackedPageId();
     const page = () => doc().pages.find((p) => p.id === pageId)!;
     const section = addBlock({ pageId, type: "section" }) as { blockId: string };
     const text = addBlock({ pageId, type: "text" }) as { blockId: string };
@@ -620,7 +647,7 @@ describe("moveBlock", () => {
   });
 
   it("refuses a bogus containerBlockId, leaving the block in place", () => {
-    const pageId = blankPageId();
+    const pageId = stackedPageId();
     const added = addBlock({ pageId, type: "text" }) as { blockId: string };
 
     const result = moveBlock({
@@ -635,7 +662,7 @@ describe("moveBlock", () => {
   });
 
   it("refuses an out-of-range columnIndex, leaving the block in place", () => {
-    const pageId = blankPageId();
+    const pageId = stackedPageId();
     const columns = addBlock({ pageId, type: "columns" }) as { blockId: string };
     const added = addBlock({ pageId, type: "text" }) as { blockId: string };
 
@@ -656,7 +683,7 @@ describe("moveBlock", () => {
     // its old spot unconditionally, then reinserts by `ci === columnIndex`,
     // which a fractional index never matches — the block would vanish rather
     // than error if this weren't caught first.
-    const pageId = blankPageId();
+    const pageId = stackedPageId();
     const columns = addBlock({ pageId, type: "columns" }) as { blockId: string };
     const added = addBlock({ pageId, type: "text" }) as { blockId: string };
 
@@ -670,6 +697,25 @@ describe("moveBlock", () => {
 
     expect(result).toEqual({ error: expect.stringContaining("1.5") });
     expect(findBlock(doc(), added.blockId)).not.toBeNull();
+  });
+
+  it("refuses moving a block into a container on a free-canvas page", () => {
+    const pageId = blankPageId();
+    const section = addBlock({ pageId, type: "section" }) as { blockId: string };
+    const added = addBlock({ pageId, type: "text" }) as { blockId: string };
+
+    const result = moveBlock({
+      blockId: added.blockId,
+      pageId,
+      index: 0,
+      containerBlockId: section.blockId,
+    });
+
+    expect(result).toEqual({ error: expect.stringContaining("free canvas") });
+    const page = doc().pages.find((p) => p.id === pageId)!;
+    expect(page.blocks.some((b) => b.id === added.blockId)).toBe(true);
+    const sectionBlock = page.blocks.find((b) => b.id === section.blockId) as SectionBlock;
+    expect(sectionBlock.blocks).toHaveLength(0);
   });
 
   it("refuses moving a container block into another container", () => {

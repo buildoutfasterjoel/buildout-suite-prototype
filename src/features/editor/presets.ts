@@ -88,6 +88,55 @@ export function buildGeneratedDocumentPages(
 }
 
 /**
+ * The one free-form page in the sample document. Every other page is a locked
+ * template, so without this the editor opens with nothing to drag and the
+ * feature is invisible.
+ *
+ * Deliberately an overlapping layout — a title band sitting over the hero photo
+ * — because that is the thing the stacked layout could not express at all.
+ */
+function buildFreeFormPage(property: Property | undefined): Page {
+  // Requested at the photo frame's own size (below) — an image block covers
+  // its box (see the `.bo-editor-frame--boxed` rule in editor.scss), but
+  // covering still upscales a source narrower than the frame, so asking for
+  // it directly keeps the seeded photo sharp.
+  const photo = heroImage("editor-free-form", 816, 520);
+  const band: Block = {
+    id: uid("block"),
+    type: "section",
+    padding: 24,
+    background: "rgba(18, 38, 63, 0.85)",
+    blocks: [],
+  };
+  const title: Block = {
+    id: uid("block"),
+    type: "heading",
+    text: "Investment Highlights",
+    style: { ...headingStyle, color: "#ffffff" },
+  };
+  const address: Block = {
+    id: uid("block"),
+    type: "text",
+    text: addressOf(property),
+    style: { ...addressStyle, color: "#ffffff" },
+  };
+
+  return {
+    id: uid("page"),
+    name: "Investment Highlights",
+    logoSrc: LOGO_SRC,
+    locked: false,
+    blocks: [photo, band, title, address],
+    frames: {
+      [photo.id]: { x: 0, y: 0, w: 816, h: 520 },
+      [band.id]: { x: 48, y: 360, w: 520, h: 132 },
+      [title.id]: { x: 72, y: 384, w: 472, h: 48 },
+      [address.id]: { x: 72, y: 436, w: 472, h: 32 },
+    },
+  };
+}
+
+/**
  * The sample "Proposal" document's page list — a 14-page CRE offering
  * memorandum: a cover, a table of contents, then one page per section of a real
  * proposal (property, location, financials, comps, demographics, the team).
@@ -117,12 +166,7 @@ export function buildDocumentPages(
     ...buildUnderwritingSection(property, underwriting),
     propertySummary,
     buildPropertyDescriptionPage(property),
-    buildStubPage(property, {
-      name: "Complete Highlights",
-      seed: "editor-highlights",
-      dynamicKey: "buildingSqFt",
-      dynamicLabel: "Building Size",
-    }),
+    buildFreeFormPage(property),
     // Keeps the section name the document's contents already advertises.
     withPageIdentity(buildPhotoGalleryPage(property), "Additional Photos"),
     // Keeps the section name the document's contents already advertises.

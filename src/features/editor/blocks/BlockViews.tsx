@@ -334,7 +334,12 @@ function ContentsBlockView({ block, pageId, selection }: { block: ContentsBlock 
  * The center is derived from the property rather than stored, so the map follows
  * the document's binding instead of having to be re-pointed by hand.
  */
-function MapBlockView({ block, pageId, selection }: { block: MapBlock } & VisualProps) {
+function MapBlockView({
+  block,
+  pageId,
+  selection,
+  freeLayer,
+}: { block: MapBlock; freeLayer?: boolean } & VisualProps) {
   const { selected, onClick } = useBlockSelect(block.id, pageId, selection);
   const { property } = useDocumentData();
 
@@ -352,13 +357,18 @@ function MapBlockView({ block, pageId, selection }: { block: MapBlock } & Visual
 
   return (
     <div
-      className={`bo-editor-block bo-editor-map${height === null ? " is-full" : ""}${selected ? " is-selected" : ""}`}
+      className={`bo-editor-block bo-editor-map${height === null && !freeLayer ? " is-full" : ""}${selected ? " is-selected" : ""}`}
       onClick={onClick}
       style={{
-        height: height ?? undefined,
+        // On a free page the frame owns the box, and an inline height here
+        // would beat the rule that makes the block fill it — leaving the map
+        // at its preset size while the resize handles sit on the frame around
+        // it. The `size` preset is left stored, so the block still renders
+        // correctly if it ends up back on a stacked page.
+        height: freeLayer ? undefined : height ?? undefined,
         // `full` takes its height from the page instead: the `.is-full` rule in
         // editor.scss grows the sortable wrapper, which is the actual flex item.
-        minHeight: height ?? 200,
+        minHeight: freeLayer ? undefined : height ?? 200,
         border: framed
           ? `${block.borderWidth}px ${block.borderStyle} ${block.borderColor ?? "transparent"}`
           : undefined,
@@ -375,13 +385,14 @@ function MapBlockView({ block, pageId, selection }: { block: MapBlock } & Visual
   );
 }
 
-function BlockVisual({
+export function BlockVisual({
   block,
   pageId,
   selection,
   locked,
   index,
-}: { block: Block; index: number } & VisualProps) {
+  freeLayer,
+}: { block: Block; index: number; freeLayer?: boolean } & VisualProps) {
   switch (block.type) {
     case "heading":
       return <HeadingBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
@@ -391,16 +402,39 @@ function BlockVisual({
       return <TableBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "image":
       return (
-        <ImageBlockView block={block} pageId={pageId} selection={selection} locked={locked} index={index} />
+        <ImageBlockView
+          block={block}
+          pageId={pageId}
+          selection={selection}
+          locked={locked}
+          index={index}
+          freeLayer={freeLayer}
+        />
       );
     case "list":
       return <ListBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "contents":
       return <ContentsBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "map":
-      return <MapBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
+      return (
+        <MapBlockView
+          block={block}
+          pageId={pageId}
+          selection={selection}
+          locked={locked}
+          freeLayer={freeLayer}
+        />
+      );
     case "spacer":
-      return <SpacerBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
+      return (
+        <SpacerBlockView
+          block={block}
+          pageId={pageId}
+          selection={selection}
+          locked={locked}
+          freeLayer={freeLayer}
+        />
+      );
     case "divider":
       return <DividerBlockView block={block} pageId={pageId} selection={selection} locked={locked} />;
     case "columns":
@@ -458,13 +492,25 @@ function TextBlockView({ block, pageId, selection }: { block: TextBlock } & Visu
   );
 }
 
-function ImageBlockView({ block, pageId, selection, index }: { block: ImageBlock; index: number } & VisualProps) {
+function ImageBlockView({
+  block,
+  pageId,
+  selection,
+  index,
+  freeLayer,
+}: { block: ImageBlock; index: number; freeLayer?: boolean } & VisualProps) {
   const { selected, onClick } = useBlockSelect(block.id, pageId, selection);
+  // `fullBleed`'s negative margins cancel the stacked page's content padding
+  // so a cover photo reaches the paper's edge. A free-page frame already has
+  // its own explicit width/position (and `--boxed` fills it with `object-fit:
+  // cover`), so the same margins would just make the image spill past its
+  // frame instead — skip them here.
+  const style = freeLayer ? {} : fullBleedStyle(block.fullBleed, index === 0);
   return (
     <div
       className={`bo-editor-block${selected ? " is-selected" : ""}`}
       onClick={onClick}
-      style={fullBleedStyle(block.fullBleed, index === 0)}
+      style={style}
     >
       <img
         src={block.src}
@@ -475,13 +521,20 @@ function ImageBlockView({ block, pageId, selection, index }: { block: ImageBlock
   );
 }
 
-function SpacerBlockView({ block, pageId, selection }: { block: SpacerBlock } & VisualProps) {
+function SpacerBlockView({
+  block,
+  pageId,
+  selection,
+  freeLayer,
+}: { block: SpacerBlock; freeLayer?: boolean } & VisualProps) {
   const { selected, onClick } = useBlockSelect(block.id, pageId, selection);
   return (
     <div
       className={`bo-editor-block bo-editor-spacer${selected ? " is-selected" : ""}`}
       onClick={onClick}
-      style={{ height: block.height }}
+      // Same rule as the map: inside a frame the frame's height wins, so the
+      // block's own height must not be set inline.
+      style={{ height: freeLayer ? undefined : block.height }}
     >
       {selected && <span className="bo-editor-spacer-label">Spacer · {block.height}px</span>}
     </div>

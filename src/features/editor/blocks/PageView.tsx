@@ -6,6 +6,7 @@ import {
   faBolt,
   faArrowRotateLeft,
   faSwatchbook,
+  faLockOpen,
 } from "@fortawesome/pro-regular-svg-icons";
 import { Popover } from "@buildoutinc/blueprint-react/ui/Popover";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
@@ -16,6 +17,8 @@ import { useWorkspaceRef } from "../workspaceContext";
 import { BRAND } from "../brand";
 import { PAGE_WIDTH, PAGE_HEIGHT, PAGE_PADDING, type Page, type Selection } from "../types";
 import { BlockList } from "./BlockViews";
+import { FreeBlock } from "./FreeBlock";
+import { frameAt, measurePageElement } from "../frames";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 
 /** Icon button + tooltip shown in the page toolbar popover. */
@@ -50,8 +53,24 @@ function PageToolbarButton({
  * editor's toolbars instead of floating over them. The popup still sits outside
  * the zoom-transformed page stack, so its buttons stay full size at any zoom.
  */
-function PageToolbar({ page, open }: { page: Page; open: boolean }) {
+function PageToolbar({
+  page,
+  open,
+}: {
+  page: Page;
+  open: boolean;
+}) {
   const workspaceRef = useWorkspaceRef();
+  const zoom = useEditorStore((s) => s.zoom);
+  const freePage = useEditorStore((s) => s.freePage);
+
+  // Measuring is the whole conversion: the rects come off the page as it is
+  // rendered right now, so the page cannot move when it is unfrozen.
+  const unfreeze = () => {
+    const measured = measurePageElement(page.id, zoom);
+    if (!measured) return;
+    freePage(page.id, measured);
+  };
 
   return (
     <Popover open={open}>
@@ -113,6 +132,22 @@ function PageToolbar({ page, open }: { page: Page; open: boolean }) {
             className="align-self-stretch h-auto"
           />
           <div className="d-flex gap-0-5 align-items-center">
+            {!page.frames && (
+              <Tooltip>
+                <Tooltip.Trigger
+                  render={
+                    <Button variant="ghost" size="sm" onClick={unfreeze}>
+                      <FontAwesomeIcon icon={faLockOpen} />
+                      Unfreeze layout
+                    </Button>
+                  }
+                />
+                <Tooltip.Content side="top">
+                  Turn this page into a free canvas. Blocks keep their exact
+                  positions and become movable.
+                </Tooltip.Content>
+              </Tooltip>
+            )}
             <PageToolbarButton icon={faSliders} label="Page Options" />
             <PageToolbarButton
               icon={faMapLocationDot}
@@ -143,6 +178,25 @@ function PageFooter({ pageNumber }: { pageNumber: number }) {
       <span>{pageNumber}</span>
     </div>
   );
+}
+
+/**
+ * Render a free page's blocks in a stable DOM order, carrying their paint order
+ * as a depth number instead.
+ *
+ * `page.blocks` order IS the paint order, but rendering in that order makes
+ * React move DOM nodes whenever a block is sent to the back or brought to the
+ * front. Moving a node detaches it, and a block that owns a live widget does
+ * not survive that: Leaflet loses its container, and the *second* reorder of a
+ * map threw inside Leaflet and blanked the whole document through the route's
+ * error boundary. Sorting by id keeps every node where it is for the lifetime
+ * of the page, so reordering only rewrites a `z-index` — nothing is detached,
+ * and no block can be broken by being restacked.
+ */
+function paintOrder(blocks: Page["blocks"]): { block: Page["blocks"][number]; depth: number }[] {
+  return blocks
+    .map((block, depth) => ({ block, depth }))
+    .sort((a, b) => (a.block.id < b.block.id ? -1 : a.block.id > b.block.id ? 1 : 0));
 }
 
 /** A single fixed-size page (US Letter) rendering its block stack. */
@@ -186,23 +240,40 @@ export function PageView({
           </div>
         )}
 
-        <div
-          className="d-flex flex-column"
-          style={{
-            gap: bleed ? 0 : 32,
-            padding: bleed ? 0 : PAGE_PADDING,
-            flex: "1 0 0",
-            minHeight: 0,
-          }}
-        >
-          <BlockList
-            blocks={page.blocks}
-            pageId={page.id}
-            list={{ kind: "page", pageId: page.id }}
-            selection={pageSelection}
-            locked={page.locked ?? false}
-          />
-        </div>
+        {page.frames ? (
+          // A free page owns the whole sheet: blocks sit in page coordinates,
+          // over the chrome if that is where they were put.
+          <div className="bo-editor-free-layer">
+            {paintOrder(page.blocks).map(({ block, depth }) => (
+              <FreeBlock
+                key={block.id}
+                block={block}
+                pageId={page.id}
+                frame={page.frames![block.id] ?? frameAt(block.type, PAGE_WIDTH / 2, 120)}
+                selection={pageSelection}
+                depth={depth}
+              />
+            ))}
+          </div>
+        ) : (
+          <div
+            className="d-flex flex-column"
+            style={{
+              gap: bleed ? 0 : 32,
+              padding: bleed ? 0 : PAGE_PADDING,
+              flex: "1 0 0",
+              minHeight: 0,
+            }}
+          >
+            <BlockList
+              blocks={page.blocks}
+              pageId={page.id}
+              list={{ kind: "page", pageId: page.id }}
+              selection={pageSelection}
+              locked={page.locked ?? false}
+            />
+          </div>
+        )}
 
         {chrome && <PageFooter pageNumber={pageNumber} />}
       </div>

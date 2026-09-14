@@ -12,6 +12,7 @@ import {
   faPlus,
   faGripDotsVertical,
   faLock,
+  faLockOpen,
   faPencil,
   faTrashCan,
   faMagnifyingGlass,
@@ -31,6 +32,7 @@ import type { Block, ContentBlock, Page } from "../types";
 import { BLOCK_ICONS, blockLabel } from "../blocks/blockMeta";
 import type { BlockVariant } from "../blocks/blockFactory";
 import { pageHasDynamicContent } from "../tree";
+import { measurePageElement } from "../frames";
 import { TemplateGallery } from "./TemplateGallery";
 import { CRE_PHOTO_IDS, crePhotoUrl } from "#/components/properties/propertyDisplay";
 
@@ -543,7 +545,20 @@ export function LayersPanel() {
   const activePageId = useEditorStore((s) => s.activePageId);
   const setActivePageId = useEditorStore((s) => s.setActivePageId);
   const requestPageScroll = useEditorStore((s) => s.requestPageScroll);
+  const zoom = useEditorStore((s) => s.zoom);
+  const freePage = useEditorStore((s) => s.freePage);
   const page = pages.find((p) => p.id === activePageId) ?? pages[0];
+
+  // Same conversion the page toolbar's own Unfreeze button performs — see
+  // `measurePageElement`. This is the only reachable path on a page whose
+  // blocks tile the whole sheet, since there's no blank space left to click
+  // to open that toolbar.
+  const unfreeze = () => {
+    if (!page) return;
+    const measured = measurePageElement(page.id, zoom);
+    if (!measured) return;
+    freePage(page.id, measured);
+  };
 
   // Sets the scope immediately (so the picker's own value updates without
   // waiting for a smooth scroll to finish) and asks the Canvas to scroll —
@@ -578,6 +593,19 @@ export function LayersPanel() {
         >
           <FontAwesomeIcon icon={faLock} />
           Fixed layout — content editable
+        </span>
+      )}
+
+      {page && !page.frames && (
+        <Button variant="secondary" size="sm" className="w-100" onClick={unfreeze}>
+          <FontAwesomeIcon icon={faLockOpen} />
+          Unfreeze layout
+        </Button>
+      )}
+
+      {page?.frames && (
+        <span className="fs-small" style={{ color: "#506079" }}>
+          Listed back to front — the last row is on top.
         </span>
       )}
 
@@ -632,40 +660,17 @@ const CONTENT_BLOCKS: PaletteEntry[] = [
     label: "Map",
     desc: "Map of the deal's address",
   },
-];
-
-const LAYOUT_BLOCKS: PaletteEntry[] = [
-  {
-    type: "columns",
-    variant: { columnCount: 2 },
-    icon: BLOCK_ICONS.columns,
-    label: "2 Columns",
-    desc: "Two side-by-side drop zones",
-  },
-  {
-    type: "columns",
-    variant: { columnCount: 3 },
-    icon: BLOCK_ICONS.columns,
-    label: "3 Columns",
-    desc: "Three side-by-side drop zones",
-  },
-  {
-    type: "section",
-    icon: BLOCK_ICONS.section,
-    label: "Section",
-    desc: "Padded container",
-  },
-  {
-    type: "spacer",
-    icon: BLOCK_ICONS.spacer,
-    label: "Spacer",
-    desc: "Vertical gap",
-  },
   {
     type: "divider",
     icon: BLOCK_ICONS.divider,
     label: "Divider",
     desc: "Horizontal rule",
+  },
+  {
+    type: "section",
+    icon: BLOCK_ICONS.section,
+    label: "Box",
+    desc: "Colored rectangle to sit behind content",
   },
 ];
 
@@ -721,19 +726,11 @@ export function BlocksPanel() {
     <div className="d-flex flex-column gap-3">
       <PanelHeading>Blocks</PanelHeading>
       <span className="fs-small" style={{ color: "#506079" }}>
-        Drag a block onto the page to add it.
+        Drag a block onto the page to place it.
       </span>
 
-      <span className="bo-editor-subsection-title">Content</span>
       <div className="d-flex flex-column gap-2">
         {CONTENT_BLOCKS.map((b) => (
-          <PaletteItem key={paletteId(b)} entry={b} />
-        ))}
-      </div>
-
-      <span className="bo-editor-subsection-title">Layout</span>
-      <div className="d-flex flex-column gap-2">
-        {LAYOUT_BLOCKS.map((b) => (
           <PaletteItem key={paletteId(b)} entry={b} />
         ))}
       </div>

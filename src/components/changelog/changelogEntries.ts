@@ -117,6 +117,47 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 230,
+    title:
+      "Blocks on a document page can be placed and resized anywhere, and a template page can be unfrozen into a free canvas",
+    mergedAt: "2026-09-14T21:34:28Z",
+    day: "2026-09-14",
+    author: "buildoutfasterjoel",
+    area: "Documents",
+    summary:
+      "A document page stacked its blocks in one column, so putting two things side by side meant reaching for a Columns block and dropping content into it. Blocks are now placed and sized directly, the way the production editor works — which is what makes those layout blocks unnecessary.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "Drag a block anywhere on the page and resize it from any of its eight handles. Blocks may overlap, and each one can be brought to the front or sent to the back.",
+      },
+      {
+        kind: "feature",
+        text: "Unfreeze layout turns a template page into a free canvas without moving anything — it measures where each block already sits and keeps it there, so the page looks identical the moment after.",
+      },
+      {
+        kind: "feature",
+        text: "Dragging a block out of the palette drops it where you release the pointer, at a sensible starting size for its type.",
+      },
+      {
+        kind: "refinement",
+        text: "The Blocks palette is a single list. Columns and Spacer are gone, Divider moved in beside the other content, and Box is there for the colored rectangle you put behind text.",
+      },
+      {
+        kind: "refinement",
+        text: "The selected block's Bring to front, Send to back and Delete buttons sit together in one floating tray above it.",
+      },
+      {
+        kind: "fix",
+        text: "A map or photo now fills the box you resize it to, instead of keeping its own size while the handles moved without it.",
+      },
+      {
+        kind: "fix",
+        text: "Restacking a map no longer blanks the document, and a drag released outside the browser window is still recorded instead of being silently lost.",
+      },
+    ],
+  },
+  {
     pr: 229,
     title:
       "The campaign Recipients tab is a real roster, filterable by what each contact did",

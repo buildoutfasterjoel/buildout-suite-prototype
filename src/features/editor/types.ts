@@ -286,6 +286,17 @@ export interface Page {
    * the paper's edge.
    */
   bleed?: boolean;
+  /**
+   * Geometry for a free-canvas page, keyed by block id. Its presence is what
+   * makes the page free: blocks are absolutely positioned and `blocks` order
+   * becomes paint order (first = back, last = front) rather than reading order.
+   * Absent = the stacked layout every template page still uses.
+   *
+   * Kept as one map on the page rather than a `rect` field on each of the eleven
+   * block interfaces, so blocks stay portable between the two layouts and
+   * `blockFactory` never has to know where a block will land.
+   */
+  frames?: Record<string, Rect>;
   blocks: Block[];
 }
 
@@ -303,6 +314,18 @@ export interface Selection {
   pageId: string;
   blockId?: string;
   cellId?: string;
+}
+
+/**
+ * A block's box on a free page, in page space — origin at the top-left of the
+ * sheet, before `PAGE_PADDING`, so a block can sit over the logo header or the
+ * footer.
+ */
+export interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 }
 
 /** US Letter at 96dpi — the fixed page size for the prototype. */
