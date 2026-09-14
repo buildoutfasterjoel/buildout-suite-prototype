@@ -1147,9 +1147,9 @@
 
 /* Front/back/delete, floated above the selected block. */
 /* The selected block's actions, given the page toolbar's floating-surface
-   treatment — one tray rather than three separate chips — over a subtle accent
-   tint that ties it to the selection outline it belongs to. The buttons inside
-   are Blueprint's, so they bring their own sizing and states. */
+   treatment — one tray rather than three separate chips — over Blueprint's
+   accent surface, the same tint its accent ghost buttons sit on. The buttons
+   inside are Blueprint's, so they bring their own sizing and states. */
 .bo-editor-frame-actions {
   position: absolute;
   top: -36px;
@@ -1159,8 +1159,8 @@
   gap: 2px;
   padding: 2px;
   border-radius: 8px;
-  background: rgba(var(--bp-primary-rgb), 0.08);
-  border: 1px solid rgba(var(--bp-primary-rgb), 0.16);
+  background: tokens.$buildout-blue-50;
+  border: 1px solid tokens.$buildout-blue-100;
   box-shadow: tokens.$shadow-base;
   z-index: 3;
 }
