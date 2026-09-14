@@ -7,6 +7,7 @@ import {
   faBolt,
   faArrowRotateLeft,
   faSwatchbook,
+  faLockOpen,
 } from "@fortawesome/pro-regular-svg-icons";
 import { Popover } from "@buildoutinc/blueprint-react/ui/Popover";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
@@ -18,7 +19,7 @@ import { BRAND } from "../brand";
 import { PAGE_WIDTH, PAGE_HEIGHT, PAGE_PADDING, type Page, type Selection } from "../types";
 import { BlockList } from "./BlockViews";
 import { FreeBlock } from "./FreeBlock";
-import { frameAt } from "../frames";
+import { frameAt, measureFrames } from "../frames";
 import { Badge } from "@buildoutinc/blueprint-react/ui/Badge";
 
 /** Icon button + tooltip shown in the page toolbar popover. */
@@ -53,8 +54,26 @@ function PageToolbarButton({
  * editor's toolbars instead of floating over them. The popup still sits outside
  * the zoom-transformed page stack, so its buttons stay full size at any zoom.
  */
-function PageToolbar({ page, open }: { page: Page; open: boolean }) {
+function PageToolbar({
+  page,
+  open,
+  pageRef,
+}: {
+  page: Page;
+  open: boolean;
+  pageRef: React.RefObject<HTMLDivElement | null>;
+}) {
   const workspaceRef = useWorkspaceRef();
+  const zoom = useEditorStore((s) => s.zoom);
+  const freePage = useEditorStore((s) => s.freePage);
+
+  // Measuring is the whole conversion: the rects come off the page as it is
+  // rendered right now, so the page cannot move when it is unfrozen.
+  const unfreeze = () => {
+    const el = pageRef.current;
+    if (!el) return;
+    freePage(page.id, measureFrames(el, zoom));
+  };
 
   return (
     <Popover open={open}>
@@ -116,6 +135,22 @@ function PageToolbar({ page, open }: { page: Page; open: boolean }) {
             className="align-self-stretch h-auto"
           />
           <div className="d-flex gap-0-5 align-items-center">
+            {!page.frames && (
+              <Tooltip>
+                <Tooltip.Trigger
+                  render={
+                    <Button variant="ghost" size="sm" onClick={unfreeze}>
+                      <FontAwesomeIcon icon={faLockOpen} />
+                      Unfreeze layout
+                    </Button>
+                  }
+                />
+                <Tooltip.Content side="top">
+                  Turn this page into a free canvas. Blocks keep their exact
+                  positions and become movable.
+                </Tooltip.Content>
+              </Tooltip>
+            )}
             <PageToolbarButton icon={faSliders} label="Page Options" />
             <PageToolbarButton
               icon={faMapLocationDot}
@@ -227,7 +262,7 @@ export function PageView({
 
         {chrome && <PageFooter pageNumber={pageNumber} />}
       </div>
-      <PageToolbar page={page} open={pageSelected} />
+      <PageToolbar page={page} open={pageSelected} pageRef={pageRef} />
     </div>
   );
 }
