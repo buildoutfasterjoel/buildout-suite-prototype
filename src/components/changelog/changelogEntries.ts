@@ -117,6 +117,35 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 227,
+    title:
+      "The Web Activity log records what a visitor did, and a named row opens that inquiry",
+    mergedAt: "2026-09-14T16:07:41Z",
+    day: "2026-09-14",
+    author: "buildoutfasterjoel",
+    area: "Deals",
+    summary:
+      "A deal's Web Activity log was showing a web-analytics table Buildout does not have \u2014 page paths, sources, devices and locations, performed by people invented for the table. It now records the four things a visitor actually does on a listing website, performed by the deal's own inquirers.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "The log reads Performed By, Performed At and Activity, where an activity is the CA and the documents behind it: viewed or signed the CA, viewed or downloaded a document by name.",
+      },
+      {
+        kind: "feature",
+        text: "A named visitor is one of the deal's inquirers, and clicking the name opens their inquiry panel over the log \u2014 status, access level and CA \u2014 without losing your place in the list. Edits made there show on the Inquiries table, and a suite's inquiry opened from the building's log still belongs to the suite.",
+      },
+      {
+        kind: "refinement",
+        text: "Everyone else is an anonymous visitor, who can do anything a lead can. A space deal's log names only its own inquirers, and a deal with no inquiries runs entirely anonymous.",
+      },
+      {
+        kind: "fix",
+        text: "Rows no longer repeat one another: every column is drawn independently, so a twelve-row log stops reading as one row copied down.",
+      },
+    ],
+  },
+  {
     pr: 225,
     title:
       "Company settings gains Back Office, Invoice Defaults, QuickBooks and Document Defaults pages",

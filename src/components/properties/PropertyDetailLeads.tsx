@@ -25,8 +25,11 @@ import {
 } from "@fortawesome/pro-regular-svg-icons";
 import { faCircleInfo } from "@fortawesome/pro-duotone-svg-icons";
 import type { Property } from "#/data/types";
-import { getLeadsForProperty, getListing } from "#/data/store";
-import { leadsForSpaceDeal } from "#/data/unitScopedMarketing";
+import { getLeadsForProperty } from "#/data/store";
+import {
+  inquiredSpaceDeal,
+  leadsForSpaceDeal,
+} from "#/data/unitScopedMarketing";
 import { LEAD_STATUSES } from "#/data/leadFacts";
 import { useDataStore } from "#/data/dataStore";
 import { shouldIgnoreRowClick } from "#/components/contacts/rowClick";
@@ -125,20 +128,14 @@ export function PropertyDetailLeads({
     const spaceLabelById = new Map<string, string>();
     const listingIdById = new Map<string, string>();
     for (const contact of scopedContacts) {
-      for (const listingId of contact.inquiredListingIds ?? []) {
-        const deal = getListing(listingId);
-        // Only a child space deal names a unit; a building-level inquiry does not.
-        if (!deal?.parentDealId) continue;
-        const unit = property.units.find((u) => u.id === deal.unitId);
-        if (unit) {
-          spaceLabelById.set(contact.id, unit.label);
-          listingIdById.set(contact.id, listingId);
-          break;
-        }
-      }
+      const deal = inquiredSpaceDeal(contact, property);
+      const unit = deal && property.units.find((u) => u.id === deal.unitId);
+      if (!deal || !unit) continue;
+      spaceLabelById.set(contact.id, unit.label);
+      listingIdById.set(contact.id, deal.id);
     }
     return { spaceLabelById, listingIdById };
-  }, [scopedContacts, property.units]);
+  }, [scopedContacts, property]);
 
   const spaceLabels = rowContext.spaceLabelById;
 

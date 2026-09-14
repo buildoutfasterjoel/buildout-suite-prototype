@@ -114,14 +114,17 @@ export function InquiryFlyout({
                   {inquiry.name}
                 </Offcanvas.Title>
                 <div className="text-muted text-truncate">
-                  {[inquiry.role, inquiry.company].filter(Boolean).join(" · ") ||
-                    "No company on file"}
+                  {[inquiry.role, inquiry.company]
+                    .filter(Boolean)
+                    .join(" · ") || "No company on file"}
                 </div>
               </div>
             </div>
             <div className="d-flex flex-wrap gap-2">
               <Badge
-                variant={inquiry.status === "No Status" ? "secondary" : "primary"}
+                variant={
+                  inquiry.status === "No Status" ? "secondary" : "primary"
+                }
                 appearance="muted"
               >
                 {inquiry.status}
@@ -226,7 +229,9 @@ export function InquiryFlyout({
                 value={
                   <Select
                     value={inquiry.accessLevel}
-                    onValueChange={(v) => v && patch({ accessLevel: v as AccessLevel })}
+                    onValueChange={(v) =>
+                      v && patch({ accessLevel: v as AccessLevel })
+                    }
                   >
                     <Select.Trigger style={{ minWidth: 160 }}>
                       <Select.Value />
@@ -265,14 +270,16 @@ export function InquiryFlyout({
               <Row
                 label="1031 Expiration"
                 value={
-                  inquiry.expiration1031 === "--" ? muted : inquiry.expiration1031
+                  inquiry.expiration1031 === "--"
+                    ? muted
+                    : inquiry.expiration1031
                 }
               />
             </Section>
           </Offcanvas.Body>
 
           <Offcanvas.Footer className="d-flex justify-content-between gap-2">
-            <Offcanvas.Close render={<Button variant="outline">Close</Button>} />
+            <Offcanvas.Close render={<Button variant="ghost">Close</Button>} />
             {/* Delete sits on the primary's near side rather than against it:
                 it is the destructive one, so it keeps a button's width between
                 itself and the action people reach for by habit. */}
