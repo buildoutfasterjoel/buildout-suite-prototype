@@ -109,8 +109,9 @@ export interface EmailDayMetric {
 export interface EmailPerformance {
   fromEmail: string;
   sentAt: string; // "May 23, 2026 at 12:32pm CDT"
+  /** Same send, as ISO "YYYY-MM-DD" — the anchor recipient dates are dated from. */
+  sentDate: string;
   propertyCount: number;
-  recipientCount: number;
   /** Aggregate rates shown in the stat cards, as integer percentages. */
   delivered: number;
   opens: number;
@@ -270,8 +271,8 @@ export function getEmailPerformance(email: Email): EmailPerformance {
   return {
     fromEmail: brokerEmail(email.primaryBroker),
     sentAt: fmtSentAt(sent),
+    sentDate: isoDate(sent),
     propertyCount: 1 + (h % 8), // 1–8
-    recipientCount: 200 + (h % 400), // 200–599
     delivered: 96 + (h % 5), // 96–100
     opens,
     clicks,

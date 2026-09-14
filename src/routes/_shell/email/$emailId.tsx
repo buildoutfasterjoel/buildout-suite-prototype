@@ -14,10 +14,12 @@ import {
   faPersonDigging,
 } from "@fortawesome/pro-regular-svg-icons";
 import { getEmailPerformance } from "#/data/emails";
+import { getEmailRecipients } from "#/data/emailRecipients";
 import { getEmailById } from "#/data/store";
 import { EmailCampaignHeader } from "#/components/email/EmailCampaignHeader";
 import { EmailMetaCard } from "#/components/email/EmailMetaCard";
 import { EmailPerformanceTab } from "#/components/email/EmailPerformanceTab";
+import { EmailRecipientsTab } from "#/components/email/EmailRecipientsTab";
 
 export const Route = createFileRoute("/_shell/email/$emailId")({
   component: EmailCampaignDetail,
@@ -54,7 +56,7 @@ function CampaignNotFound() {
   );
 }
 
-/** Centered placeholder for tabs not yet built (Recipients, Preview Email). */
+/** Centered placeholder for tabs not yet built (Preview Email). */
 function ComingSoon({ title }: { title: string }) {
   return (
     <Empty className="py-6">
@@ -78,6 +80,7 @@ function EmailCampaignDetail() {
   if (!email || email.status !== "sent") return <CampaignNotFound />;
 
   const performance = getEmailPerformance(email);
+  const recipients = getEmailRecipients(email, performance);
 
   return (
     <div className="d-flex flex-column h-100 overflow-auto">
@@ -106,7 +109,7 @@ function EmailCampaignDetail() {
                     appearance="muted"
                     className="fs-xs ms-1"
                   >
-                    {performance.recipientCount}
+                    {recipients.length}
                   </Badge>
                 </Tabs.Tab>
                 <Tabs.Tab
@@ -121,7 +124,12 @@ function EmailCampaignDetail() {
             {tab === "performance" && (
               <EmailPerformanceTab performance={performance} />
             )}
-            {tab === "recipients" && <ComingSoon title="Recipients" />}
+            {tab === "recipients" && (
+              <EmailRecipientsTab
+                recipients={recipients}
+                subject={email.subject}
+              />
+            )}
             {tab === "preview" && <ComingSoon title="Preview Email" />}
           </Card.Body>
         </Card>
