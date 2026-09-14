@@ -140,13 +140,15 @@ export function WebsiteActivityLog({ listing }: { listing: Listing }) {
                 <Table.Row key={event.id}>
                   <Table.Cell>
                     {event.performedById ? (
-                      <button
-                        type="button"
-                        className="btn btn-link p-0 border-0 link-primary text-nowrap"
-                        onClick={() => setOpenId(event.performedById!)}
+                      <a
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setOpenId(event.performedById!);
+                        }}
                       >
                         {event.performedBy}
-                      </button>
+                      </a>
                     ) : (
                       <span className="text-muted">{event.performedBy}</span>
                     )}
