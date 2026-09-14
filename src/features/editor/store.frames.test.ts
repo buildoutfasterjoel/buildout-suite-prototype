@@ -80,6 +80,44 @@ describe("removeBlock", () => {
   });
 });
 
+describe("moveBlock", () => {
+  it("prunes the source page's entry and creates one on the destination", () => {
+    const fromPageId = addBlankPage();
+    const toPageId = addBlankPage();
+    const block = createBlock("text");
+    useEditorStore.getState().insertBlock({ kind: "page", pageId: fromPageId, index: 0 }, block);
+
+    useEditorStore.getState().moveBlock(block.id, { kind: "page", pageId: toPageId, index: 0 });
+
+    expect(pageById(fromPageId).frames?.[block.id]).toBeUndefined();
+    expect(pageById(toPageId).frames?.[block.id]).toBeDefined();
+  });
+
+  it("leaves a block's rect unchanged when reordered within the same free page", () => {
+    const pageId = addBlankPage();
+    const a = createBlock("text");
+    const b = createBlock("text");
+    useEditorStore.getState().insertBlock({ kind: "page", pageId, index: 0 }, a);
+    useEditorStore.getState().insertBlock({ kind: "page", pageId, index: 1 }, b);
+    const before = pageById(pageId).frames![a.id];
+
+    useEditorStore.getState().moveBlock(a.id, { kind: "page", pageId, index: 1 });
+
+    expect(pageById(pageId).frames![a.id]).toEqual(before);
+  });
+
+  it("leaves the stacked destination page with no frames map at all", () => {
+    const fromPageId = addBlankPage();
+    const block = createBlock("text");
+    useEditorStore.getState().insertBlock({ kind: "page", pageId: fromPageId, index: 0 }, block);
+    const stackedPageId = doc().pages[0].id;
+
+    useEditorStore.getState().moveBlock(block.id, { kind: "page", pageId: stackedPageId, index: 0 });
+
+    expect(pageById(stackedPageId).frames).toBeUndefined();
+  });
+});
+
 describe("setBlockDepth", () => {
   it("moves a block to the front and back of the paint order", () => {
     const pageId = addBlankPage();

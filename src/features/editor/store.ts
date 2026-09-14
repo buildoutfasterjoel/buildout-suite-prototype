@@ -487,11 +487,28 @@ export const useEditorStore = create<EditorState>((set, get) => {
       // A container can't be nested inside another container.
       if (isContainer(moving) && target.kind !== "page") return s;
 
+      const fromLocation = findLocation(s.document, blockId);
+      if (!fromLocation) return s;
+      const fromPageId = pageIdForTarget(s.document, fromLocation);
+
       // Remove-then-insert-at-target.index reproduces arrayMove semantics for a
       // same-list reorder, and inserts before the hovered item across lists.
       const { doc: without, removed } = removeBlockFromDoc(s.document, blockId);
       if (!removed) return s;
-      return { document: insertAt(without, target, removed), dirty: true };
+      const inserted = insertAt(without, target, removed);
+      const toPageId = pageIdForTarget(inserted, target);
+
+      // A same-page move only changes paint order or nesting, never position —
+      // its frame (if any) stays exactly as it was. Cross-page is the only case
+      // that needs to drop the old entry and pick up a new one, so a reorder
+      // within one free page can't be re-placed by this pass.
+      if (toPageId === fromPageId) {
+        return { document: inserted, dirty: true };
+      }
+      return {
+        document: assignFrame(pruneFrame(inserted, blockId), toPageId, removed),
+        dirty: true,
+      };
     }),
 
   removeBlock: (blockId) =>
