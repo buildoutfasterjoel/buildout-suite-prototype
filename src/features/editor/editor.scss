@@ -379,8 +379,11 @@
 .bo-editor-cell {
   cursor: pointer;
 }
+/* The active cell — on its own, or the anchor of a drag selection. Accent, to
+   match the selection wash: a cell selection is one thing in one colour, and
+   primary purple is left to the hover affordances. */
 .bo-editor-cell.is-selected {
-  box-shadow: inset 0 0 0 2px var(--bp-primary);
+  box-shadow: inset 0 0 0 2px var(--bp-accent);
 }
 
 /* ---- Drag & drop ---- */
