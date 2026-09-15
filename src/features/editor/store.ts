@@ -11,6 +11,7 @@ import type {
   Page,
   Rect,
   Selection,
+  TextAlign,
 } from "./types";
 import { PAGE_PADDING } from "./types";
 import type { DocumentData } from "./dynamic";
@@ -33,6 +34,20 @@ const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 /** localStorage key for the properties panel's pinned/docked preference. */
 export const SIDEBAR_PIN_STORAGE_KEY = "bo-editor:sidebar-pinned";
+
+/**
+ * Cell-level formatting, applied to a whole cell rather than a run of its text.
+ * A drag selection picks cells, not characters, so it has no caret to hand
+ * `execCommand` — see `RichTextToolbar`.
+ */
+export interface CellFormat {
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  strike?: boolean;
+  fontSize?: number;
+  align?: TextAlign;
+}
 
 interface EditorState {
   document: EditorDocument;
@@ -195,6 +210,12 @@ interface EditorState {
 
   /** Edit a cell's static text value. */
   setCellValue: (blockId: string, cellId: string, value: string) => void;
+  /** Format every listed cell of a table (a drag selection, or one cell). */
+  setCellsFormat: (blockId: string, cellIds: string[], patch: CellFormat) => void;
+  /** Set per-column width weights after a boundary drag (see blocks/tableColumns.ts). */
+  setColWidths: (blockId: string, widths: number[]) => void;
+  /** Align a heading/text/list block's text. */
+  setBlockAlign: (blockId: string, align: TextAlign) => void;
   /** Restore a table to its original template state (rows, style, title). */
   resetTable: (blockId: string) => void;
 }
@@ -620,24 +641,37 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
   addColumn: (blockId, index) =>
     set((s) => ({
-      document: updateTableRows(s.document, blockId, (rows) =>
-        rows.map((row) => {
-          const next = [...row];
-          // New column-0 cells inherit the existing header column's role.
-          const header = index === 0 && row[0]?.header === true;
-          next.splice(clampIndex(index, row.length), 0, createCell({ header }));
+      document: updateColWidths(
+        updateTableRows(s.document, blockId, (rows) =>
+          rows.map((row) => {
+            const next = [...row];
+            // New column-0 cells inherit the existing header column's role.
+            const header = index === 0 && row[0]?.header === true;
+            next.splice(clampIndex(index, row.length), 0, createCell({ header }));
+            return next;
+          }),
+        ),
+        blockId,
+        // A new column arrives at the average width of the ones already there.
+        (w) => {
+          const next = [...w];
+          next.splice(clampIndex(index, w.length), 0, w.reduce((a, b) => a + b, 0) / w.length);
           return next;
-        }),
+        },
       ),
       dirty: true,
     })),
 
   removeColumn: (blockId, index) =>
     set((s) => ({
-      document: updateTableRows(s.document, blockId, (rows) => {
-        if ((rows[0]?.length ?? 0) <= 1) return rows; // keep at least one column
-        return rows.map((row) => row.filter((_, ci) => ci !== index));
-      }),
+      document: updateColWidths(
+        updateTableRows(s.document, blockId, (rows) => {
+          if ((rows[0]?.length ?? 0) <= 1) return rows; // keep at least one column
+          return rows.map((row) => row.filter((_, ci) => ci !== index));
+        }),
+        blockId,
+        (w) => (w.length <= 1 ? w : w.filter((_, i) => i !== index)),
+      ),
       selection: clearTableCell(s.selection, blockId),
       dirty: true,
     })),
@@ -684,8 +718,13 @@ export const useEditorStore = create<EditorState>((set, get) => {
 
   moveColumn: (blockId, from, to) =>
     set((s) => ({
-      document: updateTableRows(s.document, blockId, (rows) =>
-        rows.map((row) => moveItem(row, from, to)),
+      document: updateColWidths(
+        updateTableRows(s.document, blockId, (rows) =>
+          rows.map((row) => moveItem(row, from, to)),
+        ),
+        blockId,
+        // A column keeps the width it was dragged to when it moves.
+        (w) => moveItem(w, from, to),
       ),
       dirty: true,
     })),
@@ -697,6 +736,48 @@ export const useEditorStore = create<EditorState>((set, get) => {
       ),
       dirty: true,
     })),
+
+  setCellsFormat: (blockId, cellIds, patch) =>
+    set((s) => {
+      const ids = new Set(cellIds);
+      const { align, ...font } = patch;
+      return {
+        document: updateTableRows(s.document, blockId, (rows) =>
+          rows.map((row) =>
+            row.map((c) =>
+              ids.has(c.id)
+                ? { ...c, align: align ?? c.align, style: { ...c.style, ...font } }
+                : c,
+            ),
+          ),
+        ),
+        dirty: true,
+      };
+    }),
+
+  setColWidths: (blockId, widths) =>
+    set((s) => {
+      const block = findBlock(s.document, blockId);
+      if (!block || block.type !== "table") return s;
+      return {
+        document: replaceBlock(s.document, blockId, { ...block, colWidths: widths }),
+        dirty: true,
+      };
+    }),
+
+  setBlockAlign: (blockId, align) =>
+    set((s) => {
+      const block = findBlock(s.document, blockId);
+      if (!block || (block.type !== "heading" && block.type !== "text" && block.type !== "list"))
+        return s;
+      return {
+        document: replaceBlock(s.document, blockId, {
+          ...block,
+          style: { ...block.style, align },
+        }),
+        dirty: true,
+      };
+    }),
 
   resetTable: (blockId) =>
     set((s) => {
@@ -711,6 +792,20 @@ export const useEditorStore = create<EditorState>((set, get) => {
     }),
   };
 });
+
+/**
+ * Keep a table's `colWidths` in step with a column add/remove/move. A table
+ * that was never resized has none, and stays that way.
+ */
+function updateColWidths(
+  doc: EditorDocument,
+  blockId: string,
+  fn: (widths: number[]) => number[],
+): EditorDocument {
+  const block = findBlock(doc, blockId);
+  if (!block || block.type !== "table" || !block.colWidths) return doc;
+  return replaceBlock(doc, blockId, { ...block, colWidths: fn(block.colWidths) });
+}
 
 /** Clamp an insertion index into the inclusive range [0, length]. */
 function clampIndex(index: number, length: number): number {

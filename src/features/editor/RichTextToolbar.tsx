@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBold,
@@ -17,11 +17,13 @@ import {
   ToggleButtonGroup,
   type ToggleItem,
 } from "./controls/ToggleButtonGroup";
-import { useDocumentData, useSelectedEntities } from "./store";
+import { ALIGN_ITEMS } from "./panels/StyleControls";
+import { useDocumentData, useEditorStore, useSelectedEntities } from "./store";
+import type { CellFormat } from "./store";
 import { INLINE_FIELD_GROUPS } from "./dynamic";
 import type { InlineFieldGroup, InlineFieldOption } from "./dynamic";
 import { tokenChipHtml } from "./inlineTokens";
-import type { DynamicKey } from "./types";
+import type { Cell, DynamicKey, TextAlign } from "./types";
 import { InputGroup } from "@buildoutinc/blueprint-react/ui/InputGroup";
 import { Button } from "@buildoutinc/blueprint-react/ui/Button";
 import { Input } from "@buildoutinc/blueprint-react/ui/Input";
@@ -66,6 +68,20 @@ const EMPTY_FORMAT: FormatState = {
   fontName: "",
   fontSize: DEFAULT_FONT_SIZE,
 };
+
+/** The cell-level flag each B/I/U/S button sets on a multi-cell selection. */
+const RANGE_KEYS: Record<FontStyleValue, "bold" | "italic" | "underline" | "strike"> = {
+  bold: "bold",
+  italic: "italic",
+  underline: "underline",
+  strikeThrough: "strike",
+};
+
+/** The value every cell in a range shares, or null when they differ. */
+function shared<T>(cells: Cell[], read: (c: Cell) => T): T | null {
+  const first = read(cells[0]);
+  return cells.every((c) => read(c) === first) ? first : null;
+}
 
 /** Element hosting a DOM node (the node itself, or its parent for text nodes). */
 function hostElement(node: Node | null): HTMLElement | null {
@@ -116,6 +132,23 @@ export function RichTextToolbar() {
     block?.type === "text" ||
     (block?.type === "table" && cell != null);
   const open = Boolean(isTextNode);
+
+  const setCellsFormat = useEditorStore((s) => s.setCellsFormat);
+  const setBlockAlign = useEditorStore((s) => s.setBlockAlign);
+  const selectedCellIds = useEditorStore((s) => s.selection?.cellIds);
+
+  /**
+   * The cells of a multi-cell (drag) selection. Two or more cells format
+   * through the model rather than `execCommand`: there is no single caret to
+   * hand it, and the user picked cells, not a run of text. One cell keeps the
+   * rich-text path, so half a cell's text can still be bolded on its own.
+   */
+  const rangeCells: Cell[] | null = useMemo(() => {
+    if (!selectedCellIds || selectedCellIds.length < 2 || block?.type !== "table") return null;
+    const ids = new Set(selectedCellIds);
+    const cells = block.rows.flat().filter((c) => ids.has(c.id));
+    return cells.length > 1 ? cells : null;
+  }, [block, selectedCellIds]);
 
   const [format, setFormat] = useState<FormatState>(EMPTY_FORMAT);
   const [sizeInput, setSizeInput] = useState(String(DEFAULT_FONT_SIZE));
@@ -342,18 +375,67 @@ export function RichTextToolbar() {
   const applyFontSize = useCallback(
     (px: number) => {
       const clamped = Math.max(FONT_SIZE_MIN, Math.min(FONT_SIZE_MAX, px));
-      runCommand("fontSize", String(clamped));
+      if (rangeCells && block) {
+        setCellsFormat(
+          block.id,
+          rangeCells.map((c) => c.id),
+          { fontSize: clamped },
+        );
+      } else {
+        runCommand("fontSize", String(clamped));
+      }
       setSizeInput(String(clamped));
     },
-    [runCommand],
+    [block, rangeCells, runCommand, setCellsFormat],
   );
 
-  const activeStyles = [
-    format.bold ? ("bold" as const) : null,
-    format.italic ? ("italic" as const) : null,
-    format.underline ? ("underline" as const) : null,
-    format.strikeThrough ? ("strikeThrough" as const) : null,
-  ].filter((v): v is FontStyleValue => v !== null);
+  /** B/I/U/S: the model for a cell range, the live selection for anything else. */
+  const applyFontStyle = (value: FontStyleValue) => {
+    if (!rangeCells || !block) {
+      runCommand(value);
+      return;
+    }
+    const key = RANGE_KEYS[value];
+    // Already on everywhere in the range = the button turns it off.
+    const on = rangeCells.every((c) => c.style[key] === true);
+    setCellsFormat(
+      block.id,
+      rangeCells.map((c) => c.id),
+      { [key]: !on } as CellFormat,
+    );
+  };
+
+  /**
+   * Alignment is a property of the cell (or the block), never of a text run:
+   * `execCommand` writes it onto the contentEditable's own style attribute,
+   * which is not part of the HTML that gets persisted, so it would vanish on
+   * the next render.
+   */
+  const blockStyle =
+    block && (block.type === "heading" || block.type === "text") ? block.style : null;
+  const alignCellIds = rangeCells?.map((c) => c.id) ?? (cell ? [cell.id] : null);
+  const align: TextAlign | null = rangeCells
+    ? shared(rangeCells, (c) => c.align ?? "left")
+    : cell
+      ? cell.align ?? "left"
+      : blockStyle?.align ?? null;
+
+  const applyAlign = (value: TextAlign) => {
+    if (!block) return;
+    if (alignCellIds) setCellsFormat(block.id, alignCellIds, { align: value });
+    else setBlockAlign(block.id, value);
+  };
+
+  const activeStyles = rangeCells
+    ? (Object.keys(RANGE_KEYS) as FontStyleValue[]).filter((v) =>
+        rangeCells.every((c) => c.style[RANGE_KEYS[v]] === true),
+      )
+    : [
+        format.bold ? ("bold" as const) : null,
+        format.italic ? ("italic" as const) : null,
+        format.underline ? ("underline" as const) : null,
+        format.strikeThrough ? ("strikeThrough" as const) : null,
+      ].filter((v): v is FontStyleValue => v !== null);
 
   // Stay mounted until the slide-out finishes, then unmount.
   if (!mounted) return null;
@@ -384,7 +466,24 @@ export function RichTextToolbar() {
               active={activeStyles}
               multi
               tooltips
-              onToggle={(value) => runCommand(value)}
+              onToggle={applyFontStyle}
+            />
+          </span>
+
+          <Separator
+            orientation="vertical"
+            className="align-self-stretch h-auto"
+          />
+
+          <span
+            className="d-inline-flex"
+            onMouseDown={(e) => e.preventDefault()}
+          >
+            <ToggleButtonGroup
+              items={ALIGN_ITEMS}
+              active={align ? [align] : []}
+              tooltips
+              onToggle={applyAlign}
             />
           </span>
 
@@ -394,6 +493,10 @@ export function RichTextToolbar() {
           />
 
           <Select
+            // A range has no one caret to apply a font to, and the model's
+            // per-cell font family isn't rendered — so it stays out of reach
+            // rather than quietly styling the anchor cell alone.
+            disabled={rangeCells != null}
             value={format.fontName || null}
             onValueChange={(value) =>
               value && runCommand("fontName", String(value))
@@ -489,6 +592,8 @@ export function RichTextToolbar() {
               retained "City" in the box would read as though the block were
               bound to City, the very claim inline tokens exist to avoid. */}
           <Combobox
+            // An insert needs one caret; with a range selected there is none.
+            disabled={rangeCells != null}
             items={INLINE_FIELD_GROUPS}
             value={null}
             inputValue={fieldQuery}

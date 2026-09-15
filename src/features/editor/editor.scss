@@ -703,6 +703,41 @@
   z-index: 0;
 }
 
+/* Multi-cell (drag) selection: one accent wash over the whole rectangle, so a
+   block of cells reads as a single selection rather than a grid of boxes. The
+   anchor cell keeps its own purple inset ring underneath. */
+.bo-editor-table-range {
+  position: absolute;
+  background: rgba(var(--bp-primary-rgb), 0.16);
+  outline: 1px solid var(--bp-primary);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Column resize grips: an invisible 7px strip down each interior boundary that
+   shows a 1px accent line under the pointer — a table isn't striped with lines
+   the moment it's hovered. Rows have no grip: they grow with their content. */
+.bo-editor-col-resize {
+  position: absolute;
+  width: 7px;
+  transform: translateX(-50%);
+  cursor: col-resize;
+  pointer-events: auto;
+  z-index: 3;
+}
+.bo-editor-col-resize::after {
+  content: "";
+  position: absolute;
+  inset: 0 3px;
+  background: var(--bp-primary);
+  opacity: 0;
+  transition: opacity motion.$short2 ease;
+}
+.bo-editor-col-resize:hover::after,
+.bo-editor-col-resize.is-dragging::after {
+  opacity: 1;
+}
+
 /* Reset-to-template control — portaled to body, fixed to the viewport just left
    of the table, so the page's overflow:hidden can't clip it. */
 .bo-editor-table-reset {

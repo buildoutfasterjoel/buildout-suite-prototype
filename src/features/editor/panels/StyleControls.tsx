@@ -48,7 +48,8 @@ const FONT_STYLE_ITEMS: ToggleItem<"bold" | "italic" | "underline">[] = [
   { value: "underline", icon: faUnderline, label: "Underline" },
 ];
 
-const ALIGN_ITEMS: ToggleItem<TextStyle["align"]>[] = [
+/** Shared with the floating rich-text toolbar, which aligns the same values. */
+export const ALIGN_ITEMS: ToggleItem<TextStyle["align"]>[] = [
   { value: "left", icon: faAlignLeft, label: "Align left" },
   { value: "center", icon: faAlignCenter, label: "Align center" },
   { value: "right", icon: faAlignRight, label: "Align right" },

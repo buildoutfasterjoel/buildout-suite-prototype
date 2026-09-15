@@ -23,6 +23,8 @@ export interface TextStyle {
   bold: boolean;
   italic: boolean;
   underline: boolean;
+  /** Optional so the existing style defaults need no entry — absent = not struck. */
+  strike?: boolean;
   letterSpacing: number;
   lineHeight: number;
   align: TextAlign;
@@ -108,6 +110,12 @@ export interface TableBlock {
   type: "table";
   title?: string;
   rows: Cell[][];
+  /**
+   * Per-column width weights, one per column. Absent = the browser's auto
+   * layout, which is what a table has until someone drags a boundary. See
+   * `blocks/tableColumns.ts` for why these are weights and not percentages.
+   */
+  colWidths?: number[];
   /**
    * Visibility rules keyed by the id of the row's first cell. Keyed by id
    * rather than index so rules survive reordering and are dropped naturally
@@ -314,6 +322,12 @@ export interface Selection {
   pageId: string;
   blockId?: string;
   cellId?: string;
+  /**
+   * Every cell of a multi-cell (drag) selection, including `cellId` — which
+   * stays the anchor, so everything that reads one cell keeps working and only
+   * the code that formats a range has to know about the list.
+   */
+  cellIds?: string[];
 }
 
 /**
