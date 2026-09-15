@@ -52,6 +52,7 @@ import { contentsEntries, contentsIndexLabel } from "../contents";
 import { MAP_FALLBACK_CENTER, mapSizeHeight } from "./mapStyles";
 import { BRAND } from "../brand";
 import { trailingRowInsertIndex, visibleRows } from "./rowVisibility";
+import { columnPercents, columnWeights, resizeColumns } from "./tableColumns";
 import { SortableBlock, ListDropZone } from "../dnd/SortableBlock";
 import type { ListLocation } from "../dnd/dndTypes";
 import { blockLabel } from "./blockMeta";
@@ -617,6 +618,22 @@ const ROW_HANDLE_LEN = 14;
 // Minimum breathing room at each end so a capped handle keeps a clickable gap.
 const HANDLE_GAP = 3;
 
+/** Every cell id in the rectangle two cells span, read across then down. */
+function cellRangeIds(
+  rows: { cells: Cell[] }[],
+  a: { row: number; col: number },
+  b: { row: number; col: number },
+): string[] {
+  const ids: string[] = [];
+  for (let r = Math.min(a.row, b.row); r <= Math.max(a.row, b.row); r += 1) {
+    for (let c = Math.min(a.col, b.col); c <= Math.max(a.col, b.col); c += 1) {
+      const id = rows[r]?.cells[c]?.id;
+      if (id) ids.push(id);
+    }
+  }
+  return ids;
+}
+
 function TableBlockView({ block, pageId, selection }: { block: TableBlock } & VisualProps) {
   const select = useSelect();
   const setCellValue = useEditorStore((s) => s.setCellValue);
@@ -657,6 +674,50 @@ function TableBlockView({ block, pageId, selection }: { block: TableBlock } & Vi
     col: number | null;
     row: number | null;
   } | null>(null);
+  // Cell a drag started in, and whether it has grown past that one cell. The
+  // drag reads live in a mousemove handler, so refs rather than state.
+  const anchorRef = useRef<{ row: number; col: number } | null>(null);
+  const draggedRef = useRef(false);
+
+  const colWeights = columnWeights(block);
+  const cellIds = selectedHere ? selection?.cellIds : undefined;
+
+  // The rectangle to wash in accent — derived from the selected ids rather than
+  // kept alongside them, so there is one source of truth for what is selected.
+  const rangeRect = useMemo(() => {
+    if (!cellIds || cellIds.length < 2) return null;
+    const ids = new Set(cellIds);
+    let r0 = Infinity;
+    let r1 = -1;
+    let c0 = Infinity;
+    let c1 = -1;
+    rows.forEach((row, r) =>
+      row.cells.forEach((cell, c) => {
+        if (!ids.has(cell.id)) return;
+        r0 = Math.min(r0, r);
+        r1 = Math.max(r1, r);
+        c0 = Math.min(c0, c);
+        c1 = Math.max(c1, c);
+      }),
+    );
+    return r1 < 0 ? null : { r0, r1, c0, c1 };
+  }, [cellIds, rows]);
+
+  // A drag can end anywhere, so the anchor is dropped on the window's mouseup.
+  useEffect(() => {
+    const onUp = () => {
+      anchorRef.current = null;
+    };
+    window.addEventListener("mouseup", onUp);
+    return () => window.removeEventListener("mouseup", onUp);
+  }, []);
+
+  /** True when the click that follows a range drag should be ignored. */
+  const swallowDragClick = () => {
+    if (!draggedRef.current) return false;
+    draggedRef.current = false;
+    return true;
+  };
 
   // Measure column/row boundaries relative to the wrap so the affordance
   // overlay lines up with the (auto-width) native table.
@@ -697,9 +758,12 @@ function TableBlockView({ block, pageId, selection }: { block: TableBlock } & Vi
     const ro = new ResizeObserver(measure);
     ro.observe(table);
     return () => ro.disconnect();
-  }, [block.rows]);
+    // Column widths change the boundaries without changing the table's own box,
+    // so the ResizeObserver never fires for them — re-measure on the widths too.
+  }, [block.rows, block.colWidths]);
 
-  // Track which column/row band the cursor is over so only those handles show.
+  // Track which column/row band the cursor is over so only those handles show,
+  // and grow a cell range while the button is down.
   const onMouseMove = (e: React.MouseEvent) => {
     if (edges.cols.length < 2 || edges.rows.length < 2) return;
     const box = wrapRef.current?.getBoundingClientRect();
@@ -716,6 +780,24 @@ function TableBlockView({ block, pageId, selection }: { block: TableBlock } & Vi
     const col = band(edges.cols, px);
     const row = band(edges.rows, py);
     setHoverBand(col === null && row === null ? null : { col, row });
+
+    const anchor = anchorRef.current;
+    if (!anchor || !(e.buttons & 1) || col === null || row === null) return;
+    const spansOneCell = row === anchor.row && col === anchor.col;
+    // Until the pointer leaves the anchor cell this is an ordinary text drag —
+    // only reaching a second cell turns it into a cell selection.
+    if (spansOneCell && !draggedRef.current) return;
+    const ids = cellRangeIds(rows, anchor, { row, col });
+    if (ids.join() === (cellIds ?? []).join()) return;
+    draggedRef.current = true;
+    // A cross-cell text highlight would otherwise sit under the accent wash.
+    window.getSelection()?.removeAllRanges();
+    select({
+      pageId,
+      blockId: block.id,
+      cellId: rows[anchor.row]?.cells[anchor.col]?.id,
+      cellIds: ids,
+    });
   };
 
   // The reset control is portaled out of the overflow:hidden page so it can
@@ -752,6 +834,9 @@ function TableBlockView({ block, pageId, selection }: { block: TableBlock } & Vi
       className={`bo-editor-block bo-editor-table-wrap${selectedBlock ? " is-selected" : ""}`}
       onClick={(e) => {
         e.stopPropagation();
+        // A range drag ends in a click on the table; it must not collapse the
+        // selection the drag just made.
+        if (swallowDragClick()) return;
         select({ pageId, blockId: block.id });
       }}
       onMouseEnter={() => setHovered(true)}
@@ -763,11 +848,28 @@ function TableBlockView({ block, pageId, selection }: { block: TableBlock } & Vi
       onMouseMove={onMouseMove}
       style={{ width: "100%" }}
     >
-      <table ref={tableRef} style={{ width: "100%", borderCollapse: "collapse", border }}>
+      <table
+        ref={tableRef}
+        style={{
+          width: "100%",
+          borderCollapse: "collapse",
+          border,
+          // Auto layout ignores a <col> width as soon as the content is wider,
+          // so a dragged column only holds its width under fixed layout.
+          tableLayout: colWeights ? "fixed" : "auto",
+        }}
+      >
+        {colWeights && (
+          <colgroup>
+            {columnPercents(colWeights).map((pct, i) => (
+              <col key={i} style={{ width: `${pct}%` }} />
+            ))}
+          </colgroup>
+        )}
         <tbody>
-          {rows.map((row) => (
+          {rows.map((row, ri) => (
             <tr key={row.index}>
-              {row.cells.map((cell) => (
+              {row.cells.map((cell, ci) => (
                 <CellView
                   key={cell.id}
                   cell={cell}
@@ -776,8 +878,13 @@ function TableBlockView({ block, pageId, selection }: { block: TableBlock } & Vi
                   value={cell.value}
                   editable
                   onChange={(v) => setCellValue(block.id, cell.id, v)}
+                  onMouseDown={() => {
+                    anchorRef.current = { row: ri, col: ci };
+                    draggedRef.current = false;
+                  }}
                   onSelect={(e) => {
                     e.stopPropagation();
+                    if (swallowDragClick()) return;
                     select({ pageId, blockId: block.id, cellId: cell.id });
                   }}
                 />
@@ -799,6 +906,7 @@ function TableBlockView({ block, pageId, selection }: { block: TableBlock } & Vi
           rowCount={rows.length}
           rowIndexMap={rowIndexMap}
           highlight={highlight}
+          range={rangeRect}
           hoverBand={hoverBand}
           setHoverHandle={setHoverHandle}
           openMenu={openMenu}
@@ -826,10 +934,19 @@ interface HandleTarget {
   index: number;
 }
 
+/** A rectangle of selected cells, in rendered row/column indices. */
+interface CellRange {
+  r0: number;
+  r1: number;
+  c0: number;
+  c1: number;
+}
+
 /**
- * Affordances laid over the table: a column/row highlight, per-column and
- * per-row handles (each opens an actions menu), and boundary insert dots. The
- * container is pointer-events:none; only the controls are interactive.
+ * Affordances laid over the table: a column/row highlight, the selected cell
+ * range, per-column and per-row handles (each opens an actions menu), boundary
+ * insert dots, and a resize grip per column boundary. The container is
+ * pointer-events:none; only the controls are interactive.
  */
 function TableEditOverlay({
   blockId,
@@ -838,6 +955,7 @@ function TableEditOverlay({
   rowCount,
   rowIndexMap,
   highlight,
+  range,
   hoverBand,
   setHoverHandle,
   openMenu,
@@ -850,6 +968,7 @@ function TableEditOverlay({
   /** Translates a DOM row index (rendered, post-pruning) to its index in `block.rows`. */
   rowIndexMap: number[];
   highlight: HandleTarget | null;
+  range: CellRange | null;
   hoverBand: { col: number | null; row: number | null } | null;
   setHoverHandle: (h: HandleTarget | null) => void;
   openMenu: HandleTarget | null;
@@ -860,6 +979,8 @@ function TableEditOverlay({
   return (
     <div className="bo-editor-table-overlay">
       <ColumnRowHighlight edges={edges} target={highlight} />
+      <CellRangeHighlight edges={edges} range={range} />
+      <ColumnResizers blockId={blockId} edges={edges} />
       <ColumnHandles
         blockId={blockId}
         edges={edges}
@@ -911,6 +1032,78 @@ function ColumnRowHighlight({ edges, target }: { edges: TableEdges; target: Hand
           width: edges.width,
         };
   return <div className="bo-editor-table-highlight" style={style} />;
+}
+
+/**
+ * The accent wash over a multi-cell selection. One rectangle for the whole
+ * range rather than a box per cell, so a 3×4 block of cells reads as one thing.
+ */
+function CellRangeHighlight({ edges, range }: { edges: TableEdges; range: CellRange | null }) {
+  if (!range) return null;
+  if (range.c1 + 1 >= edges.cols.length || range.r1 + 1 >= edges.rows.length) return null;
+
+  return (
+    <div
+      className="bo-editor-table-range"
+      style={{
+        left: edges.cols[range.c0],
+        width: edges.cols[range.c1 + 1] - edges.cols[range.c0],
+        top: edges.rows[range.r0],
+        height: edges.rows[range.r1 + 1] - edges.rows[range.r0],
+      }}
+    />
+  );
+}
+
+/**
+ * A drag grip on every interior column boundary. Rows have none on purpose:
+ * their height follows the content of their cells.
+ *
+ * The widths measured at mousedown drive the whole drag, so the store update
+ * each move causes (which re-measures the table) can't compound into drift.
+ */
+function ColumnResizers({ blockId, edges }: { blockId: string; edges: TableEdges }) {
+  const setColWidths = useEditorStore((s) => s.setColWidths);
+  const [dragging, setDragging] = useState<number | null>(null);
+
+  const startDrag = (index: number) => (e: React.MouseEvent) => {
+    // Keeps the drag from placing a caret in the cell underneath.
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const widths = edges.cols.slice(1).map((x, i) => x - edges.cols[i]);
+    setDragging(index);
+
+    const onMove = (ev: MouseEvent) =>
+      setColWidths(blockId, resizeColumns(widths, index, ev.clientX - startX));
+    const onUp = () => {
+      setDragging(null);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
+  return (
+    <>
+      {edges.cols.slice(1, -1).map((x, k) => {
+        const index = k + 1;
+        return (
+          <div
+            key={`crz-${index}`}
+            className={`bo-editor-col-resize${dragging === index ? " is-dragging" : ""}`}
+            style={{ left: x, top: edges.rows[0], height: edges.height }}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label={`Resize column ${index}`}
+            onMouseDown={startDrag(index)}
+            onClick={(e) => e.stopPropagation()}
+          />
+        );
+      })}
+    </>
+  );
 }
 
 /** Column handles across the top edge; each opens an insert/delete menu. */
@@ -1199,6 +1392,7 @@ function CellView({
   editable,
   onChange,
   onSelect,
+  onMouseDown,
 }: {
   cell: Cell;
   border: string;
@@ -1207,6 +1401,8 @@ function CellView({
   editable: boolean;
   onChange: (value: string) => void;
   onSelect: (e: React.MouseEvent) => void;
+  /** Arms a cell-range drag — absent on the read-only (preview) path. */
+  onMouseDown?: (e: React.MouseEvent) => void;
 }) {
   const bottom =
     cell.style.borderBottomWidth > 0 && cell.style.borderBottomStyle !== "none"
@@ -1220,6 +1416,7 @@ function CellView({
       className={`bo-editor-cell${selected ? " is-selected" : ""}`}
       data-cell-id={cell.id}
       onClick={onSelect}
+      onMouseDown={onMouseDown}
       style={{
         border,
         borderBottom: bottom ?? border,
@@ -1228,7 +1425,10 @@ function CellView({
         fontSize: cell.style.fontSize,
         fontWeight: cell.header || cell.style.bold ? 600 : 400,
         fontStyle: cell.style.italic ? "italic" : "normal",
-        textDecoration: cell.style.underline ? "underline" : "none",
+        textDecoration:
+          [cell.style.underline && "underline", cell.style.strike && "line-through"]
+            .filter(Boolean)
+            .join(" ") || "none",
         textAlign: cell.align ?? "left",
         color: cell.style.color ?? "#22262f",
         textTransform: cell.style.transform === "none" ? undefined : cell.style.transform,

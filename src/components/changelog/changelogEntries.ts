@@ -117,6 +117,35 @@ export const KIND_ORDER: ChangeKind[] = ["feature", "refinement", "fix"];
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    pr: 232,
+    title:
+      "A block of table cells can be selected and formatted together, and columns can be dragged to a width",
+    mergedAt: "2026-09-15T16:07:45Z",
+    day: "2026-09-15",
+    author: "buildoutfasterjoel",
+    area: "Documents",
+    summary:
+      "Formatting a table meant clicking one cell at a time, and a column's width was whatever the browser decided. A block of cells can now be selected in one drag and formatted together, and any column can be dragged to the width you want.",
+    highlights: [
+      {
+        kind: "feature",
+        text: "Drag across a table's cells to select a block of them. The cells you cover are washed in blue, and bold, italic, underline, strikethrough and font size apply to all of them at once.",
+      },
+      {
+        kind: "feature",
+        text: "Text alignment is now in the floating toolbar — for a block of cells, a single cell, or a heading or text block.",
+      },
+      {
+        kind: "feature",
+        text: "Drag any column's edge to set its width. The two columns either side of the edge trade width, so the table stays the same size, and a column dragged narrow wraps its text and grows the row instead of clipping it. Insert, delete or move a column and the widths follow.",
+      },
+      {
+        kind: "refinement",
+        text: "Selecting part of one cell's text still works as before: a drag only becomes a cell selection once it reaches a second cell.",
+      },
+    ],
+  },
+  {
     pr: 231,
     title:
       "A table on a free page can be grabbed by a band around it, hugs its rows, and its handles sit where they should",
