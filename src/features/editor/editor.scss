@@ -704,12 +704,14 @@
 }
 
 /* Multi-cell (drag) selection: one accent wash over the whole rectangle, so a
-   block of cells reads as a single selection rather than a grid of boxes. The
-   anchor cell keeps its own purple inset ring underneath. */
+   block of cells reads as a single selection rather than a grid of boxes.
+   Accent (blue) rather than primary: the column/row hover highlight and the
+   anchor cell's ring are both purple, and a selection that isn't a hover state
+   should not be the same colour as one. */
 .bo-editor-table-range {
   position: absolute;
-  background: rgba(var(--bp-primary-rgb), 0.16);
-  outline: 1px solid var(--bp-primary);
+  background: rgba(var(--bp-accent-rgb), 0.16);
+  outline: 1px solid var(--bp-accent);
   pointer-events: none;
   z-index: 1;
 }
